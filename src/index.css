@@ -4,35 +4,36 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Blobbi Island Design System - Light Mode */
+    --background: 45 67% 97%; /* #FFF8EC - warm off-white */
+    --foreground: 32 33% 15%; /* #2C2419 - warm dark brown */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 42 43% 95%; /* #F5F0E8 - slightly darker off-white */
+    --card-foreground: 32 33% 15%; /* #2C2419 - warm dark brown */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 42 43% 95%; /* #F5F0E8 */
+    --popover-foreground: 32 33% 15%; /* #2C2419 */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 20 42% 39%; /* #8B5A3C - rich warm brown */
+    --primary-foreground: 45 67% 97%; /* #FFF8EC - base background */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 38 29% 84%; /* #E5DDD0 - muted earthy tone */
+    --secondary-foreground: 32 33% 15%; /* #2C2419 */
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 38 29% 84%; /* #E5DDD0 */
+    --muted-foreground: 28 17% 37%; /* #6B5D4F - softer brown */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 38 29% 84%; /* #E5DDD0 */
+    --accent-foreground: 32 33% 15%; /* #2C2419 */
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 45 67% 97%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 38 29% 84%; /* #E5DDD0 - light warm gray */
+    --input: 38 29% 84%; /* #E5DDD0 */
+    --ring: 20 55% 40%; /* #A0522D - focus ring */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -52,33 +53,34 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Blobbi Island Design System - Dark Mode */
+    --background: 30 13% 10%; /* #1C1814 - deep warm brown */
+    --foreground: 42 43% 90%; /* #F0E6D6 - warm off-white */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 30 17% 14%; /* #252018 - slightly lighter warm brown */
+    --card-foreground: 42 43% 90%; /* #F0E6D6 */
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 30 17% 14%; /* #252018 */
+    --popover-foreground: 42 43% 90%; /* #F0E6D6 */
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 43 91% 39%; /* #B8860B - vibrant dark gold */
+    --primary-foreground: 30 13% 10%; /* #1C1814 - base dark background */
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 28 17% 21%; /* #3A332A - muted dark brown */
+    --secondary-foreground: 42 43% 90%; /* #F0E6D6 */
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 28 17% 21%; /* #3A332A */
+    --muted-foreground: 32 17% 67%; /* #A69B8A - soft light brown */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 28 17% 21%; /* #3A332A */
+    --accent-foreground: 42 43% 90%; /* #F0E6D6 */
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 42 43% 90%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 28 17% 21%; /* #3A332A - subtle dark brown */
+    --input: 28 17% 21%; /* #3A332A */
+    --ring: 51 88% 67%; /* #DAA520 - brighter gold for focus */
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
