@@ -3,13 +3,15 @@ import { ScrollToTop } from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { BlobbiIsland } from "./pages/BlobbiIsland";
 
 export function AppRouter() {
   return (
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={<BlobbiIsland />} />
+        <Route path="/original" element={<Index />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
