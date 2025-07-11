@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
+import { useNostr } from './useNostr';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 
@@ -38,6 +38,7 @@ export function useCurrentCompanion() {
 }
 
 export function useSetCurrentCompanion() {
+  const { nostr } = useNostr();
   const { mutate: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { user } = useCurrentUser();
@@ -48,14 +49,34 @@ export function useSetCurrentCompanion() {
         throw new Error('User not logged in');
       }
 
-      // Create kind 31125 event with current_companion tag
+      // 1. Fetch the latest kind 31125 event
+      const events = await nostr.query([{
+        kinds: [31125],
+        authors: [user.pubkey],
+        limit: 1
+      }]);
+
+      let existingTags: string[][] = [];
+      if (events.length > 0) {
+        existingTags = events[0].tags;
+      }
+
+      // 2. Filter out the old 'current_companion' tag, if it exists
+      const newTags = existingTags.filter(([tagName]) => tagName !== 'current_companion');
+
+      // 3. Add the new 'current_companion' tag
+      newTags.push(['current_companion', blobbiId]);
+
+      // Ensure 'd' tag for addressable event exists
+      if (!newTags.some(([tagName]) => tagName === 'd')) {
+        newTags.push(['d', 'current_companion']);
+      }
+
+      // 4. Create the new event with the updated tags
       createEvent({
         kind: 31125,
         content: `Selected ${blobbiId} as current companion`,
-        tags: [
-          ['d', 'current_companion'], // Addressable event identifier
-          ['current_companion', blobbiId],
-        ],
+        tags: newTags,
       });
 
       return blobbiId;
@@ -64,6 +85,9 @@ export function useSetCurrentCompanion() {
       // Invalidate and refetch current companion query
       queryClient.invalidateQueries({
         queryKey: ['current-companion', user?.pubkey]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['companion-settings', user?.pubkey]
       });
     },
   });
