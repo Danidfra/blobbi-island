@@ -10,6 +10,7 @@ import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
 import { CurrentBlobbiDisplay } from "@/components/blobbi/CurrentBlobbiDisplay";
 import { MobileLandscapePrompt } from "@/components/blobbi/MobileLandscapePrompt";
+import { InteractiveIslandMap, LocationModal } from "@/components/blobbi/InteractiveIslandMap";
 
 type GameState = 'login' | 'loading' | 'selection' | 'playing';
 
@@ -21,6 +22,7 @@ export function BlobbiIsland() {
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
   const [gameState, setGameState] = useState<GameState>('login');
   const [isLandscape, setIsLandscape] = useState(true);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
 
   // Determine game state based on user login and data loading
   useEffect(() => {
@@ -96,6 +98,14 @@ export function BlobbiIsland() {
     setGameState('selection');
   };
 
+  const handleLocationClick = (locationId: string) => {
+    setSelectedLocation(locationId);
+  };
+
+  const handleCloseLocationModal = () => {
+    setSelectedLocation(null);
+  };
+
   const renderGameContent = () => {
     switch (gameState) {
       case 'login':
@@ -114,37 +124,33 @@ export function BlobbiIsland() {
 
       case 'playing':
         return (
-          <div className="flex items-center justify-center h-full bg-gradient-to-b from-blue-100 to-green-100">
-            <div className="text-center space-y-6 p-8">
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold text-primary">🏝️ Welcome to Blobbi Island!</h2>
-                <p className="text-lg text-muted-foreground">
-                  Playing with <span className="font-semibold text-primary">
-                    {selectedBlobbi?.name || selectedBlobbi?.id}
-                  </span>
-                </p>
-              </div>
+          <div className="relative w-full h-full bg-gradient-to-b from-sky-200 to-blue-300">
+            {/* Interactive Island Map */}
+            <InteractiveIslandMap onLocationClick={handleLocationClick} />
 
-              <div className="space-y-4">
-                <div className="flex justify-center">
+            {/* Current Blobbi Display - Floating in corner */}
+            <div className="absolute top-4 left-4 z-10">
+              <div className="bg-white/90 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
+                <div className="flex items-center space-x-3">
                   <CurrentBlobbiDisplay
-                    size="xl"
-                    className="shadow-xl border-4 border-primary/30"
+                    size="sm"
+                    className="border-2 border-primary/30"
                     showFallback={true}
                     interactive={true}
                     onClick={() => setGameState('selection')}
                   />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-foreground">
+                      {selectedBlobbi?.name || selectedBlobbi?.id}
+                    </p>
+                    <button
+                      onClick={() => setGameState('selection')}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Switch Blobbi
+                    </button>
+                  </div>
                 </div>
-                <p className="text-muted-foreground">
-                  Game world coming soon...
-                </p>
-
-                <button
-                  onClick={() => setGameState('selection')}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Switch Blobbi
-                </button>
               </div>
             </div>
           </div>
@@ -179,6 +185,14 @@ export function BlobbiIsland() {
           </a>
         </p>
       </footer>
+
+      {/* Location Modal */}
+      {selectedLocation && (
+        <LocationModal
+          locationId={selectedLocation}
+          onClose={handleCloseLocationModal}
+        />
+      )}
     </div>
   );
 }
