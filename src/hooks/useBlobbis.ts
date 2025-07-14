@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
+import type { PetState } from '@/lib/blobbi-types';
+import { parsePetState, validatePetStateEvent } from '@/lib/blobbi-parsers';
 
+// Legacy interface for backward compatibility
 export interface Blobbi {
   id: string;
   stage: 'egg' | 'baby' | 'adult';
@@ -30,6 +33,37 @@ export interface Blobbi {
   adultType?: string; // For adult stage Blobbis (bloomi, breezy, etc.)
 }
 
+/** Convert PetState to legacy Blobbi interface */
+function petStateToLegacyBlobbi(petState: PetState): Blobbi {
+  return {
+    id: petState.id,
+    stage: petState.stage,
+    generation: petState.generation,
+    hunger: petState.hunger,
+    happiness: petState.happiness,
+    health: petState.health,
+    hygiene: petState.hygiene,
+    energy: petState.energy,
+    experience: petState.experience,
+    careStreak: petState.careStreak,
+    baseColor: petState.baseColor,
+    secondaryColor: petState.secondaryColor,
+    pattern: petState.pattern,
+    eyeColor: petState.eyeColor,
+    specialMark: petState.specialMark,
+    personality: petState.personality ? [petState.personality] : undefined,
+    traits: petState.trait ? [petState.trait] : undefined,
+    mood: petState.mood,
+    favoriteFood: petState.favoriteFood,
+    voiceType: petState.voiceType,
+    size: petState.size,
+    title: petState.title,
+    skill: petState.skill,
+    name: petState.name,
+    adultType: petState.adultType,
+  };
+}
+
 export function useBlobbis() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -43,52 +77,22 @@ export function useBlobbis() {
 
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Query for kind 31124 events (Blobbi Current State)
+      // Query for kind 31124 events (Pet State)
       const events = await nostr.query([{
         kinds: [31124],
         authors: [user.pubkey],
         limit: 50
       }], { signal });
 
-      // Transform events to Blobbi objects
-      const blobbis: Blobbi[] = events
-        .filter(event => {
-          // Only include Blobbis that are not in egg stage (as per spec)
-          const stage = event.tags.find(([name]) => name === 'stage')?.[1];
-          return stage && stage !== 'egg';
-        })
-        .map(event => {
-          const getTag = (name: string) => event.tags.find(([tagName]) => tagName === name)?.[1];
-          const getTags = (name: string) => event.tags.filter(([tagName]) => tagName === name).map(([, value]) => value);
+      // Transform events to typed PetState objects, then convert to legacy format
+      const petStates = events
+        .filter(validatePetStateEvent)
+        .map(parsePetState)
+        .filter((pet): pet is PetState => pet !== null)
+        .filter(pet => pet.stage !== 'egg'); // Only include non-egg pets
 
-          return {
-            id: getTag('d') || event.id,
-            stage: (getTag('stage') as 'baby' | 'adult') || 'baby',
-            generation: parseInt(getTag('generation') || '1'),
-            hunger: parseInt(getTag('hunger') || '50'),
-            happiness: parseInt(getTag('happiness') || '50'),
-            health: parseInt(getTag('health') || '50'),
-            hygiene: parseInt(getTag('hygiene') || '50'),
-            energy: parseInt(getTag('energy') || '50'),
-            experience: parseInt(getTag('experience') || '0'),
-            careStreak: parseInt(getTag('care_streak') || '0'),
-            baseColor: getTag('base_color'),
-            secondaryColor: getTag('secondary_color'),
-            pattern: getTag('pattern'),
-            eyeColor: getTag('eye_color'),
-            specialMark: getTag('special_mark'),
-            personality: getTags('personality'),
-            traits: getTags('trait'),
-            mood: getTag('mood'),
-            favoriteFood: getTag('favorite_food'),
-            voiceType: getTag('voice_type'),
-            size: getTag('size'),
-            title: getTag('title'),
-            skill: getTag('skill'),
-            name: event.content || getTag('d') || event.id,
-            adultType: getTag('adult_type'),
-          };
-        });
+      // Convert to legacy Blobbi format for backward compatibility
+      const blobbis: Blobbi[] = petStates.map(petStateToLegacyBlobbi);
 
       return blobbis;
     },
