@@ -3,6 +3,7 @@
  *
  * Displays the main island with clickable location overlays.
  * Each location has hover effects and is positioned absolutely over the island image.
+ * Special handling for town area that shows expanded view with buildings.
  */
 
 import React, { useState } from 'react';
@@ -75,9 +76,17 @@ interface InteractiveIslandMapProps {
 
 export function InteractiveIslandMap({ onLocationClick, className }: InteractiveIslandMapProps) {
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
+  const [showTownExpanded, setShowTownExpanded] = useState(false);
 
   const handleLocationClick = (locationId: string) => {
     console.log(`Clicked location: ${locationId}`);
+
+    // Special handling for town area
+    if (locationId === 'town') {
+      setShowTownExpanded(true);
+      return;
+    }
+
     onLocationClick?.(locationId);
   };
 
@@ -85,11 +94,11 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
     <div className={cn("relative w-full h-full flex items-center justify-center p-4", className)}>
       {/* Main Island Image Container */}
       <div className="relative max-w-full max-h-full">
-        {/* Island Background */}
+        {/* Island Background - switches between normal and town-open */}
         <img
-          src="/assets/blobbi-island.png"
-          alt="Blobbi Island"
-          className="max-w-full max-h-full object-contain drop-shadow-2xl"
+          src={showTownExpanded ? "/assets/town-open.png" : "/assets/blobbi-island.png"}
+          alt={showTownExpanded ? "Town Open View" : "Blobbi Island"}
+          className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
           style={{
             maxWidth: 'min(90vw, 90vh)',
             maxHeight: 'min(90vw, 90vh)',
@@ -98,8 +107,8 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           }}
         />
 
-        {/* Location Overlays */}
-        {LOCATIONS.map((location) => (
+        {/* Location Overlays - only show when not in town expanded view */}
+        {!showTownExpanded && LOCATIONS.map((location) => (
           <button
             key={location.id}
             onClick={() => handleLocationClick(location.id)}
@@ -110,7 +119,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               "transition-all duration-300 ease-out",
               "cursor-pointer",
               "hover:z-20",
-              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg",
+              " rounded-lg",
               "active:scale-95",
               hoveredLocation === location.id && "scale-110 drop-shadow-2xl z-20"
             )}
@@ -152,13 +161,187 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
             </div>
           </button>
         ))}
+
+        {/* Town Buildings - only show when town is expanded */}
+        {showTownExpanded && (
+          <>
+            {/* Arcade - positioned on the left */}
+            <button
+              onClick={() => onLocationClick?.('arcade')}
+              onMouseEnter={() => setHoveredLocation('arcade')}
+              onMouseLeave={() => setHoveredLocation(null)}
+              className={cn(
+                "absolute transform -translate-x-1/2 -translate-y-1/2",
+                "transition-all duration-300 ease-out",
+                "cursor-pointer hover:z-20",
+                " rounded-lg",
+                "active:scale-95",
+                hoveredLocation === 'arcade' && "scale-105 drop-shadow-2xl z-20"
+              )}
+              style={{
+                left: '28%',
+                top: '45%',
+                width: 250,
+                height: 250,
+              }}
+              title="Arcade"
+              aria-label="Go to Arcade"
+            >
+              <img
+                src="/assets/builds/arcade.png"
+                alt="Arcade"
+                className={cn(
+                  "w-full h-full object-contain",
+                  "transition-all duration-300 ease-out",
+                  "drop-shadow-lg",
+                  hoveredLocation === 'arcade' && "brightness-110 contrast-110"
+                )}
+                draggable={false}
+              />
+              <div
+                className={cn(
+                  "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
+                  "bg-black/90 text-white text-xs font-medium px-3 py-1.5 rounded-full",
+                  "transition-all duration-300 ease-out",
+                  "whitespace-nowrap border border-white/20",
+                  "backdrop-blur-sm",
+                  hoveredLocation === 'arcade'
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-2"
+                )}
+              >
+                Arcade
+              </div>
+            </button>
+
+            {/* Stage - positioned in the middle */}
+            <button
+              onClick={() => onLocationClick?.('stage')}
+              onMouseEnter={() => setHoveredLocation('stage')}
+              onMouseLeave={() => setHoveredLocation(null)}
+              className={cn(
+                "absolute transform -translate-x-1/2 -translate-y-1/2",
+                "transition-all duration-300 ease-out",
+                "cursor-pointer hover:z-20",
+                " rounded-lg",
+                "active:scale-95",
+                hoveredLocation === 'stage' && "scale-105 drop-shadow-2xl z-20"
+              )}
+              style={{
+                left: '50%',
+                top: '40%',
+                width: 250,
+                height: 250,
+              }}
+              title="Stage"
+              aria-label="Go to Stage"
+            >
+              <img
+                src="/assets/builds/stage.png"
+                alt="Stage"
+                className={cn(
+                  "w-full h-full object-contain",
+                  "transition-all duration-300 ease-out",
+                  "drop-shadow-lg",
+                  hoveredLocation === 'stage' && "brightness-110 contrast-110"
+                )}
+                draggable={false}
+              />
+              <div
+                className={cn(
+                  "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
+                  "bg-black/90 text-white text-xs font-medium px-3 py-1.5 rounded-full",
+                  "transition-all duration-300 ease-out",
+                  "whitespace-nowrap border border-white/20",
+                  "backdrop-blur-sm",
+                  hoveredLocation === 'stage'
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-2"
+                )}
+              >
+                Stage
+              </div>
+            </button>
+
+            {/* Shop - positioned on the right */}
+            <button
+              onClick={() => onLocationClick?.('shop')}
+              onMouseEnter={() => setHoveredLocation('shop')}
+              onMouseLeave={() => setHoveredLocation(null)}
+              className={cn(
+                "absolute transform -translate-x-1/2 -translate-y-1/2",
+                "transition-all duration-300 ease-out",
+                "cursor-pointer hover:z-20",
+                " rounded-lg",
+                "active:scale-95",
+                hoveredLocation === 'shop' && "scale-105 drop-shadow-2xl z-20"
+              )}
+              style={{
+                left: '73%',
+                top: '45%',
+                width: 250,
+                height: 250,
+              }}
+              title="Shop"
+              aria-label="Go to Shop"
+            >
+              <img
+                src="/assets/builds/shop.png"
+                alt="Shop"
+                className={cn(
+                  "w-full h-full object-contain",
+                  "transition-all duration-300 ease-out",
+                  "drop-shadow-lg",
+                  hoveredLocation === 'shop' && "brightness-110 contrast-110"
+                )}
+                draggable={false}
+              />
+              <div
+                className={cn(
+                  "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
+                  "bg-black/90 text-white text-xs font-medium px-3 py-1.5 rounded-full",
+                  "transition-all duration-300 ease-out",
+                  "whitespace-nowrap border border-white/20",
+                  "backdrop-blur-sm",
+                  hoveredLocation === 'shop'
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-2"
+                )}
+              >
+                Shop
+              </div>
+            </button>
+
+            {/* Back Button */}
+            <button
+              onClick={() => setShowTownExpanded(false)}
+              className={cn(
+                "absolute top-4 right-4",
+                "bg-white/90 backdrop-blur-sm border border-border rounded-full",
+                "p-3 shadow-lg hover:shadow-xl",
+                "transition-all duration-300 ease-out",
+                "hover:scale-105 active:scale-95",
+                ""
+              )}
+              title="Back to Island View"
+              aria-label="Back to Island View"
+            >
+              <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Instructions */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
         <div className="bg-white/95 backdrop-blur-sm border border-border rounded-full px-6 py-3 shadow-xl">
           <p className="text-sm text-muted-foreground text-center font-medium">
-            🏝️ Click on a location to explore the island
+            {showTownExpanded
+              ? "🏘️ Explore the town buildings or click back to return"
+              : "🏝️ Click on a location to explore the island"
+            }
           </p>
         </div>
       </div>
