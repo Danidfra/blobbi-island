@@ -4,10 +4,12 @@
  * Displays the main island with clickable location overlays.
  * Each location has hover effects and is positioned absolutely over the island image.
  * Special handling for town area that shows expanded view with buildings.
+ * Includes movable Blobbi character in interactive scenes.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { MovableBlobbi } from './MovableBlobbi';
 
 // Location data with positioning coordinates (as percentages of the island image)
 interface Location {
@@ -30,42 +32,42 @@ const LOCATIONS: Location[] = [
     name: 'Home',
     image: '/assets/home.png',
     position: { x: 64, y: 38 }, // Left side, middle area
-    size: { width: 80, height: 80 }
+    size: { width: 70, height: 70 }
   },
   {
     id: 'beach',
     name: 'Beach',
     image: '/assets/beach.png',
     position: { x: 58, y: 85 }, // Bottom left
-    size: { width: 65, height: 65 }
+    size: { width: 60, height: 60 }
   },
   {
     id: 'mine',
     name: 'Mine',
     image: '/assets/mine.png',
     position: { x: 24, y: 78 }, // Top right
-    size: { width: 120, height: 120 }
+    size: { width: 110, height: 110 }
   },
   {
     id: 'nostr-station',
     name: 'Nostr Station',
     image: '/assets/nostr-station.png',
     position: { x: 80, y: 66 }, // Bottom right
-    size: { width: 100, height: 100 }
+    size: { width: 90, height: 90 }
   },
   {
     id: 'plaza',
     name: 'Plaza',
     image: '/assets/plaza.png',
     position: { x: 47, y: 46 }, // Center
-    size: { width: 120, height: 120 }
+    size: { width: 110, height: 110 }
   },
   {
     id: 'town',
     name: 'Town',
     image: '/assets/town.png',
     position: { x: 33, y: 25 }, // Top center-right
-    size: { width: 140, height: 140 }
+    size: { width: 130, height: 130 }
   }
 ];
 
@@ -77,6 +79,7 @@ interface InteractiveIslandMapProps {
 export function InteractiveIslandMap({ onLocationClick, className }: InteractiveIslandMapProps) {
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const [showTownExpanded, setShowTownExpanded] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const handleLocationClick = (locationId: string) => {
     console.log(`Clicked location: ${locationId}`);
@@ -93,10 +96,13 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
   return (
     <div className={cn("relative w-full h-full flex items-center justify-center p-4", className)}>
       {/* Main Island Image Container */}
-      <div className="relative max-w-full max-h-full">
+      <div
+        ref={mapContainerRef}
+        className="relative max-w-full max-h-full"
+      >
         {/* Island Background - switches between normal and town-open */}
         <img
-          src={showTownExpanded ? "/assets/town-open.png" : "/assets/blobbi-island.png"}
+          src={showTownExpanded ? "/assets/places/town-open.png" : "/assets/blobbi-island.png"}
           alt={showTownExpanded ? "Town Open View" : "Blobbi Island"}
           className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
           style={{
@@ -181,8 +187,8 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               style={{
                 left: '28%',
                 top: '45%',
-                width: 250,
-                height: 250,
+                width: 210,
+                height: 210,
               }}
               title="Arcade"
               aria-label="Go to Arcade"
@@ -229,9 +235,9 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               )}
               style={{
                 left: '50%',
-                top: '40%',
-                width: 250,
-                height: 250,
+                top: '42%',
+                width: 210,
+                height: 210,
               }}
               title="Stage"
               aria-label="Go to Stage"
@@ -278,9 +284,9 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               )}
               style={{
                 left: '73%',
-                top: '45%',
-                width: 250,
-                height: 250,
+                top: '46%',
+                width: 210,
+                height: 210,
               }}
               title="Shop"
               aria-label="Go to Shop"
@@ -321,7 +327,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
                 "p-3 shadow-lg hover:shadow-xl",
                 "transition-all duration-300 ease-out",
                 "hover:scale-105 active:scale-95",
-                ""
+                "z-30" // Ensure it's above the Blobbi
               )}
               title="Back to Island View"
               aria-label="Back to Island View"
@@ -332,6 +338,22 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
             </button>
           </>
         )}
+
+        {/* Movable Blobbi Character - only show in town expanded view */}
+        <MovableBlobbi
+          containerRef={mapContainerRef}
+          isVisible={showTownExpanded}
+          initialPosition={{ x: 50, y: 80 }} // Start at bottom center of town
+          movementSpeed={100} // Slow, calm movement
+          size="lg"
+          showTrail={false} // Disable trail for cleaner look
+          onMoveStart={(destination) => {
+            console.log('Blobbi started moving to:', destination);
+          }}
+          onMoveComplete={(position) => {
+            console.log('Blobbi reached position:', position);
+          }}
+        />
       </div>
 
       {/* Instructions */}
@@ -339,7 +361,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
         <div className="bg-white/95 backdrop-blur-sm border border-border rounded-full px-6 py-3 shadow-xl">
           <p className="text-sm text-muted-foreground text-center font-medium">
             {showTownExpanded
-              ? "🏘️ Explore the town buildings or click back to return"
+              ? "🏘️ Click anywhere to move your Blobbi around town • Explore buildings or click back to return"
               : "🏝️ Click on a location to explore the island"
             }
           </p>
