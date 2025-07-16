@@ -29,9 +29,11 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
     <PlaceBackground ref={containerRef}>
       {/* Movable Blobbi Character */}
       <MovableBlobbi
+        key={currentLocation}
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi}
+        initialPosition={{ x: 50, y: 80 }}
       />
 
       {/* Map Button - Top Right */}
