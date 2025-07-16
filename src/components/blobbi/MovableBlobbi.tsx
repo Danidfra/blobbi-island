@@ -9,11 +9,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
-
-interface Position {
-  x: number;
-  y: number;
-}
+import { Position } from '@/lib/types';
+import { Boundary, constrainPosition } from '@/lib/boundaries';
 
 interface MovementDirection {
   x: number;
@@ -29,6 +26,8 @@ interface MovableBlobbiProps {
   initialPosition?: Position;
   /** Movement speed in pixels per second */
   movementSpeed?: number;
+  /** The walkable area for the Blobbi */
+  boundary?: Boundary;
   /** Size of the Blobbi character */
   size?: "sm" | "md" | "lg" | "xl";
   /** Additional CSS classes */
@@ -46,6 +45,7 @@ export function MovableBlobbi({
   isVisible = true,
   initialPosition = { x: 50, y: 75 }, // Start at bottom center
   movementSpeed = 120, // pixels per second
+  boundary = { shape: 'rectangle', x: [0, 100], y: [60, 100] }, // Default boundary
   size = "lg",
   className,
   showTrail = false,
@@ -77,11 +77,13 @@ export function MovableBlobbi({
     if (!containerRef.current) return { x: 50, y: 75 };
 
     const rect = containerRef.current.getBoundingClientRect();
-    return {
-      x: Math.max(0, Math.min(100, (pixelPos.x / rect.width) * 100)),
-      y: Math.max(60, Math.min(100, (pixelPos.y / rect.height) * 100)) // Restrict to lower half
+    const percentPos = {
+      x: (pixelPos.x / rect.width) * 100,
+      y: (pixelPos.y / rect.height) * 100
     };
-  }, [containerRef]);
+
+    return constrainPosition(percentPos, boundary);
+  }, [containerRef, boundary]);
 
   // Calculate distance between two positions
   const getDistance = (pos1: Position, pos2: Position): number => {

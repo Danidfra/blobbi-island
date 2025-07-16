@@ -79,6 +79,7 @@ interface InteractiveIslandMapProps {
 export function InteractiveIslandMap({ onLocationClick, className }: InteractiveIslandMapProps) {
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const [showTownExpanded, setShowTownExpanded] = useState(false);
+  const [showHomeExpanded, setShowHomeExpanded] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const handleLocationClick = (locationId: string) => {
@@ -87,6 +88,11 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
     // Special handling for town area
     if (locationId === 'town') {
       setShowTownExpanded(true);
+      return;
+    }
+
+    if (locationId === 'home') {
+      setShowHomeExpanded(true);
       return;
     }
 
@@ -102,9 +108,10 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
       >
         {/* Island Background - switches between normal and town-open */}
         <img
-          src={showTownExpanded ? "/assets/places/town-open.png" : "/assets/blobbi-island.png"}
-          alt={showTownExpanded ? "Town Open View" : "Blobbi Island"}
+          src={showTownExpanded ? "/assets/places/town-open.png" : showHomeExpanded ? "/assets/places/home-open.png" : "/assets/blobbi-island.png"}
+          alt={showTownExpanded ? "Town Open View" : showHomeExpanded ? "Home Open View" : "Blobbi Island"}
           className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
+          draggable={false}
           style={{
             maxWidth: 'min(90vw, 90vh)',
             maxHeight: 'min(90vw, 90vh)',
@@ -113,8 +120,8 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           }}
         />
 
-        {/* Location Overlays - only show when not in town expanded view */}
-        {!showTownExpanded && LOCATIONS.map((location) => (
+        {/* Location Overlays - only show when not in an expanded view */}
+        {!showTownExpanded && !showHomeExpanded && LOCATIONS.map((location) => (
           <button
             key={location.id}
             onClick={() => handleLocationClick(location.id)}
@@ -318,16 +325,16 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               </div>
             </button>
 
-            {/* Back Button */}
+            {/* Back Button for Home */}
             <button
-              onClick={() => setShowTownExpanded(false)}
+              onClick={() => setShowHomeExpanded(false)}
               className={cn(
                 "absolute top-4 right-4",
                 "bg-white/90 backdrop-blur-sm border border-border rounded-full",
                 "p-3 shadow-lg hover:shadow-xl",
                 "transition-all duration-300 ease-out",
                 "hover:scale-105 active:scale-95",
-                "z-30" // Ensure it's above the Blobbi
+                "z-30"
               )}
               title="Back to Island View"
               aria-label="Back to Island View"
@@ -339,11 +346,22 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           </>
         )}
 
+        {/* Movable Blobbi for Home */}
+        <MovableBlobbi
+          containerRef={mapContainerRef}
+          isVisible={showHomeExpanded}
+          initialPosition={{ x: 50, y: 80 }}
+          boundary={{ shape: 'arch', top: 65, bottom: 100, curvature: 2 }}
+          movementSpeed={100}
+          size="lg"
+        />
+
         {/* Movable Blobbi Character - only show in town expanded view */}
         <MovableBlobbi
           containerRef={mapContainerRef}
           isVisible={showTownExpanded}
           initialPosition={{ x: 50, y: 80 }} // Start at bottom center of town
+          boundary={{ shape: 'rectangle', x: [5, 95], y: [70, 98] }}
           movementSpeed={100} // Slow, calm movement
           size="lg"
           showTrail={false} // Disable trail for cleaner look
