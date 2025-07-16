@@ -11,6 +11,8 @@ interface CurrentBlobbiDisplayProps {
   showFallback?: boolean;
   onClick?: () => void;
   interactive?: boolean;
+  /** If true, shows only the SVG without background circle */
+  transparent?: boolean;
 }
 
 const sizeClasses = {
@@ -25,7 +27,8 @@ export function CurrentBlobbiDisplay({
   size = "lg",
   showFallback = true,
   onClick,
-  interactive = false
+  interactive = false,
+  transparent = false
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: currentCompanionId } = useCurrentCompanion();
@@ -93,6 +96,34 @@ export function CurrentBlobbiDisplay({
 
   // Show current Blobbi SVG
   if (svgContent && currentBlobbi) {
+    // Transparent mode - show only the SVG without background
+    if (transparent) {
+      return (
+        <div
+          className={cn(
+            "flex items-center justify-center",
+            interactive && "cursor-pointer hover:scale-105 transition-all duration-200",
+            sizeClasses[size],
+            className
+          )}
+          title={`${currentBlobbi.name || currentBlobbi.id} - ${currentBlobbi.stage} stage${interactive ? ' (click to switch)' : ''}`}
+          onClick={onClick}
+        >
+          <div
+            className={cn(
+              "flex items-center justify-center",
+              size === "sm" && "h-6 w-6",
+              size === "md" && "h-10 w-10",
+              size === "lg" && "h-14 w-14",
+              size === "xl" && "h-20 w-20"
+            )}
+            dangerouslySetInnerHTML={{ __html: svgContent }}
+          />
+        </div>
+      );
+    }
+
+    // Default mode - show with background circle
     return (
       <div
         className={cn(
@@ -120,6 +151,33 @@ export function CurrentBlobbiDisplay({
 
   // Show fallback if enabled and no Blobbi is selected
   if (showFallback) {
+    // Transparent mode fallback - show only the emoji without background
+    if (transparent) {
+      return (
+        <div
+          className={cn(
+            "flex items-center justify-center",
+            interactive && "cursor-pointer hover:scale-105 transition-all duration-200",
+            sizeClasses[size],
+            className
+          )}
+          title={`No Blobbi selected${interactive ? ' (click to select)' : ''}`}
+          onClick={onClick}
+        >
+          <span className={cn(
+            "text-muted-foreground",
+            size === "sm" && "text-lg",
+            size === "md" && "text-2xl",
+            size === "lg" && "text-3xl",
+            size === "xl" && "text-4xl"
+          )}>
+            🥚
+          </span>
+        </div>
+      );
+    }
+
+    // Default mode fallback - show with background circle
     return (
       <div
         className={cn(
