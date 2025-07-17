@@ -40,7 +40,6 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
             )}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
-            draggable={false}
           />
 
           {/* Loading state for background image */}

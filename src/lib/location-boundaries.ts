@@ -32,6 +32,6 @@ export const locationBoundaries: Record<string, Boundary> = {
   'plaza-open.png': {
     shape: 'rectangle',
     x: [5, 95],
-    y: [70, 98],
+    y: [56, 98],
   },
 };

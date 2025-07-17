@@ -7,9 +7,9 @@ interface InteractiveElementProps {
   src: string;
   alt: string;
   className?: string;
-  animated?: boolean ;
+  animated?: boolean;
   onClick?: () => void;
-  hoverEffect?: 'scale' | 'opacity';
+  effect?: 'scale' | 'opacity' | 'door';
 }
 
 function InteractiveElement({
@@ -18,29 +18,30 @@ function InteractiveElement({
   className,
   animated = true,
   onClick,
-  hoverEffect = 'scale'
+  effect = 'scale'
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
 
-const handleInteraction = () => {
-  if (!onClick) return;
+  const handleInteraction = () => {
+    if (!onClick) return;
 
-  if (animated) {
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 300);
-  }
+    if (animated && effect !== 'door') {
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 300);
+    }
 
-  onClick();
-};
+    onClick();
+  };
 
   return (
     <div
       className={cn(
-        "cursor-pointer select-none transition-transform duration-200 ease-out",
+        "cursor-pointer select-none transition-all duration-300 ease-out",
         // Hover effects
-        hoverEffect === 'scale' && "hover:scale-110",
+        effect === 'scale' && "hover:scale-110",
+        effect === 'door' && "opacity-0 hover:opacity-100",
         // Click animation - custom tap effect
-        isAnimating && "animate-tap",
+        isAnimating && effect !== 'door' && "animate-tap",
         className
       )}
       onClick={handleInteraction}
@@ -52,9 +53,8 @@ const handleInteraction = () => {
         className={cn(
           "w-full h-full object-contain",
           // Opacity hover effect for cave
-          hoverEffect === 'opacity' && "opacity-0 hover:opacity-100 active:opacity-100"
+          effect === 'opacity' && "opacity-0 hover:opacity-100 active:opacity-100"
         )}
-        draggable={false}
       />
     </div>
   );
@@ -185,7 +185,7 @@ export function InteractiveElements() {
             alt="Cave"
             animated={false}
             onClick={() => handleElementClick('cave')}
-            hoverEffect="opacity"
+            effect="opacity"
             className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-[214px]"
           />
         </div>
@@ -210,6 +210,33 @@ export function InteractiveElements() {
       </>
     );
   }
+// Plaza elements (when background is plaza-open.png)
+if (backgroundFile === 'plaza-open.png') {
+  return (
+    <>
+      <div className="absolute inset-x-0 top-0 flex items-center justify-center z-20">
+        <div className="relative">
+          <img
+            src="/assets/interactive/plaza-build.png"
+            alt="Plaza building"
+            className="max-w-full max-h-full"
+          />
+          <InteractiveElement
+            src="/assets/interactive/plaza-door.png"
+            alt="Plaza Door"
+            animated={false}
+            onClick={() => handleElementClick('plaza-door')}
+            effect="door"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10%] z-30"
+          />
+        </div>
+      </div>
+      <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-20">
+      <img src="/assets/scenario/floor.png" alt="Floor" className="max-w-full max-h-full" />
+      </div>
+    </>
+  );
+}
 
   // No interactive elements for other backgrounds
   return null;
