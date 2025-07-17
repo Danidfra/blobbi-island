@@ -71,9 +71,9 @@ export function FloatingBlobbi({ className, size = 'lg', onBlobbiClick }: Floati
   };
 
   const sizeClasses = {
-    sm: 'w-12 h-12',
-    md: 'w-16 h-16',
-    lg: 'w-20 h-20'
+    sm: 'w-12 h-12 md:w-16 md:h-16',
+    md: 'w-16 h-16 md:w-20 md:h-20',
+    lg: 'w-20 h-20 md:w-24 md:h-24'
   };
 
   return (

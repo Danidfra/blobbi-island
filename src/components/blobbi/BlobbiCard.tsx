@@ -68,16 +68,16 @@ export function BlobbiCard({
     >
       <CardContent className="p-6 space-y-4">
         {/* SVG Display */}
-        <div className="relative h-32 w-full flex items-center justify-center">
+        <div className="relative h-32 md:h-40 w-full flex items-center justify-center">
           {isLoading ? (
-            <Skeleton className="h-28 w-28 rounded-full" />
+            <Skeleton className="h-28 w-28 md:h-36 md:w-36 rounded-full" />
           ) : error ? (
-            <div className="h-28 w-28 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
-              <span className="text-2xl">🐾</span>
+            <div className="h-28 w-28 md:h-36 md:w-36 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
+              <span className="text-2xl md:text-3xl">🐾</span>
             </div>
           ) : (
             <div
-              className="h-28 w-28"
+              className="h-28 w-28 md:h-36 md:w-36"
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />
           )}
