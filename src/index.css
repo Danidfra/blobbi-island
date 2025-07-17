@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+ */
+  user-select: none;
+}
+
+
 @layer base {
   :root {
     /* Blobbi Island Design System - Light Mode */

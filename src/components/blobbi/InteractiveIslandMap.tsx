@@ -111,7 +111,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           src={showTownExpanded ? "/assets/places/town-open.png" : showHomeExpanded ? "/assets/places/home-open.png" : "/assets/blobbi-island.png"}
           alt={showTownExpanded ? "Town Open View" : showHomeExpanded ? "Home Open View" : "Blobbi Island"}
           className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
-          draggable={false}
+
           style={{
             maxWidth: 'min(90vw, 90vh)',
             maxHeight: 'min(90vw, 90vh)',
@@ -154,7 +154,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
                 "drop-shadow-lg",
                 hoveredLocation === location.id && "brightness-110 contrast-110"
               )}
-              draggable={false}
+
             />
 
             {/* Location Label (appears on hover) */}
@@ -209,7 +209,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
                   "drop-shadow-lg",
                   hoveredLocation === 'arcade' && "brightness-110 contrast-110"
                 )}
-                draggable={false}
+
               />
               <div
                 className={cn(
@@ -258,7 +258,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
                   "drop-shadow-lg",
                   hoveredLocation === 'stage' && "brightness-110 contrast-110"
                 )}
-                draggable={false}
+
               />
               <div
                 className={cn(
@@ -307,7 +307,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
                   "drop-shadow-lg",
                   hoveredLocation === 'shop' && "brightness-110 contrast-110"
                 )}
-                draggable={false}
+                
               />
               <div
                 className={cn(

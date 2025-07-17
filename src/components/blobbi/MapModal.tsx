@@ -130,7 +130,6 @@ export function MapModal({ className }: MapModalProps) {
             src="/assets/blobbi-island.png"
             alt="Blobbi Village Map"
             className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
-            draggable={false}
             style={{
               maxWidth: 'min(94vw, 94vh)',
               maxHeight: 'min(94vw, 94vh)',
@@ -173,7 +172,6 @@ export function MapModal({ className }: MapModalProps) {
                   "drop-shadow-lg",
                   hoveredLocation === location.id && "brightness-110 contrast-110"
                 )}
-                draggable={false}
               />
 
               {/* Location Label (appears on hover) */}
