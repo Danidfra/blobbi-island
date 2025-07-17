@@ -116,4 +116,21 @@
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
+
+  /* Custom tap animation for interactive elements */
+  @keyframes tap {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .animate-tap {
+    animation: tap 0.3s ease-in-out;
+  }
 }
