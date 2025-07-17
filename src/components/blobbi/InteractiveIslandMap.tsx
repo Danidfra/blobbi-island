@@ -201,7 +201,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               aria-label="Go to Arcade"
             >
               <img
-                src="/assets/builds/arcade.png"
+                src="/assets/interactive/arcade.png"
                 alt="Arcade"
                 className={cn(
                   "w-full h-full object-contain",
@@ -250,7 +250,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               aria-label="Go to Stage"
             >
               <img
-                src="/assets/builds/stage.png"
+                src="/assets/interactive/stage.png"
                 alt="Stage"
                 className={cn(
                   "w-full h-full object-contain",
@@ -299,7 +299,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
               aria-label="Go to Shop"
             >
               <img
-                src="/assets/builds/shop.png"
+                src="/assets/interactive/shop.png"
                 alt="Shop"
                 className={cn(
                   "w-full h-full object-contain",

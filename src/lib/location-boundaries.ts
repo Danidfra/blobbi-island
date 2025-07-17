@@ -14,9 +14,10 @@ export const locationBoundaries: Record<string, Boundary> = {
     curvature: 4,
   },
   'beach-open.png': {
-    shape: 'rectangle',
-    x: [5, 95],
-    y: [65, 95],
+    shape: 'arch',
+    top: 68,
+    bottom: 70,
+    curvature: 6,
   },
   'mine-open.png': {
     shape: 'rectangle',

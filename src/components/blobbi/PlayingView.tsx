@@ -4,6 +4,7 @@ import { MapButton } from './MapButton';
 import { MovableBlobbi } from './MovableBlobbi';
 import { LocationIndicator } from './LocationIndicator';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+import { InteractiveElements } from './InteractiveElements';
 import { useLocation } from '@/hooks/useLocation';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
@@ -27,6 +28,9 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   return (
     <PlaceBackground ref={containerRef}>
+      {/* Interactive Elements - Background specific */}
+      <InteractiveElements />
+
       {/* Movable Blobbi Character */}
       <MovableBlobbi
         key={currentLocation}
