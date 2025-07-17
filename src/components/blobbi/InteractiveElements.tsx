@@ -7,6 +7,7 @@ interface InteractiveElementProps {
   src: string;
   alt: string;
   className?: string;
+  animated?: boolean ;
   onClick?: () => void;
   hoverEffect?: 'scale' | 'opacity';
 }
@@ -15,19 +16,22 @@ function InteractiveElement({
   src,
   alt,
   className,
+  animated = true,
   onClick,
   hoverEffect = 'scale'
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const handleInteraction = () => {
-    if (onClick) {
-      setIsAnimating(true);
-      onClick();
-      // Reset animation after it completes
-      setTimeout(() => setIsAnimating(false), 300);
-    }
-  };
+const handleInteraction = () => {
+  if (!onClick) return;
+
+  if (animated) {
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 300);
+  }
+
+  onClick();
+};
 
   return (
     <div
@@ -100,6 +104,72 @@ export function InteractiveElements() {
             className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:size-60"
           />
         </div>
+
+        {/* Bush 3 - Left side, slightly above bush-1 */}
+        <div className="absolute left-0 top-[68%] sm:top-[63%] z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/bush-3.png"
+            alt="Bush 3"
+            animated={false}
+            onClick={() => handleElementClick('bush-3')}
+            className="h-20 sm:h-24 md:h-28 lg:h-32"
+          />
+        </div>
+
+        {/* Bush 4 - Right side, slightly above bush-2 */}
+        <div className="absolute right-0 top-[74%] sm:top-[69%] z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/bush-4.png"
+            alt="Bush 4"
+            animated={false}
+            onClick={() => handleElementClick('bush-4')}
+            className="size-20 sm:size-24 md:size-28 lg:size-32"
+          />
+        </div>
+
+        {/* Bush 1 - Bottom left corner (highest z-index) */}
+        <div className="absolute left-0 bottom-0 z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/bush-1.png"
+            alt="Bush 1"
+            animated={false}
+            onClick={() => handleElementClick('bush-1')}
+            className="size-20 sm:size-24 md:size-28 lg:size-32"
+          />
+        </div>
+
+        {/* Bush 2 - Bottom right corner (highest z-index) */}
+        <div className="absolute right-0 bottom-0 z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/bush-2.png"
+            alt="Bush 2"
+            animated={false}
+            onClick={() => handleElementClick('bush-2')}
+            className="size-20 sm:size-24 md:size-28 lg:size-32"
+          />
+        </div>
+
+        {/* streetlight - left */}
+        <div className="absolute left-[6%] bottom-[10%] z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/streetlight.png"
+            alt="streetlight 1"
+            animated={false}
+            onClick={() => handleElementClick('bush-2')}
+            className="h-48 sm:h-52 md:h-56 lg:h-60"
+          />
+        </div>
+
+        {/* streetlight -right */}
+        <div className="absolute right-[12%] bottom-[10%] z-[25]">
+          <InteractiveElement
+            src="/assets/scenario/streetlight.png"
+            alt="streetlight 2"
+            animated={false}
+            onClick={() => handleElementClick('bush-2')}
+            className="h-48 sm:h-52 md:h-56 lg:h-60"
+          />
+        </div>
       </>
     );
   }
@@ -113,6 +183,7 @@ export function InteractiveElements() {
           <InteractiveElement
             src="/assets/interactive/cave.png"
             alt="Cave"
+            animated={false}
             onClick={() => handleElementClick('cave')}
             hoverEffect="opacity"
             className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-[214px]"
@@ -131,6 +202,7 @@ export function InteractiveElements() {
           <InteractiveElement
             src="/assets/interactive/boat.png"
             alt="Boat"
+            animated={false}
             onClick={() => handleElementClick('boat')}
             className="size-24 sm:size-28 md:size-32 lg:size-36"
           />

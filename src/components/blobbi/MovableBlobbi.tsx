@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { Position } from '@/lib/types';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
+import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 
 interface MovementDirection {
   x: number;
@@ -34,6 +35,8 @@ interface MovableBlobbiProps {
   className?: string;
   /** Show movement trail effect */
   showTrail?: boolean;
+  /** Current background file name for z-index calculations */
+  backgroundFile?: string;
   /** Callback when movement starts */
   onMoveStart?: (destination: Position) => void;
   /** Callback when movement completes */
@@ -49,6 +52,7 @@ export function MovableBlobbi({
   size = "lg",
   className,
   showTrail = false,
+  backgroundFile,
   onMoveStart,
   onMoveComplete
 }: MovableBlobbiProps) {
@@ -91,6 +95,15 @@ export function MovableBlobbi({
     const dy = pos2.y - pos1.y;
     return Math.sqrt(dx * dx + dy * dy);
   };
+
+  // Calculate dynamic z-index based on position and background
+  const getDynamicZIndex = useCallback((currentPos: Position): number => {
+    if (!backgroundFile) {
+      return 20; // Default z-index when no background is specified
+    }
+
+    return calculateBlobbiZIndex(currentPos.y, backgroundFile);
+  }, [backgroundFile]);
 
   // Smooth movement animation
   const animateMovement = useCallback((timestamp: number) => {
@@ -232,11 +245,13 @@ export function MovableBlobbi({
           }}
         >
           <div
-            className="rounded-full bg-primary/20"
-            style={{
-              width: size === "xl" ? "16px" : size === "lg" ? "12px" : size === "md" ? "8px" : "6px",
-              height: size === "xl" ? "16px" : size === "lg" ? "12px" : size === "md" ? "8px" : "6px",
-            }}
+            className={cn(
+              "rounded-full bg-primary/20",
+              size === "xl" && "w-4 h-4 md:w-5 md:h-5",
+              size === "lg" && "w-3 h-3 md:w-4 md:h-4",
+              size === "md" && "w-2 h-2 md:w-3 md:h-3",
+              size === "sm" && "w-1.5 h-1.5 md:w-2 md:h-2"
+            )}
           />
         </div>
       ))}
@@ -245,7 +260,7 @@ export function MovableBlobbi({
       <div
         ref={blobbiRef}
         className={cn(
-          "absolute z-20 transition-all duration-200 ease-out",
+          "absolute transition-all duration-200 ease-out",
           "pointer-events-none", // Allow clicks to pass through to container
           isMoving && "transition-none", // Disable CSS transitions during animation
           className
@@ -255,6 +270,7 @@ export function MovableBlobbi({
           top: `${position.y}%`,
           transform: `translate(-50%, -50%) ${shouldFlip ? 'scaleX(-1)' : ''}`,
           filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))', // Soft shadow for hovering effect
+          zIndex: getDynamicZIndex(position),
         }}
       >
       {/* Floating animation effect */}
@@ -277,12 +293,15 @@ export function MovableBlobbi({
 
         {/* Subtle ground shadow */}
         <div
-          className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-2"
+          className={cn(
+            "absolute top-full left-1/2 transform -translate-x-1/2 -mt-2 h-1.5 rounded-full",
+            size === "xl" && "w-8 md:w-10",
+            size === "lg" && "w-6 md:w-8",
+            size === "md" && "w-4 md:w-6",
+            size === "sm" && "w-3 md:w-4"
+          )}
           style={{
-            width: size === "xl" ? "32px" : size === "lg" ? "24px" : size === "md" ? "16px" : "12px",
-            height: "6px",
             background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-            borderRadius: "50%",
           }}
         />
       </div>

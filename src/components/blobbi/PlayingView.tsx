@@ -38,6 +38,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         boundary={boundary}
         isVisible={!!selectedBlobbi}
         initialPosition={{ x: 50, y: 80 }}
+        backgroundFile={background}
       />
 
       {/* Map Button - Top Right */}
