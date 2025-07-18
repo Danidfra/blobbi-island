@@ -66,17 +66,19 @@ export function darkenColor(hex: string, percent: number): string {
 }
 
 /**
- * Gets the SVG file path for a Blobbi based on its stage and adult type
+ * Gets the SVG file path for a Blobbi based on its stage, adult type, and sleeping state
  */
-export function getBlobbiSvgPath(stage: string, adultType?: string): string {
+export function getBlobbiSvgPath(stage: string, adultType?: string, isSleeping?: boolean): string {
+  const sleepingSuffix = isSleeping ? '-sleeping' : '-base';
+
   if (stage === 'baby') {
-    return '/assets/baby-stage/baby/blobbi-baby-base.svg';
+    return `/assets/baby-stage/baby/blobbi-baby${sleepingSuffix}.svg`;
   } else if (stage === 'adult' && adultType) {
-    return `/assets/adult-stage/${adultType}/${adultType}-base.svg`;
+    return `/assets/adult-stage/${adultType}/${adultType}${sleepingSuffix}.svg`;
   }
 
   // Fallback to baby stage if invalid parameters
-  return '/assets/baby-stage/baby/blobbi-baby-base.svg';
+  return `/assets/baby-stage/baby/blobbi-baby${sleepingSuffix}.svg`;
 }
 
 /**
@@ -87,9 +89,10 @@ export async function loadCustomizedBlobbiSvg(
   adultType?: string,
   baseColor?: string,
   secondaryColor?: string,
-  eyeColor?: string
+  eyeColor?: string,
+  isSleeping?: boolean
 ): Promise<string> {
-  const svgPath = getBlobbiSvgPath(stage, adultType);
+  const svgPath = getBlobbiSvgPath(stage, adultType, isSleeping);
 
   try {
     const response = await fetch(svgPath);

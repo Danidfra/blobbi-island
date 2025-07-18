@@ -9,27 +9,39 @@ import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 interface FurnitureProps {
   containerRef: React.RefObject<HTMLElement>;
   initialPosition?: Position;
+  position?: Position;
+  onPositionChange?: (position: Position) => void;
   boundary: Boundary;
   imageUrl: string;
   hoverEffectImageUrl?: string;
   size: { width: number; height: number };
   backgroundFile?: string;
   className?: string;
+  draggable?: boolean;
+  onClick?: () => void;
 }
 
 export function Furniture({
   containerRef,
   initialPosition = { x: 50, y: 75 },
+  position: controlledPosition,
+  onPositionChange,
   boundary,
   imageUrl,
   hoverEffectImageUrl,
   size,
   backgroundFile,
   className,
+  draggable = true,
+  onClick,
 }: FurnitureProps) {
-  const [position, setPosition] = useState<Position>(initialPosition);
+  const [internalPosition, setInternalPosition] = useState(initialPosition);
   const [isHovered, setIsHovered] = useState(false);
   const furnitureRef = useRef<HTMLDivElement>(null);
+
+  const isControlled = controlledPosition !== undefined && onPositionChange !== undefined;
+  const position = isControlled ? controlledPosition : internalPosition;
+  const setPosition = isControlled ? onPositionChange : setInternalPosition;
 
   const getPixelPosition = useCallback((percentPos: Position): Position => {
     if (!containerRef.current) return { x: 0, y: 0 };
@@ -50,21 +62,47 @@ export function Furniture({
     return constrainPosition(percentPos, boundary);
   }, [containerRef, boundary]);
 
-  const bind = useDrag(({ down: _down, movement: [mx, my], memo }) => {
-    const initialPixelPos = memo || getPixelPosition(position);
-    const newPixelPos = {
-      x: initialPixelPos.x + mx,
-      y: initialPixelPos.y + my,
-    };
-    const newPercentPos = getPercentPosition(newPixelPos);
-    setPosition(newPercentPos);
-    return initialPixelPos;
-  });
+  const bind = useDrag(
+    ({ down: _down, movement: [mx, my], memo, tap, dragging: _dragging, event }) => {
+      if (tap && onClick) {
+        // Prevent event from bubbling to container
+        event?.stopPropagation();
+        onClick();
+        return;
+      }
+
+      if (!draggable || !setPosition) return;
+
+      const initialPixelPos = memo || getPixelPosition(position);
+      const newPixelPos = {
+        x: initialPixelPos.x + mx,
+        y: initialPixelPos.y + my,
+      };
+      const newPercentPos = getPercentPosition(newPixelPos);
+      setPosition(newPercentPos);
+      return initialPixelPos;
+    },
+    { filterTaps: true, rubberband: true }
+  );
 
   const getDynamicZIndex = useCallback((currentPos: Position): number => {
     if (!backgroundFile) return 20;
     return calculateBlobbiZIndex(currentPos.y, backgroundFile);
   }, [backgroundFile]);
+
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    event.stopPropagation();
+    if (onClick) {
+      onClick();
+    }
+  };
 
   return (
     <div
@@ -86,6 +124,8 @@ export function Furniture({
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleClick}
+      onTouchEnd={handleTouchEnd}
     >
       <img
         src={imageUrl}
