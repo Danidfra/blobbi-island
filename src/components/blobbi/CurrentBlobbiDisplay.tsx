@@ -11,8 +11,8 @@ interface CurrentBlobbiDisplayProps {
   showFallback?: boolean;
   onClick?: () => void;
   interactive?: boolean;
-  /** If true, shows only the SVG without background circle */
   transparent?: boolean;
+  isSleeping?: boolean;
 }
 
 const sizeClasses = {
@@ -28,7 +28,8 @@ export function CurrentBlobbiDisplay({
   showFallback = true,
   onClick,
   interactive = false,
-  transparent = false
+  transparent = false,
+  isSleeping = false
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: currentCompanionId } = useCurrentCompanion();
@@ -66,7 +67,8 @@ export function CurrentBlobbiDisplay({
           adultType,
           currentBlobbi.baseColor,
           currentBlobbi.secondaryColor,
-          currentBlobbi.eyeColor
+          currentBlobbi.eyeColor,
+          isSleeping
         );
 
         setSvgContent(customizedSvg);
@@ -79,7 +81,7 @@ export function CurrentBlobbiDisplay({
     };
 
     loadSvg();
-  }, [currentBlobbi]);
+  }, [currentBlobbi, isSleeping]);
 
   // Show loading skeleton
   if (isLoading) {

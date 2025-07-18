@@ -94,6 +94,20 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
     yPosition: 34, // Same boat for beach.png
     zIndex: 15,
     backgroundFile: 'beach.png'
+  },
+
+  // Home elements (home-open.png)
+  {
+    id: 'bed',
+    yPosition: 70, // Bed position in home
+    zIndex: 15,
+    backgroundFile: 'home-open.png'
+  },
+  {
+    id: 'refrigerator',
+    yPosition: 70, // Refrigerator position in home
+    zIndex: 15,
+    backgroundFile: 'home-open.png'
   }
 ];
 
