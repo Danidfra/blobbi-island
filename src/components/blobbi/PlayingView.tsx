@@ -9,6 +9,7 @@ import { useLocation } from '@/hooks/useLocation';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import type { Blobbi } from '@/hooks/useBlobbis';
+import { Furniture } from './Furniture';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -30,6 +31,19 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
     <PlaceBackground ref={containerRef}>
       {/* Interactive Elements - Background specific */}
       <InteractiveElements />
+
+      {/* Furniture */}
+      {background === 'home-open.png' && (
+        <Furniture
+          containerRef={containerRef}
+          initialPosition={{ x: 20, y: 70 }}
+          boundary={boundary}
+          imageUrl="/assets/interactive/furniture/refrigerator.png"
+          hoverEffectImageUrl="/assets/interactive/furniture/refrigerator-door.png"
+          size={{ width: 120, height: 120 }}
+          backgroundFile={background}
+        />
+      )}
 
       {/* Movable Blobbi Character */}
       <MovableBlobbi
