@@ -18,14 +18,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
             alt="Refrigerator open"
             className="w-full h-auto"
           />
-          <DialogClose asChild>
-            <button
-              className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-1.5 hover:bg-black/75 transition-colors"
-              aria-label="Close"
-            >
-              <X className="size-5" />
-            </button>
-          </DialogClose>
+          <DialogClose asChild /> 
         </div>
       </DialogContent>
     </Dialog>
