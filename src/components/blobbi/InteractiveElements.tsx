@@ -36,10 +36,10 @@ function InteractiveElement({
   return (
     <div
       className={cn(
-        "cursor-pointer select-none transition-all duration-300 ease-out",
+        effect !== 'door' && "cursor-pointer select-none transition-all duration-300 ease-out",
         // Hover effects
         effect === 'scale' && "hover:scale-110",
-        effect === 'door' && "opacity-0 hover:opacity-100",
+        effect === 'door' && "cursor-pointer select-none opacity-0 hover:opacity-100",
         // Click animation - custom tap effect
         isAnimating && effect !== 'door' && "animate-tap",
         className
@@ -76,33 +76,55 @@ export function InteractiveElements() {
     return (
       <>
         {/* Arcade - Left side */}
-        <div className="absolute left-[10%] sm:left-[18%] top-[35%] sm:top-[30%] z-15">
-          <InteractiveElement
+        <div className="absolute left-[10%] sm:left-[18%] top-[30%] sm:top-[25%] z-15">
+           <img
             src="/assets/interactive/arcade.png"
             alt="Arcade"
+            className="h-56 sm:h-60 md:h-64 lg:h-72"
+          />
+          <InteractiveElement
+            src="/assets/interactive/arcade-door.png"
+            alt="Arcade Door"
+            animated={false}
             onClick={() => handleElementClick('arcade')}
-            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:size-60"
+            effect="door"
+            className="absolute bottom-0 -right-0  w-[40%] z-30"
           />
         </div>
 
         {/* Stage - Center */}
-        <div className="absolute left-1/2 top-[30%] sm:top-[26%] transform -translate-x-1/2 z-15">
-          <InteractiveElement
+        <div className="absolute left-1/2 top-[26%] sm:top-[21%] transform -translate-x-1/2 z-15">
+          <img
             src="/assets/interactive/stage.png"
             alt="Stage"
+            className="size-56 sm:size-60 md:size-64 lg:size-72"
+          />
+          <InteractiveElement
+            src="/assets/interactive/stage-door.png"
+            alt="Stage Door"
+            animated={false}
             onClick={() => handleElementClick('stage')}
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-60"
+            effect="door"
+            className="absolute bottom-0 -right-2  w-[50%] z-30"
           />
         </div>
 
         {/* Shop - Right side */}
-        <div className="absolute right-[10%] sm:right-[18%] top-[35%] sm:top-[30%] z-15">
-          <InteractiveElement
+        <div className="absolute right-[10%] sm:right-[18%] top-[30%] sm:top-[25%] z-15">
+          <img
             src="/assets/interactive/shop.png"
             alt="Shop"
-            onClick={() => handleElementClick('shop')}
-            className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:size-60"
+            className="h-56 sm:h-60 md:h-64 lg:h-72"
           />
+          <InteractiveElement
+            src="/assets/interactive/shop-door.png"
+            alt="Shop Door"
+            animated={false}
+            onClick={() => handleElementClick('shop')}
+            effect="door"
+            className="absolute bottom-0 left-0  w-[60%] z-30"
+          />
+
         </div>
 
         {/* Bush 3 - Left side, slightly above bush-1 */}
@@ -227,7 +249,7 @@ if (backgroundFile === 'plaza-open.png') {
             animated={false}
             onClick={() => handleElementClick('plaza-door')}
             effect="door"
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10%] z-30"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10.5%] z-30"
           />
         </div>
       </div>
