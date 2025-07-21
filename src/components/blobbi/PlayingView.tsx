@@ -12,6 +12,7 @@ import type { Blobbi } from '@/hooks/useBlobbis';
 import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
+import { ChestModal } from './ChestModal';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -24,6 +25,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
   const { currentLocation } = useLocation();
   const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
+  const [isChestOpen, setIsChestOpen] = useState(false);
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -104,7 +106,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             hoverEffectImageUrl="/assets/interactive/furniture/chest-lid-open.png"
             size={{ width: 130, height: 130 }}
             backgroundFile={background}
-            onClick={handleBedClick}
+            onClick={() => setIsChestOpen(true)}
           />
           <Furniture
             containerRef={containerRef}
@@ -119,6 +121,10 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
           <RefrigeratorModal
             isOpen={isRefrigeratorOpen}
             onClose={() => setIsRefrigeratorOpen(false)}
+          />
+          <ChestModal
+            isOpen={isChestOpen}
+            onClose={() => setIsChestOpen(false)}
           />
         </>
       )}
