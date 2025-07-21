@@ -61,7 +61,7 @@ function InteractiveElement({
 }
 
 export function InteractiveElements() {
-  const { currentLocation } = useLocation();
+  const { currentLocation, setIsMapModalOpen } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
 
   const handleElementClick = (elementName: string) => {
@@ -79,7 +79,7 @@ export function InteractiveElements() {
             src="/assets/interactive/home-door-front.png"
             alt="Arcade Door"
             animated={false}
-            onClick={() => handleElementClick('home-front')}
+            onClick={() => setIsMapModalOpen(true)}
             effect="door"
             className="absolute bottom-[22.5%] left-[16.3%]  w-[18.8%] z-15"
       />
