@@ -92,9 +92,19 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             boundary={boundary}
             imageUrl="/assets/interactive/furniture/refrigerator.png"
             hoverEffectImageUrl="/assets/interactive/furniture/refrigerator-door.png"
-            size={{ width: 140, height: 140 }}
+            size={{ width: 111, height: 173 }}
             backgroundFile={background}
             onClick={() => setIsRefrigeratorOpen(true)}
+          />
+          <Furniture
+            containerRef={containerRef}
+            position={{ x: 40, y: 70 }}
+            boundary={boundary}
+            imageUrl="/assets/interactive/furniture/chest.png"
+            hoverEffectImageUrl="/assets/interactive/furniture/chest-lid-open.png"
+            size={{ width: 130, height: 130 }}
+            backgroundFile={background}
+            onClick={handleBedClick}
           />
           <Furniture
             containerRef={containerRef}

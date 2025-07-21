@@ -72,6 +72,29 @@ export function InteractiveElements() {
   };
 
   // Town elements (when background is town-open.png)
+  if (backgroundFile === 'home-open.png') {
+    return (
+      <>
+      <InteractiveElement
+            src="/assets/interactive/home-door-front.png"
+            alt="Arcade Door"
+            animated={false}
+            onClick={() => handleElementClick('home-front')}
+            effect="door"
+            className="absolute bottom-[22.5%] left-[16.3%]  w-[18.8%] z-15"
+      />
+      <InteractiveElement
+            src="/assets/interactive/home-door-back.png"
+            alt="Arcade Door"
+            animated={false}
+            onClick={() => handleElementClick('home-back')}
+            effect="door"
+            className="absolute bottom-[22.8%] right-[16.5%]  w-[18%] z-15"
+      />
+      </>)
+  }
+
+  // Town elements (when background is town-open.png)
   if (backgroundFile === 'town-open.png') {
     return (
       <>
@@ -88,7 +111,7 @@ export function InteractiveElements() {
             animated={false}
             onClick={() => handleElementClick('arcade')}
             effect="door"
-            className="absolute bottom-0 -right-0  w-[40%] z-30"
+            className="absolute bottom-0 right-0  w-[40%] z-30"
           />
         </div>
 
