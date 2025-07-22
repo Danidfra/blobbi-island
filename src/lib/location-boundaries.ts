@@ -34,4 +34,14 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [5, 95],
     y: [56, 98],
   },
+  'back-yard-open.png': {
+    shape: 'rectangle',
+    x: [10, 90],
+    y: [75, 98],
+  },
+  'stage-open.png': {
+    shape: 'rectangle',
+    x: [10, 90],
+    y: [75, 98],
+  },
 };

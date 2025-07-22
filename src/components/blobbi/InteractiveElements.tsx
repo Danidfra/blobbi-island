@@ -61,7 +61,7 @@ function InteractiveElement({
 }
 
 export function InteractiveElements() {
-  const { currentLocation, setIsMapModalOpen } = useLocation();
+  const { currentLocation, setCurrentLocation, setIsMapModalOpen } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
 
   const handleElementClick = (elementName: string) => {
@@ -85,13 +85,39 @@ export function InteractiveElements() {
       />
       <InteractiveElement
             src="/assets/interactive/home-door-back.png"
-            alt="Arcade Door"
+            alt="back-yard-door"
             animated={false}
-            onClick={() => handleElementClick('home-back')}
+            onClick={() => setCurrentLocation('back-yard')}
             effect="door"
             className="absolute bottom-[22.8%] right-[16.5%]  w-[18%] z-15"
       />
       </>)
+  }
+
+  if (backgroundFile === 'back-yard-open.png') {
+    return (
+      <InteractiveElement
+        src="/assets/interactive/back-yard-door.png"
+        alt="Go back to home"
+        animated={false}
+        onClick={() => setCurrentLocation('home')}
+        effect="door"
+        className="absolute bottom-[22.8%] right-[16.5%] w-[18%] z-15"
+      />
+    );
+  }
+
+  if (backgroundFile === 'stage-open.png') {
+    return (
+      <InteractiveElement
+        src="/assets/interactive/stage-exit-door.png"
+        alt="Go back to town"
+        animated={false}
+        onClick={() => setCurrentLocation('town')}
+        effect="door"
+        className="absolute bottom-[10%] left-[5%] w-[15%] z-15"
+      />
+    );
   }
 
   // Town elements (when background is town-open.png)
@@ -126,7 +152,7 @@ export function InteractiveElements() {
             src="/assets/interactive/stage-door.png"
             alt="Stage Door"
             animated={false}
-            onClick={() => handleElementClick('stage')}
+            onClick={() => setCurrentLocation('stage')}
             effect="door"
             className="absolute bottom-0 -right-2  w-[50%] z-30"
           />
