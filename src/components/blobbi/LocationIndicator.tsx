@@ -18,6 +18,7 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   'arcade': 'Game Arcade',
   'stage': 'Performance Stage',
   'shop': 'Village Shop',
+  'back-yard': 'Back Yard',
 };
 
 export function LocationIndicator({ className }: LocationIndicatorProps) {
