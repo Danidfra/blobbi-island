@@ -109,14 +109,102 @@ export function InteractiveElements() {
 
   if (backgroundFile === 'stage-open.png') {
     return (
-      <InteractiveElement
-        src="/assets/interactive/stage-exit-door.png"
-        alt="Go back to town"
-        animated={false}
-        onClick={() => setCurrentLocation('town')}
-        effect="door"
-        className="absolute bottom-[10%] left-[5%] w-[15%] z-15"
-      />
+      <>
+        {/* <InteractiveElement
+          src="/assets/interactive/stage-exit-door.png"
+          alt="Go back to town"
+          animated={false}
+          onClick={() => setCurrentLocation('town')}
+          effect="door"
+          className="absolute bottom-[10%] left-[5%] w-[15%] z-15"
+        /> */}
+
+      {/* Left side */}
+        {/* Row 1 (Front) - Highest z-index */}
+        <div className="absolute bottom-0 left-0 flex items-center -space-x-4 z-30">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row1-${i}`}
+              src="/assets/interactive/furniture/stage-chair-left.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row1-${i}`)}
+            />
+          ))}
+        </div>
+
+        {/* Row 2 (Middle) - Medium z-index */}
+        <div className="absolute bottom-[5%] left-[4%] flex items-center -space-x-4 z-20">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row2-${i}`}
+              src="/assets/interactive/furniture/stage-chair-left.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row2-${i}`)}
+            />
+          ))}
+        </div>
+
+        {/* Row 3 (Back) - Lowest z-index */}
+        <div className="absolute bottom-[10%] left-[8%] flex items-center -space-x-4 z-10">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row3-${i}`}
+              src="/assets/interactive/furniture/stage-chair-left.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row3-${i}`)}
+            />
+          ))}
+        </div>
+
+      {/* Right side */}
+        {/* Row 1 (Front) - Highest z-index */}
+        <div className="absolute bottom-0 right-0 flex items-center -space-x-4 z-30">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row1-${i}`}
+              src="/assets/interactive/furniture/stage-chair.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row1-${i}`)}
+            />
+          ))}
+        </div>
+
+        {/* Row 2 (Middle) - Medium z-index */}
+        <div className="absolute bottom-[5%] right-[4%] flex items-center -space-x-4 z-20">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row2-${i}`}
+              src="/assets/interactive/furniture/stage-chair.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row2-${i}`)}
+            />
+          ))}
+        </div>
+
+        {/* Row 3 (Back) - Lowest z-index */}
+        <div className="absolute bottom-[10%] right-[8%] flex items-center -space-x-4 z-10">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <InteractiveElement
+              key={`chair-row3-${i}`}
+              src="/assets/interactive/furniture/stage-chair.png"
+              alt="Stage Chair"
+              effect="scale"
+              className="w-28"
+              onClick={() => handleElementClick(`chair-row3-${i}`)}
+            />
+          ))}
+        </div>
+      </>
     );
   }
 
