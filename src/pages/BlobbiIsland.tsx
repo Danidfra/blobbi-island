@@ -13,6 +13,7 @@ import { MobileLandscapePrompt } from "@/components/blobbi/MobileLandscapePrompt
 import { PlayingView } from "@/components/blobbi/PlayingView";
 import { MapModal } from "@/components/blobbi/MapModal";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { SceneTransition } from "@/components/blobbi/SceneTransition";
 
 type GameState = 'login' | 'loading' | 'selection' | 'playing';
 
@@ -138,6 +139,7 @@ export function BlobbiIsland() {
         <main className="container mx-auto py-6">
           <BlobbiGameContainer>
             {renderGameContent()}
+            <SceneTransition />
           </BlobbiGameContainer>
         </main>
 

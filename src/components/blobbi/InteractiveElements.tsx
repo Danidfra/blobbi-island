@@ -106,7 +106,7 @@ interface InteractiveElementsProps {
 }
 
 export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
-  const { currentLocation, setCurrentLocation, setIsMapModalOpen } = useLocation();
+  const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isCurtainHovered, setIsCurtainHovered] = useState(false);
@@ -480,7 +480,7 @@ if (backgroundFile === 'nostr-station-open.png') {
             src="/assets/interactive/sign.png"
             alt="Cave"
             animated={false}
-            onClick={() => setCurrentLocation('cave-open')}
+            onClick={() => setCurrentLocation('mine')}
             effect="scale"
             className="w-[80%]"
           />
