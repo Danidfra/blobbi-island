@@ -306,12 +306,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         {/* Arcade - Left side */}
         <div className="absolute left-[10%] sm:left-[18%] top-[30%] sm:top-[25%] z-15">
            <img
-            src="/assets/interactive/arcade.png"
+            src="/assets/interactive/builds/arcade.png"
             alt="Arcade"
             className="h-56 sm:h-60 md:h-64 lg:h-72"
           />
           <InteractiveElement
-            src="/assets/interactive/arcade-door.png"
+            src="/assets/interactive/builds/arcade-door.png"
             alt="Arcade Door"
             animated={false}
             onClick={() => handleElementClick('arcade')}
@@ -323,12 +323,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         {/* Stage - Center */}
         <div className="absolute left-1/2 top-[26%] sm:top-[21%] transform -translate-x-1/2 z-15">
           <img
-            src="/assets/interactive/stage.png"
+            src="/assets/interactive/builds/stage.png"
             alt="Stage"
             className="size-56 sm:size-60 md:size-64 lg:size-72"
           />
           <InteractiveElement
-            src="/assets/interactive/stage-door.png"
+            src="/assets/interactive/builds/stage-door.png"
             alt="Stage Door"
             animated={false}
             onClick={() => setCurrentLocation('stage')}
@@ -340,12 +340,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         {/* Shop - Right side */}
         <div className="absolute right-[10%] sm:right-[18%] top-[30%] sm:top-[25%] z-15">
           <img
-            src="/assets/interactive/shop.png"
+            src="/assets/interactive/builds/shop.png"
             alt="Shop"
             className="h-56 sm:h-60 md:h-64 lg:h-72"
           />
           <InteractiveElement
-            src="/assets/interactive/shop-door.png"
+            src="/assets/interactive/builds/shop-door.png"
             alt="Shop Door"
             animated={false}
             onClick={() => handleElementClick('shop')}
@@ -433,13 +433,13 @@ if (backgroundFile === 'nostr-station-open.png') {
         <div className="absolute top-[6%] right-[5%] w-[20%] h-auto">
           {/* Build container - relative */}
           <img
-            src="/assets/interactive/nostr-station-build.png"
+            src="/assets/interactive/builds/nostr-station-build.png"
             alt="Nostr Station"
             className="w-full h-auto"
           />
           {/* Door inside the build */}
           <InteractiveElement
-            src="/assets/interactive/nostr-station-door.png"
+            src="/assets/interactive/builds/nostr-station-door.png"
             alt="Nostr Station Door"
             animated={false}
             onClick={() => handleElementClick('arcade')}
@@ -492,24 +492,24 @@ if (backgroundFile === 'nostr-station-open.png') {
 if (backgroundFile === 'plaza-open.png') {
   return (
     <>
-      <div className="absolute inset-x-0 top-0 flex items-center justify-center z-20">
+      <div className="absolute inset-x-0 top-0 flex items-center justify-center z-10">
         <div className="relative">
           <img
-            src="/assets/interactive/plaza-build.png"
+            src="/assets/interactive/builds/plaza-build.png"
             alt="Plaza building"
             className="max-w-full max-h-full"
           />
           <InteractiveElement
-            src="/assets/interactive/plaza-door.png"
+            src="/assets/interactive/builds/plaza-door.png"
             alt="Plaza Door"
             animated={false}
             onClick={() => handleElementClick('plaza-door')}
             effect="door"
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10.5%] z-30"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10.5%] z-11"
           />
         </div>
       </div>
-      <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-20">
+      <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-10">
       <img src="/assets/scenario/floor.png" alt="Floor" className="max-w-full max-h-full" />
       </div>
     </>

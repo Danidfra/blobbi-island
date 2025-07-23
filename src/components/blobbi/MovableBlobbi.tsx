@@ -21,6 +21,8 @@ export interface MovableBlobbiRef {
   goTo: (position: Position, immediate?: boolean) => void;
 }
 
+import { locationScalingConfig } from '@/lib/location-scaling-config';
+
 interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
   isVisible?: boolean;
@@ -37,8 +39,6 @@ interface MovableBlobbiProps {
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
   scaleByYPosition?: boolean;
-  initialScale?: number;
-  finalScale?: number;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -59,8 +59,6 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       isSleeping = false,
       isAttachedToBed = false,
       scaleByYPosition = false,
-      initialScale = 1.2,
-      finalScale = 0.6,
     },
     ref
   ) => {
@@ -104,10 +102,13 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     }, [backgroundFile]);
 
     const getDynamicScale = useCallback((currentPos: Position): number => {
-      // Only apply scaling for nostr-station-open.png background when enabled
-      if (!scaleByYPosition || backgroundFile !== 'nostr-station-open.png') {
+      const scalingConfig = backgroundFile ? locationScalingConfig[backgroundFile] : undefined;
+
+      if (!scaleByYPosition || !scalingConfig) {
         return 1;
       }
+
+      const { initialScale, finalScale } = scalingConfig;
 
       // Get the Y boundaries for scaling calculation based on boundary shape
       let minY: number, maxY: number;
@@ -132,11 +133,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       const clampedY = Math.max(minY, Math.min(maxY, currentPos.y));
 
       // Calculate the interpolation factor (0 = top, 1 = bottom)
-      const factor = (clampedY - minY) / (maxY - minY);
+      const factor = (maxY - minY) > 0 ? (clampedY - minY) / (maxY - minY) : 0;
 
       // Interpolate between finalScale (top) and initialScale (bottom)
       return finalScale + (initialScale - finalScale) * factor;
-    }, [scaleByYPosition, backgroundFile, boundary, initialScale, finalScale]);
+    }, [scaleByYPosition, backgroundFile, boundary]);
 
     const animateMovement = useCallback(
       (timestamp: number) => {
