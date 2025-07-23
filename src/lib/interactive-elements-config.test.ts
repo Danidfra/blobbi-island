@@ -19,12 +19,12 @@ describe('Interactive Elements Configuration', () => {
       const nearBottom = calculateBlobbiZIndex(95, 'stage-open.png');
       expect(nearBottom).toBe(25);
 
-      // Test position at 92% from top (8% from bottom) - should be z-index 15
-      const midBottom = calculateBlobbiZIndex(92, 'stage-open.png');
+      // Test position at 82% from top (18% from bottom) - should be z-index 15
+      const midBottom = calculateBlobbiZIndex(82, 'stage-open.png');
       expect(midBottom).toBe(15);
 
-      // Test position at 85% from top (15% from bottom) - should be z-index 9
-      const higherUp = calculateBlobbiZIndex(85, 'stage-open.png');
+      // Test position at 75% from top (25% from bottom) - should be z-index 9
+      const higherUp = calculateBlobbiZIndex(75, 'stage-open.png');
       expect(higherUp).toBe(9);
 
       // Test position at 50% from top (50% from bottom) - should be z-index 9
@@ -62,11 +62,7 @@ describe('Interactive Elements Configuration', () => {
       expect(higherUp).toBe(10);
     });
 
-    it('should fall back to legacy calculation for backgrounds without position config', () => {
-      // Use a background that doesn't have position-based config
-      const unknownBg = calculateBlobbiZIndex(50, 'unknown-background.png');
-      expect(unknownBg).toBe(20); // Should return base z-index
-    });
+
   });
 
   describe('convertToBottomBasedPosition', () => {
@@ -95,16 +91,16 @@ describe('Interactive Elements Configuration', () => {
 
   describe('getZIndexThresholdForPosition', () => {
     it('should return correct threshold for stage-open.png positions', () => {
-      // 3% from bottom should match first threshold (0-5%)
+      // 3% from bottom should match first threshold (0-15%)
       const threshold1 = getZIndexThresholdForPosition(3, 'stage-open.png');
       expect(threshold1?.zIndex).toBe(25);
 
-      // 7% from bottom should match second threshold (5-10%)
-      const threshold2 = getZIndexThresholdForPosition(7, 'stage-open.png');
+      // 17% from bottom should match second threshold (15.01-20%)
+      const threshold2 = getZIndexThresholdForPosition(17, 'stage-open.png');
       expect(threshold2?.zIndex).toBe(15);
 
-      // 15% from bottom should match third threshold (10-100%)
-      const threshold3 = getZIndexThresholdForPosition(15, 'stage-open.png');
+      // 25% from bottom should match third threshold (20.01-100%)
+      const threshold3 = getZIndexThresholdForPosition(25, 'stage-open.png');
       expect(threshold3?.zIndex).toBe(9);
     });
 

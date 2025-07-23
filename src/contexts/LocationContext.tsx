@@ -1,14 +1,6 @@
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import type { LocationId } from '@/lib/location-types';
-
-interface LocationContextType {
-  currentLocation: LocationId;
-  setCurrentLocation: (location: LocationId) => void;
-  isMapModalOpen: boolean;
-  setIsMapModalOpen: (open: boolean) => void;
-}
-
-export const LocationContext = createContext<LocationContextType | undefined>(undefined);
+import { LocationContext } from './LocationContextValue';
 
 interface LocationProviderProps {
   children: ReactNode;

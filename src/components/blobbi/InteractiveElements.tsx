@@ -180,7 +180,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   if (backgroundFile === 'stage-open.png') {
     return (
       <div ref={containerRef} className="w-full h-full relative">
-        <div 
+        <div
           className='absolute w-full h-[55%] top-[5%] overflow-hidden'
           onMouseEnter={() => setIsCurtainHovered(true)}
           onMouseLeave={() => setIsCurtainHovered(false)}
@@ -199,7 +199,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             alt="Red curtain"
             className="w-[90%] h-auto relative left-[5%] top-0 pointer-events-none"
           />
-          
+
         </div>
         <InteractiveElement
           src="/assets/interactive/stage-open-little-door.png"
@@ -462,9 +462,27 @@ if (backgroundFile === 'nostr-station-open.png') {
             src="/assets/interactive/cave.png"
             alt="Cave"
             animated={false}
-            onClick={() => handleElementClick('cave')}
+            onClick={() => setCurrentLocation('cave-open')}
             effect="opacity"
             className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-[214px]"
+          />
+        </div>
+      </>
+    );
+  }
+
+  if (backgroundFile === 'cave-open.png') {
+    return (
+      <>
+        {/* Cave - Center, transparent by default */}
+        <div className="absolute left-[10%] top-[64%] z-20">
+          <InteractiveElement
+            src="/assets/interactive/sign.png"
+            alt="Cave"
+            animated={false}
+            onClick={() => setCurrentLocation('cave-open')}
+            effect="scale"
+            className="w-[80%]"
           />
         </div>
       </>
