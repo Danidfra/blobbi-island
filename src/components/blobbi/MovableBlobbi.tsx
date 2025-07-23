@@ -36,6 +36,9 @@ interface MovableBlobbiProps {
   onWakeUp?: () => void;
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
+  scaleByYPosition?: boolean;
+  initialScale?: number;
+  finalScale?: number;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -55,6 +58,9 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onWakeUp,
       isSleeping = false,
       isAttachedToBed = false,
+      scaleByYPosition = false,
+      initialScale = 1.2,
+      finalScale = 0.6,
     },
     ref
   ) => {
@@ -96,6 +102,41 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       if (!backgroundFile) return 20;
       return calculateBlobbiZIndex(currentPos.y, backgroundFile);
     }, [backgroundFile]);
+
+    const getDynamicScale = useCallback((currentPos: Position): number => {
+      // Only apply scaling for nostr-station-open.png background when enabled
+      if (!scaleByYPosition || backgroundFile !== 'nostr-station-open.png') {
+        return 1;
+      }
+
+      // Get the Y boundaries for scaling calculation based on boundary shape
+      let minY: number, maxY: number;
+
+      if (boundary.shape === 'rectangle') {
+        minY = boundary.y[0]; // Top of allowed movement area
+        maxY = boundary.y[1]; // Bottom of allowed movement area
+      } else if (boundary.shape === 'semicircle' || boundary.shape === 'arch') {
+        minY = boundary.top;
+        maxY = boundary.bottom;
+      } else if (boundary.shape === 'composite') {
+        // For composite boundaries, find the overall min/max Y values
+        minY = Math.min(...boundary.areas.map(area => area.y[0]));
+        maxY = Math.max(...boundary.areas.map(area => area.y[1]));
+      } else {
+        // Fallback to full screen height
+        minY = 0;
+        maxY = 100;
+      }
+
+      // Clamp the position within the boundary
+      const clampedY = Math.max(minY, Math.min(maxY, currentPos.y));
+
+      // Calculate the interpolation factor (0 = top, 1 = bottom)
+      const factor = (clampedY - minY) / (maxY - minY);
+
+      // Interpolate between finalScale (top) and initialScale (bottom)
+      return finalScale + (initialScale - finalScale) * factor;
+    }, [scaleByYPosition, backgroundFile, boundary, initialScale, finalScale]);
 
     const animateMovement = useCallback(
       (timestamp: number) => {
@@ -231,6 +272,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     if (!isVisible) return null;
 
     const shouldFlip = direction.x < 0;
+    const dynamicScale = getDynamicScale(position);
 
     return (
       <>
@@ -269,7 +311,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           style={{
             left: `${position.x}%`,
             top: `${position.y}%`,
-            transform: `translate(-50%, -50%) ${shouldFlip ? 'scaleX(-1)' : ''}`,
+            transform: `translate(-50%, -50%) scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
             filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
             zIndex: getDynamicZIndex(position),
           }}
@@ -290,7 +332,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           </div>
           <div
             className={cn(
-              "absolute top-full left-1/2 transform -translate-x-1/2 -mt-2 h-1.5 rounded-full",
+              "absolute top-full left-1/2 h-1.5 rounded-full",
               size === "xl" && "w-8 md:w-10",
               size === "lg" && "w-6 md:w-8",
               size === "md" && "w-4 md:w-6",
@@ -298,6 +340,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             )}
             style={{
               background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
+              transform: `translateX(-50%) translateY(-8px) scale(${dynamicScale})`,
+              transformOrigin: 'center center',
             }}
           />
         </div>
