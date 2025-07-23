@@ -83,7 +83,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
   return (
     <PlaceBackground ref={containerRef}>
       {/* Interactive Elements - Background specific */}
-      <InteractiveElements />
+      <InteractiveElements blobbiRef={blobbiRef} />
 
       {/* Furniture */}
       {background === 'home-open.png' && (

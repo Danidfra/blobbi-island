@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { calculateBlobbiZIndex, getInteractiveElementsForBackground } from './interactive-elements-config';
+import {
+  calculateBlobbiZIndex,
+  getInteractiveElementsForBackground,
+  getZIndexConfigForBackground,
+  convertToBottomBasedPosition,
+  getZIndexThresholdForPosition
+} from './interactive-elements-config';
 
 describe('Interactive Elements Configuration', () => {
   describe('calculateBlobbiZIndex', () => {
@@ -8,50 +14,103 @@ describe('Interactive Elements Configuration', () => {
       expect(zIndex).toBe(20);
     });
 
+    it('should calculate correct z-index for stage-open.png background based on position', () => {
+      // Test position at 95% from top (5% from bottom) - should be z-index 25
+      const nearBottom = calculateBlobbiZIndex(95, 'stage-open.png');
+      expect(nearBottom).toBe(25);
+
+      // Test position at 92% from top (8% from bottom) - should be z-index 15
+      const midBottom = calculateBlobbiZIndex(92, 'stage-open.png');
+      expect(midBottom).toBe(15);
+
+      // Test position at 85% from top (15% from bottom) - should be z-index 9
+      const higherUp = calculateBlobbiZIndex(85, 'stage-open.png');
+      expect(higherUp).toBe(9);
+
+      // Test position at 50% from top (50% from bottom) - should be z-index 9
+      const middle = calculateBlobbiZIndex(50, 'stage-open.png');
+      expect(middle).toBe(9);
+    });
+
     it('should calculate correct z-index for town-open.png background', () => {
-      // Test Blobbi above all elements (should be behind everything)
-      const aboveAll = calculateBlobbiZIndex(10, 'town-open.png');
-      expect(aboveAll).toBe(14); // One less than the lowest element z-index (15)
+      // Test position at 95% from top (5% from bottom) - should be z-index 25
+      const nearBottom = calculateBlobbiZIndex(95, 'town-open.png');
+      expect(nearBottom).toBe(25);
 
-      // Test Blobbi between bush-3 (68%) and bush-1 (100%)
-      // Elements above: arcade(35%,z15), stage(30%,z15), shop(35%,z15), bush-3(68%,z25), bush-4(74%,z25)
-      // Elements below: bush-1(100%,z25), bush-2(100%,z25), streetlight-left(90%,z25), streetlight-right(90%,z25)
-      // Should be behind elements below (min z-index 25 -> 24)
-      const betweenElements = calculateBlobbiZIndex(85, 'town-open.png');
-      expect(betweenElements).toBe(24);
+      // Test position at 85% from top (15% from bottom) - should be z-index 15
+      const higherUp = calculateBlobbiZIndex(85, 'town-open.png');
+      expect(higherUp).toBe(15);
+    });
 
-      // Test Blobbi below all elements (should be in front of everything)
-      const belowAll = calculateBlobbiZIndex(101, 'town-open.png');
-      expect(belowAll).toBe(26); // Higher than the highest element z-index (25) + 1
+    it('should calculate correct z-index for beach-open.png background', () => {
+      // Test position at 90% from top (10% from bottom) - should be z-index 25
+      const nearBottom = calculateBlobbiZIndex(90, 'beach-open.png');
+      expect(nearBottom).toBe(25);
+
+      // Test position at 70% from top (30% from bottom) - should be z-index 15
+      const higherUp = calculateBlobbiZIndex(70, 'beach-open.png');
+      expect(higherUp).toBe(15);
     });
 
     it('should calculate correct z-index for mine-open.png background', () => {
-      // Test Blobbi above cave (40%) - should be behind cave
-      const aboveCave = calculateBlobbiZIndex(30, 'mine-open.png');
-      expect(aboveCave).toBe(14); // One less than cave z-index (15)
+      // Test position at 90% from top (10% from bottom) - should be z-index 20
+      const nearBottom = calculateBlobbiZIndex(90, 'mine-open.png');
+      expect(nearBottom).toBe(20);
 
-      // Test Blobbi below cave (40%) - should be in front of cave
-      const belowCave = calculateBlobbiZIndex(50, 'mine-open.png');
-      expect(belowCave).toBe(16); // One more than cave z-index (15)
+      // Test position at 70% from top (30% from bottom) - should be z-index 10
+      const higherUp = calculateBlobbiZIndex(70, 'mine-open.png');
+      expect(higherUp).toBe(10);
     });
 
-    it('should calculate correct z-index for beach backgrounds', () => {
-      // Test for beach-open.png
-      const aboveBoat = calculateBlobbiZIndex(30, 'beach-open.png');
-      expect(aboveBoat).toBe(14); // One less than boat z-index (15)
+    it('should fall back to legacy calculation for backgrounds without position config', () => {
+      // Use a background that doesn't have position-based config
+      const unknownBg = calculateBlobbiZIndex(50, 'unknown-background.png');
+      expect(unknownBg).toBe(20); // Should return base z-index
+    });
+  });
 
-      const belowBoat = calculateBlobbiZIndex(40, 'beach-open.png');
-      expect(belowBoat).toBe(16); // One more than boat z-index (15)
+  describe('convertToBottomBasedPosition', () => {
+    it('should correctly convert top-based to bottom-based position', () => {
+      expect(convertToBottomBasedPosition(0)).toBe(100); // Top -> Bottom
+      expect(convertToBottomBasedPosition(100)).toBe(0); // Bottom -> Top
+      expect(convertToBottomBasedPosition(50)).toBe(50); // Middle -> Middle
+      expect(convertToBottomBasedPosition(25)).toBe(75); // 25% from top -> 75% from bottom
+      expect(convertToBottomBasedPosition(75)).toBe(25); // 75% from top -> 25% from bottom
+    });
+  });
 
-      // Test for beach.png (same boat element)
-      const aboveBoatBeach = calculateBlobbiZIndex(30, 'beach.png');
-      expect(aboveBoatBeach).toBe(14);
+  describe('getZIndexConfigForBackground', () => {
+    it('should return config for stage-open.png', () => {
+      const config = getZIndexConfigForBackground('stage-open.png');
+      expect(config).toBeDefined();
+      expect(config?.backgroundFile).toBe('stage-open.png');
+      expect(config?.thresholds).toHaveLength(3);
     });
 
-    it('should not go below minimum z-index of 1', () => {
-      // This test ensures we never get a z-index below 1
-      const minZIndex = calculateBlobbiZIndex(0, 'town-open.png');
-      expect(minZIndex).toBeGreaterThanOrEqual(1);
+    it('should return undefined for unknown background', () => {
+      const config = getZIndexConfigForBackground('unknown.png');
+      expect(config).toBeUndefined();
+    });
+  });
+
+  describe('getZIndexThresholdForPosition', () => {
+    it('should return correct threshold for stage-open.png positions', () => {
+      // 3% from bottom should match first threshold (0-5%)
+      const threshold1 = getZIndexThresholdForPosition(3, 'stage-open.png');
+      expect(threshold1?.zIndex).toBe(25);
+
+      // 7% from bottom should match second threshold (5-10%)
+      const threshold2 = getZIndexThresholdForPosition(7, 'stage-open.png');
+      expect(threshold2?.zIndex).toBe(15);
+
+      // 15% from bottom should match third threshold (10-100%)
+      const threshold3 = getZIndexThresholdForPosition(15, 'stage-open.png');
+      expect(threshold3?.zIndex).toBe(9);
+    });
+
+    it('should return undefined for unknown background', () => {
+      const threshold = getZIndexThresholdForPosition(50, 'unknown.png');
+      expect(threshold).toBeUndefined();
     });
   });
 

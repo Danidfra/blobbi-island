@@ -3,7 +3,7 @@ import { Boundary } from '@/lib/boundaries';
 export const locationBoundaries: Record<string, Boundary> = {
   'home-open.png': {
     shape: 'arch',
-    top: 70,
+    top: 68,
     bottom: 80,
     curvature: 2,
   },
@@ -41,7 +41,7 @@ export const locationBoundaries: Record<string, Boundary> = {
   },
   'stage-open.png': {
     shape: 'rectangle',
-    x: [10, 90],
+    x: [0, 100],
     y: [75, 98],
   },
 };

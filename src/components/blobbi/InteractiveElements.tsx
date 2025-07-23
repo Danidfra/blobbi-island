@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
+import { MovableBlobbiRef } from './MovableBlobbi';
 
 interface InteractiveElementProps {
   src: string;
   alt: string;
   className?: string;
   animated?: boolean;
-  onClick?: () => void;
-  effect?: 'scale' | 'opacity' | 'door';
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  effect?: 'scale' | 'opacity' | 'door' | 'slide';
+  slideDirection?: 'right' | 'left' | 'up' | 'down';
+  isHovered?: boolean;
 }
 
 function InteractiveElement({
@@ -18,51 +21,118 @@ function InteractiveElement({
   className,
   animated = true,
   onClick,
-  effect = 'scale'
+  effect = 'scale',
+  slideDirection = 'right',
+  isHovered
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isSelfHovered, setIsSelfHovered] = useState(false);
 
-  const handleInteraction = () => {
+  const finalIsHovered = isHovered !== undefined ? isHovered : isSelfHovered;
+
+  const handleInteraction = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!onClick) return;
 
-    if (animated && effect !== 'door') {
+    if (animated && effect !== 'door' && effect !== 'slide') {
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 300);
     }
 
-    onClick();
+    onClick(event);
   };
+
+  const getSlideTransform = () => {
+    if (!finalIsHovered) return 'translate(0, 0)';
+    switch (slideDirection) {
+      case 'right':
+        return 'translateX(100%)';
+      case 'left':
+        return 'translateX(-100%)';
+      case 'up':
+        return 'translateY(-100%)';
+      case 'down':
+        return 'translateY(100%)';
+      default:
+        return 'translate(0, 0)';
+    }
+  };
+
+  if (effect === 'slide') {
+    return (
+      <div
+        className={cn('cursor-pointer select-none', className)}
+        onMouseEnter={() => setIsSelfHovered(true)}
+        onMouseLeave={() => setIsSelfHovered(false)}
+        onClick={handleInteraction}
+      >
+        <div
+          className="transition-transform duration-300 ease-in-out"
+          style={{ transform: getSlideTransform() }}
+        >
+          <img src={src} alt={alt} className="w-full h-full object-contain" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
       className={cn(
-        effect !== 'door' && "cursor-pointer select-none transition-all duration-300 ease-out",
-        // Hover effects
-        effect === 'scale' && "hover:scale-110",
-        effect === 'door' && "cursor-pointer select-none opacity-0 hover:opacity-100",
-        // Click animation - custom tap effect
-        isAnimating && effect !== 'door' && "animate-tap",
+        'cursor-pointer select-none',
+        effect === 'scale' && 'transition-all duration-300 ease-out hover:scale-110',
+        effect === 'door' && 'opacity-0 hover:opacity-100',
+        isAnimating && effect !== 'door' && 'animate-tap',
         className
       )}
       onClick={handleInteraction}
-      onTouchStart={handleInteraction}
+      onMouseEnter={() => setIsSelfHovered(true)}
+      onMouseLeave={() => setIsSelfHovered(false)}
+      onTouchStart={(e) => handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>)}
     >
       <img
         src={src}
         alt={alt}
         className={cn(
-          "w-full h-full object-contain",
-          // Opacity hover effect for cave
-          effect === 'opacity' && "opacity-0 hover:opacity-100 active:opacity-100"
+          'w-full h-full object-contain',
+          effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100'
         )}
       />
     </div>
   );
 }
 
-export function InteractiveElements() {
+interface InteractiveElementsProps {
+  blobbiRef: React.RefObject<MovableBlobbiRef>;
+}
+
+export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const { currentLocation, setCurrentLocation, setIsMapModalOpen } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isCurtainHovered, setIsCurtainHovered] = useState(false);
+
+  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!blobbiRef.current) return;
+
+    const chairElement = event.currentTarget;
+    const container = chairElement.closest('.w-full.h-full.relative');
+
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const chairRect = chairElement.getBoundingClientRect();
+
+    // Calculate the center of the chair
+    const chairCenterX = chairRect.left + chairRect.width / 2;
+    // Position Blobbi at the top of the chair
+    const chairTopY = chairRect.top;
+
+    // Convert to percentage
+    const targetX = ((chairCenterX - containerRect.left) / containerRect.width) * 100;
+    const targetY = ((chairTopY - containerRect.top) / containerRect.height) * 100;
+
+    blobbiRef.current.goTo({ x: targetX, y: targetY + 3 }); // Adjust Y to sit on top
+  };
 
   const handleElementClick = (elementName: string) => {
     console.log(`Interactive element clicked: ${elementName} (location: ${currentLocation})`);
@@ -109,17 +179,38 @@ export function InteractiveElements() {
 
   if (backgroundFile === 'stage-open.png') {
     return (
-      <>
-        {/* <InteractiveElement
-          src="/assets/interactive/stage-exit-door.png"
-          alt="Go back to town"
-          animated={false}
-          onClick={() => setCurrentLocation('town')}
-          effect="door"
-          className="absolute bottom-[10%] left-[5%] w-[15%] z-15"
-        /> */}
+      <div ref={containerRef} className="w-full h-full relative">
+        <div 
+          className='absolute w-full h-[55%] top-[5%] overflow-hidden'
+          onMouseEnter={() => setIsCurtainHovered(true)}
+          onMouseLeave={() => setIsCurtainHovered(false)}
+        >
+          <InteractiveElement
+            src="/assets/interactive/curtain.png"
+            alt="Curtain"
+            effect="slide"
+            slideDirection="up"
+            className="w-[88%] h-auto absolute left-1/2 -translate-x-1/2 top-0"
+            onClick={() => console.log('Curtain clicked')}
+            isHovered={isCurtainHovered}
+          />
+          <img
+            src="/assets/interactive/red-curtain.png"
+            alt="Red curtain"
+            className="w-[90%] h-auto relative left-[5%] top-0 pointer-events-none"
+          />
+          
+        </div>
+        <InteractiveElement
+          src="/assets/interactive/stage-open-little-door.png"
+          alt="Stage little door"
+          effect="slide"
+          slideDirection="right"
+          className="w-[46px] absolute bottom-[22.8%] left-[45.4%]"
+          onClick={handleChairClick}
+        />
 
-      {/* Left side */}
+        {/* Left side */}
         {/* Row 1 (Front) - Highest z-index */}
         <div className="absolute bottom-0 left-0 flex items-center -space-x-4 z-30">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -129,35 +220,35 @@ export function InteractiveElements() {
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row1-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
 
         {/* Row 2 (Middle) - Medium z-index */}
-        <div className="absolute bottom-[5%] left-[4%] flex items-center -space-x-4 z-20">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="absolute bottom-[5%] -left-[6%] flex items-center -space-x-4 z-20">
+          {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row2-${i}`}
               src="/assets/interactive/furniture/stage-chair-left.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row2-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
 
         {/* Row 3 (Back) - Lowest z-index */}
-        <div className="absolute bottom-[10%] left-[8%] flex items-center -space-x-4 z-10">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="absolute bottom-[10%] -left-[2%] flex items-center -space-x-4 z-10">
+          {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row3-${i}`}
               src="/assets/interactive/furniture/stage-chair-left.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row3-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
@@ -172,39 +263,39 @@ export function InteractiveElements() {
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row1-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
 
         {/* Row 2 (Middle) - Medium z-index */}
-        <div className="absolute bottom-[5%] right-[4%] flex items-center -space-x-4 z-20">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="absolute bottom-[5%] -right-[6%] flex items-center -space-x-4 z-20">
+          {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row2-${i}`}
               src="/assets/interactive/furniture/stage-chair.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row2-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
 
         {/* Row 3 (Back) - Lowest z-index */}
-        <div className="absolute bottom-[10%] right-[8%] flex items-center -space-x-4 z-10">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="absolute bottom-[10%] -right-[2%] flex items-center -space-x-4 z-10">
+          {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row3-${i}`}
               src="/assets/interactive/furniture/stage-chair.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
-              onClick={() => handleElementClick(`chair-row3-${i}`)}
+              onClick={handleChairClick}
             />
           ))}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -293,7 +384,7 @@ export function InteractiveElements() {
             alt="Bush 1"
             animated={false}
             onClick={() => handleElementClick('bush-1')}
-            className="size-20 sm:size-24 md:size-28 lg:size-32"
+            className="size-20 sm:size-24 md:h-28 lg:size-32"
           />
         </div>
 

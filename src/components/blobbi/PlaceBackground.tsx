@@ -36,7 +36,8 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
             alt={`${currentLocation} background`}
             className={cn(
               "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
-              shouldShowImage ? "opacity-100" : "opacity-0"
+              shouldShowImage ? "opacity-100" : "opacity-0",
+              currentLocation === "stage" ? 'bg-black' : '',
             )}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
