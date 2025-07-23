@@ -6,6 +6,7 @@ interface LocationContextType {
   setCurrentLocation: (location: LocationId) => void;
   isMapModalOpen: boolean;
   setIsMapModalOpen: (open: boolean) => void;
+  isTransitioning: boolean;
 }
 
 export const LocationContext = createContext<LocationContextType | undefined>(undefined);
