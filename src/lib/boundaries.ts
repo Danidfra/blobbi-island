@@ -3,7 +3,8 @@ import { Position } from '@/lib/types';
 export type Boundary =
   | { shape: 'semicircle'; top: number; bottom: number }
   | { shape: 'rectangle'; x: [number, number]; y: [number, number] }
-  | { shape: 'arch'; top: number; bottom: number; curvature: number };
+  | { shape: 'arch'; top: number; bottom: number; curvature: number }
+  | { shape: 'composite'; areas: { x: [number, number]; y: [number, number] }[] };
 
 export function constrainPosition(position: Position, boundary: Boundary): Position {
   const x = Math.max(0, Math.min(100, position.x));
@@ -14,6 +15,27 @@ export function constrainPosition(position: Position, boundary: Boundary): Posit
       x: Math.max(boundary.x[0], Math.min(boundary.x[1], x)),
       y: Math.max(boundary.y[0], Math.min(boundary.y[1], y)),
     };
+  }
+
+  if (boundary.shape === 'composite') {
+    let closestPoint: Position | null = null;
+    let minDistance = Infinity;
+
+    for (const area of boundary.areas) {
+      const clampedX = Math.max(area.x[0], Math.min(area.x[1], x));
+      const clampedY = Math.max(area.y[0], Math.min(area.y[1], y));
+      const point = { x: clampedX, y: clampedY };
+
+      const dx = x - point.x;
+      const dy = y - point.y;
+      const distance = dx * dx + dy * dy;
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+      }
+    }
+    return closestPoint || { x, y };
   }
 
   if (boundary.shape === 'semicircle') {
