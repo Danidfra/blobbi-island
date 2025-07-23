@@ -424,6 +424,34 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     );
   }
 
+  // Town elements (when background is town-open.png)
+if (backgroundFile === 'nostr-station-open.png') {
+  return (
+    <>
+      {/* Nostr Station */}
+      <div className="absolute w-full h-full z-15">
+        <div className="absolute top-[6%] right-[5%] w-[20%] h-auto">
+          {/* Build container - relative */}
+          <img
+            src="/assets/interactive/nostr-station-build.png"
+            alt="Nostr Station"
+            className="w-full h-auto"
+          />
+          {/* Door inside the build */}
+          <InteractiveElement
+            src="/assets/interactive/nostr-station-door.png"
+            alt="Nostr Station Door"
+            animated={false}
+            onClick={() => handleElementClick('arcade')}
+            effect="door"
+            className="absolute bottom-0 left-[10%] w-[31%] z-15"
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
   // Mine elements (when background is mine-open.png)
   if (backgroundFile === 'mine-open.png') {
     return (
