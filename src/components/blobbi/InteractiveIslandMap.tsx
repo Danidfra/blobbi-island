@@ -10,6 +10,7 @@
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { MovableBlobbi } from './MovableBlobbi';
+import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 
 // Location data with positioning coordinates (as percentages of the island image)
 interface Location {
@@ -81,6 +82,8 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
   const [showTownExpanded, setShowTownExpanded] = useState(false);
   const [showHomeExpanded, setShowHomeExpanded] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const homeBlobbiSize = getBlobbiSizeForLocation('home');
+  const townBlobbiSize = getBlobbiSizeForLocation('town');
 
   const handleLocationClick = (locationId: string) => {
     console.log(`Clicked location: ${locationId}`);
@@ -353,7 +356,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           initialPosition={{ x: 50, y: 80 }}
           boundary={{ shape: 'arch', top: 65, bottom: 100, curvature: 2 }}
           movementSpeed={100}
-          size="lg"
+          size={homeBlobbiSize}
         />
 
         {/* Movable Blobbi Character - only show in town expanded view */}
@@ -363,7 +366,7 @@ export function InteractiveIslandMap({ onLocationClick, className }: Interactive
           initialPosition={{ x: 50, y: 80 }} // Start at bottom center of town
           boundary={{ shape: 'rectangle', x: [5, 95], y: [70, 98] }}
           movementSpeed={100} // Slow, calm movement
-          size="lg"
+          size={townBlobbiSize}
           showTrail={false} // Disable trail for cleaner look
           onMoveStart={(destination) => {
             console.log('Blobbi started moving to:', destination);

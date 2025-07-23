@@ -13,6 +13,7 @@ import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
+import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -33,6 +34,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
   const [isAttachedToBed, setIsAttachedToBed] = useState(false);
 
   const background = getBackgroundForLocation(currentLocation);
+  const blobbiSize = getBlobbiSizeForLocation(currentLocation);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',
     x: [0, 100],
@@ -143,6 +145,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         onWakeUp={handleWakeUp}
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
+        size={blobbiSize}
       />
 
       {/* Map Button - Top Right */}
