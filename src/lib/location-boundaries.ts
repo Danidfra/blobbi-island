@@ -25,9 +25,16 @@ export const locationBoundaries: Record<string, Boundary> = {
     y: [75, 98],
   },
   'nostr-station-open.png': {
-    shape: 'rectangle',
-    x: [5, 95],
-    y: [70, 95],
+    shape: 'composite',
+    areas: [
+      { x: [5, 70], y: [70, 95] }, // Main area
+      { x: [51, 61], y: [64, 70] }, //
+      { x: [56, 61], y: [60, 64] }, //
+      { x: [61, 70], y: [54, 70] }, //
+      { x: [64, 70], y: [50, 54] }, //
+      { x: [70, 96], y: [40, 95] }, //
+      { x: [75, 90], y: [28, 45] }, //
+    ],
   },
   'plaza-open.png': {
     shape: 'rectangle',

@@ -14,6 +14,7 @@ import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
+import { BoundaryVisualizer } from './BoundaryVisualizer';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -84,6 +85,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   return (
     <PlaceBackground ref={containerRef}>
+      <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
       <InteractiveElements blobbiRef={blobbiRef} />
 
