@@ -14,7 +14,7 @@ vi.mock('@/lib/interactive-elements-config', () => ({
   calculateBlobbiZIndex: () => 20,
 }));
 
-function TestWrapper({ scaleByYPosition = false, initialScale = 1.2, finalScale = 0.6, backgroundFile = 'nostr-station-open.png' }) {
+function TestWrapper({ scaleByYPosition = false, backgroundFile = 'nostr-station-open.png' }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -23,8 +23,6 @@ function TestWrapper({ scaleByYPosition = false, initialScale = 1.2, finalScale 
         <MovableBlobbi
           containerRef={containerRef}
           scaleByYPosition={scaleByYPosition}
-          initialScale={initialScale}
-          finalScale={finalScale}
           backgroundFile={backgroundFile}
           initialPosition={{ x: 50, y: 75 }}
           boundary={{ shape: 'rectangle', x: [0, 100], y: [60, 100] }}
@@ -46,7 +44,53 @@ describe('MovableBlobbi', () => {
     expect(style).toContain('scale(1)');
   });
 
-  it('renders without scaling for non-nostr-station backgrounds', () => {
+  it('applies scaling for approved backgrounds', () => {
+    const { container: nostrStationContainer } = render(
+      <TestWrapper
+        scaleByYPosition={true}
+        backgroundFile="nostr-station-open.png"
+      />
+    );
+    const nostrStationBlobbi = nostrStationContainer.querySelector('[style*="transform"]');
+    expect(nostrStationBlobbi?.getAttribute('style')).not.toContain('scale(1)');
+
+    const { container: townContainer } = render(
+      <TestWrapper
+        scaleByYPosition={true}
+        backgroundFile="town-open.png"
+      />
+    );
+    const townBlobbi = townContainer.querySelector('[style*="transform"]');
+    expect(townBlobbi?.getAttribute('style')).not.toContain('scale(1)');
+
+    const { container: plazaContainer } = render(
+      <TestWrapper
+        scaleByYPosition={true}
+        backgroundFile="plaza-open.png"
+      />
+    );
+    const plazaBlobbi = plazaContainer.querySelector('[style*="transform"]');
+    expect(plazaBlobbi?.getAttribute('style')).not.toContain('scale(1)');
+  });
+
+  it('applies correct scaling for nostr-station background', () => {
+    const { container } = render(
+      <TestWrapper
+        scaleByYPosition={true}
+        backgroundFile="nostr-station-open.png"
+      />
+    );
+
+    const blobbiElement = container.querySelector('[style*="transform"]');
+    const style = blobbiElement?.getAttribute('style');
+    const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
+    const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
+
+    expect(scaleValue).toBeGreaterThanOrEqual(0.6);
+    expect(scaleValue).toBeLessThanOrEqual(1.2);
+  });
+
+  it('applies correct scaling for town background', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
@@ -55,38 +99,29 @@ describe('MovableBlobbi', () => {
     );
 
     const blobbiElement = container.querySelector('[style*="transform"]');
-    expect(blobbiElement).toBeTruthy();
-
-    // Should have scale(1) when background is not nostr-station-open.png
     const style = blobbiElement?.getAttribute('style');
-    expect(style).toContain('scale(1)');
+    const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
+    const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
+
+    expect(scaleValue).toBeGreaterThanOrEqual(0.7);
+    expect(scaleValue).toBeLessThanOrEqual(1.2);
   });
 
-  it('applies scaling for nostr-station background when enabled', () => {
+  it('applies correct scaling for plaza background', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="nostr-station-open.png"
-        initialScale={1.2}
-        finalScale={0.6}
+        backgroundFile="plaza-open.png"
       />
     );
 
     const blobbiElement = container.querySelector('[style*="transform"]');
-    expect(blobbiElement).toBeTruthy();
-
-    // Should have a scale value between finalScale and initialScale
     const style = blobbiElement?.getAttribute('style');
-    expect(style).toMatch(/scale\([\d.]+\)/);
-
-    // Extract the scale value
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
-    if (scaleMatch) {
-      const scaleValue = parseFloat(scaleMatch[1]);
-      // Scale should be between finalScale (0.6) and initialScale (1.2)
-      expect(scaleValue).toBeGreaterThanOrEqual(0.6);
-      expect(scaleValue).toBeLessThanOrEqual(1.2);
-    }
+    const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
+
+    expect(scaleValue).toBeGreaterThanOrEqual(0.8);
+    expect(scaleValue).toBeLessThanOrEqual(1.2);
   });
 
   it('properly positions and scales the shadow', () => {
@@ -94,8 +129,6 @@ describe('MovableBlobbi', () => {
       <TestWrapper
         scaleByYPosition={true}
         backgroundFile="nostr-station-open.png"
-        initialScale={1.2}
-        finalScale={0.6}
       />
     );
 
