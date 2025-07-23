@@ -148,6 +148,9 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
         size={blobbiSize}
+        scaleByYPosition={currentLocation === 'nostr-station'}
+        initialScale={1.2}
+        finalScale={0.6}
       />
 
       {/* Map Button - Top Right */}
