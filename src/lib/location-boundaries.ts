@@ -53,4 +53,9 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [0, 100],
     y: [75, 98],
   },
+  'cave-open.png': {
+    shape: 'rectangle',
+    x: [16, 84],
+    y: [75, 79],
+  },
 };

@@ -15,6 +15,7 @@ import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
+import { MiningGame } from './MiningGame';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -132,6 +133,8 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
           />
         </>
       )}
+
+      {background === 'cave-open.png' && <MiningGame />}
 
       {/* Movable Blobbi Character */}
       <MovableBlobbi

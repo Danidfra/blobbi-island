@@ -201,82 +201,28 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
  * @returns Calculated z-index value for the Blobbi
  */
 export function calculateBlobbiZIndex(blobbiYPosition: number, backgroundFile: string): number {
-  // Convert Y position from top-based to bottom-based percentage
-  // blobbiYPosition: 0% = top, 100% = bottom
-  // We want: 0% = bottom, 100% = top
   const positionFromBottom = 100 - blobbiYPosition;
 
-  // Find the background configuration
   const backgroundConfig = backgroundZIndexConfigs.find(
     config => config.backgroundFile === backgroundFile
   );
 
-  // If no specific configuration exists, fall back to the old system
   if (!backgroundConfig) {
-    return calculateBlobbiZIndexLegacy(blobbiYPosition, backgroundFile);
+    return 20; // Default z-index
   }
 
-  // Find the appropriate threshold for the current position
-  // Sort thresholds by minPosition to ensure we check in order
   const sortedThresholds = [...backgroundConfig.thresholds].sort((a, b) => a.minPosition - b.minPosition);
 
-  // Check each threshold in order, with the first match winning
-  for (let i = 0; i < sortedThresholds.length; i++) {
-    const threshold = sortedThresholds[i];
-
-    // Use inclusive bounds for all thresholds
+  for (const threshold of sortedThresholds) {
     if (positionFromBottom >= threshold.minPosition && positionFromBottom <= threshold.maxPosition) {
-      console.log(`Matched threshold ${i}: ${threshold.minPosition}-${threshold.maxPosition}, z-index: ${threshold.zIndex}`);
       return threshold.zIndex;
     }
   }
 
-  // Return default if no threshold matched
-  return 20;
+  return 20; // Default z-index
 }
 
-/**
- * Legacy z-index calculation based on interactive elements (fallback)
- * @param blobbiYPosition - Blobbi's Y position as percentage (0-100)
- * @param backgroundFile - Current background file name
- * @returns Calculated z-index value for the Blobbi
- */
-function calculateBlobbiZIndexLegacy(blobbiYPosition: number, backgroundFile: string): number {
-  // Default z-index for Blobbi
-  const baseZIndex = 20;
 
-  // Get all interactive elements for the current background
-  const elementsForBackground = interactiveElementsConfig.filter(
-    element => element.backgroundFile === backgroundFile
-  );
-
-  if (elementsForBackground.length === 0) {
-    return baseZIndex;
-  }
-
-  // Find elements that the Blobbi should be in front of (elements above the Blobbi)
-  const elementsAbove = elementsForBackground.filter(element => element.yPosition < blobbiYPosition);
-
-  // Find elements that the Blobbi should be behind (elements below or at same level as the Blobbi)
-  const elementsBelow = elementsForBackground.filter(element => element.yPosition >= blobbiYPosition);
-
-  // Start with base z-index
-  let calculatedZIndex = baseZIndex;
-
-  // If there are elements below/at same level, Blobbi should be behind the one with lowest z-index
-  if (elementsBelow.length > 0) {
-    const minZIndexBelow = Math.min(...elementsBelow.map(e => e.zIndex));
-    calculatedZIndex = minZIndexBelow - 1;
-  }
-  // If there are only elements above, Blobbi should be in front of the one with highest z-index
-  else if (elementsAbove.length > 0) {
-    const maxZIndexAbove = Math.max(...elementsAbove.map(e => e.zIndex));
-    calculatedZIndex = maxZIndexAbove + 1;
-  }
-
-  // Ensure we don't go below a minimum z-index
-  return Math.max(calculatedZIndex, 1);
-}
 
 /**
  * Get all interactive elements for a specific background
@@ -324,7 +270,7 @@ export function getZIndexThresholdForPosition(positionFromBottom: number, backgr
   const sortedThresholds = [...config.thresholds].sort((a, b) => a.minPosition - b.minPosition);
 
   const threshold = sortedThresholds.find(
-    t => positionFromBottom >= t.minPosition && positionFromBottom < t.maxPosition
+    t => positionFromBottom >= t.minPosition && positionFromBottom <= t.maxPosition
   );
 
   // If no threshold found, check if it's at the maximum boundary of the last threshold
