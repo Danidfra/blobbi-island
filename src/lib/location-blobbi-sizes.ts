@@ -7,10 +7,11 @@ export const LOCATION_BLOBBI_SIZES: Partial<Record<LocationId, BlobbiSize>> = {
   'town': 'lg',
   'stage': 'xl',
   'beach': 'lg',
-  'mine': 'lg',
+  'mine': 'xl',
   'plaza': 'lg',
   'nostr-station': 'lg',
   'back-yard': 'xl',
+  'cave-open': 'xl',
 };
 
 export function getBlobbiSizeForLocation(location: LocationId): BlobbiSize {
