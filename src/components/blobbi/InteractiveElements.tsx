@@ -79,7 +79,7 @@ function InteractiveElement({
     <div
       className={cn(
         'cursor-pointer select-none',
-        effect === 'scale' && 'transition-all duration-300 ease-out hover:scale-110',
+        effect === 'scale' && animated && 'transition-all duration-300 ease-out hover:scale-110',
         effect === 'door' && 'opacity-0 hover:opacity-100',
         isAnimating && effect !== 'door' && 'animate-tap',
         className
@@ -316,7 +316,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             animated={false}
             onClick={() => handleElementClick('arcade')}
             effect="door"
-            className="absolute bottom-0 right-0  w-[40%] z-30"
+            className="absolute bottom-0 right-0  w-[40%] z-15"
           />
         </div>
 
@@ -333,7 +333,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             animated={false}
             onClick={() => setCurrentLocation('stage')}
             effect="door"
-            className="absolute bottom-0 -right-2  w-[50%] z-30"
+            className="absolute bottom-0 -right-2  w-[50%] z-15"
           />
         </div>
 
@@ -350,13 +350,13 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             animated={false}
             onClick={() => handleElementClick('shop')}
             effect="door"
-            className="absolute bottom-0 left-0  w-[60%] z-30"
+            className="absolute bottom-0 left-0  w-[60%] z-15"
           />
 
         </div>
 
         {/* Bush 3 - Left side, slightly above bush-1 */}
-        <div className="absolute left-0 top-[68%] sm:top-[63%] z-[25]">
+        <div className="absolute left-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-3.png"
             alt="Bush 3"
@@ -367,7 +367,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         {/* Bush 4 - Right side, slightly above bush-2 */}
-        <div className="absolute right-0 top-[74%] sm:top-[69%] z-[25]">
+        <div className="absolute right-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-4.png"
             alt="Bush 4"
@@ -378,7 +378,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         {/* Bush 1 - Bottom left corner (highest z-index) */}
-        <div className="absolute left-0 bottom-0 z-[25]">
+        <div className="absolute left-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-1.png"
             alt="Bush 1"
@@ -389,7 +389,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         {/* Bush 2 - Bottom right corner (highest z-index) */}
-        <div className="absolute right-0 bottom-0 z-[25]">
+        <div className="absolute right-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-2.png"
             alt="Bush 2"
@@ -400,7 +400,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         {/* streetlight - left */}
-        <div className="absolute left-[6%] bottom-[10%] z-[25]">
+        <div className="absolute left-[6%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 1"
@@ -411,7 +411,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         {/* streetlight -right */}
-        <div className="absolute right-[12%] bottom-[10%] z-[25]">
+        <div className="absolute right-[12%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 2"

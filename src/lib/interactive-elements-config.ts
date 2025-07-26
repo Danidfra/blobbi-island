@@ -48,14 +48,15 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'town-open.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 10, zIndex: 25 },  // Bottom area (behind bushes/streetlights)
-      { minPosition: 10, maxPosition: 100, zIndex: 15 } // Upper area (in front of buildings)
+      { minPosition: 0, maxPosition: 16, zIndex: 19 },  // Bottom area
+      { minPosition: 16.01, maxPosition: 20, zIndex: 14 }, // Middle area
+      { minPosition:  20.01, maxPosition: 100, zIndex: 9 } // Upper area (in front of buildings)
     ]
   },
   {
     backgroundFile: 'home-open.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 15, zIndex: 20 },  // Floor level
+      { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Floor level
       { minPosition: 15, maxPosition: 100, zIndex: 10 } // Upper area
     ]
   },
