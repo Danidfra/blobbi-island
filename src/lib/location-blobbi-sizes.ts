@@ -6,6 +6,7 @@ export const LOCATION_BLOBBI_SIZES: Partial<Record<LocationId, BlobbiSize>> = {
   'home': 'xl',
   'town': 'lg',
   'stage': 'xl',
+  'arcade': 'xl',
   'beach': 'lg',
   'mine': 'xl',
   'plaza': 'lg',

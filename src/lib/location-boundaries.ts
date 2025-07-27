@@ -43,6 +43,13 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [5, 95],
     y: [56, 98],
   },
+  'arcade-open.png': {
+    shape: 'composite',
+    areas: [
+      { x: [0, 100], y: [48, 100] },
+      { x: [45, 55], y: [36, 48] },
+    ],
+  },
   'back-yard-open.png': {
     shape: 'rectangle',
     x: [10, 90],

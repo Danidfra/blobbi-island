@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { MovableBlobbiRef } from './MovableBlobbi';
+import { MovementBlocker } from './MovementBlocker';
 
 interface InteractiveElementProps {
   src: string;
@@ -109,7 +110,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isCurtainHovered, setIsCurtainHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!blobbiRef.current) return;
@@ -177,13 +178,67 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     );
   }
 
+  if (backgroundFile === 'arcade-open.png') {
+    return (
+      <div ref={containerRef} className="w-full h-full relative">
+        <div
+          className='absolute flex top-[16%] w-[17.5%] left-1/2 -translate-x-1/2 overflow-hidden z-10'
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <InteractiveElement
+            src="/assets/interactive/doors/elevator-door.png"
+            alt="Curtain"
+            effect="slide"
+            slideDirection="right"
+            className="scale-x-[-1]"
+            onClick={() => console.log('Curtain clicked')}
+            isHovered={isHovered}
+          />
+          <InteractiveElement
+            src="/assets/interactive/doors/elevator-door.png"
+            alt="Curtain"
+            effect="slide"
+            slideDirection="right"
+            onClick={() => console.log('Curtain clicked')}
+            isHovered={isHovered}
+          />
+        </div>
+        <div className='relative left-[20%] top-[26%]'>
+          <img src='/assets/interactive/furniture/ticket.png' alt="ticket"
+            className="absolute" />
+          <InteractiveElement
+            src="/assets/interactive/furniture/ticket-out.png"
+            alt="ticket out"
+            effect='opacity'
+            className='absolute'
+            onClick={() => console.log('Curtain clicked')}
+            isHovered={isHovered}
+          />
+
+        </div>
+        <div className='absolute right-[7%] top-[33%]'>
+          <InteractiveElement
+            src="/assets/interactive/furniture/prizes.png"
+            alt="prizes"
+            animated={false}
+            effect='scale'
+            slideDirection="right"
+            onClick={() => console.log('Curtain clicked')}
+            isHovered={isHovered}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (backgroundFile === 'stage-open.png') {
     return (
       <div ref={containerRef} className="w-full h-full relative">
         <div
           className='absolute w-full h-[55%] top-[5%] overflow-hidden'
-          onMouseEnter={() => setIsCurtainHovered(true)}
-          onMouseLeave={() => setIsCurtainHovered(false)}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
           <InteractiveElement
             src="/assets/interactive/curtain.png"
@@ -192,7 +247,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             slideDirection="up"
             className="w-[88%] h-auto absolute left-1/2 -translate-x-1/2 top-0"
             onClick={() => console.log('Curtain clicked')}
-            isHovered={isCurtainHovered}
+            isHovered={isHovered}
           />
           <img
             src="/assets/interactive/red-curtain.png"
@@ -314,7 +369,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             src="/assets/interactive/builds/arcade-door.png"
             alt="Arcade Door"
             animated={false}
-            onClick={() => handleElementClick('arcade')}
+            onClick={() => setCurrentLocation('arcade')}
             effect="door"
             className="absolute bottom-0 right-0  w-[40%] z-15"
           />
@@ -409,6 +464,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             className="h-48 sm:h-52 md:h-56 lg:h-60"
           />
         </div>
+        <MovementBlocker id="town-buildings" x={8} y={86} width={4.5} height={4} />
 
         {/* streetlight -right */}
         <div className="absolute right-[12%] bottom-[10%] z-[15]">
@@ -420,6 +476,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             className="h-48 sm:h-52 md:h-56 lg:h-60"
           />
         </div>
+        <MovementBlocker id="town-buildings" x={82.5} y={86} width={4.5} height={4} />
       </>
     );
   }

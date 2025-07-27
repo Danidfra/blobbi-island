@@ -44,13 +44,21 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
       { minPosition: 20.01, maxPosition: 100, zIndex: 9 }
     ]
   },
+  {
+    backgroundFile: 'arcade-open.png',
+    thresholds: [
+      { minPosition: 0, maxPosition: 52, zIndex: 10 },
+      { minPosition: 52.01, maxPosition: 100, zIndex: 9 },
+    ]
+  },
   // Add more background configurations as needed
   {
     backgroundFile: 'town-open.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 16, zIndex: 19 },  // Bottom area
-      { minPosition: 16.01, maxPosition: 20, zIndex: 14 }, // Middle area
-      { minPosition:  20.01, maxPosition: 100, zIndex: 9 } // Upper area (in front of buildings)
+      { minPosition: 0, maxPosition: 10, zIndex: 25 },  // Bottom area
+      { minPosition: 10.01, maxPosition: 14.99, zIndex: 19 },  // Lower middle area
+      { minPosition: 15, maxPosition: 20, zIndex: 15 }, // Upper middle area
+      { minPosition: 20.01, maxPosition: 100, zIndex: 9 } // Upper area (in front of buildings)
     ]
   },
   {

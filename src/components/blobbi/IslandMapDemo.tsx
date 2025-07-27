@@ -3,12 +3,15 @@
  * This can be used for testing or as a standalone demo
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BlobbiGameContainer } from './BlobbiGameContainer';
 import { InteractiveIslandMap, LocationModal } from './InteractiveIslandMap';
+import { MovementBlocker } from './MovementBlocker';
+import { MovableBlobbi } from './MovableBlobbi';
 
 export function IslandMapDemo() {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleLocationClick = (locationId: string) => {
     console.log(`Demo: Clicked location ${locationId}`);
@@ -30,8 +33,10 @@ export function IslandMapDemo() {
 
       <div className="flex justify-center">
         <BlobbiGameContainer>
-          <div className="relative w-full h-full bg-gradient-to-b from-sky-200 to-blue-300">
+          <div ref={containerRef} className="relative w-full h-full bg-gradient-to-b from-sky-200 to-blue-300">
             <InteractiveIslandMap onLocationClick={handleLocationClick} />
+            <MovementBlocker id="test-blocker" x={40} y={60} width={20} height={10} />
+            <MovableBlobbi containerRef={containerRef} />
           </div>
         </BlobbiGameContainer>
       </div>

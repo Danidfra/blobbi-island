@@ -94,6 +94,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
       {background === 'home-open.png' && (
         <>
           <Furniture
+            id="refrigerator"
             containerRef={containerRef}
             initialPosition={{ x: 20, y: 70 }}
             boundary={boundary}
@@ -104,6 +105,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             onClick={() => setIsRefrigeratorOpen(true)}
           />
           <Furniture
+            id="chest"
             containerRef={containerRef}
             position={{ x: 40, y: 70 }}
             boundary={boundary}
@@ -114,6 +116,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             onClick={() => setIsChestOpen(true)}
           />
           <Furniture
+            id="bed"
             containerRef={containerRef}
             position={bedPosition}
             onPositionChange={handleBedPositionChange}

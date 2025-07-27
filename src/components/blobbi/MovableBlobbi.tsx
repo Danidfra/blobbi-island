@@ -1,3 +1,4 @@
+import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 import React, {
   useState,
   useEffect,
@@ -70,6 +71,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const animationRef = useRef<number>();
     const lastTimeRef = useRef<number>();
     const blobbiRef = useRef<HTMLDivElement>(null);
+const { isPositionBlocked } = useMovementBlocker();
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -174,6 +176,12 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           };
           const newPercentPos = getPercentPosition(newPixelPos);
 
+          if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
+            setIsMoving(false);
+            onMoveComplete?.(currentPos);
+            return currentPos;
+          }
+
           if (showTrail) {
             setTrail(prevTrail => [currentPos, ...prevTrail.slice(0, 4)]);
           }
@@ -193,6 +201,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         isMoving,
         onMoveComplete,
         showTrail,
+        isPositionBlocked,
       ]
     );
 
@@ -241,6 +250,10 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         const clickY = clientY - rect.top;
         const newTarget = getPercentPosition({ x: clickX, y: clickY });
 
+        if (isPositionBlocked(newTarget.x, newTarget.y)) {
+          return;
+        }
+
         setTargetPosition(newTarget);
         setIsMoving(true);
         onMoveStart?.(newTarget);
@@ -253,10 +266,13 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed, isPositionBlocked]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
+        if (isPositionBlocked(newTarget.x, newTarget.y)) {
+          return;
+        }
         setTargetPosition(newTarget);
         if (immediate) {
           // Immediately snap to position without animation

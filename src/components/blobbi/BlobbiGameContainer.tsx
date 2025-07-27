@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { MovementBlockerProvider } from "@/contexts/MovementBlockerContext";
 
 interface BlobbiGameContainerProps {
   children: ReactNode;
@@ -14,7 +15,9 @@ export function BlobbiGameContainer({ children, className }: BlobbiGameContainer
       "w-[1046px] h-[697px]",
       className
     )}>
-      {children}
+      <MovementBlockerProvider>
+        {children}
+      </MovementBlockerProvider>
     </div>
   );
 }
