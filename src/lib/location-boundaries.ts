@@ -22,20 +22,20 @@ export const locationBoundaries: Record<string, Boundary> = {
   'mine-open.png': {
     shape: 'composite',
     areas: [
-      { x: [42, 58], y: [68, 75] },
-      { x: [10, 90], y: [75, 98] },
+      { type: 'rectangle', x: [42, 58], y: [68, 75] },
+      { type: 'rectangle', x: [10, 90], y: [75, 98] },
     ]
   },
   'nostr-station-open.png': {
     shape: 'composite',
     areas: [
-      { x: [5, 70], y: [70, 95] }, // Main area
-      { x: [51, 61], y: [64, 70] }, //
-      { x: [56, 61], y: [60, 64] }, //
-      { x: [61, 70], y: [54, 70] }, //
-      { x: [64, 70], y: [50, 54] }, //
-      { x: [70, 96], y: [40, 95] }, //
-      { x: [75, 90], y: [28, 45] }, //
+      { type: 'rectangle', x: [5, 70], y: [70, 95] }, // Main area
+      { type: 'rectangle', x: [51, 61], y: [64, 70] }, //
+      { type: 'rectangle', x: [56, 61], y: [60, 64] }, //
+      { type: 'rectangle', x: [61, 70], y: [54, 70] }, //
+      { type: 'rectangle', x: [64, 70], y: [50, 54] }, //
+      { type: 'rectangle', x: [70, 96], y: [40, 95] }, //
+      { type: 'rectangle', x: [75, 90], y: [28, 45] }, //
     ],
   },
   'plaza-open.png': {
@@ -46,16 +46,18 @@ export const locationBoundaries: Record<string, Boundary> = {
   'arcade-open.png': {
     shape: 'composite',
     areas: [
-      { x: [0, 100], y: [48, 100] },
-      { x: [45, 55], y: [36, 48] },
+      { type: 'rectangle', x: [0, 100], y: [48, 100] },
+      { type: 'rectangle', x: [45, 55], y: [36, 48] },
     ],
   },
   'arcade-minus1.png': {
     shape: 'composite',
     areas: [
-      { x: [0, 100], y: [74, 100] },
-      { x: [26.5, 73.5], y: [55, 74] },
-      { x: [48, 52], y: [48, 55] },
+      { type: 'rectangle', x: [0, 100], y: [74, 100] },
+      { type: 'rectangle', x: [26.5, 73.5], y: [55, 74] },
+      { type: 'rectangle', x: [48, 52], y: [48, 55] },
+      { type: 'triangle', points: [{ x: 100, y: 74 }, { x: 73.5, y: 55 }, { x: 73.5, y: 74 }] },
+      { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] }
     ],
   },
   'back-yard-open.png': {

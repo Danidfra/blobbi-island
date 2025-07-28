@@ -123,8 +123,18 @@ const { isPositionBlocked } = useMovementBlocker();
         maxY = boundary.bottom;
       } else if (boundary.shape === 'composite') {
         // For composite boundaries, find the overall min/max Y values
-        minY = Math.min(...boundary.areas.map(area => area.y[0]));
-        maxY = Math.max(...boundary.areas.map(area => area.y[1]));
+        minY = Math.min(...boundary.areas.map(area => {
+          if (area.type === 'rectangle') return area.y[0];
+          if (area.type === 'circle') return area.cy - area.r;
+          if (area.type === 'triangle') return Math.min(...area.points.map(p => p.y));
+          return 100;
+        }));
+        maxY = Math.max(...boundary.areas.map(area => {
+          if (area.type === 'rectangle') return area.y[1];
+          if (area.type === 'circle') return area.cy + area.r;
+          if (area.type === 'triangle') return Math.max(...area.points.map(p => p.y));
+          return 0;
+        }));
       } else {
         // Fallback to full screen height
         minY = 0;
