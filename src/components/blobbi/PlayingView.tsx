@@ -17,6 +17,7 @@ import { ChestModal } from './ChestModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
+import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -45,6 +46,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
+  const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',
     x: [0, 100],
@@ -154,7 +156,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi}
-        initialPosition={{ x: 50, y: 80 }}
+        initialPosition={blobbiInitialPosition}
         backgroundFile={background}
         onMoveStart={handleMoveStart}
         onMoveComplete={handleMoveComplete}
