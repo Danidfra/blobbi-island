@@ -8,6 +8,8 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
   'nostr-station': 'nostr-station-open.png',
   'plaza': 'plaza-open.png',
   'arcade': 'arcade-open.png',
+  'arcade-1': 'arcade-1.png',
+  'arcade-minus1': 'arcade-minus1.png',
   'stage': 'stage-open.png',
   'shop': 'town-open.png',
   'back-yard': 'back-yard-open.png',

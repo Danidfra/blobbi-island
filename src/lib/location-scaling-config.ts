@@ -20,4 +20,8 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1.6,
     finalScale: 1.2,
   },
+  'arcade-minus1.png': {
+    initialScale: 1.2,
+    finalScale: 0.8,
+  },
 };

@@ -4,6 +4,9 @@ import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
+import { ArcadePassModal } from './ArcadePassModal';
+import { ElevatorModal } from './ElevatorModal';
+import { NoPassModal } from './NoPassModal';
 
 interface InteractiveElementProps {
   src: string;
@@ -111,6 +114,9 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isArcadePassModalOpen, setIsArcadePassModalOpen] = useState(false);
+  const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
+  const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!blobbiRef.current) return;
@@ -140,6 +146,19 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     // TODO: Add navigation or action logic here
     // This could trigger navigation to specific sub-locations,
     // open mini-games, or show specific UI components
+  };
+
+  const handleTicketPurchase = () => {
+    setIsArcadePassModalOpen(true);
+  };
+
+  const handleElevatorClick = () => {
+    const hasPass = sessionStorage.getItem('has-arcade-pass') === 'true';
+    if (hasPass) {
+      setIsElevatorModalOpen(true);
+    } else {
+      setIsNoPassModalOpen(true);
+    }
   };
 
   // Town elements (when background is town-open.png)
@@ -178,57 +197,83 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     );
   }
 
-  if (backgroundFile === 'arcade-open.png') {
+  if (backgroundFile === 'arcade-open.png' || backgroundFile === 'arcade-1.png' || backgroundFile === 'arcade-minus1.png') {
     return (
-      <div ref={containerRef} className="w-full h-full relative">
-        <div
-          className='absolute flex top-[16%] w-[17.5%] left-1/2 -translate-x-1/2 overflow-hidden z-10'
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          <InteractiveElement
-            src="/assets/interactive/doors/elevator-door.png"
-            alt="Curtain"
-            effect="slide"
-            slideDirection="right"
-            className="scale-x-[-1]"
-            onClick={() => console.log('Curtain clicked')}
-            isHovered={isHovered}
-          />
-          <InteractiveElement
-            src="/assets/interactive/doors/elevator-door.png"
-            alt="Curtain"
-            effect="slide"
-            slideDirection="right"
-            onClick={() => console.log('Curtain clicked')}
-            isHovered={isHovered}
-          />
-        </div>
-        <div className='relative left-[20%] top-[26%]'>
-          <img src='/assets/interactive/furniture/ticket.png' alt="ticket"
-            className="absolute" />
-          <InteractiveElement
-            src="/assets/interactive/furniture/ticket-out.png"
-            alt="ticket out"
-            effect='opacity'
-            className='absolute'
-            onClick={() => console.log('Curtain clicked')}
-            isHovered={isHovered}
-          />
+      <>
+        <div ref={containerRef} className="w-full h-full relative">
+          {/* Elevator */}
+          <div
+            className={cn(
+              'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
+              backgroundFile === 'arcade-open.png' && 'top-[16%] w-[17.5%] ',
+              // backgroundFile === 'arcade-1.png' && 'top-[16%] w-[17.5%] ',
+              backgroundFile === 'arcade-minus1.png' && 'top-[41%] w-[7.8%] ',
+            )}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <InteractiveElement
+              src="/assets/interactive/doors/elevator-door.png"
+              alt="Elevator Door Left"
+              effect="slide"
+              slideDirection="right"
+              className="scale-x-[-1]"
+              onClick={handleElevatorClick}
+              isHovered={isHovered}
+            />
+            <InteractiveElement
+              src="/assets/interactive/doors/elevator-door.png"
+              alt="Elevator Door Right"
+              effect="slide"
+              slideDirection="right"
+              onClick={handleElevatorClick}
+              isHovered={isHovered}
+            />
+          </div>
+
+          {/* Ticket Counter - Only on main floor */}
+          {backgroundFile === 'arcade-open.png' && (
+           <>
+            <div className='relative left-[20%] top-[26%]'>
+              <img src='/assets/interactive/furniture/ticket.png' alt="ticket counter"
+                className="absolute" />
+              <InteractiveElement
+                src="/assets/interactive/furniture/ticket-out.png"
+                alt="Purchase Arcade Pass"
+                effect='opacity'
+                className='absolute'
+                onClick={handleTicketPurchase}
+              />
+            </div>
+          {/* Prizes */}
+          <div className='absolute right-[7%] top-[33%]'>
+            <InteractiveElement
+              src="/assets/interactive/furniture/prizes.png"
+              alt="prizes"
+              animated={false}
+              effect='scale'
+              onClick={() => handleElementClick('prizes')}
+            />
+          </div>
+           </>
+          )}
 
         </div>
-        <div className='absolute right-[7%] top-[33%]'>
-          <InteractiveElement
-            src="/assets/interactive/furniture/prizes.png"
-            alt="prizes"
-            animated={false}
-            effect='scale'
-            slideDirection="right"
-            onClick={() => console.log('Curtain clicked')}
-            isHovered={isHovered}
-          />
-        </div>
-      </div>
+
+        {/* Modals */}
+        <ArcadePassModal
+          isOpen={isArcadePassModalOpen}
+          onClose={() => setIsArcadePassModalOpen(false)}
+        />
+        <ElevatorModal
+          isOpen={isElevatorModalOpen}
+          onClose={() => setIsElevatorModalOpen(false)}
+        />
+        <NoPassModal
+          isOpen={isNoPassModalOpen}
+          onClose={() => setIsNoPassModalOpen(false)}
+        />
+      </>
     );
   }
 
