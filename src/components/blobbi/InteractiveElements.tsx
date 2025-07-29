@@ -251,17 +251,80 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           {/* Floor -1 */}
           {backgroundFile === 'arcade-minus1.png' && (
             <>
-              <div className='absolute right-[18%] bottom-[36%] transition-all duration-300 ease-out hover:scale-110'>
                 <InteractiveElement
                   src="/assets/interactive/games/dance-machine.png"
-                  alt="Dance Machine piece"
+                  alt="Dance Machine"
                   effect='scale'
                   animated={false}
-                  className='relative'
+                  className='absolute right-[18%] bottom-[36%] transition-all duration-300 ease-out hover:scale-110'
                   onClick={() => handleElementClick('dance-machine')}
                 />
-                {/* <img src='/assets/interactive/games/dance-machine-piece.png' alt="ticket counter" className={cn(["absolute bottom-[17%] right-[35%] z-30", ])} /> */}
-              </div>
+            </>
+          )}
+
+          {/* Floor 1 */}
+          {backgroundFile === 'arcade-1.png' && (
+            <>
+                {/* Left Arcade Machine */}
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-pink.png"
+                    alt="Arcade Machine Pink"
+                    effect='scale'
+                    animated={false}
+                    className='absolute left-[18%] w-[10%] bottom-[28%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                    />
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-black.png"
+                    alt="Arcade Machine classic"
+                    effect='scale'
+                    animated={false}
+                    className='absolute left-[11%] w-[10%] bottom-[22%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                    />
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-classic.png"
+                    alt="Arcade Machine classic"
+                    effect='scale'
+                    animated={false}
+                    className='absolute left-[4%] w-[10%] bottom-[16%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                    />
+
+                  {/* Middle */}
+                  <InteractiveElement
+                    src="/assets/interactive/games/snooker.png"
+                    alt="Arcade Machine Green"
+                    effect='scale'
+                    animated={false}
+                    className='absolute left-[33%] w-[15%] bottom-[10%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                  />
+                  {/* Right Arcade Machine */}
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-green.png"
+                    alt="Arcade Machine Green"
+                    effect='scale'
+                    animated={false}
+                    className='absolute right-[18%] w-[10%] bottom-[28%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                  />
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-purple.png"
+                    alt="Arcade Machine Purple"
+                    effect='scale'
+                    animated={false}
+                    className='absolute right-[11%] w-[10%] bottom-[22%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                  />
+                  <InteractiveElement
+                    src="/assets/interactive/games/arcade-machine-red.png"
+                    alt="Arcade Machine Red"
+                    effect='scale'
+                    animated={false}
+                    className='absolute right-[4%] w-[10%] bottom-[16%] transition-all duration-300 ease-out hover:scale-110'
+                    onClick={() => handleElementClick('dance-machine')}
+                  />
             </>
           )}
 
