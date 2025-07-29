@@ -14,6 +14,7 @@ import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
+import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
@@ -38,6 +39,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
   const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
+  const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -92,6 +94,10 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
       const newSleepingPosition = { x: newPosition.x, y: newPosition.y - 5 };
       blobbiRef.current.goTo(newSleepingPosition, true);
     }
+  };
+
+  const handleBlobbiClick = () => {
+    setIsBlobbiInfoOpen(true);
   };
 
   return (
@@ -161,6 +167,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         onMoveStart={handleMoveStart}
         onMoveComplete={handleMoveComplete}
         onWakeUp={handleWakeUp}
+        onBlobbiClick={handleBlobbiClick}
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
         size={blobbiSize}
@@ -204,6 +211,12 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
           </div>
         </div>
       </div>
+
+      {/* Blobbi Info Modal */}
+      <BlobbiInfoModal
+        isOpen={isBlobbiInfoOpen}
+        onClose={() => setIsBlobbiInfoOpen(false)}
+      />
     </PlaceBackground>
   );
 }

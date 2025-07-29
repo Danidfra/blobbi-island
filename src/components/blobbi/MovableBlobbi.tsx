@@ -37,6 +37,7 @@ interface MovableBlobbiProps {
   onMoveStart?: (destination: Position) => void;
   onMoveComplete?: (position: Position) => void;
   onWakeUp?: () => void;
+  onBlobbiClick?: () => void;
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
   scaleByYPosition?: boolean;
@@ -57,6 +58,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onMoveStart,
       onMoveComplete,
       onWakeUp,
+      onBlobbiClick,
       isSleeping = false,
       isAttachedToBed = false,
       scaleByYPosition = false,
@@ -235,8 +237,9 @@ const { isPositionBlocked } = useMovementBlocker();
         // Always call onWakeUp when clicking anywhere
         onWakeUp?.();
 
-        // If clicking on the Blobbi itself, just wake up but don't move
+        // If clicking on the Blobbi itself, wake up and trigger click handler
         if (blobbiRef.current?.contains(event.target as Node)) {
+          onBlobbiClick?.();
           return;
         }
 
@@ -276,7 +279,7 @@ const { isPositionBlocked } = useMovementBlocker();
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed, isPositionBlocked]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isPositionBlocked]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
@@ -331,7 +334,7 @@ const { isPositionBlocked } = useMovementBlocker();
           ref={blobbiRef}
           className={cn(
             "absolute transition-all duration-200 ease-out",
-            "pointer-events-none",
+            onBlobbiClick ? "pointer-events-auto cursor-pointer hover:scale-105" : "pointer-events-none",
             isMoving && "transition-none",
             className
           )}

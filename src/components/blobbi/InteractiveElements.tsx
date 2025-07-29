@@ -445,127 +445,115 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   // Town elements (when background is town-open.png)
   if (backgroundFile === 'town-open.png') {
     return (
-      <>
+      <div className='relative w-full h-full'>
         {/* Arcade - Left side */}
-        <div className="absolute left-[10%] sm:left-[18%] top-[30%] sm:top-[25%] z-15">
-           <img
-            src="/assets/interactive/builds/arcade.png"
-            alt="Arcade"
-            className="h-56 sm:h-60 md:h-64 lg:h-72"
-          />
-          <InteractiveElement
-            src="/assets/interactive/builds/arcade-door.png"
-            alt="Arcade Door"
-            animated={false}
-            onClick={() => setCurrentLocation('arcade')}
-            effect="door"
-            className="absolute bottom-0 right-0  w-[40%] z-15"
-          />
-        </div>
+          <div className="absolute left-[18%] top-[25%] w-[21.1%] z-15">
+            <img
+              src="/assets/interactive/builds/arcade.png"
+              alt="Arcade"
+              className="w-full"
+            />
+            <InteractiveElement
+              src="/assets/interactive/builds/arcade-door.png"
+              alt="Arcade Door"
+              animated={false}
+              onClick={() => setCurrentLocation('arcade')}
+              effect="door"
+              className="absolute bottom-0 right-0  w-[40%] z-15"
+            />
+          </div>
 
-        {/* Stage - Center */}
-        <div className="absolute left-1/2 top-[26%] sm:top-[21%] transform -translate-x-1/2 z-15">
-          <img
-            src="/assets/interactive/builds/stage.png"
-            alt="Stage"
-            className="size-56 sm:size-60 md:size-64 lg:size-72"
-          />
-          <InteractiveElement
-            src="/assets/interactive/builds/stage-door.png"
-            alt="Stage Door"
-            animated={false}
-            onClick={() => setCurrentLocation('stage')}
-            effect="door"
-            className="absolute bottom-0 -right-2  w-[50%] z-15"
-          />
-        </div>
+          {/* Stage - Center */}
+          <div className="absolute left-1/2 top-[22%] w-[27.6%] transform -translate-x-1/2 z-15">
+            <img
+              src="/assets/interactive/builds/stage.png"
+              alt="Stage"
+              className="w-full"
+            />
+            <InteractiveElement
+              src="/assets/interactive/builds/stage-door.png"
+              alt="Stage Door"
+              animated={false}
+              onClick={() => setCurrentLocation('stage')}
+              effect="opacity"
+              className="absolute bottom-0 -right-[1%]  w-[47%] z-15"
+            />
+          </div>
 
-        {/* Shop - Right side */}
-        <div className="absolute right-[10%] sm:right-[18%] top-[30%] sm:top-[25%] z-15">
-          <img
-            src="/assets/interactive/builds/shop.png"
-            alt="Shop"
-            className="h-56 sm:h-60 md:h-64 lg:h-72"
-          />
-          <InteractiveElement
-            src="/assets/interactive/builds/shop-door.png"
-            alt="Shop Door"
-            animated={false}
-            onClick={() => handleElementClick('shop')}
-            effect="door"
-            className="absolute bottom-0 left-0  w-[60%] z-15"
-          />
+          {/* Shop - Right side */}
+          <div className="absolute right-[18%] top-[25%] w-[20.5%] z-15">
+            <img
+              src="/assets/interactive/builds/shop.png"
+              alt="Shop"
+              className="w-full"
+            />
+            <InteractiveElement
+              src="/assets/interactive/builds/shop-door.png"
+              alt="Shop Door"
+              animated={false}
+              onClick={() => handleElementClick('shop')}
+              effect="door"
+              className="absolute bottom-0 left-0  w-[60%] z-15"
+            />
 
-        </div>
+          </div>
 
         {/* Bush 3 - Left side, slightly above bush-1 */}
-        <div className="absolute left-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-3.png"
             alt="Bush 3"
             animated={false}
             onClick={() => handleElementClick('bush-3')}
-            className="h-20 sm:h-24 md:h-28 lg:h-32"
+            className="absolute left-0 top-[69%] z-[10]"
           />
-        </div>
 
         {/* Bush 4 - Right side, slightly above bush-2 */}
-        <div className="absolute right-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-4.png"
             alt="Bush 4"
             animated={false}
             onClick={() => handleElementClick('bush-4')}
-            className="size-20 sm:size-24 md:size-28 lg:size-32"
+            className="absolute right-0 top-[69%] z-[10]"
           />
-        </div>
 
         {/* Bush 1 - Bottom left corner (highest z-index) */}
-        <div className="absolute left-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-1.png"
             alt="Bush 1"
             animated={false}
             onClick={() => handleElementClick('bush-1')}
-            className="size-20 sm:size-24 md:h-28 lg:size-32"
+            className="absolute left-0 bottom-0 z-[20]"
           />
-        </div>
 
         {/* Bush 2 - Bottom right corner (highest z-index) */}
-        <div className="absolute right-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-2.png"
             alt="Bush 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="size-20 sm:size-24 md:size-28 lg:size-32"
+            className="absolute right-0 bottom-0 z-[20]"
           />
-        </div>
 
         {/* streetlight - left */}
-        <div className="absolute left-[6%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 1"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="h-48 sm:h-52 md:h-56 lg:h-60"
+            className="absolute left-[6%] bottom-[10%] h-[35%] z-[15]"
           />
-        </div>
         <MovementBlocker id="town-buildings" x={8} y={86} width={4.5} height={4} />
 
         {/* streetlight -right */}
-        <div className="absolute right-[12%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="h-48 sm:h-52 md:h-56 lg:h-60"
+            className="absolute right-[12%] bottom-[10%] h-[35%] z-[15]"
           />
-        </div>
         <MovementBlocker id="town-buildings" x={82.5} y={86} width={4.5} height={4} />
-      </>
+      </div>
     );
   }
 

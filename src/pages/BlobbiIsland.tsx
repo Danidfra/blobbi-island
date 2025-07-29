@@ -140,6 +140,8 @@ export function BlobbiIsland() {
           <BlobbiGameContainer>
             {renderGameContent()}
             <SceneTransition />
+            {/* Map Modal - Now properly scoped to game container */}
+            <MapModal />
           </BlobbiGameContainer>
         </main>
 
@@ -157,9 +159,6 @@ export function BlobbiIsland() {
             </a>
           </p>
         </footer>
-
-        {/* Map Modal */}
-        <MapModal />
       </div>
     </LocationProvider>
   );
