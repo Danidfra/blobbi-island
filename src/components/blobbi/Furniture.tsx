@@ -5,8 +5,10 @@ import { cn } from '@/lib/utils';
 import { Position } from '@/lib/types';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
 import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
+import { MovementBlocker } from './MovementBlocker';
 
 interface FurnitureProps {
+  id: string;
   containerRef: React.RefObject<HTMLElement>;
   initialPosition?: Position;
   position?: Position;
@@ -22,6 +24,7 @@ interface FurnitureProps {
 }
 
 export function Furniture({
+  id,
   containerRef,
   initialPosition = { x: 50, y: 75 },
   position: controlledPosition,
@@ -105,45 +108,57 @@ export function Furniture({
   };
 
   return (
-    <div
-      {...bind()}
-      ref={furnitureRef}
-      className={cn(
-        'absolute',
-        'cursor-pointer',
-        className
-      )}
-      style={{
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        transform: 'translate(-50%, -50%)',
-        zIndex: getDynamicZIndex(position),
-        touchAction: 'none',
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={handleClick}
-      onTouchEnd={handleTouchEnd}
-    >
-      <img
-        src={imageUrl}
-        alt="Furniture"
-        className="w-full h-full object-contain"
-        style={{ pointerEvents: 'none' }}
-      />
-      {hoverEffectImageUrl && (
+    <>
+      <div
+        {...bind()}
+        ref={furnitureRef}
+        className={cn(
+          'absolute',
+          'cursor-pointer',
+          className
+        )}
+        style={{
+          left: `${position.x}%`,
+          top: `${position.y}%`,
+          width: `${size.width}px`,
+          height: `${size.height}px`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: getDynamicZIndex(position),
+          touchAction: 'none',
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleClick}
+        onTouchEnd={handleTouchEnd}
+      >
         <img
-          src={hoverEffectImageUrl}
-          alt="Hover Effect"
-          className={cn(
-            'absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-200',
-            isHovered ? 'opacity-100' : 'opacity-0'
-          )}
+          src={imageUrl}
+          alt="Furniture"
+          className="w-full h-full object-contain"
           style={{ pointerEvents: 'none' }}
         />
+        {hoverEffectImageUrl && (
+          <img
+            src={hoverEffectImageUrl}
+            alt="Hover Effect"
+            className={cn(
+              'absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-200',
+              isHovered ? 'opacity-100' : 'opacity-0'
+            )}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+      </div>
+      {containerRef.current && (
+        <MovementBlocker
+          id={`furniture-blocker-${id}`}
+          x={position.x - ((size.width / containerRef.current.offsetWidth) * 100) / 2}
+          y={position.y + ((size.height / containerRef.current.offsetHeight) * 100) / 2 - ((size.height / containerRef.current.offsetHeight) * 100) * 0.2}
+          width={(size.width / containerRef.current.offsetWidth) * 100}
+          height={(size.height / containerRef.current.offsetHeight) * 20}
+          visible={true}
+        />
       )}
-    </div>
+    </>
   );
 }

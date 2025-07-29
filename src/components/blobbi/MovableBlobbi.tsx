@@ -1,3 +1,4 @@
+import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 import React, {
   useState,
   useEffect,
@@ -70,6 +71,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const animationRef = useRef<number>();
     const lastTimeRef = useRef<number>();
     const blobbiRef = useRef<HTMLDivElement>(null);
+const { isPositionBlocked } = useMovementBlocker();
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -121,8 +123,18 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         maxY = boundary.bottom;
       } else if (boundary.shape === 'composite') {
         // For composite boundaries, find the overall min/max Y values
-        minY = Math.min(...boundary.areas.map(area => area.y[0]));
-        maxY = Math.max(...boundary.areas.map(area => area.y[1]));
+        minY = Math.min(...boundary.areas.map(area => {
+          if (area.type === 'rectangle') return area.y[0];
+          if (area.type === 'circle') return area.cy - area.r;
+          if (area.type === 'triangle') return Math.min(...area.points.map(p => p.y));
+          return 100;
+        }));
+        maxY = Math.max(...boundary.areas.map(area => {
+          if (area.type === 'rectangle') return area.y[1];
+          if (area.type === 'circle') return area.cy + area.r;
+          if (area.type === 'triangle') return Math.max(...area.points.map(p => p.y));
+          return 0;
+        }));
       } else {
         // Fallback to full screen height
         minY = 0;
@@ -174,6 +186,12 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           };
           const newPercentPos = getPercentPosition(newPixelPos);
 
+          if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
+            setIsMoving(false);
+            onMoveComplete?.(currentPos);
+            return currentPos;
+          }
+
           if (showTrail) {
             setTrail(prevTrail => [currentPos, ...prevTrail.slice(0, 4)]);
           }
@@ -193,6 +211,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         isMoving,
         onMoveComplete,
         showTrail,
+        isPositionBlocked,
       ]
     );
 
@@ -241,6 +260,10 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         const clickY = clientY - rect.top;
         const newTarget = getPercentPosition({ x: clickX, y: clickY });
 
+        if (isPositionBlocked(newTarget.x, newTarget.y)) {
+          return;
+        }
+
         setTargetPosition(newTarget);
         setIsMoving(true);
         onMoveStart?.(newTarget);
@@ -253,10 +276,13 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed, isPositionBlocked]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
+        if (isPositionBlocked(newTarget.x, newTarget.y)) {
+          return;
+        }
         setTargetPosition(newTarget);
         if (immediate) {
           // Immediately snap to position without animation

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { PlaceBackground } from './PlaceBackground';
 import { MapButton } from './MapButton';
+import { ArcadePassIcon } from './ArcadePassIcon';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { LocationIndicator } from './LocationIndicator';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
@@ -16,6 +17,7 @@ import { ChestModal } from './ChestModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
+import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -26,6 +28,13 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
   const { currentLocation } = useLocation();
+
+  // Clear arcade pass when leaving arcade locations
+  React.useEffect(() => {
+    if (!currentLocation.startsWith('arcade')) {
+      sessionStorage.removeItem('has-arcade-pass');
+    }
+  }, [currentLocation]);
   const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
@@ -37,6 +46,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
+  const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',
     x: [0, 100],
@@ -94,6 +104,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
       {background === 'home-open.png' && (
         <>
           <Furniture
+            id="refrigerator"
             containerRef={containerRef}
             initialPosition={{ x: 20, y: 70 }}
             boundary={boundary}
@@ -104,6 +115,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             onClick={() => setIsRefrigeratorOpen(true)}
           />
           <Furniture
+            id="chest"
             containerRef={containerRef}
             position={{ x: 40, y: 70 }}
             boundary={boundary}
@@ -114,6 +126,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
             onClick={() => setIsChestOpen(true)}
           />
           <Furniture
+            id="bed"
             containerRef={containerRef}
             position={bedPosition}
             onPositionChange={handleBedPositionChange}
@@ -143,7 +156,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi}
-        initialPosition={{ x: 50, y: 80 }}
+        initialPosition={blobbiInitialPosition}
         backgroundFile={background}
         onMoveStart={handleMoveStart}
         onMoveComplete={handleMoveComplete}
@@ -154,8 +167,9 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         scaleByYPosition={true}
       />
 
-      {/* Map Button - Top Right */}
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
+      {/* Map Button and Arcade Pass Icon - Top Right */}
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center space-x-2">
+        <ArcadePassIcon />
         <MapButton />
       </div>
 

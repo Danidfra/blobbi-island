@@ -19,6 +19,12 @@ export function LocationProvider({ children }: LocationProviderProps) {
     setIsTransitioning(true);
     transitionTimeout.current = setTimeout(() => {
       setCurrentLocation(location);
+
+      // Clear arcade pass when leaving arcade locations
+      if (!location.startsWith('arcade')) {
+        sessionStorage.removeItem('has-arcade-pass');
+      }
+
       transitionTimeout.current = setTimeout(() => {
         setIsTransitioning(false);
         transitionTimeout.current = null;
@@ -27,7 +33,15 @@ export function LocationProvider({ children }: LocationProviderProps) {
   };
 
   useEffect(() => {
+    // Clear arcade pass on page load/reload
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('has-arcade-pass');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (transitionTimeout.current) {
         clearTimeout(transitionTimeout.current);
       }
