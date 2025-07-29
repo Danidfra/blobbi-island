@@ -50,12 +50,22 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [45, 55], y: [36, 48] },
     ],
   },
+  'arcade-1.png': {
+    shape: 'composite',
+    areas: [
+      { type: 'rectangle', x: [48, 52], y: [55, 63] },
+      { type: 'rectangle', x: [23.5, 76.5], y: [63, 84] },
+      { type: 'rectangle', x: [0, 100], y: [84, 100] },
+      { type: 'triangle', points: [{ x: 100, y: 84 }, { x: 76.5, y: 63 }, { x: 76.5, y: 84 }] },
+      { type: 'triangle', points: [{ x: 0, y:84 }, { x: 23.5, y: 63 }, { x: 23.5, y: 84 }] }
+    ],
+  },
   'arcade-minus1.png': {
     shape: 'composite',
     areas: [
       { type: 'rectangle', x: [0, 100], y: [74, 100] },
       { type: 'rectangle', x: [26.5, 73.5], y: [55, 74] },
-      { type: 'rectangle', x: [48, 52], y: [48, 55] },
+      { type: 'rectangle', x: [48, 52], y: [49, 55] },
       { type: 'triangle', points: [{ x: 100, y: 74 }, { x: 73.5, y: 55 }, { x: 73.5, y: 74 }] },
       { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] }
     ],

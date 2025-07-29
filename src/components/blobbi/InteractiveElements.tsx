@@ -7,6 +7,8 @@ import { MovementBlocker } from './MovementBlocker';
 import { ArcadePassModal } from './ArcadePassModal';
 import { ElevatorModal } from './ElevatorModal';
 import { NoPassModal } from './NoPassModal';
+import { GameModal } from './GameModal';
+import { Button } from '@/components/ui/button';
 
 interface InteractiveElementProps {
   src: string;
@@ -117,6 +119,9 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const [isArcadePassModalOpen, setIsArcadePassModalOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
   const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
+  const [isGameModalOpen, setIsGameModalOpen] = useState(false);
+  const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!blobbiRef.current) return;
@@ -146,6 +151,18 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     // TODO: Add navigation or action logic here
     // This could trigger navigation to specific sub-locations,
     // open mini-games, or show specific UI components
+    if (elementName === 'dance-machine') {
+      setGameModalContent({
+        title: 'Dance Dance Blobbi',
+        content: (
+          <div className="flex flex-col items-center justify-center h-full">
+            <p className="text-lg mb-4">Get ready to dance!</p>
+            <Button>Start Game</Button>
+          </div>
+        ),
+      });
+      setIsGameModalOpen(true);
+    }
   };
 
   const handleTicketPurchase = () => {
@@ -206,8 +223,8 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             className={cn(
               'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
               backgroundFile === 'arcade-open.png' && 'top-[16%] w-[17.5%] ',
-              // backgroundFile === 'arcade-1.png' && 'top-[16%] w-[17.5%] ',
-              backgroundFile === 'arcade-minus1.png' && 'top-[41%] w-[7.8%] ',
+              backgroundFile === 'arcade-1.png' && 'top-[42%] w-[11.5%] ',
+              backgroundFile === 'arcade-minus1.png' && 'top-[41.4%] w-[7.8%] ',
             )}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -230,6 +247,23 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               isHovered={isHovered}
             />
           </div>
+
+          {/* Floor -1 */}
+          {backgroundFile === 'arcade-minus1.png' && (
+            <>
+              <div className='absolute right-[18%] bottom-[36%] transition-all duration-300 ease-out hover:scale-110'>
+                <InteractiveElement
+                  src="/assets/interactive/games/dance-machine.png"
+                  alt="Dance Machine piece"
+                  effect='scale'
+                  animated={false}
+                  className='relative'
+                  onClick={() => handleElementClick('dance-machine')}
+                />
+                {/* <img src='/assets/interactive/games/dance-machine-piece.png' alt="ticket counter" className={cn(["absolute bottom-[17%] right-[35%] z-30", ])} /> */}
+              </div>
+            </>
+          )}
 
           {/* Ticket Counter - Only on main floor */}
           {backgroundFile === 'arcade-open.png' && (
@@ -273,6 +307,15 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           isOpen={isNoPassModalOpen}
           onClose={() => setIsNoPassModalOpen(false)}
         />
+        {gameModalContent && (
+          <GameModal
+            isOpen={isGameModalOpen}
+            onClose={() => setIsGameModalOpen(false)}
+            title={gameModalContent.title}
+          >
+            {gameModalContent.content}
+          </GameModal>
+        )}
       </>
     );
   }
