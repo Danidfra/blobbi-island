@@ -255,39 +255,118 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                   src="/assets/interactive/games/dance-machine.png"
                   alt="Dance Machine"
                   effect='scale'
-                  animated={false}
-                  className='absolute right-[18%] bottom-[36%] transition-all duration-300 ease-out hover:scale-110'
+                  className='absolute right-[18%] bottom-[36%]'
                   onClick={() => handleElementClick('dance-machine')}
                 />
+
+            {/* Wall decorations */}
+             <>
+              {/* Left */}
+                <img src='/assets/scenario/arcade/arcade-minus1/yellow-guitar-neon.png' alt="ticket counter" className="absolute top-[34%] left-[15%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/pink-headset-neon.png' alt="ticket counter" className="absolute top-[27%] left-[10%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/yellow-mic-neon.png' alt="ticket counter" className="absolute top-[27%] left-[2%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/blue-mic-neon.png' alt="ticket counter" className="absolute top-[40%] left-[10%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/song-neon.png' alt="ticket counter" className="absolute top-[48%] left-[2%] w-[4%]" />
+
+              {/* Middle */}
+                <img src='/assets/scenario/arcade/arcade-minus1/blue-notes-neon.png' alt="ticket counter" className="absolute top-[32%] left-[28%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/cd-neon.png' alt="ticket counter" className="absolute top-[27%] left-[40%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/blue-wire-mic-neon.png' alt="ticket counter" className="absolute top-[27%] right-[30%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/yellow-note-up-neon.png' alt="ticket counter" className="absolute top-[27%] right-[40%] w-[4%]" />
+
+              {/* Right */}
+                <img src='/assets/scenario/arcade/arcade-minus1/notes-neon.png' alt="ticket counter" className="absolute top-[34%] right-[17%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/pink-note-neon.png' alt="ticket counter" className="absolute top-[27%] right-[10%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/yellow-headset-neon.png' alt="ticket counter" className="absolute top-[27%] right-[2%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/purple-note-neon.png' alt="ticket counter" className="absolute top-[40%] right-[10%] w-[4%]" />
+                <img src='/assets/scenario/arcade/arcade-minus1/blue-note-neon.png' alt="ticket counter" className="absolute top-[48%] right-[2%] w-[4%]" />
+
+              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-pac-blobbi.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
+              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
+             </>
+
+            <div className='flex absolute bottom-[25%] left-[24%] w-[12.5%] gap-[20%]'>
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%]" />
+              <InteractiveElement
+                src="/assets/scenario/arcade/left-chair-arcade.png"
+                alt="Left Chair"
+                effect='scale'
+                className='left-[18%] bottom-[36%] w-[40%]'
+                // onClick={() => handleElementClick('dance-machine')}
+              />    
+              <InteractiveElement
+                src="/assets/scenario/arcade/right-chair-arcade.png"
+                alt="Right Chair"
+                effect='scale'
+                className='left-[30%] bottom-[36%] w-[40%]'
+                // onClick={() => handleElementClick('dance-machine')}
+              />            
+            </div>        
+            <div className='flex absolute bottom-[25%] right-[24%] w-[12.5%] gap-[20%]'>
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%]" />
+              <InteractiveElement
+                src="/assets/scenario/arcade/left-chair-arcade.png"
+                alt="Left Chair"
+                effect='scale'
+                className='left-[18%] bottom-[36%] w-[40%]'
+                // onClick={() => handleElementClick('dance-machine')}
+              />    
+              <InteractiveElement
+                src="/assets/scenario/arcade/right-chair-arcade.png"
+                alt="Right Chair"
+                effect='scale'
+                className='left-[30%] bottom-[36%] w-[40%]'
+                // onClick={() => handleElementClick('dance-machine')}
+              />            
+            </div>        
+
+            <img src='/assets/scenario/arcade/arcade-minus1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
+            <MovementBlocker id="stage-top" x={42} y={70} width={16} height={0.5} />
+            <MovementBlocker id="stage-r" x={42} y={70} width={0.5} height={14} />
+            <MovementBlocker id="stage-left" x={58} y={70} width={0.1} height={14} />
+            <MovementBlocker id="stage-rt" x={58} y={84} width={6} height={0.1} />
+
             </>
           )}
 
           {/* Floor 1 */}
           {backgroundFile === 'arcade-1.png' && (
             <>
+              <img src='/assets/scenario/arcade/arcade-1/trophy-neon.png' alt="ticket counter" className="absolute top-[32%] left-[14%] w-[6%]" />
+              <img src='/assets/scenario/arcade/arcade-1/sword-neon.png' alt="ticket counter" className="absolute top-[26%] left-[6%] w-[5%] -rotate-12" />
+              <img src='/assets/scenario/arcade/arcade-1/play-neon.png' alt="ticket counter" className="absolute top-[44%] left-[6%] w-[6%] -rotate-12" />
+
+              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbizard.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
+              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbi-adventure.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[6%]" />
+
+              <img src='/assets/scenario/arcade/arcade-1/controller-neon.png' alt="ticket counter" className="absolute top-[32%] left-[26%] w-[7%] -rotate-12" />
+              <img src='/assets/scenario/arcade/arcade-1/star-neon.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[27%] w-[5%]" />
+              <img src='/assets/scenario/arcade/arcade-1/dice-neon.png' alt="ticket counter" className="absolute top-[31%] right-[26%] w-[6%]" />
+
+              <img src='/assets/scenario/arcade/arcade-1/pac-man-neon.png' alt="ticket counter" className="absolute top-[32%] right-[15%] w-[4.5%] rotate-12" />
+              <img src='/assets/scenario/arcade/arcade-1/game-boy-neon.png' alt="ticket counter" className="absolute top-[28%] right-[4%] w-[4%] rotate-12" />
+              <img src='/assets/scenario/arcade/arcade-1/retro-controller-neon.png' alt="ticket counter" className="absolute top-[44%] right-[6%] w-[6%] rotate-12" />
+
                 {/* Left Arcade Machine */}
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-pink.png"
                     alt="Arcade Machine Pink"
                     effect='scale'
-                    animated={false}
-                    className='absolute left-[18%] w-[10%] bottom-[28%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute left-[18%] w-[12.5%] bottom-[28%] z-[15]'
                     onClick={() => handleElementClick('dance-machine')}
                     />
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-black.png"
                     alt="Arcade Machine classic"
                     effect='scale'
-                    animated={false}
-                    className='absolute left-[11%] w-[10%] bottom-[22%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute left-[11%] w-[12.5%] bottom-[22%] z-20'
                     onClick={() => handleElementClick('dance-machine')}
                     />
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-classic.png"
                     alt="Arcade Machine classic"
                     effect='scale'
-                    animated={false}
-                    className='absolute left-[4%] w-[10%] bottom-[16%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute left-[4%] w-[12.5%] bottom-[16%] z-[25]'
                     onClick={() => handleElementClick('dance-machine')}
                     />
 
@@ -296,33 +375,38 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                     src="/assets/interactive/games/snooker.png"
                     alt="Arcade Machine Green"
                     effect='scale'
-                    animated={false}
-                    className='absolute left-[33%] w-[15%] bottom-[10%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute left-[30%] w-[17.5%] bottom-[10%] z-30'
                     onClick={() => handleElementClick('dance-machine')}
                   />
+
+                  <InteractiveElement
+                    src="/assets/interactive/games/air-hockey.png"
+                    alt="Arcade Air Hockey"
+                    effect='scale'
+                    className='absolute right-[30%] w-[17.5%] bottom-[10%] z-30'
+                    onClick={() => handleElementClick('dance-machine')}
+                  />
+
                   {/* Right Arcade Machine */}
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-green.png"
                     alt="Arcade Machine Green"
                     effect='scale'
-                    animated={false}
-                    className='absolute right-[18%] w-[10%] bottom-[28%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute right-[18%] w-[12.5%] bottom-[28%] z-[15]'
                     onClick={() => handleElementClick('dance-machine')}
                   />
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-purple.png"
                     alt="Arcade Machine Purple"
                     effect='scale'
-                    animated={false}
-                    className='absolute right-[11%] w-[10%] bottom-[22%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute right-[11%] w-[12.5%] bottom-[22%] z-20'
                     onClick={() => handleElementClick('dance-machine')}
                   />
                   <InteractiveElement
                     src="/assets/interactive/games/arcade-machine-red.png"
                     alt="Arcade Machine Red"
                     effect='scale'
-                    animated={false}
-                    className='absolute right-[4%] w-[10%] bottom-[16%] transition-all duration-300 ease-out hover:scale-110'
+                    className='absolute right-[4%] w-[12.5%] bottom-[16%] z-[25]'
                     onClick={() => handleElementClick('dance-machine')}
                   />
             </>
@@ -342,6 +426,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                 onClick={handleTicketPurchase}
               />
             </div>
+
+            <img src='/assets/scenario/arcade/arcade-ground/wall-art-super-blobbi.png' alt="ticket counter" className="absolute top-[6%] right-[10%] w-[20%]" />
+            <img src='/assets/scenario/arcade/arcade-ground/wall-art-game-boy.png' alt="ticket counter" className="absolute top-[12%] left-[2%] w-[10%]" />
+            <img src='/assets/scenario/arcade/arcade-ground/play-up-neon.png' alt="ticket counter" className="absolute top-[18%] left-[28%] w-[8%]" />
+            <img src='/assets/scenario/arcade/arcade-ground/trophy-money-neon.png' alt="ticket counter" className="absolute top-[18%] right-[31%] w-[6%]" />
+
           {/* Prizes */}
           <div className='absolute right-[7%] top-[33%]'>
             <InteractiveElement

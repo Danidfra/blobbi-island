@@ -63,11 +63,19 @@ export const locationBoundaries: Record<string, Boundary> = {
   'arcade-minus1.png': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [0, 100], y: [74, 100] },
-      { type: 'rectangle', x: [26.5, 73.5], y: [55, 74] },
       { type: 'rectangle', x: [48, 52], y: [49, 55] },
+
+      { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] },
+      { type: 'rectangle', x: [26.5, 73.5], y: [55, 74] },
       { type: 'triangle', points: [{ x: 100, y: 74 }, { x: 73.5, y: 55 }, { x: 73.5, y: 74 }] },
-      { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] }
+      { type: 'rectangle', x: [0, 100], y: [74, 88] },
+
+      { type: 'rectangle', x: [0, 22], y: [88, 94] },
+      { type: 'triangle', points: [{ x: 22, y: 88 }, { x: 22, y: 94 }, { x: 28, y: 88 }] },
+
+      { type: 'rectangle', x: [78, 100], y: [88, 94] },
+      { type: 'triangle', points: [{ x: 78, y: 88 }, { x: 78, y: 94 }, { x: 72, y: 88 }] },
+      
     ],
   },
   'back-yard-open.png': {
