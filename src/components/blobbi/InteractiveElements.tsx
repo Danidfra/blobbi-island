@@ -223,7 +223,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             className={cn(
               'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
               backgroundFile === 'arcade-open.png' && 'top-[16%] w-[17.5%] ',
-              backgroundFile === 'arcade-1.png' && 'top-[42%] w-[11.5%] ',
+              backgroundFile === 'arcade-1.png' && 'top-[40.5%] w-[10%] ',
               backgroundFile === 'arcade-minus1.png' && 'top-[41.4%] w-[7.8%] ',
             )}
             onMouseEnter={() => setIsHovered(true)}
@@ -286,45 +286,50 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
              </>
 
             <div className='flex absolute bottom-[25%] left-[24%] w-[12.5%] gap-[20%]'>
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%]" />
               <InteractiveElement
                 src="/assets/scenario/arcade/left-chair-arcade.png"
                 alt="Left Chair"
                 effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%]'
+                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />    
               <InteractiveElement
                 src="/assets/scenario/arcade/right-chair-arcade.png"
                 alt="Right Chair"
                 effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%]'
+                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />            
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
             </div>        
             <div className='flex absolute bottom-[25%] right-[24%] w-[12.5%] gap-[20%]'>
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%]" />
               <InteractiveElement
                 src="/assets/scenario/arcade/left-chair-arcade.png"
                 alt="Left Chair"
                 effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%]'
+                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />    
               <InteractiveElement
                 src="/assets/scenario/arcade/right-chair-arcade.png"
                 alt="Right Chair"
                 effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%]'
+                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />            
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
             </div>        
 
+            <div>
             <img src='/assets/scenario/arcade/arcade-minus1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
-            <MovementBlocker id="stage-top" x={42} y={70} width={16} height={0.5} />
-            <MovementBlocker id="stage-r" x={42} y={70} width={0.5} height={14} />
-            <MovementBlocker id="stage-left" x={58} y={70} width={0.1} height={14} />
-            <MovementBlocker id="stage-rt" x={58} y={84} width={6} height={0.1} />
+              <InteractiveElement
+                src="/assets/interactive/games/arcade-mic.png"
+                alt="Right Chair"
+                effect='scale'
+                className='absolute left-1/2 transform -translate-x-1/2 bottom-[18%] w-[3%] z-[30]'
+                // onClick={() => handleElementClick('dance-machine')}
+              /> 
+            </div>
 
             </>
           )}
@@ -352,7 +357,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                     src="/assets/interactive/games/arcade-machine-pink.png"
                     alt="Arcade Machine Pink"
                     effect='scale'
-                    className='absolute left-[18%] w-[12.5%] bottom-[28%] z-[15]'
+                    className='absolute left-[18%] w-[12%] bottom-[28%] z-[15]'
                     onClick={() => handleElementClick('dance-machine')}
                     />
                   <InteractiveElement
@@ -503,7 +508,6 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           effect="slide"
           slideDirection="right"
           className="w-[46px] absolute bottom-[22.8%] left-[45.4%]"
-          onClick={handleChairClick}
         />
 
         {/* Left side */}

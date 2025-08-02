@@ -54,8 +54,9 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'arcade-minus1.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 48, zIndex: 10 },
-      { minPosition: 48.01, maxPosition: 100, zIndex: 9 },
+      { minPosition: 0, maxPosition: 22, zIndex: 31 },
+      { minPosition: 22.01, maxPosition: 32, zIndex: 26 },
+      { minPosition: 32.01, maxPosition: 100, zIndex: 9 },
     ]
   },
   {
