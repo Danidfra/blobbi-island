@@ -104,4 +104,20 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [16, 84],
     y: [75, 79],
   },
+  'shop-open.png': {
+    shape: 'composite',
+    areas: [
+      { type: 'rectangle', x: [0, 100], y: [84, 100] },
+
+      { type: 'rectangle', x: [0, 7], y: [56, 84] },
+      { type: 'triangle', points: [{ x: 7, y: 64 }, { x: 7, y: 84 }, { x: 10, y: 84 }] },
+
+      { type: 'rectangle', x: [7, 100], y: [56, 57] },
+      
+      { type: 'rectangle', x: [93, 100], y: [27, 56] },
+      { type: 'triangle', points: [{ x: 93, y: 27 }, { x: 93, y: 56 }, { x: 90, y: 56 }] },
+      
+      { type: 'rectangle', x: [0, 93], y: [27, 28] },
+    ],
+  },
 };

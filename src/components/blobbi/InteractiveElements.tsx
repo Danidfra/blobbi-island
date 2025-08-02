@@ -292,16 +292,16 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
-              />    
+              />
               <InteractiveElement
                 src="/assets/scenario/arcade/right-chair-arcade.png"
                 alt="Right Chair"
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
-              />            
+              />
               <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
-            </div>        
+            </div>
             <div className='flex absolute bottom-[25%] right-[24%] w-[12.5%] gap-[20%]'>
               <InteractiveElement
                 src="/assets/scenario/arcade/left-chair-arcade.png"
@@ -309,16 +309,16 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
-              />    
+              />
               <InteractiveElement
                 src="/assets/scenario/arcade/right-chair-arcade.png"
                 alt="Right Chair"
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
-              />            
+              />
               <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
-            </div>        
+            </div>
 
             <div>
             <img src='/assets/scenario/arcade/arcade-minus1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
@@ -328,7 +328,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
                 effect='scale'
                 className='absolute left-1/2 transform -translate-x-1/2 bottom-[18%] w-[3%] z-[30]'
                 // onClick={() => handleElementClick('dance-machine')}
-              /> 
+              />
             </div>
 
             </>
@@ -599,8 +599,47 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     );
   }
 
+  
+  if (backgroundFile === 'shop-open.png') {
+    return (
+      <>
+        <div className="absolute inset-0 pointer-events-none">
+          <img
+            src="/assets/scenario/glass-barrier-bottom.png"
+            alt="Glass Barrier"
+            className="absolute w-full bottom-[35.3%] object-cover z-[20]"
+          />
+          <img
+            src="/assets/scenario/glass-barrier-top.png"
+            alt="Glass Barrier"
+            className="absolute w-full top-[25%] object-cover z-[10]"
+          />
+          <img
+            src="/assets/scenario/shop-stairs.png"
+            alt="Glass Barrier"
+            className="absolute w-[12.8%] bottom-[8.5%] left-0 z-[25]"
+          />
+          <img
+            src="/assets/scenario/shop-stairs.png"
+            alt="Glass Barrier"
+            className="absolute w-[12.3%] bottom-[38.5%] right-0 scale-x-[-1] z-[15]"
+          />
+        </div>
+        <InteractiveElement
+          src="/assets/interactive/back-arrow.png"
+          alt="Go back to town"
+          animated={false}
+          onClick={() => setCurrentLocation('town')}
+          effect="scale"
+          className="absolute top-[5%] left-4 w-12 h-12 z-20"
+        />
+      </>
+    );
+  }
+
   // Town elements (when background is town-open.png)
   if (backgroundFile === 'town-open.png') {
+
     return (
       <div className='relative w-full h-full'>
         {/* Arcade - Left side */}
@@ -648,7 +687,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               src="/assets/interactive/builds/shop-door.png"
               alt="Shop Door"
               animated={false}
-              onClick={() => handleElementClick('shop')}
+              onClick={() => setCurrentLocation('shop')}
               effect="door"
               className="absolute bottom-0 left-0  w-[60%] z-15"
             />

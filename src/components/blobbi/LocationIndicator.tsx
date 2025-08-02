@@ -20,6 +20,7 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   'arcade-minus1': 'Game Arcade - Basement',
   'stage': 'Performance Stage',
   'shop': 'Village Shop',
+  'shop-open': 'Village Shop',
   'back-yard': 'Back Yard',
   'cave-open': 'Mining Cave',
 };
