@@ -102,7 +102,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   return (
     <PlaceBackground ref={containerRef}>
-      {/* <BoundaryVisualizer boundary={boundary} /> */}
+      <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
       <InteractiveElements blobbiRef={blobbiRef} />
 

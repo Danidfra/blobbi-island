@@ -47,9 +47,10 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'shop-open.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 42, zIndex: 30},
+      { minPosition: 71.01, maxPosition: 100, zIndex: 9 },
       { minPosition: 42.01, maxPosition: 71, zIndex: 19 },
-      { minPosition: 71.01, maxPosition: 100, zIndex: 9 }
+      { minPosition: 14.01, maxPosition: 42, zIndex: 25},
+      { minPosition: 0, maxPosition: 14, zIndex: 30},
     ]
   },
   {

@@ -16,8 +16,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'arcade-1': { x: 50, y: 63 },
   'arcade-minus1': { x: 50, y: 55 },
   'stage': { x: 50, y: 75 },
-  'shop': { x: 50, y: 75 },
-  'shop-open': { x: 50, y: 75 },
+  'shop': { x: 50, y: 90 },
   'back-yard': { x: 50, y: 75 },
   'cave-open': { x: 50, y: 75 },
 };

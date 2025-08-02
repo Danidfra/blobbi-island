@@ -633,6 +633,107 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           effect="scale"
           className="absolute top-[5%] left-4 w-12 h-12 z-20"
         />
+
+       <div className="">
+         <img 
+          src="/assets/scenario/shop/belt-barrier.png" 
+          alt="Self service kiosk"
+          className='absolute bottom-[7%] left-[24%] w-[6%] z-[26]'
+        />
+        <img 
+          src="/assets/scenario/shop/belt-barrier.png" 
+          alt="Self service kiosk"
+          className='absolute bottom-[7%] left-[56%] w-[6%] z-[26]'
+        />
+       </div>
+
+        <div className='absolute flex bottom-[12%] left-[30%] z-10 gap-6'>
+          <div>
+            <img 
+              src="/assets/interactive/furniture/self-service-kiosk.png" 
+              alt="Self service kiosk"
+              />
+            <InteractiveElement
+              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute bottom-0"
+            />
+          </div>
+          <div>
+            <img 
+              src="/assets/interactive/furniture/self-service-kiosk.png" 
+              alt="Self service kiosk"
+              />
+            <InteractiveElement
+              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute bottom-0"
+            />
+          </div>
+          <div>
+            <img 
+              src="/assets/interactive/furniture/self-service-kiosk.png" 
+              alt="Self service kiosk"
+              />
+            <InteractiveElement
+              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute bottom-0"
+            />
+          </div>
+          <div>
+            <img 
+              src="/assets/interactive/furniture/self-service-kiosk.png" 
+              alt="Self service kiosk"
+              />
+            <InteractiveElement
+              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute bottom-0"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className='flex absolute bottom-[3%] right-[3%] w-[16.5%] gap-[30%]'>
+            <img
+              src="/assets/interactive/furniture/shop-table.png"
+              alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
+            <InteractiveElement
+                src="/assets/interactive/furniture/shop-left-chair.png"
+              alt="Shop left chair"
+              effect='scale'
+              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
+            />
+            <InteractiveElement
+                src="/assets/interactive/furniture/shop-right-chair.png"
+              alt="Shop right chair"
+              effect='scale'
+              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
+            />
+          </div>
+          <div className='flex absolute bottom-[3%] right-[21%] w-[16.5%] gap-[30%]'>
+            <img
+              src="/assets/interactive/furniture/shop-table.png"
+              alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
+            <InteractiveElement
+                src="/assets/interactive/furniture/shop-left-chair.png"
+              alt="Shop left chair"
+              effect='scale'
+              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
+            />
+            <InteractiveElement
+                src="/assets/interactive/furniture/shop-right-chair.png"
+              alt="Shop right chair"
+              effect='scale'
+              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
+            />
+          </div>
+        </div>
       </>
     );
   }
