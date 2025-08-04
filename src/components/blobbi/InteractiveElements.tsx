@@ -1,3 +1,4 @@
+import { FoodShopModal } from './FoodShopModal';
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
@@ -121,6 +122,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
   const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -599,7 +601,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
     );
   }
 
-  
+
   if (backgroundFile === 'shop-open.png') {
     return (
       <>
@@ -635,13 +637,13 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         />
 
        <div>
-         <img 
-          src="/assets/scenario/shop/belt-barrier.png" 
+         <img
+          src="/assets/scenario/shop/belt-barrier.png"
           alt="Belt barrier"
           className='absolute bottom-[7%] right-[18%] w-[6%] z-[26]'
         />
-        <img 
-          src="/assets/scenario/shop/belt-barrier.png" 
+        <img
+          src="/assets/scenario/shop/belt-barrier.png"
           alt="Belt barrier"
           className='absolute bottom-[7%] right-[2%] w-[6%] z-[26]'
         />
@@ -649,10 +651,10 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
 
           {/* Coffee Shop */}
           <div className='absolute bottom-[12%] left-[28%] z-20 w-[22.5%]'>
-            <img 
+            <img
               />
             <InteractiveElement
-              src="/assets/scenario/shop/coffee-shop.png" 
+              src="/assets/scenario/shop/coffee-shop.png"
               alt="Shopping coffe shop"
               effect="scale"
               animated={false}
@@ -661,58 +663,58 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
 
           {/* Badges Store */}
           <div className='absolute bottom-[38.5%] -left-[2.5%] z-15 w-[24.5%]'>
-            <img 
-              src="/assets/scenario/shop/badges-store.png" 
+            <img
+              src="/assets/scenario/shop/badges-store.png"
               alt="Shopping badges store"
               />
             <InteractiveElement
               src="/assets/interactive/doors/badges-store-door.png"
-              alt="Self service kiosk on"
+              alt="Badges store"
               effect="opacity"
               className="absolute -bottom-[5%] right-0 w-[29.4%]"
             />
           </div>
 
         {/* Plants */}
-          <img 
+          <img
             className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png" 
+            src="/assets/scenario/shop/plant-1.png"
             alt="Photo booth open"
           />
 
-          <img 
+          <img
             className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png" 
+            src="/assets/scenario/shop/plant-1.png"
             alt="Photo booth open"
           />
-          <img 
+          <img
             className='absolute bottom-[11.5%] left-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png" 
+            src="/assets/scenario/shop/plant-2.png"
             alt="Photo booth open"
           />
 
-          <img 
+          <img
             className='absolute bottom-[11.5%] right-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png" 
+            src="/assets/scenario/shop/plant-2.png"
             alt="Photo booth open"
           />
-          <img 
+          <img
             className='absolute bottom-[66.5%] left-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png" 
+            src="/assets/scenario/shop/plant-3.png"
             alt="Photo booth open"
           />
 
-          <img 
+          <img
             className='absolute bottom-[66.5%] right-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png" 
+            src="/assets/scenario/shop/plant-3.png"
             alt="Photo booth open"
           />
 
 
           {/* Photo Booth */}
           <div className='absolute bottom-[38.5%] left-[33.5%] z-[15] w-[8.5%]'>
-            <img 
-              src="/assets/scenario/shop/photo-booth.png" 
+            <img
+              src="/assets/scenario/shop/photo-booth.png"
               alt="Photo booth open"
               />
             <InteractiveElement
@@ -725,13 +727,13 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
 
           {/* Clothing Store */}
           <div className='absolute bottom-[38.5%] right-[25.5%] z-15 w-[24.5%]'>
-            <img 
-              src="/assets/scenario/shop/clothing-store.png" 
+            <img
+              src="/assets/scenario/shop/clothing-store.png"
               alt="Shopping clothing store"
               />
             <InteractiveElement
               src="/assets/interactive/doors/clothing-store-door.png"
-              alt="Self service kiosk on"
+              alt="Clothing store"
               effect="opacity"
               className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
             />
@@ -739,8 +741,8 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
 
           {/* Furniture Store */}
           <div className='absolute top-[7.4%] left-1/2 transform -translate-x-1/2 z-15 w-[30%]'>
-            <img 
-              src="/assets/scenario/shop/furniture-store.png" 
+            <img
+              src="/assets/scenario/shop/furniture-store.png"
               alt="Shopping furniture store"
               />
             <InteractiveElement
@@ -752,9 +754,9 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           </div>
 
         <div className='absolute flex bottom-[12%] right-[4%] z-10 gap-6'>
-          {/* <div>
-            <img 
-              src="/assets/interactive/furniture/self-service-kiosk.png" 
+          <div>
+            <img
+              src="/assets/interactive/furniture/self-service-kiosk.png"
               alt="Self service kiosk"
               />
             <InteractiveElement
@@ -762,11 +764,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               alt="Self service kiosk on"
               effect="opacity"
               className="absolute bottom-0"
+              onClick={() => setIsFoodShopModalOpen(true)}
             />
           </div>
           <div>
-            <img 
-              src="/assets/interactive/furniture/self-service-kiosk.png" 
+            <img
+              src="/assets/interactive/furniture/self-service-kiosk.png"
               alt="Self service kiosk"
               />
             <InteractiveElement
@@ -774,33 +777,12 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               alt="Self service kiosk on"
               effect="opacity"
               className="absolute bottom-0"
-            />
-          </div> */}
-          <div>
-            <img 
-              src="/assets/interactive/furniture/self-service-kiosk.png" 
-              alt="Self service kiosk"
-              />
-            <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
-              alt="Self service kiosk on"
-              effect="opacity"
-              className="absolute bottom-0"
-            />
-          </div>
-          <div>
-            <img 
-              src="/assets/interactive/furniture/self-service-kiosk.png" 
-              alt="Self service kiosk"
-              />
-            <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
-              alt="Self service kiosk on"
-              effect="opacity"
-              className="absolute bottom-0"
+              onClick={() => setIsFoodShopModalOpen(true)}
             />
           </div>
         </div>
+
+        <FoodShopModal isOpen={isFoodShopModalOpen} onClose={() => setIsFoodShopModalOpen(false)} />
 
         <div>
           <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>
