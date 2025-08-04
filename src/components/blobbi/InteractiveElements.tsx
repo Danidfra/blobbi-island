@@ -612,17 +612,17 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           <img
             src="/assets/scenario/glass-barrier-top.png"
             alt="Glass Barrier"
-            className="absolute w-full top-[25%] object-cover z-[10]"
+            className="absolute w-full top-[28.4%] object-cover z-[10]"
           />
           <img
             src="/assets/scenario/shop-stairs.png"
             alt="Glass Barrier"
-            className="absolute w-[12.8%] bottom-[8.5%] left-0 z-[25]"
+            className="absolute w-[11.8%] bottom-[9.5%] left-0 z-[25]"
           />
           <img
             src="/assets/scenario/shop-stairs.png"
             alt="Glass Barrier"
-            className="absolute w-[12.3%] bottom-[38.5%] right-0 scale-x-[-1] z-[15]"
+            className="absolute w-[11.5%] bottom-[38.7%] right-0 scale-x-[-1] z-[15]"
           />
         </div>
         <InteractiveElement
@@ -634,21 +634,125 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
           className="absolute top-[5%] left-4 w-12 h-12 z-20"
         />
 
-       <div className="">
+       <div>
          <img 
           src="/assets/scenario/shop/belt-barrier.png" 
-          alt="Self service kiosk"
-          className='absolute bottom-[7%] left-[24%] w-[6%] z-[26]'
+          alt="Belt barrier"
+          className='absolute bottom-[7%] right-[18%] w-[6%] z-[26]'
         />
         <img 
           src="/assets/scenario/shop/belt-barrier.png" 
-          alt="Self service kiosk"
-          className='absolute bottom-[7%] left-[56%] w-[6%] z-[26]'
+          alt="Belt barrier"
+          className='absolute bottom-[7%] right-[2%] w-[6%] z-[26]'
         />
        </div>
 
-        <div className='absolute flex bottom-[12%] left-[30%] z-10 gap-6'>
-          <div>
+          {/* Coffee Shop */}
+          <div className='absolute bottom-[12%] left-[28%] z-20 w-[22.5%]'>
+            <img 
+              />
+            <InteractiveElement
+              src="/assets/scenario/shop/coffee-shop.png" 
+              alt="Shopping coffe shop"
+              effect="scale"
+              animated={false}
+            />
+          </div>
+
+          {/* Badges Store */}
+          <div className='absolute bottom-[38.5%] -left-[2.5%] z-15 w-[24.5%]'>
+            <img 
+              src="/assets/scenario/shop/badges-store.png" 
+              alt="Shopping badges store"
+              />
+            <InteractiveElement
+              src="/assets/interactive/doors/badges-store-door.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute -bottom-[5%] right-0 w-[29.4%]"
+            />
+          </div>
+
+        {/* Plants */}
+          <img 
+            className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
+            src="/assets/scenario/shop/plant-1.png" 
+            alt="Photo booth open"
+          />
+
+          <img 
+            className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
+            src="/assets/scenario/shop/plant-1.png" 
+            alt="Photo booth open"
+          />
+          <img 
+            className='absolute bottom-[11.5%] left-[20.4%] z-[15] w-[7%]'
+            src="/assets/scenario/shop/plant-2.png" 
+            alt="Photo booth open"
+          />
+
+          <img 
+            className='absolute bottom-[11.5%] right-[20.4%] z-[15] w-[7%]'
+            src="/assets/scenario/shop/plant-2.png" 
+            alt="Photo booth open"
+          />
+          <img 
+            className='absolute bottom-[66.5%] left-[16%] z-[9] w-[6%]'
+            src="/assets/scenario/shop/plant-3.png" 
+            alt="Photo booth open"
+          />
+
+          <img 
+            className='absolute bottom-[66.5%] right-[16%] z-[9] w-[6%]'
+            src="/assets/scenario/shop/plant-3.png" 
+            alt="Photo booth open"
+          />
+
+
+          {/* Photo Booth */}
+          <div className='absolute bottom-[38.5%] left-[33.5%] z-[15] w-[8.5%]'>
+            <img 
+              src="/assets/scenario/shop/photo-booth.png" 
+              alt="Photo booth open"
+              />
+            <InteractiveElement
+              src="/assets/interactive/doors/photo-booth-door.png"
+              alt="Photo booth open"
+              effect="opacity"
+              className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
+            />
+          </div>
+
+          {/* Clothing Store */}
+          <div className='absolute bottom-[38.5%] right-[25.5%] z-15 w-[24.5%]'>
+            <img 
+              src="/assets/scenario/shop/clothing-store.png" 
+              alt="Shopping clothing store"
+              />
+            <InteractiveElement
+              src="/assets/interactive/doors/clothing-store-door.png"
+              alt="Self service kiosk on"
+              effect="opacity"
+              className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
+            />
+          </div>
+
+          {/* Furniture Store */}
+          <div className='absolute top-[7.4%] left-1/2 transform -translate-x-1/2 z-15 w-[30%]'>
+            <img 
+              src="/assets/scenario/shop/furniture-store.png" 
+              alt="Shopping furniture store"
+              />
+            <InteractiveElement
+              src="/assets/interactive/doors/furniture-store-door.png"
+              alt="Furniture store door"
+              effect="opacity"
+              className="absolute bottom-0 left-[10%] w-[35.3%]"
+            />
+          </div>
+
+        <div className='absolute flex bottom-[12%] right-[4%] z-10 gap-6'>
+          {/* <div>
             <img 
               src="/assets/interactive/furniture/self-service-kiosk.png" 
               alt="Self service kiosk"
@@ -671,7 +775,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               effect="opacity"
               className="absolute bottom-0"
             />
-          </div>
+          </div> */}
           <div>
             <img 
               src="/assets/interactive/furniture/self-service-kiosk.png" 
@@ -699,10 +803,10 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         <div>
-          <div className='flex absolute bottom-[3%] right-[3%] w-[16.5%] gap-[30%]'>
+          <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>
             <img
               src="/assets/interactive/furniture/shop-table.png"
-              alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
+              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-left-chair.png"
               alt="Shop left chair"
@@ -716,10 +820,10 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               className='left-[30%] bottom-[36%] w-[40%] z-[27]'
             />
           </div>
-          <div className='flex absolute bottom-[3%] right-[21%] w-[16.5%] gap-[30%]'>
+          <div className='flex absolute bottom-[3%] right-[24%] w-[16.5%] gap-[30%]'>
             <img
               src="/assets/interactive/furniture/shop-table.png"
-              alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
+              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-left-chair.png"
               alt="Shop left chair"

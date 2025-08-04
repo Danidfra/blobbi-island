@@ -29,7 +29,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 1.2,
   },
   'shop-open.png': {
-    initialScale: 1.4,
-    finalScale: 1.2,
+    initialScale: 1,
+    finalScale: 0.8,
   },
 };
