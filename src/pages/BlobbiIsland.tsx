@@ -122,7 +122,6 @@ export function BlobbiIsland() {
         return (
           <PlayingView
             selectedBlobbi={selectedBlobbi}
-            onSwitchBlobbi={() => setGameState('selection')}
           />
         );
 
@@ -133,8 +132,8 @@ export function BlobbiIsland() {
 
   return (
     <LocationProvider>
-      <div className="min-h-screen bg-background">
-        <BlobbiHeader />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900 theme-transition">
+        <BlobbiHeader onSwitchBlobbi={() => setGameState('selection')} />
 
         <main className="container mx-auto py-6">
           <BlobbiGameContainer>
@@ -146,14 +145,14 @@ export function BlobbiIsland() {
         </main>
 
         {/* Footer */}
-        <footer className="text-center py-4 text-sm text-muted-foreground">
+        <footer className="text-center py-4 text-sm blobbi-text-muted">
           <p>
             Vibed with{" "}
             <a
               href="https://soapbox.pub/mkstack"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent hover:underline font-medium"
             >
               MKStack
             </a>

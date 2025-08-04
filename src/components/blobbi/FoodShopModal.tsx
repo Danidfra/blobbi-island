@@ -190,23 +190,23 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full bg-white/90 backdrop-blur-sm border-4 border-blue-300 rounded-lg shadow-lg">
+      <DialogContent className="max-w-lg w-full blobbi-card-xl border-4 border-purple-300 dark:border-purple-600 rounded-lg shadow-lg theme-transition">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-blue-800">
-            Food Shop
+          <DialogTitle className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+            🍎 Food Shop
           </DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid grid-cols-2 gap-4">
             {shopItems.map(item => (
-              <Card key={item.id} className="overflow-hidden">
+              <Card key={item.id} className="overflow-hidden blobbi-card blobbi-hover">
                 <CardHeader className="p-0">
                   <img src={item.imageUrl} alt={item.name} className="w-full h-24 object-cover" />
                 </CardHeader>
                 <CardContent className="p-3 text-center">
-                  <p className="font-bold">{item.name}</p>
-                  <p className="text-yellow-600">{item.price} coins</p>
+                  <p className="font-bold blobbi-text">{item.name}</p>
+                  <p className="icon-yellow font-semibold">{item.price} coins</p>
                 </CardContent>
                 <CardFooter className="p-3">
                   <Input
@@ -215,7 +215,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
                     value={quantities[item.id] || ''}
                     onChange={e => handleQuantityChange(item.id, e.target.value)}
                     placeholder="0"
-                    className="w-full text-center"
+                    className="w-full text-center blobbi-button border-purple-200 dark:border-purple-700"
                   />
                 </CardFooter>
               </Card>
@@ -224,36 +224,42 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
         </ScrollArea>
 
         <div className="mt-4">
-          <h3 className="font-bold text-lg mb-2">Delivery Options</h3>
+          <h3 className="font-bold text-lg mb-2 blobbi-text">Delivery Options</h3>
           <RadioGroup value={deliveryOption} onValueChange={(value: DeliveryOption) => setDeliveryOption(value)}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="home" id="home" />
-              <Label htmlFor="home">Deliver to home</Label>
+              <Label htmlFor="home" className="blobbi-text">Deliver to home</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="blobbi" id="blobbi" disabled={!currentPetId} />
-              <Label htmlFor="blobbi">Add to Blobbi inventory</Label>
+              <Label htmlFor="blobbi" className="blobbi-text">Add to Blobbi inventory</Label>
             </div>
           </RadioGroup>
-          {!currentPetId && <p className="text-xs text-muted-foreground mt-1">Select a Blobbi to enable Blobbi inventory delivery.</p>}
+          {!currentPetId && <p className="text-xs blobbi-text-muted mt-1">Select a Blobbi to enable Blobbi inventory delivery.</p>}
         </div>
 
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+        <div className="mt-4 p-4 blobbi-card rounded-lg border-purple-200 dark:border-purple-700">
           <div className="flex justify-between items-center">
-            <span className="font-bold text-lg">Total Cost:</span>
-            <span className="font-bold text-lg text-yellow-700">{totalCost} coins</span>
+            <span className="font-bold text-lg blobbi-text">Total Cost:</span>
+            <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
           </div>
-          <div className="text-right text-sm">
-            Your balance: {userCoins} coins
+          <div className="text-right text-sm blobbi-text-muted">
+            Your balance: <span className="icon-yellow font-semibold">{userCoins} coins</span>
           </div>
-          {!canAfford && <p className="text-red-500 text-sm text-center mt-2">You don't have enough coins!</p>}
+          {!canAfford && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-2">You don't have enough coins!</p>}
         </div>
 
         <DialogFooter className="mt-4">
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" className="blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
+              Cancel
+            </Button>
           </DialogClose>
-          <Button onClick={handleConfirmPurchase} disabled={!canAfford || totalCost === 0}>
+          <Button
+            onClick={handleConfirmPurchase}
+            disabled={!canAfford || totalCost === 0}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 font-medium theme-transition"
+          >
             Confirm Purchase
           </Button>
         </DialogFooter>

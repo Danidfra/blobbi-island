@@ -4,7 +4,7 @@ import { MapButton } from './MapButton';
 import { ArcadePassIcon } from './ArcadePassIcon';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { LocationIndicator } from './LocationIndicator';
-import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+
 import { InteractiveElements } from './InteractiveElements';
 import { useLocation } from '@/hooks/useLocation';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -22,10 +22,9 @@ import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
-  onSwitchBlobbi: () => void;
 }
 
-export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps) {
+export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
   const { currentLocation } = useLocation();
@@ -102,7 +101,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
 
   return (
     <PlaceBackground ref={containerRef}>
-      {/* <BoundaryVisualizer boundary={boundary} /> */}
+      <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
       <InteractiveElements blobbiRef={blobbiRef} />
 
@@ -185,32 +184,7 @@ export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps
         <LocationIndicator />
       </div>
 
-      {/* Current Blobbi Info - Top Left */}
-      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20">
-        <div className="bg-white/90 backdrop-blur-sm border border-border rounded-lg p-2 sm:p-3 shadow-lg">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <CurrentBlobbiDisplay
-              size="sm"
-              className="border-2 border-primary/30"
-              showFallback={true}
-              interactive={true}
-              onClick={onSwitchBlobbi}
-              isSleeping={isSleeping}
-            />
-            <div className="text-left">
-              <p className="text-xs sm:text-sm font-medium text-foreground">
-                {selectedBlobbi?.name || selectedBlobbi?.id}
-              </p>
-              <button
-                onClick={onSwitchBlobbi}
-                className="text-xs text-primary hover:underline"
-              >
-                Switch Blobbi
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* Blobbi Info Modal */}
       <BlobbiInfoModal
