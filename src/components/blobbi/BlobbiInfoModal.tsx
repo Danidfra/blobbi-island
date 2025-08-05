@@ -88,7 +88,7 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
         className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         onClick={handleBackdropClick}
       >
-        <div className="max-w-md w-full p-4 rounded-2xl blobbi-card-xl blobbi-gradient-container">
+        <div className="w-[90%] max-w-md p-4 rounded-2xl blobbi-card-xl blobbi-gradient-container">
           <div className="text-center p-4">
             <p className="blobbi-text-muted">No Blobbi selected</p>
             <Button onClick={onClose} className="mt-3 blobbi-button" size="sm">
@@ -104,10 +104,10 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
 
   return (
     <div 
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="max-w-2xl w-full h-full max-h-[90vh] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative">
+      <div className="w-[95%] max-w-2xl max-h-[90vh] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative">
         <div className="p-4 border-b border-purple-200/60 dark:border-purple-800/60">
           <h2 className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">
             Blobbi Info
