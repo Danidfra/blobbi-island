@@ -11,6 +11,36 @@ import { NoPassModal } from './NoPassModal';
 import { GameModal } from './GameModal';
 import { Button } from '@/components/ui/button';
 
+// BackArrow component using SVG
+function BackArrow({ className, onClick }: { className?: string; onClick?: () => void }) {
+  return (
+    <div
+      className={cn(
+        'cursor-pointer select-none transition-all duration-300 ease-out hover:scale-110 active:scale-95',
+        className
+      )}
+      onClick={onClick}
+    >
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
+      >
+        <path
+          d="M19 12H5M5 12L12 19M5 12L12 5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
 interface InteractiveElementProps {
   src: string;
   alt: string;
@@ -627,13 +657,9 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             className="absolute w-[11.5%] bottom-[38.7%] right-0 scale-x-[-1] z-[15]"
           />
         </div>
-        <InteractiveElement
-          src="/assets/interactive/back-arrow.png"
-          alt="Go back to town"
-          animated={false}
+        <BackArrow
           onClick={() => setCurrentLocation('town')}
-          effect="scale"
-          className="absolute top-[5%] left-4 w-12 h-12 z-20"
+          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
         />
 
        <div>
@@ -688,13 +714,13 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             alt="Photo booth open"
           />
           <img
-            className='absolute bottom-[11.5%] left-[20.4%] z-[15] w-[7%]'
+            className='absolute bottom-[10.5%] left-[20.4%] z-[15] w-[7%]'
             src="/assets/scenario/shop/plant-2.png"
             alt="Photo booth open"
           />
 
           <img
-            className='absolute bottom-[11.5%] right-[20.4%] z-[15] w-[7%]'
+            className='absolute bottom-[10.5%] right-[20.4%] z-[15] w-[7%]'
             src="/assets/scenario/shop/plant-2.png"
             alt="Photo booth open"
           />
