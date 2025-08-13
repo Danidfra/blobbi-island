@@ -1,10 +1,12 @@
 import { FoodShopModal } from './FoodShopModal';
+import { PhotoBoothModal } from './PhotoBoothModal';
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
+import type { Blobbi } from '@/hooks/useBlobbis';
 import { ArcadePassModal } from './ArcadePassModal';
 import { ElevatorModal } from './ElevatorModal';
 import { NoPassModal } from './NoPassModal';
@@ -140,9 +142,10 @@ function InteractiveElement({
 
 interface InteractiveElementsProps {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
+  selectedBlobbi: Blobbi | null;
 }
 
-export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -153,6 +156,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
+  const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -756,6 +760,7 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               alt="Photo booth open"
               effect="opacity"
               className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
+              onClick={() => setIsPhotoBoothModalOpen(true)}
             />
           </div>
 
@@ -817,6 +822,11 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
         </div>
 
         <FoodShopModal isOpen={isFoodShopModalOpen} onClose={() => setIsFoodShopModalOpen(false)} />
+        <PhotoBoothModal
+          isOpen={isPhotoBoothModalOpen}
+          onClose={() => setIsPhotoBoothModalOpen(false)}
+          selectedBlobbi={selectedBlobbi}
+        />
 
         <div>
           <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>

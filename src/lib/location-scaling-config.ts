@@ -32,4 +32,8 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1,
     finalScale: 0.8,
   },
+  'photo-booth-inside.png': {
+    initialScale: 1.5,
+    finalScale: 1.5,
+  },
 };
