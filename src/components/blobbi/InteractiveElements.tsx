@@ -317,39 +317,39 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
               <img src='/assets/scenario/arcade/arcade-minus1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
              </>
 
-            <div className='flex absolute bottom-[25%] left-[24%] w-[12.5%] gap-[20%]'>
+            <div className='flex absolute bottom-[25%] left-[24%] w-[16.5%] gap-[40%]'>
               <InteractiveElement
-                src="/assets/scenario/arcade/left-chair-arcade.png"
+                src="/assets/scenario/arcade/left-arcade-chair.png"
                 alt="Left Chair"
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />
               <InteractiveElement
-                src="/assets/scenario/arcade/right-chair-arcade.png"
+                src="/assets/scenario/arcade/right-arcade-chair.png"
                 alt="Right Chair"
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
-            <div className='flex absolute bottom-[25%] right-[24%] w-[12.5%] gap-[20%]'>
+            <div className='flex absolute bottom-[25%] right-[24%] w-[16.5%] gap-[40%]'>
               <InteractiveElement
-                src="/assets/scenario/arcade/left-chair-arcade.png"
+                src="/assets/scenario/arcade/left-arcade-chair.png"
                 alt="Left Chair"
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />
               <InteractiveElement
-                src="/assets/scenario/arcade/right-chair-arcade.png"
+                src="/assets/scenario/arcade/right-arcade-chair.png"
                 alt="Right Chair"
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
                 // onClick={() => handleElementClick('dance-machine')}
               />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[60%] z-[26]" />
+              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
 
             <div>
@@ -506,6 +506,10 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             {gameModalContent.content}
           </GameModal>
         )}
+        <BackArrow
+          onClick={() => setCurrentLocation('town')}
+          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
+        />
       </>
     );
   }
@@ -627,6 +631,10 @@ export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
             />
           ))}
         </div>
+        <BackArrow
+          onClick={() => setCurrentLocation('town')}
+          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
+        />
       </div>
     );
   }
