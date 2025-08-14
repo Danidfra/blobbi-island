@@ -4,6 +4,7 @@ import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { IconX } from '@tabler/icons-react';
+import { usePhotoBooth } from '@/contexts/PhotoBoothContext';
 import type { Blobbi } from '@/hooks/useBlobbis';
 
 interface PhotoBoothModalProps {
@@ -15,6 +16,7 @@ interface PhotoBoothModalProps {
 export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalBlobbiRef = useRef<MovableBlobbiRef>(null);
+  const { setPhotoBoothOpen } = usePhotoBooth();
 
   // Use centralized boundary system
   const backgroundFile = 'photo-booth-inside.png';
@@ -35,6 +37,68 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
+
+  // Set Photo Booth state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setPhotoBoothOpen(true);
+    } else {
+      setPhotoBoothOpen(false);
+    }
+  }, [isOpen, setPhotoBoothOpen]);
+
+  // Handle keyboard events for modal-local Blobbi movement
+  useEffect(() => {
+    if (!isOpen || !selectedBlobbi) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default behavior for movement keys
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Calculate movement direction
+        let deltaX = 0;
+        let deltaY = 0;
+        const moveAmount = 2; // Small movement amount
+
+        switch (e.key.toLowerCase()) {
+          case 'arrowup':
+          case 'w':
+            deltaY = -moveAmount;
+            break;
+          case 'arrowdown':
+          case 's':
+            deltaY = moveAmount;
+            break;
+          case 'arrowleft':
+          case 'a':
+            deltaX = -moveAmount;
+            break;
+          case 'arrowright':
+          case 'd':
+            deltaX = moveAmount;
+            break;
+        }
+
+        if (internalBlobbiRef.current) {
+          const currentPos = internalBlobbiRef.current.getCurrentPosition?.() || blobbiInitialPosition;
+          const newPos = {
+            x: Math.max(36, Math.min(58, currentPos.x + deltaX)), // Constrain to booth boundaries
+            y: Math.max(59, Math.min(63, currentPos.y + deltaY)), // Constrain to booth boundaries
+          };
+          internalBlobbiRef.current.goTo(newPos, true); // Immediate movement
+        }
+      }
+    };
+
+    // Add event listener with capture phase to prevent bubbling
+    document.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [isOpen, selectedBlobbi, blobbiInitialPosition]);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only close if clicking the backdrop, not the modal content

@@ -1,4 +1,5 @@
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
+import { usePhotoBooth } from '@/contexts/PhotoBoothContext';
 import React, {
   useState,
   useEffect,
@@ -20,6 +21,7 @@ interface MovementDirection {
 
 export interface MovableBlobbiRef {
   goTo: (position: Position, immediate?: boolean) => void;
+  getCurrentPosition?: () => Position;
 }
 
 import { locationScalingConfig } from '@/lib/location-scaling-config';
@@ -74,6 +76,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const lastTimeRef = useRef<number>();
     const blobbiRef = useRef<HTMLDivElement>(null);
 const { isPositionBlocked } = useMovementBlocker();
+  const { isPhotoBoothOpen } = usePhotoBooth();
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -234,6 +237,11 @@ const { isPositionBlocked } = useMovementBlocker();
       if (!container || !isVisible) return;
 
       const handleClick = (event: MouseEvent | TouchEvent) => {
+        // Early return if Photo Booth is open - disable global movement
+        if (isPhotoBoothOpen) {
+          return;
+        }
+
         // Always call onWakeUp when clicking anywhere
         onWakeUp?.();
 
@@ -279,7 +287,7 @@ const { isPositionBlocked } = useMovementBlocker();
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isPositionBlocked]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isPositionBlocked, isPhotoBoothOpen]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
@@ -297,6 +305,7 @@ const { isPositionBlocked } = useMovementBlocker();
           onMoveStart?.(newTarget);
         }
       },
+      getCurrentPosition: () => position,
     }));
 
     if (!isVisible) return null;
