@@ -12,6 +12,17 @@ export default defineConfig(() => ({
   plugins: [
     react(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          nostr: ['@nostrify/nostrify', '@nostrify/react'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

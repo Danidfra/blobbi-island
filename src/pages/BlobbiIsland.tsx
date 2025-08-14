@@ -32,7 +32,16 @@ export function BlobbiIsland() {
       setGameState('login');
       setSelectedBlobbi(null);
     } else if (isLoadingBlobbis || isLoadingCompanion) {
+      // Only show loading for a short time, then fall back to selection
+      const loadingTimeout = setTimeout(() => {
+        if (isLoadingBlobbis || isLoadingCompanion) {
+          setGameState('selection');
+        }
+      }, 1000); // 1 second timeout for loading
+
       setGameState('loading');
+
+      return () => clearTimeout(loadingTimeout);
     } else if (blobbiError || companionError) {
       setGameState('selection'); // Show selection screen with error handling
     } else if (!blobbis || blobbis.length === 0) {

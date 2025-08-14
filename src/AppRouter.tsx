@@ -1,9 +1,11 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { lazy } from "react";
 import { ScrollToTop } from "./components/ScrollToTop";
 
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import { BlobbiIsland } from "./pages/BlobbiIsland";
+// Lazy load pages for better performance
+const BlobbiIsland = lazy(() => import("./pages/BlobbiIsland").then(m => ({ default: m.BlobbiIsland })));
+const Index = lazy(() => import("./pages/Index"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 export function AppRouter() {
   return (

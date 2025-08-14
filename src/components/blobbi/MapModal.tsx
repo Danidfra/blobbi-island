@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
-import { IconX } from '@tabler/icons-react';
+import { X } from 'lucide-react';
 
 // Location data with positioning coordinates (as percentages of the island image)
 interface Location {
@@ -115,7 +115,7 @@ export function MapModal({ className }: MapModalProps) {
           title="Close Map"
           aria-label="Close Map"
         >
-          <IconX className="w-4 h-4 sm:w-5 sm:h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
 

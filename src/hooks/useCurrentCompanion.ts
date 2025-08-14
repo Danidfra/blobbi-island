@@ -34,6 +34,8 @@ export function useCurrentCompanion() {
     },
     enabled: !!user?.pubkey,
     staleTime: 30000, // 30 seconds
+    retry: 1, // Only retry once
+    retryDelay: 500, // Fast retry
   });
 }
 
