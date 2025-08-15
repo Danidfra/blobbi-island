@@ -78,11 +78,11 @@ export function RelaySelector(props: RelaySelectorProps) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between", className)}
+          className={cn("justify-between blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20", className)}
         >
           <div className="flex items-center gap-2">
-            <Wifi className="h-4 w-4" />
-            <span className="truncate">
+            <Wifi className="h-4 w-4 icon-blue" />
+            <span className="truncate blobbi-text">
               {selectedOption 
                 ? selectedOption.name 
                 : selectedRelay 
@@ -94,7 +94,7 @@ export function RelaySelector(props: RelaySelectorProps) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[300px] p-0 blobbi-card border-purple-200 dark:border-purple-700">
         <Command>
           <CommandInput 
             placeholder="Search relays or type URL..." 

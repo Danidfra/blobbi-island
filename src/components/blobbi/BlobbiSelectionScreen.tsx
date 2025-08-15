@@ -37,18 +37,18 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-b from-blue-100 to-green-100 p-6">
-        <Card className="max-w-md shadow-lg border-2">
-          <CardContent className="p-6 text-center space-y-4">
+      <div className="flex items-center justify-center h-full blobbi-gradient-container p-6">
+        <Card className="max-w-md blobbi-card-xl shadow-lg border-2 border-purple-300 dark:border-purple-600">
+          <CardContent className="blobbi-section text-center space-y-4">
             <div className="text-4xl mb-4">😞</div>
-            <h3 className="text-lg font-semibold text-destructive">Failed to load your Blobbis</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Failed to load your Blobbis</h3>
+            <p className="text-sm blobbi-text-muted">
               {error instanceof Error ? error.message : 'Unknown error occurred'}
             </p>
             <Button
               variant="outline"
               onClick={() => window.location.reload()}
-              className="w-full"
+              className="w-full blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
             >
               Try Again
             </Button>
@@ -84,12 +84,14 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
   };
 
   return (
-    <div className="h-full bg-gradient-to-b from-blue-100 to-green-100 overflow-auto">
+    <div className="h-full blobbi-gradient-container overflow-auto">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-primary">Choose Your Blobbi</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+            Choose Your Blobbi
+          </h2>
+          <p className="blobbi-text-muted">
             Select which Blobbi you'd like to play with today
           </p>
         </div>
@@ -110,20 +112,20 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
           </div>
         ) : (
           /* No Blobbis Found */
-          <Card className="border-dashed max-w-md mx-auto">
+          <Card className="border-dashed max-w-md mx-auto blobbi-card border-purple-200 dark:border-purple-700">
             <CardContent className="py-12 px-8 text-center">
               <div className="space-y-4">
                 <div className="text-6xl">🥚</div>
-                <h3 className="text-lg font-semibold">No Blobbis Found</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg font-semibold blobbi-text">No Blobbis Found</h3>
+                <p className="blobbi-text-muted">
                   Create your first Blobbi at blobbi.pet to get started!
                 </p>
                 <Button
                   variant="outline"
                   onClick={() => window.open('https://blobbi.pet', '_blank')}
-                  className="w-full"
+                  className="w-full blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
+                  <ExternalLink className="w-4 h-4 mr-2 icon-purple" />
                   Create Your First Blobbi
                 </Button>
               </div>
@@ -137,7 +139,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="flex-1"
+              className="flex-1 blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
               disabled={isUpdatingCompanion}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -147,7 +149,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
             <Button
               onClick={handleConfirmSelection}
               disabled={!selectedBlobbi || isUpdatingCompanion || selectedBlobbi.id === currentCompanionId}
-              className="flex-1"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 font-medium theme-transition"
             >
               {isUpdatingCompanion ? "Updating..." :
                selectedBlobbi?.id === currentCompanionId ? "Already Selected" : "Enter Island"}

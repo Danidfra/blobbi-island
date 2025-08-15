@@ -16,12 +16,12 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'arcade-1': { x: 50, y: 63 },
   'arcade-minus1': { x: 50, y: 55 },
   'stage': { x: 50, y: 75 },
-  'shop': { x: 50, y: 75 },
+  'shop': { x: 50, y: 90 },
   'back-yard': { x: 50, y: 75 },
   'cave-open': { x: 50, y: 75 },
 };
 
-export function getBlobbiInitialPosition(location: LocationId): InitialPosition {
+export function getBlobbiInitialPosition(location: string): InitialPosition {
   const defaultPosition = LOCATION_INITIAL_POSITIONS[location] || { x: 50, y: 75 };
 
   if (location === 'arcade') {
@@ -33,6 +33,12 @@ export function getBlobbiInitialPosition(location: LocationId): InitialPosition 
       // Player does not have the arcade pass, set initial position near the ticket booth
       return { x: 50, y: 75 };
     }
+  }
+
+  // Handle modal backgrounds (like photo-booth-inside.png)
+  if (location === 'photo-booth-inside.png') {
+    // Place Blobbi at bottom-center of the booth walkable area
+    return { x: 50, y: 60 };
   }
 
   return defaultPosition;
