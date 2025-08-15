@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode } from 'react';
 
 interface PhotoBoothContextType {
   isPhotoBoothOpen: boolean;
@@ -17,10 +17,4 @@ export function PhotoBoothProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePhotoBooth() {
-  const context = useContext(PhotoBoothContext);
-  if (context === undefined) {
-    throw new Error('usePhotoBooth must be used within a PhotoBoothProvider');
-  }
-  return context;
-}
+export { PhotoBoothContext };

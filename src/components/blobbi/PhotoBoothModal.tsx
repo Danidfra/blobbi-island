@@ -4,7 +4,7 @@ import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { IconX, IconCamera } from '@tabler/icons-react';
-import { usePhotoBooth } from '@/contexts/PhotoBoothContext';
+import { usePhotoBooth } from '@/hooks/usePhotoBooth';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Button } from '@/components/ui/button';
 
@@ -15,8 +15,10 @@ interface Accessory {
   position: { x: number; y: number };
   isDragging: boolean;
   isResizing: boolean;
+  isRotating: boolean;
   originalSize: { width: number; height: number };
   scale: number;
+  rotation: number;
 }
 
 interface PhotoBoothModalProps {
@@ -35,7 +37,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
   // Accessory state
   const [accessories, setAccessories] = useState<Accessory[]>([]);
   const [draggingAccessory, setDraggingAccessory] = useState<string | null>(null);
-  const [resizingAccessory, setResizingAccessory] = useState<string | null>(null);
+  const [rotatingAccessory, setRotatingAccessory] = useState<string | null>(null);
   const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
   const [selectedAccessory, setSelectedAccessory] = useState<string | null>(null);
 
@@ -122,8 +124,10 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
           position,
           isDragging: true,
           isResizing: false,
+          isRotating: false,
           originalSize: { width: img.width, height: img.height },
-          scale: 1.0
+          scale: 1.0,
+          rotation: 0
         }]);
       }
     } else {
@@ -160,62 +164,46 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
     setAccessories(prev => prev.filter(a => a.id !== accessoryId));
   }, []);
 
-  // Handle accessory resize start
-  const handleAccessoryResizeStart = useCallback((accessoryId: string, _clientX: number, _clientY: number) => {
-    setResizingAccessory(accessoryId);
+  // Handle accessory rotation start
+  const handleAccessoryRotateStart = useCallback((accessoryId: string, _clientX: number, _clientY: number) => {
+    setRotatingAccessory(accessoryId);
     setAccessories(prev => prev.map(a =>
-      a.id === accessoryId ? { ...a, isResizing: true } : a
+      a.id === accessoryId ? { ...a, isRotating: true } : a
     ));
   }, []);
 
-  // Handle accessory resize
-  const handleAccessoryResize = useCallback((clientX: number, clientY: number, startDistance?: number) => {
-    if (!resizingAccessory || !containerRef.current) return;
+  // Handle accessory rotation
+  const handleAccessoryRotate = useCallback((clientX: number, clientY: number) => {
+    if (!rotatingAccessory || !containerRef.current) return;
 
-    const accessory = accessories.find(a => a.id === resizingAccessory);
-    if (!accessory || !loadedImages[resizingAccessory]) return;
+    const accessory = accessories.find(a => a.id === rotatingAccessory);
+    if (!accessory) return;
 
-    if (startDistance !== undefined) {
-      // Pinch-to-zoom for mobile
-      const baseDistance = 100; // Base distance for scale 1.0
-      const newScale = Math.max(0, Math.min(1, startDistance / baseDistance));
+    const accessoryElement = document.querySelector(`[data-accessory-id="${rotatingAccessory}"]`);
+    if (!accessoryElement) return;
 
-      setAccessories(prev => prev.map(a =>
-        a.id === resizingAccessory ? { ...a, scale: newScale } : a
-      ));
-    } else {
-      // Mouse drag resize for desktop
-      const _containerRect = containerRef.current.getBoundingClientRect();
-      const accessoryElement = document.querySelector(`[data-accessory-id="${resizingAccessory}"]`);
-      if (!accessoryElement) return;
+    const accessoryRect = accessoryElement.getBoundingClientRect();
+    const centerX = accessoryRect.left + accessoryRect.width / 2;
+    const centerY = accessoryRect.top + accessoryRect.height / 2;
 
-      const accessoryRect = accessoryElement.getBoundingClientRect();
-      const centerX = accessoryRect.left + accessoryRect.width / 2;
-      const centerY = accessoryRect.top + accessoryRect.height / 2;
-
-      const distance = Math.sqrt(
-        Math.pow(clientX - centerX, 2) + Math.pow(clientY - centerY, 2)
-      );
-
-      const img = loadedImages[resizingAccessory];
-      const baseSize = Math.max(img.width, img.height);
-      const newScale = Math.max(0, Math.min(1, distance / (baseSize * 0.5)));
-
-      setAccessories(prev => prev.map(a =>
-        a.id === resizingAccessory ? { ...a, scale: newScale } : a
-      ));
-    }
-  }, [resizingAccessory, accessories, loadedImages]);
-
-  // Handle accessory resize end
-  const handleAccessoryResizeEnd = useCallback(() => {
-    if (!resizingAccessory) return;
+    // Calculate angle from center to mouse position
+    const angle = Math.atan2(clientY - centerY, clientX - centerX);
+    const degrees = (angle * 180) / Math.PI;
 
     setAccessories(prev => prev.map(a =>
-      a.id === resizingAccessory ? { ...a, isResizing: false } : a
+      a.id === rotatingAccessory ? { ...a, rotation: degrees } : a
     ));
-    setResizingAccessory(null);
-  }, [resizingAccessory]);
+  }, [rotatingAccessory, accessories]);
+
+  // Handle accessory rotation end
+  const handleAccessoryRotateEnd = useCallback(() => {
+    if (!rotatingAccessory) return;
+
+    setAccessories(prev => prev.map(a =>
+      a.id === rotatingAccessory ? { ...a, isRotating: false } : a
+    ));
+    setRotatingAccessory(null);
+  }, [rotatingAccessory]);
 
   // Handle accessory selection
   const handleAccessorySelect = useCallback((accessoryId: string) => {
@@ -226,6 +214,13 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
   const handleSizeChange = useCallback((accessoryId: string, newScale: number) => {
     setAccessories(prev => prev.map(a =>
       a.id === accessoryId ? { ...a, scale: Math.max(0, Math.min(1, newScale)) } : a
+    ));
+  }, []);
+
+  // Handle rotation change via controller
+  const handleRotationChange = useCallback((accessoryId: string, newRotation: number) => {
+    setAccessories(prev => prev.map(a =>
+      a.id === accessoryId ? { ...a, rotation: newRotation } : a
     ));
   }, []);
 
@@ -259,8 +254,8 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
     const handleMouseMove = (e: MouseEvent) => {
       if (draggingAccessory) {
         handleAccessoryDrag(e.clientX, e.clientY);
-      } else if (resizingAccessory) {
-        handleAccessoryResize(e.clientX, e.clientY);
+      } else if (rotatingAccessory) {
+        handleAccessoryRotate(e.clientX, e.clientY);
       }
     };
 
@@ -268,30 +263,24 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
       e.preventDefault();
       if (draggingAccessory && e.touches.length > 0) {
         handleAccessoryDrag(e.touches[0].clientX, e.touches[0].clientY);
-      } else if (resizingAccessory && e.touches.length === 2) {
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        const distance = Math.sqrt(
-          Math.pow(touch2.clientX - touch1.clientX, 2) +
-          Math.pow(touch2.clientY - touch1.clientY, 2)
-        );
-        handleAccessoryResize(0, 0, distance);
+      } else if (rotatingAccessory && e.touches.length > 0) {
+        handleAccessoryRotate(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
     const handleMouseUp = () => {
       if (draggingAccessory) {
         handleAccessoryDragEnd();
-      } else if (resizingAccessory) {
-        handleAccessoryResizeEnd();
+      } else if (rotatingAccessory) {
+        handleAccessoryRotateEnd();
       }
     };
 
     const handleTouchEnd = () => {
       if (draggingAccessory) {
         handleAccessoryDragEnd();
-      } else if (resizingAccessory) {
-        handleAccessoryResizeEnd();
+      } else if (rotatingAccessory) {
+        handleAccessoryRotateEnd();
       }
     };
 
@@ -308,7 +297,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isOpen, draggingAccessory, resizingAccessory, handleAccessoryDrag, handleAccessoryDragEnd, handleAccessoryResize, handleAccessoryResizeEnd]);
+  }, [isOpen, draggingAccessory, rotatingAccessory, handleAccessoryDrag, handleAccessoryDragEnd, handleAccessoryRotate, handleAccessoryRotateEnd]);
 
   // Handle keyboard events for modal-local Blobbi movement
   useEffect(() => {
@@ -668,16 +657,15 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
           <h3 className="text-sm font-bold text-center mb-3 text-purple-700 dark:text-purple-300 flex-shrink-0">
             Accessories
           </h3>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 py-2">
             {availableAccessories.map((accessory) => (
               <div
                 key={accessory.id}
                 className={cn(
-                  "relative group cursor-grab active:cursor-grabbing mx-auto",
+                  "relative group cursor-grab active:cursor-grabbing mx-auto w-[90%]",
                   "bg-white/80 hover:bg-white border border-purple-200/60 dark:border-purple-800/60 rounded-lg p-2",
                   "transition-all duration-200 hover:scale-105 active:scale-95",
                   "flex flex-col items-center gap-1 flex-shrink-0",
-                  "w-28 hover:w-32" // Allow width expansion on hover
                 )}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -720,7 +708,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
           <div className="mt-3 text-xs text-muted-foreground text-center flex-shrink-0">
             <p>Drag to photo area</p>
             <p className="text-xs opacity-60">Double-click to remove</p>
-            <p className="text-xs opacity-60 mt-1">Click to select & resize</p>
+            <p className="text-xs opacity-60 mt-1">Click to select & rotate</p>
           </div>
         </div>
 
@@ -742,7 +730,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
                       alt={selectedAccessoryData.name}
                       className="w-full h-full object-contain"
                       style={{
-                        transform: `scale(${selectedAccessoryData.scale})`,
+                        transform: `scale(${selectedAccessoryData.scale}) rotate(${selectedAccessoryData.rotation}deg)`,
                         transformOrigin: 'center',
                       }}
                       draggable={false}
@@ -765,6 +753,22 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
                     className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer dark:bg-purple-700"
                     style={{
                       background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${selectedAccessoryData.scale * 100}%, #e5e7eb ${selectedAccessoryData.scale * 100}%, #e5e7eb 100%)`
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-2">
+                    Rotation: {Math.round(selectedAccessoryData.rotation)}°
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={selectedAccessoryData.rotation}
+                    onChange={(e) => handleRotationChange(selectedAccessoryData.id, parseInt(e.target.value))}
+                    className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer dark:bg-green-700"
+                    style={{
+                      background: `linear-gradient(to right, #10b981 0%, #10b981 ${(selectedAccessoryData.rotation / 360) * 100}%, #e5e7eb ${(selectedAccessoryData.rotation / 360) * 100}%, #e5e7eb 100%)`
                     }}
                   />
                 </div>
@@ -839,17 +843,17 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
               style={{
                 left: `${accessory.position.x}%`,
                 top: `${accessory.position.y}%`,
-                transform: 'translate(-50%, -50%)',
-                transition: (accessory.isDragging || accessory.isResizing) ? 'none' : 'all 0.2s ease',
+                transform: `translate(-50%, -50%) rotate(${accessory.rotation}deg)`,
+                transition: (accessory.isDragging || accessory.isRotating) ? 'none' : 'all 0.2s ease',
               }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleAccessorySelect(accessory.id);
-                // Check if clicking on resize handle
+                // Check if clicking on rotation handle
                 const target = e.target as HTMLElement;
-                if (target.classList.contains('resize-handle')) {
-                  handleAccessoryResizeStart(accessory.id, e.clientX, e.clientY);
+                if (target.classList.contains('rotation-handle')) {
+                  handleAccessoryRotateStart(accessory.id, e.clientX, e.clientY);
                 } else {
                   handleAccessoryDragStart(accessory.id, e.clientX, e.clientY);
                 }
@@ -861,14 +865,11 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
                 if (e.touches.length === 1) {
                   // Single touch for dragging
                   const target = e.target as HTMLElement;
-                  if (target.classList.contains('resize-handle')) {
-                    handleAccessoryResizeStart(accessory.id, e.touches[0].clientX, e.touches[0].clientY);
+                  if (target.classList.contains('rotation-handle')) {
+                    handleAccessoryRotateStart(accessory.id, e.touches[0].clientX, e.touches[0].clientY);
                   } else {
                     handleAccessoryDragStart(accessory.id, e.touches[0].clientX, e.touches[0].clientY);
                   }
-                } else if (e.touches.length === 2) {
-                  // Two touches for pinch-to-zoom
-                  handleAccessoryResizeStart(accessory.id, 0, 0);
                 }
               }}
               onDoubleClick={(e) => {
@@ -891,34 +892,10 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
                     }}
                     draggable={false}
                   />
-                  {/* Resize handle - bottom right corner */}
-                  <div
-                    className="resize-handle absolute bottom-0 right-0 w-4 h-4 bg-blue-500 rounded-full cursor-nwse-resize opacity-0 hover:opacity-100 transition-opacity border-2 border-white shadow-md"
-                    style={{
-                      transform: 'translate(25%, 25%)',
-                    }}
-                  />
                 </div>
               )}
             </div>
           ))}
-
-          {/* Optional: Visual indicator of walkable area (for debugging) */}
-          {process.env.NODE_ENV === 'development' && boundary.shape === 'rectangle' && (
-            <div
-              className="absolute border-2 border-yellow-400 border-dashed opacity-50 pointer-events-none"
-              style={{
-                left: `${boundary.x[0]}%`,
-                right: `${100 - boundary.x[1]}%`,
-                top: `${boundary.y[0]}%`,
-                bottom: `${100 - boundary.y[1]}%`,
-              }}
-            >
-              <div className="absolute -top-6 left-0 text-yellow-400 text-xs">
-                Walkable Area
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Take Photo Button */}
@@ -953,7 +930,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
           <div className="bg-white/95 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-xl">
             <p className="text-xs text-muted-foreground text-center font-medium">
-              📸 Move Blobbi • Drag accessories • Click to select & resize • Double-click to remove
+              📸 Move Blobbi • Drag accessories • Click to select & rotate • Double-click to remove
             </p>
           </div>
         </div>

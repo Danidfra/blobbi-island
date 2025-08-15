@@ -10,7 +10,7 @@ interface BlobbiLoginScreenProps {
 export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
   return (
     <div className={`flex flex-col items-center justify-center min-h-full blobbi-gradient-container ${className}`}>
-      <Card className="w-full max-w-md mx-auto blobbi-card-xl shadow-lg border-2 border-purple-300 dark:border-purple-600">
+      <Card className="w-full max-w-md mx-auto py-8 blobbi-card-xl shadow-lg border-2 border-purple-300 dark:border-purple-600">
         <CardContent className="blobbi-section text-center space-y-6">
           {/* Blobbi Island Logo/Title */}
           <div className="space-y-2">

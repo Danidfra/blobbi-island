@@ -1,5 +1,5 @@
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
-import { usePhotoBooth } from '@/contexts/PhotoBoothContext';
+import { usePhotoBooth } from '@/hooks/usePhotoBooth';
 import React, {
   useState,
   useEffect,

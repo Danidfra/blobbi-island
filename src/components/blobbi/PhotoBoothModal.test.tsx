@@ -217,8 +217,8 @@ describe('PhotoBoothModal', () => {
       </TestApp>
     );
 
-    // Check resize instructions - should appear in both places
-    const allInstructions = screen.getAllByText(/click to select & resize/i);
+    // Check rotation instructions - should appear in both places
+    const allInstructions = screen.getAllByText(/click to select & rotate/i);
     expect(allInstructions).toHaveLength(2);
     expect(allInstructions[0]).toBeInTheDocument();
     expect(allInstructions[1]).toBeInTheDocument();
