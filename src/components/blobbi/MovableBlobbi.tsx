@@ -342,7 +342,7 @@ const { isPositionBlocked } = useMovementBlocker();
         <div
           ref={blobbiRef}
           className={cn(
-            "absolute transition-all duration-200 ease-out",
+            "absolute transition-all duration-200 ease-out blobbi-character",
             onBlobbiClick ? "pointer-events-auto cursor-pointer hover:scale-105" : "pointer-events-none",
             isMoving && "transition-none",
             className
