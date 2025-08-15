@@ -45,15 +45,6 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'shop-open.png',
-    thresholds: [
-      { minPosition: 71.01, maxPosition: 100, zIndex: 9 },
-      { minPosition: 42.01, maxPosition: 71, zIndex: 19 },
-      { minPosition: 14.01, maxPosition: 42, zIndex: 25},
-      { minPosition: 0, maxPosition: 14, zIndex: 30},
-    ]
-  },
-  {
     backgroundFile: 'arcade-open.png',
     thresholds: [
       { minPosition: 0, maxPosition: 52, zIndex: 10 },
@@ -63,21 +54,15 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'arcade-minus1.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 22, zIndex: 31 },
-      { minPosition: 22.01, maxPosition: 30, zIndex: 27 },
-      { minPosition: 30.01, maxPosition: 48, zIndex: 24 },
+      { minPosition: 0, maxPosition: 48, zIndex: 10 },
       { minPosition: 48.01, maxPosition: 100, zIndex: 9 },
     ]
   },
   {
     backgroundFile: 'arcade-1.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 16, zIndex: 31 },
-      { minPosition: 16.01, maxPosition: 22, zIndex: 26 },
-      { minPosition: 22.01, maxPosition: 28, zIndex: 21 },
-      { minPosition: 28.01, maxPosition: 34, zIndex: 16 },
-      { minPosition: 34.01, maxPosition: 46, zIndex: 11 },
-      { minPosition: 46.01, maxPosition: 100, zIndex: 9 },
+      { minPosition: 0, maxPosition: 40, zIndex: 10 },
+      { minPosition: 40.01, maxPosition: 100, zIndex: 9 },
     ]
   },
   // Add more background configurations as needed

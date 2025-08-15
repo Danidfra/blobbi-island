@@ -31,7 +31,7 @@ export function LoginArea({ className }: LoginAreaProps) {
       ) : (
         <Button
           onClick={() => setLoginDialogOpen(true)}
-          className='flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white w-full font-medium transition-all border-0 theme-transition'
+          className='flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground w-full font-medium transition-all hover:bg-primary/90 animate-scale-in'
         >
           <User className='w-4 h-4' />
           <span className='truncate'>Log in</span>
@@ -39,8 +39,8 @@ export function LoginArea({ className }: LoginAreaProps) {
       )}
 
       <LoginDialog
-        isOpen={loginDialogOpen}
-        onClose={() => setLoginDialogOpen(false)}
+        isOpen={loginDialogOpen} 
+        onClose={() => setLoginDialogOpen(false)} 
         onLogin={handleLogin}
         onSignup={() => setSignupDialogOpen(true)}
       />
