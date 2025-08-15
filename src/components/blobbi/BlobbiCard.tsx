@@ -59,20 +59,20 @@ export function BlobbiCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer blobbi-card-xl blobbi-hover theme-transition",
+        "cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105",
         "border-2 rounded-xl",
-        isSelected && "ring-2 ring-purple-500 ring-offset-2 dark:ring-purple-400",
-        isCurrent && "border-purple-500 dark:border-purple-400 blobbi-gradient-container"
+        isSelected && "ring-2 ring-primary ring-offset-2",
+        isCurrent && "border-primary bg-primary/5"
       )}
       onClick={onSelect}
     >
-      <CardContent className="blobbi-section space-y-4">
+      <CardContent className="p-6 space-y-4">
         {/* SVG Display */}
-        <div className="relative h-32 md:h-40 w-full flex items-center justify-center blobbi-gradient-frame p-4">
+        <div className="relative h-32 md:h-40 w-full flex items-center justify-center">
           {isLoading ? (
             <Skeleton className="h-28 w-28 md:h-36 md:w-36 rounded-full" />
           ) : error ? (
-            <div className="h-28 w-28 md:h-36 md:w-36 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center border-2 border-dashed border-purple-300 dark:border-purple-600">
+            <div className="h-28 w-28 md:h-36 md:w-36 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
               <span className="text-2xl md:text-3xl">🐾</span>
             </div>
           ) : (
@@ -85,35 +85,34 @@ export function BlobbiCard({
 
         {/* Blobbi Info */}
         <div className="text-center space-y-2">
-          <h3 className="font-semibold text-lg blobbi-text">
+          <h3 className="font-semibold text-lg">
             {blobbi.name || `Blobbi ${blobbi.id.slice(0, 8)}`}
           </h3>
 
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center justify-center gap-2">
-              <span className="blobbi-text-muted font-medium">Stage:</span>
-              <span className="blobbi-badge-baby capitalize">{blobbi.stage}</span>
-            </div>
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p className="capitalize">
+              <span className="font-medium">Stage:</span> {blobbi.stage}
+            </p>
 
             {blobbi.baseColor && (
               <div className="flex items-center justify-center gap-2">
-                <span className="blobbi-text-muted">Colors:</span>
+                <span>Colors:</span>
                 <div className="flex gap-1">
                   <div
-                    className="w-4 h-4 rounded-full border-2 border-purple-200 dark:border-purple-600"
+                    className="w-4 h-4 rounded-full border border-border"
                     style={{ backgroundColor: blobbi.baseColor }}
                     title={`Base: ${blobbi.baseColor}`}
                   />
                   {blobbi.secondaryColor && (
                     <div
-                      className="w-4 h-4 rounded-full border-2 border-purple-200 dark:border-purple-600"
+                      className="w-4 h-4 rounded-full border border-border"
                       style={{ backgroundColor: blobbi.secondaryColor }}
                       title={`Secondary: ${blobbi.secondaryColor}`}
                     />
                   )}
                   {blobbi.eyeColor && (
                     <div
-                      className="w-4 h-4 rounded-full border-2 border-purple-200 dark:border-purple-600"
+                      className="w-4 h-4 rounded-full border border-border"
                       style={{ backgroundColor: blobbi.eyeColor }}
                       title={`Eyes: ${blobbi.eyeColor}`}
                     />
@@ -126,15 +125,8 @@ export function BlobbiCard({
 
         {/* Action Button */}
         <Button
-          className={cn(
-            "w-full blobbi-button rounded-xl font-medium theme-transition",
-            isCurrent
-              ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
-              : isSelected
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0"
-                : "border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-          )}
-          variant={isCurrent || isSelected ? "default" : "outline"}
+          className="w-full"
+          variant={isCurrent ? "default" : isSelected ? "default" : "outline"}
           onClick={(e) => {
             e.stopPropagation();
             if (isSelected && !isCurrent) {

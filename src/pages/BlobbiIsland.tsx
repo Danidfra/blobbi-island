@@ -131,6 +131,7 @@ export function BlobbiIsland() {
         return (
           <PlayingView
             selectedBlobbi={selectedBlobbi}
+            onSwitchBlobbi={() => setGameState('selection')}
           />
         );
 
@@ -141,32 +142,33 @@ export function BlobbiIsland() {
 
   return (
     <LocationProvider>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900 theme-transition">
-        <BlobbiHeader onSwitchBlobbi={() => setGameState('selection')} />
+      <div className="min-h-screen bg-background">
+        <BlobbiHeader />
 
         <main className="container mx-auto py-6">
           <BlobbiGameContainer>
             {renderGameContent()}
             <SceneTransition />
-            {/* Map Modal - Now properly scoped to game container */}
-            <MapModal />
           </BlobbiGameContainer>
         </main>
 
         {/* Footer */}
-        <footer className="text-center py-4 text-sm blobbi-text-muted">
+        <footer className="text-center py-4 text-sm text-muted-foreground">
           <p>
             Vibed with{" "}
             <a
               href="https://soapbox.pub/mkstack"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent hover:underline font-medium"
+              className="text-primary hover:underline"
             >
               MKStack
             </a>
           </p>
         </footer>
+
+        {/* Map Modal */}
+        <MapModal />
       </div>
     </LocationProvider>
   );

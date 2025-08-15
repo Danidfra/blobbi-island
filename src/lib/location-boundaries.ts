@@ -53,40 +53,21 @@ export const locationBoundaries: Record<string, Boundary> = {
   'arcade-1.png': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [48, 52], y: [51, 59] },
-
-      { type: 'rectangle', x: [23.5, 76.5], y: [59, 84] },
-      { type: 'triangle', points: [{ x: 100, y: 84 }, { x: 76.5, y: 59 }, { x: 76.5, y: 84 }] },
-      { type: 'triangle', points: [{ x: 0, y:84 }, { x: 23.5, y: 59 }, { x: 23.5, y: 84 }] },
-
+      { type: 'rectangle', x: [48, 52], y: [55, 63] },
+      { type: 'rectangle', x: [23.5, 76.5], y: [63, 84] },
       { type: 'rectangle', x: [0, 100], y: [84, 100] },
+      { type: 'triangle', points: [{ x: 100, y: 84 }, { x: 76.5, y: 63 }, { x: 76.5, y: 84 }] },
+      { type: 'triangle', points: [{ x: 0, y:84 }, { x: 23.5, y: 63 }, { x: 23.5, y: 84 }] }
     ],
   },
   'arcade-minus1.png': {
     shape: 'composite',
     areas: [
+      { type: 'rectangle', x: [0, 100], y: [74, 100] },
+      { type: 'rectangle', x: [26.5, 73.5], y: [55, 74] },
       { type: 'rectangle', x: [48, 52], y: [49, 55] },
-
-      { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] },
-      { type: 'rectangle', x: [26.5, 73.5], y: [55, 69] },
       { type: 'triangle', points: [{ x: 100, y: 74 }, { x: 73.5, y: 55 }, { x: 73.5, y: 74 }] },
-      { type: 'rectangle', x: [0, 26.5], y: [74, 88] },
-      { type: 'rectangle', x: [26.5, 42], y: [69, 82] },
-      { type: 'rectangle', x: [58, 73.5], y: [69, 82] },
-      { type: 'rectangle', x: [73.5, 100], y: [74, 88] },
-
-      { type: 'rectangle', x: [48, 52], y: [72, 88] },
-      { type: 'rectangle', x: [26.5, 73.5], y: [84, 88] },
-
-      // { type: 'rectangle', x: [26.5, 73.5], y: [84, 88] },
-      // { type: 'rectangle', x: [26.5, 73.5], y: [84, 88] },
-
-      { type: 'rectangle', x: [0, 22], y: [88, 94] },
-      { type: 'triangle', points: [{ x: 22, y: 88 }, { x: 22, y: 94 }, { x: 28, y: 88 }] },
-
-      { type: 'rectangle', x: [78, 100], y: [88, 94] },
-      { type: 'triangle', points: [{ x: 78, y: 88 }, { x: 78, y: 94 }, { x: 72, y: 88 }] },
-
+      { type: 'triangle', points: [{ x: 0, y: 74 }, { x: 26.5, y: 55 }, { x: 26.5, y: 74 }] }
     ],
   },
   'back-yard-open.png': {
@@ -103,26 +84,5 @@ export const locationBoundaries: Record<string, Boundary> = {
     shape: 'rectangle',
     x: [16, 84],
     y: [75, 79],
-  },
-  'shop-open.png': {
-    shape: 'composite',
-    areas: [
-      { type: 'rectangle', x: [0, 100], y: [84, 100] },
-
-      { type: 'rectangle', x: [0, 7], y: [56, 84] },
-      { type: 'triangle', points: [{ x: 7, y: 64 }, { x: 7, y: 84 }, { x: 10, y: 84 }] },
-
-      { type: 'rectangle', x: [7, 100], y: [56, 57] },
-
-      { type: 'rectangle', x: [93, 100], y: [27, 56] },
-      { type: 'triangle', points: [{ x: 93, y: 27 }, { x: 93, y: 56 }, { x: 90, y: 56 }] },
-
-      { type: 'rectangle', x: [0, 93], y: [27, 28] },
-    ],
-  },
-  'photo-booth-inside.png': {
-    shape: 'rectangle',
-    x: [20, 68], // Center area of booth
-    y: [59, 63], // Bottom area of booth (floor)
   },
 };
