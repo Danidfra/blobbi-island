@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
-import { Map } from 'lucide-react';
+import { IconMap } from '@tabler/icons-react';
 
 interface MapButtonProps {
   className?: string;
@@ -29,7 +29,7 @@ export function MapButton({ className }: MapButtonProps) {
       title="Open Map"
       aria-label="Open Map"
     >
-      <Map className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:scale-110" />
+      <IconMap className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:scale-110" />
     </button>
   );
 }

@@ -24,42 +24,42 @@ const LOCATIONS: Location[] = [
     id: 'home',
     name: 'Home',
     image: '/assets/home.png',
-    position: { x: 64, y: 38 },
+    position: { x: 58, y: 42 },
     size: { width: 60, height: 60 }
   },
   {
     id: 'beach',
     name: 'Beach',
     image: '/assets/beach.png',
-    position: { x: 60, y: 87 },
+    position: { x: 55, y: 75 },
     size: { width: 60, height: 60 }
   },
   {
     id: 'mine',
     name: 'Mine',
     image: '/assets/mine.png',
-    position: { x: 24, y: 79 },
+    position: { x: 36, y: 69 },
     size: { width: 100, height: 100 }
   },
   {
     id: 'nostr-station',
     name: 'Nostr Station',
     image: '/assets/nostr-station.png',
-    position: { x: 80, y: 67 },
+    position: { x: 67, y: 61 },
     size: { width: 80, height: 80 }
   },
   {
     id: 'plaza',
     name: 'Plaza',
     image: '/assets/plaza.png',
-    position: { x: 47.5, y: 47 },
+    position: { x: 48, y: 47 },
     size: { width: 100, height: 100 }
   },
   {
     id: 'town',
     name: 'Town',
     image: '/assets/town.png',
-    position: { x: 33, y: 26 },
+    position: { x: 40, y: 34 },
     size: { width: 120, height: 120 }
   },
 ];
@@ -92,36 +92,30 @@ export function MapModal({ className }: MapModalProps) {
   return (
     <div
       className={cn(
-        "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2",
+        "fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4",
         className
       )}
-      onClick={(e) => {
-        // Close modal when clicking on backdrop
-        if (e.target === e.currentTarget) {
-          handleCloseModal();
-        }
-      }}
+      onClick={handleCloseModal}
     >
       <div
-        className="relative w-full h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
+        className="relative w-full h-full max-w-[98vw] max-h-[98vh] sm:max-w-[95vw] sm:max-h-[95vh] bg-transparent flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={handleCloseModal}
           className={cn(
-            "absolute top-2 right-2 z-50",
-            "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
-            "h-8 w-8 shadow-lg hover:shadow-xl",
-            "transition-all duration-200 ease-out",
+            "absolute top-2 right-2 sm:top-4 sm:right-4 z-50",
+            "bg-white/90 backdrop-blur-sm border border-border rounded-full",
+            "p-2 sm:p-3 shadow-lg hover:shadow-xl",
+            "transition-all duration-300 ease-out",
             "hover:scale-105 active:scale-95",
-            "text-foreground hover:text-red-500",
-            "flex items-center justify-center"
+            "text-foreground hover:text-red-500"
           )}
           title="Close Map"
           aria-label="Close Map"
         >
-          <IconX className="w-3 h-3" />
+          <IconX className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
 
@@ -137,8 +131,8 @@ export function MapModal({ className }: MapModalProps) {
             alt="Blobbi Village Map"
             className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
             style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
+              maxWidth: 'min(94vw, 94vh)',
+              maxHeight: 'min(94vw, 94vh)',
               width: 'auto',
               height: 'auto'
             }}
@@ -203,7 +197,7 @@ export function MapModal({ className }: MapModalProps) {
         </div>
 
         {/* Instructions */}
-        <div className="absolute top-2 left-1 transform z-10 px-2">
+        <div className="absolute bottom-2 sm:bottom-6 left-1/2 transform -translate-x-1/2 z-10 px-2">
           <div className="bg-white/95 backdrop-blur-sm border border-border rounded-full px-3 sm:px-6 py-2 sm:py-3 shadow-xl max-w-[90vw]">
             <p className="text-xs sm:text-sm text-muted-foreground text-center font-medium">
               🏝️ Click on a location to travel there • Current location is {`${currentLocation}`}

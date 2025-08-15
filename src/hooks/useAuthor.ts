@@ -14,7 +14,7 @@ export function useAuthor(pubkey: string | undefined) {
 
       const [event] = await nostr.query(
         [{ kinds: [0], authors: [pubkey!], limit: 1 }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]) },
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]) },
       );
 
       if (!event) {
@@ -28,7 +28,6 @@ export function useAuthor(pubkey: string | undefined) {
         return { event };
       }
     },
-    retry: 1,
-    retryDelay: 500,
+    retry: 3,
   });
 }

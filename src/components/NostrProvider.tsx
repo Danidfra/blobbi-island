@@ -10,7 +10,7 @@ interface NostrProviderProps {
 
 const NostrProvider: React.FC<NostrProviderProps> = (props) => {
   const { children } = props;
-  const { config } = useAppContext();
+  const { config, presetRelays } = useAppContext();
 
   const queryClient = useQueryClient();
 
@@ -36,8 +36,19 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         return new Map([[relayUrl.current, filters]]);
       },
       eventRouter(_event: NostrEvent) {
-        // Only publish to the selected relay for faster publishing
-        return [relayUrl.current];
+        // Publish to the selected relay
+        const allRelays = new Set<string>([relayUrl.current]);
+
+        // Also publish to the preset relays, capped to 5
+        for (const { url } of (presetRelays ?? [])) {
+          allRelays.add(url);
+
+          if (allRelays.size >= 5) {
+            break;
+          }
+        }
+
+        return [...allRelays];
       },
     });
   }

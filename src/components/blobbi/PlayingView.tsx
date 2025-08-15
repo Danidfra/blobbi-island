@@ -4,7 +4,7 @@ import { MapButton } from './MapButton';
 import { ArcadePassIcon } from './ArcadePassIcon';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { LocationIndicator } from './LocationIndicator';
-
+import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { InteractiveElements } from './InteractiveElements';
 import { useLocation } from '@/hooks/useLocation';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -14,7 +14,6 @@ import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
-import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
@@ -22,9 +21,10 @@ import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
+  onSwitchBlobbi: () => void;
 }
 
-export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
+export function PlayingView({ selectedBlobbi, onSwitchBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
   const { currentLocation } = useLocation();
@@ -38,7 +38,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
-  const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -95,15 +94,11 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     }
   };
 
-  const handleBlobbiClick = () => {
-    setIsBlobbiInfoOpen(true);
-  };
-
   return (
     <PlaceBackground ref={containerRef}>
       <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
-      <InteractiveElements blobbiRef={blobbiRef} selectedBlobbi={selectedBlobbi} />
+      <InteractiveElements blobbiRef={blobbiRef} />
 
       {/* Furniture */}
       {background === 'home-open.png' && (
@@ -166,7 +161,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         onMoveStart={handleMoveStart}
         onMoveComplete={handleMoveComplete}
         onWakeUp={handleWakeUp}
-        onBlobbiClick={handleBlobbiClick}
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
         size={blobbiSize}
@@ -184,13 +178,32 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         <LocationIndicator />
       </div>
 
-
-
-      {/* Blobbi Info Modal */}
-      <BlobbiInfoModal
-        isOpen={isBlobbiInfoOpen}
-        onClose={() => setIsBlobbiInfoOpen(false)}
-      />
+      {/* Current Blobbi Info - Top Left */}
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20">
+        <div className="bg-white/90 backdrop-blur-sm border border-border rounded-lg p-2 sm:p-3 shadow-lg">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <CurrentBlobbiDisplay
+              size="sm"
+              className="border-2 border-primary/30"
+              showFallback={true}
+              interactive={true}
+              onClick={onSwitchBlobbi}
+              isSleeping={isSleeping}
+            />
+            <div className="text-left">
+              <p className="text-xs sm:text-sm font-medium text-foreground">
+                {selectedBlobbi?.name || selectedBlobbi?.id}
+              </p>
+              <button
+                onClick={onSwitchBlobbi}
+                className="text-xs text-primary hover:underline"
+              >
+                Switch Blobbi
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </PlaceBackground>
   );
 }

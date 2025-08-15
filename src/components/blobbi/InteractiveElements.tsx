@@ -1,47 +1,14 @@
-import { FoodShopModal } from './FoodShopModal';
-import { PhotoBoothModal } from './PhotoBoothModal';
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
-import type { Blobbi } from '@/hooks/useBlobbis';
 import { ArcadePassModal } from './ArcadePassModal';
 import { ElevatorModal } from './ElevatorModal';
 import { NoPassModal } from './NoPassModal';
 import { GameModal } from './GameModal';
 import { Button } from '@/components/ui/button';
-
-// BackArrow component using SVG
-function BackArrow({ className, onClick }: { className?: string; onClick?: () => void }) {
-  return (
-    <div
-      className={cn(
-        'cursor-pointer select-none transition-all duration-300 ease-out hover:scale-110 active:scale-95',
-        className
-      )}
-      onClick={onClick}
-    >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full"
-      >
-        <path
-          d="M19 12H5M5 12L12 19M5 12L12 5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
 
 interface InteractiveElementProps {
   src: string;
@@ -142,10 +109,9 @@ function InteractiveElement({
 
 interface InteractiveElementsProps {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
-  selectedBlobbi: Blobbi | null;
 }
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -155,8 +121,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
   const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
   const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
-  const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
-  const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -259,7 +223,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
             className={cn(
               'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
               backgroundFile === 'arcade-open.png' && 'top-[16%] w-[17.5%] ',
-              backgroundFile === 'arcade-1.png' && 'top-[40.5%] w-[10%] ',
+              backgroundFile === 'arcade-1.png' && 'top-[42%] w-[11.5%] ',
               backgroundFile === 'arcade-minus1.png' && 'top-[41.4%] w-[7.8%] ',
             )}
             onMouseEnter={() => setIsHovered(true)}
@@ -287,169 +251,17 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           {/* Floor -1 */}
           {backgroundFile === 'arcade-minus1.png' && (
             <>
+              <div className='absolute right-[18%] bottom-[36%] transition-all duration-300 ease-out hover:scale-110'>
                 <InteractiveElement
                   src="/assets/interactive/games/dance-machine.png"
-                  alt="Dance Machine"
+                  alt="Dance Machine piece"
                   effect='scale'
-                  className='absolute right-[18%] bottom-[36%]'
+                  animated={false}
+                  className='relative'
                   onClick={() => handleElementClick('dance-machine')}
                 />
-
-            {/* Wall decorations */}
-             <>
-              {/* Left */}
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-guitar-neon.png' alt="ticket counter" className="absolute top-[34%] left-[15%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/pink-headset-neon.png' alt="ticket counter" className="absolute top-[27%] left-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-mic-neon.png' alt="ticket counter" className="absolute top-[27%] left-[2%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-mic-neon.png' alt="ticket counter" className="absolute top-[40%] left-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/song-neon.png' alt="ticket counter" className="absolute top-[48%] left-[2%] w-[4%]" />
-
-              {/* Middle */}
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-notes-neon.png' alt="ticket counter" className="absolute top-[32%] left-[28%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/cd-neon.png' alt="ticket counter" className="absolute top-[27%] left-[40%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-wire-mic-neon.png' alt="ticket counter" className="absolute top-[27%] right-[30%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-note-up-neon.png' alt="ticket counter" className="absolute top-[27%] right-[40%] w-[4%]" />
-
-              {/* Right */}
-                <img src='/assets/scenario/arcade/arcade-minus1/notes-neon.png' alt="ticket counter" className="absolute top-[34%] right-[17%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/pink-note-neon.png' alt="ticket counter" className="absolute top-[27%] right-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-headset-neon.png' alt="ticket counter" className="absolute top-[27%] right-[2%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/purple-note-neon.png' alt="ticket counter" className="absolute top-[40%] right-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-note-neon.png' alt="ticket counter" className="absolute top-[48%] right-[2%] w-[4%]" />
-
-              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-pac-blobbi.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
-             </>
-
-            <div className='flex absolute bottom-[25%] left-[24%] w-[16.5%] gap-[40%]'>
-              <InteractiveElement
-                src="/assets/scenario/arcade/left-arcade-chair.png"
-                alt="Left Chair"
-                effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-              <InteractiveElement
-                src="/assets/scenario/arcade/right-arcade-chair.png"
-                alt="Right Chair"
-                effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
-            </div>
-            <div className='flex absolute bottom-[25%] right-[24%] w-[16.5%] gap-[40%]'>
-              <InteractiveElement
-                src="/assets/scenario/arcade/left-arcade-chair.png"
-                alt="Left Chair"
-                effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-              <InteractiveElement
-                src="/assets/scenario/arcade/right-arcade-chair.png"
-                alt="Right Chair"
-                effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
-            </div>
-
-            <div>
-            <img src='/assets/scenario/arcade/arcade-minus1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
-              <InteractiveElement
-                src="/assets/interactive/games/arcade-mic.png"
-                alt="Right Chair"
-                effect='scale'
-                className='absolute left-1/2 transform -translate-x-1/2 bottom-[18%] w-[3%] z-[30]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-            </div>
-
-            </>
-          )}
-
-          {/* Floor 1 */}
-          {backgroundFile === 'arcade-1.png' && (
-            <>
-              <img src='/assets/scenario/arcade/arcade-1/trophy-neon.png' alt="ticket counter" className="absolute top-[32%] left-[14%] w-[6%]" />
-              <img src='/assets/scenario/arcade/arcade-1/sword-neon.png' alt="ticket counter" className="absolute top-[26%] left-[6%] w-[5%] -rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/play-neon.png' alt="ticket counter" className="absolute top-[44%] left-[6%] w-[6%] -rotate-12" />
-
-              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbizard.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbi-adventure.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[6%]" />
-
-              <img src='/assets/scenario/arcade/arcade-1/controller-neon.png' alt="ticket counter" className="absolute top-[32%] left-[26%] w-[7%] -rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/star-neon.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[27%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-1/dice-neon.png' alt="ticket counter" className="absolute top-[31%] right-[26%] w-[6%]" />
-
-              <img src='/assets/scenario/arcade/arcade-1/pac-man-neon.png' alt="ticket counter" className="absolute top-[32%] right-[15%] w-[4.5%] rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/game-boy-neon.png' alt="ticket counter" className="absolute top-[28%] right-[4%] w-[4%] rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/retro-controller-neon.png' alt="ticket counter" className="absolute top-[44%] right-[6%] w-[6%] rotate-12" />
-
-                {/* Left Arcade Machine */}
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-pink.png"
-                    alt="Arcade Machine Pink"
-                    effect='scale'
-                    className='absolute left-[18%] w-[12%] bottom-[28%] z-[15]'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-black.png"
-                    alt="Arcade Machine classic"
-                    effect='scale'
-                    className='absolute left-[11%] w-[12.5%] bottom-[22%] z-20'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-classic.png"
-                    alt="Arcade Machine classic"
-                    effect='scale'
-                    className='absolute left-[4%] w-[12.5%] bottom-[16%] z-[25]'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-
-                  {/* Middle */}
-                  <InteractiveElement
-                    src="/assets/interactive/games/snooker.png"
-                    alt="Arcade Machine Green"
-                    effect='scale'
-                    className='absolute left-[30%] w-[17.5%] bottom-[10%] z-30'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-
-                  <InteractiveElement
-                    src="/assets/interactive/games/air-hockey.png"
-                    alt="Arcade Air Hockey"
-                    effect='scale'
-                    className='absolute right-[30%] w-[17.5%] bottom-[10%] z-30'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-
-                  {/* Right Arcade Machine */}
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-green.png"
-                    alt="Arcade Machine Green"
-                    effect='scale'
-                    className='absolute right-[18%] w-[12.5%] bottom-[28%] z-[15]'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-purple.png"
-                    alt="Arcade Machine Purple"
-                    effect='scale'
-                    className='absolute right-[11%] w-[12.5%] bottom-[22%] z-20'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-                  <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-red.png"
-                    alt="Arcade Machine Red"
-                    effect='scale'
-                    className='absolute right-[4%] w-[12.5%] bottom-[16%] z-[25]'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
+                {/* <img src='/assets/interactive/games/dance-machine-piece.png' alt="ticket counter" className={cn(["absolute bottom-[17%] right-[35%] z-30", ])} /> */}
+              </div>
             </>
           )}
 
@@ -467,12 +279,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
                 onClick={handleTicketPurchase}
               />
             </div>
-
-            <img src='/assets/scenario/arcade/arcade-ground/wall-art-super-blobbi.png' alt="ticket counter" className="absolute top-[6%] right-[10%] w-[20%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/wall-art-game-boy.png' alt="ticket counter" className="absolute top-[12%] left-[2%] w-[10%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/play-up-neon.png' alt="ticket counter" className="absolute top-[18%] left-[28%] w-[8%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/trophy-money-neon.png' alt="ticket counter" className="absolute top-[18%] right-[31%] w-[6%]" />
-
           {/* Prizes */}
           <div className='absolute right-[7%] top-[33%]'>
             <InteractiveElement
@@ -510,10 +316,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
             {gameModalContent.content}
           </GameModal>
         )}
-        <BackArrow
-          onClick={() => setCurrentLocation('town')}
-          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-        />
       </>
     );
   }
@@ -548,6 +350,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           effect="slide"
           slideDirection="right"
           className="w-[46px] absolute bottom-[22.8%] left-[45.4%]"
+          onClick={handleChairClick}
         />
 
         {/* Left side */}
@@ -635,352 +438,134 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
             />
           ))}
         </div>
-        <BackArrow
-          onClick={() => setCurrentLocation('town')}
-          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-        />
       </div>
-    );
-  }
-
-
-  if (backgroundFile === 'shop-open.png') {
-    return (
-      <>
-        <div className="absolute inset-0 pointer-events-none">
-          <img
-            src="/assets/scenario/glass-barrier-bottom.png"
-            alt="Glass Barrier"
-            className="absolute w-full bottom-[35.3%] object-cover z-[20]"
-          />
-          <img
-            src="/assets/scenario/glass-barrier-top.png"
-            alt="Glass Barrier"
-            className="absolute w-full top-[28.4%] object-cover z-[10]"
-          />
-          <img
-            src="/assets/scenario/shop-stairs.png"
-            alt="Glass Barrier"
-            className="absolute w-[11.8%] bottom-[9.5%] left-0 z-[25]"
-          />
-          <img
-            src="/assets/scenario/shop-stairs.png"
-            alt="Glass Barrier"
-            className="absolute w-[11.5%] bottom-[38.7%] right-0 scale-x-[-1] z-[15]"
-          />
-        </div>
-        <BackArrow
-          onClick={() => setCurrentLocation('town')}
-          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-        />
-
-       <div>
-         <img
-          src="/assets/scenario/shop/belt-barrier.png"
-          alt="Belt barrier"
-          className='absolute bottom-[7%] right-[18%] w-[6%] z-[26]'
-        />
-        <img
-          src="/assets/scenario/shop/belt-barrier.png"
-          alt="Belt barrier"
-          className='absolute bottom-[7%] right-[2%] w-[6%] z-[26]'
-        />
-       </div>
-
-          {/* Coffee Shop */}
-          <div className='absolute bottom-[12%] left-[28%] z-20 w-[22.5%]'>
-            <img
-              />
-            <InteractiveElement
-              src="/assets/scenario/shop/coffee-shop.png"
-              alt="Shopping coffe shop"
-              effect="scale"
-              animated={false}
-            />
-          </div>
-
-          {/* Badges Store */}
-          <div className='absolute bottom-[38.5%] -left-[2.5%] z-15 w-[24.5%]'>
-            <img
-              src="/assets/scenario/shop/badges-store.png"
-              alt="Shopping badges store"
-              />
-            <InteractiveElement
-              src="/assets/interactive/doors/badges-store-door.png"
-              alt="Badges store"
-              effect="opacity"
-              className="absolute -bottom-[5%] right-0 w-[29.4%]"
-            />
-          </div>
-
-        {/* Plants */}
-          <img
-            className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png"
-            alt="Photo booth open"
-          />
-
-          <img
-            className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png"
-            alt="Photo booth open"
-          />
-          <img
-            className='absolute bottom-[10.5%] left-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png"
-            alt="Photo booth open"
-          />
-
-          <img
-            className='absolute bottom-[10.5%] right-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png"
-            alt="Photo booth open"
-          />
-          <img
-            className='absolute bottom-[66.5%] left-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png"
-            alt="Photo booth open"
-          />
-
-          <img
-            className='absolute bottom-[66.5%] right-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png"
-            alt="Photo booth open"
-          />
-
-
-          {/* Photo Booth */}
-          <div className='absolute bottom-[38.5%] left-[33.5%] z-[15] w-[8.5%]'>
-            <img
-              src="/assets/scenario/shop/photo-booth.png"
-              alt="Photo booth open"
-              />
-            <InteractiveElement
-              src="/assets/interactive/doors/photo-booth-door.png"
-              alt="Photo booth open"
-              effect="opacity"
-              className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
-              onClick={() => setIsPhotoBoothModalOpen(true)}
-            />
-          </div>
-
-          {/* Clothing Store */}
-          <div className='absolute bottom-[38.5%] right-[25.5%] z-15 w-[24.5%]'>
-            <img
-              src="/assets/scenario/shop/clothing-store.png"
-              alt="Shopping clothing store"
-              />
-            <InteractiveElement
-              src="/assets/interactive/doors/clothing-store-door.png"
-              alt="Clothing store"
-              effect="opacity"
-              className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
-            />
-          </div>
-
-          {/* Furniture Store */}
-          <div className='absolute top-[7.4%] left-1/2 transform -translate-x-1/2 z-15 w-[30%]'>
-            <img
-              src="/assets/scenario/shop/furniture-store.png"
-              alt="Shopping furniture store"
-              />
-            <InteractiveElement
-              src="/assets/interactive/doors/furniture-store-door.png"
-              alt="Furniture store door"
-              effect="opacity"
-              className="absolute bottom-0 left-[10%] w-[35.3%]"
-            />
-          </div>
-
-        <div className='absolute flex bottom-[12%] right-[4%] z-10 gap-6'>
-          <div>
-            <img
-              src="/assets/interactive/furniture/self-service-kiosk.png"
-              alt="Self service kiosk"
-              />
-            <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
-              alt="Self service kiosk on"
-              effect="opacity"
-              className="absolute bottom-0"
-              onClick={() => setIsFoodShopModalOpen(true)}
-            />
-          </div>
-          <div>
-            <img
-              src="/assets/interactive/furniture/self-service-kiosk.png"
-              alt="Self service kiosk"
-              />
-            <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
-              alt="Self service kiosk on"
-              effect="opacity"
-              className="absolute bottom-0"
-              onClick={() => setIsFoodShopModalOpen(true)}
-            />
-          </div>
-        </div>
-
-        <FoodShopModal isOpen={isFoodShopModalOpen} onClose={() => setIsFoodShopModalOpen(false)} />
-        <PhotoBoothModal
-          isOpen={isPhotoBoothModalOpen}
-          onClose={() => setIsPhotoBoothModalOpen(false)}
-          selectedBlobbi={selectedBlobbi}
-        />
-
-        <div>
-          <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>
-            <img
-              src="/assets/interactive/furniture/shop-table.png"
-              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
-            <InteractiveElement
-                src="/assets/interactive/furniture/shop-left-chair.png"
-              alt="Shop left chair"
-              effect='scale'
-              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
-            />
-            <InteractiveElement
-                src="/assets/interactive/furniture/shop-right-chair.png"
-              alt="Shop right chair"
-              effect='scale'
-              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
-            />
-          </div>
-          <div className='flex absolute bottom-[3%] right-[24%] w-[16.5%] gap-[30%]'>
-            <img
-              src="/assets/interactive/furniture/shop-table.png"
-              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
-            <InteractiveElement
-                src="/assets/interactive/furniture/shop-left-chair.png"
-              alt="Shop left chair"
-              effect='scale'
-              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
-            />
-            <InteractiveElement
-                src="/assets/interactive/furniture/shop-right-chair.png"
-              alt="Shop right chair"
-              effect='scale'
-              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
-            />
-          </div>
-        </div>
-      </>
     );
   }
 
   // Town elements (when background is town-open.png)
   if (backgroundFile === 'town-open.png') {
-
     return (
-      <div className='relative w-full h-full'>
+      <>
         {/* Arcade - Left side */}
-          <div className="absolute left-[18%] top-[25%] w-[21.1%] z-15">
-            <img
-              src="/assets/interactive/builds/arcade.png"
-              alt="Arcade"
-              className="w-full"
-            />
-            <InteractiveElement
-              src="/assets/interactive/builds/arcade-door.png"
-              alt="Arcade Door"
-              animated={false}
-              onClick={() => setCurrentLocation('arcade')}
-              effect="door"
-              className="absolute bottom-0 right-0  w-[40%] z-15"
-            />
-          </div>
+        <div className="absolute left-[10%] sm:left-[18%] top-[30%] sm:top-[25%] z-15">
+           <img
+            src="/assets/interactive/builds/arcade.png"
+            alt="Arcade"
+            className="h-56 sm:h-60 md:h-64 lg:h-72"
+          />
+          <InteractiveElement
+            src="/assets/interactive/builds/arcade-door.png"
+            alt="Arcade Door"
+            animated={false}
+            onClick={() => setCurrentLocation('arcade')}
+            effect="door"
+            className="absolute bottom-0 right-0  w-[40%] z-15"
+          />
+        </div>
 
-          {/* Stage - Center */}
-          <div className="absolute left-1/2 top-[22%] w-[27.6%] transform -translate-x-1/2 z-15">
-            <img
-              src="/assets/interactive/builds/stage.png"
-              alt="Stage"
-              className="w-full"
-            />
-            <InteractiveElement
-              src="/assets/interactive/builds/stage-door.png"
-              alt="Stage Door"
-              animated={false}
-              onClick={() => setCurrentLocation('stage')}
-              effect="opacity"
-              className="absolute bottom-0 -right-[1%]  w-[47%] z-15"
-            />
-          </div>
+        {/* Stage - Center */}
+        <div className="absolute left-1/2 top-[26%] sm:top-[21%] transform -translate-x-1/2 z-15">
+          <img
+            src="/assets/interactive/builds/stage.png"
+            alt="Stage"
+            className="size-56 sm:size-60 md:size-64 lg:size-72"
+          />
+          <InteractiveElement
+            src="/assets/interactive/builds/stage-door.png"
+            alt="Stage Door"
+            animated={false}
+            onClick={() => setCurrentLocation('stage')}
+            effect="door"
+            className="absolute bottom-0 -right-2  w-[50%] z-15"
+          />
+        </div>
 
-          {/* Shop - Right side */}
-          <div className="absolute right-[18%] top-[25%] w-[20.5%] z-15">
-            <img
-              src="/assets/interactive/builds/shop.png"
-              alt="Shop"
-              className="w-full"
-            />
-            <InteractiveElement
-              src="/assets/interactive/builds/shop-door.png"
-              alt="Shop Door"
-              animated={false}
-              onClick={() => setCurrentLocation('shop')}
-              effect="door"
-              className="absolute bottom-0 left-0  w-[60%] z-15"
-            />
+        {/* Shop - Right side */}
+        <div className="absolute right-[10%] sm:right-[18%] top-[30%] sm:top-[25%] z-15">
+          <img
+            src="/assets/interactive/builds/shop.png"
+            alt="Shop"
+            className="h-56 sm:h-60 md:h-64 lg:h-72"
+          />
+          <InteractiveElement
+            src="/assets/interactive/builds/shop-door.png"
+            alt="Shop Door"
+            animated={false}
+            onClick={() => handleElementClick('shop')}
+            effect="door"
+            className="absolute bottom-0 left-0  w-[60%] z-15"
+          />
 
-          </div>
+        </div>
 
         {/* Bush 3 - Left side, slightly above bush-1 */}
+        <div className="absolute left-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-3.png"
             alt="Bush 3"
             animated={false}
             onClick={() => handleElementClick('bush-3')}
-            className="absolute left-0 top-[69%] z-[10]"
+            className="h-20 sm:h-24 md:h-28 lg:h-32"
           />
+        </div>
 
         {/* Bush 4 - Right side, slightly above bush-2 */}
+        <div className="absolute right-0 top-[69%] z-[10]">
           <InteractiveElement
             src="/assets/scenario/bush-4.png"
             alt="Bush 4"
             animated={false}
             onClick={() => handleElementClick('bush-4')}
-            className="absolute right-0 top-[69%] z-[10]"
+            className="size-20 sm:size-24 md:size-28 lg:size-32"
           />
+        </div>
 
         {/* Bush 1 - Bottom left corner (highest z-index) */}
+        <div className="absolute left-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-1.png"
             alt="Bush 1"
             animated={false}
             onClick={() => handleElementClick('bush-1')}
-            className="absolute left-0 bottom-0 z-[20]"
+            className="size-20 sm:size-24 md:h-28 lg:size-32"
           />
+        </div>
 
         {/* Bush 2 - Bottom right corner (highest z-index) */}
+        <div className="absolute right-0 bottom-0 z-[20]">
           <InteractiveElement
             src="/assets/scenario/bush-2.png"
             alt="Bush 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="absolute right-0 bottom-0 z-[20]"
+            className="size-20 sm:size-24 md:size-28 lg:size-32"
           />
+        </div>
 
         {/* streetlight - left */}
+        <div className="absolute left-[6%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 1"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="absolute left-[6%] bottom-[10%] h-[35%] z-[15]"
+            className="h-48 sm:h-52 md:h-56 lg:h-60"
           />
+        </div>
         <MovementBlocker id="town-buildings" x={8} y={86} width={4.5} height={4} />
 
         {/* streetlight -right */}
+        <div className="absolute right-[12%] bottom-[10%] z-[15]">
           <InteractiveElement
             src="/assets/scenario/streetlight.png"
             alt="streetlight 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
-            className="absolute right-[12%] bottom-[10%] h-[35%] z-[15]"
+            className="h-48 sm:h-52 md:h-56 lg:h-60"
           />
+        </div>
         <MovementBlocker id="town-buildings" x={82.5} y={86} width={4.5} height={4} />
-      </div>
+      </>
     );
   }
 

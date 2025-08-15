@@ -1,5 +1,4 @@
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
-import { usePhotoBooth } from '@/contexts/PhotoBoothContext';
 import React, {
   useState,
   useEffect,
@@ -21,7 +20,6 @@ interface MovementDirection {
 
 export interface MovableBlobbiRef {
   goTo: (position: Position, immediate?: boolean) => void;
-  getCurrentPosition?: () => Position;
 }
 
 import { locationScalingConfig } from '@/lib/location-scaling-config';
@@ -39,7 +37,6 @@ interface MovableBlobbiProps {
   onMoveStart?: (destination: Position) => void;
   onMoveComplete?: (position: Position) => void;
   onWakeUp?: () => void;
-  onBlobbiClick?: () => void;
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
   scaleByYPosition?: boolean;
@@ -60,7 +57,6 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onMoveStart,
       onMoveComplete,
       onWakeUp,
-      onBlobbiClick,
       isSleeping = false,
       isAttachedToBed = false,
       scaleByYPosition = false,
@@ -76,7 +72,6 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const lastTimeRef = useRef<number>();
     const blobbiRef = useRef<HTMLDivElement>(null);
 const { isPositionBlocked } = useMovementBlocker();
-  const { isPhotoBoothOpen } = usePhotoBooth();
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -237,17 +232,11 @@ const { isPositionBlocked } = useMovementBlocker();
       if (!container || !isVisible) return;
 
       const handleClick = (event: MouseEvent | TouchEvent) => {
-        // Early return if Photo Booth is open - disable global movement
-        if (isPhotoBoothOpen) {
-          return;
-        }
-
         // Always call onWakeUp when clicking anywhere
         onWakeUp?.();
 
-        // If clicking on the Blobbi itself, wake up and trigger click handler
+        // If clicking on the Blobbi itself, just wake up but don't move
         if (blobbiRef.current?.contains(event.target as Node)) {
-          onBlobbiClick?.();
           return;
         }
 
@@ -287,7 +276,7 @@ const { isPositionBlocked } = useMovementBlocker();
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isPositionBlocked, isPhotoBoothOpen]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, isAttachedToBed, isPositionBlocked]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
@@ -305,7 +294,6 @@ const { isPositionBlocked } = useMovementBlocker();
           onMoveStart?.(newTarget);
         }
       },
-      getCurrentPosition: () => position,
     }));
 
     if (!isVisible) return null;
@@ -342,8 +330,8 @@ const { isPositionBlocked } = useMovementBlocker();
         <div
           ref={blobbiRef}
           className={cn(
-            "absolute transition-all duration-200 ease-out blobbi-character",
-            onBlobbiClick ? "pointer-events-auto cursor-pointer hover:scale-105" : "pointer-events-none",
+            "absolute transition-all duration-200 ease-out",
+            "pointer-events-none",
             isMoving && "transition-none",
             className
           )}
