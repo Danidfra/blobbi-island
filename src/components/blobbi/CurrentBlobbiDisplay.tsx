@@ -129,8 +129,8 @@ export function CurrentBlobbiDisplay({
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-green-50 border-2 border-primary/20 shadow-lg",
-          interactive && "cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200",
+          "flex items-center justify-center rounded-full blobbi-gradient-frame shadow-lg theme-transition",
+          interactive && "cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 blobbi-hover",
           sizeClasses[size],
           className
         )}
@@ -183,8 +183,8 @@ export function CurrentBlobbiDisplay({
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-full bg-muted border-2 border-dashed border-muted-foreground/30",
-          interactive && "cursor-pointer hover:bg-muted/80 transition-all duration-200",
+          "flex items-center justify-center rounded-full blobbi-card border-2 border-dashed border-purple-300 dark:border-purple-600 theme-transition",
+          interactive && "cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200",
           sizeClasses[size],
           className
         )}

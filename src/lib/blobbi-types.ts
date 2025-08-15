@@ -51,8 +51,8 @@ export interface OwnerProfileMultiTags {
 }
 
 /** Complete tag interface for kind 31125 Owner Profile events */
-export type OwnerProfileTags = OwnerProfileRequiredTags & 
-  OwnerProfileOptionalTags & 
+export type OwnerProfileTags = OwnerProfileRequiredTags &
+  OwnerProfileOptionalTags &
   OwnerProfileMultiTags;
 
 /** Parsed owner profile data structure */
@@ -87,6 +87,40 @@ export interface OwnerProfile {
   inventory: InventoryItem[];
   /** Client that created the event */
   client?: string;
+}
+
+/** Input data for creating an owner profile event */
+export interface CreateOwnerProfileInput {
+  /** Profile ID (required) */
+  profileId: string;
+  /** Display name (can be empty) */
+  name: string;
+  /** Currency amount */
+  coins?: number;
+  /** Interaction level */
+  pettingLevel?: number;
+  /** Total Blobbis the user has ever owned */
+  lifetimeBlobbis?: number;
+  /** Favorite Blobbi ID */
+  favoriteBlobbi?: string;
+  /** First Blobbi ID */
+  starterBlobbi?: string;
+  /** Currently selected companion Blobbi ID */
+  currentCompanion?: string;
+  /** Visual style/theme */
+  style?: string;
+  /** Background theme */
+  background?: string;
+  /** Custom title or role */
+  title?: string;
+  /** List of owned pet IDs */
+  ownedPets?: string[];
+  /** List of earned achievement IDs */
+  achievements?: string[];
+  /** Inventory items */
+  inventory?: InventoryItem[];
+  /** Content for the event */
+  content?: string;
 }
 
 /** Inventory item structure */
@@ -250,13 +284,13 @@ export interface PetStateSpecialTags {
 }
 
 /** Complete tag interface for kind 31124 Pet State events */
-export type PetStateTags = PetStateRequiredTags & 
-  PetStateAppearanceTags & 
-  PetStatePersonalityTags & 
-  PetStateEggTags & 
-  PetStateBehaviorTags & 
-  PetStateCareTags & 
-  PetStateSocialTags & 
+export type PetStateTags = PetStateRequiredTags &
+  PetStateAppearanceTags &
+  PetStatePersonalityTags &
+  PetStateEggTags &
+  PetStateBehaviorTags &
+  PetStateCareTags &
+  PetStateSocialTags &
   PetStateSpecialTags;
 
 /** Parsed pet state data structure */
@@ -271,7 +305,7 @@ export interface PetState {
   breedingReady: boolean;
   /** Generation number */
   generation: number;
-  
+
   // Core stats (0-100)
   /** Hunger level */
   hunger: number;
@@ -283,13 +317,13 @@ export interface PetState {
   hygiene: number;
   /** Energy level */
   energy: number;
-  
+
   // Progress
   /** Total experience points */
   experience: number;
   /** Consecutive care days */
   careStreak: number;
-  
+
   // Appearance
   /** Base color */
   baseColor?: string;
@@ -309,7 +343,7 @@ export interface PetState {
   visualEffect?: string;
   /** Special blessing */
   blessing?: string;
-  
+
   // Personality
   /** Personality type */
   personality?: string;
@@ -327,7 +361,7 @@ export interface PetState {
   title?: string;
   /** Special skill */
   skill?: string;
-  
+
   // Egg-specific (for stage="egg")
   /** Incubation time required */
   incubationTime?: number;
@@ -339,7 +373,7 @@ export interface PetState {
   eggStatus?: string;
   /** Shell integrity level */
   shellIntegrity?: number;
-  
+
   // Behavior
   /** Whether pet is sleeping */
   isSleeping: boolean;
@@ -351,7 +385,7 @@ export interface PetState {
   hasDebuff: boolean;
   /** Last interaction timestamp */
   lastInteraction?: Date;
-  
+
   // Care tracking
   /** Last meal timestamp */
   lastMeal?: Date;
@@ -367,7 +401,7 @@ export interface PetState {
   lastSing?: Date;
   /** Last medicine timestamp */
   lastMedicine?: Date;
-  
+
   // Social
   /** Adopted by pubkey */
   adoptedBy?: string;
@@ -379,7 +413,7 @@ export interface PetState {
   inParty: boolean;
   /** Whether visible to others */
   visibleToOthers: boolean;
-  
+
   // Special
   /** Associated fees */
   fees?: number;
