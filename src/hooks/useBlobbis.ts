@@ -99,5 +99,7 @@ export function useBlobbis() {
     enabled: !!user?.pubkey,
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // 1 minute
+    retry: 1, // Only retry once
+    retryDelay: 500, // Fast retry
   });
 }

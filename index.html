@@ -10,9 +10,28 @@
     <meta property="og:description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
     <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss:; img-src 'self' data: blob: https:; media-src 'self' https:">
     <link rel="manifest" href="/manifest.webmanifest">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/assets/blobbi-island.png" as="image" type="image/png">
+    <link rel="dns-prefetch" href="//relay.primal.net">
+    <link rel="preconnect" href="wss://relay.primal.net">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading screen shown before React loads -->
+      <div style="min-height: 100vh; background: #ffffff; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="text-align: center; color: #64748b;">
+          <div style="width: 32px; height: 32px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="margin: 0; font-size: 14px;">Loading Blobbi Island...</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

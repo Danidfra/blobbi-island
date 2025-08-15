@@ -6,6 +6,7 @@ import NostrProvider from '@/components/NostrProvider';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
 import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
+import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 
 interface TestAppProps {
   children: React.ReactNode;
@@ -32,11 +33,13 @@ export function TestApp({ children }: TestAppProps) {
         <QueryClientProvider client={queryClient}>
           <NostrLoginProvider storageKey='test-login'>
             <NostrProvider>
-              <MovementBlockerProvider>
-                <BrowserRouter>
-                  {children}
-                </BrowserRouter>
-              </MovementBlockerProvider>
+              <PhotoBoothProvider>
+                <MovementBlockerProvider>
+                  <BrowserRouter>
+                    {children}
+                  </BrowserRouter>
+                </MovementBlockerProvider>
+              </PhotoBoothProvider>
             </NostrProvider>
           </NostrLoginProvider>
         </QueryClientProvider>
