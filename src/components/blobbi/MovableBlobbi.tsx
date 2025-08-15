@@ -43,6 +43,7 @@ interface MovableBlobbiProps {
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
   scaleByYPosition?: boolean;
+  disableFloating?: boolean;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -64,6 +65,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       isSleeping = false,
       isAttachedToBed = false,
       scaleByYPosition = false,
+      disableFloating = false,
     },
     ref
   ) => {
@@ -357,7 +359,7 @@ const { isPositionBlocked } = useMovementBlocker();
         >
           <div
             className={cn(
-              !isSleeping && "animate-float",
+              !isSleeping && !disableFloating && "animate-float",
               "transition-transform duration-1000 ease-in-out"
             )}
           >
