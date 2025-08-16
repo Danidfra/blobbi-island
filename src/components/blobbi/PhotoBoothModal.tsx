@@ -9,6 +9,8 @@ import type { Blobbi } from '@/hooks/useBlobbis';
 import { Button } from '@/components/ui/button';
 import { ShareModal } from './ShareModal';
 
+
+
 interface Accessory {
   id: string;
   name: string;
@@ -560,12 +562,25 @@ const handleCapturePhoto = async () => {
 
     // ---------- Create Polaroid-framed version ----------
     try {
+      // High-DPI / quality settings
+      const EXPORT_SCALE = Math.min(3, Math.max(window.devicePixelRatio || 1, 2));
+
+      // Target dimensions (matching CSS PolaroidFrame)
+      const targetWidth = 500;
+
+      // Polaroid frame margins (matching PolaroidFrame defaults)
+      const margins = { top: 5, right: 4, bottom: 18, left: 4 };
+      const aspectRatio = 3 / 4; // Rectangular aspect ratio for sharing
+
+      // Calculate target height based on aspect ratio and margins
+      const innerPhotoWidth = targetWidth * (1 - (margins.left + margins.right) / 100);
+      const innerPhotoHeight = innerPhotoWidth / aspectRatio;
+      const totalHeight = innerPhotoHeight / (1 - (margins.top + margins.bottom) / 100);
+
+      // Create canvas with high resolution
       const polaroidCanvas = document.createElement('canvas');
-      // Set polaroid canvas size (matching the modal display size)
-      const polaroidWidth = 500;
-      const polaroidHeight = 600;
-      polaroidCanvas.width = polaroidWidth;
-      polaroidCanvas.height = polaroidHeight;
+      polaroidCanvas.width = Math.round(targetWidth * EXPORT_SCALE);
+      polaroidCanvas.height = Math.round(totalHeight * EXPORT_SCALE);
 
       const polaroidCtx = polaroidCanvas.getContext('2d');
       if (!polaroidCtx) {
@@ -573,33 +588,38 @@ const handleCapturePhoto = async () => {
         return;
       }
 
+      // Scale context for high DPI
+      polaroidCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
       polaroidCtx.imageSmoothingEnabled = true;
       polaroidCtx.imageSmoothingQuality = 'high';
 
-      // Load and draw polaroid frame
-      const polaroidFrame = new Image();
-      polaroidFrame.crossOrigin = 'anonymous';
+      // Draw white frame background with rounded corners
+      const frameRadius = 12;
+      polaroidCtx.fillStyle = '#ffffff';
+      polaroidCtx.beginPath();
+      polaroidCtx.roundRect(0, 0, targetWidth, totalHeight, frameRadius);
+      polaroidCtx.fill();
 
-      await new Promise<void>((resolve, reject) => {
-        polaroidFrame.onload = () => resolve();
-        polaroidFrame.onerror = reject;
-        polaroidFrame.src = '/assets/scenario/shop/polaroid-frame.png';
-      });
+      // Add subtle border
+      polaroidCtx.strokeStyle = '#e4e4e7';
+      polaroidCtx.lineWidth = 1;
+      polaroidCtx.stroke();
 
-      // Draw polaroid frame as background
-      polaroidCtx.drawImage(polaroidFrame, 0, 0, polaroidWidth, polaroidHeight);
+      // Calculate inner photo area dimensions using same margins as PolaroidFrame
+      const photoAreaWidth = targetWidth * (1 - (margins.left + margins.right) / 100);
+      const photoAreaHeight = totalHeight * (1 - (margins.top + margins.bottom) / 100);
+      const photoAreaX = targetWidth * margins.left / 100;
+      const photoAreaY = totalHeight * margins.top / 100;
 
-      // Calculate photo area dimensions (69% width, 78% height, positioned at 5% from top)
-      const photoAreaWidth = polaroidWidth * 0.69;
-      const photoAreaHeight = polaroidHeight * 0.78;
-      const photoAreaX = (polaroidWidth - photoAreaWidth) / 2;
-      const photoAreaY = polaroidHeight * 0.05;
-
-      // Create a rounded rectangle clipping path for the photo area
+      // Create rounded rectangle clipping path for photo area
       polaroidCtx.save();
       polaroidCtx.beginPath();
-      polaroidCtx.roundRect(photoAreaX, photoAreaY, photoAreaWidth, photoAreaHeight, 4);
+      polaroidCtx.roundRect(photoAreaX, photoAreaY, photoAreaWidth, photoAreaHeight, frameRadius * 0.8);
       polaroidCtx.clip();
+
+      // Add subtle background for photo area
+      polaroidCtx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+      polaroidCtx.fillRect(photoAreaX, photoAreaY, photoAreaWidth, photoAreaHeight);
 
       // Draw the captured photo inside the frame
       const photoImg = new Image();
@@ -654,118 +674,6 @@ const handleCapturePhoto = async () => {
 
   if (!isOpen) return null;
 
-  // Share Modal
-  if (capturedPhoto) {
-    return (
-      <>
-        {/* Polaroid Preview Container */}
-        <div
-          className={cn(
-            "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
-          )}
-          onClick={handleBackdropClick}
-          style={{
-            position: 'absolute',
-          }}
-        >
-          {/* Polaroid Preview Container */}
-          <div
-            className="relative bg-transparent mx-auto"
-            style={{
-              width: '500px',
-              height: '600px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className={cn(
-                "absolute top-2 right-2 z-50",
-                "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
-                "h-8 w-8 shadow-lg hover:shadow-xl",
-                "transition-all duration-200 ease-out",
-                "hover:scale-105 active:scale-95",
-                "text-foreground hover:text-red-500",
-                "flex items-center justify-center"
-              )}
-              title="Close Photo Booth"
-              aria-label="Close Photo Booth"
-            >
-              <IconX className="w-3 h-3" />
-            </button>
-
-            {/* Polaroid Frame */}
-            <div className="relative w-full h-full">
-              <img
-                src="/assets/scenario/shop/polaroid-frame.png"
-                alt="Polaroid Frame"
-                className="w-full h-full object-contain drop-shadow-2xl"
-              />
-
-              {/* Captured Photo - positioned to fit inside the frame */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-[69%] h-[78%]"
-                  style={{
-                    position: 'absolute',
-                    top: '5%',
-                    left: '50%',
-                    transform: 'translate(-50%, 0%)',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <img
-                    src={capturedPhoto}
-                    alt="Captured Photo"
-                    className="w-full h-full object-cover"
-                    style={{
-                      transformOrigin: 'center',
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 flex gap-3">
-              <Button
-                onClick={handleRetakePhoto}
-                variant="outline"
-                className="bg-white/95 backdrop-blur-sm border border-border hover:bg-white"
-              >
-                📷 Retake Photo
-              </Button>
-              <Button
-                onClick={() => setIsShareModalOpen(true)}
-                variant="outline"
-                className="bg-white/95 backdrop-blur-sm border border-border hover:bg-white"
-              >
-                <IconShare className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              <Button
-                onClick={onClose}
-                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-              >
-                ✨ Done
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Share Modal */}
-        <ShareModal
-          isOpen={isShareModalOpen}
-          onClose={() => setIsShareModalOpen(false)}
-          capturedPhoto={capturedPhoto}
-          capturedPolaroidSrc={capturedPolaroidSrc}
-        />
-      </>
-    );
-  }
-
   // If we have a captured photo, show the Polaroid preview
   if (capturedPhoto) {
     return (
@@ -775,19 +683,11 @@ const handleCapturePhoto = async () => {
             "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
           )}
           onClick={handleBackdropClick}
-          style={{
-            position: 'absolute',
-          }}
         >
-          {/* Polaroid Preview Container */}
           <div
-            className="relative bg-transparent mx-auto"
-            style={{
-              width: '500px',
-              height: '600px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          className="relative w-[60%] h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
+        >
             {/* Close Button */}
             <button
               onClick={onClose}
@@ -806,75 +706,71 @@ const handleCapturePhoto = async () => {
               <IconX className="w-3 h-3" />
             </button>
 
-            {/* Polaroid Frame */}
-            <div className="relative w-full h-full">
-              <img
-                src="/assets/scenario/shop/polaroid-frame.png"
-                alt="Polaroid Frame"
-                className="w-full h-full object-contain drop-shadow-2xl"
-              />
-
-              {/* Captured Photo - positioned to fit inside the frame */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-[69%] h-[78%]"
-                  style={{
-                    position: 'absolute',
-                    top: '5%',
-                    left: '50%',
-                    transform: 'translate(-50%, 0%)',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                  }}
-                >
+            {/* Polaroid Preview - uses exact same composed image as ShareModal */}
+            <div className="flex justify-center p-8">
+              <div className="relative w-full max-w-[80%] aspect-[3/4]">
+                {capturedPolaroidSrc ? (
                   <img
-                    src={capturedPhoto}
-                    alt="Captured Photo"
-                    className="w-full h-full object-cover"
-                    style={{
-                      transformOrigin: 'center',
-                    }}
+                    src={capturedPolaroidSrc}
+                    alt="Captured Blobbi Photo"
+                    className="w-full h-full object-contain rounded-2xl"
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                      <p className="text-sm text-muted-foreground">Processing polaroid...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons - absolutely positioned at bottom of polaroid wrapper */}
+                <div className="absolute flex inset-x-0 bottom-10 translate-y-[16px] items-center justify-center">
+                  <div className="flex flex-col gap-2 w-[70%]">
+                    {/* Top row: Retake and Share buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRetakePhoto}
+                        variant="outline"
+                        className="flex-1 bg-white/95 backdrop-blur-sm border border-border hover:bg-white h-11 text-sm"
+                      >
+                        📷 Retake
+                      </Button>
+                      <Button
+                        onClick={() => setIsShareModalOpen(true)}
+                        variant="outline"
+                        className="flex-1 bg-white/95 backdrop-blur-sm border border-border hover:bg-white h-11 text-sm"
+                      >
+                        <IconShare className="w-4 h-4 mr-1" />
+                        Share
+                      </Button>
+                    </div>
+
+                    {/* Bottom row: Done button */}
+                    <div className="flex">
+                      <Button
+                        onClick={onClose}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white h-11 text-sm"
+                      >
+                        ✨ Done
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 flex gap-3">
-              <Button
-                onClick={handleRetakePhoto}
-                variant="outline"
-                className="bg-white/95 backdrop-blur-sm border border-border hover:bg-white"
-              >
-                📷 Retake Photo
-              </Button>
-              <Button
-                onClick={() => setIsShareModalOpen(true)}
-                variant="outline"
-                className="bg-white/95 backdrop-blur-sm border border-border hover:bg-white"
-              >
-                <IconShare className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-              <Button
-                onClick={onClose}
-                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-              >
-                ✨ Done
-              </Button>
-            </div>
           </div>
-        </div>
+      </div>
 
-        {/* Share Modal */}
-        <ShareModal
-          isOpen={isShareModalOpen}
-          onClose={() => setIsShareModalOpen(false)}
-          capturedPhoto={capturedPhoto}
-          capturedPolaroidSrc={capturedPolaroidSrc}
-        />
-      </>
-    );
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        capturedPhoto={capturedPhoto}
+        capturedPolaroidSrc={capturedPolaroidSrc}
+      />
+    </>
+  );
   }
 
   return (

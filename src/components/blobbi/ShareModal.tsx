@@ -8,6 +8,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
+import { PolaroidFrame as _PolaroidFrame } from '@/components/ui/PolaroidFrame';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface ShareModalProps {
   capturedPolaroidSrc: string | null;
 }
 
-export function ShareModal({ isOpen, onClose, capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutateAsync: publishEvent } = useNostrPublish();
@@ -232,14 +233,16 @@ export function ShareModal({ isOpen, onClose, capturedPhoto, capturedPolaroidSrc
 
         {/* Photo Preview */}
         <div className="p-6">
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-6">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-6 flex justify-center">
             {capturedPolaroidSrc ? (
-              <img
-                src={capturedPolaroidSrc}
-                alt="Captured Blobbi Photo"
-                className="w-full h-auto rounded-lg shadow-md"
-                style={{ maxHeight: '200px', objectFit: 'contain' }}
-              />
+              <div style={{ maxHeight: '400px' }}>
+                <img
+                  src={capturedPolaroidSrc}
+                  alt="Captured Blobbi Photo"
+                  className="h-auto rounded-lg shadow-md"
+                  style={{ maxWidth: '150px', objectFit: 'contain' }}
+                />
+              </div>
             ) : (
               <div className="text-center py-8">
                 <p className="text-red-500 font-medium mb-2">❌ Polaroid image not available</p>
