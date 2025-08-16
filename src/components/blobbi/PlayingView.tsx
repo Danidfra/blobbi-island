@@ -102,7 +102,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     setIsBlobbiInfoOpen(true);
   };
 
-  // Listen for social share events from PhotoBoothModal
+  // Listen for social share events from ShareModal
   useEffect(() => {
     const handleOpenSocialShare = (event: CustomEvent) => {
       const { capturedPhoto, capturedPolaroidSrc } = event.detail;

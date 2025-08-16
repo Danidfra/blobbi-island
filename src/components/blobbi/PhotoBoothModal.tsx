@@ -28,10 +28,10 @@ interface PhotoBoothModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedBlobbi: Blobbi | null;
-  onOpenSocialShare?: (capturedPhoto: string, capturedPolaroidSrc: string | null) => void;
+  onOpenShareModal?: (capturedPhoto: string, capturedPolaroidSrc: string | null) => void;
 }
 
-export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenSocialShare }: PhotoBoothModalProps) {
+export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenShareModal }: PhotoBoothModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalBlobbiRef = useRef<MovableBlobbiRef>(null);
   const { setPhotoBoothOpen } = usePhotoBooth();
@@ -740,7 +740,7 @@ const handleCapturePhoto = async () => {
                       <Button
                         onClick={() => {
                           if (capturedPhoto && capturedPolaroidSrc) {
-                            onOpenSocialShare?.(capturedPhoto, capturedPolaroidSrc);
+                            onOpenShareModal?.(capturedPhoto, capturedPolaroidSrc);
                           }
                         }}
                         variant="outline"

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IconX,
   IconDownload,
   IconShare,
   IconSend,
+  IconChevronDown,
+  IconChevronUp,
   IconBrandTwitter,
   IconBrandFacebook,
   IconBrandInstagram,
@@ -43,6 +45,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
   const [isSharing, setIsSharing] = useState(false);
   const [isRelayListExpanded, setIsRelayListExpanded] = useState(false);
   const [userText, setUserText] = useState('');
+  const [isNostrSectionExpanded, setIsNostrSectionExpanded] = useState(false);
   const [isSocialPanelOpen, setIsSocialPanelOpen] = useState(false);
 
   const handleDownload = async () => {
@@ -80,6 +83,17 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
   const getPrefilledCaption = () => {
     const mandatoryHashtags = '#Blobbi #BlobbiIsland';
     return userText.trim() ? `${mandatoryHashtags} ${userText.trim()}` : mandatoryHashtags;
+  };
+
+  const toggleNostrSection = () => {
+    setIsNostrSectionExpanded(!isNostrSectionExpanded);
+  };
+
+  const handleNostrSectionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleNostrSection();
+    }
   };
 
   const handleWebShare = async () => {
@@ -288,6 +302,17 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
     }
   };
 
+  // Reset Nostr section state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Don't reset immediately to allow for smooth transitions
+      const timer = setTimeout(() => {
+        setIsNostrSectionExpanded(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -495,8 +520,17 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                 </Dialog>
 
                 {/* Post to Relay - Nostr */}
-                <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="border border-purple-200 dark:border-purple-800 rounded-lg overflow-hidden">
+                  {/* Collapsible Header */}
+                  <button
+                    id="nostr-composer-header"
+                    type="button"
+                    onClick={toggleNostrSection}
+                    onKeyDown={handleNostrSectionKeyDown}
+                    aria-expanded={isNostrSectionExpanded}
+                    aria-controls="nostr-composer-content"
+                    className="w-full p-4 flex items-center justify-between hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset"
+                  >
                     <div className="flex items-center space-x-3">
                       <IconSend className="w-5 h-5 text-purple-600 flex-shrink-0" />
                       <div className="text-left">
@@ -504,12 +538,33 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                         <div className="text-sm text-muted-foreground">Share to Nostr network</div>
                       </div>
                     </div>
-                    {!user && (
-                      <span className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded flex-shrink-0">
-                        Login required
-                      </span>
-                    )}
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      {!user && (
+                        <span className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded flex-shrink-0">
+                          Login required
+                        </span>
+                      )}
+                      <div className="flex-shrink-0 text-purple-600 dark:text-purple-400">
+                        {isNostrSectionExpanded ? (
+                          <IconChevronUp className="w-4 h-4" />
+                        ) : (
+                          <IconChevronDown className="w-4 h-4" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Collapsible Content */}
+                  <div
+                    id="nostr-composer-content"
+                    role="region"
+                    aria-labelledby="nostr-composer-header"
+                    tabIndex={isNostrSectionExpanded ? -1 : undefined}
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      isNostrSectionExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="p-4 pt-0 border-t border-purple-100 dark:border-purple-900">
 
                   {/* Text Input with Mandatory Hashtags */}
                   <div className="space-y-3">
@@ -661,7 +716,9 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                       </>
                     )}
                   </Button>
+                  </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
