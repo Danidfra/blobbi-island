@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
@@ -10,10 +10,22 @@ import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
 
 import { MobileLandscapePrompt } from "@/components/blobbi/MobileLandscapePrompt";
-import { PlayingView } from "@/components/blobbi/PlayingView";
-import { MapModal } from "@/components/blobbi/MapModal";
 import { LocationProvider } from "@/contexts/LocationContext";
-import { SceneTransition } from "@/components/blobbi/SceneTransition";
+
+// Lazy load heavy components
+const PlayingView = lazy(() => import("@/components/blobbi/PlayingView").then(module => ({ default: module.PlayingView })));
+const MapModal = lazy(() => import("@/components/blobbi/MapModal").then(module => ({ default: module.MapModal })));
+const SceneTransition = lazy(() => import("@/components/blobbi/SceneTransition").then(module => ({ default: module.SceneTransition })));
+
+// Loading component for lazy-loaded game components
+const GameComponentLoading = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="text-center space-y-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+      <p className="text-muted-foreground text-sm">Loading game...</p>
+    </div>
+  </div>
+);
 
 type GameState = 'login' | 'loading' | 'selection' | 'playing';
 
@@ -37,7 +49,7 @@ export function BlobbiIsland() {
         if (isLoadingBlobbis || isLoadingCompanion) {
           setGameState('selection');
         }
-      }, 1000); // 1 second timeout for loading
+      }, 2000); // Increased timeout to 2 seconds for better UX
 
       setGameState('loading');
 
@@ -129,9 +141,11 @@ export function BlobbiIsland() {
 
       case 'playing':
         return (
-          <PlayingView
-            selectedBlobbi={selectedBlobbi}
-          />
+          <Suspense fallback={<GameComponentLoading />}>
+            <PlayingView
+              selectedBlobbi={selectedBlobbi}
+            />
+          </Suspense>
         );
 
       default:
@@ -147,9 +161,11 @@ export function BlobbiIsland() {
         <main className="container mx-auto py-6">
           <BlobbiGameContainer>
             {renderGameContent()}
-            <SceneTransition />
-            {/* Map Modal - Now properly scoped to game container */}
-            <MapModal />
+            <Suspense fallback={null}>
+              <SceneTransition />
+              {/* Map Modal - Now properly scoped to game container */}
+              <MapModal />
+            </Suspense>
           </BlobbiGameContainer>
         </main>
 
