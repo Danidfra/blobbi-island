@@ -76,7 +76,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
     expect(screen.getByAltText('Captured Blobbi Photo')).toBeInTheDocument();
     expect(screen.getByText('Download Photo')).toBeInTheDocument();
     expect(screen.getByText('Share to App')).toBeInTheDocument();
-    expect(screen.getByText('Post to Nostr')).toBeInTheDocument();
+    expect(screen.getByText('Post to Relay')).toBeInTheDocument();
   });
 
   it('does not render when closed', () => {
@@ -124,10 +124,16 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
       </TestApp>
     );
 
-    expect(screen.getByText('Ditto')).toBeInTheDocument();
-    expect(screen.getByText('Nostr.Band')).toBeInTheDocument();
-    expect(screen.getByText('Damus')).toBeInTheDocument();
+    // Should show relay count and toggle button
+    expect(screen.getByText('1 relay selected')).toBeInTheDocument();
+    expect(screen.getByText('Show more')).toBeInTheDocument();
+
+    // In collapsed state, should show the first selected relay (Primal by default)
     expect(screen.getByText('Primal')).toBeInTheDocument();
+    expect(screen.getByText('wss://relay.primal.net')).toBeInTheDocument();
+
+    // Should show the Post to Relay section with relay count
+    expect(screen.getByText('Post to 1 Relay')).toBeInTheDocument();
   });
 
   it('allows relay selection', () => {
@@ -142,7 +148,14 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
       </TestApp>
     );
 
-    // Find checkboxes by their role and associated text
+    // First, expand the relay list to see all options
+    const showMoreButton = screen.getByText('Show more');
+    fireEvent.click(showMoreButton);
+
+    // Now should show "Show less" button
+    expect(screen.getByText('Show less')).toBeInTheDocument();
+
+    // Now find checkboxes by their role and associated text
     const dittoCheckbox = screen.getByRole('checkbox', { name: /Ditto/ });
     const nostrBandCheckbox = screen.getByRole('checkbox', { name: /Nostr\.Band/ });
 

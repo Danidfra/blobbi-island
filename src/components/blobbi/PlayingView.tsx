@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { PlaceBackground } from './PlaceBackground';
 import { MapButton } from './MapButton';
 import { ArcadePassIcon } from './ArcadePassIcon';
@@ -15,6 +15,7 @@ import { Position } from '@/lib/types';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
+import { SocialShareModal } from './SocialShareModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
@@ -39,6 +40,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
   const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
+  const [isSocialShareOpen, setIsSocialShareOpen] = useState(false);
+  const [socialShareData, setSocialShareData] = useState<{ capturedPhoto: string | null; capturedPolaroidSrc: string | null }>({ capturedPhoto: null, capturedPolaroidSrc: null });
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -98,6 +101,20 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const handleBlobbiClick = () => {
     setIsBlobbiInfoOpen(true);
   };
+
+  // Listen for social share events from PhotoBoothModal
+  useEffect(() => {
+    const handleOpenSocialShare = (event: CustomEvent) => {
+      const { capturedPhoto, capturedPolaroidSrc } = event.detail;
+      setSocialShareData({ capturedPhoto, capturedPolaroidSrc });
+      setIsSocialShareOpen(true);
+    };
+
+    document.addEventListener('openSocialShare', handleOpenSocialShare as EventListener);
+    return () => {
+      document.removeEventListener('openSocialShare', handleOpenSocialShare as EventListener);
+    };
+  }, []);
 
   return (
     <PlaceBackground ref={containerRef}>
@@ -190,6 +207,15 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       <BlobbiInfoModal
         isOpen={isBlobbiInfoOpen}
         onClose={() => setIsBlobbiInfoOpen(false)}
+      />
+
+      {/* Social Share Modal */}
+      <SocialShareModal
+        isOpen={isSocialShareOpen}
+        onClose={() => setIsSocialShareOpen(false)}
+        title="Share to Social Media"
+        capturedPhoto={socialShareData.capturedPhoto}
+        capturedPolaroidSrc={socialShareData.capturedPolaroidSrc}
       />
     </PlaceBackground>
   );
