@@ -826,6 +826,14 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           isOpen={isPhotoBoothModalOpen}
           onClose={() => setIsPhotoBoothModalOpen(false)}
           selectedBlobbi={selectedBlobbi}
+          onOpenSocialShare={(capturedPhoto, capturedPolaroidSrc) => {
+            // This will be handled by the parent component
+            // For now, we'll emit a custom event that PlayingView can listen to
+            const event = new CustomEvent('openSocialShare', {
+              detail: { capturedPhoto, capturedPolaroidSrc }
+            });
+            document.dispatchEvent(event);
+          }}
         />
 
         <div>

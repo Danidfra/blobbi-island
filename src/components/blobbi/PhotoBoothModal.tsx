@@ -7,7 +7,7 @@ import { IconX, IconCamera, IconShare } from '@tabler/icons-react';
 import { usePhotoBooth } from '@/hooks/usePhotoBooth';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Button } from '@/components/ui/button';
-import { ShareModal } from './ShareModal';
+
 
 
 
@@ -28,16 +28,17 @@ interface PhotoBoothModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedBlobbi: Blobbi | null;
+  onOpenSocialShare?: (capturedPhoto: string, capturedPolaroidSrc: string | null) => void;
 }
 
-export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothModalProps) {
+export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenSocialShare }: PhotoBoothModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalBlobbiRef = useRef<MovableBlobbiRef>(null);
   const { setPhotoBoothOpen } = usePhotoBooth();
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [capturedPolaroidSrc, setCapturedPolaroidSrc] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
 
   // Accessory state
   const [accessories, setAccessories] = useState<Accessory[]>([]);
@@ -737,7 +738,11 @@ const handleCapturePhoto = async () => {
                         📷 Retake
                       </Button>
                       <Button
-                        onClick={() => setIsShareModalOpen(true)}
+                        onClick={() => {
+                          if (capturedPhoto && capturedPolaroidSrc) {
+                            onOpenSocialShare?.(capturedPhoto, capturedPolaroidSrc);
+                          }
+                        }}
                         variant="outline"
                         className="flex-1 bg-white/95 backdrop-blur-sm border border-border hover:bg-white h-11 text-sm"
                       >
@@ -762,14 +767,7 @@ const handleCapturePhoto = async () => {
           </div>
       </div>
 
-      {/* Share Modal */}
-      <ShareModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        capturedPhoto={capturedPhoto}
-        capturedPolaroidSrc={capturedPolaroidSrc}
-      />
-    </>
+      </>
   );
   }
 
