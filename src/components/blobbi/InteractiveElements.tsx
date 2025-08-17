@@ -652,22 +652,22 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
       <>
         <div className="absolute inset-0 pointer-events-none">
           <img
-            src="/assets/scenario/glass-barrier-bottom.png"
+            src="/assets/scenario/shop/glass-barrier-bottom.png"
             alt="Glass Barrier"
             className="absolute w-full bottom-[35.3%] object-cover z-[20]"
           />
           <img
-            src="/assets/scenario/glass-barrier-top.png"
+            src="/assets/scenario/shop/glass-barrier-top.png"
             alt="Glass Barrier"
             className="absolute w-full top-[28.4%] object-cover z-[10]"
           />
           <img
-            src="/assets/scenario/shop-stairs.png"
+            src="/assets/scenario/shop/shop-stairs.png"
             alt="Glass Barrier"
             className="absolute w-[11.8%] bottom-[9.5%] left-0 z-[25]"
           />
           <img
-            src="/assets/scenario/shop-stairs.png"
+            src="/assets/scenario/shop/shop-stairs.png"
             alt="Glass Barrier"
             className="absolute w-[11.5%] bottom-[38.7%] right-0 scale-x-[-1] z-[15]"
           />
