@@ -15,6 +15,7 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   'mine': 'Crystal Mine',
   'nostr-station': 'Nostr Station',
   'plaza': 'Central Plaza',
+  'plaza-inside': 'Plaza Interior',
   'arcade': 'Game Arcade - Ground Floor',
   'arcade-1': 'Game Arcade - Floor 1',
   'arcade-minus1': 'Game Arcade - Basement',

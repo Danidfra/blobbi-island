@@ -126,6 +126,13 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
+    backgroundFile: 'plaza-inside.png',
+    thresholds: [
+      { minPosition: 0, maxPosition: 56, zIndex: 11 },
+      { minPosition: 56.01, maxPosition: 100, zIndex: 4 } 
+    ]
+  },
+  {
     backgroundFile: 'back-yard-open.png',
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Ground level

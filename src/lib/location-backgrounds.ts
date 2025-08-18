@@ -7,6 +7,7 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
   'mine': 'mine-open.png',
   'nostr-station': 'nostr-station-open.png',
   'plaza': 'plaza-open.png',
+  'plaza-inside': 'plaza-inside.png',
   'arcade': 'arcade-open.png',
   'arcade-1': 'arcade-1.png',
   'arcade-minus1': 'arcade-minus1.png',

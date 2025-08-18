@@ -43,6 +43,28 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [5, 95],
     y: [56, 98],
   },
+  'plaza-inside.png': {
+    shape: 'composite',
+    areas: [
+      { type: 'rectangle', x: [0, 100], y: [75, 100] }, // Main area
+      { type: 'rectangle', x: [25, 75], y: [69, 75] },
+      { type: 'triangle', points: [{ x: 100, y: 75 }, { x: 75, y: 65 }, { x: 75, y: 75 }] },
+      { type: 'triangle', points: [{ x: 0, y:75 }, { x: 25, y: 65 }, { x: 25, y: 75 }] },
+
+      { type: 'triangle', points: [{ x: 42, y:69 }, { x: 46, y: 69 }, { x: 46, y: 43 }] },
+      { type: 'triangle', points: [{ x: 58, y: 69 }, { x: 53, y: 69 }, { x: 53, y: 43 }] },
+      { type: 'rectangle', x: [44, 55], y: [55, 69] },
+      { type: 'rectangle', x: [46, 53], y: [43, 55] },
+
+      { type: 'rectangle', x: [44.5, 54.5], y: [43, 45] },
+
+      { type: 'rectangle', x: [53, 76], y: [43, 43] },
+      { type: 'rectangle', x: [25, 46], y: [43, 43] },
+
+      { type: 'triangle', points: [{ x: 25, y:43 }, { x: 0, y: 33 }, { x: 25, y: 43 }] },
+      { type: 'triangle', points: [{ x: 75, y: 43 }, { x: 100, y: 33 }, { x: 75, y: 43 }] },
+    ],
+  },
   'arcade-open.png': {
     shape: 'composite',
     areas: [

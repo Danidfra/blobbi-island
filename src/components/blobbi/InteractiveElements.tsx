@@ -1084,25 +1084,44 @@ if (backgroundFile === 'plaza-open.png') {
   return (
     <>
       <div className="absolute inset-x-0 top-0 flex items-center justify-center z-10">
-        <div className="relative">
+        <div className="relative flex justify-center">
           <img
             src="/assets/interactive/builds/plaza-build.png"
             alt="Plaza building"
-            className="max-w-full max-h-full"
+            className="max-w-[50%]"
           />
           <InteractiveElement
             src="/assets/interactive/builds/plaza-door.png"
             alt="Plaza Door"
             animated={false}
-            onClick={() => handleElementClick('plaza-door')}
+            onClick={() => setCurrentLocation('plaza-inside')}
             effect="door"
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[10.5%] z-11"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[7.6%] z-11"
           />
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-10">
       <img src="/assets/scenario/floor.png" alt="Floor" className="max-w-full max-h-full" />
       </div>
+    </>
+  );
+}
+
+// Plaza inside elements (when background is plaza-inside.png)
+if (backgroundFile === 'plaza-inside.png') {
+  return (
+    <>
+      {/* Glass barrier overlay */}
+      <img
+        src="/assets/scenario/plaza/plaza-glass-barrier.png"
+        alt="Glass Barrier"
+        className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10]"
+      />
+      {/* Back button to return to plaza */}
+      <BackArrow
+        onClick={() => setCurrentLocation('plaza')}
+        className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
+      />
     </>
   );
 }
