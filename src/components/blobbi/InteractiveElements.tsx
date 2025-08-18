@@ -1,5 +1,6 @@
 import { FoodShopModal } from './FoodShopModal';
 import { PhotoBoothModal } from './PhotoBoothModal';
+import { ShareModal } from './ShareModal';
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
@@ -157,6 +158,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
   const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
   const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -826,6 +829,16 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           isOpen={isPhotoBoothModalOpen}
           onClose={() => setIsPhotoBoothModalOpen(false)}
           selectedBlobbi={selectedBlobbi}
+          onOpenShareModal={(capturedPhoto, capturedPolaroidSrc) => {
+            setShareModalData({ capturedPhoto, capturedPolaroidSrc });
+            setIsShareModalOpen(true);
+          }}
+        />
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          capturedPhoto={shareModalData.capturedPhoto}
+          capturedPolaroidSrc={shareModalData.capturedPolaroidSrc}
         />
 
         <div>

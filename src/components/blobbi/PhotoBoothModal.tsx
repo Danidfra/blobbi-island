@@ -3,10 +3,13 @@ import { cn } from '@/lib/utils';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
-import { IconX, IconCamera } from '@tabler/icons-react';
+import { IconX, IconCamera, IconShare } from '@tabler/icons-react';
 import { usePhotoBooth } from '@/hooks/usePhotoBooth';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Button } from '@/components/ui/button';
+
+
+
 
 interface Accessory {
   id: string;
@@ -25,14 +28,17 @@ interface PhotoBoothModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedBlobbi: Blobbi | null;
+  onOpenShareModal?: (capturedPhoto: string, capturedPolaroidSrc: string | null) => void;
 }
 
-export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothModalProps) {
+export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenShareModal }: PhotoBoothModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalBlobbiRef = useRef<MovableBlobbiRef>(null);
   const { setPhotoBoothOpen } = usePhotoBooth();
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [capturedPolaroidSrc, setCapturedPolaroidSrc] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+
 
   // Accessory state
   const [accessories, setAccessories] = useState<Accessory[]>([]);
@@ -371,167 +377,300 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
     // Background image settings
     background: {
       imagePath: '/assets/places/photo-booth-inside.png',
-      zoom: 0.8,        // Zoom level for background (0.8 = 80% of original size)
+      zoom: 2.2,        // Zoom level for background (0.8 = 80% of original size)
       offsetX: 0,       // Horizontal offset (-50 = 50px left, 50 = 50px right)
-      offsetY: -30,     // Vertical offset (-50 = 50px up, 50 = 50px down)
+      offsetY: -68,     // Vertical offset (-50 = 50px up, 50 = 50px down)
     },
     // Blobbi character settings
     blobbi: {
-      zoom: 1.2,        // Zoom level for Blobbi (1.2 = 120% of original size)
+      zoom: 1.06,        // Zoom level for Blobbi (1.2 = 120% of original size)
       offsetX: 0,       // Horizontal offset relative to background center
-      offsetY: 20,      // Vertical offset relative to background center
+      offsetY: 68,      // Vertical offset relative to background center
     }
   };
 
-  const handleCapturePhoto = async () => {
-    if (!containerRef.current || !selectedBlobbi) return;
+const handleCapturePhoto = async () => {
+  if (!containerRef.current || !selectedBlobbi) return;
 
-    setIsCapturing(true);
+  setIsCapturing(true);
 
+  try {
+    // -------- HiDPI / quality ----------
+    const EXPORT_SCALE = Math.min(3, Math.max(window.devicePixelRatio || 1, 2)); // 2x to 3x is a good balance
+
+    // Final canvas size (in CSS px)
+    const cssW = photoCompositionConfig.polaroid.width;
+    const cssH = photoCompositionConfig.polaroid.height;
+
+    const finalCanvas = document.createElement('canvas');
+    // Internal canvas size in real pixels (HiDPI)
+    finalCanvas.width = Math.round(cssW * EXPORT_SCALE);
+    finalCanvas.height = Math.round(cssH * EXPORT_SCALE);
+
+    const finalCtx = finalCanvas.getContext('2d');
+    if (!finalCtx) {
+      console.error('Failed to get canvas context');
+      return;
+    }
+
+    // Draw in CSS px coordinates, but at higher resolution for sharpness
+    finalCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
+    finalCtx.imageSmoothingEnabled = true;
+    finalCtx.imageSmoothingQuality = 'high';
+
+    // ---------- Background ----------
+    const backgroundImage = new Image();
+    backgroundImage.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      backgroundImage.onload = () => resolve();
+      backgroundImage.onerror = reject;
+      backgroundImage.src = photoCompositionConfig.background.imagePath;
+    });
+
+    const bgZoom = photoCompositionConfig.background.zoom;
+    const bgWidth =
+      (backgroundImage.naturalWidth || backgroundImage.width) *
+      bgZoom *
+      (cssW / (backgroundImage.naturalWidth || backgroundImage.width));
+    const bgHeight =
+      (backgroundImage.naturalHeight || backgroundImage.height) *
+      bgZoom *
+      (cssH / (backgroundImage.naturalHeight || backgroundImage.height));
+
+    // Center + offset (all in CSS px)
+    const bgX = (cssW - bgWidth) / 2 + photoCompositionConfig.background.offsetX;
+    const bgY = (cssH - bgHeight) / 2 + photoCompositionConfig.background.offsetY;
+
+    finalCtx.drawImage(backgroundImage, bgX, bgY, bgWidth, bgHeight);
+
+    // ---------- Container dimensions for accessory positioning ----------
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    // Get actual background image element and its position within container
+    const backgroundImg = containerRef.current.querySelector('img[src*="photo-booth-inside.png"]') as HTMLImageElement;
+    const backgroundRect = backgroundImg?.getBoundingClientRect();
+
+    if (!backgroundRect) {
+      console.error('Background image not found');
+      return;
+    }
+
+    // Calculate background image dimensions
+    const bgActualWidth = backgroundRect.width;
+    const bgActualHeight = backgroundRect.height;
+
+    // Calculate background image offset within container (due to object-contain centering)
+    const bgOffsetX = (containerRect.width - bgActualWidth) / 2;
+    const bgOffsetY = (containerRect.height - bgActualHeight) / 2;
+
+    // ---------- Blobbi (SVG -> high-res bitmap) ----------
+    const blobbiElement = containerRef.current.querySelector('.blobbi-character');
+    if (blobbiElement) {
+      const svgElement = blobbiElement.querySelector('svg');
+      if (svgElement) {
+        const cloned = svgElement.cloneNode(true) as SVGSVGElement;
+        const br = blobbiElement.getBoundingClientRect();
+        cloned.setAttribute('width', String(br.width));
+        cloned.setAttribute('height', String(br.height));
+        if (!cloned.getAttribute('viewBox') && svgElement.getAttribute('viewBox')) {
+          cloned.setAttribute('viewBox', svgElement.getAttribute('viewBox')!);
+        }
+
+        const svgData = new XMLSerializer().serializeToString(cloned);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        const blobbiImage = new Image();
+        blobbiImage.crossOrigin = 'anonymous';
+
+        await new Promise<void>((resolve, reject) => {
+          blobbiImage.onload = () => {
+            resolve();
+          };
+          blobbiImage.onerror = reject;
+          blobbiImage.src = svgUrl;
+        });
+
+        const blobbiZoom = photoCompositionConfig.blobbi.zoom;
+        const blobbiWidth = br.width * blobbiZoom;
+        const blobbiHeight = br.height * blobbiZoom;
+
+        const blobbiX =
+          bgX + (bgWidth - blobbiWidth) / 2 + photoCompositionConfig.blobbi.offsetX;
+        const blobbiY =
+          bgY + (bgHeight - blobbiHeight) / 2 + photoCompositionConfig.blobbi.offsetY;
+
+        finalCtx.drawImage(blobbiImage, blobbiX, blobbiY, blobbiWidth, blobbiHeight);
+        URL.revokeObjectURL(svgUrl);
+      }
+    }
+
+    // ---------- Accessories ----------
+    for (const accessory of accessories) {
+      const img = loadedImages[accessory.id];
+      if (!img) continue;
+
+      // Calculate position exactly like live preview (percentage-based)
+      const containerPixelX = (accessory.position.x / 100) * containerRect.width;
+      const containerPixelY = (accessory.position.y / 100) * containerRect.height;
+
+      // Adjust for background image centering within container (object-contain behavior)
+      const bgRelativeX = containerPixelX - bgOffsetX;
+      const bgRelativeY = containerPixelY - bgOffsetY;
+
+      // Map to final canvas background space
+      const scaleX = bgWidth / bgActualWidth;
+      const scaleY = bgHeight / bgActualHeight;
+
+      const accessoryX = 35.3 + bgX + bgRelativeX * scaleX;
+      const accessoryY = bgY - 2 + bgRelativeY * scaleY;
+
+      // Calculate scale exactly like live preview (120px base * scale)
+      const baseSize = 120; // Matches live preview base size
+      const scaledSize = baseSize * (accessory.scale || 1);
+
+      // Apply background scaling to maintain relative size
+      const finalScale = Math.min(scaleX, scaleY);
+      const finalWidth = scaledSize * finalScale;
+      const finalHeight = scaledSize * finalScale;
+
+      // Calculate image dimensions maintaining aspect ratio
+      const imgAspect = (img.naturalWidth || img.width) / (img.naturalHeight || img.height);
+      let drawWidth = finalWidth;
+      let drawHeight = finalHeight;
+
+      if (imgAspect > 1) {
+        // Landscape image - constrain by width
+        drawHeight = drawWidth / imgAspect;
+      } else {
+        // Portrait or square image - constrain by height
+        drawWidth = drawHeight * imgAspect;
+      }
+
+      // Apply rotation and translation (matches live preview transform: translate(-50%, -50%) rotate())
+      finalCtx.save();
+      finalCtx.translate(accessoryX, accessoryY);
+      finalCtx.rotate((accessory.rotation || 0) * Math.PI / 180);
+
+      // Draw image centered at the position (matches translate(-50%, -50%))
+      finalCtx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      finalCtx.restore();
+    }
+
+    // ---------- Export ----------
+    const photoDataUrl = finalCanvas.toDataURL('image/png');
+    setCapturedPhoto(photoDataUrl);
+
+    // ---------- Create Polaroid-framed version ----------
     try {
-      // Create final canvas for Polaroid frame
-      const finalCanvas = document.createElement('canvas');
-      const finalCtx = finalCanvas.getContext('2d');
+      // High-DPI / quality settings
+      const EXPORT_SCALE = Math.min(3, Math.max(window.devicePixelRatio || 1, 2));
 
-      if (!finalCtx) {
-        console.error('Failed to get canvas context');
+      // Target dimensions (matching CSS PolaroidFrame)
+      const targetWidth = 500;
+
+      // Polaroid frame margins (matching PolaroidFrame defaults)
+      const margins = { top: 5, right: 4, bottom: 18, left: 4 };
+      const aspectRatio = 3 / 4; // Rectangular aspect ratio for sharing
+
+      // Calculate target height based on aspect ratio and margins
+      const innerPhotoWidth = targetWidth * (1 - (margins.left + margins.right) / 100);
+      const innerPhotoHeight = innerPhotoWidth / aspectRatio;
+      const totalHeight = innerPhotoHeight / (1 - (margins.top + margins.bottom) / 100);
+
+      // Create canvas with high resolution
+      const polaroidCanvas = document.createElement('canvas');
+      polaroidCanvas.width = Math.round(targetWidth * EXPORT_SCALE);
+      polaroidCanvas.height = Math.round(totalHeight * EXPORT_SCALE);
+
+      const polaroidCtx = polaroidCanvas.getContext('2d');
+      if (!polaroidCtx) {
+        console.error('Failed to get polaroid canvas context');
         return;
       }
 
-      // Set canvas size to match Polaroid frame
-      finalCanvas.width = photoCompositionConfig.polaroid.width;
-      finalCanvas.height = photoCompositionConfig.polaroid.height;
+      // Scale context for high DPI
+      polaroidCtx.scale(EXPORT_SCALE, EXPORT_SCALE);
+      polaroidCtx.imageSmoothingEnabled = true;
+      polaroidCtx.imageSmoothingQuality = 'high';
 
-      // Step 1: Load and draw the background image
-      const backgroundImage = new Image();
-      backgroundImage.crossOrigin = 'anonymous';
+      // Draw white frame background with rounded corners
+      const frameRadius = 12;
+      polaroidCtx.fillStyle = '#ffffff';
+      polaroidCtx.beginPath();
+      polaroidCtx.roundRect(0, 0, targetWidth, totalHeight, frameRadius);
+      polaroidCtx.fill();
+
+      // Add subtle border
+      polaroidCtx.strokeStyle = '#e4e4e7';
+      polaroidCtx.lineWidth = 1;
+      polaroidCtx.stroke();
+
+      // Calculate inner photo area dimensions using same margins as PolaroidFrame
+      const photoAreaWidth = targetWidth * (1 - (margins.left + margins.right) / 100);
+      const photoAreaHeight = totalHeight * (1 - (margins.top + margins.bottom) / 100);
+      const photoAreaX = targetWidth * margins.left / 100;
+      const photoAreaY = totalHeight * margins.top / 100;
+
+      // Create rounded rectangle clipping path for photo area
+      polaroidCtx.save();
+      polaroidCtx.beginPath();
+      polaroidCtx.roundRect(photoAreaX, photoAreaY, photoAreaWidth, photoAreaHeight, frameRadius * 0.8);
+      polaroidCtx.clip();
+
+      // Add subtle background for photo area
+      polaroidCtx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+      polaroidCtx.fillRect(photoAreaX, photoAreaY, photoAreaWidth, photoAreaHeight);
+
+      // Draw the captured photo inside the frame
+      const photoImg = new Image();
+      photoImg.crossOrigin = 'anonymous';
 
       await new Promise<void>((resolve, reject) => {
-        backgroundImage.onload = () => resolve();
-        backgroundImage.onerror = reject;
-        backgroundImage.src = photoCompositionConfig.background.imagePath;
+        photoImg.onload = () => resolve();
+        photoImg.onerror = reject;
+        photoImg.src = photoDataUrl;
       });
 
-      // Calculate background dimensions with zoom
-      const bgZoom = photoCompositionConfig.background.zoom;
-      const bgWidth = backgroundImage.width * bgZoom;
-      const bgHeight = backgroundImage.height * bgZoom;
+      // Draw photo to fit the photo area with cover behavior
+      const photoAspect = photoImg.naturalWidth / photoImg.naturalHeight;
+      const areaAspect = photoAreaWidth / photoAreaHeight;
 
-      // Calculate background position (centered with offsets)
-      const bgX = (finalCanvas.width - bgWidth) / 2 + photoCompositionConfig.background.offsetX;
-      const bgY = (finalCanvas.height - bgHeight) / 2 + photoCompositionConfig.background.offsetY;
+      let drawWidth, drawHeight, drawX, drawY;
 
-      // Draw the background
-      finalCtx.drawImage(backgroundImage, bgX, bgY, bgWidth, bgHeight);
-
-      // Step 2: Get and draw the Blobbi character
-      const blobbiElement = containerRef.current.querySelector('.blobbi-character');
-      if (blobbiElement) {
-        // Get the Blobbi's current SVG
-        const svgElement = blobbiElement.querySelector('svg');
-        if (svgElement) {
-          // Create a temporary canvas for the Blobbi
-          const blobbiCanvas = document.createElement('canvas');
-          const blobbiCtx = blobbiCanvas.getContext('2d');
-
-          if (blobbiCtx) {
-            // Get Blobbi dimensions
-            const blobbiRect = blobbiElement.getBoundingClientRect();
-            blobbiCanvas.width = blobbiRect.width;
-            blobbiCanvas.height = blobbiRect.height;
-
-            try {
-              // Convert SVG to image
-              const svgData = new XMLSerializer().serializeToString(svgElement);
-              const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-              const svgUrl = URL.createObjectURL(svgBlob);
-
-              const blobbiImage = new Image();
-              await new Promise<void>((resolve, reject) => {
-                blobbiImage.onload = () => {
-                  // Draw Blobbi to temporary canvas
-                  blobbiCtx.drawImage(blobbiImage, 0, 0, blobbiRect.width, blobbiRect.height);
-                  URL.revokeObjectURL(svgUrl);
-                  resolve();
-                };
-                blobbiImage.onerror = reject;
-                blobbiImage.src = svgUrl;
-              });
-
-              // Calculate Blobbi dimensions with zoom
-              const blobbiZoom = photoCompositionConfig.blobbi.zoom;
-              const blobbiWidth = blobbiRect.width * blobbiZoom;
-              const blobbiHeight = blobbiRect.height * blobbiZoom;
-
-              // Calculate Blobbi position (relative to background center with offsets)
-              const blobbiX = bgX + (bgWidth - blobbiWidth) / 2 + photoCompositionConfig.blobbi.offsetX;
-              const blobbiY = bgY + (bgHeight - blobbiHeight) / 2 + photoCompositionConfig.blobbi.offsetY;
-
-              // Draw the Blobbi on top of the background
-              finalCtx.drawImage(blobbiCanvas, blobbiX, blobbiY, blobbiWidth, blobbiHeight);
-
-            } catch (error) {
-              console.error('Error processing Blobbi:', error);
-              // Fallback: draw a simple placeholder
-              finalCtx.fillStyle = '#ff6b6b';
-              const fallbackSize = 60;
-              finalCtx.fillRect(
-                (finalCanvas.width - fallbackSize) / 2,
-                (finalCanvas.height - fallbackSize) / 2,
-                fallbackSize,
-                fallbackSize
-              );
-            }
-          }
-        }
+      if (photoAspect > areaAspect) {
+        // Photo is wider than area - fit to width
+        drawWidth = photoAreaWidth;
+        drawHeight = photoAreaWidth / photoAspect;
+        drawX = photoAreaX;
+        drawY = photoAreaY + (photoAreaHeight - drawHeight) / 2;
+      } else {
+        // Photo is taller than area - fit to height
+        drawHeight = photoAreaHeight;
+        drawWidth = photoAreaHeight * photoAspect;
+        drawX = photoAreaX + (photoAreaWidth - drawWidth) / 2;
+        drawY = photoAreaY;
       }
 
-      // Step 3: Draw accessories on top of everything
-      for (const accessory of accessories) {
-        if (loadedImages[accessory.id]) {
-          const img = loadedImages[accessory.id];
+      polaroidCtx.drawImage(photoImg, drawX, drawY, drawWidth, drawHeight);
+      polaroidCtx.restore();
 
-          // Calculate accessory position relative to background
-          const containerRect = containerRef.current.getBoundingClientRect();
-          const accessoryPixelX = (accessory.position.x / 100) * containerRect.width;
-          const accessoryPixelY = (accessory.position.y / 100) * containerRect.height;
-
-          // Scale accessory position to final canvas
-          const scaleX = bgWidth / containerRect.width;
-          const scaleY = bgHeight / containerRect.height;
-
-          const accessoryX = bgX + (accessoryPixelX * scaleX);
-          const accessoryY = bgY + (accessoryPixelY * scaleY);
-
-          // Draw accessory with high resolution and scale
-          const devicePixelRatio = window.devicePixelRatio || 1;
-          const scaledWidth = (img.width * accessory.scale) / devicePixelRatio;
-          const scaledHeight = (img.height * accessory.scale) / devicePixelRatio;
-
-          const accessoryWidth = scaledWidth * scaleX;
-          const accessoryHeight = scaledHeight * scaleY;
-
-          // Center the accessory on the position
-          const centeredX = accessoryX - (accessoryWidth / 2);
-          const centeredY = accessoryY - (accessoryHeight / 2);
-
-          finalCtx.drawImage(img, centeredX, centeredY, accessoryWidth, accessoryHeight);
-        }
-      }
-
-      // Convert final canvas to data URL
-      const photoDataUrl = finalCanvas.toDataURL('image/png');
-      setCapturedPhoto(photoDataUrl);
-
+      // Export the complete polaroid-framed image
+      const polaroidDataUrl = polaroidCanvas.toDataURL('image/png');
+      setCapturedPolaroidSrc(polaroidDataUrl);
     } catch (error) {
-      console.error('Error capturing photo:', error);
-    } finally {
-      setIsCapturing(false);
+      console.error('Error creating polaroid-framed image:', error);
     }
-  };
+  } catch (error) {
+    console.error('Error capturing photo:', error);
+  } finally {
+    setIsCapturing(false);
+  }
+};
 
   const handleRetakePhoto = () => {
     setCapturedPhoto(null);
+    setCapturedPolaroidSrc(null);
   };
 
   if (!isOpen) return null;
@@ -539,94 +678,97 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
   // If we have a captured photo, show the Polaroid preview
   if (capturedPhoto) {
     return (
-      <div
-        className={cn(
-          "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
-        )}
-        onClick={handleBackdropClick}
-        style={{
-          position: 'absolute',
-        }}
-      >
-        {/* Polaroid Preview Container */}
+      <>
         <div
-          className="relative bg-transparent mx-auto"
-          style={{
-            width: '500px',
-            height: '600px',
-          }}
+          className={cn(
+            "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
+          )}
+          onClick={handleBackdropClick}
+        >
+          <div
+          className="relative w-[60%] h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className={cn(
-              "absolute top-2 right-2 z-50",
-              "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
-              "h-8 w-8 shadow-lg hover:shadow-xl",
-              "transition-all duration-200 ease-out",
-              "hover:scale-105 active:scale-95",
-              "text-foreground hover:text-red-500",
-              "flex items-center justify-center"
-            )}
-            title="Close Photo Booth"
-            aria-label="Close Photo Booth"
-          >
-            <IconX className="w-3 h-3" />
-          </button>
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className={cn(
+                "absolute top-2 right-2 z-50",
+                "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
+                "h-8 w-8 shadow-lg hover:shadow-xl",
+                "transition-all duration-200 ease-out",
+                "hover:scale-105 active:scale-95",
+                "text-foreground hover:text-red-500",
+                "flex items-center justify-center"
+              )}
+              title="Close Photo Booth"
+              aria-label="Close Photo Booth"
+            >
+              <IconX className="w-3 h-3" />
+            </button>
 
-          {/* Polaroid Frame */}
-          <div className="relative w-full h-full">
-            <img
-              src="/assets/scenario/shop/polaroid-frame.png"
-              alt="Polaroid Frame"
-              className="w-full h-full object-contain drop-shadow-2xl"
-            />
+            {/* Polaroid Preview - uses exact same composed image as ShareModal */}
+            <div className="flex justify-center p-8">
+              <div className="relative w-full max-w-[80%] aspect-[3/4]">
+                {capturedPolaroidSrc ? (
+                  <img
+                    src={capturedPolaroidSrc}
+                    alt="Captured Blobbi Photo"
+                    className="w-full h-full object-contain rounded-2xl"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                      <p className="text-sm text-muted-foreground">Processing polaroid...</p>
+                    </div>
+                  </div>
+                )}
 
-            {/* Captured Photo - positioned to fit inside the frame */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div
-                className="w-[69%] h-[78%]"
-                style={{
-                  position: 'absolute',
-                  top: '5%',
-                  left: '50%',
-                  transform: 'translate(-50%, 0%)',
-                  borderRadius: '4px',
-                  overflow: 'hidden',
-                }}
-              >
-                <img
-                  src={capturedPhoto}
-                  alt="Captured Photo"
-                  className="w-full h-full object-cover"
-                  style={{
-                    transformOrigin: 'center',
-                  }}
-                />
+                {/* Action Buttons - absolutely positioned at bottom of polaroid wrapper */}
+                <div className="absolute flex inset-x-0 bottom-10 translate-y-[16px] items-center justify-center">
+                  <div className="flex flex-col gap-2 w-[70%]">
+                    {/* Top row: Retake and Share buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRetakePhoto}
+                        variant="outline"
+                        className="flex-1 bg-white/95 backdrop-blur-sm border border-border hover:bg-white h-11 text-sm"
+                      >
+                        📷 Retake
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (capturedPhoto && capturedPolaroidSrc) {
+                            onOpenShareModal?.(capturedPhoto, capturedPolaroidSrc);
+                          }
+                        }}
+                        variant="outline"
+                        className="flex-1 bg-white/95 backdrop-blur-sm border border-border hover:bg-white h-11 text-sm"
+                      >
+                        <IconShare className="w-4 h-4 mr-1" />
+                        Share
+                      </Button>
+                    </div>
+
+                    {/* Bottom row: Done button */}
+                    <div className="flex">
+                      <Button
+                        onClick={onClose}
+                        className="flex-1 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white h-11 text-sm"
+                      >
+                        ✨ Done
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 flex gap-3">
-            <Button
-              onClick={handleRetakePhoto}
-              variant="outline"
-              className="bg-white/95 backdrop-blur-sm border border-border hover:bg-white"
-            >
-              📷 Retake Photo
-            </Button>
-            <Button
-              onClick={onClose}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-            >
-              ✨ Done
-            </Button>
-          </div>
-        </div>
       </div>
-    );
+
+      </>
+  );
   }
 
   return (
@@ -826,6 +968,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi }: PhotoBoothM
               backgroundFile={backgroundFile}
               size="xl" // Increased size for modal
               scaleByYPosition={true}
+              disableFloating={true} // Disable floating animation in photo booth
             />
           )}
 

@@ -38,7 +38,7 @@ export function getBlobbiInitialPosition(location: string): InitialPosition {
   // Handle modal backgrounds (like photo-booth-inside.png)
   if (location === 'photo-booth-inside.png') {
     // Place Blobbi at bottom-center of the booth walkable area
-    return { x: 50, y: 60 };
+    return { x: 45, y: 60 };
   }
 
   return defaultPosition;
