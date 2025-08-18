@@ -75,13 +75,13 @@ export function useBlobbis() {
         throw new Error('User not logged in');
       }
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(2000)]); // Reduced timeout
 
       // Query for kind 31124 events (Pet State)
       const events = await nostr.query([{
         kinds: [31124],
         authors: [user.pubkey],
-        limit: 50
+        limit: 25 // Reduced limit for faster initial load
       }], { signal });
 
       // Transform events to typed PetState objects, then convert to legacy format
@@ -97,9 +97,9 @@ export function useBlobbis() {
       return blobbis;
     },
     enabled: !!user?.pubkey,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 120000, // 2 minutes - longer cache to reduce refetches
+    refetchInterval: 120000, // 2 minutes - less frequent refetching
     retry: 1, // Only retry once
-    retryDelay: 500, // Fast retry
+    retryDelay: 1000, // Slightly slower retry to reduce load
   });
 }
