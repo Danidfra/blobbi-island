@@ -15,7 +15,7 @@ export function useCurrentCompanion() {
         return null;
       }
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(1500)]); // Reduced timeout
 
       // Query for kind 31125 events (Owner Profile)
       const events = await nostr.query([{
@@ -33,9 +33,9 @@ export function useCurrentCompanion() {
       return ownerProfile?.currentCompanion || null;
     },
     enabled: !!user?.pubkey,
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // 2 minutes - longer cache
     retry: 1, // Only retry once
-    retryDelay: 500, // Fast retry
+    retryDelay: 1000, // Slightly slower retry
   });
 }
 

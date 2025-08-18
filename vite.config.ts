@@ -17,8 +17,13 @@ export default defineConfig(() => ({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          nostr: ['@nostrify/nostrify', '@nostrify/react'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+          router: ['react-router-dom'],
+          query: ['@tanstack/react-query'],
+          nostr: ['@nostrify/nostrify', '@nostrify/react', 'nostr-tools'],
+          radix: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast', '@radix-ui/react-tooltip'],
+          icons: ['lucide-react', '@tabler/icons-react'],
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
+          utils: ['clsx', 'tailwind-merge', 'date-fns'],
         },
       },
     },

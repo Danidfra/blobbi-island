@@ -10,11 +10,13 @@
     <meta property="og:description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
     <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss:; img-src 'self' data: blob: https:; media-src 'self' https:">
     <link rel="manifest" href="/manifest.webmanifest">
-    
+
     <!-- Preload critical resources -->
-    <link rel="preload" href="/assets/blobbi-island.png" as="image" type="image/png">
+    <link rel="preload" href="/assets/blobbi-island.png" as="image" type="image/png" fetchpriority="high">
     <link rel="dns-prefetch" href="//relay.primal.net">
     <link rel="preconnect" href="wss://relay.primal.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   </head>
   <body>
     <div id="root">
@@ -33,5 +35,6 @@
       </style>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script src="/sw-register.js" defer></script>
   </body>
 </html>
