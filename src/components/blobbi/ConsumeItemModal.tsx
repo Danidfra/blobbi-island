@@ -28,7 +28,7 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
     effects: {
       hunger: 15,
       energy: 5,
-      hygiene: 2,
+      hygiene: -2,
     },
   },
   pizza: {
@@ -38,7 +38,7 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
     effects: {
       hunger: 35,
       happiness: 10,
-      energy: 8,
+      energy: -9,
     },
   },
   burger: {
@@ -46,9 +46,10 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
     name: 'Burger',
     imageUrl: '/assets/interactive/food/burger.png',
     effects: {
-      hunger: 30,
-      happiness: 8,
-      energy: 12,
+      hunger: 40,
+      happiness: 10,
+      energy: 8,
+      hygiene: -8
     },
   },
   cake: {
@@ -57,8 +58,8 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
     imageUrl: '/assets/interactive/food/cake.png',
     effects: {
       hunger: 20,
-      happiness: 25,
-      energy: 15,
+      happiness: 30,
+      energy: -10,
     },
   },
   sushi: {
@@ -66,9 +67,10 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
     name: 'Sushi',
     imageUrl: '/assets/interactive/food/sushi.png',
     effects: {
-      hunger: 25,
+      hunger: 30,
       health: 10,
-      hygiene: 5,
+      hygiene: -6,
+      energy: 7
     },
   },
 };
