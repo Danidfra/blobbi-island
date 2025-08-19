@@ -38,6 +38,6 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
   },
   'plaza-inside.png': {
     initialScale: 1,
-    finalScale: 0.8,
+    finalScale: 0.6,
   },
 };

@@ -12,7 +12,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'mine': { x: 50, y: 75 },
   'nostr-station': { x: 50, y: 75 },
   'plaza': { x: 50, y: 75 },
-  'plaza-inside': { x: 50, y: 85 },
+  'plaza-inside': { x: 50, y: 43 },
   'arcade': { x: 50, y: 75 },
   'arcade-1': { x: 50, y: 63 },
   'arcade-minus1': { x: 50, y: 55 },

@@ -128,8 +128,9 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'plaza-inside.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 56, zIndex: 11 },
-      { minPosition: 56.01, maxPosition: 100, zIndex: 4 } 
+      { minPosition: 0, maxPosition: 22, zIndex: 25 },
+      { minPosition: 22.01, maxPosition: 56, zIndex: 20 },
+      { minPosition: 56.01, maxPosition: 100, zIndex: 9 } 
     ]
   },
   {

@@ -1101,7 +1101,7 @@ if (backgroundFile === 'plaza-open.png') {
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-10">
-      <img src="/assets/scenario/floor.png" alt="Floor" className="max-w-full max-h-full" />
+      <img src="/assets/scenario/plaza/floor.png" alt="Floor" className="max-w-full max-h-full" />
       </div>
     </>
   );
@@ -1117,6 +1117,64 @@ if (backgroundFile === 'plaza-inside.png') {
         alt="Glass Barrier"
         className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10]"
       />
+      {/* <img
+        src="/assets/scenario/plaza/plaza-glass-barrier.png"
+        alt="Glass Barrier"
+        className="absolute top-[30.5%] w-full object-cover z-[2]"
+      /> */}
+
+      {/* Plaza Chill Lounge */}
+      <div className='group absolute bottom-[28.2%] right-[6.5%] z-[11] w-[14.3%]'>
+        <img
+          src="/assets/scenario/plaza/plaza-chill-lounge.png"
+          alt="Plaza chill lounge"
+          className="w-full cursor-pointer"
+        />
+        <InteractiveElement
+          src="/assets/scenario/plaza/plaza-chill-lounge-interactive.png"
+          alt="Chill lounge door"
+          effect="scale"
+          className="absolute right-[20%] -bottom-[15%] w-[90%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+        />
+      </div>
+
+      {/* Plaza Drawing Wall */}
+      <div className='group absolute bottom-[35.8%] right-[26.8%] z-[11] w-[8.8%]'>
+        <img
+          src="/assets/scenario/plaza/plaza-drawing-wall.png"
+          alt="Plaza drawing wall"
+          className="w-full cursor-pointer"
+        />
+        <InteractiveElement
+          src="/assets/scenario/plaza/plaza-drawing-wall-interactive.png"
+          alt="Drawing wall door"
+          effect="scale"
+          className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+        />
+      </div>
+
+      {/* Plaza Information */}
+      <div className='group absolute bottom-[29%] left-[6.5%] z-[11] w-[13.2%]'>
+        <img
+          src="/assets/scenario/plaza/plaza-information.png"
+          alt="Plaza information"
+          className="w-full cursor-pointer"
+        />
+        <InteractiveElement
+          src="/assets/scenario/plaza/plaza-information-interactive.png"
+          alt="Information door"
+          effect="scale"
+          className="absolute bottom-[0] right-0 group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+        />
+      </div>
+
+      {/* Plaza Fountain */}
+        <div className='absolute left-1/2 transform -translate-x-1/2 bottom-[10%] z-[24]'>
+          <img src="/assets/scenario/plaza/floor.png" alt="Floor" />
+          <img src="/assets/scenario/plaza/fountain-bottom.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[30%] w-[70%]" />
+          <img src="/assets/scenario/plaza/fountain-top.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[80%] w-[25%]" />
+        </div>
+
       {/* Back button to return to plaza */}
       <BackArrow
         onClick={() => setCurrentLocation('plaza')}
