@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
-import { useCurrentCompanion, useSetCurrentCompanion } from "@/hooks/useCurrentCompanion";
+import { useBlobbonautProfile, useSetCurrentCompanion } from "@/hooks/useBlobbonautProfile";
 import { BlobbiCard } from "./BlobbiCard";
 import { BlobbiLoadingScreen } from "./BlobbiLoadingScreen";
 import { ExternalLink, ArrowLeft } from "lucide-react";
@@ -16,7 +16,8 @@ interface BlobbiSelectionScreenProps {
 export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSelectionScreenProps) {
   const { user } = useCurrentUser();
   const { data: blobbis, isLoading, error } = useBlobbis();
-  const { data: currentCompanionId, isLoading: isLoadingCompanion } = useCurrentCompanion();
+  const { data: profile, isLoading: isLoadingCompanion } = useBlobbonautProfile();
+  const currentCompanionId = profile?.currentCompanion;
   const { mutate: setCurrentCompanion, isPending: isUpdatingCompanion } = useSetCurrentCompanion();
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
 
