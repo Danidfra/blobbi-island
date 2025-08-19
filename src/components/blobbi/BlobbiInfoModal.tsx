@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { X, Heart, Zap, Sparkles, Shield, Star } from 'lucide-react';
+import { X, Heart, Zap, Sparkles, Shield, Star, Droplets } from 'lucide-react';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
@@ -198,6 +198,11 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
                   label="Health"
                   value={currentPet.health}
                   icon={Shield}
+                />
+                <StatDisplay
+                  label="Hygiene"
+                  value={currentPet.hygiene}
+                  icon={Droplets}
                 />
               </div>
             </div>
