@@ -1,23 +1,25 @@
+/**
+ * Hook to fetch and manage the user's Blobbonaut Profile (kind 31125)
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from './useNostr';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+
 import { parseOwnerProfile, validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
 
-export function useCurrentCompanion() {
+export function useBlobbonautProfile() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
 
   return useQuery({
-    queryKey: ['current-companion', user?.pubkey],
+    queryKey: ['blobbonaut-profile', user?.pubkey],
     queryFn: async (c) => {
-      if (!user?.pubkey) {
-        return null;
-      }
+      if (!user?.pubkey) return null;
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(1500)]); // Reduced timeout
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
-      // Query for kind 31125 events (Owner Profile)
       const events = await nostr.query([{
         kinds: [31125],
         authors: [user.pubkey],
@@ -25,18 +27,21 @@ export function useCurrentCompanion() {
       }], { signal });
 
       const validEvents = events.filter(validateOwnerProfileEvent);
-      if (validEvents.length === 0) {
-        return null;
-      }
-
-      const ownerProfile = parseOwnerProfile(validEvents[0]);
-      return ownerProfile?.currentCompanion || null;
+      return validEvents.length > 0 ? parseOwnerProfile(validEvents[0]) : null;
     },
     enabled: !!user?.pubkey,
-    staleTime: 120000, // 2 minutes - longer cache
-    retry: 1, // Only retry once
-    retryDelay: 1000, // Slightly slower retry
+    staleTime: 30000, // 30 seconds
   });
+}
+
+export function useBlobbonautInventory() {
+  const { data: profile, ...rest } = useBlobbonautProfile();
+
+  return {
+    data: profile?.inventory || [],
+    profile,
+    ...rest
+  };
 }
 
 export function useSetCurrentCompanion() {
@@ -89,13 +94,7 @@ export function useSetCurrentCompanion() {
     onSuccess: () => {
       // Invalidate and refetch related queries
       queryClient.invalidateQueries({
-        queryKey: ['current-companion', user?.pubkey]
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['owner-profile', user?.pubkey]
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['companion-settings', user?.pubkey]
+        queryKey: ['blobbonaut-profile', user?.pubkey]
       });
     },
   });

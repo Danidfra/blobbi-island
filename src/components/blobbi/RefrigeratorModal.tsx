@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
+import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
 import { useToast } from '@/hooks/useToast';
 
 interface RefrigeratorModalProps {
@@ -11,11 +12,7 @@ interface RefrigeratorModalProps {
   onClose: () => void;
 }
 
-interface FoodItemData {
-  id: string;
-  imageUrl: string;
-  position: FoodPosition;
-}
+
 
 export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,46 +20,52 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
 
   const { status, updatePetStats } = useOptimizedStatus();
+  const { data: inventory, isLoading: isInventoryLoading } = useBlobbonautInventory();
   const { toast } = useToast();
 
   // Shelf positions from bottom of modal (in pixels)
   const shelves = useMemo(() => [290, 430, 580], []); // Bottom shelf at 170px, middle at 270px, top at 370px
 
-  // Initial food items with their starting positions
-  const [foodItems, setFoodItems] = useState<FoodItemData[]>([
-    // Top shelf (370px from bottom)
-    {
-      id: 'apple',
-      imageUrl: '/assets/interactive/food/apple.png',
-      position: { x: 150, y: 0 }, // Will be set properly in useEffect
-    },
-    {
-      id: 'pizza',
-      imageUrl: '/assets/interactive/food/pizza.png',
-      position: { x: 300, y: 0 }, // Will be set properly in useEffect
-    },
-    // Middle shelf (270px from bottom)
-    {
-      id: 'burger',
-      imageUrl: '/assets/interactive/food/burger.png',
-      position: { x: 150, y: 0 }, // Will be set properly in useEffect
-    },
-    {
-      id: 'cake',
-      imageUrl: '/assets/interactive/food/cake.png',
-      position: { x: 300, y: 0 }, // Will be set properly in useEffect
-    },
-    // Bottom shelf (170px from bottom)
-    {
-      id: 'sushi',
-      imageUrl: '/assets/interactive/food/sushi.png',
-      position: { x: 225, y: 0 }, // Will be set properly in useEffect
-    },
-  ]);
+  // Map of available food items with their image paths
+  // Maps both prefixed and non-prefixed item IDs to their image paths
+  const availableFoodItems = useMemo(() => ({
+    // Non-prefixed versions (legacy support)
+    apple: '/assets/interactive/food/apple.png',
+    pizza: '/assets/interactive/food/pizza.png',
+    burger: '/assets/interactive/food/burger.png',
+    cake: '/assets/interactive/food/cake.png',
+    sushi: '/assets/interactive/food/sushi.png',
+    // Prefixed versions (current format)
+    food_apple: '/assets/interactive/food/apple.png',
+    food_pizza: '/assets/interactive/food/pizza.png',
+    food_burger: '/assets/interactive/food/burger.png',
+    food_cake: '/assets/interactive/food/cake.png',
+    food_sushi: '/assets/interactive/food/sushi.png',
+  }), []);
+
+  // Generate food items based on inventory data
+  const foodItems = useMemo(() => {
+    if (!inventory || inventory.length === 0) return [];
+
+    // Filter inventory to only include food items that we have images for
+    const foodInInventory = inventory.filter(item =>
+      item.quantity > 0 && availableFoodItems[item.itemId as keyof typeof availableFoodItems]
+    );
+
+    return foodInInventory.map((item) => ({
+      id: item.itemId,
+      imageUrl: availableFoodItems[item.itemId as keyof typeof availableFoodItems],
+      position: { x: 0, y: 0 }, // Will be set properly in useEffect
+      quantity: item.quantity,
+    }));
+  }, [inventory, availableFoodItems]);
+
+  // State for tracking food item positions
+  const [foodItemPositions, setFoodItemPositions] = useState<Record<string, FoodPosition>>({});
 
   // Set initial positions based on container size when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && foodItems.length > 0) {
       const initializePositions = () => {
         if (containerRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect();
@@ -71,45 +74,27 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
 
           // Only set positions if we have valid dimensions
           if (containerWidth > 0 && containerHeight > 0) {
-            setFoodItems(prevItems => prevItems.map((item) => {
-              let shelfIndex: number;
-              let xPercentage: number; // Use percentage for better responsiveness
+            const newPositions: Record<string, FoodPosition> = {};
 
-              // Determine which shelf and position based on the item
-              switch (item.id) {
-                case 'sushi':
-                  shelfIndex = 2; // Top shelf
-                  xPercentage = 0.35; // 35% from left
-                  break;
-                case 'pizza':
-                  shelfIndex = 2; // Top shelf
-                  xPercentage = 0.65; // 65% from left
-                  break;
-                case 'burger':
-                  shelfIndex = 1; // Middle shelf
-                  xPercentage = 0.35; // 35% from left
-                  break;
-                case 'cake':
-                  shelfIndex = 1; // Middle shelf
-                  xPercentage = 0.65; // 65% from left
-                  break;
-                case 'apple':
-                  shelfIndex = 0; // Bottom shelf
-                  xPercentage = 0.5; // 50% from left (centered)
-                  break;
-                default:
-                  shelfIndex = 0;
-                  xPercentage = 0.5;
-              }
+            foodItems.forEach((item, index) => {
+              // Distribute items across shelves
+              const shelfIndex = index % shelves.length;
+              const itemsPerShelf = Math.ceil(foodItems.length / shelves.length);
+              const positionOnShelf = Math.floor(index / shelves.length);
+
+              // Calculate x position based on how many items are on this shelf
+              const totalItemsOnShelf = Math.min(itemsPerShelf, foodItems.length - (shelfIndex * itemsPerShelf));
+              const xPercentage = totalItemsOnShelf === 1
+                ? 0.5 // Center single items
+                : 0.2 + (positionOnShelf * 0.6 / (totalItemsOnShelf - 1)); // Distribute multiple items
 
               const xPosition = containerWidth * xPercentage;
               const yPosition = containerHeight - shelves[shelfIndex];
 
-              return {
-                ...item,
-                position: { x: xPosition, y: yPosition }
-              };
-            }));
+              newPositions[item.id] = { x: xPosition, y: yPosition };
+            });
+
+            setFoodItemPositions(newPositions);
           }
         }
       };
@@ -122,14 +107,13 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
 
       return () => clearTimeout(timer);
     }
-  }, [isOpen, shelves]);
+  }, [isOpen, foodItems, shelves]);
 
   const updateFoodPosition = (id: string, newPosition: FoodPosition) => {
-    setFoodItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, position: newPosition } : item
-      )
-    );
+    setFoodItemPositions(prev => ({
+      ...prev,
+      [id]: newPosition
+    }));
   };
 
   const handleFoodClick = (id: string) => {
@@ -147,9 +131,8 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       return;
     }
 
-    // Get current inventory quantity for this item
-    const inventoryItem = status.owner?.inventory.find(item => item.itemId === itemId);
-    const currentQuantity = inventoryItem?.quantity || 0;
+    // Get current inventory quantity for this item (handle both prefixed and non-prefixed)
+    const currentQuantity = getItemQuantity(itemId);
 
     if (currentQuantity < quantity) {
       toast({
@@ -204,18 +187,18 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   };
 
   const getItemQuantity = (itemId: string): number => {
-    const inventoryItem = status.owner?.inventory.find(item => item.itemId === itemId);
+    // Try to find the item with the exact ID first
+    let inventoryItem = inventory.find(item => item.itemId === itemId);
 
-    // For demo purposes, provide mock quantities if no real inventory data exists
-    if (!inventoryItem && !status.owner?.inventory.length) {
-      const mockQuantities: Record<string, number> = {
-        apple: 5,
-        pizza: 3,
-        burger: 2,
-        cake: 1,
-        sushi: 4,
-      };
-      return mockQuantities[itemId] || 0;
+    // If not found and the itemId doesn't have the food_ prefix, try with the prefix
+    if (!inventoryItem && !itemId.startsWith('food_')) {
+      inventoryItem = inventory.find(item => item.itemId === `food_${itemId}`);
+    }
+
+    // If not found and the itemId has the food_ prefix, try without the prefix
+    if (!inventoryItem && itemId.startsWith('food_')) {
+      const unprefixedId = itemId.replace('food_', '');
+      inventoryItem = inventory.find(item => item.itemId === unprefixedId);
     }
 
     return inventoryItem?.quantity || 0;
@@ -246,19 +229,40 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
             </>
           )} */}
 
-          {/* Food items - only render when modal is open */}
-          {isOpen && foodItems.map((food) => (
-            <FoodItem
-              key={food.id}
-              imageUrl={food.imageUrl}
-              position={food.position}
-              onPositionChange={(newPosition) => updateFoodPosition(food.id, newPosition)}
-              containerRef={containerRef}
-              shelves={shelves}
-              size={64}
-              onClick={() => handleFoodClick(food.id)}
-            />
-          ))}
+          {/* Food items - only render when modal is open and we have inventory data */}
+          {isOpen && !isInventoryLoading && foodItems.map((food) => {
+            const position = foodItemPositions[food.id] || { x: 0, y: 0 };
+            return (
+              <FoodItem
+                key={food.id}
+                imageUrl={food.imageUrl}
+                position={position}
+                onPositionChange={(newPosition) => updateFoodPosition(food.id, newPosition)}
+                containerRef={containerRef}
+                shelves={shelves}
+                size={64}
+                onClick={() => handleFoodClick(food.id)}
+                quantity={food.quantity}
+              />
+            );
+          })}
+
+          {/* Loading state */}
+          {isOpen && isInventoryLoading && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-sm">Loading inventory...</div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {isOpen && !isInventoryLoading && foodItems.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-sm text-center">
+                <p>Your fridge is empty!</p>
+                <p className="text-xs opacity-75 mt-1">Get some food from the shop</p>
+              </div>
+            </div>
+          )}
 
           <DialogClose asChild />
         </div>

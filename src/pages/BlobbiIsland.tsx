@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
-import { useCurrentCompanion } from "@/hooks/useCurrentCompanion";
+import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { BlobbiHeader } from "@/components/blobbi/BlobbiHeader";
 import { BlobbiGameContainer } from "@/components/blobbi/BlobbiGameContainer";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
@@ -33,7 +33,8 @@ export function BlobbiIsland() {
   const { user } = useCurrentUser();
   const isMobile = useIsMobile();
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
-  const { data: currentCompanionId, isLoading: isLoadingCompanion, error: companionError } = useCurrentCompanion();
+  const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
+  const currentCompanionId = profile?.currentCompanion;
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
   const [gameState, setGameState] = useState<GameState>('login');
   const [isLandscape, setIsLandscape] = useState(true);

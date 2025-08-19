@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { loadCustomizedBlobbiSvg } from "@/lib/customizeSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
-import { useCurrentCompanion } from "@/hooks/useCurrentCompanion";
+import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { cn } from "@/lib/utils";
 
 interface CurrentBlobbiDisplayProps {
@@ -32,7 +32,8 @@ export function CurrentBlobbiDisplay({
   isSleeping = false
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
-  const { data: currentCompanionId } = useCurrentCompanion();
+  const { data: profile } = useBlobbonautProfile();
+  const currentCompanionId = profile?.currentCompanion;
   const [svgContent, setSvgContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
