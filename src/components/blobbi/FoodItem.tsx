@@ -16,6 +16,7 @@ interface FoodItemProps {
   size?: number;
   className?: string;
   onClick?: () => void;
+  quantity?: number;
 }
 
 export function FoodItem({
@@ -27,6 +28,7 @@ export function FoodItem({
   size = 64,
   className,
   onClick,
+  quantity,
 }: FoodItemProps) {
   const [isDragging, setIsDragging] = useState(false);
   const foodRef = useRef<HTMLDivElement>(null);
@@ -121,6 +123,13 @@ export function FoodItem({
         className="w-full h-full object-contain pointer-events-none"
         draggable={false}
       />
+
+      {/* Quantity badge */}
+      {quantity !== undefined && quantity > 1 && (
+        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold shadow-lg">
+          {quantity > 99 ? '99+' : quantity}
+        </div>
+      )}
     </div>
   );
 }
