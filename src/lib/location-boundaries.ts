@@ -46,23 +46,29 @@ export const locationBoundaries: Record<string, Boundary> = {
   'plaza-inside.png': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [0, 41], y: [75, 100] }, // Main area
 
-      { type: 'rectangle', x: [59, 100], y: [75, 100] }, // Main area
+      // Main area
+      { type: 'rectangle', x: [0, 41], y: [72, 100] },
+
+      { type: 'rectangle', x: [59, 100], y: [72, 100] },
       { type: 'triangle', points: [{ x: 59, y: 75 }, { x: 55, y: 75 }, { x: 59, y: 80 }] },
       
-      { type: 'rectangle', x: [41, 59], y: [85, 100] }, // Main area
+      { type: 'rectangle', x: [41, 59], y: [85, 100] },
       { type: 'triangle', points: [{ x: 41, y: 75 }, { x: 45, y: 75 }, { x: 41, y: 80 }] },
 
       { type: 'rectangle', x: [25, 75], y: [69, 75] },
-      { type: 'triangle', points: [{ x: 100, y: 75 }, { x: 75, y: 65 }, { x: 75, y: 75 }] },
-      { type: 'triangle', points: [{ x: 0, y:75 }, { x: 25, y: 65 }, { x: 25, y: 75 }] },
+      { type: 'triangle', points: [{ x: 0, y:72 }, { x: 25, y: 62 }, { x: 25, y: 72 }] },
+      { type: 'rectangle', x: [25, 35], y: [62, 69] },
+      { type: 'triangle', points: [{ x: 100, y: 72 }, { x: 75, y: 62 }, { x: 75, y: 72 }] },
+      { type: 'rectangle', x: [65, 75], y: [62, 69] },
 
+      // Stairs
       { type: 'triangle', points: [{ x: 42, y:69 }, { x: 46, y: 69 }, { x: 46, y: 43 }] },
       { type: 'triangle', points: [{ x: 58, y: 69 }, { x: 53, y: 69 }, { x: 53, y: 43 }] },
       { type: 'rectangle', x: [44, 55], y: [55, 69] },
       { type: 'rectangle', x: [46, 53], y: [43, 55] },
 
+      // First floor
       { type: 'rectangle', x: [44.5, 54.5], y: [43, 45] },
 
       { type: 'rectangle', x: [53, 76], y: [43, 43] },
