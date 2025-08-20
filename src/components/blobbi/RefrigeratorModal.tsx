@@ -117,7 +117,10 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   };
 
   const handleFoodClick = (id: string) => {
-    setSelectedItemId(id);
+    // Normalize the item ID to match the format expected by ConsumeItemModal
+    // Remove the 'food_' prefix if it exists
+    const normalizedId = id.startsWith('food_') ? id.replace('food_', '') : id;
+    setSelectedItemId(normalizedId);
     setIsConsumeModalOpen(true);
   };
 
@@ -205,82 +208,84 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 bg-transparent border-none max-w-md w-full">
-        <div ref={containerRef} className="relative">
-          <img
-            src="/assets/interactive/furniture/refrigerator-open.png"
-            alt="Refrigerator open"
-            className="w-full h-auto"
-          />
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="p-0 bg-transparent border-none max-w-md w-full">
+          <div ref={containerRef} className="relative">
+            <img
+              src="/assets/interactive/furniture/refrigerator-open.png"
+              alt="Refrigerator open"
+              className="w-full h-auto"
+            />
 
-          {/* Invisible shelves for debugging (remove these in production) */}
-          {/* {process.env.NODE_ENV === 'development' && (
-            <>
-              {shelves.map((shelf, index) => (
-                <div
-                  key={index}
-                  className="absolute right-1/2 translate-x-1/2 tran w-[60%] border-t-2 border-red-500 opacity-30"
-                  style={{
-                    bottom: `${shelf}px`,
-                  }}
+            {/* Invisible shelves for debugging (remove these in production) */}
+            {/* {process.env.NODE_ENV === 'development' && (
+              <>
+                {shelves.map((shelf, index) => (
+                  <div
+                    key={index}
+                    className="absolute right-1/2 translate-x-1/2 tran w-[60%] border-t-2 border-red-500 opacity-30"
+                    style={{
+                      bottom: `${shelf}px`,
+                    }}
+                  />
+                ))}
+              </>
+            )} */}
+
+            {/* Food items - only render when modal is open and we have inventory data */}
+            {isOpen && !isInventoryLoading && foodItems.map((food) => {
+              const position = foodItemPositions[food.id] || { x: 0, y: 0 };
+              return (
+                <FoodItem
+                  key={food.id}
+                  imageUrl={food.imageUrl}
+                  position={position}
+                  onPositionChange={(newPosition) => updateFoodPosition(food.id, newPosition)}
+                  containerRef={containerRef}
+                  shelves={shelves}
+                  size={64}
+                  onClick={() => handleFoodClick(food.id)}
+                  quantity={food.quantity}
                 />
-              ))}
-            </>
-          )} */}
+              );
+            })}
 
-          {/* Food items - only render when modal is open and we have inventory data */}
-          {isOpen && !isInventoryLoading && foodItems.map((food) => {
-            const position = foodItemPositions[food.id] || { x: 0, y: 0 };
-            return (
-              <FoodItem
-                key={food.id}
-                imageUrl={food.imageUrl}
-                position={position}
-                onPositionChange={(newPosition) => updateFoodPosition(food.id, newPosition)}
-                containerRef={containerRef}
-                shelves={shelves}
-                size={64}
-                onClick={() => handleFoodClick(food.id)}
-                quantity={food.quantity}
-              />
-            );
-          })}
-
-          {/* Loading state */}
-          {isOpen && isInventoryLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white text-sm">Loading inventory...</div>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {isOpen && !isInventoryLoading && foodItems.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-white text-sm text-center">
-                <p>Your fridge is empty!</p>
-                <p className="text-xs opacity-75 mt-1">Get some food from the shop</p>
+            {/* Loading state */}
+            {isOpen && isInventoryLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white text-sm">Loading inventory...</div>
               </div>
-            </div>
-          )}
+            )}
 
-          <DialogClose asChild />
-        </div>
+            {/* Empty state */}
+            {isOpen && !isInventoryLoading && foodItems.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white text-sm text-center">
+                  <p>Your fridge is empty!</p>
+                  <p className="text-xs opacity-75 mt-1">Get some food from the shop</p>
+                </div>
+              </div>
+            )}
 
-        {/* Consume Item Modal */}
-        {selectedItemId && (
-          <ConsumeItemModal
-            isOpen={isConsumeModalOpen}
-            onClose={() => {
-              setIsConsumeModalOpen(false);
-              setSelectedItemId(null);
-            }}
-            itemId={selectedItemId}
-            maxQuantity={getItemQuantity(selectedItemId)}
-            onUseItem={handleUseItem}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+            <DialogClose asChild />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Consume Item Modal - rendered separately outside the main dialog */}
+      {selectedItemId && (
+        <ConsumeItemModal
+          isOpen={isConsumeModalOpen}
+          onClose={() => {
+            setIsConsumeModalOpen(false);
+            setSelectedItemId(null);
+          }}
+          itemId={selectedItemId}
+          maxQuantity={getItemQuantity(selectedItemId)}
+          onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
+        />
+      )}
+    </>
   );
 }

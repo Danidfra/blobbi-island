@@ -25,7 +25,7 @@ const LOCATIONS: Location[] = [
     name: 'Home',
     image: '/assets/map/miniature-home.png',
     position: { x: 64, y: 38 },
-    size: { width: 60 }
+    size: { width: 80 }
   },
   {
     id: 'beach',

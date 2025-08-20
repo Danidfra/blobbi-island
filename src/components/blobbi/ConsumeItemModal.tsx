@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Minus, Plus, Heart, Zap, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Food item data with effects
+// Item data with effects (includes both food and toy items)
 interface FoodItemData {
   id: string;
   name: string;
@@ -19,7 +19,7 @@ interface FoodItemData {
   };
 }
 
-// Food items database
+// Items database (includes both food and toy items)
 const FOOD_ITEMS: Record<string, FoodItemData> = {
   apple: {
     id: 'apple',
@@ -73,6 +73,25 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
       energy: 7
     },
   },
+  // Toy items for chest
+  ball: {
+    id: 'ball',
+    name: 'Ball',
+    imageUrl: '/assets/interactive/toys/ball.png',
+    effects: {
+      happiness: 25,
+      energy: 15,
+    },
+  },
+  bear: {
+    id: 'bear',
+    name: 'Teddy Bear',
+    imageUrl: '/assets/interactive/toys/bear.png',
+    effects: {
+      happiness: 30,
+      hygiene: 10,
+    },
+  },
 };
 
 // Effect icons mapping
@@ -101,18 +120,18 @@ export function ConsumeItemModal({
 }: ConsumeItemModalProps) {
   const [quantity, setQuantity] = useState(1);
 
-  const foodItem = FOOD_ITEMS[itemId];
+  const item = FOOD_ITEMS[itemId];
 
   // Calculate total effects based on quantity
   const totalEffects = useMemo(() => {
-    if (!foodItem) return {};
+    if (!item) return {};
 
     const effects: Record<string, number> = {};
-    Object.entries(foodItem.effects).forEach(([key, value]) => {
+    Object.entries(item.effects).forEach(([key, value]) => {
       effects[key] = value * quantity;
     });
     return effects;
-  }, [foodItem, quantity]);
+  }, [item, quantity]);
 
   const handleQuantityChange = (newQuantity: number) => {
     setQuantity(Math.max(1, Math.min(maxQuantity, newQuantity)));
@@ -128,7 +147,7 @@ export function ConsumeItemModal({
     onClose();
   };
 
-  if (!foodItem) {
+  if (!item) {
     return null;
   }
 
@@ -154,13 +173,13 @@ export function ConsumeItemModal({
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-slate-700/50 rounded-xl flex items-center justify-center border border-slate-600/30">
                   <img
-                    src={foodItem.imageUrl}
-                    alt={foodItem.name}
+                    src={item.imageUrl}
+                    alt={item.name}
                     className="w-12 h-12 object-contain"
                   />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{foodItem.name}</h3>
+                  <h3 className="text-lg font-semibold text-white">{item.name}</h3>
                 </div>
               </div>
             </div>
@@ -230,7 +249,7 @@ export function ConsumeItemModal({
               <h4 className="text-white font-medium">Item Effects (per item):</h4>
               <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-600/30">
                 <div className="space-y-2">
-                  {Object.entries(foodItem.effects).map(([effect, value]) => {
+                  {Object.entries(item.effects).map(([effect, value]) => {
                     const Icon = EFFECT_ICONS[effect as keyof typeof EFFECT_ICONS];
                     return (
                       <div key={effect} className="flex items-center justify-between">

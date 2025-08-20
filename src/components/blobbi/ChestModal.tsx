@@ -42,11 +42,9 @@ function ChestItem({ item, containerBounds, onPositionChange, onClick }: ChestIt
   }, [containerBounds]);
 
   const bind = useDrag(
-    ({ down, movement: [mx, my], memo, tap, event }) => {
+    ({ down, movement: [mx, my], memo, tap }) => {
       if (tap && !isDragging) {
-        // Handle click/tap
-        event?.stopPropagation();
-        onClick(item.id);
+        // Don't handle click here - let the click handler handle it
         return;
       }
 
@@ -70,6 +68,13 @@ function ChestItem({ item, containerBounds, onPositionChange, onClick }: ChestIt
     }
   );
 
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (onClick && !isDragging) {
+      onClick(item.id);
+    }
+  };
+
   return (
     <div
       {...bind()}
@@ -85,6 +90,7 @@ function ChestItem({ item, containerBounds, onPositionChange, onClick }: ChestIt
         height: 64,
         touchAction: 'none',
       }}
+      onClick={handleClick}
     >
       <img
         src={item.imageUrl}
@@ -261,56 +267,58 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 bg-transparent border-none max-w-lg w-full">
-        <div ref={containerRef} className="relative">
-          <img
-            src="/assets/interactive/furniture/chest-open.png"
-            alt="Chest open"
-            className="w-full h-auto scale-125"
-          />
-
-          {/* Invisible container bounds for debugging (remove in production) */}
-          {/* {process.env.NODE_ENV === 'development' && containerBounds.width > 0 && (
-            <div
-              className="absolute border-2 border-red-500 opacity-30 pointer-events-none"
-              style={{
-                left: containerBounds.x,
-                top: containerBounds.y,
-                width: containerBounds.width,
-                height: containerBounds.height,
-              }}
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="p-0 bg-transparent border-none max-w-lg w-full">
+          <div ref={containerRef} className="relative">
+            <img
+              src="/assets/interactive/furniture/chest-open.png"
+              alt="Chest open"
+              className="w-full h-auto scale-125"
             />
-          )} */}
 
-          {/* Chest items - only render when modal is open and bounds are set */}
-          {isOpen && containerBounds.width > 0 && chestItems.map((item) => (
-            <ChestItem
-              key={item.id}
-              item={item}
-              containerBounds={containerBounds}
-              onPositionChange={updateItemPosition}
-              onClick={handleItemClick}
-            />
-          ))}
+            {/* Invisible container bounds for debugging (remove in production) */}
+            {/* {process.env.NODE_ENV === 'development' && containerBounds.width > 0 && (
+              <div
+                className="absolute border-2 border-red-500 opacity-30 pointer-events-none"
+                style={{
+                  left: containerBounds.x,
+                  top: containerBounds.y,
+                  width: containerBounds.width,
+                  height: containerBounds.height,
+                }}
+              />
+            )} */}
 
-          <DialogClose asChild />
-        </div>
+            {/* Chest items - only render when modal is open and bounds are set */}
+            {isOpen && containerBounds.width > 0 && chestItems.map((item) => (
+              <ChestItem
+                key={item.id}
+                item={item}
+                containerBounds={containerBounds}
+                onPositionChange={updateItemPosition}
+                onClick={handleItemClick}
+              />
+            ))}
 
-        {/* Consume Item Modal */}
-        {selectedItemId && (
-          <ConsumeItemModal
-            isOpen={isConsumeModalOpen}
-            onClose={() => {
-              setIsConsumeModalOpen(false);
-              setSelectedItemId(null);
-            }}
-            itemId={selectedItemId}
-            maxQuantity={getItemQuantity(selectedItemId)}
-            onUseItem={handleUseItem}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+            <DialogClose asChild />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Consume Item Modal - rendered separately outside the main dialog */}
+      {selectedItemId && (
+        <ConsumeItemModal
+          isOpen={isConsumeModalOpen}
+          onClose={() => {
+            setIsConsumeModalOpen(false);
+            setSelectedItemId(null);
+          }}
+          itemId={selectedItemId}
+          maxQuantity={getItemQuantity(selectedItemId)}
+          onUseItem={handleUseItem}
+        />
+      )}
+    </>
   );
 }

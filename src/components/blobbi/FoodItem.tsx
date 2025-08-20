@@ -57,10 +57,9 @@ export function FoodItem({
   }, [shelves, containerRef]);
 
   const bind = useDrag(
-    ({ down, movement: [mx, my], memo, tap, event }) => {
+    ({ down, movement: [mx, my], memo, tap }) => {
       if (tap && onClick) {
-        event?.stopPropagation();
-        onClick();
+        // Don't call onClick here - let the click handler handle it
         return;
       }
 
@@ -93,7 +92,7 @@ export function FoodItem({
 
   const handleClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (onClick && !isDragging) {
+    if (onClick) {
       onClick();
     }
   };
