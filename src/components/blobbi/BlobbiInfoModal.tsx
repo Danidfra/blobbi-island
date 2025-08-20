@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets } from 'lucide-react';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
@@ -87,7 +88,7 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
         className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         onClick={handleBackdropClick}
       >
-        <div className="w-[90%] max-w-md p-4 rounded-2xl blobbi-card-xl blobbi-gradient-container">
+        <div className="w-[85%] max-w-md p-4 rounded-2xl blobbi-card-xl blobbi-gradient-container">
           <div className="text-center p-4">
             <p className="blobbi-text-muted">No Blobbi selected</p>
             <Button onClick={onClose} className="mt-3 blobbi-button" size="sm">
@@ -106,9 +107,9 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
-      <div className="w-[95%] max-w-2xl max-h-[90vh] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative">
-        <div className="p-4 border-b border-purple-200/60 dark:border-purple-800/60">
-          <h2 className="text-xl font-bold text-center text-gray-800 dark:text-gray-200">
+      <div className="w-[85%] max-h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl">
+        <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
+          <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">
             Blobbi Info
           </h2>
           <Button
@@ -121,8 +122,9 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
           </Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 pl-5 py-5">
+          {/* Left Column - Blobbi Display and Basic Info (Fixed) */}
+          <div className="flex flex-col space-y-4 lg:w-2/5 flex-shrink-0">
             {/* Blobbi Display */}
             <div className="text-center space-y-3">
               <div className="flex justify-center">
@@ -136,11 +138,11 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
               </div>
 
               <div className="space-y-1.5">
-                <h2 className="text-2xl font-bold blobbi-text">
+                <h2 className="text-xl font-bold blobbi-text">
                   {currentPet.name || currentPet.id}
                 </h2>
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <Badge className="blobbi-badge-purple-soft text-xs">
+                  <Badge variant="outline" className="blobbi-badge text-xs">
                     {currentPet.stage} • Gen {currentPet.generation}
                   </Badge>
                   <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
@@ -170,152 +172,160 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Stats Grid */}
-            <div className="blobbi-card rounded-lg">
-              <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
-                  Core Stats
-                </h3>
-              </div>
-              <div className="p-3 grid grid-cols-2 gap-3">
-                <StatDisplay
-                  label="Hunger"
-                  value={currentPet.hunger}
-                  icon={Heart}
-                />
-                <StatDisplay
-                  label="Energy"
-                  value={currentPet.energy}
-                  icon={Zap}
-                />
-                <StatDisplay
-                  label="Happiness"
-                  value={currentPet.happiness}
-                  icon={Sparkles}
-                />
-                <StatDisplay
-                  label="Health"
-                  value={currentPet.health}
-                  icon={Shield}
-                />
-                <StatDisplay
-                  label="Hygiene"
-                  value={currentPet.hygiene}
-                  icon={Droplets}
-                />
-              </div>
-            </div>
+          {/* Right Column - Scrollable Cards Section */}
+          <div className="lg:w-3/5 flex-1 min-h-0">
+            <div className="h-full overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+              <div className="space-y-4 pb-2">
+                {/* Stats Grid */}
+                <div className="blobbi-card rounded-lg">
+                  <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
+                    <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                      Core Stats
+                    </h3>
+                  </div>
+                  <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <StatDisplay
+                      label="Hunger"
+                      value={currentPet.hunger}
+                      icon={Heart}
+                    />
+                    <StatDisplay
+                      label="Energy"
+                      value={currentPet.energy}
+                      icon={Zap}
+                    />
+                    <StatDisplay
+                      label="Happiness"
+                      value={currentPet.happiness}
+                      icon={Sparkles}
+                    />
+                    <StatDisplay
+                      label="Health"
+                      value={currentPet.health}
+                      icon={Shield}
+                    />
+                    <StatDisplay
+                      label="Hygiene"
+                      value={currentPet.hygiene}
+                      icon={Droplets}
+                      className="sm:col-span-2"
+                    />
+                  </div>
+                </div>
 
-            {/* Care Status */}
-            <div className="blobbi-card rounded-lg">
-              <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
-                  Care Status
-                </h3>
-              </div>
-              <div className="p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Condition</span>
-                  <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
-                    {careStatus.condition}
-                  </Badge>
+                {/* Care Status */}
+                <div className="blobbi-card rounded-lg">
+                  <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
+                    <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                      Care Status
+                    </h3>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Condition</span>
+                      <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
+                        {careStatus.condition}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Urgency</span>
+                      <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
+                        {careStatus.urgency}
+                      </Badge>
+                    </div>
+                    {careStatus.urgentNeed && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-base">⚠️</span>
+                        <span className="font-medium">Needs:</span>
+                        <span>{careStatus.urgentNeed}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Urgency</span>
-                  <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
-                    {careStatus.urgency}
-                  </Badge>
+
+                {/* Progress */}
+                <div className="blobbi-card rounded-lg">
+                  <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
+                    <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                      Progress
+                    </h3>
+                  </div>
+                  <div className="p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Experience</span>
+                      <span className="text-xs text-muted-foreground">
+                        {currentPet.experience} XP
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Care Streak</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {currentPet.careStreak} days
+                        </span>
+                        <Star className="h-3 w-3 text-yellow-500" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium">Generation</span>
+                      <span className="text-xs text-muted-foreground">
+                        Gen {currentPet.generation}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {careStatus.urgentNeed && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-base">⚠️</span>
-                    <span className="font-medium">Needs:</span>
-                    <span>{careStatus.urgentNeed}</span>
+
+                {/* Special Traits */}
+                {(currentPet.personality || currentPet.trait || currentPet.mood) && (
+                  <div className="blobbi-card rounded-lg">
+                    <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
+                      <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                        Personality
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {currentPet.personality && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">🎭</span>
+                          <span className="text-xs font-medium">Personality:</span>
+                          <span className="text-xs text-muted-foreground">
+                            {Array.isArray(currentPet.personality)
+                              ? currentPet.personality.join(', ')
+                              : currentPet.personality}
+                          </span>
+                        </div>
+                      )}
+                      {currentPet.trait && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">✨</span>
+                          <span className="text-xs font-medium">Trait:</span>
+                          <span className="text-xs text-muted-foreground">
+                            {Array.isArray(currentPet.trait)
+                              ? currentPet.trait.join(', ')
+                              : currentPet.trait}
+                          </span>
+                        </div>
+                      )}
+                      {currentPet.mood && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">😊</span>
+                          <span className="text-xs font-medium">Mood:</span>
+                          <span className="text-xs text-muted-foreground">
+                            {currentPet.mood}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Progress */}
-            <div className="blobbi-card rounded-lg">
-              <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
-                  Progress
-                </h3>
-              </div>
-              <div className="p-3 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Experience</span>
-                  <span className="text-xs text-muted-foreground">
-                    {currentPet.experience} XP
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Care Streak</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">
-                      {currentPet.careStreak} days
-                    </span>
-                    <Star className="h-3 w-3 text-yellow-500" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">Generation</span>
-                  <span className="text-xs text-muted-foreground">
-                    Gen {currentPet.generation}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Special Traits */}
-            {(currentPet.personality || currentPet.trait || currentPet.mood) && (
-              <div className="blobbi-card rounded-lg">
-                <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                  <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
-                    Personality
-                  </h3>
-                </div>
-                <div className="p-3 space-y-2">
-                  {currentPet.personality && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">🎭</span>
-                      <span className="text-xs font-medium">Personality:</span>
-                      <span className="text-xs text-muted-foreground">
-                        {Array.isArray(currentPet.personality)
-                          ? currentPet.personality.join(', ')
-                          : currentPet.personality}
-                      </span>
-                    </div>
-                  )}
-                  {currentPet.trait && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">✨</span>
-                      <span className="text-xs font-medium">Trait:</span>
-                      <span className="text-xs text-muted-foreground">
-                        {Array.isArray(currentPet.trait)
-                          ? currentPet.trait.join(', ')
-                          : currentPet.trait}
-                      </span>
-                    </div>
-                  )}
-                  {currentPet.mood && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">😊</span>
-                      <span className="text-xs font-medium">Mood:</span>
-                      <span className="text-xs text-muted-foreground">
-                        {currentPet.mood}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="p-4 border-t border-purple-200/60 dark:border-purple-800/60 flex justify-end">
+        <div className="p-3 border-t border-purple-200/60 dark:border-purple-800/60 flex justify-end flex-shrink-0">
           <Button variant="outline" onClick={onClose} className="blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
             Close
           </Button>

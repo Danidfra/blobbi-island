@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
@@ -14,8 +14,8 @@ interface Location {
     y: number; // percentage from top (0-100)
   };
   size?: {
-    width: number; // pixels
-    height: number; // pixels
+    width?: number; // pixels (optional)
+    height?: number; // pixels (optional)
   };
 }
 
@@ -23,44 +23,44 @@ const LOCATIONS: Location[] = [
   {
     id: 'home',
     name: 'Home',
-    image: '/assets/home.png',
+    image: '/assets/map/miniature-home.png',
     position: { x: 64, y: 38 },
-    size: { width: 60, height: 60 }
+    size: { width: 60 }
   },
   {
     id: 'beach',
     name: 'Beach',
-    image: '/assets/beach.png',
+    image: '/assets/map/miniature-beach.png',
     position: { x: 60, y: 87 },
-    size: { width: 60, height: 60 }
+    size: { width: 60 }
   },
   {
     id: 'mine',
     name: 'Mine',
-    image: '/assets/mine.png',
+    image: '/assets/map/miniature-mine.png',
     position: { x: 24, y: 79 },
-    size: { width: 100, height: 100 }
+    size: { width: 100 }
   },
   {
     id: 'nostr-station',
     name: 'Nostr Station',
-    image: '/assets/nostr-station.png',
-    position: { x: 80, y: 67 },
-    size: { width: 80, height: 80 }
+    image: '/assets/map/miniature-nostr-station.png',
+    position: { x: 80, y: 66 },
+    size: { width: 100 }
   },
   {
     id: 'plaza',
     name: 'Plaza',
-    image: '/assets/plaza.png',
-    position: { x: 47.5, y: 47 },
-    size: { width: 100, height: 100 }
+    image: '/assets/map/miniature-plaza.png',
+    position: { x: 47.5, y: 46 },
+    size: { width: 120 }
   },
   {
     id: 'town',
     name: 'Town',
-    image: '/assets/town.png',
-    position: { x: 33, y: 26 },
-    size: { width: 120, height: 120 }
+    image: '/assets/map/miniature-town.png',
+    position: { x: 33, y: 24 },
+    size: { width: 140 }
   },
 ];
 
@@ -70,10 +70,120 @@ interface MapModalProps {
   className?: string;
 }
 
+interface ImageDimensions {
+  naturalWidth: number;
+  naturalHeight: number;
+}
+
 export function MapModal({ className }: MapModalProps) {
   const { isMapModalOpen, setIsMapModalOpen, currentLocation, setCurrentLocation } = useLocation();
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [imageDimensions, setImageDimensions] = useState<Record<string, ImageDimensions>>({});
+  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
+
+  // Function to load image dimensions
+  const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight
+        });
+      };
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+  }, []);
+
+  // Function to calculate final size based on provided dimensions and image aspect ratio
+  const calculateFinalSize = useCallback((location: Location) => {
+    const { size, image } = location;
+    const dimensions = imageDimensions[image];
+
+    if (!dimensions) {
+      // If image dimensions not loaded yet, return default size
+      return { width: 60, height: 60 };
+    }
+
+    const { naturalWidth, naturalHeight } = dimensions;
+    const aspectRatio = naturalWidth / naturalHeight;
+
+    if (!size) {
+      // If no size provided, use natural size
+      return { width: naturalWidth, height: naturalHeight };
+    }
+
+    const { width: providedWidth, height: providedHeight } = size;
+
+    if (providedWidth !== undefined && providedHeight !== undefined) {
+      // Both dimensions provided, use as-is
+      return { width: providedWidth, height: providedHeight };
+    }
+
+    if (providedWidth !== undefined) {
+      // Only width provided, calculate height from aspect ratio
+      return {
+        width: providedWidth,
+        height: Math.round(providedWidth / aspectRatio)
+      };
+    }
+
+    if (providedHeight !== undefined) {
+      // Only height provided, calculate width from aspect ratio
+      return {
+        width: Math.round(providedHeight * aspectRatio),
+        height: providedHeight
+      };
+    }
+
+    // Fallback to natural size
+    return { width: naturalWidth, height: naturalHeight };
+  }, [imageDimensions]);
+
+  // Load all image dimensions when modal opens
+  useEffect(() => {
+    if (!isMapModalOpen) return;
+
+    const loadAllImages = async () => {
+      const newLoadingImages = new Set<string>();
+
+      // Start loading all images
+      LOCATIONS.forEach(location => {
+        if (!imageDimensions[location.image]) {
+          newLoadingImages.add(location.image);
+        }
+      });
+
+      if (newLoadingImages.size === 0) return;
+
+      setLoadingImages(newLoadingImages);
+
+      try {
+        const dimensionPromises = Array.from(newLoadingImages).map(async (imageUrl) => {
+          const dimensions = await loadImageDimensions(imageUrl);
+          return { imageUrl, dimensions };
+        });
+
+        const results = await Promise.all(dimensionPromises);
+
+        // Update dimensions state
+        const updatedDimensions = { ...imageDimensions };
+        results.forEach(({ imageUrl, dimensions }) => {
+          updatedDimensions[imageUrl] = dimensions;
+        });
+
+        setImageDimensions(updatedDimensions);
+      } catch (error) {
+        console.error('Error loading image dimensions:', error);
+      } finally {
+        setLoadingImages(new Set());
+      }
+    };
+
+    loadAllImages();
+  }, [isMapModalOpen, imageDimensions, loadImageDimensions]);
 
   if (!isMapModalOpen) return null;
 
@@ -145,40 +255,52 @@ export function MapModal({ className }: MapModalProps) {
           />
 
           {/* Location Overlays */}
-          {LOCATIONS.map((location) => (
-            <button
-              key={location.id}
-              onClick={() => handleLocationClick(location.id)}
-              onMouseEnter={() => setHoveredLocation(location.id)}
-              onMouseLeave={() => setHoveredLocation(null)}
-              className={cn(
-                "absolute transform -translate-x-1/2 -translate-y-1/2",
-                "transition-all duration-300 ease-out",
-                "cursor-pointer",
-                "hover:z-20",
-                "rounded-lg",
-                "active:scale-95",
-                hoveredLocation === location.id && "scale-110 drop-shadow-2xl z-20",
-              )}
-              style={{
-                left: `${location.position.x}%`,
-                top: `${location.position.y}%`,
-                width: location.size?.width || 60,
-                height: location.size?.height || 60,
-              }}
-              title={location.name}
-              aria-label={`Go to ${location.name}`}
-            >
-              <img
-                src={location.image}
-                alt={location.name}
+          {LOCATIONS.map((location) => {
+            const finalSize = calculateFinalSize(location);
+            const isImageLoading = loadingImages.has(location.image);
+
+            return (
+              <button
+                key={location.id}
+                onClick={() => handleLocationClick(location.id)}
+                onMouseEnter={() => setHoveredLocation(location.id)}
+                onMouseLeave={() => setHoveredLocation(null)}
                 className={cn(
-                  "w-full h-full object-contain",
+                  "absolute transform -translate-x-1/2 -translate-y-1/2",
                   "transition-all duration-300 ease-out",
-                  "drop-shadow-lg",
-                  hoveredLocation === location.id && "brightness-110 contrast-110"
+                  "cursor-pointer",
+                  "hover:z-20",
+                  "rounded-lg",
+                  "active:scale-95",
+                  hoveredLocation === location.id && "scale-110 drop-shadow-2xl z-20",
+                  isImageLoading && "opacity-50", // Show loading state
                 )}
-              />
+                style={{
+                  left: `${location.position.x}%`,
+                  top: `${location.position.y}%`,
+                  width: finalSize.width,
+                  height: finalSize.height,
+                }}
+                title={location.name}
+                aria-label={`Go to ${location.name}`}
+                disabled={isImageLoading}
+              >
+              {isImageLoading ? (
+                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
+                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : (
+                <img
+                  src={location.image}
+                  alt={location.name}
+                  className={cn(
+                    "w-full h-full object-contain",
+                    "transition-all duration-300 ease-out",
+                    "drop-shadow-lg",
+                    hoveredLocation === location.id && "brightness-110 contrast-110"
+                  )}
+                />
+              )}
 
               {/* Location Label (appears on hover) */}
               <div
@@ -197,7 +319,7 @@ export function MapModal({ className }: MapModalProps) {
                 {currentLocation === location.id && " (Current)"}
               </div>
             </button>
-          ))}
+          );})}
 
 
         </div>

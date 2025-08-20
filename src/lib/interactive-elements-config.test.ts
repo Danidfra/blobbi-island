@@ -137,10 +137,6 @@ describe('Interactive Elements Configuration', () => {
       const beachOpenElements = getInteractiveElementsForBackground('beach-open.png');
       expect(beachOpenElements).toHaveLength(1);
       expect(beachOpenElements[0].id).toBe('boat');
-
-      const beachElements = getInteractiveElementsForBackground('beach.png');
-      expect(beachElements).toHaveLength(1);
-      expect(beachElements[0].id).toBe('boat-beach');
     });
 
     it('should return empty array for unknown background', () => {

@@ -218,12 +218,6 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
     zIndex: 15,
     backgroundFile: 'beach-open.png'
   },
-  {
-    id: 'boat-beach',
-    yPosition: 34, // Same boat for beach.png
-    zIndex: 15,
-    backgroundFile: 'beach.png'
-  },
 
   // Home elements (home-open.png)
   {
