@@ -29,13 +29,25 @@ export const locationBoundaries: Record<string, Boundary> = {
   'nostr-station-open.png': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [5, 70], y: [70, 95] }, // Main area
+      { type: 'rectangle', x: [5, 70], y: [65, 95] }, // Main area
+      { type: 'triangle', points: [{ x: 44, y:70 }, { x: 51, y:70  }, { x: 51, y: 64 }] }, //
+
       { type: 'rectangle', x: [51, 61], y: [64, 70] }, //
+      { type: 'triangle', points: [{ x: 51, y:64 }, { x: 56, y:64  }, { x: 56, y: 60 }] }, //
+
       { type: 'rectangle', x: [56, 61], y: [60, 64] }, //
+      { type: 'triangle', points: [{ x: 56, y:60 }, { x: 61, y:54  }, { x: 61, y: 60 }] }, //
+
       { type: 'rectangle', x: [61, 70], y: [54, 70] }, //
+      { type: 'triangle', points: [{ x: 61, y:54 }, { x: 64, y:54  }, { x: 64, y: 50 }] }, //
+
       { type: 'rectangle', x: [64, 70], y: [50, 54] }, //
+      { type: 'triangle', points: [{ x: 70, y:40 }, { x: 70, y:50  }, { x: 64, y: 50 }] }, //
+
       { type: 'rectangle', x: [70, 96], y: [40, 95] }, //
-      { type: 'rectangle', x: [75, 90], y: [28, 45] }, //
+      { type: 'triangle', points: [{ x: 70, y:40 }, { x: 75, y: 32 }, { x: 75, y: 40 }] }, //
+
+      { type: 'rectangle', x: [75, 90], y: [30, 45] }, //
     ],
   },
   'plaza-open.png': {
@@ -137,7 +149,7 @@ export const locationBoundaries: Record<string, Boundary> = {
   'cave-open.png': {
     shape: 'rectangle',
     x: [16, 84],
-    y: [75, 79],
+    y: [71, 75.5],
   },
   'shop-open.png': {
     shape: 'composite',

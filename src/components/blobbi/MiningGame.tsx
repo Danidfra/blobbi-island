@@ -142,7 +142,7 @@ export function MiningGame() {
         ))}
       </div>
 
-      <div className="absolute top-4 right-4 w-32 space-y-2">
+      <div className="absolute top-4 right-4 w-32 space-y-2 text-white">
         <p>Energy</p>
         <Progress value={energy} />
         <Button onClick={finishMining}>Finish Mining</Button>
