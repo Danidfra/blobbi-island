@@ -50,6 +50,12 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [75, 90], y: [30, 45] }, //
     ],
   },
+  'nostr-station-inside.png': {
+    shape: 'composite',
+    areas: [
+      {type: 'rectangle' , x: [10, 90], y: [70, 95] },
+    ]
+  },
   'plaza-open.png': {
     shape: 'rectangle',
     x: [5, 95],
@@ -64,7 +70,7 @@ export const locationBoundaries: Record<string, Boundary> = {
 
       { type: 'rectangle', x: [59, 100], y: [72, 100] },
       { type: 'triangle', points: [{ x: 59, y: 75 }, { x: 55, y: 75 }, { x: 59, y: 80 }] },
-      
+
       { type: 'rectangle', x: [41, 59], y: [85, 100] },
       { type: 'triangle', points: [{ x: 41, y: 75 }, { x: 45, y: 75 }, { x: 41, y: 80 }] },
 

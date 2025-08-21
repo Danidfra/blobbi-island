@@ -11,6 +11,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'beach': { x: 50, y: 75 },
   'mine': { x: 50, y: 75 },
   'nostr-station': { x: 50, y: 75 },
+  'nostr-station-inside': { x: 50, y: 85 },
   'plaza': { x: 50, y: 75 },
   'plaza-inside': { x: 50, y: 43 },
   'arcade': { x: 50, y: 75 },

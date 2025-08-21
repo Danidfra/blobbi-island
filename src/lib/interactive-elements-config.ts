@@ -130,7 +130,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     thresholds: [
       { minPosition: 0, maxPosition: 22, zIndex: 25 },
       { minPosition: 22.01, maxPosition: 56, zIndex: 20 },
-      { minPosition: 56.01, maxPosition: 100, zIndex: 9 } 
+      { minPosition: 56.01, maxPosition: 100, zIndex: 9 }
     ]
   },
   {
@@ -138,6 +138,13 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Ground level
       { minPosition: 10, maxPosition: 100, zIndex: 15 } // Upper area
+    ]
+  },
+  {
+    backgroundFile: 'nostr-station-inside.png',
+    thresholds: [
+      { minPosition: 0, maxPosition: 15, zIndex: 20 },  // Floor level
+      { minPosition: 15, maxPosition: 100, zIndex: 15 } // Upper area
     ]
   }
 ];

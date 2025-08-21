@@ -1,1 +1,1 @@
-export type LocationId = 'town' | 'home' | 'beach' | 'mine' | 'nostr-station' | 'plaza' | 'plaza-inside' | 'arcade' | 'arcade-1' | 'arcade-minus1' | 'stage' | 'shop' | 'back-yard' | 'cave-open';
+export type LocationId = 'town' | 'home' | 'beach' | 'mine' | 'nostr-station' | 'nostr-station-inside' | 'plaza' | 'plaza-inside' | 'arcade' | 'arcade-1' | 'arcade-minus1' | 'stage' | 'shop' | 'back-yard' | 'cave-open';

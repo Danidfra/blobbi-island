@@ -1015,7 +1015,7 @@ if (backgroundFile === 'nostr-station-open.png') {
             src="/assets/interactive/builds/nostr-station-door.png"
             alt="Nostr Station Door"
             animated={false}
-            onClick={() => handleElementClick('arcade')}
+            onClick={() => setCurrentLocation('nostr-station-inside')}
             effect="door"
             className="absolute bottom-0 left-[10%] w-[31%] z-15"
           />
@@ -1180,6 +1180,22 @@ if (backgroundFile === 'plaza-inside.png') {
         onClick={() => setCurrentLocation('plaza')}
         className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
       />
+    </>
+  );
+}
+
+// Nostr Station Inside elements
+if (backgroundFile === 'nostr-station-inside.png') {
+  return (
+    <>
+      {/* Back button to return to outside */}
+      <BackArrow
+        onClick={() => setCurrentLocation('nostr-station')}
+        className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
+      />
+
+      <img src='/assets/scenario/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
+
     </>
   );
 }
