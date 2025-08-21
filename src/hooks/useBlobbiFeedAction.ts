@@ -58,7 +58,7 @@ export function useBlobbiFeedAction() {
   const { user } = useCurrentUser();
   const { mutate: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
-  const { status, updatePetStats, updatePetCareTimestamp } = useOptimizedStatus();
+  const { status, applyOptimisticUpdate } = useOptimizedStatus();
   const { data: profile } = useBlobbonautProfile();
 
   return useMutation({
@@ -234,9 +234,16 @@ export function useBlobbiFeedAction() {
         });
       }
 
-      // Apply optimistic updates
-      updatePetStats(petId, newStats);
-      updatePetCareTimestamp(petId, 'lastMeal');
+      // Apply comprehensive optimistic updates for pet
+      applyOptimisticUpdate({
+        petId,
+        petUpdates: {
+          ...newStats,
+          experience: newExperience,
+          careStreak: newCareStreak,
+          lastMeal: now,
+        },
+      });
 
       return {
         petId,
@@ -249,16 +256,33 @@ export function useBlobbiFeedAction() {
       };
     },
     onSuccess: () => {
-      // Invalidate related queries to refetch fresh data
+      // Invalidate related queries to refetch fresh data in the background
+      // Use refetchType: 'none' to avoid immediately overriding optimistic updates
       queryClient.invalidateQueries({
-        queryKey: ['pet-states', user?.pubkey]
+        queryKey: ['pet-states', user?.pubkey],
+        refetchType: 'none'
       });
       queryClient.invalidateQueries({
-        queryKey: ['blobbonaut-profile', user?.pubkey]
+        queryKey: ['blobbonaut-profile', user?.pubkey],
+        refetchType: 'none'
       });
       queryClient.invalidateQueries({
-        queryKey: ['owner-profile', user?.pubkey]
+        queryKey: ['owner-profile', user?.pubkey],
+        refetchType: 'none'
       });
+
+      // Trigger a background refetch after a delay to allow users to see optimistic updates
+      setTimeout(() => {
+        queryClient.refetchQueries({
+          queryKey: ['pet-states', user?.pubkey]
+        });
+        queryClient.refetchQueries({
+          queryKey: ['blobbonaut-profile', user?.pubkey]
+        });
+        queryClient.refetchQueries({
+          queryKey: ['owner-profile', user?.pubkey]
+        });
+      }, 2000); // 2 second delay to let users see the optimistic updates
     },
     onError: (error) => {
       console.error('Failed to feed Blobbi:', error);
