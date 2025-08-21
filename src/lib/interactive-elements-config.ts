@@ -11,6 +11,20 @@ export interface InteractiveElementConfig {
   zIndex: number;
   /** Background file this element appears in */
   backgroundFile: string;
+  /** Type of interactive element (for specific behaviors) */
+  type?: 'chair' | 'default';
+  /** Chair-specific configuration */
+  chairConfig?: {
+    /** Whether to close eyes when seated */
+    eyesClosedOnSeat?: boolean;
+    /** Seat anchor position as percentage of chair image */
+    seatAnchor?: {
+      xPercent?: number;
+      yPercent?: number;
+    };
+    /** Z-index offset when seated */
+    sitZIndexOffset?: number;
+  };
 }
 
 /**

@@ -42,6 +42,10 @@ interface MovableBlobbiProps {
   onBlobbiClick?: () => void;
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
+  _isSeated?: boolean;
+  eyesClosed?: boolean;
+  isAttachedToChair?: boolean;
+  sitZIndexOffset?: number;
   scaleByYPosition?: boolean;
   disableFloating?: boolean;
 }
@@ -64,6 +68,10 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onBlobbiClick,
       isSleeping = false,
       isAttachedToBed = false,
+      _isSeated = false,
+      eyesClosed = false,
+      isAttachedToChair = false,
+      sitZIndexOffset = 0,
       scaleByYPosition = false,
       disableFloating = false,
     },
@@ -107,8 +115,10 @@ const { isPositionBlocked } = useMovementBlocker();
 
     const getDynamicZIndex = useCallback((currentPos: Position): number => {
       if (!backgroundFile) return 20;
-      return calculateBlobbiZIndex(currentPos.y, backgroundFile);
-    }, [backgroundFile]);
+      const baseZIndex = calculateBlobbiZIndex(currentPos.y, backgroundFile);
+      // Apply sitZIndexOffset when attached to chair
+      return isAttachedToChair ? baseZIndex + sitZIndexOffset : baseZIndex;
+    }, [backgroundFile, isAttachedToChair, sitZIndexOffset]);
 
     const getDynamicScale = useCallback((currentPos: Position): number => {
       const scalingConfig = backgroundFile ? locationScalingConfig[backgroundFile] : undefined;
@@ -255,7 +265,13 @@ const { isPositionBlocked } = useMovementBlocker();
 
         // If attached to bed, don't respond to container clicks (only wake up)
         if (isAttachedToBed) {
+          onWakeUp?.();
           return;
+        }
+
+        // If attached to chair, just wake up but allow chair interaction
+        if (isAttachedToChair) {
+          onWakeUp?.();
         }
 
         const rect = container.getBoundingClientRect();
@@ -289,7 +305,7 @@ const { isPositionBlocked } = useMovementBlocker();
         container.removeEventListener('click', handleClick);
         container.removeEventListener('touchend', handleClick);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isPositionBlocked, isPhotoBoothOpen]);
+    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isAttachedToChair, isPositionBlocked, isPhotoBoothOpen]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {
@@ -368,6 +384,7 @@ const { isPositionBlocked } = useMovementBlocker();
               showFallback={true}
               transparent={true}
               isSleeping={isSleeping}
+              eyesClosed={eyesClosed}
               className={cn(isMoving && "scale-105")}
             />
           </div>

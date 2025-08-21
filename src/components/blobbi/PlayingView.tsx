@@ -48,6 +48,11 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [isSleeping, setIsSleeping] = useState(false);
   const [isAttachedToBed, setIsAttachedToBed] = useState(false);
 
+  // Chair state
+  const [isSeated, setIsSeated] = useState(false);
+  const [eyesClosed, setEyesClosed] = useState(false);
+  const [isAttachedToChair, setIsAttachedToChair] = useState(false);
+
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
   const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation);
@@ -73,11 +78,36 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       setIsSleeping(true);
       setIsAttachedToBed(true);
     }
+
+    // Check if Blobbi is going to a chair (this will be handled by handleChairArrival)
+    // Chair logic is handled separately in handleChairArrival
   };
 
   const handleWakeUp = () => {
     setIsSleeping(false);
     setIsAttachedToBed(false);
+    // Also wake up from chair if seated
+    if (isSeated) {
+      setIsSeated(false);
+      setEyesClosed(false);
+      setIsAttachedToChair(false);
+    }
+  };
+
+  const handleChairArrival = (position: Position) => {
+    setIsSeated(true);
+    setIsAttachedToChair(true);
+
+    // If we have a blobbiRef, snap to exact position and stop movement
+    if (blobbiRef.current) {
+      blobbiRef.current.goTo(position, true); // immediate = true
+    }
+  };
+
+  const handleChairLeave = () => {
+    setIsSeated(false);
+    setEyesClosed(false);
+    setIsAttachedToChair(false);
   };
 
   const handleMoveStart = (_destination: Position) => {
@@ -85,6 +115,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     if (isSleeping || isAttachedToBed) {
       setIsSleeping(false);
       setIsAttachedToBed(false);
+    }
+
+    // If starting to move while seated, stand up from chair
+    if (isSeated || isAttachedToChair) {
+      setIsSeated(false);
+      setEyesClosed(false);
+      setIsAttachedToChair(false);
     }
   };
 
@@ -120,7 +157,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     <PlaceBackground ref={containerRef}>
       <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
-      <InteractiveElements blobbiRef={blobbiRef} selectedBlobbi={selectedBlobbi} />
+      <InteractiveElements
+        blobbiRef={blobbiRef}
+        selectedBlobbi={selectedBlobbi}
+        onChairArrival={handleChairArrival}
+        onChairLeave={handleChairLeave}
+      />
 
       {/* Furniture */}
       {background === 'home-inside.png' && (
@@ -186,6 +228,10 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         onBlobbiClick={handleBlobbiClick}
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
+        _isSeated={isSeated}
+        eyesClosed={eyesClosed}
+        isAttachedToChair={isAttachedToChair}
+        sitZIndexOffset={2} // Default offset for chairs
         size={blobbiSize}
         scaleByYPosition={true}
       />

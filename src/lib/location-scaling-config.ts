@@ -9,8 +9,8 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 0.6,
   },
   'nostr-station-inside.png': {
-    initialScale: 1.1,
-    finalScale: 0.9,
+    initialScale: 1.4,
+    finalScale: 1.3,
   },
   'town-open.png': {
     initialScale: 1.2,

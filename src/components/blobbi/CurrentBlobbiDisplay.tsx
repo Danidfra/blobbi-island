@@ -13,6 +13,7 @@ interface CurrentBlobbiDisplayProps {
   interactive?: boolean;
   transparent?: boolean;
   isSleeping?: boolean;
+  eyesClosed?: boolean;
 }
 
 const sizeClasses = {
@@ -29,7 +30,8 @@ export function CurrentBlobbiDisplay({
   onClick,
   interactive = false,
   transparent = false,
-  isSleeping = false
+  isSleeping = false,
+  eyesClosed = false
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -69,7 +71,7 @@ export function CurrentBlobbiDisplay({
           currentBlobbi.baseColor,
           currentBlobbi.secondaryColor,
           currentBlobbi.eyeColor,
-          isSleeping
+          isSleeping || eyesClosed // Close eyes when either sleeping or seated with eyesClosed
         );
 
         setSvgContent(customizedSvg);
@@ -82,7 +84,7 @@ export function CurrentBlobbiDisplay({
     };
 
     loadSvg();
-  }, [currentBlobbi, isSleeping]);
+  }, [currentBlobbi, isSleeping, eyesClosed]);
 
   // Show loading skeleton
   if (isLoading) {

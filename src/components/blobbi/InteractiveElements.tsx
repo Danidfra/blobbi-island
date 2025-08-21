@@ -13,6 +13,7 @@ import { ElevatorModal } from './ElevatorModal';
 import { NoPassModal } from './NoPassModal';
 import { GameModal } from './GameModal';
 import { Button } from '@/components/ui/button';
+import { Position } from '@/lib/types';
 
 // BackArrow component using SVG
 function BackArrow({ className, onClick }: { className?: string; onClick?: () => void }) {
@@ -49,10 +50,19 @@ interface InteractiveElementProps {
   alt: string;
   className?: string;
   animated?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>, chairId?: string, chairConfig?: InteractiveElementProps['chairConfig']) => void;
   effect?: 'scale' | 'opacity' | 'door' | 'slide';
   slideDirection?: 'right' | 'left' | 'up' | 'down';
   isHovered?: boolean;
+  type?: 'chair' | 'default';
+  chairConfig?: {
+    sleepOnSeat?: boolean;
+    seatAnchor?: {
+      xPercent?: number;
+      yPercent?: number;
+    };
+    sitZIndexOffset?: number;
+  };
 }
 
 function InteractiveElement({
@@ -63,7 +73,9 @@ function InteractiveElement({
   onClick,
   effect = 'scale',
   slideDirection = 'right',
-  isHovered
+  isHovered,
+  type,
+  chairConfig
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSelfHovered, setIsSelfHovered] = useState(false);
@@ -76,6 +88,15 @@ function InteractiveElement({
     if (animated && effect !== 'door' && effect !== 'slide') {
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 300);
+    }
+
+    // For chairs, pass additional data
+    if (type === 'chair') {
+      const chairId = alt.replace(/\s+/g, '-').toLowerCase();
+      onClick(event, chairId, chairConfig);
+      // Prevent default click behavior for chairs
+      event.stopPropagation();
+      return;
     }
 
     onClick(event);
@@ -128,6 +149,10 @@ function InteractiveElement({
       onMouseEnter={() => setIsSelfHovered(true)}
       onMouseLeave={() => setIsSelfHovered(false)}
       onTouchStart={(e) => handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>)}
+      {...(type === 'chair' && {
+        'data-chair-id': alt.replace(/\s+/g, '-').toLowerCase(),
+        'data-chair-config': JSON.stringify(chairConfig || {})
+      })}
     >
       <img
         src={src}
@@ -144,9 +169,11 @@ function InteractiveElement({
 interface InteractiveElementsProps {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
   selectedBlobbi: Blobbi | null;
+  onChairArrival?: (position: Position) => void;
+  onChairLeave?: () => void;
 }
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival, onChairLeave }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,8 +188,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
 
+  // Chair state
+  const [seatedChairId, setSeatedChairId] = useState<string | null>(null);
+  const [_isSeated, _setIsSeated] = useState(false);
+  const [_eyesClosed, _setEyesClosed] = useState(false);
 
-  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>) => {
+
+  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
     if (!blobbiRef.current) return;
 
     const chairElement = event.currentTarget;
@@ -173,16 +205,22 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
     const containerRect = container.getBoundingClientRect();
     const chairRect = chairElement.getBoundingClientRect();
 
-    // Calculate the center of the chair
-    const chairCenterX = chairRect.left + chairRect.width / 2;
-    // Position Blobbi at the top of the chair
-    const chairTopY = chairRect.top;
+    // Get seat anchor configuration with defaults
+    const seatAnchor = chairConfig?.seatAnchor || { xPercent: 50, yPercent: 20 };
 
-    // Convert to percentage
-    const targetX = ((chairCenterX - containerRect.left) / containerRect.width) * 100;
-    const targetY = ((chairTopY - containerRect.top) / containerRect.height) * 100;
+    // Calculate seat position from chair rect and anchor percentages
+    const seatX = chairRect.left + (chairRect.width * seatAnchor.xPercent!) / 100;
+    const seatY = chairRect.top + (chairRect.height * seatAnchor.yPercent!) / 100;
 
-    blobbiRef.current.goTo({ x: targetX, y: targetY + 3 }); // Adjust Y to sit on top
+    // Convert to percentage relative to container
+    const targetX = ((seatX - containerRect.left) / containerRect.width) * 100;
+    const targetY = ((seatY - containerRect.top) / containerRect.height) * 100;
+
+    // Set current chair as target
+    setSeatedChairId(chairId);
+
+    // Move Blobbi to the seat position
+    blobbiRef.current.goTo({ x: targetX, y: targetY });
   };
 
   const handleElementClick = (elementName: string) => {
@@ -202,6 +240,35 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
       });
       setIsGameModalOpen(true);
     }
+  };
+
+  const _handleChairArrival = (position: Position) => {
+    if (!seatedChairId || !blobbiRef.current) return;
+
+    // Find the chair element to get its configuration
+    const chairElement = document.querySelector(`[data-chair-id="${seatedChairId}"]`) as HTMLElement;
+    if (!chairElement) return;
+
+    const chairConfig = JSON.parse(chairElement.dataset.chairConfig || '{}');
+
+    // Snap Blobbi to exact seat position
+    blobbiRef.current.goTo(position, true); // immediate = true
+
+    // Set seated state
+    _setIsSeated(true);
+    _setEyesClosed(chairConfig.sleepOnSeat || false);
+
+    // Notify parent component
+    onChairArrival?.(position);
+  };
+
+  const _handleChairLeave = () => {
+    _setIsSeated(false);
+    _setEyesClosed(false);
+    setSeatedChairId(null);
+
+    // Notify parent component
+    onChairLeave?.();
   };
 
   const handleTicketPurchase = () => {
@@ -328,16 +395,28 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
               <InteractiveElement
                 src="/assets/scenario/arcade/left-arcade-chair.png"
                 alt="Left Chair"
+                type="chair"
+                chairConfig={{
+                  sleepOnSeat: false,
+                  seatAnchor: { xPercent: 50, yPercent: 20 },
+                  sitZIndexOffset: 1
+                }}
+                onClick={handleChairClick}
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
               />
               <InteractiveElement
                 src="/assets/scenario/arcade/right-arcade-chair.png"
                 alt="Right Chair"
+                type="chair"
+                chairConfig={{
+                  sleepOnSeat: false,
+                  seatAnchor: { xPercent: 50, yPercent: 20 },
+                  sitZIndexOffset: 1
+                }}
+                onClick={handleChairClick}
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
               />
               <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
@@ -345,16 +424,28 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
               <InteractiveElement
                 src="/assets/scenario/arcade/left-arcade-chair.png"
                 alt="Left Chair"
+                type="chair"
+                chairConfig={{
+                  sleepOnSeat: false,
+                  seatAnchor: { xPercent: 50, yPercent: 20 },
+                  sitZIndexOffset: 1
+                }}
+                onClick={handleChairClick}
                 effect='scale'
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
               />
               <InteractiveElement
                 src="/assets/scenario/arcade/right-arcade-chair.png"
                 alt="Right Chair"
+                type="chair"
+                chairConfig={{
+                  sleepOnSeat: false,
+                  seatAnchor: { xPercent: 50, yPercent: 20 },
+                  sitZIndexOffset: 1
+                }}
+                onClick={handleChairClick}
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-                // onClick={() => handleElementClick('dance-machine')}
               />
               <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
@@ -849,12 +940,26 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-left-chair.png"
               alt="Shop left chair"
+              type="chair"
+              chairConfig={{
+                sleepOnSeat: false,
+                seatAnchor: { xPercent: 50, yPercent: 25 },
+                sitZIndexOffset: 1
+              }}
+              onClick={handleChairClick}
               effect='scale'
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-right-chair.png"
               alt="Shop right chair"
+              type="chair"
+              chairConfig={{
+                sleepOnSeat: false,
+                seatAnchor: { xPercent: 50, yPercent: 25 },
+                sitZIndexOffset: 1
+              }}
+              onClick={handleChairClick}
               effect='scale'
               className='left-[30%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -866,12 +971,26 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-left-chair.png"
               alt="Shop left chair"
+              type="chair"
+              chairConfig={{
+                sleepOnSeat: false,
+                seatAnchor: { xPercent: 50, yPercent: 25 },
+                sitZIndexOffset: 1
+              }}
+              onClick={handleChairClick}
               effect='scale'
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
             <InteractiveElement
                 src="/assets/interactive/furniture/shop-right-chair.png"
               alt="Shop right chair"
+              type="chair"
+              chairConfig={{
+                sleepOnSeat: false,
+                seatAnchor: { xPercent: 50, yPercent: 25 },
+                sitZIndexOffset: 1
+              }}
+              onClick={handleChairClick}
               effect='scale'
               className='left-[30%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -1195,6 +1314,60 @@ if (backgroundFile === 'nostr-station-inside.png') {
       />
 
       <img src='/assets/scenario/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
+
+      {/* Nostr Station Chairs */}
+      <InteractiveElement
+        src="/assets/interactive/furniture/nostr-station-chair.png"
+        alt="Nostr Station Chair 1"
+        type="chair"
+        chairConfig={{
+          sleepOnSeat: false,
+          seatAnchor: { xPercent: 50, yPercent: 38 },
+          sitZIndexOffset: 2
+        }}
+        onClick={handleChairClick}
+        effect="scale"
+        className="absolute left-[17%] bottom-[25%] w-[12%] z-[15]"
+      />
+      <InteractiveElement
+        src="/assets/interactive/furniture/nostr-station-chair.png"
+        alt="Nostr Station Chair 2"
+        type="chair"
+        chairConfig={{
+          sleepOnSeat: true,
+          seatAnchor: { xPercent: 50, yPercent: 38 },
+          sitZIndexOffset: 2
+        }}
+        onClick={handleChairClick}
+        effect="scale"
+        className="absolute left-[30%] bottom-[25%] w-[12%] z-[15]"
+      />
+      <InteractiveElement
+        src="/assets/interactive/furniture/nostr-station-chair.png"
+        alt="Nostr Station Chair 3"
+        type="chair"
+        chairConfig={{
+          sleepOnSeat: false,
+          seatAnchor: { xPercent: 50, yPercent: 38 },
+          sitZIndexOffset: 2
+        }}
+        onClick={handleChairClick}
+        effect="scale"
+        className="absolute right-[17%] bottom-[25%] w-[12%] z-[15]"
+      />
+      <InteractiveElement
+        src="/assets/interactive/furniture/nostr-station-chair.png"
+        alt="Nostr Station Chair 4"
+        type="chair"
+        chairConfig={{
+          sleepOnSeat: true,
+          seatAnchor: { xPercent: 50, yPercent: 38 },
+          sitZIndexOffset: 2
+        }}
+        onClick={handleChairClick}
+        effect="scale"
+        className="absolute right-[30%] bottom-[25%] w-[12%] z-[15]"
+      />
 
     </>
   );
