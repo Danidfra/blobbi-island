@@ -16,7 +16,7 @@
   <path d="M 100 65 Q 115 73 118 90 Q 115 107 100 115 Q 85 107 82 90 Q 85 73 100 65" fill="url(#roseyPetal3)" />
   <circle cx="100" cy="90" r="20" fill="url(#roseyCenter)" />
   
-  <!-- Cute eyes -->
+  <!-- Eyes -->
   <circle cx="90" cy="85" r="8" fill="white" />
   <circle cx="110" cy="85" r="8" fill="white" />
   <circle cx="90" cy="85" r="5" fill="#1f2937" />

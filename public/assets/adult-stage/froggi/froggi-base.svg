@@ -59,15 +59,11 @@
   <circle cx="70" cy="80" r="27" fill="url(#froggiEyeBase3D)" />
   <circle cx="130" cy="80" r="27" fill="url(#froggiEyeBase3D)" />
   
-  <!-- Eye whites -->
+  <!-- Eyes -->
   <circle cx="70" cy="80" r="22" fill="url(#froggiEyeWhite3D)" />
   <circle cx="130" cy="80" r="22" fill="url(#froggiEyeWhite3D)" />
-  
-  <!-- Pupils -->
   <circle cx="70" cy="80" r="16" fill="url(#froggiPupil3D)" />
   <circle cx="130" cy="80" r="16" fill="url(#froggiPupil3D)" />
-  
-  <!-- Eye highlights -->
   <circle cx="74" cy="76" r="6" fill="white" opacity="0.9" />
   <circle cx="134" cy="76" r="6" fill="white" opacity="0.9" />
   <circle cx="76" cy="78" r="2.5" fill="white" />

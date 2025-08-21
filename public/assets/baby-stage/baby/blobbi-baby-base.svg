@@ -38,12 +38,8 @@
   <!-- Eyes -->
   <ellipse cx="38" cy="45" rx="8" ry="10" fill="url(#blobbiEyeGradient)" />
   <ellipse cx="62" cy="45" rx="8" ry="10" fill="url(#blobbiEyeGradient)" />
-  
-  <!-- Pupils -->
   <circle cx="38" cy="46" r="6" fill="url(#blobbiPupilGradient)" />
   <circle cx="62" cy="46" r="6" fill="url(#blobbiPupilGradient)" />
-  
-  <!-- Eye highlights -->
   <circle cx="40" cy="44" r="2" fill="white" />
   <circle cx="64" cy="44" r="2" fill="white" />
   <circle cx="41" cy="45" r="0.8" fill="white" opacity="0.8" />

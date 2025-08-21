@@ -46,15 +46,11 @@
   <path d="M 100 35 L 112 70 L 150 70 L 120 95 L 132 135 L 100 115 L 68 135 L 80 95 L 50 70 L 88 70 Z" 
         fill="url(#starriInner)" opacity="0.8" />
   
-  <!-- Twinkling eyes -->
+  <!-- Eyes -->
   <circle cx="88" cy="95" r="10" fill="url(#starriEye)" />
   <circle cx="112" cy="95" r="10" fill="url(#starriEye)" />
-  
-  <!-- Pupils -->
   <circle cx="88" cy="95" r="6" fill="#1e1b4b" />
   <circle cx="112" cy="95" r="6" fill="#1e1b4b" />
-  
-  <!-- Eye highlights -->
   <circle cx="90" cy="93" r="3" fill="white" />
   <circle cx="114" cy="93" r="3" fill="white" />
   

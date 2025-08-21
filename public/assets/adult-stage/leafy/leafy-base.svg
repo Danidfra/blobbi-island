@@ -31,7 +31,7 @@
   <circle cx="100" cy="85" r="30" fill="url(#leafyCenter)" />
   <circle cx="100" cy="85" r="25" fill="url(#leafyCenterInner)" />
   
-  <!-- Cute eyes -->
+  <!-- Eyes -->
   <circle cx="90" cy="82" r="8" fill="white" />
   <circle cx="110" cy="82" r="8" fill="white" />
   <circle cx="90" cy="82" r="5" fill="#1f2937" />

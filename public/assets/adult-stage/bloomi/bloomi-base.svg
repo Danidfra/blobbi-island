@@ -36,7 +36,7 @@
   <circle cx="100" cy="110" r="35" fill="url(#bloomiCenter)" />
   <circle cx="100" cy="110" r="28" fill="url(#bloomiCenterHighlight)" opacity="0.6" />
 
-  <!-- Olhos -->
+  <!-- Eyes -->
   <circle cx="88" cy="105" r="8" fill="white" />
   <circle cx="112" cy="105" r="8" fill="white" />
   <circle cx="88" cy="105" r="5" fill="#1f2937" />

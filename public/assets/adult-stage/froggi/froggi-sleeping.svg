@@ -59,10 +59,6 @@
   <circle cx="70" cy="80" r="27" fill="url(#froggiEyeBase3D)" />
   <circle cx="130" cy="80" r="27" fill="url(#froggiEyeBase3D)" />
   
-  <!-- Eye whites -->
-  <circle cx="70" cy="80" r="22" fill="url(#froggiEyeWhite3D)" />
-  <circle cx="130" cy="80" r="22" fill="url(#froggiEyeWhite3D)" />
-  
   <!-- Sleeping eyes -->
   <path d="M 54 80 Q 70 83 86 80" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />
   <path d="M 114 80 Q 130 83 146 80" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round" />

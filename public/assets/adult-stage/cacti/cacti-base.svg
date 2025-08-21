@@ -12,7 +12,7 @@
   <line x1="100" y1="85" x2="100" y2="155" stroke="#65a30d" stroke-width="2" opacity="0.5" />
   <line x1="108" y1="85" x2="108" y2="155" stroke="#65a30d" stroke-width="2" opacity="0.5" />
   
-  <!-- Cute eyes -->
+  <!-- Eyes -->
   <circle cx="90" cy="105" r="8" fill="white" />
   <circle cx="110" cy="105" r="8" fill="white" />
   <circle cx="90" cy="105" r="5" fill="#1f2937" />

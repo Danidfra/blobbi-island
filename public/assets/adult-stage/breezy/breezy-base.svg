@@ -18,7 +18,7 @@
   <path d="M 100 50 Q 75 65 68 85 Q 65 105 75 120 Q 85 130 100 135 Q 115 130 125 120 Q 135 105 132 85 Q 125 65 100 50" 
         fill="url(#breezyInner)" opacity="0.6" />
   
-  <!-- Cute eyes -->
+  <!-- Eyes -->
   <circle cx="85" cy="90" r="10" fill="white" />
   <circle cx="115" cy="90" r="10" fill="white" />
   <circle cx="85" cy="90" r="6" fill="#1f2937" />

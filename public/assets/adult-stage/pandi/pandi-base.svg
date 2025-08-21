@@ -37,28 +37,22 @@
   <circle cx="100" cy="85" r="45" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
   
   <!-- Black ear patches -->
-  <circle cx="75" cy="65" r="18" fill="#1f2937" />
-  <circle cx="125" cy="65" r="18" fill="#1f2937" />
+  <circle cx="70" cy="45" r="18" fill="#1f2937" />
+  <circle cx="130" cy="45" r="18" fill="#1f2937" />
   
   <!-- Inner ears -->
-  <circle cx="75" cy="65" r="12" fill="#374151" />
-  <circle cx="125" cy="65" r="12" fill="#374151" />
-  
-  <!-- Eye patches -->
-  <circle cx="85" cy="85" r="20" fill="#1f2937" />
-  <circle cx="115" cy="85" r="20" fill="#1f2937" />
+  <circle cx="70" cy="45" r="12" fill="#374151" />
+  <circle cx="130" cy="45" r="12" fill="#374151" />
   
   <!-- Eyes -->
-  <circle cx="85" cy="85" r="12" fill="url(#pandiEyeWhite3D)" />
-  <circle cx="115" cy="85" r="12" fill="url(#pandiEyeWhite3D)" />
-  
-  <!-- Pupils -->
-  <circle cx="85" cy="85" r="8" fill="url(#pandiPupil3D)" />
-  <circle cx="115" cy="85" r="8" fill="url(#pandiPupil3D)" />
-  
-  <!-- Eye highlights -->
-  <circle cx="88" cy="82" r="3" fill="white" />
-  <circle cx="118" cy="82" r="3" fill="white" />
+  <circle cx="85" cy="82" r="20" fill="#1f2937" />
+  <circle cx="115" cy="82" r="20" fill="#1f2937" />
+  <circle cx="85" cy="82" r="12" fill="url(#pandiEyeWhite3D)" />
+  <circle cx="115" cy="82" r="12" fill="url(#pandiEyeWhite3D)" />
+  <circle cx="85" cy="82" r="8" fill="url(#pandiPupil3D)" />
+  <circle cx="115" cy="82" r="8" fill="url(#pandiPupil3D)" />
+  <circle cx="88" cy="79" r="3" fill="white" />
+  <circle cx="118" cy="79" r="3" fill="white" />
   
   <!-- Nose -->
   <path d="M 100 95 L 95 105 L 105 105 Z" fill="url(#pandiNose3D)" />

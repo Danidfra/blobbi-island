@@ -59,15 +59,11 @@
   <path d="M 100 105 L 140 105 L 125 140 L 100 105 Z" fill="url(#crystiFacet5)" opacity="0.6" />
   <path d="M 75 140 L 100 105 L 125 140 L 100 160 Z" fill="url(#crystiFacet6)" opacity="0.8" />
   
-  <!-- Sparkly eyes -->
+  <!-- Eyes -->
   <circle cx="88" cy="95" r="10" fill="url(#crystiEye)" />
   <circle cx="112" cy="95" r="10" fill="url(#crystiEye)" />
-  
-  <!-- Pupils -->
   <circle cx="88" cy="95" r="6" fill="#1e1b4b" />
   <circle cx="112" cy="95" r="6" fill="#1e1b4b" />
-  
-  <!-- Eye highlights -->
   <circle cx="90" cy="93" r="3" fill="white" />
   <circle cx="114" cy="93" r="3" fill="white" />
   
