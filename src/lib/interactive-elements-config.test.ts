@@ -14,21 +14,21 @@ describe('Interactive Elements Configuration', () => {
       expect(zIndex).toBe(20);
     });
 
-    it('should calculate correct z-index for stage-open.png background based on position', () => {
+    it('should calculate correct z-index for stage-inside.png background based on position', () => {
       // Test position at 95% from top (5% from bottom) - should be z-index 25
-      const nearBottom = calculateBlobbiZIndex(95, 'stage-open.png');
+      const nearBottom = calculateBlobbiZIndex(95, 'stage-inside.png');
       expect(nearBottom).toBe(25);
 
       // Test position at 82% from top (18% from bottom) - should be z-index 15
-      const midBottom = calculateBlobbiZIndex(82, 'stage-open.png');
+      const midBottom = calculateBlobbiZIndex(82, 'stage-inside.png');
       expect(midBottom).toBe(15);
 
       // Test position at 75% from top (25% from bottom) - should be z-index 9
-      const higherUp = calculateBlobbiZIndex(75, 'stage-open.png');
+      const higherUp = calculateBlobbiZIndex(75, 'stage-inside.png');
       expect(higherUp).toBe(9);
 
       // Test position at 50% from top (50% from bottom) - should be z-index 9
-      const middle = calculateBlobbiZIndex(50, 'stage-open.png');
+      const middle = calculateBlobbiZIndex(50, 'stage-inside.png');
       expect(middle).toBe(9);
     });
 
@@ -76,10 +76,10 @@ describe('Interactive Elements Configuration', () => {
   });
 
   describe('getZIndexConfigForBackground', () => {
-    it('should return config for stage-open.png', () => {
-      const config = getZIndexConfigForBackground('stage-open.png');
+    it('should return config for stage-inside.png', () => {
+      const config = getZIndexConfigForBackground('stage-inside.png');
       expect(config).toBeDefined();
-      expect(config?.backgroundFile).toBe('stage-open.png');
+      expect(config?.backgroundFile).toBe('stage-inside.png');
       expect(config?.thresholds).toHaveLength(3);
     });
 
@@ -90,17 +90,17 @@ describe('Interactive Elements Configuration', () => {
   });
 
   describe('getZIndexThresholdForPosition', () => {
-    it('should return correct threshold for stage-open.png positions', () => {
+    it('should return correct threshold for stage-inside.png positions', () => {
       // 3% from bottom should match first threshold (0-15%)
-      const threshold1 = getZIndexThresholdForPosition(3, 'stage-open.png');
+      const threshold1 = getZIndexThresholdForPosition(3, 'stage-inside.png');
       expect(threshold1?.zIndex).toBe(25);
 
       // 17% from bottom should match second threshold (15.01-20%)
-      const threshold2 = getZIndexThresholdForPosition(17, 'stage-open.png');
+      const threshold2 = getZIndexThresholdForPosition(17, 'stage-inside.png');
       expect(threshold2?.zIndex).toBe(15);
 
       // 25% from bottom should match third threshold (20.01-100%)
-      const threshold3 = getZIndexThresholdForPosition(25, 'stage-open.png');
+      const threshold3 = getZIndexThresholdForPosition(25, 'stage-inside.png');
       expect(threshold3?.zIndex).toBe(9);
     });
 

@@ -1,7 +1,7 @@
 import { Boundary } from '@/lib/boundaries';
 
 export const locationBoundaries: Record<string, Boundary> = {
-  'home-open.png': {
+  'home-inside.png': {
     shape: 'arch',
     top: 68,
     bottom: 80,
@@ -90,7 +90,7 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'triangle', points: [{ x: 75, y: 43 }, { x: 100, y: 33 }, { x: 75, y: 43 }] },
     ],
   },
-  'arcade-open.png': {
+  'arcade-inside.png': {
     shape: 'composite',
     areas: [
       { type: 'rectangle', x: [0, 100], y: [48, 100] },
@@ -141,17 +141,17 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [10, 90],
     y: [75, 98],
   },
-  'stage-open.png': {
+  'stage-inside.png': {
     shape: 'rectangle',
     x: [0, 100],
     y: [75, 98],
   },
-  'cave-open.png': {
+  'cave-inside.png': {
     shape: 'rectangle',
     x: [16, 84],
     y: [71, 75.5],
   },
-  'shop-open.png': {
+  'shopping-mall-inside.png': {
     shape: 'composite',
     areas: [
       { type: 'rectangle', x: [0, 100], y: [84, 100] },

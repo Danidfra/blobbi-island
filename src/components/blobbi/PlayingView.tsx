@@ -123,7 +123,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       <InteractiveElements blobbiRef={blobbiRef} selectedBlobbi={selectedBlobbi} />
 
       {/* Furniture */}
-      {background === 'home-open.png' && (
+      {background === 'home-inside.png' && (
         <>
           <Furniture
             id="refrigerator"
@@ -169,7 +169,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         </>
       )}
 
-      {background === 'cave-open.png' && <MiningGame />}
+      {background === 'cave-inside.png' && <MiningGame />}
 
       {/* Movable Blobbi Character */}
       <MovableBlobbi

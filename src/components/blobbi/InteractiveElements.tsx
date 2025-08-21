@@ -218,7 +218,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
   };
 
   // Town elements (when background is town-open.png)
-  if (backgroundFile === 'home-open.png') {
+  if (backgroundFile === 'home-inside.png') {
     return (
       <>
       <InteractiveElement
@@ -253,7 +253,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
     );
   }
 
-  if (backgroundFile === 'arcade-open.png' || backgroundFile === 'arcade-1.png' || backgroundFile === 'arcade-minus1.png') {
+  if (backgroundFile === 'arcade-inside.png' || backgroundFile === 'arcade-1.png' || backgroundFile === 'arcade-minus1.png') {
     return (
       <>
         <div ref={containerRef} className="w-full h-full relative">
@@ -261,7 +261,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           <div
             className={cn(
               'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
-              backgroundFile === 'arcade-open.png' && 'top-[16%] w-[17.5%] ',
+              backgroundFile === 'arcade-inside.png' && 'top-[16%] w-[17.5%] ',
               backgroundFile === 'arcade-1.png' && 'top-[40.5%] w-[10%] ',
               backgroundFile === 'arcade-minus1.png' && 'top-[41.4%] w-[7.8%] ',
             )}
@@ -457,7 +457,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
           )}
 
           {/* Ticket Counter - Only on main floor */}
-          {backgroundFile === 'arcade-open.png' && (
+          {backgroundFile === 'arcade-inside.png' && (
            <>
             <div className='relative left-[20%] top-[26%]'>
               <img src='/assets/interactive/furniture/ticket.png' alt="ticket counter"
@@ -521,7 +521,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
     );
   }
 
-  if (backgroundFile === 'stage-open.png') {
+  if (backgroundFile === 'stage-inside.png') {
     return (
       <div ref={containerRef} className="w-full h-full relative">
         <div
@@ -647,7 +647,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi }: InteractiveEl
   }
 
 
-  if (backgroundFile === 'shop-open.png') {
+  if (backgroundFile === 'shopping-mall-inside.png') {
     return (
       <>
         <div className="absolute inset-0 pointer-events-none">
@@ -1044,7 +1044,7 @@ if (backgroundFile === 'nostr-station-open.png') {
     );
   }
 
-  if (backgroundFile === 'cave-open.png') {
+  if (backgroundFile === 'cave-inside.png') {
     return (
       <>
         {/* Cave - Center, transparent by default */}

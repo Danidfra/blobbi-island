@@ -37,7 +37,7 @@ export interface BackgroundZIndexConfig {
  */
 export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
-    backgroundFile: 'stage-open.png',
+    backgroundFile: 'stage-inside.png',
     thresholds: [
       { minPosition: 0, maxPosition: 15, zIndex: 25 },
       { minPosition: 15.01, maxPosition: 20, zIndex: 15 },
@@ -45,7 +45,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'shop-open.png',
+    backgroundFile: 'shopping-mall-inside.png',
     thresholds: [
       { minPosition: 71.01, maxPosition: 100, zIndex: 9 },
       { minPosition: 42.01, maxPosition: 71, zIndex: 19 },
@@ -54,7 +54,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'arcade-open.png',
+    backgroundFile: 'arcade-inside.png',
     thresholds: [
       { minPosition: 0, maxPosition: 52, zIndex: 10 },
       { minPosition: 52.01, maxPosition: 100, zIndex: 9 },
@@ -91,7 +91,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'home-open.png',
+    backgroundFile: 'home-inside.png',
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Floor level
       { minPosition: 15, maxPosition: 100, zIndex: 10 } // Upper area
@@ -219,18 +219,18 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
     backgroundFile: 'beach-open.png'
   },
 
-  // Home elements (home-open.png)
+  // Home elements (home-inside.png)
   {
     id: 'bed',
     yPosition: 70, // Bed position in home
     zIndex: 15,
-    backgroundFile: 'home-open.png'
+    backgroundFile: 'home-inside.png'
   },
   {
     id: 'refrigerator',
     yPosition: 70, // Refrigerator position in home
     zIndex: 15,
-    backgroundFile: 'home-open.png'
+    backgroundFile: 'home-inside.png'
   }
 ];
 
