@@ -5,6 +5,7 @@ import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
+import { useBlobbiFeedAction } from '@/hooks/useBlobbiFeedAction';
 import { useToast } from '@/hooks/useToast';
 
 interface RefrigeratorModalProps {
@@ -18,10 +19,23 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
+  const [optimisticInventory, setOptimisticInventory] = useState<typeof inventory | null>(null);
 
-  const { status, updatePetStats } = useOptimizedStatus();
-  const { data: inventory, isLoading: isInventoryLoading } = useBlobbonautInventory();
+  const { status } = useOptimizedStatus();
+  const { data: inventory, isLoading: isInventoryLoading, refetch: refetchInventory } = useBlobbonautInventory();
+  const { mutate: feedBlobbi, isPending: isFeeding } = useBlobbiFeedAction();
   const { toast } = useToast();
+
+  // Use optimistic inventory if available, otherwise use real inventory
+  const currentInventory = optimisticInventory ?? inventory;
+
+  // Reset optimistic inventory and refetch when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setOptimisticInventory(null);
+      refetchInventory();
+    }
+  }, [isOpen, refetchInventory]);
 
   // Shelf positions from bottom of modal (in pixels)
   const shelves = useMemo(() => [290, 430, 580], []); // Bottom shelf at 170px, middle at 270px, top at 370px
@@ -43,12 +57,12 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
     food_sushi: '/assets/interactive/food/sushi.png',
   }), []);
 
-  // Generate food items based on inventory data
+  // Generate food items based on current inventory data (optimistic or real)
   const foodItems = useMemo(() => {
-    if (!inventory || inventory.length === 0) return [];
+    if (!currentInventory || currentInventory.length === 0) return [];
 
     // Filter inventory to only include food items that we have images for
-    const foodInInventory = inventory.filter(item =>
+    const foodInInventory = currentInventory.filter(item =>
       item.quantity > 0 && availableFoodItems[item.itemId as keyof typeof availableFoodItems]
     );
 
@@ -58,7 +72,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       position: { x: 0, y: 0 }, // Will be set properly in useEffect
       quantity: item.quantity,
     }));
-  }, [inventory, availableFoodItems]);
+  }, [currentInventory, availableFoodItems]);
 
   // State for tracking food item positions
   const [foodItemPositions, setFoodItemPositions] = useState<Record<string, FoodPosition>>({});
@@ -146,62 +160,71 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       return;
     }
 
-    // Apply item effects to pet (simplified effects for demo)
-    const effectMap: Record<string, Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }>> = {
-      apple: { hunger: 15 * quantity, energy: 5 * quantity, hygiene: 2 * quantity },
-      pizza: { hunger: 35 * quantity, happiness: 10 * quantity, energy: 8 * quantity },
-      burger: { hunger: 30 * quantity, happiness: 8 * quantity, energy: 12 * quantity },
-      cake: { hunger: 20 * quantity, happiness: 25 * quantity, energy: 15 * quantity },
-      sushi: { hunger: 25 * quantity, health: 10 * quantity, hygiene: 5 * quantity },
-    };
+    // Apply optimistic inventory update immediately
+    if (currentInventory) {
+      const updatedInventory = currentInventory.map(item => {
+        // Find the item that matches (handle both prefixed and non-prefixed)
+        const isMatch = item.itemId === itemId ||
+                       item.itemId === `food_${itemId}` ||
+                       item.itemId === itemId.replace('food_', '');
 
-    const effects = effectMap[itemId];
-    if (effects && status.currentPet) {
-      // Calculate new stats (capped at 100)
-      const currentStats = {
-        hunger: status.currentPet.hunger,
-        energy: status.currentPet.energy,
-        hygiene: status.currentPet.hygiene,
-        happiness: status.currentPet.happiness,
-        health: status.currentPet.health,
-      };
-
-      const newStats: Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }> = {};
-      Object.entries(effects).forEach(([stat, increase]) => {
-        if (increase && stat in currentStats) {
-          newStats[stat] = Math.min(100, currentStats[stat as keyof typeof currentStats] + increase);
+        if (isMatch) {
+          return {
+            ...item,
+            quantity: Math.max(0, item.quantity - quantity)
+          };
         }
-      });
+        return item;
+      }).filter(item => item.quantity > 0); // Remove items with 0 quantity
 
-      // Apply optimistic updates
-      updatePetStats(status.currentPet.id, newStats);
-
-      // TODO: Update inventory by reducing item quantity
-      // This would normally be done through a Nostr event
-
-      toast({
-        title: "Item Used Successfully",
-        description: `Fed ${quantity} ${itemId}(s) to ${status.currentPet.name}!`,
-      });
+      setOptimisticInventory(updatedInventory);
     }
 
-    setIsConsumeModalOpen(false);
-    setSelectedItemId(null);
+    // Use the new Blobbi feed action that creates proper Nostr events
+    feedBlobbi(
+      {
+        petId: status.currentPet.id,
+        itemId,
+        quantity,
+      },
+      {
+        onSuccess: (result) => {
+          const itemDisplayName = itemId.replace('food_', '').replace('_', ' ');
+          toast({
+            title: "Feeding Successful! 🍽️",
+            description: `Fed ${quantity} ${itemDisplayName}(s) to ${status.currentPet?.name}! Gained ${result.experienceGained} XP.`,
+          });
+          setIsConsumeModalOpen(false);
+          setSelectedItemId(null);
+        },
+        onError: (error) => {
+          // Revert optimistic update on error
+          setOptimisticInventory(null);
+          toast({
+            title: "Feeding Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const getItemQuantity = (itemId: string): number => {
+    if (!currentInventory) return 0;
+
     // Try to find the item with the exact ID first
-    let inventoryItem = inventory.find(item => item.itemId === itemId);
+    let inventoryItem = currentInventory.find(item => item.itemId === itemId);
 
     // If not found and the itemId doesn't have the food_ prefix, try with the prefix
     if (!inventoryItem && !itemId.startsWith('food_')) {
-      inventoryItem = inventory.find(item => item.itemId === `food_${itemId}`);
+      inventoryItem = currentInventory.find(item => item.itemId === `food_${itemId}`);
     }
 
     // If not found and the itemId has the food_ prefix, try without the prefix
     if (!inventoryItem && itemId.startsWith('food_')) {
       const unprefixedId = itemId.replace('food_', '');
-      inventoryItem = inventory.find(item => item.itemId === unprefixedId);
+      inventoryItem = currentInventory.find(item => item.itemId === unprefixedId);
     }
 
     return inventoryItem?.quantity || 0;
@@ -284,6 +307,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           itemId={selectedItemId}
           maxQuantity={getItemQuantity(selectedItemId)}
           onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
+          isLoading={isFeeding}
         />
       )}
     </>
