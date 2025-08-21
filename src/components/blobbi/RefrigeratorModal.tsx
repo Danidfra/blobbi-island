@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
@@ -38,7 +39,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   }, [isOpen, refetchInventory]);
 
   // Shelf positions from bottom of modal (in pixels)
-  const shelves = useMemo(() => [290, 430, 580], []); // Bottom shelf at 170px, middle at 270px, top at 370px
+  const shelves = useMemo(() => [250, 365, 505], []);
 
   // Map of available food items with their image paths
   // Maps both prefixed and non-prefixed item IDs to their image paths
@@ -230,11 +231,42 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
     return inventoryItem?.quantity || 0;
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && isOpen) {
+      onClose();
+    }
+  };
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="p-0 bg-transparent border-none max-w-md w-full">
+      <div
+        className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={handleBackdropClick}
+      >
+        <div className="w-[70%] p-0 flex flex-col relative shadow-2xl max-w-sm">
           <div ref={containerRef} className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="absolute top-2 right-2 h-8 w-8 rounded-full z-10 bg-black/50 hover:bg-black/70 text-white"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
             <img
               src="/assets/interactive/furniture/refrigerator-open.png"
               alt="Refrigerator open"
@@ -247,7 +279,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
                 {shelves.map((shelf, index) => (
                   <div
                     key={index}
-                    className="absolute right-1/2 translate-x-1/2 tran w-[60%] border-t-2 border-red-500 opacity-30"
+                    className="absolute left-1/2 transform -translate-x-1/2 w-[60%] border-t-2 border-red-500 opacity-30"
                     style={{
                       bottom: `${shelf}px`,
                     }}
@@ -291,10 +323,9 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
               </div>
             )}
 
-            <DialogClose asChild />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
       {/* Consume Item Modal - rendered separately outside the main dialog */}
       {selectedItemId && (

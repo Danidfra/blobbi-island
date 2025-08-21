@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import { useDrag } from '@use-gesture/react';
 import { cn } from '@/lib/utils';
 import { ConsumeItemModal } from './ConsumeItemModal';
@@ -266,11 +267,42 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
     return inventoryItem?.quantity || 0;
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && isOpen) {
+      onClose();
+    }
+  };
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="p-0 bg-transparent border-none max-w-lg w-full">
+      <div
+        className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={handleBackdropClick}
+      >
+        <div className="w-[70%] p-0 flex flex-col relative shadow-2xl max-w-md">
           <div ref={containerRef} className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="absolute top-2 right-2 h-8 w-8 rounded-full z-10 bg-black/50 hover:bg-black/70 text-white"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
             <img
               src="/assets/interactive/furniture/chest-open.png"
               alt="Chest open"
@@ -301,10 +333,9 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
               />
             ))}
 
-            <DialogClose asChild />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
       {/* Consume Item Modal - rendered separately outside the main dialog */}
       {selectedItemId && (
