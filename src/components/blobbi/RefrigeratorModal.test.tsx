@@ -5,14 +5,21 @@ import { RefrigeratorModal } from './RefrigeratorModal';
 
 // Mock the hooks
 const mockUseBlobbonautInventory = vi.fn();
+const mockUseBlobbonautProfile = vi.fn();
 const mockUseOptimizedStatus = vi.fn();
+const mockUseBlobbiFeedAction = vi.fn();
 
 vi.mock('@/hooks/useBlobbonautProfile', () => ({
   useBlobbonautInventory: () => mockUseBlobbonautInventory(),
+  useBlobbonautProfile: () => mockUseBlobbonautProfile(),
 }));
 
 vi.mock('@/hooks/useOptimizedStatus', () => ({
   useOptimizedStatus: () => mockUseOptimizedStatus(),
+}));
+
+vi.mock('@/hooks/useBlobbiFeedAction', () => ({
+  useBlobbiFeedAction: () => mockUseBlobbiFeedAction(),
 }));
 
 describe('RefrigeratorModal', () => {
@@ -32,6 +39,20 @@ describe('RefrigeratorModal', () => {
         owner: null,
       },
       updatePetStats: vi.fn(),
+    });
+
+    mockUseBlobbonautProfile.mockReturnValue({
+      data: {
+        id: 'profile',
+        name: 'Test User',
+        coins: 100,
+        inventory: [],
+      },
+    });
+
+    mockUseBlobbiFeedAction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
     });
   });
 

@@ -109,6 +109,7 @@ interface ConsumeItemModalProps {
   itemId: string;
   maxQuantity: number;
   onUseItem: (itemId: string, quantity: number) => void;
+  isLoading?: boolean;
 }
 
 export function ConsumeItemModal({
@@ -117,6 +118,7 @@ export function ConsumeItemModal({
   itemId,
   maxQuantity,
   onUseItem,
+  isLoading = false,
 }: ConsumeItemModalProps) {
   const [quantity, setQuantity] = useState(1);
 
@@ -276,13 +278,14 @@ export function ConsumeItemModal({
               </Button>
               <Button
                 onClick={handleUse}
+                disabled={isLoading}
                 className={cn(
                   "flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
                   "text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200",
-                  "border-0"
+                  "border-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 )}
               >
-                Use
+                {isLoading ? "Feeding..." : "Use"}
               </Button>
             </div>
           </div>

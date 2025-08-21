@@ -5,6 +5,7 @@ import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
+import { useBlobbiFeedAction } from '@/hooks/useBlobbiFeedAction';
 import { useToast } from '@/hooks/useToast';
 
 interface RefrigeratorModalProps {
@@ -19,8 +20,9 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
 
-  const { status, updatePetStats } = useOptimizedStatus();
+  const { status } = useOptimizedStatus();
   const { data: inventory, isLoading: isInventoryLoading } = useBlobbonautInventory();
+  const { mutate: feedBlobbi, isPending: isFeeding } = useBlobbiFeedAction();
   const { toast } = useToast();
 
   // Shelf positions from bottom of modal (in pixels)
@@ -146,47 +148,32 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       return;
     }
 
-    // Apply item effects to pet (simplified effects for demo)
-    const effectMap: Record<string, Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }>> = {
-      apple: { hunger: 15 * quantity, energy: 5 * quantity, hygiene: 2 * quantity },
-      pizza: { hunger: 35 * quantity, happiness: 10 * quantity, energy: 8 * quantity },
-      burger: { hunger: 30 * quantity, happiness: 8 * quantity, energy: 12 * quantity },
-      cake: { hunger: 20 * quantity, happiness: 25 * quantity, energy: 15 * quantity },
-      sushi: { hunger: 25 * quantity, health: 10 * quantity, hygiene: 5 * quantity },
-    };
-
-    const effects = effectMap[itemId];
-    if (effects && status.currentPet) {
-      // Calculate new stats (capped at 100)
-      const currentStats = {
-        hunger: status.currentPet.hunger,
-        energy: status.currentPet.energy,
-        hygiene: status.currentPet.hygiene,
-        happiness: status.currentPet.happiness,
-        health: status.currentPet.health,
-      };
-
-      const newStats: Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }> = {};
-      Object.entries(effects).forEach(([stat, increase]) => {
-        if (increase && stat in currentStats) {
-          newStats[stat] = Math.min(100, currentStats[stat as keyof typeof currentStats] + increase);
-        }
-      });
-
-      // Apply optimistic updates
-      updatePetStats(status.currentPet.id, newStats);
-
-      // TODO: Update inventory by reducing item quantity
-      // This would normally be done through a Nostr event
-
-      toast({
-        title: "Item Used Successfully",
-        description: `Fed ${quantity} ${itemId}(s) to ${status.currentPet.name}!`,
-      });
-    }
-
-    setIsConsumeModalOpen(false);
-    setSelectedItemId(null);
+    // Use the new Blobbi feed action that creates proper Nostr events
+    feedBlobbi(
+      {
+        petId: status.currentPet.id,
+        itemId,
+        quantity,
+      },
+      {
+        onSuccess: (result) => {
+          const itemDisplayName = itemId.replace('food_', '').replace('_', ' ');
+          toast({
+            title: "Feeding Successful! 🍽️",
+            description: `Fed ${quantity} ${itemDisplayName}(s) to ${status.currentPet?.name}! Gained ${result.experienceGained} XP.`,
+          });
+          setIsConsumeModalOpen(false);
+          setSelectedItemId(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "Feeding Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const getItemQuantity = (itemId: string): number => {
@@ -284,6 +271,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           itemId={selectedItemId}
           maxQuantity={getItemQuantity(selectedItemId)}
           onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
+          isLoading={isFeeding}
         />
       )}
     </>
