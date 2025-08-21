@@ -157,9 +157,18 @@ export function useBlobbiFeedAction() {
         ['energy', newStats.energy.toString()],
         ['experience', newExperience.toString()],
         ['care_streak', newCareStreak.toString()],
+        // Update feeding-specific timestamps
         ['last_meal', Math.floor(now.getTime() / 1000).toString()],
         ['last_interaction', Math.floor(now.getTime() / 1000).toString()],
       ];
+
+      // Preserve all existing last_* timestamps (except the ones we're updating above)
+      if (pet.lastClean) petStateTags.push(['last_clean', Math.floor(pet.lastClean.getTime() / 1000).toString()]);
+      if (pet.lastWarm) petStateTags.push(['last_warm', Math.floor(pet.lastWarm.getTime() / 1000).toString()]);
+      if (pet.lastTalk) petStateTags.push(['last_talk', Math.floor(pet.lastTalk.getTime() / 1000).toString()]);
+      if (pet.lastCheck) petStateTags.push(['last_check', Math.floor(pet.lastCheck.getTime() / 1000).toString()]);
+      if (pet.lastSing) petStateTags.push(['last_sing', Math.floor(pet.lastSing.getTime() / 1000).toString()]);
+      if (pet.lastMedicine) petStateTags.push(['last_medicine', Math.floor(pet.lastMedicine.getTime() / 1000).toString()]);
 
       // Add existing optional tags
       if (pet.baseColor) petStateTags.push(['base_color', pet.baseColor]);
