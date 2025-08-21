@@ -1,6 +1,7 @@
 import { FoodShopModal } from './FoodShopModal';
 import { PhotoBoothModal } from './PhotoBoothModal';
 import { ShareModal } from './ShareModal';
+import { NostrHubModal } from '@/components/NostrHubModal';
 import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
@@ -187,6 +188,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
+  const [isNostrHubModalOpen, setIsNostrHubModalOpen] = useState(false);
 
   // Chair state
   const [seatedChairId, setSeatedChairId] = useState<string | null>(null);
@@ -195,6 +197,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
+
     if (!blobbiRef.current) return;
 
     const chairElement = event.currentTarget;
@@ -221,6 +224,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
     // Move Blobbi to the seat position
     blobbiRef.current.goTo({ x: targetX, y: targetY });
+
+        // Special handling for Nostr Station chairs - open Nostr Hub modal
+    if (backgroundFile === 'nostr-station-inside.png') {
+      setIsNostrHubModalOpen(true);
+      return;
+    }
   };
 
   const handleElementClick = (elementName: string) => {
@@ -1369,6 +1378,11 @@ if (backgroundFile === 'nostr-station-inside.png') {
         className="absolute right-[30%] bottom-[25%] w-[12%] z-[15]"
       />
 
+      {/* Nostr Hub Modal */}
+      <NostrHubModal
+        isOpen={isNostrHubModalOpen}
+        onClose={() => setIsNostrHubModalOpen(false)}
+      />
     </>
   );
 }

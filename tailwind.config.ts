@@ -96,6 +96,7 @@ export default {
 			},
 			cursor: {
 				pickaxe: "url('/assets/interactive/games/cursor-pickaxe.png') 0 0, auto",
+				'blobbi-neon': "url('/assets/baby-stage/baby/cursor-blobbi-baby-neon.png') 14 1, auto",
 			}
 		}
 	},
