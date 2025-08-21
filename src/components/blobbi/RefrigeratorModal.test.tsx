@@ -64,6 +64,7 @@ describe('RefrigeratorModal', () => {
         { itemId: 'burger', quantity: 1 },
       ],
       isLoading: false,
+      refetch: vi.fn(),
     });
 
     render(
@@ -83,6 +84,7 @@ describe('RefrigeratorModal', () => {
         { itemId: 'food_cake', quantity: 23 },
       ],
       isLoading: false,
+      refetch: vi.fn(),
     });
 
     render(
@@ -99,6 +101,7 @@ describe('RefrigeratorModal', () => {
     mockUseBlobbonautInventory.mockReturnValue({
       data: [],
       isLoading: false,
+      refetch: vi.fn(),
     });
 
     render(

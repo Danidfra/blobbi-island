@@ -19,11 +19,23 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
+  const [optimisticInventory, setOptimisticInventory] = useState<typeof inventory | null>(null);
 
   const { status } = useOptimizedStatus();
-  const { data: inventory, isLoading: isInventoryLoading } = useBlobbonautInventory();
+  const { data: inventory, isLoading: isInventoryLoading, refetch: refetchInventory } = useBlobbonautInventory();
   const { mutate: feedBlobbi, isPending: isFeeding } = useBlobbiFeedAction();
   const { toast } = useToast();
+
+  // Use optimistic inventory if available, otherwise use real inventory
+  const currentInventory = optimisticInventory ?? inventory;
+
+  // Reset optimistic inventory and refetch when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setOptimisticInventory(null);
+      refetchInventory();
+    }
+  }, [isOpen, refetchInventory]);
 
   // Shelf positions from bottom of modal (in pixels)
   const shelves = useMemo(() => [290, 430, 580], []); // Bottom shelf at 170px, middle at 270px, top at 370px
@@ -45,12 +57,12 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
     food_sushi: '/assets/interactive/food/sushi.png',
   }), []);
 
-  // Generate food items based on inventory data
+  // Generate food items based on current inventory data (optimistic or real)
   const foodItems = useMemo(() => {
-    if (!inventory || inventory.length === 0) return [];
+    if (!currentInventory || currentInventory.length === 0) return [];
 
     // Filter inventory to only include food items that we have images for
-    const foodInInventory = inventory.filter(item =>
+    const foodInInventory = currentInventory.filter(item =>
       item.quantity > 0 && availableFoodItems[item.itemId as keyof typeof availableFoodItems]
     );
 
@@ -60,7 +72,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       position: { x: 0, y: 0 }, // Will be set properly in useEffect
       quantity: item.quantity,
     }));
-  }, [inventory, availableFoodItems]);
+  }, [currentInventory, availableFoodItems]);
 
   // State for tracking food item positions
   const [foodItemPositions, setFoodItemPositions] = useState<Record<string, FoodPosition>>({});
@@ -148,6 +160,26 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
       return;
     }
 
+    // Apply optimistic inventory update immediately
+    if (currentInventory) {
+      const updatedInventory = currentInventory.map(item => {
+        // Find the item that matches (handle both prefixed and non-prefixed)
+        const isMatch = item.itemId === itemId ||
+                       item.itemId === `food_${itemId}` ||
+                       item.itemId === itemId.replace('food_', '');
+
+        if (isMatch) {
+          return {
+            ...item,
+            quantity: Math.max(0, item.quantity - quantity)
+          };
+        }
+        return item;
+      }).filter(item => item.quantity > 0); // Remove items with 0 quantity
+
+      setOptimisticInventory(updatedInventory);
+    }
+
     // Use the new Blobbi feed action that creates proper Nostr events
     feedBlobbi(
       {
@@ -166,6 +198,8 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           setSelectedItemId(null);
         },
         onError: (error) => {
+          // Revert optimistic update on error
+          setOptimisticInventory(null);
           toast({
             title: "Feeding Failed",
             description: error.message,
@@ -177,18 +211,20 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   };
 
   const getItemQuantity = (itemId: string): number => {
+    if (!currentInventory) return 0;
+
     // Try to find the item with the exact ID first
-    let inventoryItem = inventory.find(item => item.itemId === itemId);
+    let inventoryItem = currentInventory.find(item => item.itemId === itemId);
 
     // If not found and the itemId doesn't have the food_ prefix, try with the prefix
     if (!inventoryItem && !itemId.startsWith('food_')) {
-      inventoryItem = inventory.find(item => item.itemId === `food_${itemId}`);
+      inventoryItem = currentInventory.find(item => item.itemId === `food_${itemId}`);
     }
 
     // If not found and the itemId has the food_ prefix, try without the prefix
     if (!inventoryItem && itemId.startsWith('food_')) {
       const unprefixedId = itemId.replace('food_', '');
-      inventoryItem = inventory.find(item => item.itemId === unprefixedId);
+      inventoryItem = currentInventory.find(item => item.itemId === unprefixedId);
     }
 
     return inventoryItem?.quantity || 0;
