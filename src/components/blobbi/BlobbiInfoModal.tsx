@@ -4,16 +4,19 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets } from 'lucide-react';
-import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+import { StaticBlobbiDisplay } from './StaticBlobbiDisplay';
+import { BackgroundLayer } from './BackgroundLayer';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
+import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 
 interface BlobbiInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  backgroundKey?: string;
 }
 
 function getUrgencyVariant(urgency: CareUrgency): "default" | "destructive" | "outline" | "secondary" {
@@ -60,9 +63,10 @@ function StatDisplay({
   );
 }
 
-export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
+export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-default' }: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
   const ownerProfile = useOwnerProfile();
+  const backgroundSrc = getBlobbiBackground(backgroundKey);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -123,25 +127,48 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 pl-5 py-5">
-          {/* Left Column - Blobbi Display and Basic Info (Fixed) */}
-          <div className="flex flex-col space-y-4 lg:w-2/5 flex-shrink-0">
-            {/* Blobbi Display */}
-            <div className="text-center space-y-3">
-              <div className="flex justify-center">
-                <div className="blobbi-gradient-frame p-2">
-                  <CurrentBlobbiDisplay
-                    size="lg"
-                    showFallback={true}
-                    isSleeping={currentPet.isSleeping}
-                  />
-                </div>
+          {/* Stage - Left side with background and static Blobbi */}
+          <div className="flex flex-col lg:w-2/5 flex-shrink-0">
+            {/* Stage Container - This is line 127 equivalent, keeping exact dimensions */}
+            <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full">
+              {/* Background Layer - z-0 */}
+              <div className="absolute inset-0 z-0">
+                <BackgroundLayer
+                  src={backgroundSrc}
+                  alt="Blobbi background"
+                  fit="cover"
+                  fallback={
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900" />
+                  }
+                />
               </div>
 
+              {/* Optional: Subtle vignette for text contrast */}
+              <div className="absolute inset-0 z-5 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+              </div>
+
+              {/* Static Blobbi - z-10, centered */}
+              <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
+                <StaticBlobbiDisplay
+                  size="3xl"
+                  showFallback={true}
+                  isSleeping={currentPet.isSleeping}
+                  className="transform-gpu"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar - Right side with all informational content */}
+          <div className="lg:w-3/5 flex-1 min-h-0 flex flex-col space-y-4">
+            {/* Basic Info */}
+            <div className="blobbi-card rounded-lg p-3">
               <div className="space-y-1.5">
                 <h2 className="text-xl font-bold blobbi-text">
                   {currentPet.name || currentPet.id}
                 </h2>
-                <div className="flex items-center justify-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className="blobbi-badge text-xs">
                     {currentPet.stage} • Gen {currentPet.generation}
                   </Badge>
@@ -172,11 +199,9 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Right Column - Scrollable Cards Section */}
-          <div className="lg:w-3/5 flex-1 min-h-0">
-            <div className="h-full overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+            {/* Scrollable Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
               <div className="space-y-4 pb-2">
                 {/* Stats Grid */}
                 <div className="blobbi-card rounded-lg">
@@ -325,7 +350,7 @@ export function BlobbiInfoModal({ isOpen, onClose }: BlobbiInfoModalProps) {
           </div>
         </div>
 
-        <div className="p-3 border-t border-purple-200/60 dark:border-purple-800/60 flex justify-end flex-shrink-0">
+        <div className="p-3 border-t border-purple-200/60 dark:border-purple-800/60 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
           <Button variant="outline" onClick={onClose} className="blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
             Close
           </Button>
