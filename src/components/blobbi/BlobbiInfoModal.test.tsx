@@ -24,6 +24,20 @@ describe('BlobbiInfoModal', () => {
       </TestApp>
     );
 
-    expect(screen.queryByText('Accessories')).not.toBeInTheDocument();
+    expect(screen.queryByText('Blobbi Info')).not.toBeInTheDocument();
+  });
+
+  it('shows modal with no pet message', () => {
+    render(
+      <TestApp>
+        <div className="relative w-full h-screen">
+          <BlobbiInfoModal isOpen={true} onClose={() => {}} />
+        </div>
+      </TestApp>
+    );
+
+    // The modal should show "No Blobbi selected" when there's no pet
+    expect(screen.getByText('No Blobbi selected')).toBeInTheDocument();
+    expect(screen.getByText('Close')).toBeInTheDocument();
   });
 });
