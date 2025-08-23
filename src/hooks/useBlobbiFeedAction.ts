@@ -175,16 +175,20 @@ export function useBlobbiFeedAction() {
       if (pet.secondaryColor) petStateTags.push(['secondary_color', pet.secondaryColor]);
       if (pet.pattern) petStateTags.push(['pattern', pet.pattern]);
       if (pet.eyeColor) petStateTags.push(['eye_color', pet.eyeColor]);
+      if (pet.specialMark) petStateTags.push(['special_mark', pet.specialMark]);
+      if (pet.adultType) petStateTags.push(['adult_type', pet.adultType]);
       if (pet.personality) petStateTags.push(['personality', pet.personality]);
       if (pet.trait) petStateTags.push(['trait', pet.trait]);
       if (pet.mood) petStateTags.push(['mood', pet.mood]);
       if (pet.favoriteFood) petStateTags.push(['favorite_food', pet.favoriteFood]);
+      if (pet.voiceType) petStateTags.push(['voice_type', pet.voiceType]);
       if (pet.size) petStateTags.push(['size', pet.size]);
       if (pet.currentLocation) petStateTags.push(['current_location', pet.currentLocation]);
       if (pet.isSleeping !== undefined) petStateTags.push(['is_sleeping', pet.isSleeping ? 'true' : 'false']);
       if (pet.isDirty !== undefined) petStateTags.push(['is_dirty', pet.isDirty ? 'true' : 'false']);
       if (pet.inParty !== undefined) petStateTags.push(['in_party', pet.inParty ? 'true' : 'false']);
       if (pet.visibleToOthers !== undefined) petStateTags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
+      if (pet.client !== undefined) petStateTags.push(['client', pet.client]);
 
       createEvent({
         kind: 31124,
