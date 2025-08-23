@@ -160,7 +160,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     >
       <div
         ref={modalRef}
-        className="w-[85%] max-h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
+        className="w-[85%] !h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
         style={modalMinHeight ? { minHeight: modalMinHeight, height: modalMinHeight } : undefined}
       >
         <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
