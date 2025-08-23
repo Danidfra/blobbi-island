@@ -5,7 +5,7 @@ import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { cn } from "@/lib/utils";
 
-interface CurrentBlobbiDisplayProps {
+export interface CurrentBlobbiDisplayProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   showFallback?: boolean;
@@ -74,7 +74,22 @@ export function CurrentBlobbiDisplay({
           isSleeping || eyesClosed // Close eyes when either sleeping or seated with eyesClosed
         );
 
-        setSvgContent(customizedSvg);
+        // Add lazy loading attributes to SVG for performance
+        const optimizedSvg = customizedSvg.replace(
+          /<svg([^>]*)>/,
+          (match, attributes) => {
+            // Add loading attributes if not already present
+            if (!attributes.includes('decoding=')) {
+              attributes += ' decoding="async"';
+            }
+            if (!attributes.includes('fetchpriority=')) {
+              attributes += ' fetchpriority="low"';
+            }
+            return `<svg${attributes}>`;
+          }
+        );
+
+        setSvgContent(optimizedSvg);
       } catch (err) {
         console.error('Failed to load current Blobbi SVG:', err);
         setSvgContent("");

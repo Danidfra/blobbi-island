@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide-react';
-import { StaticBlobbiDisplay } from './StaticBlobbiDisplay';
+import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
@@ -81,6 +81,8 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(defaultTab);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
+  const primaryContentRef = useRef<HTMLDivElement>(null);
 
   // Mock accessories data - to be replaced with real data later
   const accessories: AccessoryItem[] = [
@@ -110,13 +112,18 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Capture modal height when it first renders to set minimum height
+  // Capture primary tab content height to set as minimum for modal
   useEffect(() => {
-    if (modalRef.current && selectedTab === 'primary' && !modalMinHeight) {
-      const height = modalRef.current.offsetHeight;
-      setModalMinHeight(`${height}px`);
+    if (primaryContentRef.current && selectedTab === 'primary' && !primaryTabHeight) {
+      const height = primaryContentRef.current.offsetHeight;
+      setPrimaryTabHeight(height);
+      // Set modal minimum height based on primary tab content + padding and other elements
+      if (modalRef.current) {
+        const modalHeight = modalRef.current.offsetHeight;
+        setModalMinHeight(`${modalHeight}px`);
+      }
     }
-  }, [selectedTab, modalMinHeight]);
+  }, [selectedTab, primaryTabHeight]);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && isOpen) {
@@ -154,7 +161,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
       <div
         ref={modalRef}
         className="w-[85%] max-h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
-        style={modalMinHeight ? { minHeight: modalMinHeight } : undefined}
+        style={modalMinHeight ? { minHeight: modalMinHeight, height: modalMinHeight } : undefined}
       >
         <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
           <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">
@@ -176,7 +183,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
             {/* Stage Container - This is line 127 equivalent, keeping exact dimensions */}
             <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full">
               {/* Background Layer - z-0 */}
-              <div className="absolute inset-0 z-0">
+              <div className="absolute inset-0 z-0" aria-hidden="true">
                 <BackgroundLayer
                   src={backgroundSrc}
                   alt="Blobbi background"
@@ -194,10 +201,11 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
               {/* Static Blobbi - z-10, centered */}
               <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
-                <StaticBlobbiDisplay
+                <CurrentBlobbiPreview
                   size="3xl"
                   showFallback={true}
                   isSleeping={currentPet.isSleeping}
+                  isStaticPreview={true}
                   className="transform-gpu"
                 />
               </div>
@@ -230,7 +238,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
               {/* Tab Content - scrollable panels */}
               <div className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                 {/* Primary Tab Content */}
-                <TabsContent value="primary" className="mt-4 space-y-4 pb-2 focus-visible:outline-none">
+                <TabsContent value="primary" className="mt-4 space-y-4 pb-2 focus-visible:outline-none" ref={primaryContentRef}>
                   {/* Basic Info */}
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
@@ -414,7 +422,8 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                 </TabsContent>
 
                 {/* Inventory Tab Content */}
-                <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none">
+                <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                   {accessories.length === 0 ? (
                     // Empty State
                     <Card className="border-dashed border-purple-200/60 dark:border-purple-800/60">
@@ -477,6 +486,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                       ))}
                     </div>
                   )}
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>
