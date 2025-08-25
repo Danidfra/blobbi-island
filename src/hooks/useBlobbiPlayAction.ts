@@ -1,5 +1,5 @@
 /**
- * Hook for feeding Blobbi pets with proper Nostr event creation
+ * Hook for playing with Blobbi pets using toys with proper Nostr event creation
  *
  * Creates Kind 14919 interaction events and updates Kind 31124 pet state
  * and Kind 31125 owner profile according to Blobbi specification
@@ -13,16 +13,16 @@ import { useBlobbonautProfile } from './useBlobbonautProfile';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
 
 
-interface FeedActionInput {
-  /** Pet ID to feed */
+interface PlayActionInput {
+  /** Pet ID to play with */
   petId: string;
-  /** Food item ID */
+  /** Toy item ID */
   itemId: string;
-  /** Quantity to consume */
+  /** Quantity to use */
   quantity: number;
 }
 
-interface FoodEffects {
+interface ToyEffects {
   hunger?: number;
   energy?: number;
   hygiene?: number;
@@ -32,7 +32,10 @@ interface FoodEffects {
 
 // Helper to get clean item name for display
 function getItemDisplayName(itemId: string): string {
-  return itemId.replace('food_', '').replace('_', ' ');
+  const cleaned = itemId.replace('toy_', '').replace('_', ' ');
+  // Convert 'teddy' to 'teddy bear' for better display
+  if (cleaned === 'teddy') return 'teddy bear';
+  return cleaned;
 }
 
 // Helper to calculate stat change with bounds checking
@@ -40,7 +43,7 @@ function calculateStatChange(currentValue: number, change: number): number {
   return Math.max(0, Math.min(100, currentValue + change));
 }
 
-export function useBlobbiFeedAction() {
+export function useBlobbiPlayAction() {
   const { user } = useCurrentUser();
   const { mutate: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
@@ -48,12 +51,12 @@ export function useBlobbiFeedAction() {
   const { data: profile } = useBlobbonautProfile();
 
   return useMutation({
-    mutationFn: async ({ petId, itemId, quantity }: FeedActionInput) => {
+    mutationFn: async ({ petId, itemId, quantity }: PlayActionInput) => {
       if (!user?.pubkey) {
         throw new Error('User not logged in');
       }
 
-      // Find the pet being fed
+      // Find the pet being played with
       const pet = status.allPets.find(p => p.id === petId);
       if (!pet) {
         throw new Error(`Pet with ID ${petId} not found`);
@@ -61,16 +64,16 @@ export function useBlobbiFeedAction() {
 
       // Get item effects from ITEM_DATA (try both prefixed and non-prefixed)
       let itemData = ITEM_DATA[itemId];
-      if (!itemData && !itemId.startsWith('food_')) {
-        itemData = ITEM_DATA[`food_${itemId}`];
+      if (!itemData && !itemId.startsWith('toy_')) {
+        itemData = ITEM_DATA[`toy_${itemId}`];
       }
       if (!itemData) {
-        throw new Error(`Unknown food item: ${itemId}`);
+        throw new Error(`Unknown item: ${itemId}`);
       }
       const effects = itemData.effects;
 
       // Check inventory quantity (inventory items have prefixes)
-      const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
+      const prefixedItemId = itemId.startsWith('toy_') ? itemId : `toy_${itemId}`;
       const inventoryItem = profile?.inventory.find(item => item.itemId === prefixedItemId);
 
       if (!inventoryItem || inventoryItem.quantity < quantity) {
@@ -78,9 +81,9 @@ export function useBlobbiFeedAction() {
       }
 
       // Calculate total effects for this quantity
-      const totalEffects: FoodEffects = {};
+      const totalEffects: ToyEffects = {};
       Object.entries(effects).forEach(([stat, value]) => {
-        totalEffects[stat as keyof FoodEffects] = value * quantity;
+        totalEffects[stat as keyof ToyEffects] = value * quantity;
       });
 
       // Calculate new stats
@@ -92,26 +95,26 @@ export function useBlobbiFeedAction() {
         energy: calculateStatChange(pet.energy, totalEffects.energy || 0),
       };
 
-      // Experience gained (5 points per item used)
-      const experienceGained = quantity * 5;
+      // Experience gained (3 points per item used for playing)
+      const experienceGained = quantity * 3;
       const newExperience = pet.experience + experienceGained;
 
-      // Care points (2 points per feeding action, regardless of quantity)
-      const carePoints = 2;
+      // Care points (1 point per playing action, regardless of quantity)
+      const carePoints = 1;
 
       // Update care streak if this is a new day
-      const lastMeal = pet.lastMeal;
+      const lastInteraction = pet.lastInteraction;
       const now = new Date();
-      const isNewDay = !lastMeal ||
-        (now.getTime() - lastMeal.getTime()) > (20 * 60 * 60 * 1000); // 20+ hours = new day
+      const isNewDay = !lastInteraction ||
+        (now.getTime() - lastInteraction.getTime()) > (20 * 60 * 60 * 1000); // 20+ hours = new day
       const newCareStreak = isNewDay ? pet.careStreak + 1 : pet.careStreak;
 
       // 1. Create Kind 14919 Interaction Event
       const interactionTags = [
         ['blobbi_id', petId],
-        ['action', 'feed'],
+        ['action', 'play'],
         ['action_category', 'enrichment'],
-        ['stat_change', `hunger:+${totalEffects.hunger || 0}`],
+        ['stat_change', `happiness:+${totalEffects.happiness || 0}`],
         ['item_used', getItemDisplayName(itemId)],
         ['experience_gained', experienceGained.toString()],
         ['care_streak', newCareStreak.toString()],
@@ -120,14 +123,14 @@ export function useBlobbiFeedAction() {
 
       // Add additional stat changes to tags
       Object.entries(totalEffects).forEach(([stat, value]) => {
-        if (stat !== 'hunger' && value !== 0) {
+        if (stat !== 'happiness' && value !== 0) {
           interactionTags.push(['stat_change', `${stat}:${value > 0 ? '+' : ''}${value}`]);
         }
       });
 
       createEvent({
         kind: 14919,
-        content: `Blobbi fed interaction`,
+        content: `Blobbi play interaction`,
         tags: interactionTags,
       });
 
@@ -144,12 +147,12 @@ export function useBlobbiFeedAction() {
         ['energy', newStats.energy.toString()],
         ['experience', newExperience.toString()],
         ['care_streak', newCareStreak.toString()],
-        // Update feeding-specific timestamps
-        ['last_meal', Math.floor(now.getTime() / 1000).toString()],
+        // Update interaction timestamp
         ['last_interaction', Math.floor(now.getTime() / 1000).toString()],
       ];
 
-      // Preserve all existing last_* timestamps (except the ones we're updating above)
+      // Preserve all existing last_* timestamps (except the one we're updating above)
+      if (pet.lastMeal) petStateTags.push(['last_meal', Math.floor(pet.lastMeal.getTime() / 1000).toString()]);
       if (pet.lastClean) petStateTags.push(['last_clean', Math.floor(pet.lastClean.getTime() / 1000).toString()]);
       if (pet.lastWarm) petStateTags.push(['last_warm', Math.floor(pet.lastWarm.getTime() / 1000).toString()]);
       if (pet.lastTalk) petStateTags.push(['last_talk', Math.floor(pet.lastTalk.getTime() / 1000).toString()]);
@@ -232,7 +235,7 @@ export function useBlobbiFeedAction() {
           ...newStats,
           experience: newExperience,
           careStreak: newCareStreak,
-          lastMeal: now,
+          lastInteraction: now,
         },
       });
 
@@ -276,7 +279,7 @@ export function useBlobbiFeedAction() {
       }, 2000); // 2 second delay to let users see the optimistic updates
     },
     onError: (error) => {
-      console.error('Failed to feed Blobbi:', error);
+      console.error('Failed to play with Blobbi:', error);
     },
   });
 }

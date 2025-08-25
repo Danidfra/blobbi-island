@@ -6,7 +6,7 @@ import { Minus, Plus, Heart, Zap, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Item data with effects (includes both food and toy items)
-interface FoodItemData {
+interface ItemData {
   id: string;
   name: string;
   imageUrl: string;
@@ -20,7 +20,73 @@ interface FoodItemData {
 }
 
 // Items database (includes both food and toy items)
-const FOOD_ITEMS: Record<string, FoodItemData> = {
+export const ITEM_DATA: Record<string, ItemData> = {
+  // Prefixed versions (actual inventory items)
+  food_apple: {
+    id: 'food_apple',
+    name: 'Apple',
+    imageUrl: '/assets/interactive/food/apple.png',
+    effects: {
+      hunger: 15,
+      energy: 5,
+      hygiene: -2,
+    },
+  },
+  food_pizza: {
+    id: 'food_pizza',
+    name: 'Pizza',
+    imageUrl: '/assets/interactive/food/pizza.png',
+    effects: {
+      hunger: 35,
+      happiness: 10,
+      energy: -9,
+    },
+  },
+  food_burger: {
+    id: 'food_burger',
+    name: 'Burger',
+    imageUrl: '/assets/interactive/food/burger.png',
+    effects: {
+      hunger: 40,
+      happiness: 10,
+      energy: 8,
+      hygiene: -8
+    },
+  },
+  food_cake: {
+    id: 'food_cake',
+    name: 'Cake',
+    imageUrl: '/assets/interactive/food/cake.png',
+    effects: {
+      hunger: 20,
+      happiness: 30,
+      energy: -10,
+    },
+  },
+  food_sushi: {
+    id: 'food_sushi',
+    name: 'Sushi',
+    imageUrl: '/assets/interactive/food/sushi.png',
+    effects: {
+      hunger: 30,
+      health: 10,
+      hygiene: -6,
+      energy: 7
+    },
+  },
+  toy_ball: {
+    id: 'toy_ball',
+    name: 'Ball',
+    imageUrl: '/assets/interactive/toys/ball.png',
+    effects: { happiness: 25, energy: -10, hygiene: -5 },
+  },
+  toy_teddy: {
+    id: 'toy_teddy',
+    name: 'Teddy Bear',
+    imageUrl: '/assets/interactive/toys/bear.png',
+    effects: { happiness: 40, energy: -15 },
+  },
+  // Non-prefixed versions for UI display (when items are normalized for modal)
   apple: {
     id: 'apple',
     name: 'Apple',
@@ -73,23 +139,23 @@ const FOOD_ITEMS: Record<string, FoodItemData> = {
       energy: 7
     },
   },
-  // Toy items for chest
   ball: {
     id: 'ball',
     name: 'Ball',
     imageUrl: '/assets/interactive/toys/ball.png',
-    effects: {
-      happiness: 25,
-      energy: 15,
+    effects: { 
+      happiness: 25, 
+      energy: -10, 
+      hygiene: -5 
     },
   },
-  bear: {
-    id: 'bear',
+  teddy: {
+    id: 'teddy',
     name: 'Teddy Bear',
     imageUrl: '/assets/interactive/toys/bear.png',
-    effects: {
-      happiness: 30,
-      hygiene: 10,
+    effects: { 
+      happiness: 40, 
+      energy: -15 
     },
   },
 };
@@ -110,6 +176,7 @@ interface ConsumeItemModalProps {
   maxQuantity: number;
   onUseItem: (itemId: string, quantity: number) => void;
   isLoading?: boolean;
+  loadingText?: string;
 }
 
 export function ConsumeItemModal({
@@ -119,10 +186,11 @@ export function ConsumeItemModal({
   maxQuantity,
   onUseItem,
   isLoading = false,
+  loadingText = "Using...",
 }: ConsumeItemModalProps) {
   const [quantity, setQuantity] = useState(1);
 
-  const item = FOOD_ITEMS[itemId];
+  const item = ITEM_DATA[itemId];
 
   // Calculate total effects based on quantity
   const totalEffects = useMemo(() => {
@@ -237,7 +305,7 @@ export function ConsumeItemModal({
                       <div key={effect} className="flex items-center space-x-2">
                         <Icon className="w-4 h-4 text-blue-400" />
                         <span className="text-sm text-white capitalize">
-                          +{value} {effect}
+                          {value > 0 ? '+' : ''}{value} {effect}
                         </span>
                       </div>
                     );
@@ -259,7 +327,7 @@ export function ConsumeItemModal({
                           <Icon className="w-4 h-4 text-slate-400" />
                           <span className="text-sm text-slate-300 capitalize">{effect}:</span>
                         </div>
-                        <span className="text-sm text-white">+{value}</span>
+                        <span className="text-sm text-white">{value > 0 ? '+' : ''}{value}</span>
                       </div>
                     );
                   })}
@@ -285,7 +353,7 @@ export function ConsumeItemModal({
                   "border-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 )}
               >
-                {isLoading ? "Feeding..." : "Use"}
+                {isLoading ? loadingText : "Use"}
               </Button>
             </div>
           </div>
