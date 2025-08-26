@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
-import type { OwnerProfile, CreateOwnerProfileInput } from '@/lib/blobbi-types';
+import type { OwnerProfile } from '@/lib/blobbi-types';
 import { X } from 'lucide-react';
 
 interface FoodShopModalProps {
@@ -59,52 +59,54 @@ function useBlobbiEvents() {
   const queryClient = useQueryClient();
 
   const useUpdateOwnerProfile = () => useMutation({
-    mutationFn: async (updates: Partial<CreateOwnerProfileInput>) => {
+    mutationFn: async (updatedProfile: OwnerProfile) => {
       if (!user?.pubkey) {
         throw new Error('User not logged in');
       }
 
-      const existingProfile = queryClient.getQueryData(['owner-profile', user.pubkey]) as OwnerProfile | null;
-
-      const mergedData: CreateOwnerProfileInput = {
-        profileId: updates.profileId || existingProfile?.id || 'profile',
-        name: updates.name !== undefined ? updates.name : (existingProfile?.name || ''),
-        coins: updates.coins !== undefined ? updates.coins : existingProfile?.coins,
-        inventory: updates.inventory !== undefined ? updates.inventory : existingProfile?.inventory,
-      };
-
-      const tags: string[][] = [
-        ['d', mergedData.profileId],
-        ['name', mergedData.name],
+      // Create owner profile tags preserving all existing data
+      const ownerTags = [
+        ['d', updatedProfile.id],
+        ['name', updatedProfile.name],
+        ['coins', updatedProfile.coins.toString()],
+        ['pettingLevel', updatedProfile.pettingLevel.toString()],
+        ['lifetimeBlobbis', updatedProfile.lifetimeBlobbis.toString()],
       ];
-      if (mergedData.coins !== undefined) tags.push(['coins', mergedData.coins.toString()]);
-      if (mergedData.inventory) {
-        mergedData.inventory.forEach(item => tags.push(['storage', `${item.itemId}:${item.quantity}`]));
-      }
+
+      // Add optional single-value tags
+      if (updatedProfile.favoriteBlobbi) ownerTags.push(['favoriteBlobbi', updatedProfile.favoriteBlobbi]);
+      if (updatedProfile.starterBlobbi) ownerTags.push(['starterBlobbi', updatedProfile.starterBlobbi]);
+      if (updatedProfile.currentCompanion) ownerTags.push(['current_companion', updatedProfile.currentCompanion]);
+      if (updatedProfile.style) ownerTags.push(['style', updatedProfile.style]);
+      if (updatedProfile.background) ownerTags.push(['background', updatedProfile.background]);
+      if (updatedProfile.title) ownerTags.push(['title', updatedProfile.title]);
+
+      // Add multi-value tags
+      updatedProfile.ownedPets.forEach(petId => ownerTags.push(['has', petId]));
+      updatedProfile.achievements.forEach(achievement => ownerTags.push(['achievements', achievement]));
+      updatedProfile.inventory.forEach(item => ownerTags.push(['storage', `${item.itemId}:${item.quantity}`]));
+
+      // Always preserve the client tag as a convention
+      if (updatedProfile.client) ownerTags.push(['client', updatedProfile.client]);
 
       createEvent({
         kind: 31125,
-        content: `Updated owner profile: ${mergedData.name}`,
-        tags,
+        content: `Owner profile: ${updatedProfile.name}`,
+        tags: ownerTags,
       });
 
-      return mergedData;
+      return updatedProfile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['owner-profile', user?.pubkey] });
+      queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile', user?.pubkey] });
     },
   });
 
   const { mutateAsync: updateOwnerProfile } = useUpdateOwnerProfile();
 
   const publishOwnerProfile = (profile: OwnerProfile) => {
-    const input: CreateOwnerProfileInput = {
-      profileId: profile.id,
-      name: profile.name,
-      coins: profile.coins,
-      inventory: profile.inventory,
-    };
-    return updateOwnerProfile(input);
+    return updateOwnerProfile(profile);
   };
 
   return { publishOwnerProfile };
@@ -166,11 +168,14 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
     Object.entries(quantities).forEach(([itemId, quantity]) => {
       if (quantity > 0) {
-        const existingItem = newInventory.find(item => item.itemId === itemId);
+        // Ensure item ID has the food_ prefix for storage
+        const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
+
+        const existingItem = newInventory.find(item => item.itemId === prefixedItemId);
         if (existingItem) {
           existingItem.quantity += quantity;
         } else {
-          newInventory.push({ itemId, quantity });
+          newInventory.push({ itemId: prefixedItemId, quantity });
         }
       }
     });
@@ -189,7 +194,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     setQuantities({});
     onClose();
   };
-  
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -199,7 +204,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleBackdropClick}
     >
