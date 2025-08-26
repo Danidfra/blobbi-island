@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { useDrag } from '@use-gesture/react';
 import { cn } from '@/lib/utils';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
+import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
+import { useBlobbiPlayAction } from '@/hooks/useBlobbiPlayAction';
 import { useToast } from '@/hooks/useToast';
 
 interface ChestModalProps {
@@ -16,6 +18,7 @@ interface ChestItemData {
   id: string;
   imageUrl: string;
   position: { x: number; y: number }; // Pixel positions
+  quantity: number;
 }
 
 interface ChestItemProps {
@@ -99,6 +102,12 @@ function ChestItem({ item, containerBounds, onPositionChange, onClick }: ChestIt
         className="w-full h-full object-contain pointer-events-none"
         draggable={false}
       />
+      {/* Quantity badge */}
+      {item.quantity > 1 && (
+        <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
+          {item.quantity}
+        </div>
+      )}
     </div>
   );
 }
@@ -108,28 +117,55 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
   const [containerBounds, setContainerBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [optimisticInventory, setOptimisticInventory] = useState<typeof inventory | null>(null);
 
-  const { status, updatePetStats } = useOptimizedStatus();
+  const { status } = useOptimizedStatus();
+  const { data: inventory, isLoading: isInventoryLoading, refetch: refetchInventory } = useBlobbonautInventory();
+  const { mutate: playWithBlobbi, isPending: isPlaying } = useBlobbiPlayAction();
   const { toast } = useToast();
 
-  // Initial chest items with random positions (will be set in useEffect)
-  const [chestItems, setChestItems] = useState<ChestItemData[]>([
-    {
-      id: 'ball',
-      imageUrl: '/assets/interactive/toys/ball.png',
-      position: { x: 0, y: 0 }, // Will be set randomly in useEffect
-    },
-    {
-      id: 'bear',
-      imageUrl: '/assets/interactive/toys/bear.png',
-      position: { x: 0, y: 0 }, // Will be set randomly in useEffect
-    },
-  ]);
+  // Use optimistic inventory if available, otherwise use real inventory
+  const currentInventory = optimisticInventory ?? inventory;
 
-  // Set up container bounds and random positions when modal opens
+  // Reset optimistic inventory and refetch when modal opens
   useEffect(() => {
     if (isOpen) {
-      const initializeChest = () => {
+      setOptimisticInventory(null);
+      refetchInventory();
+    }
+  }, [isOpen, refetchInventory]);
+
+  // Map of available toy items with their image paths (only prefixed versions exist)
+  const availableToyItems = useMemo(() => ({
+    toy_ball: '/assets/interactive/toys/ball.png',
+    toy_teddy: '/assets/interactive/toys/bear.png',
+  }), []);
+
+  // Generate toy items based on current inventory data (optimistic or real)
+  const toyItems = useMemo(() => {
+    if (!currentInventory || currentInventory.length === 0) return [];
+
+    // Filter inventory to only include toy items that we have images for
+    const toysInInventory = currentInventory.filter(item =>
+      item.quantity > 0 && availableToyItems[item.itemId as keyof typeof availableToyItems]
+    );
+
+    return toysInInventory.map((item) => ({
+      id: item.itemId,
+      imageUrl: availableToyItems[item.itemId as keyof typeof availableToyItems],
+      position: { x: 0, y: 0 }, // Will be set properly in useEffect
+      quantity: item.quantity,
+    }));
+  }, [currentInventory, availableToyItems]);
+
+  // State for tracking toy item positions
+  const [toyItemPositions, setToyItemPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [isChestInitialized, setIsChestInitialized] = useState(false);
+
+  // Set up container bounds when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const initializeChestBounds = () => {
         if (containerRef.current) {
           const containerRect = containerRef.current.getBoundingClientRect();
           const containerWidth = containerRect.width;
@@ -140,52 +176,81 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
             // Define the invisible container bounds inside the chest
             // These values represent the interior space of the chest image
             const bounds = {
-              x: containerWidth * 0.14, // 15% from left edge
-              y: containerHeight * 0.52, // 35% from top edge
-              width: containerWidth * 0.73, // 70% of total width
-              height: containerHeight * 0.42, // 45% of total height
+              x: containerWidth * 0.14, // 14% from left edge
+              y: containerHeight * 0.52, // 52% from top edge
+              width: containerWidth * 0.73, // 73% of total width
+              height: containerWidth * 0.42, // 42% of total height
             };
 
             setContainerBounds(bounds);
-
-            // Generate random positions for items within the bounds
-            setChestItems(prevItems => prevItems.map((item) => {
-              const itemSize = 64;
-              const maxX = bounds.width - itemSize;
-              const maxY = bounds.height - itemSize;
-
-              const randomX = bounds.x + Math.random() * maxX;
-              const randomY = bounds.y + Math.random() * maxY;
-
-              return {
-                ...item,
-                position: { x: randomX, y: randomY }
-              };
-            }));
+            setIsChestInitialized(true);
           }
         }
       };
 
       // Try immediate initialization
-      initializeChest();
+      initializeChestBounds();
 
       // Also try with a delay to ensure image is loaded
-      const timer = setTimeout(initializeChest, 100);
+      const timer = setTimeout(initializeChestBounds, 100);
 
       return () => clearTimeout(timer);
+    } else {
+      // Reset when modal closes
+      setIsChestInitialized(false);
+      setToyItemPositions({});
     }
   }, [isOpen]);
 
+  // Generate positions for new items when inventory changes
+  useEffect(() => {
+    if (isChestInitialized && containerBounds.width > 0 && toyItems.length > 0) {
+      setToyItemPositions(prevPositions => {
+        const newPositions = { ...prevPositions };
+
+        toyItems.forEach((item) => {
+          // Only generate position if this item doesn't already have one
+          if (!newPositions[item.id]) {
+            const itemSize = 64;
+            const maxX = containerBounds.width - itemSize;
+            const maxY = containerBounds.height - itemSize;
+
+            const randomX = containerBounds.x + Math.random() * maxX;
+            const randomY = containerBounds.y + Math.random() * maxY;
+
+            newPositions[item.id] = { x: randomX, y: randomY };
+          }
+        });
+
+        // Remove positions for items that no longer exist
+        const currentItemIds = new Set(toyItems.map(item => item.id));
+        Object.keys(newPositions).forEach(itemId => {
+          if (!currentItemIds.has(itemId)) {
+            delete newPositions[itemId];
+          }
+        });
+
+        return newPositions;
+      });
+    }
+  }, [isChestInitialized, containerBounds, toyItems]);
+
   const updateItemPosition = (id: string, newPosition: { x: number; y: number }) => {
-    setChestItems(prevItems =>
-      prevItems.map(item =>
-        item.id === id ? { ...item, position: newPosition } : item
-      )
-    );
+    setToyItemPositions(prev => ({
+      ...prev,
+      [id]: newPosition
+    }));
   };
 
   const handleItemClick = (id: string) => {
-    setSelectedItemId(id);
+    // Normalize the item ID to match the format expected by ConsumeItemModal
+    // Remove the 'toy_' prefix if it exists
+    let normalizedId = id.startsWith('toy_') ? id.replace('toy_', '') : id;
+    // Handle teddy bear mapping
+    if (normalizedId === 'teddy') {
+      normalizedId = 'teddy'; // Keep as teddy since we added it to ConsumeItemModal
+    }
+    setSelectedItemId(normalizedId);
     setIsConsumeModalOpen(true);
   };
 
@@ -193,15 +258,14 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
     if (!status.currentPet) {
       toast({
         title: "No Pet Selected",
-        description: "Please select a pet to use items with first.",
+        description: "Please select a pet to play with first.",
         variant: "destructive",
       });
       return;
     }
 
-    // Get current inventory quantity for this item
-    const inventoryItem = status.owner?.inventory.find(item => item.itemId === itemId);
-    const currentQuantity = inventoryItem?.quantity || 0;
+    // Get current inventory quantity for this item (handle both prefixed and non-prefixed)
+    const currentQuantity = getItemQuantity(itemId);
 
     if (currentQuantity < quantity) {
       toast({
@@ -212,57 +276,58 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
       return;
     }
 
-    // Apply item effects to pet (toy effects for chest items)
-    const effectMap: Record<string, Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }>> = {
-      ball: { happiness: 25 * quantity, energy: 15 * quantity },
-      bear: { happiness: 30 * quantity, hygiene: 10 * quantity },
-    };
-
-    const effects = effectMap[itemId];
-    if (effects && status.currentPet) {
-      // Calculate new stats (capped at 100)
-      const currentStats = {
-        hunger: status.currentPet.hunger,
-        energy: status.currentPet.energy,
-        hygiene: status.currentPet.hygiene,
-        happiness: status.currentPet.happiness,
-        health: status.currentPet.health,
-      };
-
-      const newStats: Partial<{ hunger: number; energy: number; hygiene: number; happiness: number; health: number }> = {};
-      Object.entries(effects).forEach(([stat, increase]) => {
-        if (increase && stat in currentStats) {
-          newStats[stat] = Math.min(100, currentStats[stat as keyof typeof currentStats] + increase);
+    // Apply optimistic inventory update immediately
+    if (currentInventory) {
+      const prefixedItemId = itemId.startsWith('toy_') ? itemId : `toy_${itemId}`;
+      const updatedInventory = currentInventory.map(item => {
+        if (item.itemId === prefixedItemId) {
+          return {
+            ...item,
+            quantity: Math.max(0, item.quantity - quantity)
+          };
         }
-      });
+        return item;
+      }).filter(item => item.quantity > 0); // Remove items with 0 quantity
 
-      // Apply optimistic updates
-      updatePetStats(status.currentPet.id, newStats);
-
-      // TODO: Update inventory by reducing item quantity
-      // This would normally be done through a Nostr event
-
-      toast({
-        title: "Toy Used Successfully",
-        description: `Played with ${quantity} ${itemId}(s) with ${status.currentPet.name}!`,
-      });
+      setOptimisticInventory(updatedInventory);
     }
 
-    setIsConsumeModalOpen(false);
-    setSelectedItemId(null);
+    // Use the new Blobbi play action that creates proper Nostr events
+    playWithBlobbi(
+      {
+        petId: status.currentPet.id,
+        itemId,
+        quantity,
+      },
+      {
+        onSuccess: (result) => {
+          const itemDisplayName = itemId.replace('toy_', '').replace('_', ' ');
+          toast({
+            title: "Playing Successful! 🎾",
+            description: `Played with ${quantity} ${itemDisplayName}(s) with ${status.currentPet?.name}! Gained ${result.experienceGained} XP.`,
+          });
+          setIsConsumeModalOpen(false);
+          setSelectedItemId(null);
+        },
+        onError: (error) => {
+          // Revert optimistic update on error
+          setOptimisticInventory(null);
+          toast({
+            title: "Playing Failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const getItemQuantity = (itemId: string): number => {
-    const inventoryItem = status.owner?.inventory.find(item => item.itemId === itemId);
+    if (!currentInventory) return 0;
 
-    // For demo purposes, provide mock quantities if no real inventory data exists
-    if (!inventoryItem && !status.owner?.inventory.length) {
-      const mockQuantities: Record<string, number> = {
-        ball: 5,
-        bear: 3,
-      };
-      return mockQuantities[itemId] || 0;
-    }
+    // Inventory items have prefixes, so convert to prefixed version
+    const prefixedItemId = itemId.startsWith('toy_') ? itemId : `toy_${itemId}`;
+    const inventoryItem = currentInventory.find(item => item.itemId === prefixedItemId);
 
     return inventoryItem?.quantity || 0;
   };
@@ -322,16 +387,39 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
               />
             )} */}
 
-            {/* Chest items - only render when modal is open and bounds are set */}
-            {isOpen && containerBounds.width > 0 && chestItems.map((item) => (
-              <ChestItem
-                key={item.id}
-                item={item}
-                containerBounds={containerBounds}
-                onPositionChange={updateItemPosition}
-                onClick={handleItemClick}
-              />
-            ))}
+            {/* Toy items - only render when modal is open and we have inventory data */}
+            {isOpen && !isInventoryLoading && toyItems.map((toy) => {
+              const position = toyItemPositions[toy.id] || { x: 0, y: 0 };
+              return (
+                <ChestItem
+                  key={toy.id}
+                  item={{
+                    ...toy,
+                    position
+                  }}
+                  containerBounds={containerBounds}
+                  onPositionChange={updateItemPosition}
+                  onClick={handleItemClick}
+                />
+              );
+            })}
+
+            {/* Loading state */}
+            {isOpen && isInventoryLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white text-sm">Loading inventory...</div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {isOpen && !isInventoryLoading && toyItems.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white text-sm text-center">
+                  <p>Your toy chest is empty!</p>
+                  <p className="text-xs opacity-75 mt-1">Get some toys from the shop</p>
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
@@ -347,7 +435,9 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
           }}
           itemId={selectedItemId}
           maxQuantity={getItemQuantity(selectedItemId)}
-          onUseItem={handleUseItem}
+          onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
+          isLoading={isPlaying}
+          loadingText="Playing..."
         />
       )}
     </>

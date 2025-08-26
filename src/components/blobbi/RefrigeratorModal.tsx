@@ -41,16 +41,8 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   // Shelf positions from bottom of modal (in pixels)
   const shelves = useMemo(() => [250, 365, 505], []);
 
-  // Map of available food items with their image paths
-  // Maps both prefixed and non-prefixed item IDs to their image paths
+  // Map of available food items with their image paths (only prefixed versions exist)
   const availableFoodItems = useMemo(() => ({
-    // Non-prefixed versions (legacy support)
-    apple: '/assets/interactive/food/apple.png',
-    pizza: '/assets/interactive/food/pizza.png',
-    burger: '/assets/interactive/food/burger.png',
-    cake: '/assets/interactive/food/cake.png',
-    sushi: '/assets/interactive/food/sushi.png',
-    // Prefixed versions (current format)
     food_apple: '/assets/interactive/food/apple.png',
     food_pizza: '/assets/interactive/food/pizza.png',
     food_burger: '/assets/interactive/food/burger.png',
@@ -163,13 +155,9 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
 
     // Apply optimistic inventory update immediately
     if (currentInventory) {
+      const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
       const updatedInventory = currentInventory.map(item => {
-        // Find the item that matches (handle both prefixed and non-prefixed)
-        const isMatch = item.itemId === itemId ||
-                       item.itemId === `food_${itemId}` ||
-                       item.itemId === itemId.replace('food_', '');
-
-        if (isMatch) {
+        if (item.itemId === prefixedItemId) {
           return {
             ...item,
             quantity: Math.max(0, item.quantity - quantity)
@@ -214,19 +202,9 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const getItemQuantity = (itemId: string): number => {
     if (!currentInventory) return 0;
 
-    // Try to find the item with the exact ID first
-    let inventoryItem = currentInventory.find(item => item.itemId === itemId);
-
-    // If not found and the itemId doesn't have the food_ prefix, try with the prefix
-    if (!inventoryItem && !itemId.startsWith('food_')) {
-      inventoryItem = currentInventory.find(item => item.itemId === `food_${itemId}`);
-    }
-
-    // If not found and the itemId has the food_ prefix, try without the prefix
-    if (!inventoryItem && itemId.startsWith('food_')) {
-      const unprefixedId = itemId.replace('food_', '');
-      inventoryItem = currentInventory.find(item => item.itemId === unprefixedId);
-    }
+    // Inventory items have prefixes, so convert to prefixed version
+    const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
+    const inventoryItem = currentInventory.find(item => item.itemId === prefixedItemId);
 
     return inventoryItem?.quantity || 0;
   };
@@ -339,6 +317,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           maxQuantity={getItemQuantity(selectedItemId)}
           onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
           isLoading={isFeeding}
+          loadingText="Feeding..."
         />
       )}
     </>
