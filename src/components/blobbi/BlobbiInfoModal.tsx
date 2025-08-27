@@ -3,11 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+
 
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide-react';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
+import { AccessoryInventoryGrid } from './AccessoryInventoryGrid';
+import { AccessoryEditPanel } from './AccessoryEditPanel';
+import type { AccessoryItem } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
@@ -22,13 +25,7 @@ interface BlobbiInfoModalProps {
   defaultTab?: 'primary' | 'inventory';
 }
 
-interface AccessoryItem {
-  id: string;
-  name: string;
-  iconSrc: string;
-  equipped?: boolean;
-  rarity?: string;
-}
+
 
 function getUrgencyVariant(urgency: CareUrgency): "default" | "destructive" | "outline" | "secondary" {
   switch (urgency) {
@@ -79,28 +76,14 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const ownerProfile = useOwnerProfile();
   const backgroundSrc = getBlobbiBackground(backgroundKey);
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(defaultTab);
+  const [selectedAccessory, setSelectedAccessory] = useState<AccessoryItem | null>(null);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
   const primaryContentRef = useRef<HTMLDivElement>(null);
 
   // Mock accessories data - to be replaced with real data later
-  const accessories: AccessoryItem[] = [
-    // Uncomment below to test the inventory grid layout:
-    // { id: '1', name: 'Party Hat', iconSrc: '/accessories/party-hat.png', rarity: 'Rare', equipped: true },
-    // { id: '2', name: 'Sunglasses', iconSrc: '/accessories/sunglasses.png', rarity: 'Common' },
-    // { id: '3', name: 'Bow Tie', iconSrc: '/accessories/bow-tie.png', rarity: 'Uncommon' },
-    // { id: '4', name: 'Crown', iconSrc: '/accessories/crown.png', rarity: 'Legendary' },
-    // { id: '5', name: 'Scarf', iconSrc: '/accessories/scarf.png', rarity: 'Common' },
-    // { id: '6', name: 'Earrings', iconSrc: '/accessories/earrings.png', rarity: 'Rare' },
-    // { id: '7', name: 'Necklace', iconSrc: '/accessories/necklace.png', rarity: 'Epic' },
-    // { id: '8', name: 'Badge', iconSrc: '/accessories/badge.png', rarity: 'Common' },
-    // { id: '9', name: 'Tie', iconSrc: '/accessories/tie.png', rarity: 'Uncommon' },
-    // Add more items to test scrolling:
-    // { id: '10', name: 'Glasses', iconSrc: '/accessories/glasses.png', rarity: 'Rare' },
-    // { id: '11', name: 'Bandana', iconSrc: '/accessories/bandana.png', rarity: 'Common' },
-    // { id: '12', name: 'Medal', iconSrc: '/accessories/medal.png', rarity: 'Legendary' },
-  ];
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -423,70 +406,22 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
                 {/* Inventory Tab Content */}
                 <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
-                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
-                  {accessories.length === 0 ? (
-                    // Empty State
-                    <Card className="border-dashed border-purple-200/60 dark:border-purple-800/60">
-                      <CardContent className="py-12 px-8 text-center">
-                        <div className="max-w-sm mx-auto space-y-4">
-                          <Package className="h-12 w-12 mx-auto text-purple-300 dark:text-purple-600" />
-                          <div className="space-y-2">
-                            <h3 className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                              No accessories yet
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                              Earn or unlock items to fill your inventory.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  {selectedAccessory ? (
+                    // Edit Panel View
+                    <div className="flex-1 min-h-0 flex justify-center items-start p-4 overflow-y-auto">
+                      <AccessoryEditPanel
+                        accessory={selectedAccessory}
+                        onClose={() => setSelectedAccessory(null)}
+                      />
+                    </div>
                   ) : (
-                    // Inventory Grid
-                    <div className="grid grid-cols-3 gap-3 content-start" style={{ contain: 'content' }}>
-                      {accessories.map((accessory) => (
-                        <Card
-                          key={accessory.id}
-                          className="group rounded-xl border bg-white/70 dark:bg-gray-800/70 backdrop-blur p-2 hover:shadow-md transition-shadow focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-1"
-                        >
-                          <CardContent className="p-0">
-                            {/* Thumbnail */}
-                            <div className="relative w-full aspect-[1/1] overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800 mb-2">
-                              <img
-                                src={accessory.iconSrc}
-                                alt={accessory.name}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                decoding="async"
-                                fetchPriority="low"
-                                width="100"
-                                height="100"
-                              />
-                              {accessory.equipped && (
-                                <div className="absolute top-1 right-1">
-                                  <Badge variant="secondary" className="text-xs px-1 py-0">
-                                    ✓
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Item Details */}
-                            <div className="space-y-1">
-                              <h4 className="line-clamp-1 text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                                {accessory.name}
-                              </h4>
-                              {accessory.rarity && (
-                                <Badge variant="outline" className="text-xs px-1 py-0">
-                                  {accessory.rarity}
-                                </Badge>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                    // Grid View
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+                      <AccessoryInventoryGrid
+                        onAccessoryClick={setSelectedAccessory}
+                      />
                     </div>
                   )}
-                  </div>
                 </TabsContent>
               </div>
             </Tabs>
