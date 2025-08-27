@@ -18,11 +18,11 @@ interface AccessoryEditPanelProps {
 
 export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelProps) {
   const { equipment, equipAccessory, unequipAccessory, isEquipping, isUnequipping } = useAccessoryManagement();
-  
+
   // Find current equipment for this accessory or same slot
   const currentEquipment = equipment.find(eq => eq.code === accessory.code);
   const slotEquipment = equipment.find(eq => eq.slot === accessory.slot);
-  
+
   // Initialize form data
   const [formData, setFormData] = useState(() => {
     const defaults = {
@@ -34,7 +34,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
       form: 'default' as const,
       refw: 100,
       refh: 100,
-      url: generateAccessoryUrl(accessory.code),
+      url: generateAccessoryUrl(accessory.code) || '',
     };
 
     if (currentEquipment) {
@@ -47,7 +47,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
         form: currentEquipment.form,
         refw: currentEquipment.refw,
         refh: currentEquipment.refh,
-        url: currentEquipment.url,
+        url: currentEquipment.url || '',
       };
     }
 
@@ -61,7 +61,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
       ...prev,
       [field]: value,
     }));
-    
+
     // Clear error when user changes the value
     if (errors[field]) {
       setErrors(prev => {
@@ -110,6 +110,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
       await equipAccessory({
         code: accessory.code,
         ...formData,
+        url: formData.url || '', // Ensure URL is not null
       });
       onClose();
     } catch (error) {
@@ -163,7 +164,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Preview */}
         <div className="flex justify-center">
@@ -200,7 +201,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
             />
             {errors.x && <p className="text-xs text-red-500">{errors.x}</p>}
           </div>
-          
+
           <div className="space-y-1">
             <Label htmlFor="y" className="text-xs">Y Position (0-100)</Label>
             <Input
@@ -232,7 +233,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
             />
             {errors.scale && <p className="text-xs text-red-500">{errors.scale}</p>}
           </div>
-          
+
           <div className="space-y-1">
             <Label htmlFor="rot" className="text-xs">Rotation (-45 to 45)</Label>
             <Input
@@ -288,7 +289,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
             />
             {errors.refw && <p className="text-xs text-red-500">{errors.refw}</p>}
           </div>
-          
+
           <div className="space-y-1">
             <Label htmlFor="refh" className="text-xs">Ref Height</Label>
             <Input
@@ -308,8 +309,8 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
           <Label htmlFor="url" className="text-xs">Image URL</Label>
           <Input
             id="url"
-            value={formData.url}
-            onChange={(e) => handleInputChange('url', e.target.value)}
+            value={formData.url || ''}
+            onChange={(e) => handleInputChange('url', e.target.value || '')}
             className={errors.url ? 'border-red-500' : ''}
           />
           {errors.url && <p className="text-xs text-red-500">{errors.url}</p>}
@@ -335,7 +336,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
             <Save className="h-4 w-4 mr-1" />
             {isEquipping ? 'Saving...' : (isEquipped ? 'Update' : 'Equip')}
           </Button>
-          
+
           {isEquipped && (
             <Button
               onClick={handleRemove}

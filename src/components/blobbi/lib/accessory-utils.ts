@@ -22,12 +22,21 @@ import {
 
 /** Infer accessory slot from code prefix */
 export function inferSlotFromCode(code: string): AccessorySlot {
+  // Back-compat: map "glasses-" prefix to "eyewear-"
+  if (code.startsWith('glasses-')) {
+    return 'eyewear';
+  }
+
   for (const [slot, prefix] of Object.entries(SLOT_PREFIXES)) {
+    if (slot === 'unknown') continue; // Skip unknown slot
     if (code.startsWith(prefix)) {
       return slot as AccessorySlot;
     }
   }
-  throw new AccessoryValidationError(`Invalid accessory code: ${code}`);
+
+  // If prefix is unknown, return "unknown" instead of throwing
+  console.warn(`Unknown accessory prefix for code: ${code}`);
+  return 'unknown';
 }
 
 // ============================================================================
@@ -35,10 +44,18 @@ export function inferSlotFromCode(code: string): AccessorySlot {
 // ============================================================================
 
 /** Generate GitHub URL for accessory based on code */
-export function generateAccessoryUrl(code: string): string {
-  const slot = inferSlotFromCode(code);
-  const filename = `${code}.png`;
-  return `${GITHUB_ACCESSORY_BASE_URL}/${slot}/${filename}`;
+export function generateAccessoryUrl(code: string): string | null {
+  try {
+    const slot = inferSlotFromCode(code);
+    if (slot === 'unknown') {
+      return null; // Don't generate URL for unknown slots
+    }
+    const filename = `${code}.png`;
+    return `${GITHUB_ACCESSORY_BASE_URL}/${slot}/${filename}`;
+  } catch (error) {
+    console.warn(`Failed to generate accessory URL for ${code}:`, error);
+    return null;
+  }
 }
 
 // ============================================================================
@@ -48,7 +65,7 @@ export function generateAccessoryUrl(code: string): string {
 /** Parse an equip tag from event tags */
 export function parseEquipTag(tags: string[][], code: string): EquipmentConfig | null {
   const equipTag = tags.find(([name, tagCode]) => name === 'equip' && tagCode === code);
-  
+
   if (!equipTag) return null;
 
   const tagEntries = Object.fromEntries(
@@ -70,7 +87,7 @@ export function parseEquipTag(tags: string[][], code: string): EquipmentConfig |
       refw: parseInt(tagEntries.refw || '100', 10),
       refh: parseInt(tagEntries.refh || '100', 10),
       form: (tagEntries.form || 'default') as AccessoryForm,
-      url: tagEntries.url || generateAccessoryUrl(code),
+      url: tagEntries.url || generateAccessoryUrl(code) || '',
       slot: inferSlotFromCode(code),
     };
   } catch (error) {
@@ -84,31 +101,41 @@ export function parseInvTags(tags: string[][]): AccessoryItem[] {
   return tags
     .filter(([name]) => name === 'inv')
     .map((invTag) => {
-      const tagEntries = Object.fromEntries(
-        invTag.slice(1).map((value, index) => {
-          const key = invTag[index * 2 + 1];
-          const val = invTag[index * 2 + 2];
-          return [key, val];
-        })
-      );
-
       try {
+        const tagEntries = Object.fromEntries(
+          invTag.slice(1).map((value, index) => {
+            const key = invTag[index * 2 + 1];
+            const val = invTag[index * 2 + 2];
+            return [key, val];
+          })
+        );
+
         const code = tagEntries[''] || '';
         const qty = parseInt(tagEntries.qty || '0', 10);
-        const url = tagEntries.url || generateAccessoryUrl(code);
+
+        // Skip if quantity is 0 or invalid
+        if (qty <= 0 || isNaN(qty)) {
+          return null;
+        }
+
+        // Generate URL safely - never throw
+        const url = tagEntries.url || generateAccessoryUrl(code) || '';
+
+        // Infer slot safely - never throw
+        const slot = inferSlotFromCode(code);
 
         return {
           code,
           quantity: qty,
           url,
-          slot: inferSlotFromCode(code),
+          slot,
         };
       } catch (error) {
         console.warn(`Failed to parse inv tag:`, invTag, error);
         return null;
       }
     })
-    .filter((item): item is AccessoryItem => item !== null && item.quantity > 0);
+    .filter((item): item is AccessoryItem => item !== null);
 }
 
 /** Parse all equipment tags from event tags */
@@ -116,16 +143,22 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
   return tags
     .filter(([name]) => name === 'equip')
     .map((equipTag) => {
-      const code = equipTag[1];
-      const tagEntries = Object.fromEntries(
-        equipTag.slice(1).map((value, index) => {
-          const key = equipTag[index * 2 + 1];
-          const val = equipTag[index * 2 + 2];
-          return [key, val];
-        })
-      );
-
       try {
+        const code = equipTag[1];
+        const tagEntries = Object.fromEntries(
+          equipTag.slice(1).map((value, index) => {
+            const key = equipTag[index * 2 + 1];
+            const val = equipTag[index * 2 + 2];
+            return [key, val];
+          })
+        );
+
+        // Generate URL safely
+        const url = tagEntries.url || generateAccessoryUrl(code) || '';
+
+        // Infer slot safely
+        const slot = inferSlotFromCode(code);
+
         return {
           code,
           x: parseInt(tagEntries.x || '50', 10),
@@ -136,8 +169,8 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
           refw: parseInt(tagEntries.refw || '100', 10),
           refh: parseInt(tagEntries.refh || '100', 10),
           form: (tagEntries.form || 'default') as AccessoryForm,
-          url: tagEntries.url || generateAccessoryUrl(code),
-          slot: inferSlotFromCode(code),
+          url,
+          slot,
         };
       } catch (error) {
         console.warn(`Failed to parse equip tag:`, equipTag, error);
@@ -154,7 +187,7 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
 /** Create an equip tag from equipment config */
 export function createEquipTag(config: EquipmentConfig): string[] {
   const tag: string[] = ['equip', config.code];
-  
+
   // Add all properties
   tag.push('x', config.x.toString());
   tag.push('y', config.y.toString());
@@ -166,7 +199,7 @@ export function createEquipTag(config: EquipmentConfig): string[] {
   tag.push('form', config.form);
   tag.push('url', config.url);
   tag.push('ver', '1');
-  
+
   return tag;
 }
 
@@ -184,31 +217,31 @@ export function validateAccessoryEditData(data: AccessoryEditData): void {
   if (data.x < 0 || data.x > 100) {
     throw new AccessoryValidationError('X position must be between 0 and 100');
   }
-  
+
   if (data.y < 0 || data.y > 100) {
     throw new AccessoryValidationError('Y position must be between 0 and 100');
   }
-  
+
   if (data.scale < 0.25 || data.scale > 2.0) {
     throw new AccessoryValidationError('Scale must be between 0.25 and 2.0');
   }
-  
+
   if (data.rot < -45 || data.rot > 45) {
     throw new AccessoryValidationError('Rotation must be between -45 and 45 degrees');
   }
-  
+
   if (!VALID_FORMS.includes(data.form)) {
     throw new AccessoryValidationError(`Invalid form: ${data.form}`);
   }
-  
+
   if (data.refw <= 0) {
     throw new AccessoryValidationError('Reference width must be positive');
   }
-  
+
   if (data.refh <= 0) {
     throw new AccessoryValidationError('Reference height must be positive');
   }
-  
+
   if (!data.url.trim()) {
     throw new AccessoryValidationError('URL cannot be empty');
   }
@@ -231,7 +264,7 @@ export function isValidAccessoryCode(code: string): boolean {
 /** Merge duplicate inventory tags by summing quantities */
 export function mergeInventoryTags(items: AccessoryItem[]): AccessoryItem[] {
   const merged = new Map<string, AccessoryItem>();
-  
+
   for (const item of items) {
     const existing = merged.get(item.code);
     if (existing) {
@@ -243,7 +276,7 @@ export function mergeInventoryTags(items: AccessoryItem[]): AccessoryItem[] {
       merged.set(item.code, { ...item });
     }
   }
-  
+
   return Array.from(merged.values()).sort((a, b) => a.code.localeCompare(b.code));
 }
 
@@ -264,6 +297,29 @@ export function checkInventoryQuantity(inventory: AccessoryItem[], code: string,
 }
 
 // ============================================================================
+// Local Asset Resolution
+// ============================================================================
+
+/** Resolve accessory image URL from local assets first, then fallback to remote */
+export function resolveAccessoryImageUrl(code: string, slot: AccessorySlot, _remoteUrl?: string): string {
+  // Don't try to resolve URLs for unknown slots
+  if (slot === 'unknown') {
+    return '';
+  }
+
+  const _webpPath = `/assets/accessories/${slot}/${code}.webp`;
+  const pngPath = `/assets/accessories/${slot}/${code}.png`;
+
+  // Try legacy misspelled path as fallback
+  const _legacyWebpPath = `/assets/acessories/${slot}/${code}.webp`;
+  const _legacyPngPath = `/assets/acessories/${slot}/${code}.png`;
+
+  // For this implementation, prioritize local PNG assets
+  // The onError handler in the component will handle fallbacks
+  return pngPath;
+}
+
+// ============================================================================
 // Event Tag Management
 // ============================================================================
 
@@ -281,14 +337,14 @@ export function removeEquipTags(tags: string[][]): string[][] {
 export function updateInvTags(tags: string[][], items: AccessoryItem[]): string[][] {
   // Remove existing inv tags
   const filteredTags = removeInvTags(tags);
-  
+
   // Add new inv tags
   for (const item of items) {
     if (item.quantity > 0) {
       filteredTags.push(createInvTag(item));
     }
   }
-  
+
   return filteredTags;
 }
 
@@ -296,46 +352,49 @@ export function updateInvTags(tags: string[][], items: AccessoryItem[]): string[
 export function updateEquipTags(tags: string[][], equipment: EquipmentConfig[]): string[][] {
   // Remove existing equip tags
   const filteredTags = removeEquipTags(tags);
-  
+
   // Add new equip tags
   for (const config of equipment) {
     filteredTags.push(createEquipTag(config));
   }
-  
+
   return filteredTags;
 }
 
 /** Update inventory quantity for a specific item */
 export function updateInventoryQuantity(inventory: AccessoryItem[], code: string, delta: number): AccessoryItem[] {
   const existing = inventory.find(item => item.code === code);
-  
+
   if (!existing && delta > 0) {
     // Create new item if it doesn't exist and we're adding
+    const url = generateAccessoryUrl(code) || '';
+    const slot = inferSlotFromCode(code);
+
     return [
       ...inventory,
       {
         code,
         quantity: delta,
-        url: generateAccessoryUrl(code),
-        slot: inferSlotFromCode(code),
+        url,
+        slot,
       }
     ];
   }
-  
+
   if (!existing) {
     return inventory; // No change if item doesn't exist and we're removing
   }
-  
+
   const newQuantity = existing.quantity + delta;
-  
+
   if (newQuantity <= 0) {
     // Remove item if quantity reaches 0
     return inventory.filter(item => item.code !== code);
   }
-  
+
   // Update existing item
-  return inventory.map(item => 
-    item.code === code 
+  return inventory.map(item =>
+    item.code === code
       ? { ...item, quantity: newQuantity }
       : item
   );

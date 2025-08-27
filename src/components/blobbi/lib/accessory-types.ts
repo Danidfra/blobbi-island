@@ -1,6 +1,6 @@
 /**
  * TypeScript types for Blobbi accessory management
- * 
+ *
  * This system handles:
  * - Kind 31125: Owner Profile with inventory tags (inv)
  * - Kind 31124: Pet State with equipment tags (equip)
@@ -11,7 +11,7 @@
 // ============================================================================
 
 /** Accessory slot type inferred from code prefix */
-export type AccessorySlot = 'headwear' | 'eyewear';
+export type AccessorySlot = 'headwear' | 'eyewear' | 'back' | 'neckwear' | 'handheld' | 'face-mark' | 'aura' | 'color-overlay' | 'unknown';
 
 /** Accessory form type */
 export type AccessoryForm = 'default' | 'baby' | 'teen' | 'adult';
@@ -128,10 +128,20 @@ export interface AccessoryEditData {
 export const SLOT_PREFIXES: Record<AccessorySlot, string> = {
   headwear: 'headwear-',
   eyewear: 'eyewear-',
+  back: 'back-',
+  neckwear: 'neckwear-',
+  handheld: 'handheld-',
+  'face-mark': 'face-mark-',
+  aura: 'aura-',
+  'color-overlay': 'color-overlay-',
+  unknown: '',
 } as const;
 
 /** All valid accessory form values */
 export const VALID_FORMS: AccessoryForm[] = ['default', 'baby', 'teen', 'adult'] as const;
+
+/** Regular expression pattern for valid accessory codes */
+export const ACCESSORY_CODE_PATTERN = /^(headwear|eyewear|back|neckwear|handheld|face-mark|aura|color-overlay)-[A-Za-z0-9_-]+$/;
 
 /** GitHub repository URL pattern */
 export const GITHUB_ACCESSORY_BASE_URL = 'https://danidfra.github.io/blobbi-designs/accessories';

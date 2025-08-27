@@ -1,6 +1,6 @@
 /**
  * Accessory Management Hooks
- * 
+ *
  * Provides hooks for managing accessories in Blobbi events:
  * - Reading inventory from kind 31125
  * - Reading equipment from kind 31124
@@ -14,6 +14,7 @@ import { useNostr } from '../../../hooks/useNostr';
 import { useOptimizedStatus } from '../../../hooks/useOptimizedStatus';
 import { useNostrPublish } from '../../../hooks/useNostrPublish';
 import type {
+  AccessoryItem,
   EquipmentConfig,
   AccessoryEditData
 } from '../lib/accessory-types';
@@ -74,6 +75,94 @@ export function useAccessoryInventory() {
 
       const inventory = parseInvTags(events[0].tags);
       return mergeInventoryTags(inventory);
+    },
+    enabled: !!user?.pubkey,
+    staleTime: 30000, // 30 seconds
+  });
+}
+
+/** Hook for fetching user's accessory inventory for UI-only display (optimized for Inventory tab) */
+export function useAccessoryInventoryUI() {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+
+  return useQuery({
+    queryKey: ['accessory-inventory-ui', user?.pubkey],
+    queryFn: async (c) => {
+      if (!user?.pubkey) {
+        return [];
+      }
+
+      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
+
+      const events = await nostr.query([{
+        kinds: [31125],
+        authors: [user.pubkey],
+        limit: 1,
+      }], { signal });
+
+      if (events.length === 0) {
+        return [];
+      }
+
+      // Parse inv tags with resilient parsing - never throw, skip malformed tags
+      const inventory = events[0].tags
+        .filter(([name]) => name === 'inv')
+        .map((invTag) => {
+          try {
+            const tagEntries = Object.fromEntries(
+              invTag.slice(1).map((value, index) => {
+                const key = invTag[index * 2 + 1];
+                const val = invTag[index * 2 + 2];
+                return [key, val];
+              })
+            );
+
+            const code = tagEntries[''] || '';
+            const qty = parseInt(tagEntries.qty || '0', 10);
+
+            // Skip if quantity is 0 or invalid
+            if (qty <= 0 || isNaN(qty)) {
+              return null;
+            }
+
+            // Infer slot from code prefix (with back-compat for glasses- -> eyewear-)
+            let slot = 'unknown';
+            if (code.startsWith('glasses-')) {
+              slot = 'eyewear';
+            } else if (code.startsWith('headwear-')) {
+              slot = 'headwear';
+            } else if (code.startsWith('eyewear-')) {
+              slot = 'eyewear';
+            } else if (code.startsWith('back-')) {
+              slot = 'back';
+            } else if (code.startsWith('neckwear-')) {
+              slot = 'neckwear';
+            } else if (code.startsWith('handheld-')) {
+              slot = 'handheld';
+            } else if (code.startsWith('face-mark-')) {
+              slot = 'face-mark';
+            } else if (code.startsWith('aura-')) {
+              slot = 'aura';
+            } else if (code.startsWith('color-overlay-')) {
+              slot = 'color-overlay';
+            }
+
+            return {
+              code,
+              quantity: qty,
+              slot,
+              // No URL needed for UI-only display - will use local assets
+              url: '',
+            };
+          } catch (error) {
+            console.warn(`Failed to parse inv tag for UI display:`, invTag, error);
+            return null;
+          }
+        })
+        .filter((item): item is AccessoryItem => item !== null);
+
+      return inventory;
     },
     enabled: !!user?.pubkey,
     staleTime: 30000, // 30 seconds
@@ -158,7 +247,7 @@ export function useEquipAccessory() {
       const petEvent = petEvents[0];
       const currentEquipment = parseEquipTags(petEvent.tags);
       const slot = inferSlotFromCode(editData.code);
-      
+
       // Find existing equipment in the same slot
       const existingInSlot = findEquipmentBySlot(currentEquipment, slot);
 
@@ -357,15 +446,15 @@ export function useAccessoryManagement() {
     inventory: inventory || [],
     equipment: equipment || [],
     currentPet: status?.currentPet || null,
-    
+
     // Actions
     equipAccessory,
     unequipAccessory,
-    
+
     // Loading states
     isEquipping: equipMutation.isPending,
     isUnequipping: unequipMutation.isPending,
-    
+
     // Errors
     equipError: equipMutation.error,
     unequipError: unequipMutation.error,

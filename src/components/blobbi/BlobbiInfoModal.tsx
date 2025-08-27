@@ -8,9 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide-react';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
-import { AccessoryInventoryGrid } from './AccessoryInventoryGrid';
-import { AccessoryEditPanel } from './AccessoryEditPanel';
-import type { AccessoryItem } from './lib/accessory-types';
+import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
@@ -76,7 +74,6 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const ownerProfile = useOwnerProfile();
   const backgroundSrc = getBlobbiBackground(backgroundKey);
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(defaultTab);
-  const [selectedAccessory, setSelectedAccessory] = useState<AccessoryItem | null>(null);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
@@ -406,22 +403,9 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
                 {/* Inventory Tab Content */}
                 <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
-                  {selectedAccessory ? (
-                    // Edit Panel View
-                    <div className="flex-1 min-h-0 flex justify-center items-start p-4 overflow-y-auto">
-                      <AccessoryEditPanel
-                        accessory={selectedAccessory}
-                        onClose={() => setSelectedAccessory(null)}
-                      />
-                    </div>
-                  ) : (
-                    // Grid View
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
-                      <AccessoryInventoryGrid
-                        onAccessoryClick={setSelectedAccessory}
-                      />
-                    </div>
-                  )}
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+                    <AccessoryInventoryUI />
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>

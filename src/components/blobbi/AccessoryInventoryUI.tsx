@@ -1,12 +1,11 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useAccessoryManagement } from './hooks/useAccessoryManagement';
-import { resolveAccessoryImageUrl } from './lib/accessory-utils';
+import { useAccessoryInventoryUI } from './hooks/useAccessoryManagement';
 import type { AccessoryItem } from './lib/accessory-types';
 
-interface AccessoryInventoryGridProps {
-  onAccessoryClick: (accessory: AccessoryItem) => void;
+interface AccessoryInventoryUIProps {
+  onAccessoryClick?: (accessory: AccessoryItem) => void;
   className?: string;
 }
 
@@ -25,14 +24,32 @@ function getSlotEmoji(slot: string): string {
   }
 }
 
-export function AccessoryInventoryGrid({ onAccessoryClick, className }: AccessoryInventoryGridProps) {
-  const { inventory, equipment } = useAccessoryManagement();
+// Helper function to resolve local asset URL
+function resolveLocalAssetUrl(code: string, slot: string): string {
+  if (slot === 'unknown') {
+    return ''; // No asset path for unknown slots
+  }
 
-  // Filter inventory to only include accessories with quantity > 0
-  const availableAccessories = inventory.filter(item => item.quantity > 0);
+  // Try primary path first - PNG format for maximum compatibility
+  return `/assets/accessories/${slot}/${code}.png`;
+}
 
-  // Create a set of equipped accessory codes for quick lookup
-  const equippedCodes = new Set(equipment.map(eq => eq.code));
+export function AccessoryInventoryUI({ onAccessoryClick, className }: AccessoryInventoryUIProps) {
+  const { data: inventory, isLoading } = useAccessoryInventoryUI();
+
+  // Filter inventory to only include accessories with quantity > 0 (already done in hook, but double-check)
+  const availableAccessories = inventory?.filter(item => item.quantity > 0) || [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground text-sm">Loading inventory...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (availableAccessories.length === 0) {
     return (
@@ -57,10 +74,8 @@ export function AccessoryInventoryGrid({ onAccessoryClick, className }: Accessor
   return (
     <div className={`grid grid-cols-3 gap-3 content-start ${className || ''}`} style={{ contain: 'content' }}>
       {availableAccessories.map((accessory) => {
-        const isEquipped = equippedCodes.has(accessory.code);
-
-        // Resolve image URL from local assets first
-        const imageUrl = resolveAccessoryImageUrl(accessory.code, accessory.slot, accessory.url);
+        // Resolve local asset URL - never use external URLs
+        const imageUrl = resolveLocalAssetUrl(accessory.code, accessory.slot);
 
         return (
           <Card
@@ -69,9 +84,8 @@ export function AccessoryInventoryGrid({ onAccessoryClick, className }: Accessor
               group rounded-xl border bg-white/70 dark:bg-gray-800/70 backdrop-blur p-2
               hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer
               focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-1
-              ${isEquipped ? 'ring-2 ring-purple-500/50' : ''}
             `}
-            onClick={() => onAccessoryClick(accessory)}
+            onClick={() => onAccessoryClick?.(accessory)}
           >
             <CardContent className="p-0">
               {/* Thumbnail */}
@@ -85,13 +99,30 @@ export function AccessoryInventoryGrid({ onAccessoryClick, className }: Accessor
                   width="100"
                   height="100"
                   onError={(e) => {
-                    // Fallback to placeholder if image fails to load
+                    // Try legacy misspelled path first
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const placeholder = document.createElement('div');
-                    placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
-                    placeholder.textContent = getSlotEmoji(accessory.slot);
-                    target.parentElement?.appendChild(placeholder);
+                    const currentSrc = target.src;
+                    const legacyPath = `/assets/acessories/${accessory.slot}/${accessory.code}.png`;
+
+                    if (!currentSrc.includes(legacyPath)) {
+                      // Try legacy path
+                      target.src = legacyPath;
+                      target.onerror = () => {
+                        // If legacy path also fails, show placeholder
+                        target.style.display = 'none';
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
+                        placeholder.textContent = getSlotEmoji(accessory.slot);
+                        target.parentElement?.appendChild(placeholder);
+                      };
+                    } else {
+                      // Already tried legacy path, show placeholder
+                      target.style.display = 'none';
+                      const placeholder = document.createElement('div');
+                      placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
+                      placeholder.textContent = getSlotEmoji(accessory.slot);
+                      target.parentElement?.appendChild(placeholder);
+                    }
                   }}
                 />
 
@@ -101,15 +132,6 @@ export function AccessoryInventoryGrid({ onAccessoryClick, className }: Accessor
                     {accessory.quantity}
                   </Badge>
                 </div>
-
-                {/* Equipped indicator */}
-                {isEquipped && (
-                  <div className="absolute top-1 right-1">
-                    <Badge variant="default" className="text-xs px-1.5 py-0.5 bg-purple-600">
-                      ✓
-                    </Badge>
-                  </div>
-                )}
               </div>
 
               {/* Item Details */}
