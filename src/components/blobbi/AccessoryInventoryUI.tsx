@@ -24,13 +24,15 @@ function getSlotEmoji(slot: string): string {
   }
 }
 
-// Helper function to resolve local asset URL
+// Helper function to resolve local asset URL with proper fallback chain
 function resolveLocalAssetUrl(code: string, slot: string): string {
   if (slot === 'unknown') {
     return ''; // No asset path for unknown slots
   }
 
-  // Try primary path first - PNG format for maximum compatibility
+  // Try .webp first (better compression), then .png (fallback)
+  // For now, return .png as primary since that's what exists in the assets
+  // The onError handler will try webp first as fallback
   return `/assets/accessories/${slot}/${code}.png`;
 }
 
@@ -99,16 +101,88 @@ export function AccessoryInventoryUI({ onAccessoryClick, className }: AccessoryI
                   width="100"
                   height="100"
                   onError={(e) => {
-                    // Try legacy misspelled path first
+                    // Implement fallback chain: .webp -> .png -> legacy misspelled path -> placeholder
                     const target = e.target as HTMLImageElement;
                     const currentSrc = target.src;
-                    const legacyPath = `/assets/acessories/${accessory.slot}/${accessory.code}.png`;
+                    const webpPath = `/assets/accessories/${accessory.slot}/${accessory.code}.webp`;
+                    const pngPath = `/assets/accessories/${accessory.slot}/${accessory.code}.png`;
+                    const legacyWebpPath = `/assets/acessories/${accessory.slot}/${accessory.code}.webp`;
+                    const legacyPngPath = `/assets/acessories/${accessory.slot}/${accessory.code}.png`;
 
-                    if (!currentSrc.includes(legacyPath)) {
-                      // Try legacy path
-                      target.src = legacyPath;
+                    if (!currentSrc.includes(webpPath)) {
+                      // Try webp first
+                      target.src = webpPath;
                       target.onerror = () => {
-                        // If legacy path also fails, show placeholder
+                        if (!currentSrc.includes(pngPath)) {
+                          // Then try png
+                          target.src = pngPath;
+                          target.onerror = () => {
+                            if (!currentSrc.includes(legacyWebpPath)) {
+                              // Then try legacy webp
+                              target.src = legacyWebpPath;
+                              target.onerror = () => {
+                                if (!currentSrc.includes(legacyPngPath)) {
+                                  // Finally try legacy png
+                                  target.src = legacyPngPath;
+                                  target.onerror = () => {
+                                    // If all fail, show placeholder
+                                    target.style.display = 'none';
+                                    const placeholder = document.createElement('div');
+                                    placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
+                                    placeholder.textContent = getSlotEmoji(accessory.slot);
+                                    target.parentElement?.appendChild(placeholder);
+                                  };
+                                };
+                              };
+                            };
+                          };
+                        };
+                      };
+                    } else if (!currentSrc.includes(pngPath)) {
+                      // Try png next
+                      target.src = pngPath;
+                      target.onerror = () => {
+                        if (!currentSrc.includes(legacyWebpPath)) {
+                          // Then try legacy webp
+                          target.src = legacyWebpPath;
+                          target.onerror = () => {
+                            if (!currentSrc.includes(legacyPngPath)) {
+                              // Finally try legacy png
+                              target.src = legacyPngPath;
+                              target.onerror = () => {
+                                // If all fail, show placeholder
+                                target.style.display = 'none';
+                                const placeholder = document.createElement('div');
+                                placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
+                                placeholder.textContent = getSlotEmoji(accessory.slot);
+                                target.parentElement?.appendChild(placeholder);
+                              };
+                            };
+                          };
+                        };
+                      };
+                    } else if (!currentSrc.includes(legacyWebpPath)) {
+                      // Try legacy webp
+                      target.src = legacyWebpPath;
+                      target.onerror = () => {
+                        if (!currentSrc.includes(legacyPngPath)) {
+                          // Finally try legacy png
+                          target.src = legacyPngPath;
+                          target.onerror = () => {
+                            // If all fail, show placeholder
+                            target.style.display = 'none';
+                            const placeholder = document.createElement('div');
+                            placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
+                            placeholder.textContent = getSlotEmoji(accessory.slot);
+                            target.parentElement?.appendChild(placeholder);
+                          };
+                        };
+                      };
+                    } else if (!currentSrc.includes(legacyPngPath)) {
+                      // Finally try legacy png
+                      target.src = legacyPngPath;
+                      target.onerror = () => {
+                        // If all fail, show placeholder
                         target.style.display = 'none';
                         const placeholder = document.createElement('div');
                         placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';
@@ -116,7 +190,7 @@ export function AccessoryInventoryUI({ onAccessoryClick, className }: AccessoryI
                         target.parentElement?.appendChild(placeholder);
                       };
                     } else {
-                      // Already tried legacy path, show placeholder
+                      // All paths tried, show placeholder
                       target.style.display = 'none';
                       const placeholder = document.createElement('div');
                       placeholder.className = 'w-full h-full flex items-center justify-center text-3xl';

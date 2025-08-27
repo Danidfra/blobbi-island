@@ -9,12 +9,14 @@ import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
+import { DebugAccessoriesModal } from './DebugAccessoriesModal';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
+import { Settings } from 'lucide-react';
 
 interface BlobbiInfoModalProps {
   isOpen: boolean;
@@ -74,6 +76,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const ownerProfile = useOwnerProfile();
   const backgroundSrc = getBlobbiBackground(backgroundKey);
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(defaultTab);
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
@@ -406,6 +409,21 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                     <AccessoryInventoryUI />
                   </div>
+
+                  {/* Debug button (development only) */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="pt-4 border-t border-purple-200/60 dark:border-purple-800/60">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsDebugModalOpen(true)}
+                        className="w-full"
+                      >
+                        <Settings className="h-3 w-3 mr-2" />
+                        Debug Accessories
+                      </Button>
+                    </div>
+                  )}
                 </TabsContent>
               </div>
             </Tabs>
@@ -418,6 +436,12 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
           </Button>
         </div>
       </div>
+
+      {/* Debug Accessories Modal (development only) */}
+      <DebugAccessoriesModal
+        isOpen={isDebugModalOpen}
+        onClose={() => setIsDebugModalOpen(false)}
+      />
     </div>
   );
 }

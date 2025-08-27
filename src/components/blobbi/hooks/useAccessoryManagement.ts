@@ -110,16 +110,15 @@ export function useAccessoryInventoryUI() {
         .filter(([name]) => name === 'inv')
         .map((invTag) => {
           try {
-            const tagEntries = Object.fromEntries(
-              invTag.slice(1).map((value, index) => {
-                const key = invTag[index * 2 + 1];
-                const val = invTag[index * 2 + 2];
-                return [key, val];
-              })
-            );
+            // Parse inv tag format: ["inv", "<code>", "qty", "<int>", "url", "..."]
+            if (invTag.length < 4) {
+              console.warn(`Invalid inv tag length:`, invTag);
+              return null;
+            }
 
-            const code = tagEntries[''] || '';
-            const qty = parseInt(tagEntries.qty || '0', 10);
+            const code = invTag[1] || '';
+            const qtyStr = invTag[3] || '0';
+            const qty = parseInt(qtyStr, 10);
 
             // Skip if quantity is 0 or invalid
             if (qty <= 0 || isNaN(qty)) {
@@ -148,12 +147,12 @@ export function useAccessoryInventoryUI() {
               slot = 'color-overlay';
             }
 
+            // Return the parsed inventory item
             return {
               code,
               quantity: qty,
               slot,
-              // No URL needed for UI-only display - will use local assets
-              url: '',
+              url: '', // URL not needed - will use local assets
             };
           } catch (error) {
             console.warn(`Failed to parse inv tag for UI display:`, invTag, error);
