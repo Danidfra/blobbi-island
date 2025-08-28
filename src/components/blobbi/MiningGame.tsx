@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
+import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -21,8 +22,10 @@ interface MinedItem {
 
 export function MiningGame() {
   const { setCurrentLocation } = useLocation();
+  const { status, updatePetStats } = useOptimizedStatus();
+  const currentPet = status.currentPet;
+  
   const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results'>('instructions');
-  const [energy, setEnergy] = useState(100);
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
@@ -37,7 +40,7 @@ export function MiningGame() {
   };
 
   const handleMineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (energy <= 20) {
+    if (!currentPet || currentPet.energy <= 20) {
       finishMining();
       return;
     }
@@ -49,8 +52,11 @@ export function MiningGame() {
     const y = e.clientY - rect.top;
 
     setHoles(prev => [...prev, { x, y }]);
-    setEnergy(prev => prev - 10);
     setClicks(prev => prev + 1);
+
+    // Update the pet's energy by consuming 10 energy
+    const newEnergy = Math.max(0, currentPet.energy - 10);
+    updatePetStats(currentPet.id, { energy: newEnergy });
 
     const random = Math.random();
     let gem: Gem;
@@ -142,9 +148,9 @@ export function MiningGame() {
         ))}
       </div>
 
-      <div className="absolute top-4 right-4 w-32 space-y-2 text-white">
+      <div className="absolute top-4 left-4 w-32 space-y-2 text-white">
         <p>Energy</p>
-        <Progress value={energy} />
+        <Progress value={currentPet?.energy || 0} />
         <Button onClick={finishMining}>Finish Mining</Button>
       </div>
     </div>
