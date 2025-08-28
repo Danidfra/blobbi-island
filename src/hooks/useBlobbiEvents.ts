@@ -304,12 +304,14 @@ function createPetStateTags(input: CreatePetStateInput): string[][] {
   if (input.title) tags.push(['title', input.title]);
   if (input.skill) tags.push(['skill', input.skill]);
 
-  // Add optional egg-specific tags
-  if (input.incubationTime !== undefined) tags.push(['incubation_time', input.incubationTime.toString()]);
-  if (input.incubationProgress !== undefined) tags.push(['incubation_progress', input.incubationProgress.toString()]);
-  if (input.eggTemperature !== undefined) tags.push(['egg_temperature', input.eggTemperature.toString()]);
-  if (input.eggStatus) tags.push(['egg_status', input.eggStatus]);
-  if (input.shellIntegrity !== undefined) tags.push(['shell_integrity', input.shellIntegrity.toString()]);
+  // Add optional egg-specific tags (only for eggs)
+  if (input.stage === 'egg') {
+    if (input.incubationTime !== undefined) tags.push(['incubation_time', input.incubationTime.toString()]);
+    if (input.incubationProgress !== undefined) tags.push(['incubation_progress', input.incubationProgress.toString()]);
+    if (input.eggTemperature !== undefined) tags.push(['egg_temperature', input.eggTemperature.toString()]);
+    if (input.eggStatus) tags.push(['egg_status', input.eggStatus]);
+    if (input.shellIntegrity !== undefined) tags.push(['shell_integrity', input.shellIntegrity.toString()]);
+  }
 
   // Add optional behavior tags
   if (input.isSleeping !== undefined) tags.push(['is_sleeping', input.isSleeping ? 'true' : 'false']);
@@ -398,30 +400,89 @@ export function useUpdatePetState() {
         throw new Error(`Pet with ID ${petId} not found`);
       }
 
-      // Merge with updates
+      const finalStage = updates.stage !== undefined ? updates.stage : existingPet.stage;
+
+      // Merge with updates - preserving ALL existing fields
       const mergedData: CreatePetStateInput = {
         petId,
         name: updates.name !== undefined ? updates.name : existingPet.name,
-        stage: updates.stage !== undefined ? updates.stage : existingPet.stage,
+        stage: finalStage,
         breedingReady: updates.breedingReady !== undefined ? updates.breedingReady : existingPet.breedingReady,
         generation: updates.generation !== undefined ? updates.generation : existingPet.generation,
+        
+        // Core stats (0-100)
         hunger: updates.hunger !== undefined ? updates.hunger : existingPet.hunger,
         happiness: updates.happiness !== undefined ? updates.happiness : existingPet.happiness,
         health: updates.health !== undefined ? updates.health : existingPet.health,
         hygiene: updates.hygiene !== undefined ? updates.hygiene : existingPet.hygiene,
         energy: updates.energy !== undefined ? updates.energy : existingPet.energy,
+        
+        // Progress
         experience: updates.experience !== undefined ? updates.experience : existingPet.experience,
         careStreak: updates.careStreak !== undefined ? updates.careStreak : existingPet.careStreak,
-        // ... include all other fields with similar logic
-        lastMeal: updates.lastMeal !== undefined ? updates.lastMeal : existingPet.lastMeal,
-        lastClean: updates.lastClean !== undefined ? updates.lastClean : existingPet.lastClean,
+        
+        // Appearance
+        baseColor: updates.baseColor !== undefined ? updates.baseColor : existingPet.baseColor,
+        secondaryColor: updates.secondaryColor !== undefined ? updates.secondaryColor : existingPet.secondaryColor,
+        pattern: updates.pattern !== undefined ? updates.pattern : existingPet.pattern,
+        eyeColor: updates.eyeColor !== undefined ? updates.eyeColor : existingPet.eyeColor,
+        specialMark: updates.specialMark !== undefined ? updates.specialMark : existingPet.specialMark,
+        adultType: updates.adultType !== undefined ? updates.adultType : existingPet.adultType,
+        manifestation: updates.manifestation !== undefined ? updates.manifestation : existingPet.manifestation,
+        visualEffect: updates.visualEffect !== undefined ? updates.visualEffect : existingPet.visualEffect,
+        blessing: updates.blessing !== undefined ? updates.blessing : existingPet.blessing,
+        
+        // Personality
+        personality: updates.personality !== undefined ? updates.personality : existingPet.personality,
+        trait: updates.trait !== undefined ? updates.trait : existingPet.trait,
+        mood: updates.mood !== undefined ? updates.mood : existingPet.mood,
+        favoriteFood: updates.favoriteFood !== undefined ? updates.favoriteFood : existingPet.favoriteFood,
+        voiceType: updates.voiceType !== undefined ? updates.voiceType : existingPet.voiceType,
+        size: updates.size !== undefined ? updates.size : existingPet.size,
+        title: updates.title !== undefined ? updates.title : existingPet.title,
+        skill: updates.skill !== undefined ? updates.skill : existingPet.skill,
+        
+        // Egg-specific (only for eggs)
+        ...(finalStage === 'egg' ? {
+          incubationTime: updates.incubationTime !== undefined ? updates.incubationTime : existingPet.incubationTime,
+          incubationProgress: updates.incubationProgress !== undefined ? updates.incubationProgress : existingPet.incubationProgress,
+          eggTemperature: updates.eggTemperature !== undefined ? updates.eggTemperature : existingPet.eggTemperature,
+          eggStatus: updates.eggStatus !== undefined ? updates.eggStatus : existingPet.eggStatus,
+          shellIntegrity: updates.shellIntegrity !== undefined ? updates.shellIntegrity : existingPet.shellIntegrity,
+        } : {}),
+        
+        // Behavior
         isSleeping: updates.isSleeping !== undefined ? updates.isSleeping : existingPet.isSleeping,
         isDirty: updates.isDirty !== undefined ? updates.isDirty : existingPet.isDirty,
-        // Add other fields as needed...
+        hasBuff: updates.hasBuff !== undefined ? updates.hasBuff : existingPet.hasBuff,
+        hasDebuff: updates.hasDebuff !== undefined ? updates.hasDebuff : existingPet.hasDebuff,
+        lastInteraction: updates.lastInteraction !== undefined ? updates.lastInteraction : existingPet.lastInteraction,
+        
+        // Care tracking
+        lastMeal: updates.lastMeal !== undefined ? updates.lastMeal : existingPet.lastMeal,
+        lastClean: updates.lastClean !== undefined ? updates.lastClean : existingPet.lastClean,
+        lastWarm: updates.lastWarm !== undefined ? updates.lastWarm : existingPet.lastWarm,
+        lastTalk: updates.lastTalk !== undefined ? updates.lastTalk : existingPet.lastTalk,
+        lastCheck: updates.lastCheck !== undefined ? updates.lastCheck : existingPet.lastCheck,
+        lastSing: updates.lastSing !== undefined ? updates.lastSing : existingPet.lastSing,
+        lastMedicine: updates.lastMedicine !== undefined ? updates.lastMedicine : existingPet.lastMedicine,
+        
+        // Social
+        adoptedBy: updates.adoptedBy !== undefined ? updates.adoptedBy : existingPet.adoptedBy,
+        adoptedFrom: updates.adoptedFrom !== undefined ? updates.adoptedFrom : existingPet.adoptedFrom,
+        currentLocation: updates.currentLocation !== undefined ? updates.currentLocation : existingPet.currentLocation,
+        inParty: updates.inParty !== undefined ? updates.inParty : existingPet.inParty,
+        visibleToOthers: updates.visibleToOthers !== undefined ? updates.visibleToOthers : existingPet.visibleToOthers,
+        
+        // Special
+        fees: updates.fees !== undefined ? updates.fees : existingPet.fees,
+        penalty: updates.penalty !== undefined ? updates.penalty : existingPet.penalty,
+        value: updates.value !== undefined ? updates.value : existingPet.value,
+        carePointsDeducted: updates.carePointsDeducted !== undefined ? updates.carePointsDeducted : existingPet.carePointsDeducted,
       };
 
       const tags = createPetStateTags(mergedData);
-      const content = mergedData.name || petId;
+      const content = mergedData.name || existingPet.name || petId;
 
       createEvent({
         kind: 31124,
