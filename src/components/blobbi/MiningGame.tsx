@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
+import { useUpdatePetState } from '@/hooks/useBlobbiEvents';
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -22,7 +23,8 @@ interface MinedItem {
 
 export function MiningGame() {
   const { setCurrentLocation } = useLocation();
-  const { status, updatePetStats } = useOptimizedStatus();
+  const { status } = useOptimizedStatus();
+  const { mutate: updatePetState } = useUpdatePetState();
   const currentPet = status.currentPet;
   
   const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results'>('instructions');
@@ -54,9 +56,12 @@ export function MiningGame() {
     setHoles(prev => [...prev, { x, y }]);
     setClicks(prev => prev + 1);
 
-    // Update the pet's energy by consuming 10 energy
+    // Update the pet's energy by consuming 10 energy and publish to Nostr (kind 31124)
     const newEnergy = Math.max(0, currentPet.energy - 10);
-    updatePetStats(currentPet.id, { energy: newEnergy });
+    updatePetState({
+      petId: currentPet.id,
+      updates: { energy: newEnergy }
+    });
 
     const random = Math.random();
     let gem: Gem;
