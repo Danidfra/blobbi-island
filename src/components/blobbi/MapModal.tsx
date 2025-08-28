@@ -243,7 +243,7 @@ export function MapModal({ className }: MapModalProps) {
         >
           {/* Island Map Background */}
           <img
-            src="/assets/blobbi-island.png"
+            src="/assets/map/blobbi-island.png"
             alt="Blobbi Village Map"
             className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
             style={{
