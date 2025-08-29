@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useUpdatePetState } from '@/hooks/useBlobbiEvents';
+import { useUpdatePetState, useUpdateOwnerProfile } from '@/hooks/useBlobbiEvents';
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -23,27 +23,52 @@ interface MinedItem {
 
 export function MiningGame() {
   const { setCurrentLocation } = useLocation();
-  const { status } = useOptimizedStatus();
+  const { status, updatePetStats, updateOwnerCoins } = useOptimizedStatus();
   const { mutate: updatePetState } = useUpdatePetState();
+  const { mutate: updateOwnerProfile } = useUpdateOwnerProfile();
   const currentPet = status.currentPet;
-  
+  const owner = status.owner;
+
   const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results'>('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
+  const [currentEnergy, setCurrentEnergy] = useState(currentPet?.energy || 100);
   const miningAreaRef = useRef<HTMLDivElement>(null);
+
+  // Update local energy state when currentPet changes
+  useEffect(() => {
+    if (currentPet) {
+      setCurrentEnergy(currentPet.energy);
+    }
+  }, [currentPet?.energy]);
+
+
 
   const startGame = () => {
     setGameState('playing');
   };
 
   const finishMining = () => {
+    // Calculate total coins earned
+    const totalCoins = minedItems.reduce((acc, item) => {
+      return acc + GEM_VALUES[item.type];
+    }, 0);
+
+    // Add coins to user's balance
+    if (totalCoins > 0 && owner) {
+      const newCoins = (owner.coins || 0) + totalCoins;
+      updateOwnerCoins(newCoins);
+      updateOwnerProfile({
+        coins: newCoins
+      });
+    }
+
     setGameState('results');
   };
 
   const handleMineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!currentPet || currentPet.energy <= 20) {
-      finishMining();
+    if (!currentPet || gameState !== 'playing') {
       return;
     }
 
@@ -56,12 +81,24 @@ export function MiningGame() {
     setHoles(prev => [...prev, { x, y }]);
     setClicks(prev => prev + 1);
 
-    // Update the pet's energy by consuming 10 energy and publish to Nostr (kind 31124)
-    const newEnergy = Math.max(0, currentPet.energy - 10);
+    // Update the pet's energy by consuming 10 energy
+    const newEnergy = Math.max(0, currentEnergy - 10);
+    setCurrentEnergy(newEnergy);
+
+    // Apply optimistic update immediately for UI responsiveness
+    updatePetStats(currentPet.id, { energy: newEnergy });
+
+    // Publish to Nostr (kind 31124)
     updatePetState({
       petId: currentPet.id,
       updates: { energy: newEnergy }
     });
+
+    // End game if energy is too low after this click
+    if (newEnergy <= 20) {
+      finishMining();
+      return;
+    }
 
     const random = Math.random();
     let gem: Gem;
@@ -104,6 +141,8 @@ export function MiningGame() {
       return acc + (GEM_VALUES[gem as Gem] * count);
     }, 0);
 
+    const finalEnergyStatus = currentEnergy <= 20 ? 'Your Blobbi is exhausted!' : 'Mining session complete!';
+
     return (
       <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
         <Card className="w-full max-w-md">
@@ -111,14 +150,26 @@ export function MiningGame() {
             <CardTitle>Mining Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{finalEnergyStatus}</p>
             <p>Total Clicks: {clicks}</p>
-            <ul>
-              {Object.entries(results).map(([gem, count]) => (
-                <li key={gem}>{gem}: {count}</li>
-              ))}
-            </ul>
-            <p>Total Coins: {totalCoins}</p>
-            <Button onClick={() => setCurrentLocation('mine')}>Exit Cave</Button>
+            <div className="space-y-1">
+              <p className="font-semibold">Items Found:</p>
+              <ul className="text-sm space-y-1">
+                {Object.entries(results).map(([gem, count]) => (
+                  <li key={gem} className="flex justify-between">
+                    <span>{gem.replace('.png', '').replace('-', ' ')}: {count}</span>
+                    <span>{GEM_VALUES[gem as Gem] * count} coins</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="border-t pt-2">
+              <p className="font-bold">Total Coins Earned: {totalCoins}</p>
+              {totalCoins > 0 && (
+                <p className="text-sm text-green-600">Coins added to your balance!</p>
+              )}
+            </div>
+            <Button onClick={() => setCurrentLocation('mine')} className="w-full">Exit Cave</Button>
           </CardContent>
         </Card>
       </div>
@@ -154,8 +205,8 @@ export function MiningGame() {
       </div>
 
       <div className="absolute top-4 left-4 w-32 space-y-2 text-white">
-        <p>Energy</p>
-        <Progress value={currentPet?.energy || 0} />
+        <p>Energy: {currentEnergy}/100</p>
+        <Progress value={currentEnergy} />
         <Button onClick={finishMining}>Finish Mining</Button>
       </div>
     </div>
