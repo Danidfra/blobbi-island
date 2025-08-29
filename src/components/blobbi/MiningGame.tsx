@@ -29,7 +29,7 @@ export function MiningGame() {
   const currentPet = status.currentPet;
   const owner = status.owner;
 
-  const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results'>('instructions');
+  const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results' | 'low-energy'>('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
@@ -68,7 +68,17 @@ export function MiningGame() {
   };
 
   const handleMineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!currentPet || gameState !== 'playing') {
+    if (!currentPet) {
+      return;
+    }
+
+    // Check if user has enough energy to start/continue the game
+    if (currentEnergy <= 20) {
+      setGameState('low-energy');
+      return;
+    }
+
+    if (gameState !== 'playing') {
       return;
     }
 
@@ -176,10 +186,33 @@ export function MiningGame() {
     );
   };
 
+  const renderLowEnergy = () => (
+    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Not Enough Energy!</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p>Your Blobbi doesn't have enough energy to mine!</p>
+          <p className="text-sm text-muted-foreground">
+            Current Energy: {currentEnergy}/100
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You need more than 20 energy to start mining.
+          </p>
+          <Button onClick={() => setCurrentLocation('mine')} className="w-full">
+            Exit Cave
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="relative w-full h-full">
       {gameState === 'instructions' && renderInstructions()}
       {gameState === 'results' && renderResults()}
+      {gameState === 'low-energy' && renderLowEnergy()}
 
       <div
         ref={miningAreaRef}
