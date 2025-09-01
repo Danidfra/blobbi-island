@@ -10,6 +10,8 @@ import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { DebugAccessoriesModal } from './DebugAccessoriesModal';
+import { DraggableAccessoriesOverlay } from './DraggableAccessoriesOverlay';
+import type { EquipmentConfig } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
@@ -81,6 +83,8 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const modalRef = useRef<HTMLDivElement>(null);
   const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
   const primaryContentRef = useRef<HTMLDivElement>(null);
+  const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   // Mock accessories data - to be replaced with real data later
 
@@ -164,7 +168,10 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
           {/* Stage - Left side with background and static Blobbi */}
           <div className="flex flex-col lg:w-2/5 flex-shrink-0">
             {/* Stage Container - This is line 127 equivalent, keeping exact dimensions */}
-            <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full">
+            <div
+              ref={stageRef}
+              className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full"
+            >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
                 <BackgroundLayer
@@ -192,7 +199,34 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   className="transform-gpu"
                 />
               </div>
+
+              {/* Draggable Accessories Overlay - z-20 */}
+              {selectedTab === 'inventory' && (
+                <DraggableAccessoriesOverlay
+                  containerRef={stageRef}
+                  selectedAccessory={selectedAccessory}
+                  onAccessorySelect={setSelectedAccessory}
+                />
+              )}
             </div>
+
+            {/* Controls for selected accessory */}
+            {selectedTab === 'inventory' && selectedAccessory && (
+              <div className="mt-4 p-3 bg-blue-50/80 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+                  Editing: {selectedAccessory.code}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div>Position: {Math.round(selectedAccessory.x)}%, {Math.round(selectedAccessory.y)}%</div>
+                  <div>Scale: {selectedAccessory.scale.toFixed(2)}x</div>
+                  <div>Rotation: {selectedAccessory.rot}°</div>
+                  <div>Slot: {selectedAccessory.slot}</div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2 opacity-75">
+                  💡 Drag to move • Scroll to scale • Shift+scroll to rotate
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Right side with tabbed interface */}
@@ -407,7 +441,10 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                 {/* Inventory Tab Content */}
                 <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
-                    <AccessoryInventoryUI />
+                    <AccessoryInventoryUI
+                      onEquippedAccessoryClick={setSelectedAccessory}
+                      selectedAccessory={selectedAccessory}
+                    />
                   </div>
 
                   {/* Debug button (development only) */}
