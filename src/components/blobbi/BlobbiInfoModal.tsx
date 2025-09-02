@@ -265,11 +265,12 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   showFallback={true}
                   isSleeping={currentPet.isSleeping}
                   isStaticPreview={true}
+                  showAccessories={selectedTab === 'primary'}
                   className="transform-gpu"
                 />
               </div>
 
-              {/* Draggable Accessories Overlay - z-20 */}
+              {/* Draggable Accessories Overlay - z-20 - Only show in inventory tab for editing */}
               {selectedTab === 'inventory' && (
                 <DraggableAccessoriesOverlay
                   containerRef={stageRef}

@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
+import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
 
 interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "size"> {
@@ -7,6 +8,7 @@ interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "siz
   isStaticPreview?: boolean;
   children?: React.ReactNode;
   _transparent?: boolean;
+  showAccessories?: boolean;
 }
 
 const sizeClasses = {
@@ -30,6 +32,7 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
   _transparent = false,
   isSleeping = false,
   eyesClosed = false,
+  showAccessories = true,
   children,
   ...props
 }, ref) => {
@@ -39,6 +42,19 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
 
   // Map larger sizes to CurrentBlobbiDisplay's "xl" size but override with custom classes
   const displaySize = size === "2xl" || size === "3xl" ? "xl" : size;
+
+  // Calculate accessory size multiplier based on blobbi size
+  const getAccessorySizeMultiplier = () => {
+    switch (size) {
+      case "sm": return 0.4;
+      case "md": return 0.6;
+      case "lg": return 0.8;
+      case "xl": return 1.0;
+      case "2xl": return 1.6;
+      case "3xl": return 2.2;
+      default: return 1.0;
+    }
+  };
 
   return (
     <div ref={ref} className={cn("relative", sizeClasses[size], className)}>
@@ -61,6 +77,14 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
           isStaticPreview && "!cursor-default !hover:scale-100 !transition-none"
         )}
       />
+
+      {/* Accessory Overlay */}
+      {showAccessories && (
+        <AccessoryOverlay
+          isStatic={true}
+          sizeMultiplier={getAccessorySizeMultiplier()}
+        />
+      )}
 
       {/* Overlay slot for accessories - future-ready */}
       {children && (
