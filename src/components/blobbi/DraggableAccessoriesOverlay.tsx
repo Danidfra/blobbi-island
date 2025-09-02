@@ -1,14 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
-import { useToast } from '@/hooks/useToast';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
-import type { EquipmentConfig, AccessoryEditData } from './lib/accessory-types';
+import type { EquipmentConfig } from './lib/accessory-types';
 
 interface DraggableAccessoriesOverlayProps {
   containerRef: React.RefObject<HTMLDivElement>;
   selectedAccessory: EquipmentConfig | null;
   onAccessorySelect?: (accessory: EquipmentConfig) => void;
+  onAccessoryUpdate?: (accessoryCode: string, updates: Partial<EquipmentConfig>) => void;
+  pendingUpdates: Record<string, Partial<EquipmentConfig>>;
   className?: string;
 }
 
@@ -71,9 +72,9 @@ function DraggableAccessory({
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (!isSelected) return;
-    
+
     e.preventDefault();
-    
+
     if (e.shiftKey) {
       // Shift + wheel = rotation
       const delta = e.deltaY > 0 ? 5 : -5;
@@ -92,7 +93,7 @@ function DraggableAccessory({
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-      
+
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -132,7 +133,7 @@ function DraggableAccessory({
         onError={(e) => {
           const target = e.target as HTMLImageElement;
           const slot = config.slot;
-          
+
           // Fallback chain for missing images
           const webpPath = `/assets/accessories/${slot}/${config.code}.webp`;
           const pngPath = `/assets/accessories/${slot}/${config.code}.png`;
@@ -161,76 +162,26 @@ export function DraggableAccessoriesOverlay({
   containerRef,
   selectedAccessory,
   onAccessorySelect,
+  onAccessoryUpdate,
+  pendingUpdates,
   className
 }: DraggableAccessoriesOverlayProps) {
-  const { equipment, equipAccessory } = useAccessoryManagement();
-  const { toast } = useToast();
-  const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { equipment } = useAccessoryManagement();
 
   const handleAccessoryUpdate = useCallback((accessoryCode: string, updates: Partial<EquipmentConfig>) => {
-    setPendingUpdates(prev => ({
-      ...prev,
-      [accessoryCode]: { ...prev[accessoryCode], ...updates }
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
+    onAccessoryUpdate?.(accessoryCode, updates);
+  }, [onAccessoryUpdate]);
 
   const handleAccessorySelect = useCallback((accessory: EquipmentConfig) => {
     onAccessorySelect?.(accessory);
   }, [onAccessorySelect]);
-
-  // Auto-save changes after a delay
-  useEffect(() => {
-    if (!hasUnsavedChanges || !selectedAccessory) return;
-
-    const timeoutId = setTimeout(async () => {
-      const updates = pendingUpdates[selectedAccessory.code];
-      if (!updates) return;
-
-      try {
-        const editData: AccessoryEditData = {
-          code: selectedAccessory.code,
-          x: updates.x ?? selectedAccessory.x,
-          y: updates.y ?? selectedAccessory.y,
-          scale: updates.scale ?? selectedAccessory.scale,
-          rot: updates.rot ?? selectedAccessory.rot,
-          flipX: updates.flipX ?? selectedAccessory.flipX,
-          refw: selectedAccessory.refw,
-          refh: selectedAccessory.refh,
-          form: selectedAccessory.form,
-          url: selectedAccessory.url,
-        };
-
-        await equipAccessory(editData);
-        
-        // Clear pending updates for this accessory
-        setPendingUpdates(prev => {
-          const newUpdates = { ...prev };
-          delete newUpdates[selectedAccessory.code];
-          return newUpdates;
-        });
-        
-        setHasUnsavedChanges(Object.keys(pendingUpdates).length > 1);
-      } catch (error) {
-        console.error('Failed to save accessory changes:', error);
-        toast({
-          title: "Auto-save Failed",
-          description: "Failed to save accessory position. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }, 1000); // Auto-save after 1 second of no changes
-
-    return () => clearTimeout(timeoutId);
-  }, [hasUnsavedChanges, selectedAccessory, pendingUpdates, equipAccessory, toast]);
 
   return (
     <div className={cn("absolute inset-0 pointer-events-none", className)}>
       {equipment.map((accessory) => {
         const updates = pendingUpdates[accessory.code] || {};
         const currentConfig = { ...accessory, ...updates };
-        
+
         return (
           <div key={accessory.code} className="pointer-events-auto">
             <DraggableAccessory
@@ -243,16 +194,6 @@ export function DraggableAccessoriesOverlay({
           </div>
         );
       })}
-      
-      {/* Save indicator */}
-      {hasUnsavedChanges && (
-        <div className="absolute top-2 right-2 pointer-events-none">
-          <div className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Auto-saving...
-          </div>
-        </div>
-      )}
     </div>
   );
 }

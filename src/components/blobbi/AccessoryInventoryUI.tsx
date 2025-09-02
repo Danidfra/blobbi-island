@@ -2,6 +2,8 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { useAccessoryInventoryUI } from './hooks/useAccessoryManagement';
 import { EquippedAccessoriesGrid } from './EquippedAccessoriesGrid';
 import type { AccessoryItem, EquipmentConfig } from './lib/accessory-types';
@@ -10,6 +12,12 @@ interface AccessoryInventoryUIProps {
   onAccessoryClick?: (accessory: AccessoryItem) => void;
   onEquippedAccessoryClick?: (accessory: EquipmentConfig) => void;
   selectedAccessory?: EquipmentConfig | null;
+  currentAccessory?: EquipmentConfig | null;
+  hasUnsavedChanges?: boolean;
+  onScaleChange?: (value: number[]) => void;
+  onRotationChange?: (value: number[]) => void;
+  onSaveChanges?: () => void;
+  isUpdating?: boolean;
   className?: string;
 }
 
@@ -44,6 +52,12 @@ export function AccessoryInventoryUI({
   onAccessoryClick,
   onEquippedAccessoryClick,
   selectedAccessory,
+  currentAccessory,
+  hasUnsavedChanges,
+  onScaleChange,
+  onRotationChange,
+  onSaveChanges,
+  isUpdating,
   className
 }: AccessoryInventoryUIProps) {
   const { data: inventory, isLoading } = useAccessoryInventoryUI();
@@ -86,6 +100,83 @@ export function AccessoryInventoryUI({
             onAccessoryClick={onEquippedAccessoryClick}
             selectedAccessory={selectedAccessory}
           />
+
+          {/* Controls for selected accessory */}
+          {currentAccessory && (
+            <div className="p-3 bg-blue-50/80 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Editing: {currentAccessory.code}
+                </div>
+                {hasUnsavedChanges && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-orange-600 dark:text-orange-400">Unsaved</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Position Info */}
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                <div>Position: {Math.round(currentAccessory.x)}%, {Math.round(currentAccessory.y)}%</div>
+                <div>Slot: {currentAccessory.slot}</div>
+              </div>
+
+              {/* Scale Control */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                    Scale
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {currentAccessory.scale.toFixed(2)}x
+                  </span>
+                </div>
+                <Slider
+                  value={[currentAccessory.scale]}
+                  onValueChange={onScaleChange}
+                  min={0.25}
+                  max={2.0}
+                  step={0.05}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Rotation Control */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                    Rotation
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {currentAccessory.rot}°
+                  </span>
+                </div>
+                <Slider
+                  value={[currentAccessory.rot]}
+                  onValueChange={onRotationChange}
+                  min={-45}
+                  max={45}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Save Button */}
+              <Button
+                onClick={onSaveChanges}
+                disabled={!hasUnsavedChanges || isUpdating}
+                size="sm"
+                className="w-full"
+              >
+                {isUpdating ? 'Saving...' : 'Save Changes'}
+              </Button>
+
+              <div className="text-xs text-muted-foreground opacity-75">
+                💡 Drag to move • Use sliders or scroll to adjust scale/rotation
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="inventory" className="mt-4">

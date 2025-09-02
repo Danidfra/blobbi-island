@@ -406,6 +406,84 @@ export function useUnequipAccessory() {
   });
 }
 
+/** Hook for updating an already equipped accessory's position/settings */
+export function useUpdateEquippedAccessory() {
+  const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { mutate: createEvent } = useNostrPublish();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ petId, editData }: { petId: string; editData: AccessoryEditData }) => {
+      if (!user?.pubkey) {
+        throw new Error('User not logged in');
+      }
+
+      // Validate edit data
+      validateAccessoryEditData(editData);
+
+      // Get current pet event
+      const signal = AbortSignal.timeout(5000);
+      const petEvents = await nostr.query([{
+        kinds: [31124],
+        authors: [user.pubkey],
+        '#d': [petId],
+        limit: 1,
+      }], { signal });
+
+      if (petEvents.length === 0) {
+        throw new Error('Pet not found');
+      }
+
+      const petEvent = petEvents[0];
+      const currentEquipment = parseEquipTags(petEvent.tags);
+      const slot = inferSlotFromCode(editData.code);
+
+      // Find the existing equipment item
+      const existingEquipment = currentEquipment.find(eq => eq.code === editData.code);
+      if (!existingEquipment) {
+        throw new Error('Accessory is not currently equipped');
+      }
+
+      // Create updated equipment config
+      const updatedEquipment: EquipmentConfig = {
+        code: editData.code,
+        x: editData.x,
+        y: editData.y,
+        scale: editData.scale,
+        rot: editData.rot,
+        flipX: editData.flipX,
+        refw: editData.refw,
+        refh: editData.refh,
+        form: editData.form,
+        url: editData.url,
+        slot,
+      };
+
+      // Replace the existing equipment with updated version
+      const newEquipmentList = currentEquipment.map(eq =>
+        eq.code === editData.code ? updatedEquipment : eq
+      );
+
+      // Create new equipment event with updated tags
+      const equipmentTags = updateEquipTags(petEvent.tags, newEquipmentList);
+      createEvent({
+        kind: 31124,
+        content: petEvent.content,
+        tags: equipmentTags,
+      });
+
+      return { updatedEquipment };
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate equipment query to refresh UI
+      queryClient.invalidateQueries({
+        queryKey: ACCESSORY_QUERY_KEYS.equipment(variables.petId)
+      });
+    },
+  });
+}
+
 // ============================================================================
 // Combined Hook for UI Components
 // ============================================================================
@@ -417,6 +495,7 @@ export function useAccessoryManagement() {
   const { data: equipment } = usePetEquipment(status?.currentPet?.id);
   const equipMutation = useEquipAccessory();
   const unequipMutation = useUnequipAccessory();
+  const updateMutation = useUpdateEquippedAccessory();
 
   const equipAccessory = async (editData: AccessoryEditData) => {
     if (!status?.currentPet?.id) {
@@ -440,6 +519,17 @@ export function useAccessoryManagement() {
     });
   };
 
+  const updateEquippedAccessory = async (editData: AccessoryEditData) => {
+    if (!status?.currentPet?.id) {
+      throw new Error('No pet selected');
+    }
+
+    return updateMutation.mutateAsync({
+      petId: status.currentPet.id,
+      editData,
+    });
+  };
+
   return {
     // Data
     inventory: inventory || [],
@@ -449,13 +539,16 @@ export function useAccessoryManagement() {
     // Actions
     equipAccessory,
     unequipAccessory,
+    updateEquippedAccessory,
 
     // Loading states
     isEquipping: equipMutation.isPending,
     isUnequipping: unequipMutation.isPending,
+    isUpdating: updateMutation.isPending,
 
     // Errors
     equipError: equipMutation.error,
     unequipError: unequipMutation.error,
+    updateError: updateMutation.error,
   };
 }

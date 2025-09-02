@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -11,7 +10,10 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { DebugAccessoriesModal } from './DebugAccessoriesModal';
 import { DraggableAccessoriesOverlay } from './DraggableAccessoriesOverlay';
-import type { EquipmentConfig } from './lib/accessory-types';
+import { useAccessoryManagement } from './hooks/useAccessoryManagement';
+import { useToast } from '@/hooks/useToast';
+import { Button } from '@/components/ui/button';
+import type { EquipmentConfig, AccessoryEditData } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
@@ -85,9 +87,76 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const primaryContentRef = useRef<HTMLDivElement>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
+  const { updateEquippedAccessory, isUpdating } = useAccessoryManagement();
+  const { toast } = useToast();
 
-  // Mock accessories data - to be replaced with real data later
+  const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
+    setPendingUpdates(prev => ({
+      ...prev,
+      [accessoryCode]: { ...prev[accessoryCode], ...updates }
+    }));
+  };
 
+  const handleSaveChanges = async () => {
+    if (!selectedAccessory) return;
+
+    const updates = pendingUpdates[selectedAccessory.code];
+    if (!updates) return;
+
+    try {
+      const editData: AccessoryEditData = {
+        code: selectedAccessory.code,
+        x: updates.x ?? selectedAccessory.x,
+        y: updates.y ?? selectedAccessory.y,
+        scale: updates.scale ?? selectedAccessory.scale,
+        rot: updates.rot ?? selectedAccessory.rot,
+        flipX: updates.flipX ?? selectedAccessory.flipX,
+        refw: selectedAccessory.refw,
+        refh: selectedAccessory.refh,
+        form: selectedAccessory.form,
+        url: selectedAccessory.url,
+      };
+
+      await updateEquippedAccessory(editData);
+
+      // Clear pending updates for this accessory
+      setPendingUpdates(prev => {
+        const newUpdates = { ...prev };
+        delete newUpdates[selectedAccessory.code];
+        return newUpdates;
+      });
+
+      toast({
+        title: "Accessory Updated",
+        description: `${selectedAccessory.code} position saved successfully.`,
+      });
+    } catch (error) {
+      console.error('Failed to save accessory changes:', error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save accessory changes.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleScaleChange = (value: number[]) => {
+    if (!selectedAccessory) return;
+    handleAccessoryUpdate(selectedAccessory.code, { scale: value[0] });
+  };
+
+  const handleRotationChange = (value: number[]) => {
+    if (!selectedAccessory) return;
+    handleAccessoryUpdate(selectedAccessory.code, { rot: value[0] });
+  };
+
+  const currentAccessory = selectedAccessory ? {
+    ...selectedAccessory,
+    ...pendingUpdates[selectedAccessory.code]
+  } : null;
+
+  const hasUnsavedChanges = selectedAccessory ? !!pendingUpdates[selectedAccessory.code] : false;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -206,27 +275,13 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   containerRef={stageRef}
                   selectedAccessory={selectedAccessory}
                   onAccessorySelect={setSelectedAccessory}
+                  onAccessoryUpdate={handleAccessoryUpdate}
+                  pendingUpdates={pendingUpdates}
                 />
               )}
             </div>
 
-            {/* Controls for selected accessory */}
-            {selectedTab === 'inventory' && selectedAccessory && (
-              <div className="mt-4 p-3 bg-blue-50/80 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-                  Editing: {selectedAccessory.code}
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>Position: {Math.round(selectedAccessory.x)}%, {Math.round(selectedAccessory.y)}%</div>
-                  <div>Scale: {selectedAccessory.scale.toFixed(2)}x</div>
-                  <div>Rotation: {selectedAccessory.rot}°</div>
-                  <div>Slot: {selectedAccessory.slot}</div>
-                </div>
-                <div className="text-xs text-muted-foreground mt-2 opacity-75">
-                  💡 Drag to move • Scroll to scale • Shift+scroll to rotate
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Sidebar - Right side with tabbed interface */}
@@ -444,6 +499,12 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                     <AccessoryInventoryUI
                       onEquippedAccessoryClick={setSelectedAccessory}
                       selectedAccessory={selectedAccessory}
+                      currentAccessory={currentAccessory}
+                      hasUnsavedChanges={hasUnsavedChanges}
+                      onScaleChange={handleScaleChange}
+                      onRotationChange={handleRotationChange}
+                      onSaveChanges={handleSaveChanges}
+                      isUpdating={isUpdating}
                     />
                   </div>
 
