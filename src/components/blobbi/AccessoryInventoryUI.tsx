@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { useAccessoryInventoryUI } from './hooks/useAccessoryManagement';
+import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { EquippedAccessoriesGrid } from './EquippedAccessoriesGrid';
+import { AccessoryUsageModal } from './AccessoryUsageModal';
+import { generateAccessoryUrl } from './lib/accessory-utils';
 import type { AccessoryItem, EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryInventoryUIProps {
@@ -43,7 +46,7 @@ function resolveLocalAssetUrl(code: string, slot: string): string {
   }
 
   // Try .webp first (better compression), then .png (fallback)
-  // For now, return .png as primary since that's what exists in the assets
+  // For now, return .png as primary since that's what exists in assets
   // The onError handler will try webp first as fallback
   return `/assets/accessories/${slot}/${code}.png`;
 }
@@ -61,9 +64,54 @@ export function AccessoryInventoryUI({
   className
 }: AccessoryInventoryUIProps) {
   const { data: inventory, isLoading } = useAccessoryInventoryUI();
+  const { equipAccessory, isEquipping } = useAccessoryManagement();
+  const [selectedInventoryAccessory, setSelectedInventoryAccessory] = useState<AccessoryItem | null>(null);
+  const [showUsageModal, setShowUsageModal] = useState(false);
 
   // Filter inventory to only include accessories with quantity > 0 (already done in hook, but double-check)
   const availableAccessories = inventory?.filter(item => item.quantity > 0) || [];
+
+  const handleAccessoryClick = (accessory: AccessoryItem) => {
+    setSelectedInventoryAccessory(accessory);
+    setShowUsageModal(true);
+    // Also call the original click handler if provided
+    onAccessoryClick?.(accessory);
+  };
+
+  const handleUseAccessory = async (accessory: AccessoryItem) => {
+    // Generate proper URL for the accessory
+    const url = generateAccessoryUrl(accessory.code) || '';
+
+    // Create AccessoryEditData object that equipAccessory expects
+    const editData = {
+      code: accessory.code,
+      x: 50,
+      y: 50,
+      scale: 1.0,
+      rot: 0,
+      flipX: false,
+      refw: 100,
+      refh: 100,
+      form: 'default' as const,
+      url, // Use the generated URL
+    };
+
+    try {
+      console.log('Equipping accessory with data:', editData);
+      // Call equipAccessory with the correct AccessoryEditData format
+      await equipAccessory(editData);
+      console.log('Successfully equipped accessory');
+    } catch (error) {
+      console.error('Failed to equip accessory:', error);
+      // You might want to show an error message to the user here
+      throw error; // Re-throw to let modal handle it
+    }
+  };
+
+  const handleCloseUsageModal = () => {
+    setShowUsageModal(false);
+    setSelectedInventoryAccessory(null);
+  };
 
   if (isLoading) {
     return (
@@ -210,7 +258,7 @@ export function AccessoryInventoryUI({
                       hover:shadow-md transition-all duration-200 hover:scale-105 cursor-pointer
                       focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-1
                     `}
-                    onClick={() => onAccessoryClick?.(accessory)}
+                    onClick={() => handleAccessoryClick(accessory)}
                   >
                     <CardContent className="p-0">
                       {/* Thumbnail */}
@@ -348,6 +396,15 @@ export function AccessoryInventoryUI({
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Accessory Usage Modal */}
+      <AccessoryUsageModal
+        isOpen={showUsageModal}
+        onClose={handleCloseUsageModal}
+        accessory={selectedInventoryAccessory}
+        onUseAccessory={handleUseAccessory}
+        isUsing={isEquipping}
+      />
     </div>
   );
 }
