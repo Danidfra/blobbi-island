@@ -10,6 +10,8 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 import { useOptimizedStatus } from './useOptimizedStatus';
 import { useBlobbonautProfile } from './useBlobbonautProfile';
+import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
+import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
 
 
@@ -49,6 +51,8 @@ export function useBlobbiFeedAction() {
 
   return useMutation({
     mutationFn: async ({ petId, itemId, quantity }: FeedActionInput) => {
+      // Get current equipment for this pet
+      const currentEquipment = (queryClient.getQueryData(['accessory-equipment', petId]) as EquipmentConfig[]) || [];
       if (!user?.pubkey) {
         throw new Error('User not logged in');
       }
@@ -105,6 +109,9 @@ export function useBlobbiFeedAction() {
       const isNewDay = !lastMeal ||
         (now.getTime() - lastMeal.getTime()) > (20 * 60 * 60 * 1000); // 20+ hours = new day
       const newCareStreak = isNewDay ? pet.careStreak + 1 : pet.careStreak;
+
+      // Convert current equipment to equip tags
+      const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
 
       // 1. Create Kind 14919 Interaction Event
       const interactionTags = [
@@ -176,6 +183,11 @@ export function useBlobbiFeedAction() {
       if (pet.inParty !== undefined) petStateTags.push(['in_party', pet.inParty ? 'true' : 'false']);
       if (pet.visibleToOthers !== undefined) petStateTags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
       if (pet.client !== undefined) petStateTags.push(['client', pet.client]);
+
+      // Add current equipment as equip tags
+      equipTags.forEach(equipTag => {
+        petStateTags.push(equipTag);
+      });
 
       createEvent({
         kind: 31124,
