@@ -1,6 +1,5 @@
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
-import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
 
 interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "size"> {
@@ -43,7 +42,7 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
   // Map larger sizes to CurrentBlobbiDisplay's "xl" size but override with custom classes
   const displaySize = size === "2xl" || size === "3xl" ? "xl" : size;
 
-  // Calculate accessory size multiplier based on blobbi size
+  // Calculate accessory size multiplier based on the actual preview size
   const getAccessorySizeMultiplier = () => {
     switch (size) {
       case "sm": return 0.4;
@@ -67,6 +66,8 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
         transparent={true} // Always use transparent mode for preview to match the original static display behavior
         isSleeping={isSleeping}
         eyesClosed={eyesClosed}
+        showAccessories={showAccessories} // Pass the showAccessories prop to CurrentBlobbiDisplay
+        accessorySizeMultiplier={getAccessorySizeMultiplier()} // Pass the calculated accessory size multiplier
         className={cn(
           // Override the size classes for larger sizes
           (size === "2xl" || size === "3xl") && "!h-auto !w-auto",
@@ -77,14 +78,6 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
           isStaticPreview && "!cursor-default !hover:scale-100 !transition-none"
         )}
       />
-
-      {/* Accessory Overlay */}
-      {showAccessories && (
-        <AccessoryOverlay
-          isStatic={true}
-          sizeMultiplier={getAccessorySizeMultiplier()}
-        />
-      )}
 
       {/* Overlay slot for accessories - future-ready */}
       {children && (

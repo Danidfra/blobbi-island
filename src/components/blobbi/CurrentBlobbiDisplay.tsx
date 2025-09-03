@@ -16,6 +16,7 @@ export interface CurrentBlobbiDisplayProps {
   isSleeping?: boolean;
   eyesClosed?: boolean;
   showAccessories?: boolean;
+  accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
 }
 
 const sizeClasses = {
@@ -34,7 +35,8 @@ export function CurrentBlobbiDisplay({
   transparent = false,
   isSleeping = false,
   eyesClosed = false,
-  showAccessories = true
+  showAccessories = true,
+  accessorySizeMultiplier
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -117,8 +119,11 @@ export function CurrentBlobbiDisplay({
     );
   }
 
-  // Calculate accessory size multiplier based on blobbi size
+  // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
+    if (accessorySizeMultiplier !== undefined) {
+      return accessorySizeMultiplier;
+    }
     switch (size) {
       case "sm": return 0.3;
       case "md": return 0.5;
