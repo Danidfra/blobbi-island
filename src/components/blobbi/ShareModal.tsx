@@ -20,12 +20,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
-import { useUploadFile } from '@/hooks/useUploadFile';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useImgBBUpload } from '@/hooks/useImgBBUpload';
+import { useNostrPublishWithStatus, type RelayPublishStatus } from '@/hooks/useNostrPublishWithStatus';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
 import { PolaroidFrame as _PolaroidFrame } from '@/components/ui/PolaroidFrame';
+
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -36,8 +37,8 @@ interface ShareModalProps {
 
 export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
   const { toast } = useToast();
-  const { mutateAsync: uploadFile } = useUploadFile();
-  const { mutateAsync: publishEvent } = useNostrPublish();
+  const { mutateAsync: uploadToImgBB } = useImgBBUpload();
+  const { mutateAsync: publishWithStatus } = useNostrPublishWithStatus();
   const { config, presetRelays } = useAppContext();
   const { user } = useCurrentUser();
 
@@ -47,6 +48,8 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
   const [userText, setUserText] = useState('');
   const [isNostrSectionExpanded, setIsNostrSectionExpanded] = useState(false);
   const [isSocialPanelOpen, setIsSocialPanelOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'publishing' | 'success' | 'error'>('idle');
+  const [relayStatuses, setRelayStatuses] = useState<RelayPublishStatus[]>([]);
 
   const handleDownload = async () => {
     if (!capturedPolaroidSrc) {
@@ -239,21 +242,22 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
     }
 
     try {
-      setIsSharing(true);
+      setUploadProgress('uploading');
 
-      // Convert polaroid data URL to blob for upload
-      const response = await fetch(capturedPolaroidSrc);
-      const blob = await response.blob();
-      const file = new File([blob], 'blobbi-polaroid.png', { type: 'image/png' });
+      // Upload to ImgBB (hook handles both File and dataURL)
+      const imageUrl = await uploadToImgBB(capturedPolaroidSrc);
 
-      // Upload file to Blossom server
-      const fileTags = await uploadFile(file);
+      // Create content with image URL and mandatory hashtags
+      const mandatoryHashtags = '#Blobbi #BlobbiIsland';
+      const content = userText.trim()
+        ? `${userText.trim()}\n\n${mandatoryHashtags}\n\n${imageUrl}`
+        : `${mandatoryHashtags}\n\n${imageUrl}`;
 
-      // Create content with mandatory hashtags
-      const content = getPrefilledCaption();
+      // Prepare tags
+      const tags: string[][] = [];
 
-      // Add image tags and NIP-94 metadata
-      const tags = [...fileTags];
+      // Add image URL as a tag for NIP-94 compatibility
+      tags.push(['url', imageUrl]);
 
       // Add alt tag for accessibility
       tags.push(['alt', 'A polaroid photo taken at Blobbi Island with accessories, background, and frame']);
@@ -262,29 +266,54 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
       tags.push(['t', 'Blobbi']);
       tags.push(['t', 'BlobbiIsland']);
 
-      // Publish to selected relays
-      const event = await publishEvent({
-        kind: 1, // Text note
-        content,
-        tags,
+      setUploadProgress('publishing');
+
+      // Publish to selected relays with status tracking
+      const result = await publishWithStatus({
+        event: {
+          kind: 1, // Text note
+          content,
+          tags,
+          created_at: Math.floor(Date.now() / 1000),
+        },
+        relayUrls: selectedRelays,
       });
 
-      toast({
-        title: "Photo shared to Nostr! 🚀",
-        description: `Your polaroid has been published to ${selectedRelays.length} relay(s). Event ID: ${event?.id?.slice(0, 8)}...`,
-      });
+      setRelayStatuses(result.relayStatuses);
+      setUploadProgress('success');
 
-      // Close modal after successful share
-      onClose();
+      // Show success toast with relay status
+      if (result.successCount > 0) {
+        toast({
+          title: "Photo shared to Nostr! 🚀",
+          description: `Successfully published to ${result.successCount} of ${selectedRelays.length} relay(s). Event ID: ${result.event.id?.slice(0, 8)}...`,
+        });
+
+        // Reset form after successful share
+        setUserText('');
+
+        // Keep modal open to show relay status
+      } else {
+        toast({
+          title: "Publish failed",
+          description: "Failed to publish to any relay. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error sharing to Nostr:', error);
+      setUploadProgress('error');
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Share failed",
-        description: "Could not share polaroid to Nostr. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
-      setIsSharing(false);
+      if (uploadProgress !== 'success') {
+        setIsSharing(false);
+      }
     }
   };
 
@@ -308,6 +337,10 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
       // Don't reset immediately to allow for smooth transitions
       const timer = setTimeout(() => {
         setIsNostrSectionExpanded(false);
+        setUploadProgress('idle');
+        setRelayStatuses([]);
+        setIsSharing(false);
+        setUserText('');
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -702,12 +735,22 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                   <Button
                     onClick={handleNostrShare}
                     className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-                    disabled={isSharing || !user || selectedRelays.length === 0 || !capturedPolaroidSrc}
+                    disabled={uploadProgress !== 'idle' || !user || selectedRelays.length === 0 || !capturedPolaroidSrc}
                   >
-                    {isSharing ? (
+                    {uploadProgress === 'uploading' ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Posting to Nostr...
+                        Uploading to void.cat...
+                      </>
+                    ) : uploadProgress === 'publishing' ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Posting to {selectedRelays.length} relay{selectedRelays.length !== 1 ? 's' : ''}...
+                      </>
+                    ) : uploadProgress === 'success' ? (
+                      <>
+                        <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                        Published! ✨
                       </>
                     ) : (
                       <>
@@ -716,6 +759,58 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                       </>
                     )}
                   </Button>
+
+                  {/* Relay Status Display */}
+                  {relayStatuses.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        Relay Status:
+                      </div>
+                      <div className="space-y-1">
+                        {relayStatuses.map((status, index) => (
+                          <div key={index} className="flex items-center space-x-2 text-sm">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              status.status === 'success' ? 'bg-green-500' :
+                              status.status === 'error' ? 'bg-red-500' :
+                              'bg-yellow-500'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">
+                                {presetRelays?.find(r => r.url === status.url)?.name || 'Unknown'}
+                              </div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {status.url}
+                              </div>
+                            </div>
+                            <div className="text-xs">
+                              {status.status === 'success' ? '✓' :
+                               status.status === 'error' ? '✗' :
+                               '⏳'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Summary and retry button */}
+                      <div className="flex items-center justify-between pt-2 border-t border-purple-100 dark:border-purple-900">
+                        <div className="text-xs text-muted-foreground">
+                          {relayStatuses.filter(s => s.status === 'success').length} of {relayStatuses.length} relays succeeded
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setRelayStatuses([]);
+                            setUploadProgress('idle');
+                            setIsSharing(false);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7 px-3"
+                        >
+                          New Post
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   </div>
                 </div>
               </div>
