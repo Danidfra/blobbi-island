@@ -12,12 +12,16 @@ import { DebugAccessoriesModal } from './DebugAccessoriesModal';
 import { AccessoryOverlay } from './AccessoryOverlay';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { useToast } from '@/hooks/useToast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostr } from '@/hooks/useNostr';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { Button } from '@/components/ui/button';
-import type { EquipmentConfig, AccessoryEditData } from './lib/accessory-types';
+import type { EquipmentConfig } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
+import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 import { Settings } from 'lucide-react';
@@ -88,7 +92,10 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
-  const { updateEquippedAccessory, isUpdating } = useAccessoryManagement();
+  const { isUpdating, equipment } = useAccessoryManagement();
+  const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { mutate: createEvent } = useNostrPublish();
   const { toast } = useToast();
 
   const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
@@ -99,37 +106,66 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   };
 
   const handleSaveChanges = async () => {
-    if (!selectedAccessory) return;
+    const accessoryCodes = Object.keys(pendingUpdates);
+    if (accessoryCodes.length === 0) return;
 
-    const updates = pendingUpdates[selectedAccessory.code];
-    if (!updates) return;
+    if (!user?.pubkey || !currentPet?.id) {
+      toast({
+        title: "Save Failed",
+        description: "User not logged in or no pet selected.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      const editData: AccessoryEditData = {
-        code: selectedAccessory.code,
-        x: updates.x ?? selectedAccessory.x,
-        y: updates.y ?? selectedAccessory.y,
-        scale: updates.scale ?? selectedAccessory.scale,
-        rot: updates.rot ?? selectedAccessory.rot,
-        flipX: updates.flipX ?? selectedAccessory.flipX,
-        refw: selectedAccessory.refw,
-        refh: selectedAccessory.refh,
-        form: selectedAccessory.form,
-        url: selectedAccessory.url,
-      };
+      // Get current pet event
+      const signal = AbortSignal.timeout(5000);
+      const petEvents = await nostr.query([{
+        kinds: [31124],
+        authors: [user.pubkey],
+        '#d': [currentPet.id],
+        limit: 1,
+      }], { signal });
 
-      await updateEquippedAccessory(editData);
+      if (petEvents.length === 0) {
+        throw new Error('Pet not found');
+      }
 
-      // Clear pending updates for this accessory
-      setPendingUpdates(prev => {
-        const newUpdates = { ...prev };
-        delete newUpdates[selectedAccessory.code];
-        return newUpdates;
+      const petEvent = petEvents[0];
+      const currentEquipment = equipment || [];
+
+      // Create updated equipment list with all pending updates applied
+      const updatedEquipment = currentEquipment.map(accessory => {
+        const updates = pendingUpdates[accessory.code];
+        if (!updates) return accessory;
+
+        return {
+          ...accessory,
+          x: updates.x ?? accessory.x,
+          y: updates.y ?? accessory.y,
+          scale: updates.scale ?? accessory.scale,
+          rot: updates.rot ?? accessory.rot,
+          flipX: updates.flipX ?? accessory.flipX,
+        };
       });
 
+      // Create new equipment event with all updated equipment
+      const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
+      
+      // Create single event with all updates
+      createEvent({
+        kind: 31124,
+        content: petEvent.content,
+        tags: equipmentTags,
+      });
+
+      // Clear all pending updates
+      setPendingUpdates({});
+
       toast({
-        title: "Accessory Updated",
-        description: `${selectedAccessory.code} position saved successfully.`,
+        title: "Accessories Updated",
+        description: `${accessoryCodes.length} accessory positions saved successfully.`,
       });
     } catch (error) {
       console.error('Failed to save accessory changes:', error);
@@ -156,7 +192,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     ...pendingUpdates[selectedAccessory.code]
   } : null;
 
-  const hasUnsavedChanges = selectedAccessory ? !!pendingUpdates[selectedAccessory.code] : false;
+  const hasUnsavedChanges = Object.keys(pendingUpdates).length > 0;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
