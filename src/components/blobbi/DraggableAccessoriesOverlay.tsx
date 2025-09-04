@@ -125,8 +125,9 @@ function DraggableAccessory({
         alt={config.code}
         className="max-w-none pointer-events-none"
         style={{
-          width: '60px',
-          height: '60px',
+          width: '120px',
+          height: '120px',
+          scale: config.scale,
           objectFit: 'contain',
         }}
         draggable={false}
