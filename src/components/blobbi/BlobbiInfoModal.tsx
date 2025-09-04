@@ -9,7 +9,7 @@ import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { DebugAccessoriesModal } from './DebugAccessoriesModal';
-import { DraggableAccessoriesOverlay } from './DraggableAccessoriesOverlay';
+import { AccessoryOverlay } from './AccessoryOverlay';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
@@ -265,22 +265,22 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   showFallback={true}
                   isSleeping={currentPet.isSleeping}
                   isStaticPreview={true}
-                  showAccessories={selectedTab === 'primary'}
+                  showAccessories={false} // Don't show accessories here - we use unified AccessoryOverlay
                   className="transform-gpu"
                 />
               </div>
 
-              {/* Draggable Accessories Overlay - z-20 - Only show in inventory tab for editing */}
-              {selectedTab === 'inventory' && (
-                <DraggableAccessoriesOverlay
-                  containerRef={stageRef}
-                  selectedAccessory={selectedAccessory}
-                  onAccessorySelect={setSelectedAccessory}
-                  onAccessoryUpdate={handleAccessoryUpdate}
-                  pendingUpdates={pendingUpdates}
-                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
-                />
-              )}
+              {/* Single Accessory Overlay - works for both static and draggable modes */}
+              <AccessoryOverlay
+                className="z-20"  // Ensure accessories are on top
+                containerRef={stageRef}
+                selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
+                onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
+                onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
+                isStatic={selectedTab === 'primary'}
+                sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
+                pendingUpdates={pendingUpdates} // Pass pending updates for real-time position updates
+              />
             </div>
 
 
