@@ -278,6 +278,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   onAccessorySelect={setSelectedAccessory}
                   onAccessoryUpdate={handleAccessoryUpdate}
                   pendingUpdates={pendingUpdates}
+                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
                 />
               )}
             </div>

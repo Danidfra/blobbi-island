@@ -11,6 +11,8 @@ interface DraggableAccessoriesOverlayProps {
   onAccessoryUpdate?: (accessoryCode: string, updates: Partial<EquipmentConfig>) => void;
   pendingUpdates: Record<string, Partial<EquipmentConfig>>;
   className?: string;
+  /** Size multiplier for accessories relative to the blobbi */
+  sizeMultiplier?: number;
 }
 
 interface DraggableAccessoryProps {
@@ -19,6 +21,7 @@ interface DraggableAccessoryProps {
   isSelected: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<EquipmentConfig>) => void;
+  sizeMultiplier?: number;
 }
 
 function DraggableAccessory({
@@ -26,7 +29,8 @@ function DraggableAccessory({
   containerRef,
   isSelected,
   onSelect,
-  onUpdate
+  onUpdate,
+  sizeMultiplier = 1.0
 }: DraggableAccessoryProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -103,6 +107,9 @@ function DraggableAccessory({
 
   const imageUrl = config.url || generateAccessoryUrl(config.code) || '';
 
+  // Calculate the size based on the multiplier (same as AccessoryOverlay)
+  const baseSize = 60 * sizeMultiplier;
+
   return (
     <div
       className={cn(
@@ -125,8 +132,8 @@ function DraggableAccessory({
         alt={config.code}
         className="max-w-none pointer-events-none"
         style={{
-          width: '120px',
-          height: '120px',
+          width: `${baseSize}px`,
+          height: `${baseSize}px`,
           scale: config.scale,
           objectFit: 'contain',
         }}
@@ -165,7 +172,8 @@ export function DraggableAccessoriesOverlay({
   onAccessorySelect,
   onAccessoryUpdate,
   pendingUpdates,
-  className
+  className,
+  sizeMultiplier = 1.0
 }: DraggableAccessoriesOverlayProps) {
   const { equipment } = useAccessoryManagement();
 
@@ -191,6 +199,7 @@ export function DraggableAccessoriesOverlay({
               isSelected={selectedAccessory?.code === accessory.code}
               onSelect={() => handleAccessorySelect(accessory)}
               onUpdate={(updates) => handleAccessoryUpdate(accessory.code, updates)}
+              sizeMultiplier={sizeMultiplier}
             />
           </div>
         );
