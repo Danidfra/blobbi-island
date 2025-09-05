@@ -10,11 +10,12 @@ import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { DebugAccessoriesModal } from './DebugAccessoriesModal';
 import { AccessoryOverlay } from './AccessoryOverlay';
-import { useAccessoryManagement } from './hooks/useAccessoryManagement';
+import { useAccessoryManagement, ACCESSORY_QUERY_KEYS } from './hooks/useAccessoryManagement';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@/hooks/useNostr';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import type { EquipmentConfig } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
@@ -92,11 +93,14 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
+  const [committedUpdates, setCommittedUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const { isUpdating, equipment } = useAccessoryManagement();
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
-  const { mutate: createEvent } = useNostrPublish();
+  const { mutateAsync: createEvent } = useNostrPublish();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
     setPendingUpdates(prev => ({
@@ -118,6 +122,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
       return;
     }
 
+    setIsSaving(true);
     try {
       // Get current pet event
       const signal = AbortSignal.timeout(5000);
@@ -152,16 +157,22 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
       // Create new equipment event with all updated equipment
       const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
-      
-      // Create single event with all updates
-      createEvent({
+
+      // Publish the event
+      await createEvent({
         kind: 31124,
         content: petEvent.content,
         tags: equipmentTags,
       });
 
-      // Clear all pending updates
+      // Move pending updates to committed updates - these are now the user's saved positions
+      setCommittedUpdates(prev => ({ ...prev, ...pendingUpdates }));
       setPendingUpdates({});
+
+      // Invalidate query in background to sync with relay (but don't await it)
+      queryClient.invalidateQueries({
+        queryKey: ACCESSORY_QUERY_KEYS.equipment(currentPet.id)
+      });
 
       toast({
         title: "Accessories Updated",
@@ -174,6 +185,9 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
         description: error instanceof Error ? error.message : "Failed to save accessory changes.",
         variant: "destructive",
       });
+      // On error, keep the pending updates so user doesn't lose their changes
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -189,10 +203,45 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
   const currentAccessory = selectedAccessory ? {
     ...selectedAccessory,
+    ...committedUpdates[selectedAccessory.code],
     ...pendingUpdates[selectedAccessory.code]
   } : null;
 
   const hasUnsavedChanges = Object.keys(pendingUpdates).length > 0;
+
+  // Clean up committed updates when query data matches them
+  useEffect(() => {
+    if (!equipment || Object.keys(committedUpdates).length === 0) return;
+
+    const updatesToClear: string[] = [];
+
+    for (const [accessoryCode, updates] of Object.entries(committedUpdates)) {
+      const queryAccessory = equipment.find(eq => eq.code === accessoryCode);
+      if (!queryAccessory) continue;
+
+      // Check if query data matches our committed updates (within small tolerance)
+      const matches = (
+        (updates.x === undefined || Math.abs(queryAccessory.x - updates.x) < 0.1) &&
+        (updates.y === undefined || Math.abs(queryAccessory.y - updates.y) < 0.1) &&
+        (updates.scale === undefined || Math.abs(queryAccessory.scale - updates.scale) < 0.01) &&
+        (updates.rot === undefined || Math.abs(queryAccessory.rot - updates.rot) < 0.1) &&
+        (updates.flipX === undefined || queryAccessory.flipX === updates.flipX)
+      );
+
+      if (matches) {
+        updatesToClear.push(accessoryCode);
+      }
+    }
+
+    // Clear committed updates that now match the query data
+    if (updatesToClear.length > 0) {
+      setCommittedUpdates(prev => {
+        const updated = { ...prev };
+        updatesToClear.forEach(code => delete updated[code]);
+        return updated;
+      });
+    }
+  }, [equipment, committedUpdates]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -315,7 +364,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                 onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
                 isStatic={selectedTab === 'primary'}
                 sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
-                pendingUpdates={pendingUpdates} // Pass pending updates for real-time position updates
+                pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
               />
             </div>
 
@@ -542,7 +591,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                       onScaleChange={handleScaleChange}
                       onRotationChange={handleRotationChange}
                       onSaveChanges={handleSaveChanges}
-                      isUpdating={isUpdating}
+                      isUpdating={isSaving || isUpdating}
                     />
                   </div>
 

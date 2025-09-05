@@ -164,7 +164,7 @@ export function useAccessoryInventoryUI() {
       return inventory;
     },
     enabled: !!user?.pubkey,
-    staleTime: 30000, // 30 seconds
+    staleTime: 5000, // 5 seconds - more responsive for inventory changes
   });
 }
 
