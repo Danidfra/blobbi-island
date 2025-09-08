@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
+import { AccessoryRemovalModal } from './AccessoryRemovalModal';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
 import type { EquipmentConfig } from './lib/accessory-types';
@@ -32,7 +35,29 @@ export function EquippedAccessoriesGrid({
   selectedAccessory, 
   className 
 }: EquippedAccessoriesGridProps) {
-  const { equipment } = useAccessoryManagement();
+  const { equipment, unequipAccessory, isUnequipping } = useAccessoryManagement();
+  const [selectedAccessoryForRemoval, setSelectedAccessoryForRemoval] = useState<EquipmentConfig | null>(null);
+  const [showRemovalModal, setShowRemovalModal] = useState(false);
+
+  const handleRemoveClick = (accessory: EquipmentConfig, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    setSelectedAccessoryForRemoval(accessory);
+    setShowRemovalModal(true);
+  };
+
+  const handleRemoveAccessory = async (accessory: EquipmentConfig) => {
+    try {
+      await unequipAccessory(accessory.code);
+    } catch (error) {
+      console.error('Failed to remove accessory:', error);
+      throw error;
+    }
+  };
+
+  const handleCloseRemovalModal = () => {
+    setShowRemovalModal(false);
+    setSelectedAccessoryForRemoval(null);
+  };
 
   if (equipment.length === 0) {
     return (
@@ -117,6 +142,15 @@ export function EquippedAccessoriesGrid({
                     }}
                   />
 
+                  {/* Remove button */}
+                  <button
+                    onClick={(e) => handleRemoveClick(accessory, e)}
+                    className="absolute top-1 left-1 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center opacity-90 group-hover:opacity-100 transition-all duration-200 shadow-lg hover:shadow-md border border-red-600"
+                    title="Remove accessory"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+
                   {/* Position indicator */}
                   <div className="absolute top-1 right-1">
                     <Badge variant="secondary" className="text-xs px-1 py-0 bg-black/70 text-white">
@@ -153,7 +187,18 @@ export function EquippedAccessoriesGrid({
       {/* Instructions */}
       <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2 mt-3">
         💡 Click on an accessory to edit its position, scale, and rotation in the simulator above.
+        <br />
+        <span className="text-orange-600 dark:text-orange-400">🗑️ Hover over an accessory and click the red X to remove it.</span>
       </div>
+
+      {/* Accessory Removal Modal */}
+      <AccessoryRemovalModal
+        isOpen={showRemovalModal}
+        onClose={handleCloseRemovalModal}
+        accessory={selectedAccessoryForRemoval}
+        onRemoveAccessory={handleRemoveAccessory}
+        isRemoving={isUnequipping}
+      />
     </div>
   );
 }
