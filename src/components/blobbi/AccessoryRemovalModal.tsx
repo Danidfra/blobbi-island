@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Sparkles, Package } from 'lucide-react';
+import { Sparkles, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { resolveAccessoryImageUrl } from './lib/accessory-utils';
 import type { EquipmentConfig } from './lib/accessory-types';
