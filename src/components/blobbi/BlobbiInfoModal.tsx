@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -10,10 +9,20 @@ import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { AccessoryInventoryUI } from './AccessoryInventoryUI';
 import { DebugAccessoriesModal } from './DebugAccessoriesModal';
+import { AccessoryOverlay } from './AccessoryOverlay';
+import { useAccessoryManagement, ACCESSORY_QUERY_KEYS } from './hooks/useAccessoryManagement';
+import { useToast } from '@/hooks/useToast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostr } from '@/hooks/useNostr';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import type { EquipmentConfig } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
+import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 import { Settings } from 'lucide-react';
@@ -81,9 +90,158 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
   const modalRef = useRef<HTMLDivElement>(null);
   const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
   const primaryContentRef = useRef<HTMLDivElement>(null);
+  const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
+  const [committedUpdates, setCommittedUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const { isUpdating, equipment } = useAccessoryManagement();
+  const { user } = useCurrentUser();
+  const { nostr } = useNostr();
+  const { mutateAsync: createEvent } = useNostrPublish();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Mock accessories data - to be replaced with real data later
+  const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
+    setPendingUpdates(prev => ({
+      ...prev,
+      [accessoryCode]: { ...prev[accessoryCode], ...updates }
+    }));
+  };
 
+  const handleSaveChanges = async () => {
+    const accessoryCodes = Object.keys(pendingUpdates);
+    if (accessoryCodes.length === 0) return;
+
+    if (!user?.pubkey || !currentPet?.id) {
+      toast({
+        title: "Save Failed",
+        description: "User not logged in or no pet selected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Get current pet event
+      const signal = AbortSignal.timeout(5000);
+      const petEvents = await nostr.query([{
+        kinds: [31124],
+        authors: [user.pubkey],
+        '#d': [currentPet.id],
+        limit: 1,
+      }], { signal });
+
+      if (petEvents.length === 0) {
+        throw new Error('Pet not found');
+      }
+
+      const petEvent = petEvents[0];
+      const currentEquipment = equipment || [];
+
+      // Create updated equipment list with all pending updates applied
+      const updatedEquipment = currentEquipment.map(accessory => {
+        const updates = pendingUpdates[accessory.code];
+        if (!updates) return accessory;
+
+        return {
+          ...accessory,
+          x: updates.x ?? accessory.x,
+          y: updates.y ?? accessory.y,
+          scale: updates.scale ?? accessory.scale,
+          rot: updates.rot ?? accessory.rot,
+          flipX: updates.flipX ?? accessory.flipX,
+        };
+      });
+
+      // Create new equipment event with all updated equipment
+      const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
+
+      // Publish the event
+      await createEvent({
+        kind: 31124,
+        content: petEvent.content,
+        tags: equipmentTags,
+      });
+
+      // Move pending updates to committed updates - these are now the user's saved positions
+      setCommittedUpdates(prev => ({ ...prev, ...pendingUpdates }));
+      setPendingUpdates({});
+
+      // Invalidate query in background to sync with relay (but don't await it)
+      queryClient.invalidateQueries({
+        queryKey: ACCESSORY_QUERY_KEYS.equipment(currentPet.id)
+      });
+
+      toast({
+        title: "Accessories Updated",
+        description: `${accessoryCodes.length} accessory positions saved successfully.`,
+      });
+    } catch (error) {
+      console.error('Failed to save accessory changes:', error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save accessory changes.",
+        variant: "destructive",
+      });
+      // On error, keep the pending updates so user doesn't lose their changes
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleScaleChange = (value: number[]) => {
+    if (!selectedAccessory) return;
+    handleAccessoryUpdate(selectedAccessory.code, { scale: value[0] });
+  };
+
+  const handleRotationChange = (value: number[]) => {
+    if (!selectedAccessory) return;
+    handleAccessoryUpdate(selectedAccessory.code, { rot: value[0] });
+  };
+
+  const currentAccessory = selectedAccessory ? {
+    ...selectedAccessory,
+    ...committedUpdates[selectedAccessory.code],
+    ...pendingUpdates[selectedAccessory.code]
+  } : null;
+
+  const hasUnsavedChanges = Object.keys(pendingUpdates).length > 0;
+
+  // Clean up committed updates when query data matches them
+  useEffect(() => {
+    if (!equipment || Object.keys(committedUpdates).length === 0) return;
+
+    const updatesToClear: string[] = [];
+
+    for (const [accessoryCode, updates] of Object.entries(committedUpdates)) {
+      const queryAccessory = equipment.find(eq => eq.code === accessoryCode);
+      if (!queryAccessory) continue;
+
+      // Check if query data matches our committed updates (within small tolerance)
+      const matches = (
+        (updates.x === undefined || Math.abs(queryAccessory.x - updates.x) < 0.1) &&
+        (updates.y === undefined || Math.abs(queryAccessory.y - updates.y) < 0.1) &&
+        (updates.scale === undefined || Math.abs(queryAccessory.scale - updates.scale) < 0.01) &&
+        (updates.rot === undefined || Math.abs(queryAccessory.rot - updates.rot) < 0.1) &&
+        (updates.flipX === undefined || queryAccessory.flipX === updates.flipX)
+      );
+
+      if (matches) {
+        updatesToClear.push(accessoryCode);
+      }
+    }
+
+    // Clear committed updates that now match the query data
+    if (updatesToClear.length > 0) {
+      setCommittedUpdates(prev => {
+        const updated = { ...prev };
+        updatesToClear.forEach(code => delete updated[code]);
+        return updated;
+      });
+    }
+  }, [equipment, committedUpdates]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,7 +322,10 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
           {/* Stage - Left side with background and static Blobbi */}
           <div className="flex flex-col lg:w-2/5 flex-shrink-0">
             {/* Stage Container - This is line 127 equivalent, keeping exact dimensions */}
-            <div className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full">
+            <div
+              ref={stageRef}
+              className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full"
+            >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
                 <BackgroundLayer
@@ -189,10 +350,25 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   showFallback={true}
                   isSleeping={currentPet.isSleeping}
                   isStaticPreview={true}
+                  showAccessories={false} // Don't show accessories here - we use unified AccessoryOverlay
                   className="transform-gpu"
                 />
               </div>
+
+              {/* Single Accessory Overlay - works for both static and draggable modes */}
+              <AccessoryOverlay
+                className="z-20"  // Ensure accessories are on top
+                containerRef={stageRef}
+                selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
+                onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
+                onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
+                isStatic={selectedTab === 'primary'}
+                sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
+                pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
+              />
             </div>
+
+
           </div>
 
           {/* Sidebar - Right side with tabbed interface */}
@@ -407,7 +583,16 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                 {/* Inventory Tab Content */}
                 <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
-                    <AccessoryInventoryUI />
+                    <AccessoryInventoryUI
+                      onEquippedAccessoryClick={setSelectedAccessory}
+                      selectedAccessory={selectedAccessory}
+                      currentAccessory={currentAccessory}
+                      hasUnsavedChanges={hasUnsavedChanges}
+                      onScaleChange={handleScaleChange}
+                      onRotationChange={handleRotationChange}
+                      onSaveChanges={handleSaveChanges}
+                      isUpdating={isSaving || isUpdating}
+                    />
                   </div>
 
                   {/* Debug button (development only) */}

@@ -8,6 +8,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
+import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
+import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import type {
   OwnerProfile,
   PetState,
@@ -392,6 +394,9 @@ export function useUpdatePetState() {
         throw new Error('User not logged in');
       }
 
+      // Get current equipment for this pet
+      const currentEquipment = (queryClient.getQueryData(['accessory-equipment', petId]) as EquipmentConfig[]) || [];
+
       // Get existing pet state data from cache
       const allPets = queryClient.getQueryData(['pet-states', user.pubkey]) as PetState[] | undefined;
       const existingPet = allPets?.find(pet => pet.id === petId);
@@ -409,18 +414,18 @@ export function useUpdatePetState() {
         stage: finalStage,
         breedingReady: updates.breedingReady !== undefined ? updates.breedingReady : existingPet.breedingReady,
         generation: updates.generation !== undefined ? updates.generation : existingPet.generation,
-        
+
         // Core stats (0-100)
         hunger: updates.hunger !== undefined ? updates.hunger : existingPet.hunger,
         happiness: updates.happiness !== undefined ? updates.happiness : existingPet.happiness,
         health: updates.health !== undefined ? updates.health : existingPet.health,
         hygiene: updates.hygiene !== undefined ? updates.hygiene : existingPet.hygiene,
         energy: updates.energy !== undefined ? updates.energy : existingPet.energy,
-        
+
         // Progress
         experience: updates.experience !== undefined ? updates.experience : existingPet.experience,
         careStreak: updates.careStreak !== undefined ? updates.careStreak : existingPet.careStreak,
-        
+
         // Appearance
         baseColor: updates.baseColor !== undefined ? updates.baseColor : existingPet.baseColor,
         secondaryColor: updates.secondaryColor !== undefined ? updates.secondaryColor : existingPet.secondaryColor,
@@ -431,7 +436,7 @@ export function useUpdatePetState() {
         manifestation: updates.manifestation !== undefined ? updates.manifestation : existingPet.manifestation,
         visualEffect: updates.visualEffect !== undefined ? updates.visualEffect : existingPet.visualEffect,
         blessing: updates.blessing !== undefined ? updates.blessing : existingPet.blessing,
-        
+
         // Personality
         personality: updates.personality !== undefined ? updates.personality : existingPet.personality,
         trait: updates.trait !== undefined ? updates.trait : existingPet.trait,
@@ -441,7 +446,7 @@ export function useUpdatePetState() {
         size: updates.size !== undefined ? updates.size : existingPet.size,
         title: updates.title !== undefined ? updates.title : existingPet.title,
         skill: updates.skill !== undefined ? updates.skill : existingPet.skill,
-        
+
         // Egg-specific (only for eggs)
         ...(finalStage === 'egg' ? {
           incubationTime: updates.incubationTime !== undefined ? updates.incubationTime : existingPet.incubationTime,
@@ -450,14 +455,14 @@ export function useUpdatePetState() {
           eggStatus: updates.eggStatus !== undefined ? updates.eggStatus : existingPet.eggStatus,
           shellIntegrity: updates.shellIntegrity !== undefined ? updates.shellIntegrity : existingPet.shellIntegrity,
         } : {}),
-        
+
         // Behavior
         isSleeping: updates.isSleeping !== undefined ? updates.isSleeping : existingPet.isSleeping,
         isDirty: updates.isDirty !== undefined ? updates.isDirty : existingPet.isDirty,
         hasBuff: updates.hasBuff !== undefined ? updates.hasBuff : existingPet.hasBuff,
         hasDebuff: updates.hasDebuff !== undefined ? updates.hasDebuff : existingPet.hasDebuff,
         lastInteraction: updates.lastInteraction !== undefined ? updates.lastInteraction : existingPet.lastInteraction,
-        
+
         // Care tracking
         lastMeal: updates.lastMeal !== undefined ? updates.lastMeal : existingPet.lastMeal,
         lastClean: updates.lastClean !== undefined ? updates.lastClean : existingPet.lastClean,
@@ -466,14 +471,14 @@ export function useUpdatePetState() {
         lastCheck: updates.lastCheck !== undefined ? updates.lastCheck : existingPet.lastCheck,
         lastSing: updates.lastSing !== undefined ? updates.lastSing : existingPet.lastSing,
         lastMedicine: updates.lastMedicine !== undefined ? updates.lastMedicine : existingPet.lastMedicine,
-        
+
         // Social
         adoptedBy: updates.adoptedBy !== undefined ? updates.adoptedBy : existingPet.adoptedBy,
         adoptedFrom: updates.adoptedFrom !== undefined ? updates.adoptedFrom : existingPet.adoptedFrom,
         currentLocation: updates.currentLocation !== undefined ? updates.currentLocation : existingPet.currentLocation,
         inParty: updates.inParty !== undefined ? updates.inParty : existingPet.inParty,
         visibleToOthers: updates.visibleToOthers !== undefined ? updates.visibleToOthers : existingPet.visibleToOthers,
-        
+
         // Special
         fees: updates.fees !== undefined ? updates.fees : existingPet.fees,
         penalty: updates.penalty !== undefined ? updates.penalty : existingPet.penalty,
@@ -482,6 +487,13 @@ export function useUpdatePetState() {
       };
 
       const tags = createPetStateTags(mergedData);
+
+      // Convert current equipment to equip tags and add them
+      const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
+      equipTags.forEach(equipTag => {
+        tags.push(equipTag);
+      });
+
       const content = mergedData.name || existingPet.name || petId;
 
       createEvent({

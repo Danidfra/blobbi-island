@@ -68,17 +68,20 @@ export function parseEquipTag(tags: string[][], code: string): EquipmentConfig |
 
   if (!equipTag) return null;
 
-  const tagEntries = Object.fromEntries(
-    equipTag.slice(1).map((value, index) => {
-      const key = equipTag[index * 2 + 1];
-      const val = equipTag[index * 2 + 2];
-      return [key, val];
-    })
-  );
-
   try {
+    // Equip tag format: ["equip", "<code>", "x", "<int>", "y", "<int>", "scale", "<float>", "rot", "<int>", "flipX", "0|1", "refw", "<int>", "refh", "<int>", "form", "<string>", "url", "<string>"]
+    const tagCode = equipTag[1];
+    
+    // Parse key-value pairs from the tag
+    const tagEntries: Record<string, string> = {};
+    for (let i = 2; i < equipTag.length; i += 2) {
+      const key = equipTag[i];
+      const val = equipTag[i + 1] || '';
+      tagEntries[key] = val;
+    }
+
     return {
-      code,
+      code: tagCode,
       x: parseInt(tagEntries.x || '50', 10),
       y: parseInt(tagEntries.y || '50', 10),
       scale: parseFloat(tagEntries.scale || '1.0'),
@@ -87,8 +90,8 @@ export function parseEquipTag(tags: string[][], code: string): EquipmentConfig |
       refw: parseInt(tagEntries.refw || '100', 10),
       refh: parseInt(tagEntries.refh || '100', 10),
       form: (tagEntries.form || 'default') as AccessoryForm,
-      url: tagEntries.url || generateAccessoryUrl(code) || '',
-      slot: inferSlotFromCode(code),
+      url: tagEntries.url || generateAccessoryUrl(tagCode) || '',
+      slot: inferSlotFromCode(tagCode),
     };
   } catch (error) {
     console.warn(`Failed to parse equip tag for ${code}:`, error);
@@ -102,16 +105,15 @@ export function parseInvTags(tags: string[][]): AccessoryItem[] {
     .filter(([name]) => name === 'inv')
     .map((invTag) => {
       try {
-        const tagEntries = Object.fromEntries(
-          invTag.slice(1).map((value, index) => {
-            const key = invTag[index * 2 + 1];
-            const val = invTag[index * 2 + 2];
-            return [key, val];
-          })
-        );
+        // Parse inv tag format: ["inv", "<code>", "qty", "<int>", "url", "..."]
+        if (invTag.length < 4) {
+          console.warn(`Invalid inv tag length:`, invTag);
+          return null;
+        }
 
-        const code = tagEntries[''] || '';
-        const qty = parseInt(tagEntries.qty || '0', 10);
+        const code = invTag[1] || '';
+        const qtyStr = invTag[3] || '0';
+        const qty = parseInt(qtyStr, 10);
 
         // Skip if quantity is 0 or invalid
         if (qty <= 0 || isNaN(qty)) {
@@ -119,7 +121,7 @@ export function parseInvTags(tags: string[][]): AccessoryItem[] {
         }
 
         // Generate URL safely - never throw
-        const url = tagEntries.url || generateAccessoryUrl(code) || '';
+        const url = generateAccessoryUrl(code) || '';
 
         // Infer slot safely - never throw
         const slot = inferSlotFromCode(code);
@@ -145,13 +147,14 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
     .map((equipTag) => {
       try {
         const code = equipTag[1];
-        const tagEntries = Object.fromEntries(
-          equipTag.slice(1).map((value, index) => {
-            const key = equipTag[index * 2 + 1];
-            const val = equipTag[index * 2 + 2];
-            return [key, val];
-          })
-        );
+        
+        // Parse key-value pairs from tag
+        const tagEntries: Record<string, string> = {};
+        for (let i = 2; i < equipTag.length; i += 2) {
+          const key = equipTag[i];
+          const val = equipTag[i + 1] || '';
+          tagEntries[key] = val;
+        }
 
         // Generate URL safely
         const url = tagEntries.url || generateAccessoryUrl(code) || '';
@@ -161,7 +164,7 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
 
         return {
           code,
-          x: parseInt(tagEntries.x || '50', 10),
+          x: parseInt(tagEntries.x || '5', 10),
           y: parseInt(tagEntries.y || '50', 10),
           scale: parseFloat(tagEntries.scale || '1.0'),
           rot: parseInt(tagEntries.rot || '0', 10),

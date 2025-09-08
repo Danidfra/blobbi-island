@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { loadCustomizedBlobbiSvg } from "@/lib/customizeSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
+import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
 
 export interface CurrentBlobbiDisplayProps {
@@ -14,6 +15,8 @@ export interface CurrentBlobbiDisplayProps {
   transparent?: boolean;
   isSleeping?: boolean;
   eyesClosed?: boolean;
+  showAccessories?: boolean;
+  accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
 }
 
 const sizeClasses = {
@@ -31,7 +34,9 @@ export function CurrentBlobbiDisplay({
   interactive = false,
   transparent = false,
   isSleeping = false,
-  eyesClosed = false
+  eyesClosed = false,
+  showAccessories = true,
+  accessorySizeMultiplier
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -114,6 +119,20 @@ export function CurrentBlobbiDisplay({
     );
   }
 
+  // Calculate accessory size multiplier based on blobbi size or use custom multiplier
+  const getAccessorySizeMultiplier = () => {
+    if (accessorySizeMultiplier !== undefined) {
+      return accessorySizeMultiplier;
+    }
+    switch (size) {
+      case "sm": return 0.3;
+      case "md": return 0.5;
+      case "lg": return 0.7;
+      case "xl": return 1.0;
+      default: return 1.0;
+    }
+  };
+
   // Show current Blobbi SVG
   if (svgContent && currentBlobbi) {
     // Transparent mode - show only the SVG without background
@@ -121,7 +140,7 @@ export function CurrentBlobbiDisplay({
       return (
         <div
           className={cn(
-            "flex items-center justify-center",
+            "flex items-center justify-center relative",
             interactive && "cursor-pointer hover:scale-105 transition-all duration-200",
             sizeClasses[size],
             className
@@ -139,6 +158,15 @@ export function CurrentBlobbiDisplay({
             )}
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
+
+          {/* Accessory Overlay for transparent mode */}
+          {showAccessories && (
+            <AccessoryOverlay
+              isStatic={true}
+              sizeMultiplier={getAccessorySizeMultiplier()}
+              className="absolute inset-0"
+            />
+          )}
         </div>
       );
     }
@@ -147,7 +175,7 @@ export function CurrentBlobbiDisplay({
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-full blobbi-gradient-frame shadow-lg theme-transition",
+          "flex items-center justify-center rounded-full blobbi-gradient-frame shadow-lg theme-transition relative",
           interactive && "cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 blobbi-hover",
           sizeClasses[size],
           className
@@ -165,6 +193,15 @@ export function CurrentBlobbiDisplay({
           )}
           dangerouslySetInnerHTML={{ __html: svgContent }}
         />
+
+        {/* Accessory Overlay for default mode */}
+        {showAccessories && (
+          <AccessoryOverlay
+            isStatic={true}
+            sizeMultiplier={getAccessorySizeMultiplier()}
+            className="absolute inset-0"
+          />
+        )}
       </div>
     );
   }

@@ -7,6 +7,7 @@ interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "siz
   isStaticPreview?: boolean;
   children?: React.ReactNode;
   _transparent?: boolean;
+  showAccessories?: boolean;
 }
 
 const sizeClasses = {
@@ -30,6 +31,7 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
   _transparent = false,
   isSleeping = false,
   eyesClosed = false,
+  showAccessories = true,
   children,
   ...props
 }, ref) => {
@@ -39,6 +41,19 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
 
   // Map larger sizes to CurrentBlobbiDisplay's "xl" size but override with custom classes
   const displaySize = size === "2xl" || size === "3xl" ? "xl" : size;
+
+  // Calculate accessory size multiplier based on the actual preview size
+  const getAccessorySizeMultiplier = () => {
+    switch (size) {
+      case "sm": return 0.4;
+      case "md": return 0.6;
+      case "lg": return 0.8;
+      case "xl": return 1.0;
+      case "2xl": return 1.6;
+      case "3xl": return 2.2;
+      default: return 1.0;
+    }
+  };
 
   return (
     <div ref={ref} className={cn("relative", sizeClasses[size], className)}>
@@ -51,6 +66,8 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
         transparent={true} // Always use transparent mode for preview to match the original static display behavior
         isSleeping={isSleeping}
         eyesClosed={eyesClosed}
+        showAccessories={showAccessories} // Pass the showAccessories prop to CurrentBlobbiDisplay
+        accessorySizeMultiplier={getAccessorySizeMultiplier()} // Pass the calculated accessory size multiplier
         className={cn(
           // Override the size classes for larger sizes
           (size === "2xl" || size === "3xl") && "!h-auto !w-auto",
