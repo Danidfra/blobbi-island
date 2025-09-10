@@ -69,7 +69,6 @@ export function AccessoryInventoryUI({
   const { equipAccessory, isEquipping } = useAccessoryManagement();
   const [selectedInventoryAccessory, setSelectedInventoryAccessory] = useState<AccessoryItem | null>(null);
   const [showUsageModal, setShowUsageModal] = useState(false);
-  const [showTestSquare, setShowTestSquare] = useState(false);
 
   // Filter inventory to only include accessories with quantity > 0 (already done in hook, but double-check)
   const availableAccessories = inventory?.filter(item => item.quantity > 0) || [];
@@ -104,10 +103,6 @@ export function AccessoryInventoryUI({
       // Call equipAccessory with the correct AccessoryEditData format
       await equipAccessory(editData);
       console.log('Successfully equipped accessory');
-
-      // Show test square for 3 seconds
-      setShowTestSquare(true);
-      setTimeout(() => setShowTestSquare(false), 3000);
     } catch (error) {
       console.error('Failed to equip accessory:', error);
       // You might want to show an error message to the user here
@@ -133,18 +128,6 @@ export function AccessoryInventoryUI({
 
   return (
     <div className={`space-y-4 ${className || ''}`}>
-      {/* TEST SQUARE - Shows when equip/unequip completes */}
-      {showTestSquare && (
-        <div
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] bg-red-500 border-4 border-red-700 rounded-lg shadow-2xl flex items-center justify-center"
-          style={{ width: '200px', height: '200px' }}
-        >
-          <div className="text-white font-bold text-xl text-center">
-            EQUIP<br/>COMPLETE!
-          </div>
-        </div>
-      )}
-
       <Tabs defaultValue="equipped" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-purple-100/60 dark:bg-purple-900/60">
           <TabsTrigger
@@ -441,7 +424,6 @@ function EquippedAccessoriesGridInternal({
   const { equipment, unequipAccessory, isUnequipping } = useAccessoryManagement();
   const [selectedAccessoryForRemoval, setSelectedAccessoryForRemoval] = useState<EquipmentConfig | null>(null);
   const [showRemovalModal, setShowRemovalModal] = useState(false);
-  const [showTestSquare, setShowTestSquare] = useState(false);
 
   const handleRemoveClick = (accessory: EquipmentConfig, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering card click
@@ -452,10 +434,6 @@ function EquippedAccessoriesGridInternal({
   const handleRemoveAccessory = async (accessory: EquipmentConfig) => {
     try {
       await unequipAccessory(accessory.code);
-
-      // Show test square for 3 seconds
-      setShowTestSquare(true);
-      setTimeout(() => setShowTestSquare(false), 3000);
     } catch (error) {
       console.error('Failed to remove accessory:', error);
       throw error;
@@ -489,18 +467,6 @@ function EquippedAccessoriesGridInternal({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {/* TEST SQUARE - Shows when unequip completes */}
-      {showTestSquare && (
-        <div
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] bg-red-500 border-4 border-red-700 rounded-lg shadow-2xl flex items-center justify-center"
-          style={{ width: '200px', height: '200px' }}
-        >
-          <div className="text-white font-bold text-xl text-center">
-            UNEQUIP<br/>COMPLETE!
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="text-sm font-medium text-purple-700 dark:text-purple-300 px-1">
         Equipped Accessories ({equipment.length})

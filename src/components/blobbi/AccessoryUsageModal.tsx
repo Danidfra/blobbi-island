@@ -40,11 +40,13 @@ export function AccessoryUsageModal({ isOpen, onClose, accessory, onUseAccessory
 
   const handleUse = async () => {
     try {
-      // Call the provided onUseAccessory function
+      // Call the provided onUseAccessory function and wait for it to complete
       await onUseAccessory?.(accessory);
+      // Only close modal after successful completion
       onClose();
     } catch (error) {
       console.error('Failed to use accessory:', error);
+      // Don't close modal on error - let user try again
     }
   };
 

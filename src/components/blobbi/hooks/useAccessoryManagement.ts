@@ -232,6 +232,7 @@ export function useEquipAccessory() {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.equipment(petId) });
       await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.inventory(user.pubkey) });
+      await queryClient.cancelQueries({ queryKey: ['accessory-inventory-ui', user.pubkey] });
 
       // Snapshot the previous values
       const previousEquipment = queryClient.getQueryData<EquipmentConfig[]>(
@@ -239,6 +240,9 @@ export function useEquipAccessory() {
       );
       const previousInventory = queryClient.getQueryData<AccessoryItem[]>(
         ACCESSORY_QUERY_KEYS.inventory(user.pubkey)
+      );
+      const previousInventoryUI = queryClient.getQueryData<AccessoryItem[]>(
+        ['accessory-inventory-ui', user.pubkey]
       );
 
       if (previousEquipment && previousInventory) {
@@ -273,15 +277,22 @@ export function useEquipAccessory() {
           optimisticInventory = updateInventoryQuantity(optimisticInventory, existingInSlot.code, 1);
         }
 
+        // Update inventory UI optimistically
+        let optimisticInventoryUI = previousInventoryUI || [];
+        const mergedInventory = mergeInventoryTags(optimisticInventory);
+        optimisticInventoryUI = mergedInventory.filter(item => item.quantity > 0);
+
         // Optimistically update the cache
         queryClient.setQueryData(ACCESSORY_QUERY_KEYS.equipment(petId), optimisticEquipment);
         queryClient.setQueryData(ACCESSORY_QUERY_KEYS.inventory(user.pubkey), optimisticInventory);
+        queryClient.setQueryData(['accessory-inventory-ui', user.pubkey], optimisticInventoryUI);
       }
 
       // Return a context object with the snapshotted values
       return {
         previousEquipment,
         previousInventory,
+        previousInventoryUI,
         petId,
         userPubkey: user.pubkey
       };
