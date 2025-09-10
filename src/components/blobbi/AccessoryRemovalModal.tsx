@@ -40,11 +40,13 @@ export function AccessoryRemovalModal({ isOpen, onClose, accessory, onRemoveAcce
 
   const handleRemove = async () => {
     try {
-      // Call the provided onRemoveAccessory function
+      // Call the provided onRemoveAccessory function and wait for it to complete
       await onRemoveAccessory?.(accessory);
+      // Only close modal after successful completion
       onClose();
     } catch (error) {
       console.error('Failed to remove accessory:', error);
+      // Don't close modal on error - let user try again
     }
   };
 

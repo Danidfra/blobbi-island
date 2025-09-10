@@ -77,94 +77,6 @@ export function useAccessoryInventory() {
       return mergeInventoryTags(inventory);
     },
     enabled: !!user?.pubkey,
-    staleTime: 30000, // 30 seconds
-  });
-}
-
-/** Hook for fetching user's accessory inventory for UI-only display (optimized for Inventory tab) */
-export function useAccessoryInventoryUI() {
-  const { nostr } = useNostr();
-  const { user } = useCurrentUser();
-
-  return useQuery({
-    queryKey: ['accessory-inventory-ui', user?.pubkey],
-    queryFn: async (c) => {
-      if (!user?.pubkey) {
-        return [];
-      }
-
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-
-      const events = await nostr.query([{
-        kinds: [31125],
-        authors: [user.pubkey],
-        limit: 1,
-      }], { signal });
-
-      if (events.length === 0) {
-        return [];
-      }
-
-      // Parse inv tags with resilient parsing - never throw, skip malformed tags
-      const inventory = events[0].tags
-        .filter(([name]) => name === 'inv')
-        .map((invTag) => {
-          try {
-            // Parse inv tag format: ["inv", "<code>", "qty", "<int>", "url", "..."]
-            if (invTag.length < 4) {
-              console.warn(`Invalid inv tag length:`, invTag);
-              return null;
-            }
-
-            const code = invTag[1] || '';
-            const qtyStr = invTag[3] || '0';
-            const qty = parseInt(qtyStr, 10);
-
-            // Skip if quantity is 0 or invalid
-            if (qty <= 0 || isNaN(qty)) {
-              return null;
-            }
-
-            // Infer slot from code prefix (with back-compat for glasses- -> eyewear-)
-            let slot = 'unknown';
-            if (code.startsWith('glasses-')) {
-              slot = 'eyewear';
-            } else if (code.startsWith('headwear-')) {
-              slot = 'headwear';
-            } else if (code.startsWith('eyewear-')) {
-              slot = 'eyewear';
-            } else if (code.startsWith('back-')) {
-              slot = 'back';
-            } else if (code.startsWith('neckwear-')) {
-              slot = 'neckwear';
-            } else if (code.startsWith('handheld-')) {
-              slot = 'handheld';
-            } else if (code.startsWith('face-mark-')) {
-              slot = 'face-mark';
-            } else if (code.startsWith('aura-')) {
-              slot = 'aura';
-            } else if (code.startsWith('color-overlay-')) {
-              slot = 'color-overlay';
-            }
-
-            // Return the parsed inventory item
-            return {
-              code,
-              quantity: qty,
-              slot,
-              url: '', // URL not needed - will use local assets
-            };
-          } catch (error) {
-            console.warn(`Failed to parse inv tag for UI display:`, invTag, error);
-            return null;
-          }
-        })
-        .filter((item): item is AccessoryItem => item !== null);
-
-      return inventory;
-    },
-    enabled: !!user?.pubkey,
-    staleTime: 5000, // 5 seconds - more responsive for inventory changes
   });
 }
 
@@ -200,7 +112,6 @@ export function usePetEquipment(petId?: string) {
       return parseEquipTags(events[0].tags);
     },
     enabled: !!user?.pubkey && !!petId,
-    staleTime: 30000, // 30 seconds
   });
 }
 
@@ -212,7 +123,7 @@ export function usePetEquipment(petId?: string) {
 export function useEquipAccessory() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
-  const { mutate: createEvent } = useNostrPublish();
+  const { mutateAsync: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
   const { data: inventory } = useAccessoryInventory();
 
@@ -292,32 +203,125 @@ export function useEquipAccessory() {
         updatedInventory = updateInventoryQuantity(updatedInventory, existingInSlot.code, 1);
       }
 
-      // Create new equipment event
+      // Create new equipment event and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
-      createEvent({
+      await createEvent({
         kind: 31124,
         content: petEvent.content,
         tags: equipmentTags,
       });
 
-      // Create new inventory event
+      // Create new inventory event and wait for it to be signed/published
       const inventoryTags = updateInvTags(ownerEvent.tags, updatedInventory);
-      createEvent({
+      await createEvent({
         kind: 31125,
         content: ownerEvent.content,
         tags: inventoryTags,
       });
 
-      return { newEquipment, updatedInventory, replacedCode: existingInSlot?.code };
+      return {
+        newEquipment,
+        updatedEquipment,
+        updatedInventory,
+        replacedCode: existingInSlot?.code
+      };
     },
-    onSuccess: (data, variables) => {
-      // Invalidate queries
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.inventory(user?.pubkey)
-      });
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.equipment(variables.petId)
-      });
+    onMutate: async ({ petId, editData }) => {
+      if (!user?.pubkey) return;
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.equipment(petId) });
+      await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.inventory(user.pubkey) });
+      await queryClient.cancelQueries({ queryKey: ['accessory-inventory-ui', user.pubkey] });
+
+      // Snapshot the previous values
+      const previousEquipment = queryClient.getQueryData<EquipmentConfig[]>(
+        ACCESSORY_QUERY_KEYS.equipment(petId)
+      );
+      const previousInventory = queryClient.getQueryData<AccessoryItem[]>(
+        ACCESSORY_QUERY_KEYS.inventory(user.pubkey)
+      );
+      const previousInventoryUI = queryClient.getQueryData<AccessoryItem[]>(
+        ['accessory-inventory-ui', user.pubkey]
+      );
+
+      if (previousEquipment && previousInventory) {
+        const slot = inferSlotFromCode(editData.code);
+        const existingInSlot = findEquipmentBySlot(previousEquipment, slot);
+
+        // Prepare new equipment config
+        const newEquipment: EquipmentConfig = {
+          code: editData.code,
+          x: editData.x,
+          y: editData.y,
+          scale: editData.scale,
+          rot: editData.rot,
+          flipX: editData.flipX,
+          refw: editData.refw,
+          refh: editData.refh,
+          form: editData.form,
+          url: editData.url,
+          slot,
+        };
+
+        // Update equipment optimistically
+        let optimisticEquipment = previousEquipment;
+        if (existingInSlot) {
+          optimisticEquipment = removeEquipmentByCode(optimisticEquipment, existingInSlot.code);
+        }
+        optimisticEquipment = [...optimisticEquipment, newEquipment];
+
+        // Update inventory optimistically
+        let optimisticInventory = updateInventoryQuantity(previousInventory, editData.code, -1);
+        if (existingInSlot) {
+          optimisticInventory = updateInventoryQuantity(optimisticInventory, existingInSlot.code, 1);
+        }
+
+        // Update inventory UI optimistically
+        let optimisticInventoryUI = previousInventoryUI || [];
+        const mergedInventory = mergeInventoryTags(optimisticInventory);
+        optimisticInventoryUI = mergedInventory.filter(item => item.quantity > 0);
+
+        // Optimistically update the cache
+        queryClient.setQueryData(ACCESSORY_QUERY_KEYS.equipment(petId), optimisticEquipment);
+        queryClient.setQueryData(ACCESSORY_QUERY_KEYS.inventory(user.pubkey), optimisticInventory);
+        queryClient.setQueryData(['accessory-inventory-ui', user.pubkey], optimisticInventoryUI);
+      }
+
+      // Return a context object with the snapshotted values
+      return {
+        previousEquipment,
+        previousInventory,
+        previousInventoryUI,
+        petId,
+        userPubkey: user.pubkey
+      };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context) {
+        if (context.previousEquipment) {
+          queryClient.setQueryData(
+            ACCESSORY_QUERY_KEYS.equipment(context.petId),
+            context.previousEquipment
+          );
+        }
+        if (context.previousInventory) {
+          queryClient.setQueryData(
+            ACCESSORY_QUERY_KEYS.inventory(context.userPubkey),
+            context.previousInventory
+          );
+        }
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache consistency
+      // But don't await it - let it happen in the background
+      if (user?.pubkey) {
+        queryClient.invalidateQueries({
+          queryKey: ACCESSORY_QUERY_KEYS.inventory(user.pubkey)
+        });
+      }
     },
   });
 }
@@ -326,7 +330,7 @@ export function useEquipAccessory() {
 export function useUnequipAccessory() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
-  const { mutate: createEvent } = useNostrPublish();
+  const { mutateAsync: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -376,17 +380,17 @@ export function useUnequipAccessory() {
       // Add item back to inventory
       const updatedInventory = updateInventoryQuantity(currentInventory, code, 1);
 
-      // Create new equipment event
+      // Create new equipment event and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
-      createEvent({
+      await createEvent({
         kind: 31124,
         content: petEvent.content,
         tags: equipmentTags,
       });
 
-      // Create new inventory event
+      // Create new inventory event and wait for it to be signed/published
       const inventoryTags = updateInvTags(ownerEvent.tags, updatedInventory);
-      createEvent({
+      await createEvent({
         kind: 31125,
         content: ownerEvent.content,
         tags: inventoryTags,
@@ -394,14 +398,66 @@ export function useUnequipAccessory() {
 
       return { updatedEquipment, updatedInventory };
     },
-    onSuccess: (data, variables) => {
-      // Invalidate queries
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.inventory(user?.pubkey)
-      });
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.equipment(variables.petId)
-      });
+    onMutate: async ({ petId, code }) => {
+      if (!user?.pubkey) return;
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.equipment(petId) });
+      await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.inventory(user.pubkey) });
+
+      // Snapshot the previous values
+      const previousEquipment = queryClient.getQueryData<EquipmentConfig[]>(
+        ACCESSORY_QUERY_KEYS.equipment(petId)
+      );
+      const previousInventory = queryClient.getQueryData<AccessoryItem[]>(
+        ACCESSORY_QUERY_KEYS.inventory(user.pubkey)
+      );
+
+      if (previousEquipment && previousInventory) {
+        // Remove equipment optimistically
+        const optimisticEquipment = removeEquipmentByCode(previousEquipment, code);
+
+        // Add item back to inventory optimistically
+        const optimisticInventory = updateInventoryQuantity(previousInventory, code, 1);
+
+        // Optimistically update the cache
+        queryClient.setQueryData(ACCESSORY_QUERY_KEYS.equipment(petId), optimisticEquipment);
+        queryClient.setQueryData(ACCESSORY_QUERY_KEYS.inventory(user.pubkey), optimisticInventory);
+      }
+
+      // Return a context object with the snapshotted values
+      return {
+        previousEquipment,
+        previousInventory,
+        petId,
+        userPubkey: user.pubkey
+      };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context) {
+        if (context.previousEquipment) {
+          queryClient.setQueryData(
+            ACCESSORY_QUERY_KEYS.equipment(context.petId),
+            context.previousEquipment
+          );
+        }
+        if (context.previousInventory) {
+          queryClient.setQueryData(
+            ACCESSORY_QUERY_KEYS.inventory(context.userPubkey),
+            context.previousInventory
+          );
+        }
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure cache consistency
+      // But don't await it - let it happen in the background
+      if (user?.pubkey) {
+        queryClient.invalidateQueries({
+          queryKey: ACCESSORY_QUERY_KEYS.inventory(user.pubkey)
+        });
+      }
     },
   });
 }
@@ -410,7 +466,7 @@ export function useUnequipAccessory() {
 export function useUpdateEquippedAccessory() {
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
-  const { mutate: createEvent } = useNostrPublish();
+  const { mutateAsync: createEvent } = useNostrPublish();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -465,21 +521,73 @@ export function useUpdateEquippedAccessory() {
         eq.code === editData.code ? updatedEquipment : eq
       );
 
-      // Create new equipment event with updated tags
+      // Create new equipment event with updated tags and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, newEquipmentList);
-      createEvent({
+      await createEvent({
         kind: 31124,
         content: petEvent.content,
         tags: equipmentTags,
       });
 
-      return { updatedEquipment };
+      return { updatedEquipment, newEquipmentList };
     },
-    onSuccess: (data, variables) => {
-      // Invalidate equipment query to refresh UI
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.equipment(variables.petId)
-      });
+    onMutate: async ({ petId, editData }) => {
+      if (!user?.pubkey) return;
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ACCESSORY_QUERY_KEYS.equipment(petId) });
+
+      // Snapshot the previous value
+      const previousEquipment = queryClient.getQueryData<EquipmentConfig[]>(
+        ACCESSORY_QUERY_KEYS.equipment(petId)
+      );
+
+      if (previousEquipment) {
+        const slot = inferSlotFromCode(editData.code);
+
+        // Create updated equipment config
+        const updatedEquipment: EquipmentConfig = {
+          code: editData.code,
+          x: editData.x,
+          y: editData.y,
+          scale: editData.scale,
+          rot: editData.rot,
+          flipX: editData.flipX,
+          refw: editData.refw,
+          refh: editData.refh,
+          form: editData.form,
+          url: editData.url,
+          slot,
+        };
+
+        // Replace the existing equipment with updated version optimistically
+        const optimisticEquipment = previousEquipment.map(eq =>
+          eq.code === editData.code ? updatedEquipment : eq
+        );
+
+        // Optimistically update the cache
+        queryClient.setQueryData(ACCESSORY_QUERY_KEYS.equipment(petId), optimisticEquipment);
+      }
+
+      // Return a context object with the snapshotted value
+      return {
+        previousEquipment,
+        petId,
+        userPubkey: user.pubkey
+      };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousEquipment) {
+        queryClient.setQueryData(
+          ACCESSORY_QUERY_KEYS.equipment(context.petId),
+          context.previousEquipment
+        );
+      }
+    },
+    onSettled: () => {
+      // Let background refetch happen to ensure consistency
+      // Don't await it to keep UI responsive
     },
   });
 }
