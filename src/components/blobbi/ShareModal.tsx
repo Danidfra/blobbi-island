@@ -16,16 +16,13 @@ import {
   IconCopy
 } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
-import { useImgBBUpload } from '@/hooks/useImgBBUpload';
-import { useNostrPublishWithStatus, type RelayPublishStatus } from '@/hooks/useNostrPublishWithStatus';
-import { useAppContext } from '@/hooks/useAppContext';
+import { useUploadFile } from '@/hooks/useUploadFile';
+import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
-import { PolaroidFrame as _PolaroidFrame } from '@/components/ui/PolaroidFrame';
 
 
 interface ShareModalProps {
@@ -35,21 +32,18 @@ interface ShareModalProps {
   capturedPolaroidSrc: string | null;
 }
 
-export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
   const { toast } = useToast();
-  const { mutateAsync: uploadToImgBB } = useImgBBUpload();
-  const { mutateAsync: publishWithStatus } = useNostrPublishWithStatus();
-  const { config, presetRelays } = useAppContext();
+  const { mutateAsync: uploadFile } = useUploadFile();
+  const { mutate: createEvent } = useNostrPublish();
   const { user } = useCurrentUser();
 
-  const [selectedRelays, setSelectedRelays] = useState<string[]>([config.relayUrl]);
   const [isSharing, setIsSharing] = useState(false);
-  const [isRelayListExpanded, setIsRelayListExpanded] = useState(false);
-  const [userText, setUserText] = useState('');
   const [isNostrSectionExpanded, setIsNostrSectionExpanded] = useState(false);
   const [isSocialPanelOpen, setIsSocialPanelOpen] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'publishing' | 'success' | 'error'>('idle');
-  const [relayStatuses, setRelayStatuses] = useState<RelayPublishStatus[]>([]);
+  const [userText, setUserText] = useState('');
 
   const handleDownload = async () => {
     if (!capturedPolaroidSrc) {
@@ -114,9 +108,8 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
 
       // Check if Web Share API Level 2 is available (with files support)
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [] })) {
-        // Convert polaroid data URL to blob
-        const response = await fetch(capturedPolaroidSrc);
-        const blob = await response.blob();
+        // Convert polaroid data URL to blob using the same approach
+        const blob = await (await fetch(capturedPolaroidSrc)).blob();
         const file = new File([blob], 'blobbi-polaroid.png', { type: 'image/png' });
 
         await navigator.share({
@@ -232,98 +225,81 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
       return;
     }
 
-    if (selectedRelays.length === 0) {
-      toast({
-        title: "No relays selected",
-        description: "Please select at least one relay to publish to.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    setIsPosting(true);
     try {
-      setUploadProgress('uploading');
+      // Convert data URL to blob (following nostrdamus pattern)
+      const blob = await (await fetch(capturedPolaroidSrc)).blob();
+      const file = new File([blob], "blobbi-polaroid.png", { type: "image/png" });
+      const uploadResult = await uploadFile(file);
+      const imageUrl = uploadResult[0][1];
 
-      // Upload to ImgBB (hook handles both File and dataURL)
-      const imageUrl = await uploadToImgBB(capturedPolaroidSrc);
-
-      // Create content with image URL and mandatory hashtags
+      // Create hashtags for the content
       const mandatoryHashtags = '#Blobbi #BlobbiIsland';
-      const content = userText.trim()
+
+      // Create summary for imeta tag
+      const imetaSummary = 'blobbi_polaroid #Blobbi #BlobbiIsland';
+
+      // Create final content with image URL (following nostrdamus pattern)
+      const finalContent = userText.trim()
         ? `${userText.trim()}\n\n${mandatoryHashtags}\n\n${imageUrl}`
         : `${mandatoryHashtags}\n\n${imageUrl}`;
 
-      // Prepare tags
-      const tags: string[][] = [];
-
-      // Add image URL as a tag for NIP-94 compatibility
-      tags.push(['url', imageUrl]);
-
-      // Add alt tag for accessibility
-      tags.push(['alt', 'A polaroid photo taken at Blobbi Island with accessories, background, and frame']);
-
-      // Add discoverability tags
-      tags.push(['t', 'Blobbi']);
-      tags.push(['t', 'BlobbiIsland']);
-
-      setUploadProgress('publishing');
-
-      // Publish to selected relays with status tracking
-      const result = await publishWithStatus({
-        event: {
-          kind: 1, // Text note
-          content,
-          tags,
-          created_at: Math.floor(Date.now() / 1000),
+      createEvent(
+        {
+          kind: 1,
+          content: finalContent,
+          tags: [
+            ["t", "Blobbi"],
+            ["t", "BlobbiIsland"],
+            [
+              "imeta",
+              `url ${imageUrl}`,
+              "m image/png",
+              `summary ${imetaSummary}`,
+              `alt A polaroid photo taken at Blobbi Island with accessories, background, and frame`
+            ]
+          ],
         },
-        relayUrls: selectedRelays,
-      });
+        {
+          onSuccess: () => {
+            setIsPosting(false);
+            toast({
+              title: "Photo shared to Nostr! 🚀",
+              description: "Your Blobbi polaroid has been published successfully.",
+            });
 
-      setRelayStatuses(result.relayStatuses);
-      setUploadProgress('success');
+            // Reset form after successful share
+            setUserText('');
 
-      // Show success toast with relay status
-      if (result.successCount > 0) {
-        toast({
-          title: "Photo shared to Nostr! 🚀",
-          description: `Successfully published to ${result.successCount} of ${selectedRelays.length} relay(s). Event ID: ${result.event.id?.slice(0, 8)}...`,
-        });
-
-        // Reset form after successful share
-        setUserText('');
-
-        // Keep modal open to show relay status
-      } else {
-        toast({
-          title: "Publish failed",
-          description: "Failed to publish to any relay. Please try again.",
-          variant: "destructive",
-        });
-      }
+            // Close modal after short delay
+            setTimeout(() => {
+              onClose();
+            }, 2000);
+          },
+          onError: (error) => {
+            setIsPosting(false);
+            console.error('Error sharing to Nostr:', error);
+            toast({
+              title: "Share failed",
+              description: "Failed to publish to Nostr. Please try again.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
     } catch (error) {
+      setIsPosting(false);
       console.error('Error sharing to Nostr:', error);
-      setUploadProgress('error');
-
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Share failed",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      if (uploadProgress !== 'success') {
-        setIsSharing(false);
-      }
     }
   };
 
-  const handleRelayToggle = (relayUrl: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRelays(prev => [...prev, relayUrl]);
-    } else {
-      setSelectedRelays(prev => prev.filter(url => url !== relayUrl));
-    }
-  };
+
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && isOpen) {
@@ -338,8 +314,8 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
       const timer = setTimeout(() => {
         setIsNostrSectionExpanded(false);
         setUploadProgress('idle');
-        setRelayStatuses([]);
         setIsSharing(false);
+        setIsPosting(false);
         setUserText('');
       }, 300);
       return () => clearTimeout(timer);
@@ -631,186 +607,23 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                     </div>
                   </div>
 
-                  {/* Relay Selection */}
-                  <div className="space-y-2 mt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-muted-foreground">
-                        {selectedRelays.length} relay{selectedRelays.length !== 1 ? 's' : ''} selected
-                      </div>
-                      <button
-                        onClick={() => setIsRelayListExpanded(!isRelayListExpanded)}
-                        className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 flex items-center space-x-1 transition-colors"
-                      >
-                        <span>{isRelayListExpanded ? 'Show less' : 'Show more'}</span>
-                        <svg
-                          className={`w-3 h-3 transition-transform duration-200 ${isRelayListExpanded ? 'rotate-180' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Compact view - show only first selected relay */}
-                    {!isRelayListExpanded && selectedRelays.length > 0 && (
-                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                          <div className="text-sm flex-1">
-                            <div className="font-medium">
-                              {presetRelays?.find(r => r.url === selectedRelays[0])?.name || 'Unknown'}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {selectedRelays[0]}
-                            </div>
-                          </div>
-                          {selectedRelays.length > 1 && (
-                            <span className="text-xs text-muted-foreground">
-                              +{selectedRelays.length - 1} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Expanded state - show all relays */}
-                    {isRelayListExpanded && (
-                      <div className="space-y-2">
-                        <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
-                          {presetRelays?.map((relay) => (
-                            <div key={relay.url} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={relay.url}
-                                checked={selectedRelays.includes(relay.url)}
-                                onCheckedChange={(checked) => handleRelayToggle(relay.url, checked as boolean)}
-                                disabled={isSharing || !user}
-                              />
-                              <label
-                                htmlFor={relay.url}
-                                className={cn(
-                                  "text-sm cursor-pointer flex-1",
-                                  !user && "opacity-50 cursor-not-allowed"
-                                )}
-                              >
-                                <div className="font-medium">{relay.name}</div>
-                                <div className="text-xs text-muted-foreground">{relay.url}</div>
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Empty state when no relays selected */}
-                    {selectedRelays.length === 0 && (
-                      <div className="space-y-2">
-                        <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
-                          {presetRelays?.map((relay) => (
-                            <div key={relay.url} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={relay.url}
-                                checked={selectedRelays.includes(relay.url)}
-                                onCheckedChange={(checked) => handleRelayToggle(relay.url, checked as boolean)}
-                                disabled={isSharing || !user}
-                              />
-                              <label
-                                htmlFor={relay.url}
-                                className={cn(
-                                  "text-sm cursor-pointer flex-1",
-                                  !user && "opacity-50 cursor-not-allowed"
-                                )}
-                              >
-                                <div className="font-medium">{relay.name}</div>
-                                <div className="text-xs text-muted-foreground">{relay.url}</div>
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   <Button
                     onClick={handleNostrShare}
                     className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
-                    disabled={uploadProgress !== 'idle' || !user || selectedRelays.length === 0 || !capturedPolaroidSrc}
+                    disabled={isPosting || !user || !capturedPolaroidSrc}
                   >
-                    {uploadProgress === 'uploading' ? (
+                    {isPosting ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Uploading to void.cat...
-                      </>
-                    ) : uploadProgress === 'publishing' ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Posting to {selectedRelays.length} relay{selectedRelays.length !== 1 ? 's' : ''}...
-                      </>
-                    ) : uploadProgress === 'success' ? (
-                      <>
-                        <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
-                        Published! ✨
+                        Posting to Nostr...
                       </>
                     ) : (
                       <>
                         <IconSend className="w-4 h-4 mr-2" />
-                        Post to {selectedRelays.length} Relay{selectedRelays.length !== 1 ? 's' : ''}
+                        Post to Nostr
                       </>
                     )}
                   </Button>
-
-                  {/* Relay Status Display */}
-                  {relayStatuses.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <div className="text-sm font-medium text-muted-foreground">
-                        Relay Status:
-                      </div>
-                      <div className="space-y-1">
-                        {relayStatuses.map((status, index) => (
-                          <div key={index} className="flex items-center space-x-2 text-sm">
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              status.status === 'success' ? 'bg-green-500' :
-                              status.status === 'error' ? 'bg-red-500' :
-                              'bg-yellow-500'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">
-                                {presetRelays?.find(r => r.url === status.url)?.name || 'Unknown'}
-                              </div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {status.url}
-                              </div>
-                            </div>
-                            <div className="text-xs">
-                              {status.status === 'success' ? '✓' :
-                               status.status === 'error' ? '✗' :
-                               '⏳'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Summary and retry button */}
-                      <div className="flex items-center justify-between pt-2 border-t border-purple-100 dark:border-purple-900">
-                        <div className="text-xs text-muted-foreground">
-                          {relayStatuses.filter(s => s.status === 'success').length} of {relayStatuses.length} relays succeeded
-                        </div>
-                        <Button
-                          onClick={() => {
-                            setRelayStatuses([]);
-                            setUploadProgress('idle');
-                            setIsSharing(false);
-                          }}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-7 px-3"
-                        >
-                          New Post
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                   </div>
                 </div>
               </div>
