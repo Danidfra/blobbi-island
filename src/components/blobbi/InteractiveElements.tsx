@@ -875,9 +875,10 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               />
             <InteractiveElement
               src="/assets/interactive/doors/clothing-store-door.png"
-              alt="Clothing store"
+              alt="Clothing store door"
               effect="opacity"
               className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
+              onClick={() => setCurrentLocation('clothing-store-inside')}
             />
           </div>
 
@@ -1382,6 +1383,19 @@ if (backgroundFile === 'nostr-station-inside.png') {
       <NostrHubModal
         isOpen={isNostrHubModalOpen}
         onClose={() => setIsNostrHubModalOpen(false)}
+      />
+    </>
+  );
+}
+
+// Clothing Store Inside elements
+if (backgroundFile === 'clothing-store-inside.png') {
+  return (
+    <>
+      {/* Back button to return to shopping mall */}
+      <BackArrow
+        onClick={() => setCurrentLocation('shop')}
+        className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
       />
     </>
   );

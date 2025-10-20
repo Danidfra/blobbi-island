@@ -21,6 +21,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'shop': { x: 50, y: 90 },
   'back-yard': { x: 50, y: 75 },
   'cave-open': { x: 50, y: 75 },
+  'clothing-store-inside': { x: 50, y: 80 },
 };
 
 export function getBlobbiInitialPosition(location: string): InitialPosition {

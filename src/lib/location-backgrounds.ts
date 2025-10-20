@@ -16,6 +16,7 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
   'shop': 'shopping-mall-inside.png',
   'back-yard': 'back-yard-open.png',
   'cave-open': 'cave-inside.png',
+  'clothing-store-inside': 'clothing-store-inside.png',
 };
 
 export function getBackgroundForLocation(location: LocationId): string {

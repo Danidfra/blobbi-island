@@ -160,6 +160,13 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
       { minPosition: 0, maxPosition: 15, zIndex: 20 },  // Floor level
       { minPosition: 15, maxPosition: 100, zIndex: 15 } // Upper area
     ]
+  },
+  {
+    backgroundFile: 'clothing-store-inside.png',
+    thresholds: [
+      { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Floor level
+      { minPosition: 20, maxPosition: 100, zIndex: 15 } // Upper area
+    ]
   }
 ];
 

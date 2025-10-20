@@ -46,7 +46,7 @@ export const locationBoundaries: Record<string, Boundary> = {
 
       { type: 'rectangle', x: [70, 96], y: [40, 95] }, //
       { type: 'triangle', points: [{ x: 70, y:40 }, { x: 75, y: 32 }, { x: 75, y: 40 }] }, //
-      
+
       { type: 'rectangle', x: [75, 90], y: [30, 45] }, //
     ],
   },
@@ -55,7 +55,7 @@ export const locationBoundaries: Record<string, Boundary> = {
     areas: [
       { type: 'triangle', points: [{ x: 2, y:74 }, { x: 20, y: 62 }, { x: 20, y: 74 }] }, //
       { type: 'triangle', points: [{ x: 98, y:74 }, { x: 80, y: 62 }, { x: 80, y: 74 }] }, //
-      
+
       {type: 'rectangle' , x: [20, 26], y: [50, 62] },
 
       {type: 'rectangle' , x: [33, 39], y: [50, 62] },
@@ -181,7 +181,7 @@ export const locationBoundaries: Record<string, Boundary> = {
 
       { type: 'rectangle', x: [93, 100], y: [27, 56] },
       { type: 'triangle', points: [{ x: 93, y: 27 }, { x: 93, y: 56 }, { x: 90, y: 56 }] },
-
+      
       { type: 'rectangle', x: [0, 93], y: [27, 28] },
     ],
   },
@@ -189,5 +189,14 @@ export const locationBoundaries: Record<string, Boundary> = {
     shape: 'rectangle',
     x: [20, 68], // Center area of booth
     y: [59, 63], // Bottom area of booth (floor)
+  },
+  'clothing-store-inside.png': {
+    shape: 'composite',
+    areas: [
+      {type: 'rectangle', x: [16, 84], y: [70, 90],},
+      
+      { type: 'triangle', points: [{ x: 16, y: 70 }, { x: 16, y: 90 }, { x: 0, y: 90 }] },
+      { type: 'triangle', points: [{ x: 84, y: 70 }, { x: 84, y: 90 }, { x: 100, y: 90 }] },
+    ]
   },
 };
