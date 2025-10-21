@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Debug flag for multiplayer logging
+const DEBUG_MP = process.env.NODE_ENV === "development";
 import { loadCustomizedBlobbiSvg } from "@/lib/customizeSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
@@ -17,6 +20,18 @@ export interface CurrentBlobbiDisplayProps {
   eyesClosed?: boolean;
   showAccessories?: boolean;
   accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
+  /** New: if provided, component renders THIS visual instead of fetching local hooks */
+  visualOverride?: {
+    name?: string;
+    baseColor?: string;
+    secondaryColor?: string;
+    eyeColor?: string;
+    pattern?: string;
+    specialMark?: string;
+    stage?: "egg" | "child" | "adult";
+    adultType?: string;
+  };
+  debugLabel?: string;
 }
 
 const sizeClasses = {
@@ -36,7 +51,9 @@ export function CurrentBlobbiDisplay({
   isSleeping = false,
   eyesClosed = false,
   showAccessories = true,
-  accessorySizeMultiplier
+  accessorySizeMultiplier,
+  visualOverride,
+  debugLabel =  visualOverride ? "remote" : "local"
 }: CurrentBlobbiDisplayProps) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -45,37 +62,78 @@ export function CurrentBlobbiDisplay({
   const [isLoading, setIsLoading] = useState(false);
   const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
 
-  // Find the current Blobbi
+  const lastVORef = useRef<string | null>(null);
+  const lastSvgLenRef = useRef<number>(0);
+
   useEffect(() => {
+    if (!DEBUG_MP) return;
+    if (!visualOverride) return;
+    const sig = JSON.stringify({
+      stage: visualOverride.stage,
+      baseColor: visualOverride.baseColor,
+      secondaryColor: visualOverride.secondaryColor,
+      eyeColor: visualOverride.eyeColor,
+      pattern: visualOverride.pattern,
+      name: visualOverride.name
+    });
+    if (sig !== lastVORef.current) {
+      lastVORef.current = sig;
+      console.debug("[blobbi][mp][display] visualOverride changed", { debugLabel, ...visualOverride });
+    }
+  }, [visualOverride, debugLabel]);
+
+  // Use visualOverride if provided, otherwise use local hooks
+  const shouldUseLocalData = !visualOverride;
+
+  // Find the current Blobbi (only if using local data)
+  useEffect(() => {
+    if (!shouldUseLocalData) {
+      setCurrentBlobbi(null);
+      return;
+    }
+
     if (currentCompanionId && blobbis) {
       const blobbi = blobbis.find(b => b.id === currentCompanionId);
       setCurrentBlobbi(blobbi || null);
     } else {
       setCurrentBlobbi(null);
     }
-  }, [currentCompanionId, blobbis]);
+  }, [currentCompanionId, blobbis, shouldUseLocalData]);
 
   // Load the SVG for the current Blobbi
   useEffect(() => {
     const loadSvg = async () => {
-      if (!currentBlobbi) {
-        setSvgContent("");
-        return;
+      let blobbiData: typeof currentBlobbi | typeof visualOverride;
+
+      if (visualOverride) {
+        // Use visualOverride data
+        if (!visualOverride.baseColor && !visualOverride.secondaryColor) {
+          setSvgContent("");
+          return;
+        }
+        blobbiData = visualOverride;
+      } else {
+        // Use local data
+        if (!currentBlobbi) {
+          setSvgContent("");
+          return;
+        }
+        blobbiData = currentBlobbi;
       }
 
       setIsLoading(true);
 
       try {
-        const adultType = currentBlobbi.stage === 'adult' ?
-          currentBlobbi.adultType || 'bloomi' :
+        const adultType = blobbiData.stage === 'adult' ?
+          blobbiData.adultType || 'bloomi' :
           undefined;
 
         const customizedSvg = await loadCustomizedBlobbiSvg(
-          currentBlobbi.stage,
+          blobbiData.stage || 'child',
           adultType,
-          currentBlobbi.baseColor,
-          currentBlobbi.secondaryColor,
-          currentBlobbi.eyeColor,
+          blobbiData.baseColor,
+          blobbiData.secondaryColor,
+          blobbiData.eyeColor,
           isSleeping || eyesClosed // Close eyes when either sleeping or seated with eyesClosed
         );
 
@@ -95,8 +153,27 @@ export function CurrentBlobbiDisplay({
         );
 
         setSvgContent(optimizedSvg);
+        if (DEBUG_MP) {
+          const len = optimizedSvg.length;
+          if (len !== lastSvgLenRef.current) {
+            lastSvgLenRef.current = len;
+            console.debug("[blobbi][mp][display] svg ready", {
+              debugLabel,
+              stage: (visualOverride?.stage || currentBlobbi?.stage || "child"),
+              bytes: len
+            });
+          }
+        }
       } catch (err) {
-        console.error('Failed to load current Blobbi SVG:', err);
+        console.error("[blobbi][mp][display] Failed to load Blobbi SVG", {
+          debugLabel,
+          isRemote: !!visualOverride,
+          stage: visualOverride?.stage || currentBlobbi?.stage,
+          baseColor: visualOverride?.baseColor || currentBlobbi?.baseColor,
+          secondaryColor: visualOverride?.secondaryColor || currentBlobbi?.secondaryColor,
+          eyeColor: visualOverride?.eyeColor || currentBlobbi?.eyeColor,
+          err
+        });
         setSvgContent("");
       } finally {
         setIsLoading(false);
@@ -104,7 +181,7 @@ export function CurrentBlobbiDisplay({
     };
 
     loadSvg();
-  }, [currentBlobbi, isSleeping, eyesClosed]);
+  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
 
   // Show loading skeleton
   if (isLoading) {
@@ -133,8 +210,12 @@ export function CurrentBlobbiDisplay({
     }
   };
 
-  // Show current Blobbi SVG
-  if (svgContent && currentBlobbi) {
+  // Show Blobbi SVG
+  if (svgContent && (currentBlobbi || visualOverride)) {
+    const blobbiData = (currentBlobbi || visualOverride)!;
+    const displayName = blobbiData.name || (visualOverride ? 'Remote Blobbi' : (currentBlobbi?.id || 'Blobbi'));
+    const stage = blobbiData.stage || 'child';
+
     // Transparent mode - show only the SVG without background
     if (transparent) {
       return (
@@ -145,7 +226,7 @@ export function CurrentBlobbiDisplay({
             sizeClasses[size],
             className
           )}
-          title={`${currentBlobbi.name || currentBlobbi.id} - ${currentBlobbi.stage} stage${interactive ? ' (click to switch)' : ''}`}
+          title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
           onClick={onClick}
         >
           <div
@@ -180,7 +261,7 @@ export function CurrentBlobbiDisplay({
           sizeClasses[size],
           className
         )}
-        title={`${currentBlobbi.name || currentBlobbi.id} - ${currentBlobbi.stage} stage${interactive ? ' (click to switch)' : ''}`}
+        title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
         onClick={onClick}
       >
         <div
@@ -206,8 +287,11 @@ export function CurrentBlobbiDisplay({
     );
   }
 
-  // Show fallback if enabled and no Blobbi is selected
-  if (showFallback) {
+  // Show fallback if enabled and no Blobbi/visual is selected
+  if (showFallback && !currentBlobbi && !visualOverride) {
+    const titleText = visualOverride ? 'Remote Blobbi' : 'No Blobbi selected';
+    const clickText = interactive ? (visualOverride ? '' : ' (click to select)') : '';
+
     // Transparent mode fallback - show only the emoji without background
     if (transparent) {
       return (
@@ -218,7 +302,7 @@ export function CurrentBlobbiDisplay({
             sizeClasses[size],
             className
           )}
-          title={`No Blobbi selected${interactive ? ' (click to select)' : ''}`}
+          title={`${titleText}${clickText}`}
           onClick={onClick}
         >
           <span className={cn(
@@ -243,7 +327,7 @@ export function CurrentBlobbiDisplay({
           sizeClasses[size],
           className
         )}
-        title={`No Blobbi selected${interactive ? ' (click to select)' : ''}`}
+        title={`${titleText}${clickText}`}
         onClick={onClick}
       >
         <span className={cn(

@@ -22,8 +22,8 @@ export const DEFAULT_SPEED_PX = 220;
 /** Heartbeat interval in milliseconds (25 seconds) */
 export const HEARTBEAT_INTERVAL_MS = 25000;
 
-/** Garbage collection interval in milliseconds (5 seconds) */
-export const GC_INTERVAL_MS = 5000;
+/** Animation and garbage collection interval in milliseconds (100ms) */
+export const ANIMATION_INTERVAL_MS = 100;
 
 // ============================================================================
 // Type Definitions
@@ -70,6 +70,7 @@ export interface PlayerRenderState {
   isMoving: boolean;
   lastSeen: number;
   visual?: BlobbiVisual;
+  lastContent: PresenceContent;
 }
 
 /** Blobbi visual data */
@@ -411,37 +412,45 @@ export async function publishHeartbeat(
 /**
  * Validate a presence event
  */
-export function validatePresenceEvent(event: NostrEvent): boolean {
+export type PresenceValidation =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export function explainPresenceEvent(event: NostrEvent): PresenceValidation {
   try {
-    // Check kind
-    if (event.kind !== 31950) return false;
+    if (event.kind !== 31950) return { ok: false, reason: 'kind != 31950' };
 
-    // Check required tags
-    const dTag = event.tags.find(([name]: string[]) => name === 'd')?.[1];
-    const aTag = event.tags.find(([name]: string[]) => name === 'a')?.[1];
-    const presenceTag = event.tags.find(([name, value]: string[]) => name === 't' && value === 'blobbi:presence');
-    const islandTag = event.tags.find(([name, value]: string[]) => name === 't' && value?.startsWith('island:'));
-    const locationTag = event.tags.find(([name, value]: string[]) => name === 't' && value?.startsWith('loc:'));
-    const expirationTag = event.tags.find(([name]: string[]) => name === 'expiration')?.[1];
+    const dTag = event.tags.find(([n]: string[]) => n === 'd')?.[1];
+    const aTag = event.tags.find(([n]: string[]) => n === 'a')?.[1];
+    const presenceTag = event.tags.find(([n, v]: string[]) => n === 't' && v === 'blobbi:presence');
+    const islandTag = event.tags.find(([n, v]: string[]) => n === 't' && v?.startsWith('island:'));
+    const locationTag = event.tags.find(([n, v]: string[]) => n === 't' && v?.startsWith('loc:'));
+    const expirationTag = event.tags.find(([n]: string[]) => n === 'expiration')?.[1];
 
-    if (!dTag?.startsWith('session:') || !aTag || !presenceTag || !islandTag || !locationTag || !expirationTag) {
-      return false;
-    }
+    if (!dTag) return { ok: false, reason: 'missing d tag' };
+    if (!dTag.startsWith('session:')) return { ok: false, reason: 'd not session:*' };
+    if (!aTag) return { ok: false, reason: 'missing a tag' };
+    if (!presenceTag) return { ok: false, reason: 'missing t:blobbi:presence' };
+    if (!islandTag) return { ok: false, reason: 'missing island tag' };
+    if (!locationTag) return { ok: false, reason: 'missing loc tag' };
+    if (!expirationTag) return { ok: false, reason: 'missing expiration' };
 
-    // Validate expiration
     const expiration = parseInt(expirationTag);
-    if (isNaN(expiration) || expiration <= nowSec()) {
-      return false;
-    }
+    if (Number.isNaN(expiration)) return { ok: false, reason: 'expiration NaN' };
+    if (expiration <= nowSec()) return { ok: false, reason: 'expired' };
 
-    // Parse and validate content
+    // Parse content
     const content: PresenceContent = JSON.parse(event.content);
-    if (!content.state || !content.location || !content.anchor) {
-      return false;
-    }
+    if (!content?.state) return { ok: false, reason: 'content.state missing' };
+    if (!content?.location) return { ok: false, reason: 'content.location missing' };
+    if (!content?.anchor) return { ok: false, reason: 'content.anchor missing' };
 
-    return true;
-  } catch {
-    return false;
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, reason: `exception: ${String(err?.message || err)}` };
   }
+}
+
+export function validatePresenceEvent(event: NostrEvent): boolean {
+  return explainPresenceEvent(event).ok;
 }

@@ -4,6 +4,13 @@
  */
 
 import React, { useRef, useCallback, useEffect } from 'react';
+
+// Debug flag for multiplayer logging
+ const DEBUG_MP =
+   import.meta.env.MODE === "development" && (
+     localStorage.getItem("blobbiDebug") === "1" ||
+     (globalThis as any).__BLOBBI_DEBUG === true
+   );
 import { useNostr } from '@nostrify/react';
 // import { useQuery } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -14,7 +21,7 @@ import { useLocation } from '@/hooks/useLocation';
 import type { Position } from '@/lib/types';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
-import { SimpleBlobbiDisplay } from './SimpleBlobbiDisplay';
+import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -75,12 +82,17 @@ export function MultiplayerLayer({
     }
 
     // Parse visual data (simplified)
+    const get = (n: string) => event.tags.find(([name]) => name === n)?.[1];
     const name = event.content || 'Unnamed Blobbi';
-    const baseColor = event.tags.find(([name]) => name === 'base_color')?.[1];
-    const secondaryColor = event.tags.find(([name]) => name === 'secondary_color')?.[1];
-    const pattern = event.tags.find(([name]) => name === 'pattern')?.[1];
-    const eyeColor = event.tags.find(([name]) => name === 'eye_color')?.[1];
-    const specialMark = event.tags.find(([name]) => name === 'special_mark')?.[1];
+    const baseColor      = get('base_color')      || get('baseColor');
+    const secondaryColor = get('secondary_color') || get('secondaryColor');
+    const pattern        = get('pattern');
+    const eyeColor       = get('eye_color')       || get('eyeColor');
+    const specialMark    = get('special_mark')    || get('specialMark');
+
+    if (!baseColor && !secondaryColor && !eyeColor) {
+      console.warn('[blobbi][mp][visual] 31124 sem cores', { pubkey, d, tags: event.tags });
+    }
 
     return {
       name,
@@ -97,35 +109,109 @@ export function MultiplayerLayer({
   // ============================================================================
 
   const subscribe = useCallback((filter: NostrFilter, onEvent: (event: NostrEvent) => void) => {
-    const abortController = new AbortController();
+    let closed = false;
+    let subscription: AsyncIterableIterator<unknown> | { intervalId: NodeJS.Timeout; abortController: AbortController } | null = null;
 
-    // Query for existing events
-    nostr.query([filter], { signal: abortController.signal })
-      .then(events => {
-        events.forEach(onEvent);
-      })
-      .catch(error => {
-        console.error('Failed to query events:', error);
-      });
+    const processSubscription = async () => {
+      if (closed) return;
 
-    // Set up real-time subscription with polling
-    const intervalId = setInterval(async () => {
       try {
-        const recentEvents = await nostr.query([{
-          ...filter,
-          since: Math.floor(Date.now() / 1000) - 60, // Last minute
-        }], { signal: abortController.signal });
+        // Use streaming subscription via nostr.req
+        if (DEBUG_MP) console.debug('[blobbi][mp][sub] streaming start', { filter });
+        subscription = nostr.req([filter]) as AsyncIterableIterator<unknown>;
 
-        recentEvents.forEach(onEvent);
-      } catch {
-        // Ignore errors in polling
+        for await (const msg of subscription) {
+          if (closed) break;
+
+          if (!Array.isArray(msg)) continue;
+
+          const [type, , event] = msg;
+
+          if (type === 'EVENT' && event && typeof event === 'object') {
+            // Process the event
+            onEvent(event as NostrEvent);
+          } else if (type === 'EOSE') {
+            // End of stored events, but subscription remains open for new events
+            console.debug('[Multiplayer] EOSE received, waiting for new events');
+          } else if (type === 'CLOSED') {
+            // Subscription was closed
+            break;
+          }
+        }
+      } catch (error) {
+        if (!closed && error.name !== 'AbortError') {
+          if (DEBUG_MP) console.warn('[blobbi][mp][sub] streaming failed, fallback to polling', { reason: String(error) });
+
+          // Fallback to low-latency polling if streaming fails
+          let since: number | undefined = Math.floor(Date.now() / 1000) - 1;
+          let intervalId: NodeJS.Timeout | null = null;
+          const abortController = new AbortController();
+
+          const pollEvents = async () => {
+            if (closed) return;
+
+            try {
+              const events = await nostr.query([{
+                ...filter,
+                since,
+              }], { signal: abortController.signal });
+
+              if (closed) return;
+
+              // Process only new events
+              events
+                .filter(event => event.created_at > (since || 0))
+                .sort((a, b) => a.created_at - b.created_at)
+                .forEach(onEvent);
+
+              // Update since to the latest event timestamp
+              if (events.length > 0) {
+                since = Math.max(...events.map(e => e.created_at));
+              }
+
+              if (DEBUG_MP) console.debug('[blobbi][mp][sub] polling batch', { count: events.length, since });
+            } catch (pollError) {
+              if (!closed && pollError.name !== 'AbortError') {
+                console.error('Polling error:', pollError);
+              }
+            }
+          };
+
+          // Initial poll
+          await pollEvents();
+
+          // Set up polling interval
+          intervalId = setInterval(pollEvents, 150);
+
+          // Store interval ID for cleanup
+          subscription = { intervalId, abortController };
+        }
       }
-    }, 5000); // Poll every 5 seconds
+    };
+
+    // Start processing subscription
+    processSubscription().catch(error => {
+      if (!closed) {
+        console.error('Subscription processing error:', error);
+      }
+    });
 
     return {
       close: () => {
-        abortController.abort();
-        clearInterval(intervalId);
+        closed = true;
+
+        // Close streaming subscription if active
+        if (subscription && typeof subscription === 'object' && 'return' in subscription && typeof subscription.return === 'function') {
+          subscription.return();
+        }
+
+        // Close fallback polling if active
+        if (subscription && 'intervalId' in subscription && typeof subscription.intervalId === 'number') {
+          clearInterval(subscription.intervalId);
+          if ('abortController' in subscription && subscription.abortController) {
+            subscription.abortController.abort();
+          }
+        }
       }
     };
   }, [nostr]);
@@ -199,11 +285,11 @@ export function MultiplayerLayer({
     const clickY = clientY - rect.top;
     const targetPos = getPercentPosition({ x: clickX, y: clickY });
 
-    console.debug('[blobbi] CLICK coords', { clientX, clientY, clickX, clickY, targetPos });
+    if (DEBUG_MP) console.debug('[blobbi][mp][ui] click', { targetPos, rect: { w: rect.width, h: rect.height } });
 
     try {
       await moveTo(targetPos);
-      console.debug('[blobbi] CLICK moveTo done, myPosRef=', myPosRef.current);
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] moved', { myPos: myPosRef.current });
       onMyPositionChange?.(myPosRef.current);
     } catch (error) {
       console.error('Failed to move:', error);
@@ -224,9 +310,15 @@ export function MultiplayerLayer({
     container.addEventListener('pointerdown', onPointerDown, { capture: true });
 
     return () => {
-      container.removeEventListener('pointerdown', onPointerDown, { capture: true } as any);
+      container.removeEventListener('pointerdown', onPointerDown, { capture: true });
     };
   }, [containerRef, disabled, user, handleContainerClick]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[blobbi][mp][render] players size', players.size);
+    }
+  }, [players.size]);
 
   // ============================================================================
   // Render
@@ -244,7 +336,15 @@ export function MultiplayerLayer({
   return (
     <div className={cn("absolute inset-0 pointer-events-none", className)}>
       {/* Render other players */}
-      {Array.from(players.values()).map((player) => (
+      {Array.from(players.values()).map((player, idx) => {
+        if (DEBUG_MP && (idx % 8 === 0)) {
+          console.debug('[blobbi][mp][render] remote', {
+            key: `${player.pubkey}:${player.sessionId}`,
+            hasVisual: !!player.visual,
+            name: player.visual?.name
+          });
+        }
+        return (
         <div
           key={`${player.pubkey}:${player.sessionId}`}
           className="absolute pointer-events-none"
@@ -255,12 +355,18 @@ export function MultiplayerLayer({
             zIndex: 10,
           }}
         >
-          <SimpleBlobbiDisplay
+          <CurrentBlobbiDisplay
             size="lg"
-            visual={player.visual}
-            isMoving={player.isMoving}
+            visualOverride={player.visual || {
+              baseColor: '#4F46E5',
+              secondaryColor: '#7C3AED',
+              eyeColor: '#1F2937',
+              stage: 'child',
+            }}
+            transparent={true}
+            showAccessories={false}
             className={cn(
-              "transition-all duration-200 ease-out",
+              "transition-all duration-200 ease-out z-9",
               player.isMoving && "transition-none"
             )}
           />
@@ -274,7 +380,8 @@ export function MultiplayerLayer({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* Debug info (only in development) */}
       {process.env.NODE_ENV === 'development' && (
