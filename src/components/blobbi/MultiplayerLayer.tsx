@@ -9,7 +9,7 @@ import React, { useRef, useCallback, useEffect } from 'react';
  const DEBUG_MP =
    import.meta.env.MODE === "development" && (
      localStorage.getItem("blobbiDebug") === "1" ||
-     (globalThis as any).__BLOBBI_DEBUG === true
+     (globalThis as Record<string, unknown>).__BLOBBI_DEBUG === true
    );
 import { useNostr } from '@nostrify/react';
 // import { useQuery } from '@tanstack/react-query';
@@ -220,6 +220,18 @@ export function MultiplayerLayer({
   // Multiplayer Hook
   // ============================================================================
 
+  const percentToPixel = useCallback((p: Position) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: (p.x / 100) * rect.width, y: (p.y / 100) * rect.height };
+  }, [containerRef]);
+
+  const pixelToPercent = useCallback((p: {x:number; y:number}) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 50, y: 75 };
+    return { x: (p.x / rect.width) * 100, y: (p.y / rect.height) * 100 };
+  }, [containerRef]);
+
   const {
     sessionId,
     players,
@@ -238,6 +250,8 @@ export function MultiplayerLayer({
     },
     subscribe,
     fetch31124: fetchBlobbi31124,
+    percentToPixel,
+    pixelToPercent
   });
 
   // ============================================================================
@@ -341,7 +355,9 @@ export function MultiplayerLayer({
           console.debug('[blobbi][mp][render] remote', {
             key: `${player.pubkey}:${player.sessionId}`,
             hasVisual: !!player.visual,
-            name: player.visual?.name
+            name: player.visual?.name,
+            animPos: player.position,
+            isMoving: player.isMoving
           });
         }
         return (
@@ -365,10 +381,7 @@ export function MultiplayerLayer({
             }}
             transparent={true}
             showAccessories={false}
-            className={cn(
-              "transition-all duration-200 ease-out z-9",
-              player.isMoving && "transition-none"
-            )}
+            className="z-9"
           />
 
           {/* Player name label */}

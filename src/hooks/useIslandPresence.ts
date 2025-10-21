@@ -1,15 +1,13 @@
 /**
  * React hook for Nostr multiplayer presence on Blobbi Island
  */
-import { buildPresence31950, EXP_SECONDS, explainPresenceEvent } from '@/lib/multiplayer';
+
+import { type PlayerAnimState } from '@/lib/multiplayer';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 // Debug flag for multiplayer logging
- const DEBUG_MP =
-   import.meta.env.MODE === "development" && (
-     localStorage.getItem("blobbiDebug") === "1" ||
-     (globalThis as any).__BLOBBI_DEBUG === true
-   );
+const DEBUG_MP = true;
+
 // import { useQuery } from '@tanstack/react-query';
 import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
@@ -25,13 +23,11 @@ import {
   publishMove,
   publishHeartbeat,
   validatePresenceEvent,
-  posAt,
   nowSec,
   createWalkableApi,
   parseA,
   DEFAULT_SPEED_PX,
   HEARTBEAT_INTERVAL_MS,
-  ANIMATION_INTERVAL_MS,
 } from '@/lib/multiplayer';
 
 // ============================================================================
@@ -48,6 +44,8 @@ interface UseIslandPresenceOptions {
   subscribe: (filter: NostrFilter, onEvent: (event: NostrEvent) => void) => { close: () => void };
   fetch31124: (pubkey: string, d: string) => Promise<BlobbiVisual>;
   nav?: WalkableApi;
+  percentToPixel: (p: Position) => { x:number; y:number };
+  pixelToPercent: (p: {x:number; y:number}) => Position;
 }
 
 interface UseIslandPresenceReturn {
@@ -76,6 +74,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   } = opts;
 
   const navApi = useMemo(() => opts.nav ?? createWalkableApi(location), [opts.nav, location]);
+
   // State
   const [sessionId] = useState(() => makeSessionId());
   const [players, setPlayers] = useState<Map<string, PlayerRenderState>>(new Map());
@@ -86,13 +85,13 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const myPosRef = useRef<Position>(startPos);
   const subscriptionRef = useRef<{ close: () => void } | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const gcIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const myLastContentRef = useRef<PresenceContent | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const visualCacheRef = useRef<Map<string, BlobbiVisual>>(new Map());
   const fetchingVisualsRef = useRef<Set<string>>(new Set());
   const initRef = useRef(false);
   const lastLocationRef = useRef<LocationId>(location);
-  const tickRef = useRef(0);
+  const playersAnimRef = useRef<Map<string, PlayerAnimState>>(new Map());
+  const lastUpdateTimeRef = useRef<number>(performance.now());
 
   // Memoized values
   const blobbiAddr = useMemo(() => makeBlobbiAddr(pubkey, blobbiD), [pubkey, blobbiD]);
@@ -128,26 +127,86 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   }, [fetch31124]);
 
   // ============================================================================
+  // Animation Loop (like MovableBlobbi)
+  // ============================================================================
+
+const animatePlayers = useCallback(() => {
+  const now = performance.now();
+  const dt = (now - lastUpdateTimeRef.current) / 1000;
+  lastUpdateTimeRef.current = now;
+
+  let needsUpdate = false;
+  const updated = new Map(playersAnimRef.current);
+
+  for (const [key, anim] of playersAnimRef.current) {
+    const player = players.get(key);
+    if (!player) continue;
+
+    const posPx    = opts.percentToPixel(anim.pos);
+    const targetPx = opts.percentToPixel(anim.target);
+
+    const dx = targetPx.x - posPx.x;
+    const dy = targetPx.y - posPx.y;
+    const distPx = Math.hypot(dx, dy);
+
+    let newPosPx = { ...posPx };
+    let moving = false;
+
+    if (distPx > 2) {
+      const step = anim.speedPx * dt;         // px/sec * sec = px
+      const ux = dx / distPx, uy = dy / distPx;
+      newPosPx.x += ux * step;
+      newPosPx.y += uy * step;
+      moving = true;
+    } else {
+      newPosPx = targetPx;
+    }
+
+    const newPosPct = opts.pixelToPercent(newPosPx);
+
+    const newAnim = { ...anim, pos: newPosPct, moving, lastUpdate: now };
+    updated.set(key, newAnim);
+
+    if (
+      Math.abs(newPosPct.x - player.position.x) > 0.1 ||
+      Math.abs(newPosPct.y - player.position.y) > 0.1 ||
+      moving !== player.isMoving
+    ) {
+      needsUpdate = true;
+    }
+  }
+
+  playersAnimRef.current = updated;
+
+  if (needsUpdate) {
+    setPlayers(prev => {
+      const next = new Map(prev);
+      for (const [key, anim] of updated) {
+        const p = prev.get(key);
+        if (p) next.set(key, { ...p, position: anim.pos, isMoving: anim.moving });
+      }
+      return next;
+    });
+  }
+
+  animationFrameRef.current = requestAnimationFrame(animatePlayers);
+}, [players, opts.percentToPixel, opts.pixelToPercent]);
+
+  // Start animation loop
+  useEffect(() => {
+    animationFrameRef.current = requestAnimationFrame(animatePlayers);
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [animatePlayers]);
+
+  // ============================================================================
   // Event Processing
   // ============================================================================
 
   const processPresenceEvent = useCallback(async (event: NostrEvent) => {
-    // hard guard contra históricos antigos
-    const NOW = nowSec();
-    // margem de segurança um pouco maior que EXP_SECONDS
-    if (event.created_at < (NOW - (EXP_SECONDS * 2))) {
-      if (DEBUG_MP) console.debug('[blobbi][mp] skip old event', {
-        pk: event.pubkey, at: event.created_at, now: NOW
-      });
-      return;
-    }
-    const verdict = explainPresenceEvent(event);
-    if (!verdict.ok) {
-      if (DEBUG_MP) console.warn('[blobbi][mp] EVENT rejected:', verdict.reason, {
-        pk: event.pubkey, at: event.created_at, tags: event.tags
-      });
-      return;
-    }
     try {
       if (DEBUG_MP) console.debug('[blobbi][mp] EVENT raw', {
         kind: event.kind,
@@ -186,29 +245,85 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
         goal: content.goal ? { from: content.goal.from, to: content.goal.to, v: content.goal.v, ts: content.goal.ts } : null
       });
 
-      // Calculate initial position (will be updated by animation loop)
-      let currentPos: Position;
-      if (content.goal) {
-        currentPos = posAt(content.goal, nowSec());
-      } else {
-        currentPos = { x: content.anchor.x, y: content.anchor.y };
-      }
-
       // Fetch visual if not cached
       let visual = visualCacheRef.current.get(aTag);
       if (!visual && !fetchingVisualsRef.current.has(aTag)) {
         visual = await fetchBlobbiVisual(aTag);
       }
 
+      // Determine target position
+      const targetPos = content.goal ? content.goal.to : {
+        x: content.anchor.x,
+        y: content.anchor.y
+      };
+
+      // Check if this is a new session (should snap)
+      const existingPlayer = players.get(playerKey);
+      const existingAnimState = playersAnimRef.current.get(playerKey);
+      const isSessionChange = existingPlayer && existingPlayer.sessionId !== sessionIdFromTag;
+
+      // Calculate distance to determine if we should snap (teleport fallback)
+      let shouldSnap = isSessionChange;
+      if (existingAnimState) {
+        const distance = Math.sqrt(
+          Math.pow(targetPos.x - existingAnimState.pos.x, 2) +
+          Math.pow(targetPos.y - existingAnimState.pos.y, 2)
+        );
+        // Snap if distance is too large (> 35% of map width)
+        if (distance > 35) {
+          shouldSnap = true;
+        }
+      }
+
+      if (isSessionChange && DEBUG_MP) {
+        console.debug('[blobbi][mp] remote:session-change', {
+          key: playerKey,
+          oldSession: existingPlayer?.sessionId,
+          newSession: sessionIdFromTag
+        });
+      }
+
+      if (shouldSnap && DEBUG_MP) {
+        console.debug('[blobbi][mp] remote:snap', {
+          key: playerKey,
+          from: existingAnimState?.pos,
+          to: targetPos,
+          reason: isSessionChange ? 'session-change' : 'large-distance'
+        });
+      }
+
+      // Create or update animation state
+      const animState: PlayerAnimState = {
+        pos: shouldSnap ? targetPos : (existingAnimState?.pos || targetPos),
+        target: targetPos,
+        speedPx: DEFAULT_SPEED_PX,
+        lastUpdate: performance.now(),
+        moving: !shouldSnap && (content.state === 'moving' && !!content.goal),
+      };
+
+      // Update animation state
+      const newAnimStates = new Map(playersAnimRef.current);
+      newAnimStates.set(playerKey, animState);
+      playersAnimRef.current = newAnimStates;
+
+      if (DEBUG_MP) console.debug('[blobbi][mp] remote:set-target', {
+        key: playerKey,
+        target: targetPos,
+        snap: shouldSnap,
+        moving: animState.moving
+      });
+
+      // Create player state
       const playerState: PlayerRenderState = {
         pubkey: event.pubkey,
         sessionId: sessionIdFromTag,
         blobbiAddr: aTag,
-        position: currentPos,
-        isMoving: content.state === 'moving' && !!content.goal,
+        position: animState.pos,
+        isMoving: animState.moving,
         lastSeen: nowSec(),
         visual,
-        lastContent: content, // Store full content for interpolation (required)
+        lastContent: content,
+        animState,
       };
 
       if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {
@@ -220,28 +335,13 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
 
       setPlayers(prev => {
         const updated = new Map(prev);
-        const existing = prev.get(playerKey);
-
-        if (existing && existing.lastContent?.goal && content.state === 'idle') {
-          const g = existing.lastContent.goal;
-          const dist = Math.hypot(g.to.x - g.from.x, g.to.y - g.from.y);
-          const endTs = g.ts + dist / g.v;
-          if (nowSec() < endTs) {
-            updated.set(playerKey, { ...existing, lastSeen: nowSec() });
-            return updated;
-          }
-        }
-
         updated.set(playerKey, playerState);
-        if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {
-          key: playerKey, total: updated.size, isMoving: playerState.isMoving
-        });
         return updated;
       });
     } catch (error) {
       console.error('Error processing presence event:', error);
     }
-  }, [pubkey, fetchBlobbiVisual]);
+  }, [pubkey, fetchBlobbiVisual, players]);
 
   // ============================================================================
   // Subscription Management
@@ -255,82 +355,11 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
     const filter = {
       kinds: [31950],
       '#t': ['blobbi:presence', `island:${islandId}`, `loc:${location}`],
-      since: nowSec() - (EXP_SECONDS * 2),
     };
 
     if (DEBUG_MP) console.debug('[blobbi][mp][sub] start', { filter });
     subscriptionRef.current = subscribe(filter, processPresenceEvent);
   }, [islandId, location, subscribe, processPresenceEvent]);
-
-  // ============================================================================
-  // Position Updates and Interpolation
-  // ============================================================================
-
-  const updatePlayerPositions = useCallback(() => {
-    const now = nowSec();
-    const epsilon = 0.01; // Small epsilon for floating point comparison
-
-    setPlayers(prev => {
-      const updated = new Map();
-      tickRef.current++;
-      if (DEBUG_MP && (tickRef.current % 30 === 0)) {
-        console.debug('[blobbi][mp][tick] update', { now, size: prev.size });
-      }
-
-      for (const [key, player] of prev) {
-        // Remove expired players (40+ seconds old)
-        if (now - player.lastSeen > 40) {
-          if (DEBUG_MP && (tickRef.current % 10 === 0))
-            console.debug('[blobbi][mp][tick] drop-expired', { key, lastSeen: player.lastSeen, now });
-          continue;
-        }
-
-        const content = player.lastContent;
-        let newPosition: Position;
-        let isMoving: boolean;
-
-        if (content.goal) {
-          // Calculate interpolated position
-          newPosition = posAt(content.goal, now);
-
-          // Check if movement is complete using epsilon comparison
-          const distanceToGoal = Math.sqrt(
-            Math.pow(newPosition.x - content.goal.to.x, 2) +
-            Math.pow(newPosition.y - content.goal.to.y, 2)
-          );
-
-          isMoving = distanceToGoal > epsilon;
-
-          // If movement is complete, ensure we're at the exact destination
-          if (!isMoving) {
-            newPosition = { x: content.goal.to.x, y: content.goal.to.y };
-          }
-        } else {
-          // No goal, stay at anchor position
-          newPosition = { x: content.anchor.x, y: content.anchor.y };
-          isMoving = false;
-        }
-
-        if (DEBUG_MP && (tickRef.current % 10 === 0)) console.debug('[blobbi][mp][tick] interp', {
-          key,
-          hadGoal: !!player.lastContent?.goal,
-          from: player.position,
-          to: player.lastContent?.goal?.to,
-          newPosition,
-          isMoving
-        });
-
-        // Update player state with new position and movement status
-        updated.set(key, {
-          ...player,
-          position: newPosition,
-          isMoving,
-        });
-      }
-
-      return updated;
-    });
-  }, []);
 
   // ============================================================================
   // Movement Function
@@ -356,18 +385,6 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
       );
       if (DEBUG_MP) console.debug('[blobbi][mp] moveTo published', { clampedDest });
 
-      myLastContentRef.current = {
-        state: 'moving',
-        location,
-        anchor: { x: from.x, y: from.y, ts: nowSec() },
-        goal: {
-          from: { x: from.x, y: from.y },
-          to: { x: clampedDest.x, y: clampedDest.y },
-          v: DEFAULT_SPEED_PX,
-          ts: nowSec(),
-        },
-      };
-
       if (clampedDest.x !== myPosRef.current.x || clampedDest.y !== myPosRef.current.y) {
         myPosRef.current = clampedDest;
       }
@@ -381,81 +398,45 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // Lifecycle Management
   // ============================================================================
 
- // One-shot init: login, subscribe e timers (StrictMode-safe)
- useEffect(() => {
-   if (initRef.current) return;
-   initRef.current = true;
+  // One-shot init: login, subscribe e timers (StrictMode-safe)
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
 
-   let mounted = true;
+    let mounted = true;
 
-   const doLoginAndStart = async () => {
-     try {
-       await publishPresenceLogin(publish, {
-         sessionId, islandId, location, blobbiAddr, startPos,
-       });
-       if (DEBUG_MP) console.debug('[blobbi][mp] login presence published', { startPos, location });
-       if (!mounted) return;
-       setIsLoading(false);
+    const doLoginAndStart = async () => {
+      try {
+        await publishPresenceLogin(publish, {
+          sessionId, islandId, location, blobbiAddr, startPos,
+        });
+        if (DEBUG_MP) console.debug('[blobbi][mp] login presence published', { startPos, location });
+        if (!mounted) return;
+        setIsLoading(false);
 
-       // subscribe uma vez
-       startSubscription();
+        // subscribe uma vez
+        startSubscription();
 
-       // timers únicos
-       heartbeatIntervalRef.current = setInterval(() => {
-         try {
-           const last = myLastContentRef.current;
-           let content: PresenceContent;
-           if (last?.goal) {
-             // ❸ Heartbeat mantém MOVING com mesmo goal e âncora interpolada
-             const now = nowSec();
-             const p = posAt(last.goal, now);
-             const dist = Math.hypot(last.goal.to.x - last.goal.from.x, last.goal.to.y - last.goal.from.y);
-             const endTs = last.goal.ts + dist / last.goal.v;
-             if (now < endTs) {
-               content = {
-                 state: 'moving',
-                 location,
-                 anchor: { x: p.x, y: p.y, ts: now },
-                 goal: last.goal,
-               };
-             } else {
-               content = {
-                 state: 'idle',
-                 location,
-                 anchor: { x: last.goal.to.x, y: last.goal.to.y, ts: now },
-               };
-               myPosRef.current = { x: last.goal.to.x, y: last.goal.to.y };
-               myLastContentRef.current = content;
-             }
-           } else {
-             content = {
-               state: 'idle',
-               location,
-               anchor: { x: myPosRef.current.x, y: myPosRef.current.y, ts: nowSec() },
-             };
-           }
-           const evt = buildPresence31950({ sessionId, islandId, location, blobbiAddr, content });
-           publish(evt).catch(err => console.error('Failed to publish heartbeat:', err));
-         } catch (err) {
-           console.error('Heartbeat error:', err);
-         }
-       }, HEARTBEAT_INTERVAL_MS);
+        // timers únicos
+        heartbeatIntervalRef.current = setInterval(() => {
+          if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr }, myPosRef.current)
+            .catch(err => console.error('Failed to publish heartbeat:', err));
+        }, HEARTBEAT_INTERVAL_MS);
+      } catch (err) {
+        console.error('Failed to init presence:', err);
+        if (mounted) { setError('Failed to init presence'); setIsLoading(false); }
+      }
+    };
 
-       gcIntervalRef.current = setInterval(updatePlayerPositions, ANIMATION_INTERVAL_MS);
-     } catch (err) {
-       console.error('Failed to init presence:', err);
-       if (mounted) { setError('Failed to init presence'); setIsLoading(false); }
-     }
-   };
+    doLoginAndStart();
 
-   doLoginAndStart();
-
-   return () => {
-     mounted = false;
-     if (subscriptionRef.current) subscriptionRef.current.close();
-     if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
-     if (gcIntervalRef.current) clearInterval(gcIntervalRef.current);
-   };
+    return () => {
+      mounted = false;
+      if (subscriptionRef.current) subscriptionRef.current.close();
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
   //  eslint-disable-next-line react-hooks/exhaustive-deps
  }, []);
 
@@ -473,8 +454,8 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
-      if (gcIntervalRef.current) {
-        clearInterval(gcIntervalRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, []);

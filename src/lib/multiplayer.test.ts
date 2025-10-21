@@ -92,6 +92,13 @@ describe('Multiplayer Smooth Movement', () => {
         isMoving: true,
         lastSeen: 1000000,
         lastContent: content,
+        animState: {
+          pos: { x: 10, y: 20 },
+          target: { x: 50, y: 60 },
+          speedPx: 220,
+          lastUpdate: performance.now(),
+          moving: true,
+        },
       };
 
       expect(playerState.lastContent).toEqual(content);
@@ -113,6 +120,13 @@ describe('Multiplayer Smooth Movement', () => {
         isMoving: false,
         lastSeen: 1000000,
         lastContent: content,
+        animState: {
+          pos: { x: 30, y: 40 },
+          target: { x: 30, y: 40 },
+          speedPx: 220,
+          lastUpdate: performance.now(),
+          moving: false,
+        },
       };
 
       expect(playerState.lastContent).toEqual(content);

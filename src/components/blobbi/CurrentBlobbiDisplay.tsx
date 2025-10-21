@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Debug flag for multiplayer logging
-const DEBUG_MP = process.env.NODE_ENV === "development";
 import { loadCustomizedBlobbiSvg } from "@/lib/customizeSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
+
+// Debug flag for multiplayer logging
+const DEBUG_MP = true;
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
@@ -31,7 +31,6 @@ export interface CurrentBlobbiDisplayProps {
     stage?: "egg" | "child" | "adult";
     adultType?: string;
   };
-  debugLabel?: string;
 }
 
 const sizeClasses = {
@@ -52,9 +51,9 @@ export function CurrentBlobbiDisplay({
   eyesClosed = false,
   showAccessories = true,
   accessorySizeMultiplier,
-  visualOverride,
-  debugLabel =  visualOverride ? "remote" : "local"
+  visualOverride
 }: CurrentBlobbiDisplayProps) {
+  // Always run hooks, but only use data when needed (for local player)
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
   const currentCompanionId = profile?.currentCompanion;
@@ -62,58 +61,39 @@ export function CurrentBlobbiDisplay({
   const [isLoading, setIsLoading] = useState(false);
   const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
 
-  const lastVORef = useRef<string | null>(null);
-  const lastSvgLenRef = useRef<number>(0);
+  if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] CurrentBlobbiDisplay(remote)', { visualOverride });
 
+  // Only use local data for local player (when visualOverride is not provided)
   useEffect(() => {
-    if (!DEBUG_MP) return;
-    if (!visualOverride) return;
-    const sig = JSON.stringify({
-      stage: visualOverride.stage,
-      baseColor: visualOverride.baseColor,
-      secondaryColor: visualOverride.secondaryColor,
-      eyeColor: visualOverride.eyeColor,
-      pattern: visualOverride.pattern,
-      name: visualOverride.name
-    });
-    if (sig !== lastVORef.current) {
-      lastVORef.current = sig;
-      console.debug("[blobbi][mp][display] visualOverride changed", { debugLabel, ...visualOverride });
-    }
-  }, [visualOverride, debugLabel]);
-
-  // Use visualOverride if provided, otherwise use local hooks
-  const shouldUseLocalData = !visualOverride;
-
-  // Find the current Blobbi (only if using local data)
-  useEffect(() => {
-    if (!shouldUseLocalData) {
+    if (visualOverride) {
+      // For remote players, don't use local data
       setCurrentBlobbi(null);
       return;
     }
 
+    // For local player, find the current Blobbi
     if (currentCompanionId && blobbis) {
       const blobbi = blobbis.find(b => b.id === currentCompanionId);
       setCurrentBlobbi(blobbi || null);
     } else {
       setCurrentBlobbi(null);
     }
-  }, [currentCompanionId, blobbis, shouldUseLocalData]);
+  }, [currentCompanionId, blobbis, visualOverride]);
 
-  // Load the SVG for the current Blobbi
+  // Load the SVG for the current Blobbi or visual override
   useEffect(() => {
     const loadSvg = async () => {
       let blobbiData: typeof currentBlobbi | typeof visualOverride;
 
       if (visualOverride) {
-        // Use visualOverride data
+        // Use visualOverride data for remote players
         if (!visualOverride.baseColor && !visualOverride.secondaryColor) {
           setSvgContent("");
           return;
         }
         blobbiData = visualOverride;
       } else {
-        // Use local data
+        // Use local data for local player only
         if (!currentBlobbi) {
           setSvgContent("");
           return;
@@ -153,27 +133,9 @@ export function CurrentBlobbiDisplay({
         );
 
         setSvgContent(optimizedSvg);
-        if (DEBUG_MP) {
-          const len = optimizedSvg.length;
-          if (len !== lastSvgLenRef.current) {
-            lastSvgLenRef.current = len;
-            console.debug("[blobbi][mp][display] svg ready", {
-              debugLabel,
-              stage: (visualOverride?.stage || currentBlobbi?.stage || "child"),
-              bytes: len
-            });
-          }
-        }
+        if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] svg ready (remote)', { stage: (visualOverride.stage || 'child') });
       } catch (err) {
-        console.error("[blobbi][mp][display] Failed to load Blobbi SVG", {
-          debugLabel,
-          isRemote: !!visualOverride,
-          stage: visualOverride?.stage || currentBlobbi?.stage,
-          baseColor: visualOverride?.baseColor || currentBlobbi?.baseColor,
-          secondaryColor: visualOverride?.secondaryColor || currentBlobbi?.secondaryColor,
-          eyeColor: visualOverride?.eyeColor || currentBlobbi?.eyeColor,
-          err
-        });
+        console.error('Failed to load Blobbi SVG:', err);
         setSvgContent("");
       } finally {
         setIsLoading(false);
@@ -182,19 +144,6 @@ export function CurrentBlobbiDisplay({
 
     loadSvg();
   }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
-
-  // Show loading skeleton
-  if (isLoading) {
-    return (
-      <Skeleton
-        className={cn(
-          "rounded-full",
-          sizeClasses[size],
-          className
-        )}
-      />
-    );
-  }
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -209,6 +158,19 @@ export function CurrentBlobbiDisplay({
       default: return 1.0;
     }
   };
+
+  // Show loading skeleton
+  if (isLoading) {
+    return (
+      <Skeleton
+        className={cn(
+          "rounded-full",
+          sizeClasses[size],
+          className
+        )}
+      />
+    );
+  }
 
   // Show Blobbi SVG
   if (svgContent && (currentBlobbi || visualOverride)) {
@@ -241,13 +203,16 @@ export function CurrentBlobbiDisplay({
           />
 
           {/* Accessory Overlay for transparent mode */}
-          {showAccessories && (
-            <AccessoryOverlay
-              isStatic={true}
-              sizeMultiplier={getAccessorySizeMultiplier()}
-              className="absolute inset-0"
-            />
-          )}
+          {showAccessories && (() => {
+            if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
+            return (
+              <AccessoryOverlay
+                isStatic={true}
+                sizeMultiplier={getAccessorySizeMultiplier()}
+                className="absolute inset-0"
+              />
+            );
+          })()}
         </div>
       );
     }
@@ -276,13 +241,16 @@ export function CurrentBlobbiDisplay({
         />
 
         {/* Accessory Overlay for default mode */}
-        {showAccessories && (
-          <AccessoryOverlay
-            isStatic={true}
-            sizeMultiplier={getAccessorySizeMultiplier()}
-            className="absolute inset-0"
-          />
-        )}
+        {showAccessories && (() => {
+          if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
+          return (
+            <AccessoryOverlay
+              isStatic={true}
+              sizeMultiplier={getAccessorySizeMultiplier()}
+              className="absolute inset-0"
+            />
+          );
+        })()}
       </div>
     );
   }

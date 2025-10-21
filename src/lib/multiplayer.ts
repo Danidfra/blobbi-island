@@ -17,7 +17,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 export const EXP_SECONDS = 35;
 
 /** Default movement speed in pixels per second */
-export const DEFAULT_SPEED_PX = 220;
+export const DEFAULT_SPEED_PX = 120;
 
 /** Heartbeat interval in milliseconds (25 seconds) */
 export const HEARTBEAT_INTERVAL_MS = 25000;
@@ -61,6 +61,15 @@ export interface WalkableApi {
   clampToBounds(x: number, y: number): { x: number; y: number };
 }
 
+/** Animation state for remote players */
+export interface PlayerAnimState {
+  pos: Position;           // current animated position
+  target: Position;        // destination from event.goal or event.anchor
+  speedPx: number;         // same as DEFAULT_SPEED_PX
+  lastUpdate: number;      // last frame timestamp
+  moving: boolean;
+}
+
 /** Player state for rendering */
 export interface PlayerRenderState {
   pubkey: string;
@@ -71,6 +80,7 @@ export interface PlayerRenderState {
   lastSeen: number;
   visual?: BlobbiVisual;
   lastContent: PresenceContent;
+  animState: PlayerAnimState; // animation state for smooth movement
 }
 
 /** Blobbi visual data */
@@ -446,8 +456,8 @@ export function explainPresenceEvent(event: NostrEvent): PresenceValidation {
     if (!content?.anchor) return { ok: false, reason: 'content.anchor missing' };
 
     return { ok: true };
-  } catch (err: any) {
-    return { ok: false, reason: `exception: ${String(err?.message || err)}` };
+  } catch (err: unknown) {
+    return { ok: false, reason: `exception: ${String(err instanceof Error ? err.message : err)}` };
   }
 }
 
