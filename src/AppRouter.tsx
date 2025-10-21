@@ -5,6 +5,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 // Lazy load pages for better performance with loading states
 const BlobbiIsland = lazy(() => import("./pages/BlobbiIsland").then(m => ({ default: m.BlobbiIsland })));
 const Index = lazy(() => import("./pages/Index"));
+const MultiplayerDemo = lazy(() => import("./pages/MultiplayerDemo").then(m => ({ default: m.MultiplayerDemo })));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading component for lazy-loaded routes
@@ -30,6 +31,11 @@ export function AppRouter() {
         <Route path="/original" element={
           <Suspense fallback={<PageLoading />}>
             <Index />
+          </Suspense>
+        } />
+        <Route path="/multiplayer-demo" element={
+          <Suspense fallback={<PageLoading />}>
+            <MultiplayerDemo />
           </Suspense>
         } />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

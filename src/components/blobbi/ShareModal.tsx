@@ -32,7 +32,7 @@ interface ShareModalProps {
   capturedPolaroidSrc: string | null;
 }
 
-export function ShareModal({ isOpen, onClose, capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
+export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
   const { toast } = useToast();
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: createEvent } = useNostrPublish();
@@ -42,7 +42,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto, capturedPolaroidSrc
   const [isNostrSectionExpanded, setIsNostrSectionExpanded] = useState(false);
   const [isSocialPanelOpen, setIsSocialPanelOpen] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'publishing' | 'success' | 'error'>('idle');
+  const [_uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'publishing' | 'success' | 'error'>('idle');
   const [userText, setUserText] = useState('');
 
   const handleDownload = async () => {

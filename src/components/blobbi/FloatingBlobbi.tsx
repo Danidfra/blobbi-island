@@ -1,21 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+import type { BlobbiVisual } from '@/lib/multiplayer';
 
 interface FloatingBlobbiProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   onBlobbiClick?: () => void;
+  visual?: BlobbiVisual;
+  autoMove?: boolean;
 }
 
-export function FloatingBlobbi({ className, size = 'lg', onBlobbiClick }: FloatingBlobbiProps) {
+export function FloatingBlobbi({
+  className,
+  size = 'lg',
+  onBlobbiClick,
+  visual: _visual,
+  autoMove = true
+}: FloatingBlobbiProps) {
   const [position, setPosition] = useState({ x: 50, y: 70 }); // Start at bottom center
   const [isMoving, setIsMoving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const moveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Auto-movement behavior
+  // Auto-movement behavior (only if autoMove is enabled)
   useEffect(() => {
+    if (!autoMove) return;
+
     const moveRandomly = () => {
       if (isMoving) return;
 
@@ -42,11 +53,11 @@ export function FloatingBlobbi({ className, size = 'lg', onBlobbiClick }: Floati
         clearTimeout(moveTimeoutRef.current);
       }
     };
-  }, [isMoving]);
+  }, [isMoving, autoMove]);
 
-  // Handle click to move
+  // Handle click to move (only if autoMove is enabled)
   const handleContainerClick = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
+    if (!autoMove || !containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -79,8 +90,8 @@ export function FloatingBlobbi({ className, size = 'lg', onBlobbiClick }: Floati
   return (
     <div
       ref={containerRef}
-      className={cn("absolute inset-0 cursor-pointer", className)}
-      onClick={handleContainerClick}
+      className={cn("absolute inset-0", autoMove && "cursor-pointer", className)}
+      onClick={autoMove ? handleContainerClick : undefined}
     >
       {/* Floating Blobbi */}
       <div
@@ -111,12 +122,14 @@ export function FloatingBlobbi({ className, size = 'lg', onBlobbiClick }: Floati
         />
       </div>
 
-      {/* Click instruction (appears briefly on hover) */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap">
-          Click anywhere to move your Blobbi • Click Blobbi to switch
+      {/* Click instruction (appears briefly on hover) - only for autoMove mode */}
+      {autoMove && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+          <div className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap">
+            Click anywhere to move your Blobbi • Click Blobbi to switch
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

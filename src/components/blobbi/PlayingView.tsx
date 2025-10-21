@@ -20,6 +20,7 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
+import { MultiplayerLayer } from './MultiplayerLayer';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -56,6 +57,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
   const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation);
+  const [myPosition, setMyPosition] = useState<Position>(blobbiInitialPosition);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',
     x: [0, 100],
@@ -70,6 +72,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   };
 
   const handleMoveComplete = (position: Position) => {
+    setMyPosition(position);
+
     // Check if Blobbi reached the sleeping position with tighter tolerance
     if (
       Math.abs(position.x - sleepingPosition.x) < 2 &&
@@ -110,7 +114,9 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     setIsAttachedToChair(false);
   };
 
-  const handleMoveStart = (_destination: Position) => {
+  const handleMoveStart = (destination: Position) => {
+    setMyPosition(destination);
+
     // If starting to move while sleeping, wake up and detach from bed
     if (isSleeping || isAttachedToBed) {
       setIsSleeping(false);
@@ -235,6 +241,16 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         size={blobbiSize}
         scaleByYPosition={true}
       />
+
+      {/* Multiplayer Layer */}
+      {selectedBlobbi && (
+        <MultiplayerLayer
+          containerRef={containerRef}
+          currentBlobbiD={selectedBlobbi.id}
+          startPosition={myPosition}
+          onMyPositionChange={setMyPosition}
+        />
+      )}
 
       {/* Map Button and Arcade Pass Icon - Top Right */}
       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center space-x-2">
