@@ -1,7 +1,7 @@
 /**
  * React hook for Nostr multiplayer presence on Blobbi Island
  */
-
+import { posAt } from '@/lib/multiplayer';
 import { type PlayerAnimState } from '@/lib/multiplayer';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
@@ -162,14 +162,15 @@ const animatePlayers = useCallback(() => {
       newPosPx = targetPx;
     }
 
-    const newPosPct = opts.pixelToPercent(newPosPx);
+    const newPosPctRaw = opts.pixelToPercent(newPosPx);
+    const clamped = navApi.clampToBounds(newPosPctRaw.x, newPosPctRaw.y);
 
-    const newAnim = { ...anim, pos: newPosPct, moving, lastUpdate: now };
+    const newAnim = { ...anim, pos: clamped, moving, lastUpdate: now };
     updated.set(key, newAnim);
 
     if (
-      Math.abs(newPosPct.x - player.position.x) > 0.1 ||
-      Math.abs(newPosPct.y - player.position.y) > 0.1 ||
+      Math.abs(clamped.x - player.position.x) > 0.1 ||
+      Math.abs(clamped.y - player.position.y) > 0.1 ||
       moving !== player.isMoving
     ) {
       needsUpdate = true;
@@ -190,7 +191,7 @@ const animatePlayers = useCallback(() => {
   }
 
   animationFrameRef.current = requestAnimationFrame(animatePlayers);
-}, [players, opts.percentToPixel, opts.pixelToPercent]);
+}, [players, opts.percentToPixel, opts.pixelToPercent, navApi]);
 
   // Start animation loop
   useEffect(() => {
@@ -227,6 +228,33 @@ const animatePlayers = useCallback(() => {
       const content: PresenceContent = JSON.parse(event.content);
       const dTag = event.tags.find(([name]: string[]) => name === 'd')?.[1];
       const aTag = event.tags.find(([name]: string[]) => name === 'a')?.[1];
+      const locTag = event.tags.find(([n, v]: string[]) => n === 't' && v?.startsWith('loc:'))?.[1];
+      const tagLocation = (locTag?.split(':')[1] ?? content.location) as LocationId;
+
+      if (tagLocation !== location || content.location !== location) {
+        const dTag = event.tags.find(([n]: string[]) => n === 'd')?.[1];
+        const sessionIdFromTag = dTag?.replace('session:', '');
+        if (sessionIdFromTag) {
+          const playerKey = `${event.pubkey}:${sessionIdFromTag}`;
+
+          if (playersAnimRef.current.has(playerKey) || players.has(playerKey)) {
+            if (DEBUG_MP) console.debug('[blobbi][mp] remove player (location mismatch)', {
+              key: playerKey, eventLoc: content.location, tagLoc: tagLocation, currentLoc: location
+            });
+
+            const updatedAnim = new Map(playersAnimRef.current);
+            updatedAnim.delete(playerKey);
+            playersAnimRef.current = updatedAnim;
+
+            setPlayers(prev => {
+              const next = new Map(prev);
+              next.delete(playerKey);
+              return next;
+            });
+          }
+        }
+        return;
+      }
 
       if (!dTag?.startsWith('session:') || !aTag) {
         return;
@@ -252,54 +280,32 @@ const animatePlayers = useCallback(() => {
       }
 
       // Determine target position
-      const targetPos = content.goal ? content.goal.to : {
-        x: content.anchor.x,
-        y: content.anchor.y
-      };
+      const rawTarget = content.goal ? content.goal.to : { x: content.anchor.x, y: content.anchor.y };
+      const targetPos = navApi.clampToBounds(rawTarget.x, rawTarget.y);
 
-      // Check if this is a new session (should snap)
-      const existingPlayer = players.get(playerKey);
-      const existingAnimState = playersAnimRef.current.get(playerKey);
-      const isSessionChange = existingPlayer && existingPlayer.sessionId !== sessionIdFromTag;
+      // Posição "agora" baseada no goal do emissor (interpolação), com clamp local
+      let posNow = content.goal
+        ? posAt(
+            {
+              from: content.goal.from,
+              to: content.goal.to,
+              v: content.goal.v,
+              ts: content.goal.ts,
+            },
+            nowSec()
+          )
+        : { x: content.anchor.x, y: content.anchor.y };
+      posNow = navApi.clampToBounds(posNow.x, posNow.y);
 
-      // Calculate distance to determine if we should snap (teleport fallback)
-      let shouldSnap = isSessionChange;
-      if (existingAnimState) {
-        const distance = Math.sqrt(
-          Math.pow(targetPos.x - existingAnimState.pos.x, 2) +
-          Math.pow(targetPos.y - existingAnimState.pos.y, 2)
-        );
-        // Snap if distance is too large (> 35% of map width)
-        if (distance > 35) {
-          shouldSnap = true;
-        }
-      }
-
-      if (isSessionChange && DEBUG_MP) {
-        console.debug('[blobbi][mp] remote:session-change', {
-          key: playerKey,
-          oldSession: existingPlayer?.sessionId,
-          newSession: sessionIdFromTag
-        });
-      }
-
-      if (shouldSnap && DEBUG_MP) {
-        console.debug('[blobbi][mp] remote:snap', {
-          key: playerKey,
-          from: existingAnimState?.pos,
-          to: targetPos,
-          reason: isSessionChange ? 'session-change' : 'large-distance'
-        });
-      }
-
-      // Create or update animation state
-      const animState: PlayerAnimState = {
-        pos: shouldSnap ? targetPos : (existingAnimState?.pos || targetPos),
-        target: targetPos,
-        speedPx: DEFAULT_SPEED_PX,
-        lastUpdate: performance.now(),
-        moving: !shouldSnap && (content.state === 'moving' && !!content.goal),
-      };
+     const speed = content.goal?.v ?? DEFAULT_SPEED_PX;
+     const existingAnimState = playersAnimRef.current.get(playerKey);
+     const animState: PlayerAnimState = {
+       pos: existingAnimState?.pos ?? posNow,
+       target: targetPos,
+       speedPx: speed,
+       lastUpdate: performance.now(),
+       moving: content.state === 'moving' && !!content.goal,
+     };
 
       // Update animation state
       const newAnimStates = new Map(playersAnimRef.current);
@@ -308,8 +314,9 @@ const animatePlayers = useCallback(() => {
 
       if (DEBUG_MP) console.debug('[blobbi][mp] remote:set-target', {
         key: playerKey,
+        fromNow: posNow,
         target: targetPos,
-        snap: shouldSnap,
+        v: speed,
         moving: animState.moving
       });
 
@@ -341,7 +348,7 @@ const animatePlayers = useCallback(() => {
     } catch (error) {
       console.error('Error processing presence event:', error);
     }
-  }, [pubkey, fetchBlobbiVisual, players]);
+  }, [pubkey, fetchBlobbiVisual, players, navApi]);
 
   // ============================================================================
   // Subscription Management

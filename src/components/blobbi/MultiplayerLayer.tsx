@@ -334,23 +334,22 @@ export function MultiplayerLayer({
     }
   }, [players.size]);
 
+  const visiblePlayers = Array
+    .from(players.values())
+    .filter(p => p.lastContent?.location === currentLocation);
+
   // ============================================================================
   // Render
   // ============================================================================
 
-  if (!user || disabled) {
-    return null;
-  }
+  if (!user || disabled) return null
 
-  if (error) {
-    console.error('Multiplayer error:', error);
-    return null;
-  }
+  if (error) { console.error('Multiplayer error:', error); return null;  }
 
   return (
     <div className={cn("absolute inset-0 pointer-events-none", className)}>
       {/* Render other players */}
-      {Array.from(players.values()).map((player, idx) => {
+      {visiblePlayers.map((player, idx) => {
         if (DEBUG_MP && (idx % 8 === 0)) {
           console.debug('[blobbi][mp][render] remote', {
             key: `${player.pubkey}:${player.sessionId}`,
@@ -400,7 +399,8 @@ export function MultiplayerLayer({
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute top-4 right-4 bg-black/75 text-white text-xs p-2 rounded">
           <div>Session: {sessionId.slice(0, 8)}...</div>
-          <div>Players: {players.size}</div>
+          <div>Players (all): {players.size}</div>
+          <div>Players (visible): {visiblePlayers.length}</div>
           <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
           <div>My Pos: {Math.round(myPosRef.current.x)}, {Math.round(myPosRef.current.y)}</div>
         </div>
