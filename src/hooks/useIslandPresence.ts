@@ -524,8 +524,12 @@ const animatePlayers = useCallback(() => {
         myPosRef.current = clampedDest;
       }
     } catch (error) {
-      console.error('Failed to publish movement:', error);
-      setError('Failed to publish movement');
+      // Don't treat movement publish failures as fatal - just log and continue
+      console.warn('Movement publish failed but continuing:', error);
+      // Only set error for non-movement publish failures
+      if (!error.message?.includes('All relays failed')) {
+        setError('Failed to publish movement');
+      }
     }
   }, [publish, sessionId, islandId, location, blobbiAddr, navApi]);
 
@@ -554,7 +558,10 @@ const animatePlayers = useCallback(() => {
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
           publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr }, myPosRef.current)
-            .catch(err => console.error('Failed to publish heartbeat:', err));
+            .catch(err => {
+              console.warn('Heartbeat publish failed but continuing:', err);
+              // Don't treat heartbeat failures as fatal
+            });
         }, HEARTBEAT_INTERVAL_MS);
 
         gcIntervalRef.current = window.setInterval(() => {
@@ -588,7 +595,13 @@ const animatePlayers = useCallback(() => {
         }, 1000);
       } catch (err) {
         console.error('Failed to init presence:', err);
-        if (mounted) { setError('Failed to init presence'); setIsLoading(false); }
+        if (mounted) {
+          // Only set error for non-retryable failures
+          if (!err.message?.includes('All relays failed')) {
+            setError('Failed to init presence');
+          }
+          setIsLoading(false);
+        }
       }
     };
 
@@ -633,7 +646,10 @@ const animatePlayers = useCallback(() => {
 
   publishPresenceLogin(publish, {
     sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current,
-  }).catch(err => console.error('Failed to publish presence on location change:', err));
+  }).catch(err => {
+      console.warn('Failed to publish presence on location change but continuing:', err);
+      // Don't treat location change publish failures as fatal
+    });
 
   if (subscriptionRef.current) subscriptionRef.current.close();
   startSubscription();

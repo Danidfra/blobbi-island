@@ -64,6 +64,12 @@ export function MultiplayerLayer({
   const { isPositionBlocked } = useMovementBlocker();
 
   const clickHandledRef = useRef(false);
+  const lastPublishTimeRef = useRef<number>(0);
+  const publishDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isPublishingRef = useRef<boolean>(false);
+  const pendingTargetRef = useRef<Position | null>(null);
+  const consecutiveFailureCountRef = useRef<number>(0);
+  const cooldownActiveRef = useRef<boolean>(false);
 
   // Create navigation API for walkable area checking
   const navApi = useMemo(() => {
@@ -244,13 +250,13 @@ export function MultiplayerLayer({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     return { x: (p.x / 100) * rect.width, y: (p.y / 100) * rect.height };
-  }, [containerRef]);
+  }, [containerRef, isPositionBlocked, navApi]);
 
   const pixelToPercent = useCallback((p: {x:number; y:number}) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 50, y: 75 };
     return { x: (p.x / rect.width) * 100, y: (p.y / rect.height) * 100 };
-  }, [containerRef]);
+  }, [containerRef, isPositionBlocked, navApi]);
 
   const {
     sessionId,
@@ -378,13 +384,98 @@ export function MultiplayerLayer({
 
     if (DEBUG_MP) console.debug('[blobbi][mp][ui] click', { targetPos, rect: { w: rect.width, h: rect.height } });
 
-    try {
-      await moveTo(targetPos);
-      if (DEBUG_MP) console.debug('[blobbi][mp][ui] moved', { myPos: myPosRef.current });
-      onMyPositionChange?.(myPosRef.current);
-    } catch (error) {
-      console.error('Failed to move:', error);
+    // Check if we're in cooldown mode (after consecutive failures)
+    if (cooldownActiveRef.current) {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] click ignored - cooldown active');
+      return;
     }
+
+    // Rate limiting: Ignore new publishes if less than 90ms passed since last publish
+    const now = Date.now();
+    if (now - lastPublishTimeRef.current < 90) {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] rate limited click', {
+        timeSinceLastPublish: now - lastPublishTimeRef.current,
+        targetPos
+      });
+      return;
+    }
+
+    // Latest-only queue: If a publish is in flight, store this as the pending target
+    if (isPublishingRef.current) {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] click queued - replacing pending target', { targetPos });
+      pendingTargetRef.current = targetPos;
+      return;
+    }
+
+    // Clear any existing debounce timer
+    if (publishDebounceTimerRef.current) {
+      clearTimeout(publishDebounceTimerRef.current);
+    }
+
+    // Set up debounced movement
+    publishDebounceTimerRef.current = setTimeout(async () => {
+      try {
+        isPublishingRef.current = true;
+        lastPublishTimeRef.current = Date.now();
+
+        // Use the latest pending target or the original target
+        const finalTarget = pendingTargetRef.current || targetPos;
+        pendingTargetRef.current = null; // Clear pending target
+
+        if (DEBUG_MP) console.debug('[blobbi][mp][ui] executing debounced move', { finalTarget });
+
+        await moveTo(finalTarget);
+
+        // Reset consecutive failure count on success
+        consecutiveFailureCountRef.current = 0;
+
+        if (DEBUG_MP) console.debug('[blobbi][mp][ui] moved', { myPos: myPosRef.current });
+        onMyPositionChange?.(myPosRef.current);
+      } catch (error) {
+        console.error('Failed to move:', error);
+
+        // Track consecutive failures
+        consecutiveFailureCountRef.current++;
+
+        // If we have 3 consecutive failures, activate cooldown
+        if (consecutiveFailureCountRef.current >= 3) {
+          if (DEBUG_MP) console.debug('[blobbi][mp][ui] activating cooldown after 3 failures');
+          cooldownActiveRef.current = true;
+
+          // Clear cooldown after 0.75 seconds
+          setTimeout(() => {
+            cooldownActiveRef.current = false;
+            consecutiveFailureCountRef.current = 0;
+            if (DEBUG_MP) console.debug('[blobbi][mp][ui] cooldown ended');
+          }, 750);
+        }
+
+        // Don't treat publish failures as fatal - just log and continue
+        if (DEBUG_MP) console.debug('[blobbi][mp][ui] movement failed but continuing', { error });
+      } finally {
+        isPublishingRef.current = false;
+        publishDebounceTimerRef.current = null;
+
+        // If there's a pending target and we're not in cooldown, process it immediately
+        if (pendingTargetRef.current && !cooldownActiveRef.current) {
+          if (DEBUG_MP) console.debug('[blobbi][mp][ui] processing pending target immediately');
+          setTimeout(() => {
+            const pending = pendingTargetRef.current;
+            if (pending) {
+              pendingTargetRef.current = null;
+              handleContainerClick({
+                clientX: 0,
+                clientY: 0,
+                // Create a minimal event-like object
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                composedPath: () => [],
+              } as unknown as MouseEvent | TouchEvent | PointerEvent);
+            }
+          }, 50);
+        }
+      }
+    }, 150); // Debounce delay - only last click in rapid succession will trigger
   }, [disabled, user, containerRef, getPercentPosition, moveTo, onMyPositionChange, myPosRef, shouldTriggerWorldMove]);
 
   // ============================================================================
@@ -404,6 +495,15 @@ export function MultiplayerLayer({
       container.removeEventListener('pointerdown', onPointerDown, { capture: true });
     };
   }, [containerRef, disabled, user, handleContainerClick]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (publishDebounceTimerRef.current) {
+        clearTimeout(publishDebounceTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
