@@ -8,7 +8,18 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Blobbi Island - Virtual Pet Adventure" />
     <meta property="og:description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
-    <meta http-equiv="content-security-policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-src 'self' https:; font-src 'self'; base-uri 'self'; manifest-src 'self'; connect-src 'self' blob: https: wss: data:; img-src 'self' data: blob: https:; media-src 'self' https:">
+    <meta http-equiv="content-security-policy" content="
+      default-src 'none';
+      script-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      frame-src 'self' https:;
+      font-src 'self' data: https://fonts.gstatic.com;
+      base-uri 'self';
+      manifest-src 'self';
+      connect-src 'self' blob: data: https: ws: wss:;
+      img-src 'self' data: blob: https:;
+      media-src 'self' https:;
+    ">
     <link rel="manifest" href="/manifest.webmanifest">
 
     <!-- Preload critical resources -->
@@ -17,6 +28,7 @@
     <link rel="preconnect" href="wss://relay.primal.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script defer src="/dev-cleanup.js"></script>
   </head>
   <body>
     <div id="root">
