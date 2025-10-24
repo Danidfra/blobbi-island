@@ -24,7 +24,10 @@ function BackArrow({ className, onClick }: { className?: string; onClick?: () =>
         'cursor-pointer select-none transition-all duration-300 ease-out hover:scale-110 active:scale-95',
         className
       )}
+      data-block-move
       onClick={onClick}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       <svg
         width="24"
@@ -84,6 +87,7 @@ function InteractiveElement({
   const finalIsHovered = isHovered !== undefined ? isHovered : isSelfHovered;
 
   const handleInteraction = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
     if (!onClick) return;
 
     if (animated && effect !== 'door' && effect !== 'slide') {
@@ -95,8 +99,6 @@ function InteractiveElement({
     if (type === 'chair') {
       const chairId = alt.replace(/\s+/g, '-').toLowerCase();
       onClick(event, chairId, chairConfig);
-      // Prevent default click behavior for chairs
-      event.stopPropagation();
       return;
     }
 
@@ -146,10 +148,14 @@ function InteractiveElement({
         isAnimating && effect !== 'door' && 'animate-tap',
         className
       )}
+      data-block-move
       onClick={handleInteraction}
       onMouseEnter={() => setIsSelfHovered(true)}
       onMouseLeave={() => setIsSelfHovered(false)}
-      onTouchStart={(e) => handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>)}
+      onTouchStart={(e) => {
+        e.preventDefault(); // evita click extra depois do touch
+        handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>);
+      }}
       {...(type === 'chair' && {
         'data-chair-id': alt.replace(/\s+/g, '-').toLowerCase(),
         'data-chair-config': JSON.stringify(chairConfig || {})

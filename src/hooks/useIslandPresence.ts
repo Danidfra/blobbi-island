@@ -31,6 +31,7 @@ import {
   HEARTBEAT_INTERVAL_MS,
   EXP_SECONDS,
 } from '@/lib/multiplayer';
+import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 
 // ============================================================================
 // Types
@@ -320,6 +321,8 @@ const animatePlayers = useCallback(() => {
 
       const sessionIdFromTag = dTag.replace('session:', '');
       const playerKey = `${event.pubkey}:${sessionIdFromTag}`;
+      const isBrandNewForThisLocation =
+        !playersAnimRef.current.has(playerKey) && !players.has(playerKey);
       const prev = latestSessionByPubkeyRef.current.get(event.pubkey);
 
       if (!prev || prev.sessionId !== sessionIdFromTag) {
@@ -418,10 +421,13 @@ const animatePlayers = useCallback(() => {
         : { x: content.anchor.x, y: content.anchor.y };
       posNow = navApi.clampToBounds(posNow.x, posNow.y);
 
+      const spawn = getBlobbiInitialPosition(location);
+      const initialPos = isBrandNewForThisLocation ? spawn : posNow;
+
      const speed = content.goal?.v ?? DEFAULT_SPEED_PX;
      const existingAnimState = playersAnimRef.current.get(playerKey);
      const animState: PlayerAnimState = {
-       pos: existingAnimState?.pos ?? posNow,
+       pos: existingAnimState?.pos ?? initialPos,
        target: targetPos,
        speedPx: speed,
        lastUpdate: performance.now(),

@@ -164,7 +164,6 @@ export function BlobbiIsland() {
             {renderGameContent()}
             <Suspense fallback={null}>
               <SceneTransition />
-              {/* Map Modal - Now properly scoped to game container */}
               <MapModal />
             </Suspense>
           </BlobbiGameContainer>

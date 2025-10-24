@@ -248,28 +248,72 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       const container = containerRef.current;
       if (!container || !isVisible) return;
 
-      const handleClick = (event: MouseEvent | TouchEvent) => {
-        // Early return if Photo Booth is open - disable global movement
-        if (isPhotoBoothOpen) {
-          return;
+      const isPrimaryPointer = (ev: MouseEvent | PointerEvent) =>
+        (!('button' in ev) || ev.button === 0) &&
+        !ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey;
+
+      const shouldTriggerWorldMove = (ev: MouseEvent | TouchEvent): boolean => {
+        // 1) Photo Booth aberto = não mover
+        if (isPhotoBoothOpen) return false;
+
+        // 2) Se clicou no próprio Blobbi: não andar (só wake/click)
+        if (blobbiRef.current?.contains(ev.target as Node)) return false;
+
+        // 3) Bloquear UI clicável/modal/etc
+        const path = (ev as any).composedPath?.() as Element[] | undefined;
+        const chain: Element[] =
+          path?.filter((n) => n instanceof Element) as Element[] ??
+          (ev.target instanceof Element ? [ev.target] : []);
+
+        const BLOCK_UI_SELECTOR = [
+          '[data-block-move]',
+          '[data-overlay]',
+          '[role="dialog"]',
+          '[role="menu"]',
+          '[role="button"]',
+          'button',
+          'a[href]',
+          'input, textarea, select',
+          '.modal',
+          '.drawer',
+          '.popover',
+          '.tooltip',
+          '.map-ui'
+        ].join(',');
+
+        for (const el of chain) {
+          if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
+          // se encontrar outro "world surface" no caminho, não é chão deste container
+          if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
         }
 
-        // Always call onWakeUp when clicking anywhere
-        onWakeUp?.();
+        // 4) Clique precisa estar dentro do container
+        if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
 
-        // If clicking on the Blobbi itself, wake up and trigger click handler
+        // 5) Se for mouse/pointer, só botão principal sem modificadores
+        if (ev instanceof MouseEvent && !isPrimaryPointer(ev)) return false;
+
+        return true;
+      };
+
+      const handlePointer = (event: MouseEvent | TouchEvent) => {
         if (blobbiRef.current?.contains(event.target as Node)) {
+          onWakeUp?.();
           onBlobbiClick?.();
           return;
         }
 
-        // If attached to bed, don't respond to container clicks (only wake up)
+
+        if (!shouldTriggerWorldMove(event)) return;
+
+        // Acorda sempre
+        onWakeUp?.();
+
+        // Regras de cama/cadeira
         if (isAttachedToBed) {
           onWakeUp?.();
           return;
         }
-
-        // If attached to chair, just wake up but allow chair interaction
         if (isAttachedToChair) {
           onWakeUp?.();
         }
@@ -289,23 +333,33 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         const clickY = clientY - rect.top;
         const newTarget = getPercentPosition({ x: clickX, y: clickY });
 
-        if (isPositionBlocked(newTarget.x, newTarget.y)) {
-          return;
-        }
+        if (isPositionBlocked(newTarget.x, newTarget.y)) return;
 
         setTargetPosition(newTarget);
         setIsMoving(true);
         onMoveStart?.(newTarget);
       };
 
-      container.addEventListener('click', handleClick);
-      container.addEventListener('touchend', handleClick);
+      // usar pointerdown/touchstart para captar intenção de clique no “chão”
+      container.addEventListener('pointerdown', handlePointer as any, { passive: true });
+      container.addEventListener('touchstart', handlePointer as any, { passive: true });
 
       return () => {
-        container.removeEventListener('click', handleClick);
-        container.removeEventListener('touchend', handleClick);
+        container.removeEventListener('pointerdown', handlePointer as any);
+        container.removeEventListener('touchstart', handlePointer as any);
       };
-    }, [containerRef, isVisible, getPercentPosition, onMoveStart, onWakeUp, onBlobbiClick, isAttachedToBed, isAttachedToChair, isPositionBlocked, isPhotoBoothOpen]);
+    }, [
+      containerRef,
+      isVisible,
+      getPercentPosition,
+      onMoveStart,
+      onWakeUp,
+      onBlobbiClick,
+      isAttachedToBed,
+      isAttachedToChair,
+      isPositionBlocked,
+      isPhotoBoothOpen
+    ]);
 
     useImperativeHandle(ref, () => ({
       goTo: (newTarget, immediate = false) => {

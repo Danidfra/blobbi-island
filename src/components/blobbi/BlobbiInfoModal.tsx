@@ -299,11 +299,17 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     <div
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
+      data-overlay
+      data-block-move
     >
       <div
         ref={modalRef}
         className="w-[85%] !h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
         style={modalMinHeight ? { minHeight: modalMinHeight, height: modalMinHeight } : undefined}
+        role="dialog"
+        aria-modal="true"
+        data-block-move
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
           <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">

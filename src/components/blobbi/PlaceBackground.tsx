@@ -20,7 +20,6 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
 
     return (
       <div
-        ref={ref}
         className={cn(
           "relative w-full h-full",
           // Apply blur when map modal is open
@@ -35,7 +34,7 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
             src={backgroundImage}
             alt={`${currentLocation} background`}
             className={cn(
-              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none",
               shouldShowImage ? "opacity-100" : "opacity-0",
               currentLocation === "stage" ? 'bg-black' : '',
             )}
@@ -49,8 +48,18 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
           )}
         </>
 
+        {/* Clickable ground/surface layer (only this recebe data-world-surface) */}
+        <div
+          className="absolute inset-0 z-0"
+          data-world-surface
+        />
+
         {/* Content */}
-        <div className="relative z-10 w-full h-full">
+        <div
+        ref={ref}
+          className="relative z-10 w-full h-full"
+          data-world-surface
+        >
           {children}
         </div>
       </div>

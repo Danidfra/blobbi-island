@@ -253,13 +253,19 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       )}
 
       {/* Map Button and Arcade Pass Icon - Top Right */}
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center space-x-2">
+      <div
+        className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center space-x-2"
+        data-block-move
+      >
         <ArcadePassIcon />
         <MapButton />
       </div>
 
       {/* Current Location Indicator - Top Center */}
-      <div className="absolute top-2 left-1/2 transform -translate-x-1/2 sm:top-4 z-20">
+      <div
+        className="absolute top-2 left-1/2 transform -translate-x-1/2 sm:top-4 z-20"
+        data-block-move
+      >
         <LocationIndicator />
       </div>
 

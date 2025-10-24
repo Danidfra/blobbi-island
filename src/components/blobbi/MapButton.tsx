@@ -26,6 +26,7 @@ export function MapButton({ className }: MapButtonProps) {
         "group",
         className
       )}
+      data-block-move
       title="Open Map"
       aria-label="Open Map"
     >
