@@ -684,14 +684,22 @@ const handleCapturePhoto = async () => {
             "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
           )}
           onClick={handleBackdropClick}
+          onPointerDown={(e) => e.stopPropagation()}
+          data-overlay
+          data-block-move
         >
           <div
           className="relative w-[60%] h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          data-block-move
         >
             {/* Close Button */}
             <button
               onClick={onClose}
+              onPointerDown={(e) => e.stopPropagation()}
               className={cn(
                 "absolute top-2 right-2 z-50",
                 "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
@@ -703,6 +711,7 @@ const handleCapturePhoto = async () => {
               )}
               title="Close Photo Booth"
               aria-label="Close Photo Booth"
+              data-block-move
             >
               <IconX className="w-3 h-3" />
             </button>
@@ -777,6 +786,9 @@ const handleCapturePhoto = async () => {
         "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2"
       )}
       onClick={handleBackdropClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      data-overlay
+      data-block-move
       style={{
         // Ensure this is positioned relative to the game container
         position: 'absolute',
@@ -790,6 +802,10 @@ const handleCapturePhoto = async () => {
           height: '705px',
         }}
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        data-block-move
       >
         {/* Accessories List - Left Side (Absolute Positioned) */}
         <div
@@ -930,6 +946,7 @@ const handleCapturePhoto = async () => {
         {/* Close Button */}
         <button
           onClick={onClose}
+          onPointerDown={(e) => e.stopPropagation()}
           className={cn(
             "absolute top-2 right-2 z-50",
             "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
@@ -941,6 +958,7 @@ const handleCapturePhoto = async () => {
           )}
           title="Close Photo Booth"
           aria-label="Close Photo Booth"
+          data-block-move
         >
           <IconX className="w-3 h-3" />
         </button>

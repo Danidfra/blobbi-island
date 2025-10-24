@@ -299,6 +299,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     <div
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleBackdropClick}
+      onPointerDown={(e) => e.stopPropagation()}
       data-overlay
       data-block-move
     >
@@ -310,6 +311,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
         aria-modal="true"
         data-block-move
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
           <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">
@@ -319,7 +321,9 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
             variant="ghost"
             size="icon"
             onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
             className="absolute top-2 right-2 h-8 w-8 rounded-full"
+            data-block-move
           >
             <X className="h-4 w-4" />
           </Button>

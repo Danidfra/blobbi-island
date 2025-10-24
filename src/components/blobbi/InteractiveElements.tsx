@@ -28,6 +28,7 @@ function BackArrow({ className, onClick }: { className?: string; onClick?: () =>
       onClick={onClick}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       <svg
         width="24"
@@ -155,6 +156,9 @@ function InteractiveElement({
       onTouchStart={(e) => {
         e.preventDefault(); // evita click extra depois do touch
         handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>);
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
       }}
       {...(type === 'chair' && {
         'data-chair-id': alt.replace(/\s+/g, '-').toLowerCase(),

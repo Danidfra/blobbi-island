@@ -17,6 +17,7 @@ export function MapButton({ className }: MapButtonProps) {
   return (
     <button
       onClick={handleOpenMap}
+      onPointerDown={(e) => e.stopPropagation()}
       className={cn(
         "bg-white/90 backdrop-blur-sm border border-border rounded-full",
         "p-2 sm:p-3 shadow-lg hover:shadow-xl",

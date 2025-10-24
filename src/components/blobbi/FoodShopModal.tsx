@@ -207,8 +207,17 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     <div
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleBackdropClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      data-overlay
+      data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-purple-300 dark:border-purple-600 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90vh]">
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-purple-300 dark:border-purple-600 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90vh]"
+        role="dialog"
+        aria-modal="true"
+        data-block-move
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b border-purple-200/60 dark:border-purple-800/60 relative">
           <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
             🍎 Food Shop
@@ -217,7 +226,9 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             variant="ghost"
             size="icon"
             onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
             className="absolute top-2 right-2 h-8 w-8 rounded-full"
+            data-block-move
           >
             <X className="h-4 w-4" />
           </Button>

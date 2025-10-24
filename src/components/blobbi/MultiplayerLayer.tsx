@@ -288,8 +288,56 @@ export function MultiplayerLayer({
     };
   }, [containerRef]);
 
+  const shouldTriggerWorldMove = useCallback((ev: MouseEvent | TouchEvent | PointerEvent): boolean => {
+    const container = containerRef.current;
+    if (!container) return false;
+
+    const isPrimaryPointer = (ev: MouseEvent | PointerEvent) =>
+      (!('button' in ev) || ev.button === 0) &&
+      !ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey;
+
+    const path = (ev as PointerEvent | MouseEvent).composedPath?.() as Element[] | undefined;
+    const chain: Element[] =
+      path?.filter((n) => n instanceof Element) as Element[] ??
+      (ev.target instanceof Element ? [ev.target] : []);
+
+    const BLOCK_UI_SELECTOR = [
+      '[data-block-move]',
+      '[data-overlay]',
+      '[role="dialog"]',
+      '[aria-modal="true"]',
+      '[role="menu"]',
+      '[role="button"]',
+      'button',
+      'a[href]',
+      'input, textarea, select',
+      '.modal',
+      '.drawer',
+      '.popover',
+      '.tooltip',
+      '.map-ui'
+    ].join(',');
+
+    for (const el of chain) {
+      if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
+      if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
+    }
+
+    if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
+
+    if ((ev instanceof MouseEvent || (window.PointerEvent && ev instanceof PointerEvent)) && !isPrimaryPointer(ev)) return false;
+
+    return true;
+  }, [containerRef]);
+
   const handleContainerClick = useCallback(async (event: MouseEvent | TouchEvent | PointerEvent) => {
     if (disabled || !user || clickHandledRef.current) {
+      return;
+    }
+
+    // Check if this click should trigger world movement
+    if (!shouldTriggerWorldMove(event)) {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] click blocked by UI element');
       return;
     }
 
@@ -337,7 +385,7 @@ export function MultiplayerLayer({
     } catch (error) {
       console.error('Failed to move:', error);
     }
-  }, [disabled, user, containerRef, getPercentPosition, moveTo, onMyPositionChange, myPosRef]);
+  }, [disabled, user, containerRef, getPercentPosition, moveTo, onMyPositionChange, myPosRef, shouldTriggerWorldMove]);
 
   // ============================================================================
   // Event Listeners

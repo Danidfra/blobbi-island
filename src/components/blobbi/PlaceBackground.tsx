@@ -49,11 +49,6 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
         </>
 
         {/* Clickable ground/surface layer (only this recebe data-world-surface) */}
-        <div
-          className="absolute inset-0 z-0"
-          data-world-surface
-        />
-
         {/* Content */}
         <div
         ref={ref}

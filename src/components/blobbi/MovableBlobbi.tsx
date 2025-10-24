@@ -253,14 +253,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         !ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey;
 
       const shouldTriggerWorldMove = (ev: MouseEvent | TouchEvent): boolean => {
-        // 1) Photo Booth aberto = não mover
         if (isPhotoBoothOpen) return false;
 
-        // 2) Se clicou no próprio Blobbi: não andar (só wake/click)
         if (blobbiRef.current?.contains(ev.target as Node)) return false;
 
-        // 3) Bloquear UI clicável/modal/etc
-        const path = (ev as any).composedPath?.() as Element[] | undefined;
+        const path = (ev as MouseEvent & { composedPath?: () => Element[] }).composedPath?.();
         const chain: Element[] =
           path?.filter((n) => n instanceof Element) as Element[] ??
           (ev.target instanceof Element ? [ev.target] : []);
@@ -269,6 +266,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           '[data-block-move]',
           '[data-overlay]',
           '[role="dialog"]',
+          '[aria-modal="true"]',
           '[role="menu"]',
           '[role="button"]',
           'button',
@@ -283,14 +281,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
         for (const el of chain) {
           if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
-          // se encontrar outro "world surface" no caminho, não é chão deste container
           if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
         }
 
-        // 4) Clique precisa estar dentro do container
         if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
 
-        // 5) Se for mouse/pointer, só botão principal sem modificadores
         if (ev instanceof MouseEvent && !isPrimaryPointer(ev)) return false;
 
         return true;
@@ -306,10 +301,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
         if (!shouldTriggerWorldMove(event)) return;
 
-        // Acorda sempre
         onWakeUp?.();
 
-        // Regras de cama/cadeira
         if (isAttachedToBed) {
           onWakeUp?.();
           return;
@@ -340,13 +333,12 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         onMoveStart?.(newTarget);
       };
 
-      // usar pointerdown/touchstart para captar intenção de clique no “chão”
-      container.addEventListener('pointerdown', handlePointer as any, { passive: true });
-      container.addEventListener('touchstart', handlePointer as any, { passive: true });
+      container.addEventListener('pointerdown', handlePointer as EventListener, { passive: true });
+      container.addEventListener('touchstart', handlePointer as EventListener, { passive: true });
 
       return () => {
-        container.removeEventListener('pointerdown', handlePointer as any);
-        container.removeEventListener('touchstart', handlePointer as any);
+        container.removeEventListener('pointerdown', handlePointer as EventListener);
+        container.removeEventListener('touchstart', handlePointer as EventListener);
       };
     }, [
       containerRef,
