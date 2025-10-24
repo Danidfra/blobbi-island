@@ -25,6 +25,7 @@ import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
+import { displayNameFromId } from '@/lib/blobbi-name';
 import { Settings } from 'lucide-react';
 
 interface BlobbiInfoModalProps {
@@ -402,7 +403,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
                       <h2 className="text-xl font-bold blobbi-text">
-                        {currentPet.name || currentPet.id}
+                        {displayNameFromId(currentPet.id) ?? currentPet.id}
                       </h2>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="blobbi-badge text-xs">

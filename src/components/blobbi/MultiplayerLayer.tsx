@@ -3,7 +3,7 @@
  * Handles click-to-move and renders other players
  */
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useMemo } from 'react';
 
 // Debug flag for multiplayer logging
  const DEBUG_MP =
@@ -23,6 +23,12 @@ import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { cn } from '@/lib/utils';
+import { nameFromDTag } from '@/lib/blobbi-name';
+import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
+import { locationScalingConfig } from '@/lib/location-scaling-config';
+import { createWalkableApi } from '@/lib/multiplayer';
+import { locationBoundaries } from '@/lib/location-boundaries';
+import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
 // ============================================================================
 // Types
@@ -55,8 +61,14 @@ export function MultiplayerLayer({
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { currentLocation } = useLocation();
+  const { isPositionBlocked } = useMovementBlocker();
 
   const clickHandledRef = useRef(false);
+
+  // Create navigation API for walkable area checking
+  const navApi = useMemo(() => {
+    return createWalkableApi(currentLocation);
+  }, [currentLocation]);
 
   // ============================================================================
   // Blobbi Visual Fetching
@@ -83,7 +95,8 @@ export function MultiplayerLayer({
 
     // Parse visual data (simplified)
     const get = (n: string) => event.tags.find(([name]) => name === n)?.[1];
-    const name = event.content || 'Unnamed Blobbi';
+    const dTag = get('d');
+    const name = nameFromDTag(dTag) || get('name') || 'Unnamed Blobbi';
     const baseColor      = get('base_color')      || get('baseColor');
     const secondaryColor = get('secondary_color') || get('secondaryColor');
     const pattern        = get('pattern');
@@ -251,7 +264,8 @@ export function MultiplayerLayer({
     subscribe,
     fetch31124: fetchBlobbi31124,
     percentToPixel,
-    pixelToPercent
+    pixelToPercent,
+    nav: navApi
   });
 
   // ============================================================================
@@ -297,7 +311,15 @@ export function MultiplayerLayer({
 
     const clickX = clientX - rect.left;
     const clickY = clientY - rect.top;
-    const targetPos = getPercentPosition({ x: clickX, y: clickY });
+    let targetPos = getPercentPosition({ x: clickX, y: clickY });
+
+    const clamped = navApi.clampToBounds(targetPos.x, targetPos.y);
+    targetPos = { x: clamped.x, y: clamped.y };
+
+    if (isPositionBlocked(targetPos.x, targetPos.y)) {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] blocked click', { targetPos });
+      return;
+    }
 
     if (DEBUG_MP) console.debug('[blobbi][mp][ui] click', { targetPos, rect: { w: rect.width, h: rect.height } });
 
@@ -334,9 +356,95 @@ export function MultiplayerLayer({
     }
   }, [players.size]);
 
-  const visiblePlayers = Array
-    .from(players.values())
-    .filter(p => p.lastContent?.location === currentLocation);
+  const visiblePlayers = React.useMemo(
+    () => Array.from(players.values()).filter(p => p.lastContent?.location === currentLocation),
+    [players, currentLocation]
+  );
+
+  // track last positions to infer heading (prevents weird flips on vertical moves)
+  const lastPosRef = React.useRef(new Map<string, Position>());
+
+  // Get background file for current location
+  const backgroundFile = useMemo(() => {
+    const locationToFile: Record<string, string> = {
+      'town': 'town-open.png',
+      'home': 'home-inside.png',
+      'beach': 'beach-open.png',
+      'mine': 'mine-open.png',
+      'nostr-station': 'nostr-station-open.png',
+      'nostr-station-inside': 'nostr-station-inside.png',
+      'plaza': 'plaza-open.png',
+      'plaza-inside': 'plaza-inside.png',
+      'arcade': 'arcade-inside.png',
+      'arcade-1': 'arcade-1.png',
+      'arcade-minus1': 'arcade-minus1.png',
+      'stage': 'stage-inside.png',
+      'shop': 'shopping-mall-inside.png',
+      'back-yard': 'back-yard-open.png',
+      'cave-open': 'cave-inside.png',
+      'clothing-store-inside': 'clothing-store-inside.png',
+    };
+    return locationToFile[currentLocation] || 'town-open.png';
+  }, [currentLocation]);
+
+  // Get boundary for current location
+  const boundary = useMemo(() => {
+    return locationBoundaries[backgroundFile];
+  }, [backgroundFile]);
+
+  // Helper functions for dynamic z-index and scaling (same as MovableBlobbi)
+  const getDynamicZIndex = useCallback((currentPos: Position, sitOffset = 0): number => {
+    if (!backgroundFile) return 20;
+    return calculateBlobbiZIndex(currentPos.y, backgroundFile) + sitOffset;
+  }, [backgroundFile]);
+
+  const getDynamicScale = useCallback((currentPos: Position): number => {
+    const scalingConfig = backgroundFile ? locationScalingConfig[backgroundFile] : undefined;
+
+    if (!scalingConfig) {
+      return 1;
+    }
+
+    const { initialScale, finalScale } = scalingConfig;
+
+    // Get the Y boundaries for scaling calculation based on boundary shape
+    let minY: number, maxY: number;
+
+    if (boundary?.shape === 'rectangle') {
+      minY = boundary.y[0]; // Top of allowed movement area
+      maxY = boundary.y[1]; // Bottom of allowed movement area
+    } else if (boundary?.shape === 'semicircle' || boundary?.shape === 'arch') {
+      minY = boundary.top;
+      maxY = boundary.bottom;
+    } else if (boundary?.shape === 'composite') {
+      // For composite boundaries, find the overall min/max Y values
+      minY = Math.min(...boundary.areas.map(area => {
+        if (area.type === 'rectangle') return area.y[0];
+        if (area.type === 'circle') return area.cy - area.r;
+        if (area.type === 'triangle') return Math.min(...area.points.map(p => p.y));
+        return 100;
+      }));
+      maxY = Math.max(...boundary.areas.map(area => {
+        if (area.type === 'rectangle') return area.y[1];
+        if (area.type === 'circle') return area.cy + area.r;
+        if (area.type === 'triangle') return Math.max(...area.points.map(p => p.y));
+        return 0;
+      }));
+    } else {
+      // Fallback to full screen height
+      minY = 0;
+      maxY = 100;
+    }
+
+    // Clamp the position within the boundary
+    const clampedY = Math.max(minY, Math.min(maxY, currentPos.y));
+
+    // Calculate the interpolation factor (0 = top, 1 = bottom)
+    const factor = (maxY - minY) > 0 ? (clampedY - minY) / (maxY - minY) : 0;
+
+    // Interpolate between finalScale (top) and initialScale (bottom)
+    return finalScale + (initialScale - finalScale) * factor;
+  }, [backgroundFile, boundary]);
 
   // ============================================================================
   // Render
@@ -359,34 +467,80 @@ export function MultiplayerLayer({
             isMoving: player.isMoving
           });
         }
+
+        // Calculate dynamic z-index and scale (same as MovableBlobbi)
+        const dynamicZIndex = getDynamicZIndex(player.position);
+        const dynamicScale = getDynamicScale(player.position);
+
+        // Determine if character should be flipped based on movement direction
+        const keyId = `${player.pubkey}:${player.sessionId}`;
+        const last = lastPosRef.current.get(keyId) ?? player.position;
+        const dx = player.position.x - last.x;
+        const shouldFlip = Math.abs(dx) > 0.1 ? dx < 0 : false;
+        lastPosRef.current.set(keyId, player.position);
+
         return (
-        <div
-          key={`${player.pubkey}:${player.sessionId}`}
-          className="absolute pointer-events-none"
-          style={{
-            left: `${player.position.x}%`,
-            top: `${player.position.y}%`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
-          }}
-        >
-          <CurrentBlobbiDisplay
-            size="lg"
-            visualOverride={player.visual || {
-              baseColor: '#4F46E5',
-              secondaryColor: '#7C3AED',
-              eyeColor: '#1F2937',
-              stage: 'child',
+          <div
+            key={`${player.pubkey}:${player.sessionId}`}
+            className="absolute pointer-events-auto group"
+            style={{
+              left: `${player.position.x}%`,
+              top: `${player.position.y}%`,
+              transform: `translate(-50%, -50%)`,  // ⬅️ no scale/flip here
+              zIndex: dynamicZIndex,
+              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
             }}
-            transparent={true}
-            showAccessories={false}
-            className="z-9"
+          >
+            {/* SPRITE – hover target (peer) */}
+            <div
+              className="peer pointer-events-auto select-none"
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{
+                transform: `scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
+                transformOrigin: 'center center',
+              }}
+            >
+          <div className={cn(
+            !player.isMoving && "animate-float",
+            "transition-transform duration-1000 ease-in-out"
+          )}>
+            <CurrentBlobbiDisplay
+              size="lg"
+              visualOverride={player.visual || {
+                baseColor: '#4F46E5',
+                secondaryColor: '#7C3AED',
+                eyeColor: '#1F2937',
+                stage: 'child',
+              }}
+              transparent={true}
+              showAccessories={false}
+              className={cn(player.isMoving && "scale-105")}
+            />
+          </div>
+        </div>
+
+          {/* Drop shadow/ellipse below Blobbi (same as MovableBlobbi) */}
+          <div
+            className={cn(
+              "absolute top-full left-1/2 h-1.5 rounded-full",
+              "w-6 md:w-8" // lg size equivalent
+            )}
+            style={{
+              background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
+              transform: `translateX(-50%) translateY(-8px) scale(${dynamicScale})`,
+              transformOrigin: 'center center',
+            }}
           />
 
-          {/* Player name label */}
+          {/* Player name label (hidden until hover) */}
           {player.visual?.name && (
-            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
-              <div className="bg-black/75 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap">
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none">
+              <div
+                className="bg-black/75 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap
+                           opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                aria-label={player.visual.name}
+                title={player.visual.name}
+              >
                 {player.visual.name}
               </div>
             </div>

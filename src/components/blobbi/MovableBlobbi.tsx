@@ -85,8 +85,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const animationRef = useRef<number>();
     const lastTimeRef = useRef<number>();
     const blobbiRef = useRef<HTMLDivElement>(null);
-const { isPositionBlocked } = useMovementBlocker();
-  const { isPhotoBoothOpen } = usePhotoBooth();
+    const { isPositionBlocked } = useMovementBlocker();
+    const { isPhotoBoothOpen } = usePhotoBooth();
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };

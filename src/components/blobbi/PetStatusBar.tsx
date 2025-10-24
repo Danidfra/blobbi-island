@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useFeedPet, useCleanPet } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
+import { displayNameFromId } from '@/lib/blobbi-name';
 import type { CareUrgency } from '@/lib/blobbi-types';
 
 /** Get urgency color for badges */
@@ -64,7 +65,7 @@ export function PetStatusBar() {
       {/* Pet Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-semibold blobbi-text">{currentPet.name}</h3>
+          <h3 className="font-semibold blobbi-text">{displayNameFromId(currentPet.id) ?? currentPet.id}</h3>
           <p className="text-sm blobbi-text-muted">
             <span className="blobbi-badge-baby capitalize">{currentPet.stage}</span> • Gen {currentPet.generation}
           </p>

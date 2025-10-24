@@ -4,6 +4,7 @@
 import { posAt } from '@/lib/multiplayer';
 import { type PlayerAnimState } from '@/lib/multiplayer';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
 // Debug flag for multiplayer logging
 const DEBUG_MP = true;
@@ -92,6 +93,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const lastLocationRef = useRef<LocationId>(location);
   const playersAnimRef = useRef<Map<string, PlayerAnimState>>(new Map());
   const lastUpdateTimeRef = useRef<number>(performance.now());
+  const { isPositionBlocked } = useMovementBlocker();
 
   // Memoized values
   const blobbiAddr = useMemo(() => makeBlobbiAddr(pubkey, blobbiD), [pubkey, blobbiD]);
@@ -163,17 +165,70 @@ const animatePlayers = useCallback(() => {
     }
 
     const newPosPctRaw = opts.pixelToPercent(newPosPx);
-    const clamped = navApi.clampToBounds(newPosPctRaw.x, newPosPctRaw.y);
 
-    const newAnim = { ...anim, pos: clamped, moving, lastUpdate: now };
-    updated.set(key, newAnim);
+    // Check if the new position is walkable before clamping
+    if (navApi.isWalkable(newPosPctRaw.x, newPosPctRaw.y) && !isPositionBlocked(newPosPctRaw.x, newPosPctRaw.y)) {
+      // Position is walkable, use it as-is
+      const clamped = navApi.clampToBounds(newPosPctRaw.x, newPosPctRaw.y);
+      const newAnim = { ...anim, pos: clamped, moving, lastUpdate: now };
+      updated.set(key, newAnim);
 
-    if (
-      Math.abs(clamped.x - player.position.x) > 0.1 ||
-      Math.abs(clamped.y - player.position.y) > 0.1 ||
-      moving !== player.isMoving
-    ) {
-      needsUpdate = true;
+      if (
+        Math.abs(clamped.x - player.position.x) > 0.1 ||
+        Math.abs(clamped.y - player.position.y) > 0.1 ||
+        moving !== player.isMoving
+      ) {
+        needsUpdate = true;
+      }
+    } else {
+      // Position is not walkable, find the closest walkable point
+      // Similar to MovableBlobbi's logic
+      const currentPosPct = opts.pixelToPercent(posPx);
+
+      // Calculate direction from current to target
+      const dirX = newPosPctRaw.x - currentPosPct.x;
+      const dirY = newPosPctRaw.y - currentPosPct.y;
+      const dirDist = Math.sqrt(dirX * dirX + dirY * dirY);
+
+      if (dirDist > 0) {
+        // Step along the direction until we find a walkable point
+        const stepX = dirX / dirDist;
+        const stepY = dirY / dirDist;
+
+        let foundWalkable = false;
+        let lastWalkable = currentPosPct;
+
+        // Check in small increments along the path
+        const maxSteps = Math.ceil(dirDist * 2); // More granular checking
+        for (let i = 1; i <= maxSteps; i++) {
+          const checkX = currentPosPct.x + stepX * (i / 2);
+          const checkY = currentPosPct.y + stepY * (i / 2);
+
+          if (navApi.isWalkable(checkX, checkY) && !isPositionBlocked(checkX, checkY)) {
+            lastWalkable = { x: checkX, y: checkY };
+            foundWalkable = true;
+          } else {
+            // Found a non-walkable point, use the last walkable position
+            break;
+          }
+        }
+
+        const finalPos = navApi.clampToBounds(lastWalkable.x, lastWalkable.y);
+        const newAnim = { ...anim, pos: finalPos, moving: foundWalkable, lastUpdate: now };
+        updated.set(key, newAnim);
+
+        if (
+          Math.abs(finalPos.x - player.position.x) > 0.1 ||
+          Math.abs(finalPos.y - player.position.y) > 0.1 ||
+          foundWalkable !== player.isMoving
+        ) {
+          needsUpdate = true;
+        }
+      } else {
+        // No meaningful movement direction, stay at current position
+        const newAnim = { ...anim, pos: currentPosPct, moving: false, lastUpdate: now };
+        updated.set(key, newAnim);
+      }
     }
   }
 
@@ -191,7 +246,7 @@ const animatePlayers = useCallback(() => {
   }
 
   animationFrameRef.current = requestAnimationFrame(animatePlayers);
-}, [players, opts.percentToPixel, opts.pixelToPercent, navApi]);
+}, [players, opts.percentToPixel, opts.pixelToPercent, navApi, isPositionBlocked]);
 
   // Start animation loop
   useEffect(() => {
@@ -279,9 +334,45 @@ const animatePlayers = useCallback(() => {
         visual = await fetchBlobbiVisual(aTag);
       }
 
-      // Determine target position
+      // Determine target position with walkable validation
       const rawTarget = content.goal ? content.goal.to : { x: content.anchor.x, y: content.anchor.y };
-      const targetPos = navApi.clampToBounds(rawTarget.x, rawTarget.y);
+
+      // Check if target is walkable, if not find closest walkable point
+      let targetPos = rawTarget;
+      if (!navApi.isWalkable(rawTarget.x, rawTarget.y) || isPositionBlocked(rawTarget.x, rawTarget.y)) {
+        // Find closest walkable point along the path
+        const origin = content.goal ? content.goal.from : content.anchor;
+        const dx = rawTarget.x - origin.x;
+        const dy = rawTarget.y - origin.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+          const stepX = dx / distance;
+          const stepY = dy / distance;
+
+          // Step along the direction until we find a walkable point
+          let currentX = origin.x;
+          let currentY = origin.y;
+          let lastWalkable = { x: origin.x, y: origin.y };
+
+          const maxSteps = Math.ceil(distance);
+          for (let i = 1; i <= maxSteps; i++) {
+            currentX = origin.x + stepX * i;
+            currentY = origin.y + stepY * i;
+
+            if (navApi.isWalkable(currentX, currentY) && !isPositionBlocked(currentX, currentY)) {
+              lastWalkable = { x: currentX, y: currentY };
+            } else {
+              break;
+            }
+          }
+
+          targetPos = lastWalkable;
+        }
+      }
+
+      // Final clamp to bounds
+      targetPos = navApi.clampToBounds(targetPos.x, targetPos.y);
 
       // Posição "agora" baseada no goal do emissor (interpolação), com clamp local
       let posNow = content.goal
@@ -348,7 +439,7 @@ const animatePlayers = useCallback(() => {
     } catch (error) {
       console.error('Error processing presence event:', error);
     }
-  }, [pubkey, fetchBlobbiVisual, players, navApi]);
+  }, [pubkey, fetchBlobbiVisual, players, navApi, isPositionBlocked]);
 
   // ============================================================================
   // Subscription Management
