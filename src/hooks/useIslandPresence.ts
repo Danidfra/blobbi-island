@@ -29,6 +29,7 @@ import {
   parseA,
   DEFAULT_SPEED_PX,
   HEARTBEAT_INTERVAL_MS,
+  EXP_SECONDS,
 } from '@/lib/multiplayer';
 
 // ============================================================================
@@ -86,6 +87,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const myPosRef = useRef<Position>(startPos);
   const subscriptionRef = useRef<{ close: () => void } | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gcIntervalRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const visualCacheRef = useRef<Map<string, BlobbiVisual>>(new Map());
   const fetchingVisualsRef = useRef<Set<string>>(new Set());
@@ -93,6 +95,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const lastLocationRef = useRef<LocationId>(location);
   const playersAnimRef = useRef<Map<string, PlayerAnimState>>(new Map());
   const lastUpdateTimeRef = useRef<number>(performance.now());
+  const latestSessionByPubkeyRef = useRef<Map<string, {sessionId:string; seen:number}>>(new Map());
   const { isPositionBlocked } = useMovementBlocker();
 
   // Memoized values
@@ -317,6 +320,34 @@ const animatePlayers = useCallback(() => {
 
       const sessionIdFromTag = dTag.replace('session:', '');
       const playerKey = `${event.pubkey}:${sessionIdFromTag}`;
+      const prev = latestSessionByPubkeyRef.current.get(event.pubkey);
+
+      if (!prev || prev.sessionId !== sessionIdFromTag) {
+        // mark this as latest
+        latestSessionByPubkeyRef.current.set(event.pubkey, { sessionId: sessionIdFromTag, seen: nowSec() });
+        // remove other sessions of the same pubkey
+        setPlayers(prevMap => {
+          const next = new Map(prevMap);
+          for (const key of prevMap.keys()) {
+            if (key.startsWith(`${event.pubkey}:`) && key !== playerKey) {
+              next.delete(key);
+            }
+          }
+          return next;
+        });
+        // also clean anim map
+        const newAnimMap = new Map(playersAnimRef.current);
+        for (const key of newAnimMap.keys()) {
+          if (key.startsWith(`${event.pubkey}:`) && key !== playerKey) {
+            newAnimMap.delete(key);
+          }
+        }
+        playersAnimRef.current = newAnimMap;
+      } else {
+        // update last seen for the same latest session
+        prev.seen = nowSec();
+        latestSessionByPubkeyRef.current.set(event.pubkey, prev);
+      }
 
       if (DEBUG_MP) console.debug('[blobbi][mp] EVENT ok', {
         from: event.pubkey,
@@ -374,7 +405,6 @@ const animatePlayers = useCallback(() => {
       // Final clamp to bounds
       targetPos = navApi.clampToBounds(targetPos.x, targetPos.y);
 
-      // Posição "agora" baseada no goal do emissor (interpolação), com clamp local
       let posNow = content.goal
         ? posAt(
             {
@@ -450,9 +480,10 @@ const animatePlayers = useCallback(() => {
       subscriptionRef.current.close();
     }
 
-    const filter = {
+    const filter: NostrFilter = {
       kinds: [31950],
       '#t': ['blobbi:presence', `island:${islandId}`, `loc:${location}`],
+      since: nowSec() - 5,
     };
 
     if (DEBUG_MP) console.debug('[blobbi][mp][sub] start', { filter });
@@ -512,15 +543,43 @@ const animatePlayers = useCallback(() => {
         if (!mounted) return;
         setIsLoading(false);
 
-        // subscribe uma vez
         startSubscription();
 
-        // timers únicos
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
           publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr }, myPosRef.current)
             .catch(err => console.error('Failed to publish heartbeat:', err));
         }, HEARTBEAT_INTERVAL_MS);
+
+        gcIntervalRef.current = window.setInterval(() => {
+          const now = nowSec();
+          const STALE = EXP_SECONDS + 5;
+          let changed = false;
+
+          // remove por lastSeen
+          setPlayers(prev => {
+            const next = new Map(prev);
+            for (const [key, p] of prev) {
+              if (now - p.lastSeen > STALE) {
+                next.delete(key);
+                playersAnimRef.current.delete(key);
+                changed = true;
+              }
+            }
+            return next;
+          });
+
+          if (changed) {
+            const still = new Set<string>();
+            for (const p of playersAnimRef.current.keys()) {
+              // p = `${pubkey}:${session}`
+              still.add(p.split(':',1)[0]);
+            }
+            for (const pk of latestSessionByPubkeyRef.current.keys()) {
+              if (!still.has(pk)) latestSessionByPubkeyRef.current.delete(pk);
+            }
+          }
+        }, 1000);
       } catch (err) {
         console.error('Failed to init presence:', err);
         if (mounted) { setError('Failed to init presence'); setIsLoading(false); }
@@ -533,6 +592,7 @@ const animatePlayers = useCallback(() => {
       mounted = false;
       if (subscriptionRef.current) subscriptionRef.current.close();
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      if (gcIntervalRef.current) clearInterval(gcIntervalRef.current);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   //  eslint-disable-next-line react-hooks/exhaustive-deps
@@ -552,6 +612,7 @@ const animatePlayers = useCallback(() => {
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current);
       }
+      if (gcIntervalRef.current) clearInterval(gcIntervalRef.current);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -579,6 +640,22 @@ const animatePlayers = useCallback(() => {
       myPosRef.current
     ).catch(err => console.error('Failed to publish heartbeat:', err));
   }, HEARTBEAT_INTERVAL_MS);
+
+  if (gcIntervalRef.current) clearInterval(gcIntervalRef.current);
+  gcIntervalRef.current = window.setInterval(() => {
+    const now = nowSec();
+    const STALE = EXP_SECONDS + 5;
+    setPlayers(prev => {
+      const next = new Map(prev);
+      for (const [key, p] of prev) {
+        if (now - p.lastSeen > STALE) {
+          next.delete(key);
+          playersAnimRef.current.delete(key);
+        }
+      }
+      return next;
+    });
+  }, 1000);
 }, [location, publish, sessionId, islandId, blobbiAddr, startSubscription]);
 
   return {
