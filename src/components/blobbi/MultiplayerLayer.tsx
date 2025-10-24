@@ -102,6 +102,11 @@ export function MultiplayerLayer({
     const pattern        = get('pattern');
     const eyeColor       = get('eye_color')       || get('eyeColor');
     const specialMark    = get('special_mark')    || get('specialMark');
+    const stageRaw       = get('stage') || get('blobbi_stage');
+    const stage = stageRaw === 'egg' || stageRaw === 'child' || stageRaw === 'adult'
+      ? stageRaw
+      : undefined;
+    const adultType      = get('adult_type') || get('adultType') || get('blobbi_adult_type');
 
     if (!baseColor && !secondaryColor && !eyeColor) {
       console.warn('[blobbi][mp][visual] 31124 sem cores', { pubkey, d, tags: event.tags });
@@ -114,6 +119,8 @@ export function MultiplayerLayer({
       pattern,
       eyeColor,
       specialMark,
+      stage,
+      adultType,
     };
   }, [nostr]);
 
@@ -512,9 +519,10 @@ export function MultiplayerLayer({
                 eyeColor: '#1F2937',
                 stage: 'child',
               }}
-              transparent={true}
+              transparent
               showAccessories={false}
               className={cn(player.isMoving && "scale-105")}
+              idSuffix={`${player.pubkey}-${player.sessionId}`}
             />
           </div>
         </div>

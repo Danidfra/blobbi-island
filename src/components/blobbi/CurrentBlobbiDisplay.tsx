@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { loadCustomizedBlobbiSvg } from "@/lib/customizeSvg";
+import { loadCustomizedBlobbiSvg, scopeSvgIds } from "@/lib/customizeSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { AccessoryOverlay } from "./AccessoryOverlay";
@@ -20,6 +20,7 @@ export interface CurrentBlobbiDisplayProps {
   eyesClosed?: boolean;
   showAccessories?: boolean;
   accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
+  idSuffix?: string;
   /** New: if provided, component renders THIS visual instead of fetching local hooks */
   visualOverride?: {
     name?: string;
@@ -51,8 +52,13 @@ export function CurrentBlobbiDisplay({
   eyesClosed = false,
   showAccessories = true,
   accessorySizeMultiplier,
-  visualOverride
+  idSuffix,
+  visualOverride,
 }: CurrentBlobbiDisplayProps) {
+  const scopeIdRef = useRef<string>(
+    idSuffix ??
+    `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2,8)}`
+  );
   // Always run hooks, but only use data when needed (for local player)
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -104,17 +110,18 @@ export function CurrentBlobbiDisplay({
       setIsLoading(true);
 
       try {
-        const adultType = blobbiData.stage === 'adult' ?
+        const stage = blobbiData.stage || 'baby';
+        const adultType = stage === 'adult' ?
           blobbiData.adultType || 'bloomi' :
           undefined;
 
         const customizedSvg = await loadCustomizedBlobbiSvg(
-          blobbiData.stage || 'child',
+          stage,
           adultType,
           blobbiData.baseColor,
           blobbiData.secondaryColor,
           blobbiData.eyeColor,
-          isSleeping || eyesClosed // Close eyes when either sleeping or seated with eyesClosed
+          isSleeping || eyesClosed, // Close eyes when either sleeping or seated with eyesClosed
         );
 
         // Add lazy loading attributes to SVG for performance
@@ -132,8 +139,9 @@ export function CurrentBlobbiDisplay({
           }
         );
 
-        setSvgContent(optimizedSvg);
-        if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] svg ready (remote)', { stage: (visualOverride.stage || 'child') });
+        const scoped = scopeSvgIds(optimizedSvg, scopeIdRef.current);
+        setSvgContent(scoped);
+        if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] svg ready (remote)', { stage: (visualOverride.stage || 'baby') });
       } catch (err) {
         console.error('Failed to load Blobbi SVG:', err);
         setSvgContent("");
@@ -144,6 +152,8 @@ export function CurrentBlobbiDisplay({
 
     loadSvg();
   }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
+
+
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -176,7 +186,7 @@ export function CurrentBlobbiDisplay({
   if (svgContent && (currentBlobbi || visualOverride)) {
     const blobbiData = (currentBlobbi || visualOverride)!;
     const displayName = blobbiData.name || (visualOverride ? 'Remote Blobbi' : (currentBlobbi?.id || 'Blobbi'));
-    const stage = blobbiData.stage || 'child';
+    const stage = blobbiData.stage || 'baby';
 
     // Transparent mode - show only the SVG without background
     if (transparent) {
