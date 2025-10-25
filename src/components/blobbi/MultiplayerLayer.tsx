@@ -29,6 +29,9 @@ import { locationScalingConfig } from '@/lib/location-scaling-config';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
+import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
+import { useChatBubbles } from '@/hooks/useChatBubbles';
+import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
 
 // ============================================================================
 // Types
@@ -42,6 +45,8 @@ interface MultiplayerLayerProps {
   className?: string;
   onMyPositionChange?: (position: Position) => void;
   disabled?: boolean;
+  chatFunctionRef?: React.MutableRefObject<((text: string) => Promise<void>) | null>;
+  myAnchorId?: string;
 }
 
 // ============================================================================
@@ -56,6 +61,8 @@ export function MultiplayerLayer({
   className,
   onMyPositionChange,
   disabled = false,
+  chatFunctionRef,
+  myAnchorId,
 }: MultiplayerLayerProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -70,6 +77,18 @@ export function MultiplayerLayer({
   const pendingTargetRef = useRef<Position | null>(null);
   const consecutiveFailureCountRef = useRef<number>(0);
   const cooldownActiveRef = useRef<boolean>(false);
+  const lastChatPublishRef = useRef<number>(0);
+
+  // Chat bubble management
+  const {
+    bubbles,
+    queuedBubbles,
+    showBubble,
+    queueBubble,
+    processQueuedBubbles,
+    clearBubbles,
+    isDuplicate,
+  } = useChatBubbles();
 
   // Create navigation API for walkable area checking
   const navApi = useMemo(() => {
@@ -280,6 +299,181 @@ export function MultiplayerLayer({
     pixelToPercent,
     nav: navApi
   });
+
+  // ============================================================================
+  // Chat Message Publishing
+  // ============================================================================
+
+  const publishChatMessage = useCallback(async (text: string): Promise<void> => {
+    if (!user || !text.trim()) return;
+
+    const now = Date.now();
+
+    // Rate limiting
+    if (now - lastChatPublishRef.current < CHAT_RATE_LIMIT_MS) {
+      throw new Error('Rate limited: Please wait before sending another message');
+    }
+
+    const expirationTime = Math.floor((now + CHAT_EVICT_MS) / 1000);
+
+    const content = JSON.stringify({
+      type: 'chat',
+      location: currentLocation,
+      blobbiD: currentBlobbiD,
+      text: text.trim(),
+      ts: Math.floor(now / 1000),
+    });
+
+    const event = {
+      kind: CHAT_KIND,
+      content,
+      tags: [
+        ['d', sessionId],
+        ['l', currentLocation],
+        ['expiration', expirationTime.toString()],
+        ['p', user.pubkey],
+        ['i', islandId],
+        ['alt', `Chat message: ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}`],
+      ],
+    };
+
+    try {
+      // Use Promise.allSettled for non-fatal publish attempts
+      const results = await Promise.allSettled([publishEvent(event)]);
+
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      if (DEBUG_MP) {
+        console.debug('[blobbi][chat] publish results', { successful, total: results.length });
+      }
+
+      // Update rate limit timestamp even on partial success
+      lastChatPublishRef.current = now;
+
+      // Show local bubble immediately (optimistic)
+      showBubble('me', text, now + CHAT_EVICT_MS);
+
+    } catch (error) {
+      console.error('Failed to publish chat message:', error);
+      throw error;
+    }
+  }, [user, currentLocation, currentBlobbiD, islandId, publishEvent, showBubble, sessionId]);
+
+  // ============================================================================
+  // Chat Event Processing
+  // ============================================================================
+
+  const processChatEvent = useCallback((event: NostrEvent) => {
+    try {
+      if (event.kind !== CHAT_KIND) return;
+
+      // Skip own events
+      if (event.pubkey === user?.pubkey) return;
+
+      const now = Date.now();
+      const nowSec = Math.floor(now / 1000);
+
+      // Check expiration
+      const expirationTag = event.tags.find(([name]) => name === 'expiration')?.[1];
+      if (expirationTag && parseInt(expirationTag) < nowSec) {
+        return; // Expired
+      }
+
+      // Check location (tolerant parser: accepts 'l' or 'location')
+      const locationTag =
+        event.tags.find(([name]) => name === 'l')?.[1] ??
+        event.tags.find(([name]) => name === 'location')?.[1];
+      if (locationTag !== currentLocation) {
+        return; // Different location
+      }
+
+      // Check if too old
+      if (nowSec - event.created_at > CHAT_EVICT_MS / 1000) {
+        return; // Too old
+      }
+
+      let content;
+      try {
+        content = JSON.parse(event.content);
+      } catch {
+        return; // Invalid JSON
+      }
+
+      // Validate content structure
+      if (content.type !== 'chat' ||
+          content.location !== currentLocation ||
+          !content.text ||
+          typeof content.text !== 'string') {
+        return;
+      }
+
+      // Sanitize text (remove HTML, trim)
+      const sanitizedText = content.text.replace(/<[^>]*>/g, '').trim();
+      if (!sanitizedText) return;
+
+      // Dedupe by session ID
+      const dTag = event.tags.find(([name]) => name === 'd')?.[1];
+      if (!dTag) return;
+
+      const dedupeKey = `${event.pubkey}:${dTag}`;
+      if (isDuplicate(dedupeKey)) {
+        if (DEBUG_MP) console.debug('[blobbi][chat] duplicate message ignored', { dedupeKey });
+        return;
+      }
+
+      const expiresAt = expirationTag ? parseInt(expirationTag) * 1000 : (now + CHAT_EVICT_MS);
+      queueBubble(`${event.pubkey}:pending`, sanitizedText, expiresAt);
+    } catch (error) {
+      console.error('Error processing chat event:', error);
+    }
+  }, [user?.pubkey, currentLocation, queueBubble, isDuplicate]);
+
+  // ============================================================================
+  // Chat Subscription
+  // ============================================================================
+
+  useEffect(() => {
+    if (!user) return;
+
+    const chatFilter: NostrFilter = {
+      kinds: [CHAT_KIND],
+      '#l': [currentLocation],
+      '#i': [islandId],                                   
+      since: Math.floor((Date.now() - 5_000) / 1000),
+    };
+
+    if (DEBUG_MP) console.debug('[blobbi][chat] starting subscription', { chatFilter });
+    const chatSubscription = subscribe(chatFilter, processChatEvent);
+    return () => chatSubscription.close();
+  }, [user?.pubkey, currentLocation, islandId, subscribe, processChatEvent]);
+
+  // Process queued bubbles when players change
+  useEffect(() => {
+    const isPlayerVisible = (playerKey: string) => {
+      if (playerKey.endsWith(':pending')) {
+        const pubkey = playerKey.replace(':pending', '');
+        return Array.from(players.keys()).some(key => key.startsWith(`${pubkey}:`));
+      }
+      return players.has(playerKey);
+    };
+    processQueuedBubbles(isPlayerVisible);
+  }, [players, queuedBubbles, processQueuedBubbles]);
+
+  // Clear bubbles when location changes
+  useEffect(() => {
+    clearBubbles();
+  }, [currentLocation, clearBubbles]);
+
+  // Expose chat function to parent
+  useEffect(() => {
+    if (chatFunctionRef) {
+      chatFunctionRef.current = publishChatMessage;
+    }
+    return () => {
+      if (chatFunctionRef) {
+        chatFunctionRef.current = null;
+      }
+    };
+  }, [chatFunctionRef, publishChatMessage]);
 
   // ============================================================================
   // Click Handling
@@ -638,6 +832,7 @@ export function MultiplayerLayer({
           <div
             key={`${player.pubkey}:${player.sessionId}`}
             className="absolute pointer-events-auto group"
+            data-player-key={`${player.pubkey}:${player.sessionId}`}
             style={{
               left: `${player.position.x}%`,
               top: `${player.position.y}%`,
@@ -683,7 +878,7 @@ export function MultiplayerLayer({
             )}
             style={{
               background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-              transform: `translateX(-50%) translateY(-8px) scale(${dynamicScale})`,
+              transform: `translateX(-50%) scale(${dynamicScale})`,
               transformOrigin: 'center center',
             }}
           />
@@ -704,6 +899,27 @@ export function MultiplayerLayer({
         </div>
         );
       })}
+
+      {/* Chat Bubbles Layer */}
+      <ChatBubblesLayer
+        bubbles={bubbles}
+        getAnchorEl={(playerKey: string) => {
+          const container = containerRef.current;
+          if (!container) return null;
+          if (playerKey === 'me') {
+            const id = myAnchorId ?? 'my-blobbi-anchor';
+            return container.querySelector<HTMLElement>(`#${id}`);
+          }
+          const key = playerKey.endsWith(':pending')
+            ? (() => {
+                const pubkey = playerKey.slice(0, -':pending'.length);
+                return Array.from(players.keys()).find(k => k.startsWith(`${pubkey}:`)) ?? '';
+              })()
+            : playerKey;
+          if (!key) return null;
+          return container.querySelector<HTMLElement>(`[data-player-key="${key}"]`);
+        }}
+      />
 
       {/* Debug info (only in development) */}
       {process.env.NODE_ENV === 'development' && (

@@ -26,7 +26,7 @@ export interface MovableBlobbiRef {
 
 import { locationScalingConfig } from '@/lib/location-scaling-config';
 
-interface MovableBlobbiProps {
+export interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
   isVisible?: boolean;
   initialPosition?: Position;
@@ -48,6 +48,7 @@ interface MovableBlobbiProps {
   sitZIndexOffset?: number;
   scaleByYPosition?: boolean;
   disableFloating?: boolean;
+  anchorId?: string;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -74,6 +75,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       sitZIndexOffset = 0,
       scaleByYPosition = false,
       disableFloating = false,
+      anchorId,
     },
     ref
   ) => {
@@ -405,34 +407,45 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           ))}
         <div
           ref={blobbiRef}
+          id={anchorId}
           className={cn(
             "absolute transition-all duration-200 ease-out blobbi-character",
-            onBlobbiClick ? "pointer-events-auto cursor-pointer hover:scale-105" : "pointer-events-none",
+            onBlobbiClick ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
             isMoving && "transition-none",
             className
           )}
           style={{
             left: `${position.x}%`,
             top: `${position.y}%`,
-            transform: `translate(-50%, -50%) scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
+            // ⬇️ wrapper externo SEM scale/flip — serve de âncora p/ a bolha
+            transform: `translate(-50%, -50%)`,
             filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
             zIndex: getDynamicZIndex(position),
           }}
         >
+          {/* ⬇️ wrapper interno recebe scale/flip */}
           <div
-            className={cn(
-              !isSleeping && !disableFloating && "animate-float",
-              "transition-transform duration-1000 ease-in-out"
-            )}
+            className="relative"
+            style={{
+              transform: `scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
+              transformOrigin: 'center center',
+            }}
           >
-            <CurrentBlobbiDisplay
-              size={size}
-              showFallback={true}
-              transparent={true}
-              isSleeping={isSleeping}
-              eyesClosed={eyesClosed}
-              className={cn(isMoving && "scale-105")}
-            />
+            <div
+              className={cn(
+                !isSleeping && !disableFloating && "animate-float",
+                "transition-transform duration-1000 ease-in-out"
+              )}
+            >
+              <CurrentBlobbiDisplay
+                size={size}
+                showFallback={true}
+                transparent={true}
+                isSleeping={isSleeping}
+                eyesClosed={eyesClosed}
+                className={cn(isMoving && "scale-105")}
+              />
+            </div>
           </div>
           <div
             className={cn(
@@ -444,7 +457,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             )}
             style={{
               background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-              transform: `translateX(-50%) translateY(-8px) scale(${dynamicScale})`,
+              transform: `translateX(-50%) scale(${dynamicScale})`,
               transformOrigin: 'center center',
             }}
           />

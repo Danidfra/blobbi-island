@@ -21,6 +21,8 @@ import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { MultiplayerLayer } from './MultiplayerLayer';
+import { ChatInputBar } from '@/components/ChatInputBar';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -29,7 +31,9 @@ interface PlayingViewProps {
 export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
+  const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation } = useLocation();
+  const { user } = useCurrentUser();
 
   // Clear arcade pass when leaving arcade locations
   React.useEffect(() => {
@@ -145,6 +149,14 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     setIsBlobbiInfoOpen(true);
   };
 
+  const handleSendChatMessage = async (text: string) => {
+    if (chatFunctionRef.current) {
+      await chatFunctionRef.current(text);
+    } else {
+      throw new Error('Chat function not available');
+    }
+  };
+
   // Listen for social share events from ShareModal
   useEffect(() => {
     const handleOpenSocialShare = (event: CustomEvent) => {
@@ -232,6 +244,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         onMoveComplete={handleMoveComplete}
         onWakeUp={handleWakeUp}
         onBlobbiClick={handleBlobbiClick}
+        anchorId="my-blobbi-anchor"
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
         _isSeated={isSeated}
@@ -249,6 +262,16 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           currentBlobbiD={selectedBlobbi.id}
           startPosition={myPosition}
           onMyPositionChange={setMyPosition}
+          chatFunctionRef={chatFunctionRef}
+          myAnchorId="my-blobbi-anchor"
+        />
+      )}
+
+      {/* Chat Input Bar - only show when user is logged in and has a selected Blobbi */}
+      {user && selectedBlobbi && (
+        <ChatInputBar
+          onSend={handleSendChatMessage}
+          disabled={!user}
         />
       )}
 
