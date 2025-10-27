@@ -69,36 +69,45 @@ export function useChatBubbles() {
   }, []);
 
   // Try to show queued bubbles when players become available
-  const processQueuedBubbles = useCallback((isPlayerVisible: (playerKey: string) => boolean) => {
-    const now = Date.now();
-    
-    setQueuedBubbles(prev => {
-      const remaining: QueuedBubble[] = [];
-      
-      for (const queuedBubble of prev) {
-        // Check if bubble has expired while queued
-        if (now > queuedBubble.expiresAt) {
-          continue; // Drop expired bubbles
-        }
-        
-        // Check if we've been waiting too long
-        if (now - queuedBubble.queuedAt > CHAT_PLAYER_GRACE_MS) {
-          continue; // Drop bubbles that have been queued too long
-        }
-        
-        // Check if player is now visible
-        if (isPlayerVisible(queuedBubble.playerKey)) {
-          // Show the bubble
-          showBubble(queuedBubble.playerKey, queuedBubble.text, queuedBubble.expiresAt);
-        } else {
-          // Keep in queue
+  const processQueuedBubbles = useCallback(
+    (isPlayerVisible: (playerKey: string) => boolean) => {
+      const now = Date.now();
+
+      setQueuedBubbles((prev) => {
+        let changed = false;
+        const remaining: QueuedBubble[] = [];
+
+        for (const queuedBubble of prev) {
+          // expirou na fila
+          if (now > queuedBubble.expiresAt) {
+            changed = true;
+            continue;
+          }
+          // aguardou tempo demais sem âncora
+          if (now - queuedBubble.queuedAt > CHAT_PLAYER_GRACE_MS) {
+            changed = true;
+            continue;
+          }
+          // âncora já existe? adota agora
+          if (isPlayerVisible(queuedBubble.playerKey)) {
+            showBubble(
+              queuedBubble.playerKey,
+              queuedBubble.text,
+              queuedBubble.expiresAt
+            );
+            changed = true;
+            continue;
+          }
+          // ainda sem âncora -> mantém na fila
           remaining.push(queuedBubble);
         }
-      }
-      
-      return remaining;
-    });
-  }, [showBubble]);
+
+        // ⚠️ se nada mudou, retorna o próprio "prev" para evitar update inútil
+        return changed ? remaining : prev;
+      });
+    },
+    [showBubble]
+  );
 
   // Clear all bubbles
   const clearBubbles = useCallback(() => {

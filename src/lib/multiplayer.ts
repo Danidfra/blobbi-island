@@ -91,7 +91,7 @@ export interface BlobbiVisual {
   pattern?: string;
   eyeColor?: string;
   specialMark?: string;
-  stage?: 'egg' | 'child' | 'adult';
+  stage?: 'egg' | 'baby' | 'adult';
   adultType?: string;
 }
 

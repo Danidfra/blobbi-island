@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,27 @@ export function ChatBubblesLayer({
 }: ChatBubblesLayerProps) {
   const [visibleBubbles, setVisibleBubbles] = useState<Map<string, BubbleState>>(new Map());
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  const mapsAreShallowEqual = (
+    a: Map<string, BubbleState>,
+    b: Map<string, BubbleState>
+  ) => {
+    if (a.size !== b.size) return false;
+    for (const [key, va] of a) {
+      const vb = b.get(key);
+      if (!vb) return false;
+      // Compara identidade do bubble (id), flag e âncora
+      if (
+        va.bubble.id !== vb.bubble.id ||
+        va.isExpiring !== vb.isExpiring ||
+        va.anchorEl !== vb.anchorEl
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   useEffect(() => {
     const now = Date.now();
     const next = new Map<string, BubbleState>();
@@ -40,8 +61,8 @@ export function ChatBubblesLayer({
         anchorEl: getAnchorEl(bubble.playerKey),
       });
     }
-    setVisibleBubbles(next);
-  }, [bubbles, getAnchorEl]); // não precisamos de RAF; seguimos o DOM da âncora
+    setVisibleBubbles(prev => (mapsAreShallowEqual(prev, next) ? prev : next));
+  }, [bubbles, getAnchorEl]);
 
   // Handle bubble lifecycle (show/hide with animations)
   useEffect(() => {
@@ -110,9 +131,11 @@ export function ChatBubblesLayer({
     };
   }, []);
 
+  const renderList = useMemo(() => Array.from(visibleBubbles.values()), [visibleBubbles]);
+
   return (
     <div className={cn("absolute inset-0 pointer-events-none z-[25]", className)}>
-      {Array.from(visibleBubbles.values()).map(({ bubble, anchorEl, isExpiring }) =>
+      {renderList.map(({ bubble, anchorEl, isExpiring }) =>
         anchorEl
           ? createPortal(
               <ChatBubbleElement key={bubble.id} bubble={bubble} isExpiring={isExpiring} />,

@@ -29,7 +29,7 @@ export interface CurrentBlobbiDisplayProps {
     eyeColor?: string;
     pattern?: string;
     specialMark?: string;
-    stage?: "egg" | "child" | "adult";
+    stage?: "egg" | "baby" | "adult";
     adultType?: string;
   };
 }

@@ -80,12 +80,17 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     ref
   ) => {
     const [position, setPosition] = useState<Position>(initialPosition);
-    const [targetPosition, setTargetPosition] = useState<Position>(initialPosition);
+    // 🔒 refs para evitar recriar animação e estourar hooks
+    const targetRef = useRef<Position>(initialPosition);
     const [isMoving, setIsMoving] = useState(false);
+    const isMovingRef = useRef(false);
+    // garante que state e ref fiquem em sincronia
+    useEffect(() => { isMovingRef.current = isMoving; }, [isMoving]);
     const [direction, setDirection] = useState<MovementDirection>({ x: 0, y: 0 });
     const [trail, setTrail] = useState<Position[]>([]);
     const animationRef = useRef<number>();
     const lastTimeRef = useRef<number>();
+    const justCompletedRef = useRef(false);
     const blobbiRef = useRef<HTMLDivElement>(null);
     const { isPositionBlocked } = useMovementBlocker();
     const { isPhotoBoothOpen } = usePhotoBooth();
@@ -178,16 +183,16 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         const deltaTime = (timestamp - lastTimeRef.current) / 1000;
         lastTimeRef.current = timestamp;
 
+        let reached = false;
         setPosition(currentPos => {
           const currentPixelPos = getPixelPosition(currentPos);
-          const targetPixelPos = getPixelPosition(targetPosition);
+          const target = targetRef.current;
+          const targetPixelPos = getPixelPosition(target);
           const distance = getDistance(currentPixelPos, targetPixelPos);
 
           if (distance < 2) {
-            setIsMoving(false);
-            onMoveComplete?.(targetPosition);
-            // Snap exactly to the target position
-            return targetPosition;
+            reached = true;
+            return target;
           }
 
           const dx = targetPixelPos.x - currentPixelPos.x;
@@ -197,7 +202,14 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           const normalizedDx = dx / directionLength;
           const normalizedDy = dy / directionLength;
 
-          setDirection({ x: normalizedDx, y: normalizedDy });
+          // só atualiza direção se mudar o suficiente (evita rerenders)
+          setDirection(prev => {
+            const EPS = 0.001;
+            if (Math.abs(prev.x - normalizedDx) < EPS && Math.abs(prev.y - normalizedDy) < EPS) {
+              return prev;
+            }
+            return { x: normalizedDx, y: normalizedDy };
+          });
 
           const newPixelPos = {
             x: currentPixelPos.x + normalizedDx * moveDistance,
@@ -206,28 +218,39 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           const newPercentPos = getPercentPosition(newPixelPos);
 
           if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
-            setIsMoving(false);
-            onMoveComplete?.(currentPos);
+            reached = true;
             return currentPos;
           }
 
           if (showTrail) {
-            setTrail(prevTrail => [currentPos, ...prevTrail.slice(0, 4)]);
+            setTrail(prevTrail => {
+              if (prevTrail[0] && prevTrail[0].x === currentPos.x && prevTrail[0].y === currentPos.y) {
+                return prevTrail;
+              }
+              return [currentPos, ...prevTrail.slice(0, 4)];
+            });
           }
 
           return newPercentPos;
         });
 
-        if (isMoving) {
+        if (reached) {
+          if (!justCompletedRef.current) {
+            justCompletedRef.current = true;
+            setIsMoving(false);
+            onMoveComplete?.(targetRef.current);
+            setTimeout(() => { justCompletedRef.current = false; }, 0);
+          }
+          return;
+        }
+        if (isMovingRef.current) {
           animationRef.current = requestAnimationFrame(animateMovement);
         }
       },
       [
-        targetPosition,
         movementSpeed,
         getPixelPosition,
         getPercentPosition,
-        isMoving,
         onMoveComplete,
         showTrail,
         isPositionBlocked,
@@ -235,7 +258,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     );
 
     useEffect(() => {
-      if (isMoving) {
+      if (isMovingRef.current) {
         lastTimeRef.current = undefined;
         animationRef.current = requestAnimationFrame(animateMovement);
       }
@@ -244,7 +267,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           cancelAnimationFrame(animationRef.current);
         }
       };
-    }, [isMoving, animateMovement]);
+    }, [animateMovement]);
 
     useEffect(() => {
       const container = containerRef.current;
@@ -330,8 +353,9 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
         if (isPositionBlocked(newTarget.x, newTarget.y)) return;
 
-        setTargetPosition(newTarget);
+        targetRef.current = newTarget;
         setIsMoving(true);
+        isMovingRef.current = true;
         onMoveStart?.(newTarget);
       };
 
@@ -360,14 +384,16 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         if (isPositionBlocked(newTarget.x, newTarget.y)) {
           return;
         }
-        setTargetPosition(newTarget);
+        targetRef.current = newTarget;
         if (immediate) {
           // Immediately snap to position without animation
           setPosition(newTarget);
           setIsMoving(false);
+          isMovingRef.current = false;
           onMoveComplete?.(newTarget);
         } else {
           setIsMoving(true);
+          isMovingRef.current = true;
           onMoveStart?.(newTarget);
         }
       },

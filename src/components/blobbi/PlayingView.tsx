@@ -23,10 +23,21 @@ import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { MultiplayerLayer } from './MultiplayerLayer';
 import { ChatInputBar } from '@/components/ChatInputBar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostr } from '@/hooks/useNostr';
+import type { BlobbiVisual } from '@/lib/multiplayer';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
 }
+
+type Stage = 'egg' | 'baby' | 'adult';
+const normalizeStage = (s: unknown, fallback: Stage = 'baby'): Stage => {
+  return s === 'egg' || s === 'baby' || s === 'adult' ? s : fallback;
+};
+const getTag = (event: { tags: string[][] }, name: string): string | undefined => {
+  const t = event.tags.find(([n]) => n === name);
+  return t?.[1];
+};
 
 export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,6 +45,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation } = useLocation();
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
 
   // Clear arcade pass when leaving arcade locations
   React.useEffect(() => {
@@ -47,6 +59,22 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
   const [isSocialShareOpen, setIsSocialShareOpen] = useState(false);
   const [socialShareData, setSocialShareData] = useState<{ capturedPhoto: string | null; capturedPolaroidSrc: string | null }>({ capturedPhoto: null, capturedPolaroidSrc: null });
+  const [readOnlyBlobbiData, setReadOnlyBlobbiData] = useState<{
+    name: string;
+    stage: string;
+    hunger: number;
+    energy: number;
+    happiness: number;
+    health: number;
+    hygiene: number;
+    experience: number;
+    careStreak: number;
+    generation: number;
+    personality?: string | string[];
+    trait?: string | string[];
+    mood?: string;
+    isSleeping?: boolean;
+  } | null>(null);
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -147,6 +175,74 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
   const handleBlobbiClick = () => {
     setIsBlobbiInfoOpen(true);
+    setReadOnlyBlobbiData(null); // Clear read-only data when opening own Blobbi
+  };
+
+  // Opens read-only Blobbi info for other users.
+  // Receives blobbiD (d-tag), not the sessionId.
+  const handleOtherBlobbiClick = async (playerPubkey: string, blobbiD: string, blobbiVisual: BlobbiVisual) => {
+    try {
+      // Fetch the other player's Blobbi data
+      const signal = AbortSignal.timeout(5000);
+
+      const events = await nostr.query([{
+        kinds: [31124],
+        authors: [playerPubkey],
+        '#d': [blobbiD],
+        limit: 1,
+      }], { signal });
+
+      if (events.length === 0) {
+        console.warn('No Blobbi data found for player:', playerPubkey);
+        setReadOnlyBlobbiData({
+          name: blobbiVisual.name || 'Unknown Blobbi',
+          stage: normalizeStage(blobbiVisual.stage),
+          hunger: 50, energy: 50, happiness: 50, health: 100, hygiene: 50,
+          experience: 0, careStreak: 0, generation: 1, isSleeping: false,
+        });
+        setIsBlobbiInfoOpen(true);
+        return;
+      }
+
+      const event = events[0];
+
+      // Create mock Blobbi data for read-only display with all required PetState fields
+      const blobbiData = {
+        id: blobbiD,
+        name: blobbiVisual.name || 'Unknown Blobbi',
+        stage: normalizeStage(blobbiVisual.stage ?? getTag(event, 'stage') ?? 'baby'),
+        breedingReady: getTag(event, 'breeding_ready') === 'true',
+        generation: parseInt(getTag(event, 'generation') ?? '1', 10),
+        hunger: parseInt(getTag(event, 'hunger') ?? '50', 10),
+        energy: parseInt(getTag(event, 'energy') ?? '50', 10),
+        happiness: parseInt(getTag(event, 'happiness') ?? '50', 10),
+        health: parseInt(getTag(event, 'health') ?? '100', 10),
+        hygiene: parseInt(getTag(event, 'hygiene') ?? '50', 10),
+        experience: parseInt(getTag(event, 'experience') ?? '0', 10),
+        careStreak: parseInt(getTag(event, 'care_streak') ?? '0', 10),
+        isSleeping: getTag(event, 'is_sleeping') === 'true',
+        isDirty: getTag(event, 'is_dirty') === 'true',
+        hasBuff: getTag(event, 'has_buff') === 'true',
+        hasDebuff: getTag(event, 'has_debuff') === 'true',
+        inParty: getTag(event, 'in_party') === 'true',
+        visibleToOthers: getTag(event, 'visible_to_others') === 'true',
+        personality: getTag(event, 'personality'),
+        trait: getTag(event, 'trait'),
+        mood: getTag(event, 'mood'),
+      };
+
+      setReadOnlyBlobbiData(blobbiData);
+      setIsBlobbiInfoOpen(true);
+    } catch (error) {
+      console.error('Failed to fetch other player Blobbi data:', error);
+      setReadOnlyBlobbiData({
+        name: blobbiVisual.name || 'Unknown Blobbi',
+        stage: normalizeStage(blobbiVisual.stage),
+        hunger: 50, energy: 50, happiness: 50, health: 100, hygiene: 50,
+        experience: 0, careStreak: 0, generation: 1, isSleeping: false,
+      });
+      setIsBlobbiInfoOpen(true);
+    }
   };
 
   const handleSendChatMessage = async (text: string) => {
@@ -264,6 +360,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           onMyPositionChange={setMyPosition}
           chatFunctionRef={chatFunctionRef}
           myAnchorId="my-blobbi-anchor"
+          onOtherBlobbiClick={handleOtherBlobbiClick}
         />
       )}
 
@@ -298,6 +395,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       <BlobbiInfoModal
         isOpen={isBlobbiInfoOpen}
         onClose={() => setIsBlobbiInfoOpen(false)}
+        readOnly={!!readOnlyBlobbiData}
+        externalBlobbiData={readOnlyBlobbiData || undefined}
       />
 
       {/* Social Share Modal */}

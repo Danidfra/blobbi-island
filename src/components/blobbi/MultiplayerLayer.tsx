@@ -33,6 +33,17 @@ import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
 
+type PlayerLike = {
+  pubkey: string;
+  sessionId: string;
+  position: Position;
+  isMoving: boolean;
+  visual?: BlobbiVisual;
+  lastContent?: { blobbiD?: unknown; location?: unknown };
+  blobbiD?: unknown;
+};
+
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -47,6 +58,11 @@ interface MultiplayerLayerProps {
   disabled?: boolean;
   chatFunctionRef?: React.MutableRefObject<((text: string) => Promise<void>) | null>;
   myAnchorId?: string;
+  onOtherBlobbiClick?: (
+    playerPubkey: string,
+    blobbiD: string | undefined,
+    blobbiVisual: BlobbiVisual
+  ) => void;
 }
 
 // ============================================================================
@@ -63,6 +79,7 @@ export function MultiplayerLayer({
   disabled = false,
   chatFunctionRef,
   myAnchorId,
+  onOtherBlobbiClick,
 }: MultiplayerLayerProps) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -78,6 +95,37 @@ export function MultiplayerLayer({
   const consecutiveFailureCountRef = useRef<number>(0);
   const cooldownActiveRef = useRef<boolean>(false);
   const lastChatPublishRef = useRef<number>(0);
+  const anchorIndexRef = React.useRef(new Map<string, string>());
+
+  const resolveBlobbiD = useCallback(
+    async (player: PlayerLike): Promise<string | undefined> => {
+      const fromLast = player.lastContent?.blobbiD;
+      if (typeof fromLast === 'string' && fromLast.length > 0) return fromLast;
+      const direct = player.blobbiD;
+      if (typeof direct === 'string' && direct.length > 0) return direct;
+
+      try {
+        const signal = AbortSignal.timeout(3000);
+        const events = await nostr.query(
+          [
+            {
+              kinds: [31124],
+              authors: [player.pubkey],
+              limit: 1,
+            },
+          ],
+          { signal }
+        );
+        const ev = events[0];
+        if (!ev) return undefined;
+        const d = ev.tags.find(([k]) => k === 'd')?.[1];
+        return typeof d === 'string' && d.length > 0 ? d : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    [nostr]
+  );
 
   // Chat bubble management
   const {
@@ -128,7 +176,7 @@ export function MultiplayerLayer({
     const eyeColor       = get('eye_color')       || get('eyeColor');
     const specialMark    = get('special_mark')    || get('specialMark');
     const stageRaw       = get('stage') || get('blobbi_stage');
-    const stage = stageRaw === 'egg' || stageRaw === 'child' || stageRaw === 'adult'
+    const stage = stageRaw === 'egg' || stageRaw === 'baby' || stageRaw === 'adult'
       ? stageRaw
       : undefined;
     const adultType      = get('adult_type') || get('adultType') || get('blobbi_adult_type');
@@ -437,7 +485,7 @@ export function MultiplayerLayer({
     const chatFilter: NostrFilter = {
       kinds: [CHAT_KIND],
       '#l': [currentLocation],
-      '#i': [islandId],                                   
+      '#i': [islandId],
       since: Math.floor((Date.now() - 5_000) / 1000),
     };
 
@@ -448,10 +496,18 @@ export function MultiplayerLayer({
 
   // Process queued bubbles when players change
   useEffect(() => {
+    // Build a stable lookup pubkey -> concrete [data-player-key="..."] once per players change
+    const m = new Map<string, string>();
+    for (const key of players.keys()) {
+      const [pubkey] = key.split(':');
+      m.set(pubkey, key);
+    }
+    anchorIndexRef.current = m;
+
     const isPlayerVisible = (playerKey: string) => {
       if (playerKey.endsWith(':pending')) {
         const pubkey = playerKey.replace(':pending', '');
-        return Array.from(players.keys()).some(key => key.startsWith(`${pubkey}:`));
+        return anchorIndexRef.current.has(pubkey)
       }
       return players.has(playerKey);
     };
@@ -799,6 +855,20 @@ export function MultiplayerLayer({
   // Render
   // ============================================================================
 
+  const getAnchorEl = useCallback((playerKey: string) => {
+    const container = containerRef.current;
+    if (!container) return null;
+    if (playerKey === 'me') {
+      const id = myAnchorId ?? 'my-blobbi-anchor';
+      return container.querySelector<HTMLElement>(`#${id}`);
+    }
+    const key = playerKey.endsWith(':pending')
+      ? anchorIndexRef.current.get(playerKey.slice(0, -':pending'.length)) ?? ''
+      : playerKey;
+    if (!key) return null;
+    return container.querySelector<HTMLElement>(`[data-player-key="${key}"]`);
+  }, [containerRef, myAnchorId]);
+
   if (!user || disabled) return null
 
   if (error) { console.error('Multiplayer error:', error); return null;  }
@@ -843,8 +913,25 @@ export function MultiplayerLayer({
           >
             {/* SPRITE – hover target (peer) */}
             <div
-              className="peer pointer-events-auto select-none"
-              onPointerDown={(e) => e.stopPropagation()}
+              className="peer pointer-events-auto select-none cursor-pointer"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (!onOtherBlobbiClick) return;
+                const visual = player.visual;
+                if (!visual) return;
+                void (async () => {
+                  const blobbiD = await resolveBlobbiD(player as PlayerLike);
+                  onOtherBlobbiClick(player.pubkey, blobbiD, visual);
+                  if (import.meta.env.MODE === 'development') {
+                    console.debug('[blobbi][click] remote blobbi clicked', player.pubkey, blobbiD);
+                    if (!blobbiD) {
+                      console.warn('[blobbi][mp] blobbiD not found (sent undefined)', {
+                        pubkey: player.pubkey, sessionId: player.sessionId
+                      });
+                    }
+                  }
+                })();
+              }}
               style={{
                 transform: `scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
                 transformOrigin: 'center center',
@@ -860,7 +947,7 @@ export function MultiplayerLayer({
                 baseColor: '#4F46E5',
                 secondaryColor: '#7C3AED',
                 eyeColor: '#1F2937',
-                stage: 'child',
+                stage: 'baby',
               }}
               transparent
               showAccessories={false}
@@ -903,22 +990,7 @@ export function MultiplayerLayer({
       {/* Chat Bubbles Layer */}
       <ChatBubblesLayer
         bubbles={bubbles}
-        getAnchorEl={(playerKey: string) => {
-          const container = containerRef.current;
-          if (!container) return null;
-          if (playerKey === 'me') {
-            const id = myAnchorId ?? 'my-blobbi-anchor';
-            return container.querySelector<HTMLElement>(`#${id}`);
-          }
-          const key = playerKey.endsWith(':pending')
-            ? (() => {
-                const pubkey = playerKey.slice(0, -':pending'.length);
-                return Array.from(players.keys()).find(k => k.startsWith(`${pubkey}:`)) ?? '';
-              })()
-            : playerKey;
-          if (!key) return null;
-          return container.querySelector<HTMLElement>(`[data-player-key="${key}"]`);
-        }}
+        getAnchorEl={getAnchorEl}
       />
 
       {/* Debug info (only in development) */}

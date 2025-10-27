@@ -33,6 +33,23 @@ interface BlobbiInfoModalProps {
   onClose: () => void;
   backgroundKey?: string;
   defaultTab?: 'primary' | 'inventory';
+  readOnly?: boolean;
+  externalBlobbiData?: {
+    name: string;
+    stage: string;
+    hunger: number;
+    energy: number;
+    happiness: number;
+    health: number;
+    hygiene: number;
+    experience: number;
+    careStreak: number;
+    generation: number;
+    personality?: string | string[];
+    trait?: string | string[];
+    mood?: string;
+    isSleeping?: boolean;
+  };
 }
 
 
@@ -81,11 +98,21 @@ function StatDisplay({
   );
 }
 
-export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-default', defaultTab = 'primary' }: BlobbiInfoModalProps) {
+export function BlobbiInfoModal({
+  isOpen,
+  onClose,
+  backgroundKey = 'blobbi-bg-default',
+  defaultTab = 'primary',
+  readOnly = false,
+  externalBlobbiData
+}: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
   const ownerProfile = useOwnerProfile();
+
+  // Use external data if in read-only mode, otherwise use current pet data
+  const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
   const backgroundSrc = getBlobbiBackground(backgroundKey);
-  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(defaultTab);
+  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -275,7 +302,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
 
   if (!isOpen) return null;
 
-  if (!currentPet) {
+  if (!blobbiData) {
     return (
       <div
         className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
@@ -293,7 +320,19 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
     );
   }
 
-  const careStatus = analyzeCareStatus(currentPet);
+  const careStatus = readOnly ? {
+    urgentNeed: undefined,
+    urgency: 'none' as const,
+    condition: 'good' as const,
+    sleepState: 'awake' as const,
+    nextCareIn: undefined,
+  } : (currentPet ? analyzeCareStatus(currentPet) : {
+    urgentNeed: undefined,
+    urgency: 'none' as const,
+    condition: 'good' as const,
+    sleepState: 'awake' as const,
+    nextCareIn: undefined,
+  });
 
   return (
     <div
@@ -315,7 +354,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
       >
         <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
           <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">
-            Blobbi Info
+            {readOnly ? `Blobbi Info – ${blobbiData.name}` : 'Blobbi Info'}
           </h2>
           <Button
             variant="ghost"
@@ -359,7 +398,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                 <CurrentBlobbiPreview
                   size="3xl"
                   showFallback={true}
-                  isSleeping={currentPet.isSleeping}
+                  isSleeping={blobbiData.isSleeping}
                   isStaticPreview={true}
                   showAccessories={false} // Don't show accessories here - we use unified AccessoryOverlay
                   className="transform-gpu"
@@ -370,12 +409,12 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
               <AccessoryOverlay
                 className="z-20"  // Ensure accessories are on top
                 containerRef={stageRef}
-                selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
-                onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
-                onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
-                isStatic={selectedTab === 'primary'}
+                selectedAccessory={!readOnly && selectedTab === 'inventory' ? selectedAccessory : undefined}
+                onAccessorySelect={!readOnly && selectedTab === 'inventory' ? setSelectedAccessory : undefined}
+                onAccessoryUpdate={!readOnly && selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
+                isStatic={readOnly || selectedTab === 'primary'}
                 sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
-                pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
+                pendingUpdates={!readOnly ? { ...committedUpdates, ...pendingUpdates } : undefined} // Merge committed and pending updates
               />
             </div>
 
@@ -387,7 +426,7 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
             <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as 'primary' | 'inventory')} className="flex flex-col h-full">
               {/* Tabs Header - sticky at top */}
               <div className="sticky top-0 backdrop-blur-sm z-20 rounded-xl border-purple-200/60 dark:border-purple-800/60">
-                <TabsList className="grid w-full grid-cols-2 bg-purple-100/60 dark:bg-purple-900/60">
+                <TabsList className={`grid ${readOnly ? 'grid-cols-1' : 'grid-cols-2'} bg-purple-100/60 dark:bg-purple-900/60`}>
                   <TabsTrigger
                     value="primary"
                     className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
@@ -395,13 +434,15 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                     <Heart className="h-4 w-4 mr-2" />
                     Primary
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="inventory"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
-                  >
-                    <Package className="h-4 w-4 mr-2" />
-                    Inventory
-                  </TabsTrigger>
+                  {!readOnly && (
+                    <TabsTrigger
+                      value="inventory"
+                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Inventory
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
 
@@ -413,36 +454,38 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
                       <h2 className="text-xl font-bold blobbi-text">
-                        {displayNameFromId(currentPet.id) ?? currentPet.id}
+                        {readOnly ? blobbiData.name : (displayNameFromId(currentPet?.id) ?? currentPet?.id)}
                       </h2>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="blobbi-badge text-xs">
-                          {currentPet.stage} • Gen {currentPet.generation}
+                          {blobbiData.stage} • Gen {blobbiData.generation}
                         </Badge>
-                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
-                          {careStatus.condition}
+                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus?.urgency || 'none')}>
+                          {careStatus?.condition || 'Unknown'}
                         </Badge>
                       </div>
                     </div>
                   </div>
 
-                  {/* Coins Display */}
-                  <div className="blobbi-card rounded-lg p-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-lg">🪙</span>
-                      <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
-                        {ownerProfile?.coins || 0} Coins
-                      </span>
+                  {/* Coins Display - Only show in non-read-only mode */}
+                  {!readOnly && (
+                    <div className="blobbi-card rounded-lg p-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-lg">🪙</span>
+                        <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                          {ownerProfile?.coins || 0} Coins
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Urgent Care Alert */}
-                  {careStatus.urgentNeed && careStatus.urgency !== 'none' && (
+                  {careStatus?.urgentNeed && careStatus.urgency !== 'none' && (
                     <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-700 dark:text-red-300">
                       <div className="flex items-center gap-2">
                         <span className="text-base">⚠️</span>
                         <span className="font-medium">Urgent:</span>
-                        <span>Your Blobbi needs {careStatus.urgentNeed}!</span>
+                        <span>{readOnly ? `This Blobbi needs ${careStatus.urgentNeed}!` : `Your Blobbi needs ${careStatus.urgentNeed}!`}</span>
                       </div>
                     </div>
                   )}
@@ -457,27 +500,27 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                     <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <StatDisplay
                         label="Hunger"
-                        value={currentPet.hunger}
+                        value={blobbiData.hunger}
                         icon={Heart}
                       />
                       <StatDisplay
                         label="Energy"
-                        value={currentPet.energy}
+                        value={blobbiData.energy}
                         icon={Zap}
                       />
                       <StatDisplay
                         label="Happiness"
-                        value={currentPet.happiness}
+                        value={blobbiData.happiness}
                         icon={Sparkles}
                       />
                       <StatDisplay
                         label="Health"
-                        value={currentPet.health}
+                        value={blobbiData.health}
                         icon={Shield}
                       />
                       <StatDisplay
                         label="Hygiene"
-                        value={currentPet.hygiene}
+                        value={blobbiData.hygiene}
                         icon={Droplets}
                         className="sm:col-span-2"
                       />
@@ -494,8 +537,8 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                     <div className="p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">Condition</span>
-                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
-                          {careStatus.condition}
+                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus?.urgency || 'none')}>
+                          {careStatus?.condition || 'Unknown'}
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
@@ -525,14 +568,14 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">Experience</span>
                         <span className="text-xs text-muted-foreground">
-                          {currentPet.experience} XP
+                          {blobbiData.experience} XP
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">Care Streak</span>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground">
-                            {currentPet.careStreak} days
+                            {blobbiData.careStreak} days
                           </span>
                           <Star className="h-3 w-3 text-yellow-500" />
                         </div>
@@ -540,14 +583,14 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium">Generation</span>
                         <span className="text-xs text-muted-foreground">
-                          Gen {currentPet.generation}
+                          Gen {blobbiData.generation}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Special Traits */}
-                  {(currentPet.personality || currentPet.trait || currentPet.mood) && (
+                  {(blobbiData.personality || blobbiData.trait || blobbiData.mood) && (
                     <div className="blobbi-card rounded-lg">
                       <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
                         <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
@@ -555,34 +598,34 @@ export function BlobbiInfoModal({ isOpen, onClose, backgroundKey = 'blobbi-bg-de
                         </h3>
                       </div>
                       <div className="p-3 space-y-2">
-                        {currentPet.personality && (
+                        {blobbiData.personality && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs">🎭</span>
                             <span className="text-xs font-medium">Personality:</span>
                             <span className="text-xs text-muted-foreground">
-                              {Array.isArray(currentPet.personality)
-                                ? currentPet.personality.join(', ')
-                                : currentPet.personality}
+                              {Array.isArray(blobbiData.personality)
+                                ? blobbiData.personality.join(', ')
+                                : blobbiData.personality}
                             </span>
                           </div>
                         )}
-                        {currentPet.trait && (
+                        {blobbiData.trait && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs">✨</span>
                             <span className="text-xs font-medium">Trait:</span>
                             <span className="text-xs text-muted-foreground">
-                              {Array.isArray(currentPet.trait)
-                                ? currentPet.trait.join(', ')
-                                : currentPet.trait}
+                              {Array.isArray(blobbiData.trait)
+                                ? blobbiData.trait.join(', ')
+                                : blobbiData.trait}
                             </span>
                           </div>
                         )}
-                        {currentPet.mood && (
+                        {blobbiData.mood && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs">😊</span>
                             <span className="text-xs font-medium">Mood:</span>
                             <span className="text-xs text-muted-foreground">
-                              {currentPet.mood}
+                              {blobbiData.mood}
                             </span>
                           </div>
                         )}
