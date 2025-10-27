@@ -9,9 +9,28 @@
   "orientation": "landscape",
   "icons": [
     {
-      "src": "/assets/blobbi-island.png",
+      "src": "/icons/blobbi-island-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/blobbi-island-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/blobbi-island-icon-rounded-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/blobbi-island-icon-rounded-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
     }
   ]
 }

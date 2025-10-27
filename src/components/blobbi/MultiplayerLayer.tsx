@@ -99,10 +99,27 @@ export function MultiplayerLayer({
 
   const resolveBlobbiD = useCallback(
     async (player: PlayerLike): Promise<string | undefined> => {
-      const fromLast = player.lastContent?.blobbiD;
-      if (typeof fromLast === 'string' && fromLast.length > 0) return fromLast;
+      // 1) Presença atual (mais fresco)
       const direct = player.blobbiD;
-      if (typeof direct === 'string' && direct.length > 0) return direct;
+      if (typeof direct === 'string' && direct.length > 0) {
+        if (DEBUG_MP) {
+          console.debug('[blobbi][mp][resolveBlobbiD] using direct blobbiD', {
+            pubkey: player.pubkey, blobbiD: direct
+          });
+        }
+        return direct;
+      }
+
+      // 2) Último conteúdo cacheado na presença
+      const fromLast = player.lastContent?.blobbiD;
+      if (typeof fromLast === 'string' && fromLast.length > 0) {
+        if (DEBUG_MP) {
+          console.debug('[blobbi][mp][resolveBlobbiD] using cached blobbiD', {
+            pubkey: player.pubkey, blobbiD: fromLast
+          });
+        }
+        return fromLast;
+      }
 
       try {
         const signal = AbortSignal.timeout(3000);
@@ -111,16 +128,60 @@ export function MultiplayerLayer({
             {
               kinds: [31124],
               authors: [player.pubkey],
-              limit: 1,
+              limit: 10,
             },
           ],
           { signal }
         );
-        const ev = events[0];
-        if (!ev) return undefined;
-        const d = ev.tags.find(([k]) => k === 'd')?.[1];
+
+        if (!events?.length) {
+          if (DEBUG_MP) {
+            console.debug('[blobbi][mp][resolveBlobbiD] no events found', {
+              pubkey: player.pubkey
+            });
+          }
+          return undefined;
+        }
+
+        // Filter for valid events with d tags and sort by created_at descending
+        const validEvents = [...events]
+          .filter(e => {
+            if (typeof e?.created_at !== 'number') return false;
+            const dTag = e.tags?.find(([k]) => k === 'd')?.[1];
+            return typeof dTag === 'string' && dTag.length > 0;
+          })
+          .sort((a, b) => b.created_at - a.created_at);
+
+        if (validEvents.length === 0) {
+          if (DEBUG_MP) {
+            console.debug('[blobbi][mp][resolveBlobbiD] no valid events with d tags', {
+              pubkey: player.pubkey, totalEvents: events.length
+            });
+          }
+          return undefined;
+        }
+
+        const latestEvent = validEvents[0];
+        const d = latestEvent.tags.find(([k]) => k === 'd')?.[1];
+
+        if (DEBUG_MP) {
+          console.debug('[blobbi][mp][resolveBlobbiD] picked latest d', {
+            pubkey: player.pubkey,
+            d,
+            created_at: latestEvent.created_at,
+            totalEvents: events.length,
+            validEvents: validEvents.length
+          });
+        }
+
         return typeof d === 'string' && d.length > 0 ? d : undefined;
-      } catch {
+      } catch (error) {
+        if (DEBUG_MP) {
+          console.debug('[blobbi][mp][resolveBlobbiD] query failed', {
+            pubkey: player.pubkey,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
         return undefined;
       }
     },
@@ -577,6 +638,8 @@ export function MultiplayerLayer({
     for (const el of chain) {
       if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
       if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
+      // Check if click is on a player sprite (which has data-player-key attribute)
+      if (el.closest?.('[data-player-key]')) return false;
     }
 
     if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
@@ -914,21 +977,34 @@ export function MultiplayerLayer({
             {/* SPRITE – hover target (peer) */}
             <div
               className="peer pointer-events-auto select-none cursor-pointer"
+              data-block-move="true"
               onPointerDown={(e) => {
                 e.stopPropagation();
                 if (!onOtherBlobbiClick) return;
                 const visual = player.visual;
                 if (!visual) return;
                 void (async () => {
+                  // ⚠️ Só prossegue se houver d-tag válida
                   const blobbiD = await resolveBlobbiD(player as PlayerLike);
-                  onOtherBlobbiClick(player.pubkey, blobbiD, visual);
-                  if (import.meta.env.MODE === 'development') {
-                    console.debug('[blobbi][click] remote blobbi clicked', player.pubkey, blobbiD);
-                    if (!blobbiD) {
-                      console.warn('[blobbi][mp] blobbiD not found (sent undefined)', {
+                  if (!blobbiD) {
+                    if (import.meta.env.MODE === 'development') {
+                      console.warn('[blobbi][mp] blobbiD not found, skipping details fetch', {
                         pubkey: player.pubkey, sessionId: player.sessionId
                       });
                     }
+                    return;
+                  }
+                  console.log('[blobbi-debug][click] Remote Blobbi clicked:', {
+                    pubkey: player.pubkey,
+                    sessionId: player.sessionId,
+                    blobbiD,
+                    visualName: visual.name,
+                    visualStage: visual.stage,
+                    timestamp: new Date().toISOString()
+                  });
+                  onOtherBlobbiClick(player.pubkey, blobbiD, visual);
+                  if (import.meta.env.MODE === 'development') {
+                    console.debug('[blobbi][click] remote blobbi clicked', player.pubkey, blobbiD);
                   }
                 })();
               }}

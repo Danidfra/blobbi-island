@@ -53,6 +53,7 @@ export interface PresenceContent {
   location: LocationId;
   anchor: PositionWithTimestamp;
   goal?: MovementGoal;
+  blobbiD?: string; // Optional blobbiD for better tracking
 }
 
 /** Walkable API interface for boundary checking */
@@ -79,8 +80,9 @@ export interface PlayerRenderState {
   isMoving: boolean;
   lastSeen: number;
   visual?: BlobbiVisual;
-  lastContent: PresenceContent;
+  lastContent: PresenceContent & { blobbiD?: string }; // Allow blobbiD in lastContent
   animState: PlayerAnimState; // animation state for smooth movement
+  blobbiD?: string; // Direct blobbiD for quick access
 }
 
 /** Blobbi visual data */

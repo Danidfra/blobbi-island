@@ -27,6 +27,7 @@ import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 import { displayNameFromId } from '@/lib/blobbi-name';
 import { Settings } from 'lucide-react';
+import type { BlobbiVisual } from '@/lib/multiplayer';
 
 interface BlobbiInfoModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ interface BlobbiInfoModalProps {
   backgroundKey?: string;
   defaultTab?: 'primary' | 'inventory';
   readOnly?: boolean;
+  previewKey?: string;
   externalBlobbiData?: {
     name: string;
     stage: string;
@@ -50,6 +52,7 @@ interface BlobbiInfoModalProps {
     mood?: string;
     isSleeping?: boolean;
   };
+  externalVisual?: BlobbiVisual;
 }
 
 
@@ -104,7 +107,9 @@ export function BlobbiInfoModal({
   backgroundKey = 'blobbi-bg-default',
   defaultTab = 'primary',
   readOnly = false,
-  externalBlobbiData
+  previewKey = 'self',
+  externalBlobbiData,
+  externalVisual
 }: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
   const ownerProfile = useOwnerProfile();
@@ -112,7 +117,6 @@ export function BlobbiInfoModal({
   // Use external data if in read-only mode, otherwise use current pet data
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
   const backgroundSrc = getBlobbiBackground(backgroundKey);
-  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -129,6 +133,7 @@ export function BlobbiInfoModal({
   const { mutateAsync: createEvent } = useNostrPublish();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
 
   const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
     setPendingUpdates(prev => ({
@@ -165,7 +170,7 @@ export function BlobbiInfoModal({
         throw new Error('Pet not found');
       }
 
-      const petEvent = petEvents[0];
+      const petEvent = petEvents.sort((a, b) => b.created_at - a.created_at)[0];
       const currentEquipment = equipment || [];
 
       // Create updated equipment list with all pending updates applied
@@ -236,6 +241,47 @@ export function BlobbiInfoModal({
   } : null;
 
   const hasUnsavedChanges = Object.keys(pendingUpdates).length > 0;
+
+  useEffect(() => {
+    setSelectedTab(readOnly ? 'primary' : defaultTab);
+  }, [readOnly, defaultTab]);
+
+  // Debug logging for externalBlobbiData changes
+  useEffect(() => {
+    if (readOnly && externalBlobbiData) {
+      console.log('[blobbi-debug][modal] externalBlobbiData changed:', {
+        name: externalBlobbiData.name,
+        stage: externalBlobbiData.stage,
+        generation: externalBlobbiData.generation,
+        previewKey,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [readOnly, externalBlobbiData, previewKey]);
+
+  // Debug logging for externalVisual changes
+  useEffect(() => {
+    if (readOnly && externalVisual) {
+      console.log('[blobbi-debug][modal] externalVisual changed:', {
+        name: externalVisual.name,
+        stage: externalVisual.stage,
+        baseColor: externalVisual.baseColor,
+        secondaryColor: externalVisual.secondaryColor,
+        previewKey,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [readOnly, externalVisual, previewKey]);
+
+  // Debug logging for modal open/close
+  useEffect(() => {
+    console.log('[blobbi-debug][modal] Modal state changed:', {
+      isOpen,
+      readOnly,
+      previewKey,
+      timestamp: new Date().toISOString()
+    });
+  }, [isOpen, readOnly, previewKey]);
 
   // Clean up committed updates when query data matches them
   useEffect(() => {
@@ -396,26 +442,31 @@ export function BlobbiInfoModal({
               {/* Static Blobbi - z-10, centered */}
               <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
                 <CurrentBlobbiPreview
+                  key={`preview:${previewKey}`}
                   size="3xl"
                   showFallback={true}
                   isSleeping={blobbiData.isSleeping}
                   isStaticPreview={true}
-                  showAccessories={false} // Don't show accessories here - we use unified AccessoryOverlay
+                  showAccessories={false}
                   className="transform-gpu"
+                  visualOverride={readOnly ? externalVisual : undefined}
+                  idSuffix={`preview:${previewKey}`}
                 />
               </div>
 
               {/* Single Accessory Overlay - works for both static and draggable modes */}
-              <AccessoryOverlay
-                className="z-20"  // Ensure accessories are on top
-                containerRef={stageRef}
-                selectedAccessory={!readOnly && selectedTab === 'inventory' ? selectedAccessory : undefined}
-                onAccessorySelect={!readOnly && selectedTab === 'inventory' ? setSelectedAccessory : undefined}
-                onAccessoryUpdate={!readOnly && selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
-                isStatic={readOnly || selectedTab === 'primary'}
-                sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
-                pendingUpdates={!readOnly ? { ...committedUpdates, ...pendingUpdates } : undefined} // Merge committed and pending updates
-              />
+              {!readOnly && (
+                <AccessoryOverlay
+                  className="z-20"  // Ensure accessories are on top
+                  containerRef={stageRef}
+                  selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
+                  onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
+                  onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
+                  isStatic={selectedTab === 'primary'}
+                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
+                  pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
+                />
+              )}
             </div>
 
 

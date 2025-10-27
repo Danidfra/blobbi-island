@@ -46,6 +46,9 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const { currentLocation } = useLocation();
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
+  const [modalKey, setModalKey] = useState<string>('self');
+  const currentRemoteRef = useRef<{ pubkey: string; d: string } | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
 
   // Clear arcade pass when leaving arcade locations
   React.useEffect(() => {
@@ -75,6 +78,9 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     mood?: string;
     isSleeping?: boolean;
   } | null>(null);
+
+  const [externalVisual, setExternalVisual] = useState<BlobbiVisual | null>(null);
+  const [remotePreviewKey, setRemotePreviewKey] = useState<string | null>(null);
 
   // Adjusted position for sleeping Blobbi (slightly higher on the bed)
   const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
@@ -174,43 +180,199 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   };
 
   const handleBlobbiClick = () => {
+    console.log('[blobbi-debug][modal] Opening own Blobbi modal - clearing currentRemoteRef:', {
+      currentRemoteRefBefore: currentRemoteRef.current,
+      timestamp: new Date().toISOString()
+    });
+
+    currentRemoteRef.current = null;
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+      fetchAbortRef.current = null;
+    }
+    setModalKey(`self:${Date.now()}`);
+    setRemotePreviewKey(null);
     setIsBlobbiInfoOpen(true);
-    setReadOnlyBlobbiData(null); // Clear read-only data when opening own Blobbi
+    setReadOnlyBlobbiData(null); // limpa dados read-only ao abrir o seu próprio Blobbi
+    setExternalVisual(null);     // garante que não vaze visual remoto
   };
 
   // Opens read-only Blobbi info for other users.
   // Receives blobbiD (d-tag), not the sessionId.
   const handleOtherBlobbiClick = async (playerPubkey: string, blobbiD: string, blobbiVisual: BlobbiVisual) => {
+    console.log('[blobbi-debug][handleOtherBlobbiClick] Starting handleOtherBlobbiClick:', {
+      playerPubkey,
+      blobbiD,
+      blobbiVisualName: blobbiVisual.name,
+      blobbiVisualStage: blobbiVisual.stage,
+      currentRemoteRefBefore: currentRemoteRef.current,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!blobbiD || typeof blobbiD !== 'string') {
+      if (import.meta.env.MODE === 'development') {
+        console.warn('[blobbi][ui] handleOtherBlobbiClick called without valid d-tag');
+      }
+      return; // evita abrir modal com dados errados de um "último" evento
+    }
+
+    console.log('[blobbi-debug][setState] Setting currentRemoteRef:', {
+      playerPubkey,
+      blobbiD,
+      timestamp: new Date().toISOString()
+    });
+
+    currentRemoteRef.current = { pubkey: playerPubkey, d: blobbiD };
+    if (fetchAbortRef.current) {
+      console.log('[blobbi-debug][fetch] Aborting previous fetch request');
+      fetchAbortRef.current.abort();
+    }
+    fetchAbortRef.current = new AbortController();
+    const localController = fetchAbortRef.current;
+    const { signal } = localController;
+
+    const basicBlobbiData = {
+      name: blobbiVisual.name || 'Unknown Blobbi',
+      stage: normalizeStage(blobbiVisual.stage ?? 'baby'),
+      hunger: 50,
+      energy: 50,
+      happiness: 50,
+      health: 100,
+      hygiene: 50,
+      experience: 0,
+      careStreak: 0,
+      generation: 1,
+      isSleeping: false,
+    };
+
+    const mk = `remote:${playerPubkey}:${blobbiD}:${Date.now()}`;
+    setModalKey(mk);
+    setRemotePreviewKey(`${playerPubkey}:${blobbiD}`);
+
+    console.log('[blobbi-debug][setState] Setting externalVisual:', {
+      playerPubkey,
+      blobbiD,
+      visualName: blobbiVisual.name,
+      visualStage: blobbiVisual.stage,
+      timestamp: new Date().toISOString()
+    });
+
+    setExternalVisual(blobbiVisual);
+
+    console.log('[blobbi-debug][setState] Setting basic read-only data:', {
+      playerPubkey,
+      blobbiD,
+      name: basicBlobbiData.name,
+      stage: basicBlobbiData.stage,
+      timestamp: new Date().toISOString()
+    });
+
+    setReadOnlyBlobbiData(basicBlobbiData);
+    setIsBlobbiInfoOpen(true);
+
+    // Fetch detailed data in the background
     try {
-      // Fetch the other player's Blobbi data
-      const signal = AbortSignal.timeout(5000);
+      console.log('[blobbi-debug][fetch] Starting nostr.query for detailed data:', {
+        playerPubkey,
+        blobbiD,
+        timestamp: new Date().toISOString()
+      });
 
       const events = await nostr.query([{
         kinds: [31124],
         authors: [playerPubkey],
         '#d': [blobbiD],
         limit: 1,
-      }], { signal });
+      }], { signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]) });
 
-      if (events.length === 0) {
-        console.warn('No Blobbi data found for player:', playerPubkey);
-        setReadOnlyBlobbiData({
-          name: blobbiVisual.name || 'Unknown Blobbi',
-          stage: normalizeStage(blobbiVisual.stage),
-          hunger: 50, energy: 50, happiness: 50, health: 100, hygiene: 50,
-          experience: 0, careStreak: 0, generation: 1, isSleeping: false,
+      console.log('[blobbi-debug][fetch] nostr.query completed:', {
+        playerPubkey,
+        blobbiD,
+        eventsFound: events.length,
+        signalAborted: signal.aborted,
+        timestamp: new Date().toISOString()
+      });
+
+      if (signal.aborted) {
+        console.log('[blobbi-debug][fetch] Query aborted, not applying results:', {
+          playerPubkey,
+          blobbiD,
+          timestamp: new Date().toISOString()
         });
-        setIsBlobbiInfoOpen(true);
         return;
       }
 
-      const event = events[0];
+      if (events.length === 0) {
+        console.warn('[blobbi-debug][fetch] No Blobbi data found for player:', {
+          playerPubkey,
+          blobbiD,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
 
-      // Create mock Blobbi data for read-only display with all required PetState fields
-      const blobbiData = {
+      const event = events.sort((a, b) => b.created_at - a.created_at)[0];
+      const evD = event.tags.find(([k]) => k === 'd')?.[1];
+
+      console.log('[blobbi-debug][modal][debug] applying event', {
+        blobbiDFromEvent: evD,
+        currentRemoteRef: currentRemoteRef.current,
+        created_at: event.created_at,
+        timestamp: new Date().toISOString()
+      });
+
+      if (evD !== blobbiD) {
+        console.warn('[blobbi-debug][fetch] Event d-tag mismatch, ignoring:', {
+          expected: blobbiD,
+          got: evD,
+          playerPubkey,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      // Verify that we're still targeting the same Blobbi before applying updates
+      const isCurrentTarget = !signal.aborted &&
+        currentRemoteRef.current?.pubkey === playerPubkey &&
+        currentRemoteRef.current?.d === blobbiD;
+
+      if (!isCurrentTarget) {
+        console.log('[blobbi-debug][fetch] Target changed, not applying results:', {
+          playerPubkey,
+          blobbiD,
+          currentRemoteRef: currentRemoteRef.current,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const get = (n: string) => event.tags.find(([k]) => k === n)?.[1];
+      const refinedVisual: BlobbiVisual = {
+        ...blobbiVisual,
+        baseColor: get('base_color') ?? get('baseColor') ?? blobbiVisual.baseColor,
+        secondaryColor: get('secondary_color') ?? get('secondaryColor') ?? blobbiVisual.secondaryColor,
+        eyeColor: get('eye_color') ?? get('eyeColor') ?? blobbiVisual.eyeColor,
+        pattern: get('pattern') ?? blobbiVisual.pattern,
+        specialMark: get('special_mark') ?? get('specialMark') ?? blobbiVisual.specialMark,
+        stage: normalizeStage(get('stage') ?? blobbiVisual.stage ?? 'baby'),
+        adultType: get('adult_type') ?? get('adultType') ?? blobbiVisual.adultType,
+        name: blobbiVisual.name || get('name') || 'Unnamed Blobbi',
+      };
+
+      console.log('[blobbi-debug][setState] Setting refined externalVisual:', {
+        playerPubkey,
+        blobbiD,
+        name: refinedVisual.name,
+        stage: refinedVisual.stage,
+        timestamp: new Date().toISOString()
+      });
+      setExternalVisual(refinedVisual);
+
+      // Cria dados detalhados para o read-only
+      const detailedBlobbiData = {
         id: blobbiD,
-        name: blobbiVisual.name || 'Unknown Blobbi',
-        stage: normalizeStage(blobbiVisual.stage ?? getTag(event, 'stage') ?? 'baby'),
+        name: refinedVisual.name || 'Unknown Blobbi',
+        stage: normalizeStage(refinedVisual.stage ?? getTag(event, 'stage') ?? 'baby'),
         breedingReady: getTag(event, 'breeding_ready') === 'true',
         generation: parseInt(getTag(event, 'generation') ?? '1', 10),
         hunger: parseInt(getTag(event, 'hunger') ?? '50', 10),
@@ -231,17 +393,23 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         mood: getTag(event, 'mood'),
       };
 
-      setReadOnlyBlobbiData(blobbiData);
-      setIsBlobbiInfoOpen(true);
-    } catch (error) {
-      console.error('Failed to fetch other player Blobbi data:', error);
-      setReadOnlyBlobbiData({
-        name: blobbiVisual.name || 'Unknown Blobbi',
-        stage: normalizeStage(blobbiVisual.stage),
-        hunger: 50, energy: 50, happiness: 50, health: 100, hygiene: 50,
-        experience: 0, careStreak: 0, generation: 1, isSleeping: false,
+      console.log('[blobbi-debug][setState] Setting detailed read-only data:', {
+        playerPubkey,
+        blobbiD,
+        name: detailedBlobbiData.name,
+        stage: detailedBlobbiData.stage,
+        generation: detailedBlobbiData.generation,
+        timestamp: new Date().toISOString()
       });
-      setIsBlobbiInfoOpen(true);
+      setReadOnlyBlobbiData(detailedBlobbiData);
+    } catch (error) {
+      console.error('[blobbi-debug][fetch] Failed to fetch other player Blobbi data:', {
+        playerPubkey,
+        blobbiD,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
+      // Keep basic data if fetch fails
     }
   };
 
@@ -393,10 +561,27 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
       {/* Blobbi Info Modal */}
       <BlobbiInfoModal
+        key={modalKey}
         isOpen={isBlobbiInfoOpen}
-        onClose={() => setIsBlobbiInfoOpen(false)}
+        onClose={() => {
+          setIsBlobbiInfoOpen(false);
+          setReadOnlyBlobbiData(null);
+          setExternalVisual(null);
+          console.log('[blobbi-debug][modal] Modal closed - clearing currentRemoteRef:', {
+            currentRemoteRefBefore: currentRemoteRef.current,
+            timestamp: new Date().toISOString()
+          });
+          currentRemoteRef.current = null;
+          if (fetchAbortRef.current) {
+            fetchAbortRef.current.abort();
+            fetchAbortRef.current = null;
+          }
+          setRemotePreviewKey(null);
+        }}
         readOnly={!!readOnlyBlobbiData}
         externalBlobbiData={readOnlyBlobbiData || undefined}
+        externalVisual={externalVisual || undefined}
+        previewKey={remotePreviewKey ?? 'self'}
       />
 
       {/* Social Share Modal */}

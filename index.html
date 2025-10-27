@@ -5,9 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Blobbi Island - Virtual Pet Adventure</title>
     <meta name="description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
+
+    <!-- Social -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Blobbi Island - Virtual Pet Adventure" />
     <meta property="og:description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#8B5A3C" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- iOS icons -->
+    <link rel="apple-touch-icon" href="/icons/blobbi-island-icon-rounded-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/blobbi-island-icon-rounded-192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="/icons/blobbi-island-icon-192.png" type="image/png" sizes="192x192" />
+
+    <!-- (Remova se o arquivo não existir)
+    <link rel="preload" href="/assets/blobbi-island.png" as="image" type="image/png" />
+    -->
+
+    <!-- CSP -->
     <meta http-equiv="content-security-policy" content="
       default-src 'none';
       script-src 'self';
@@ -20,19 +39,18 @@
       img-src 'self' data: blob: https:;
       media-src 'self' https:;
     ">
-    <link rel="manifest" href="/manifest.webmanifest">
 
-    <!-- Preload critical resources -->
-    <link rel="preload" href="/assets/blobbi-island.png" as="image" type="image/png" fetchpriority="high">
+    <!-- Perf -->
     <link rel="dns-prefetch" href="//relay.primal.net">
     <link rel="preconnect" href="wss://relay.primal.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <script defer src="/dev-cleanup.js"></script>
   </head>
   <body>
     <div id="root">
-      <!-- Initial loading screen shown before React loads -->
+      <!-- Initial loading screen -->
       <div style="min-height: 100vh; background: #ffffff; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif;">
         <div style="text-align: center; color: #64748b;">
           <div style="width: 32px; height: 32px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
@@ -40,10 +58,7 @@
         </div>
       </div>
       <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       </style>
     </div>
     <script type="module" src="/src/main.tsx"></script>

@@ -447,6 +447,17 @@ const animatePlayers = useCallback(() => {
         moving: animState.moving
       });
 
+      // Extract blobbiD from aTag for proper tracking
+      let blobbiDFromATag: string | undefined;
+      try {
+        const { blobbi_d } = parseA(aTag);
+        blobbiDFromATag = blobbi_d;
+      } catch {
+        // Invalid aTag format, skip this event
+        if (DEBUG_MP) console.debug('[blobbi][mp] invalid aTag format, skipping', { aTag });
+        return;
+      }
+
       // Create player state
       const playerState: PlayerRenderState = {
         pubkey: event.pubkey,
@@ -456,8 +467,9 @@ const animatePlayers = useCallback(() => {
         isMoving: animState.moving,
         lastSeen: nowSec(),
         visual,
-        lastContent: content,
+        lastContent: { ...content, blobbiD: blobbiDFromATag }, // Ensure blobbiD is in lastContent
         animState,
+        blobbiD: blobbiDFromATag, // Add blobbiD directly to player state
       };
 
       if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {

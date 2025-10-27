@@ -40,7 +40,8 @@ export const BackgroundLayer = forwardRef<HTMLDivElement, BackgroundLayerProps>(
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
           decoding="async"
-          fetchPriority="low"
+          loading="eager"
+          {...{ fetchpriority: 'low' }}
         />
 
         {/* Loading state */}
