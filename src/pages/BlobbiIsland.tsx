@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
@@ -35,46 +35,47 @@ export function BlobbiIsland() {
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
   const currentCompanionId = profile?.currentCompanion;
-  const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
+  const [manualSelection, setManualSelection] = useState<Blobbi | null>(null);
   const [gameState, setGameState] = useState<GameState>('login');
   const [isLandscape, setIsLandscape] = useState(true);
+
+  // Derive selected Blobbi synchronously -- no race condition between effects.
+  // Manual selection (from the selection screen) takes priority, then falls back
+  // to the current_companion from the profile event.
+  const selectedBlobbi = useMemo(() => {
+    if (manualSelection) return manualSelection;
+    if (currentCompanionId && blobbis) {
+      return blobbis.find(b => b.id === currentCompanionId) ?? null;
+    }
+    return null;
+  }, [manualSelection, currentCompanionId, blobbis]);
 
   // Determine game state based on user login and data loading
   useEffect(() => {
     if (!user) {
       setGameState('login');
-      setSelectedBlobbi(null);
+      setManualSelection(null);
     } else if (isLoadingBlobbis || isLoadingCompanion) {
       // Only show loading for a short time, then fall back to selection
       const loadingTimeout = setTimeout(() => {
         if (isLoadingBlobbis || isLoadingCompanion) {
           setGameState('selection');
         }
-      }, 2000); // Increased timeout to 2 seconds for better UX
+      }, 2000);
 
       setGameState('loading');
 
       return () => clearTimeout(loadingTimeout);
     } else if (blobbiError || companionError) {
-      setGameState('selection'); // Show selection screen with error handling
+      setGameState('selection');
     } else if (!blobbis || blobbis.length === 0) {
-      setGameState('selection'); // Show selection screen for creating first Blobbi
-    } else if (!selectedBlobbi || !currentCompanionId) {
+      setGameState('selection');
+    } else if (!selectedBlobbi) {
       setGameState('selection');
     } else {
       setGameState('playing');
     }
-  }, [user, isLoadingBlobbis, isLoadingCompanion, blobbiError, companionError, blobbis, selectedBlobbi, currentCompanionId]);
-
-  // Update selected Blobbi when current companion changes
-  useEffect(() => {
-    if (currentCompanionId && blobbis) {
-      const companion = blobbis.find(b => b.id === currentCompanionId);
-      if (companion) {
-        setSelectedBlobbi(companion);
-      }
-    }
-  }, [currentCompanionId, blobbis]);
+  }, [user, isLoadingBlobbis, isLoadingCompanion, blobbiError, companionError, blobbis, selectedBlobbi]);
 
   // Check orientation on mobile
   useEffect(() => {
@@ -103,19 +104,15 @@ export function BlobbiIsland() {
   }
 
   const handleBlobbiSelected = (blobbi: Blobbi) => {
-    setSelectedBlobbi(blobbi);
+    setManualSelection(blobbi);
     setGameState('playing');
   };
 
   const handleCancelSelection = () => {
     // If user has a current companion, go back to playing
-    if (currentCompanionId && blobbis) {
-      const companion = blobbis.find(b => b.id === currentCompanionId);
-      if (companion) {
-        setSelectedBlobbi(companion);
-        setGameState('playing');
-        return;
-      }
+    if (selectedBlobbi) {
+      setGameState('playing');
+      return;
     }
 
     // Otherwise stay in selection mode
@@ -157,7 +154,7 @@ export function BlobbiIsland() {
   return (
     <LocationProvider>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900 theme-transition">
-        <BlobbiHeader onSwitchBlobbi={() => setGameState('selection')} />
+        <BlobbiHeader onSwitchBlobbi={() => { setManualSelection(null); setGameState('selection'); }} />
 
         <main className="container mx-auto py-6">
           <BlobbiGameContainer>
