@@ -5,9 +5,6 @@ import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
 
-// Debug flag for multiplayer logging
-const DEBUG_MP = true;
-
 export interface CurrentBlobbiDisplayProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
@@ -65,8 +62,6 @@ export function CurrentBlobbiDisplay({
   const [svgContent, setSvgContent] = useState<string>("");
   const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
 
-  if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] CurrentBlobbiDisplay(remote)', { visualOverride });
-
   // Only use local data for local player (when visualOverride is not provided)
   useEffect(() => {
     if (visualOverride) {
@@ -121,14 +116,11 @@ export function CurrentBlobbiDisplay({
       );
 
       setSvgContent(customizedSvg);
-      if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] svg ready (remote)', { stage: (visualOverride.stage || 'baby') });
     } catch (err) {
       console.error('Failed to load Blobbi SVG:', err);
       setSvgContent("");
     }
   }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
-
-
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -175,16 +167,13 @@ export function CurrentBlobbiDisplay({
           />
 
           {/* Accessory Overlay for transparent mode */}
-          {showAccessories && (() => {
-            if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
-            return (
-              <AccessoryOverlay
-                isStatic={true}
-                sizeMultiplier={getAccessorySizeMultiplier()}
-                className="absolute inset-0"
-              />
-            );
-          })()}
+          {showAccessories && (
+            <AccessoryOverlay
+              isStatic={true}
+              sizeMultiplier={getAccessorySizeMultiplier()}
+              className="absolute inset-0"
+            />
+          )}
         </div>
       );
     }
@@ -213,16 +202,13 @@ export function CurrentBlobbiDisplay({
         />
 
         {/* Accessory Overlay for default mode */}
-        {showAccessories && (() => {
-          if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
-          return (
-            <AccessoryOverlay
-              isStatic={true}
-              sizeMultiplier={getAccessorySizeMultiplier()}
-              className="absolute inset-0"
-            />
-          );
-        })()}
+        {showAccessories && (
+          <AccessoryOverlay
+            isStatic={true}
+            sizeMultiplier={getAccessorySizeMultiplier()}
+            className="absolute inset-0"
+          />
+        )}
       </div>
     );
   }

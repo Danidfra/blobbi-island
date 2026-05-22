@@ -195,7 +195,7 @@ export function useBlobbiPlayAction() {
         tags: petStateTags,
       });
 
-      // 3. Update Kind 31125 Owner Profile (reduce inventory)
+      // 3. Update Kind 11125 Owner Profile (reduce inventory)
       if (profile) {
         // Create updated inventory
         const updatedInventory = profile.inventory.map(item => {

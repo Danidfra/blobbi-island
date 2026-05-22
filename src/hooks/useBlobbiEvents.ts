@@ -18,7 +18,7 @@ import type {
 import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // ============================================================================
-// Owner Profile Event Creation (Kind 31125)
+// Owner Profile Event Creation (Kind 11125)
 // ============================================================================
 
 /** Input data for creating an owner profile event */

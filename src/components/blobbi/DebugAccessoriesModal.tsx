@@ -212,7 +212,7 @@ function DebugInventoryTab() {
       {/* Current inventory */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Current Inventory (31125)</CardTitle>
+          <CardTitle className="text-sm">Current Inventory (11125)</CardTitle>
         </CardHeader>
         <CardContent>
           {inventory && inventory.length > 0 ? (
@@ -268,10 +268,10 @@ function DebugEquipTab() {
   const { nostr } = useNostr();
   const { mutate: createEvent } = useNostrPublish();
 
-  // Fetch current companion from kind 31125 to determine which Blobbi's 31124 to modify
+  // Fetch current companion from kind 11125 to determine which Blobbi's 31124 to modify
   const [currentCompanion, setCurrentCompanion] = useState<string | null>(null);
 
-  // Fetch current companion from user's kind 31125
+  // Fetch current companion from user's kind 11125
   const { data: companionData } = useQuery({
     queryKey: ['current-companion', user?.pubkey],
     queryFn: async () => {
@@ -484,7 +484,7 @@ function DebugEquipTab() {
         <Card>
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-              No current companion found. Please set a current companion in kind 31125.
+              No current companion found. Please set a current companion in kind 11125.
             </p>
           </CardContent>
         </Card>
@@ -585,7 +585,7 @@ export function DebugAccessoriesModal({ isOpen, onClose }: DebugAccessoriesModal
         <ScrollArea className="max-h-[60vh] pr-4">
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="inventory">Inventory (31125)</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory (11125)</TabsTrigger>
               <TabsTrigger value="equip">Equipment (31124)</TabsTrigger>
             </TabsList>
 
