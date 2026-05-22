@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { displayNameFromId } from '@/lib/blobbi-name';
 import { Settings } from 'lucide-react';
 import type { BlobbiVisual } from '@/lib/multiplayer';
+import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 interface BlobbiInfoModalProps {
   isOpen: boolean;
@@ -160,7 +161,7 @@ export function BlobbiInfoModal({
       // Get current pet event
       const signal = AbortSignal.timeout(5000);
       const petEvents = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [currentPet.id],
         limit: 1,
@@ -193,7 +194,7 @@ export function BlobbiInfoModal({
 
       // Publish the event
       await createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: petEvent.content,
         tags: equipmentTags,
       });

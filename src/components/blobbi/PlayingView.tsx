@@ -25,6 +25,7 @@ import { ChatInputBar } from '@/components/ChatInputBar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
+import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -279,7 +280,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       });
 
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [playerPubkey],
         '#d': [blobbiD],
         limit: 1,

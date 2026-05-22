@@ -16,6 +16,11 @@ import type {
   CareNeed,
 } from './blobbi-types';
 import { nameFromDTag } from './blobbi-name';
+import {
+  KIND_BLOBBONAUT_PROFILE,
+  KIND_BLOBBONAUT_PROFILE_LEGACY,
+  KIND_BLOBBI_STATE,
+} from './blobbi-kinds';
 
 // ============================================================================
 // Tag Parsing Utilities
@@ -65,12 +70,12 @@ export function parseInventoryItems(storageTags: string[]): InventoryItem[] {
 }
 
 // ============================================================================
-// Owner Profile Parser (Kind 31125)
+// Owner Profile Parser (Kind 11125, with legacy 31125 support)
 // ============================================================================
 
-/** Parse a kind 31125 event into an OwnerProfile */
+/** Parse a kind 11125 (or legacy 31125) event into an OwnerProfile */
 export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
-  if (event.kind !== 31125) return null;
+  if (event.kind !== KIND_BLOBBONAUT_PROFILE && event.kind !== KIND_BLOBBONAUT_PROFILE_LEGACY) return null;
 
   const id = getTag(event, 'd');
   const name = getTag(event, 'name');
@@ -108,7 +113,7 @@ export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
 
 /** Parse a kind 31124 event into a PetState */
 export function parsePetState(event: NostrEvent): PetState | null {
-  if (event.kind !== 31124) return null;
+  if (event.kind !== KIND_BLOBBI_STATE) return null;
 
   const id = getTag(event, 'd');
   const stage = getTag(event, 'stage') as PetStage;
@@ -303,9 +308,9 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
 // Validation Functions
 // ============================================================================
 
-/** Validate a kind 31125 event structure */
+/** Validate a kind 11125 (or legacy 31125) event structure */
 export function validateOwnerProfileEvent(event: NostrEvent): boolean {
-  if (event.kind !== 31125) return false;
+  if (event.kind !== KIND_BLOBBONAUT_PROFILE && event.kind !== KIND_BLOBBONAUT_PROFILE_LEGACY) return false;
 
   const d = getTag(event, 'd');
   const name = getTag(event, 'name');
@@ -315,7 +320,7 @@ export function validateOwnerProfileEvent(event: NostrEvent): boolean {
 
 /** Validate a kind 31124 event structure */
 export function validatePetStateEvent(event: NostrEvent): boolean {
-  if (event.kind !== 31124) return false;
+  if (event.kind !== KIND_BLOBBI_STATE) return false;
 
   const requiredTags = ['d', 'stage', 'breeding_ready', 'generation',
                        'hunger', 'happiness', 'health', 'hygiene',

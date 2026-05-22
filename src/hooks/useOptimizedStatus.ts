@@ -2,7 +2,7 @@
  * Optimized Status Layer Hook
  *
  * Provides a real-time, optimistically updated status object that combines
- * owner profile (kind 31125) and pet state (kind 31124) data for fast UI rendering.
+ * owner profile (kind 11125) and pet state (kind 31124) data for fast UI rendering.
  *
  * This hook:
  * - Loads initial data from Nostr relays
@@ -26,6 +26,7 @@ import {
   validateOwnerProfileEvent,
   validatePetStateEvent
 } from '@/lib/blobbi-parsers';
+import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // ============================================================================
 // Main Hook
@@ -39,7 +40,7 @@ export function useOptimizedStatus() {
   // Ref to store optimistic updates that haven't been confirmed by relay
   const pendingUpdatesRef = useRef<StatusUpdate[]>([]);
 
-  // Query for owner profile (kind 31125)
+  // Query for owner profile (kind 11125, with legacy 31125 fallback)
   const ownerQuery = useQuery({
     queryKey: ['owner-profile', user?.pubkey],
     queryFn: async (c) => {
@@ -48,7 +49,7 @@ export function useOptimizedStatus() {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1
       }], { signal });
@@ -69,7 +70,7 @@ export function useOptimizedStatus() {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         limit: 50
       }], { signal });

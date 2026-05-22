@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import type { OwnerProfile } from '@/lib/blobbi-types';
+import { KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 import { X } from 'lucide-react';
 
 interface FoodShopModalProps {
@@ -90,7 +91,7 @@ function useBlobbiEvents() {
       if (updatedProfile.client) ownerTags.push(['client', updatedProfile.client]);
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: `Owner profile: ${updatedProfile.name}`,
         tags: ownerTags,
       });

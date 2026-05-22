@@ -1,5 +1,7 @@
 /**
- * Hook to fetch and manage the user's Blobbonaut Profile (kind 31125)
+ * Hook to fetch and manage the user's Blobbonaut Profile (kind 11125)
+ *
+ * Also queries legacy kind 31125 for backward compatibility.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +10,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 
 import { parseOwnerProfile, validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
+import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 
 export function useBlobbonautProfile() {
   const { nostr } = useNostr();
@@ -21,7 +24,7 @@ export function useBlobbonautProfile() {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1
       }], { signal });
@@ -56,9 +59,9 @@ export function useSetCurrentCompanion() {
         throw new Error('User not logged in');
       }
 
-      // 1. Fetch the latest kind 31125 event
+      // 1. Fetch the latest owner profile event (both new and legacy kinds)
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1
       }]);
@@ -74,7 +77,7 @@ export function useSetCurrentCompanion() {
       // 3. Add the new 'current_companion' tag
       newTags.push(['current_companion', blobbiId]);
 
-      // Ensure required tags for kind 31125 exist
+      // Ensure required tags for kind 11125 exist
       if (!newTags.some(([tagName]) => tagName === 'd')) {
         newTags.push(['d', 'profile']);
       }
@@ -84,7 +87,7 @@ export function useSetCurrentCompanion() {
 
       // 4. Create the new event with the updated tags
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: `Selected ${blobbiId} as current companion`,
         tags: newTags,
       });

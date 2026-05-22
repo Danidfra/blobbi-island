@@ -2,10 +2,10 @@
  * Accessory Management Hooks
  *
  * Provides hooks for managing accessories in Blobbi events:
- * - Reading inventory from kind 31125
+ * - Reading inventory from kind 11125
  * - Reading equipment from kind 31124
  * - Creating/updating equipment in kind 31124
- * - Updating inventory in kind 31125
+ * - Updating inventory in kind 11125
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +35,7 @@ import {
   updateEquipTags,
   inferSlotFromCode
 } from '../lib/accessory-utils';
+import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // ============================================================================
 // Query Keys
@@ -46,7 +47,7 @@ export const ACCESSORY_QUERY_KEYS = {
 } as const;
 
 // ============================================================================
-// Inventory Query (Kind 31125)
+// Inventory Query (Kind 11125)
 // ============================================================================
 
 /** Hook for fetching user's accessory inventory */
@@ -64,7 +65,7 @@ export function useAccessoryInventory() {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }], { signal });
@@ -99,7 +100,7 @@ export function usePetEquipment(petId?: string) {
       const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
 
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [petId],
         limit: 1,
@@ -144,7 +145,7 @@ export function useEquipAccessory() {
       // Get current pet event
       const signal = AbortSignal.timeout(5000);
       const petEvents = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [petId],
         limit: 1,
@@ -163,7 +164,7 @@ export function useEquipAccessory() {
 
       // Get current owner event for inventory management
       const ownerEvents = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }], { signal });
@@ -206,7 +207,7 @@ export function useEquipAccessory() {
       // Create new equipment event and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
       await createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: petEvent.content,
         tags: equipmentTags,
       });
@@ -214,7 +215,7 @@ export function useEquipAccessory() {
       // Create new inventory event and wait for it to be signed/published
       const inventoryTags = updateInvTags(ownerEvent.tags, updatedInventory);
       await createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: ownerEvent.content,
         tags: inventoryTags,
       });
@@ -342,7 +343,7 @@ export function useUnequipAccessory() {
       // Get current pet event
       const signal = AbortSignal.timeout(5000);
       const petEvents = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [petId],
         limit: 1,
@@ -362,7 +363,7 @@ export function useUnequipAccessory() {
 
       // Get current owner event for inventory management
       const ownerEvents = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }], { signal });
@@ -383,7 +384,7 @@ export function useUnequipAccessory() {
       // Create new equipment event and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
       await createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: petEvent.content,
         tags: equipmentTags,
       });
@@ -391,7 +392,7 @@ export function useUnequipAccessory() {
       // Create new inventory event and wait for it to be signed/published
       const inventoryTags = updateInvTags(ownerEvent.tags, updatedInventory);
       await createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: ownerEvent.content,
         tags: inventoryTags,
       });
@@ -481,7 +482,7 @@ export function useUpdateEquippedAccessory() {
       // Get current pet event
       const signal = AbortSignal.timeout(5000);
       const petEvents = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [petId],
         limit: 1,
@@ -524,7 +525,7 @@ export function useUpdateEquippedAccessory() {
       // Create new equipment event with updated tags and wait for it to be signed/published
       const equipmentTags = updateEquipTags(petEvent.tags, newEquipmentList);
       await createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: petEvent.content,
         tags: equipmentTags,
       });

@@ -1,7 +1,7 @@
 /**
  * Typed event creation hooks for Blobbi Nostr events
  *
- * Provides type-safe functions for creating kind 31125 (Owner Profile)
+ * Provides type-safe functions for creating kind 11125 (Owner Profile)
  * and kind 31124 (Pet State) events with proper validation.
  */
 
@@ -15,6 +15,7 @@ import type {
   PetState,
   InventoryItem
 } from '@/lib/blobbi-types';
+import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // ============================================================================
 // Owner Profile Event Creation (Kind 31125)
@@ -102,7 +103,7 @@ export function useCreateOwnerProfile() {
       const content = input.content || `Owner profile: ${input.name}`;
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content,
         tags,
       });
@@ -159,7 +160,7 @@ export function useUpdateOwnerProfile() {
       const content = mergedData.content || `Updated owner profile: ${mergedData.name}`;
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content,
         tags,
       });
@@ -363,7 +364,7 @@ export function useCreatePetState() {
       const content = input.name || input.petId;
 
       createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content,
         tags,
       });
@@ -497,7 +498,7 @@ export function useUpdatePetState() {
       const content = mergedData.name || existingPet.name || petId;
 
       createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content,
         tags,
       });

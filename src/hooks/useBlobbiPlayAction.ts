@@ -1,8 +1,8 @@
 /**
  * Hook for playing with Blobbi pets using toys with proper Nostr event creation
  *
- * Creates Kind 14919 interaction events and updates Kind 31124 pet state
- * and Kind 31125 owner profile according to Blobbi specification
+ * Creates Kind 1124 interaction events and updates Kind 31124 pet state
+ * and Kind 11125 owner profile according to Blobbi specification
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { useBlobbonautProfile } from './useBlobbonautProfile';
 import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
+import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 
 
 interface PlayActionInput {
@@ -117,28 +118,23 @@ export function useBlobbiPlayAction() {
       // Convert current equipment to equip tags
       const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
 
-      // 1. Create Kind 14919 Interaction Event
-      const interactionTags = [
-        ['blobbi_id', petId],
+      // 1. Create Kind 1124 Interaction Event (Ditto-compatible)
+      const coordinate = `31124:${user.pubkey}:${petId}`;
+      const interactionTags: string[][] = [
+        ['a', coordinate],
+        ['p', user.pubkey],
         ['action', 'play'],
-        ['action_category', 'enrichment'],
-        ['stat_change', `happiness:+${totalEffects.happiness || 0}`],
-        ['item_used', getItemDisplayName(itemId)],
-        ['experience_gained', experienceGained.toString()],
-        ['care_streak', newCareStreak.toString()],
-        ['care_points', carePoints.toString()],
+        ['source', 'blobbi-island'],
+        ['alt', 'Blobbi interaction: play'],
       ];
 
-      // Add additional stat changes to tags
-      Object.entries(totalEffects).forEach(([stat, value]) => {
-        if (stat !== 'happiness' && value !== 0) {
-          interactionTags.push(['stat_change', `${stat}:${value > 0 ? '+' : ''}${value}`]);
-        }
-      });
+      if (itemId) {
+        interactionTags.push(['item', itemId]);
+      }
 
       createEvent({
-        kind: 14919,
-        content: `Blobbi play interaction`,
+        kind: KIND_BLOBBI_INTERACTION,
+        content: '',
         tags: interactionTags,
       });
 
@@ -194,7 +190,7 @@ export function useBlobbiPlayAction() {
       });
 
       createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: pet.name || petId,
         tags: petStateTags,
       });
@@ -235,7 +231,7 @@ export function useBlobbiPlayAction() {
         updatedInventory.forEach(item => ownerTags.push(['storage', `${item.itemId}:${item.quantity}`]));
 
         createEvent({
-          kind: 31125,
+          kind: KIND_BLOBBONAUT_PROFILE,
           content: `Owner profile: ${profile.name}`,
           tags: ownerTags,
         });
