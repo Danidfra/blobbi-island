@@ -87,6 +87,10 @@ export interface OwnerProfile {
   inventory: InventoryItem[];
   /** Client that created the event */
   client?: string;
+  /** Raw tags from the original event — preserved for republishing so we don't drop unknown tags */
+  rawTags: string[][];
+  /** Raw content from the original event — preserved for republishing so we don't overwrite JSON data */
+  rawContent: string;
 }
 
 /** Input data for creating an owner profile event */

@@ -67,8 +67,10 @@ export function useSetCurrentCompanion() {
       }]);
 
       let existingTags: string[][] = [];
+      let existingContent = '';
       if (events.length > 0 && validateOwnerProfileEvent(events[0])) {
         existingTags = events[0].tags;
+        existingContent = events[0].content;
       }
 
       // 2. Filter out the old 'current_companion' tag, if it exists
@@ -85,10 +87,10 @@ export function useSetCurrentCompanion() {
         newTags.push(['name', '']); // Empty name is allowed
       }
 
-      // 4. Create the new event with the updated tags
+      // 4. Create the new event with the updated tags, preserving original content
       createEvent({
         kind: KIND_BLOBBONAUT_PROFILE,
-        content: `Selected ${blobbiId} as current companion`,
+        content: existingContent,
         tags: newTags,
       });
 

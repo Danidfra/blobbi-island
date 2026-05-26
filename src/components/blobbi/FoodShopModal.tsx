@@ -12,6 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import type { OwnerProfile } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
+import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
 import { X } from 'lucide-react';
 
 interface FoodShopModalProps {
@@ -65,34 +66,12 @@ function useBlobbiEvents() {
         throw new Error('User not logged in');
       }
 
-      // Create owner profile tags preserving all existing data
-      const ownerTags = [
-        ['d', updatedProfile.id],
-        ['name', updatedProfile.name],
-        ['coins', updatedProfile.coins.toString()],
-        ['pettingLevel', updatedProfile.pettingLevel.toString()],
-        ['lifetimeBlobbis', updatedProfile.lifetimeBlobbis.toString()],
-      ];
-
-      // Add optional single-value tags
-      if (updatedProfile.favoriteBlobbi) ownerTags.push(['favoriteBlobbi', updatedProfile.favoriteBlobbi]);
-      if (updatedProfile.starterBlobbi) ownerTags.push(['starterBlobbi', updatedProfile.starterBlobbi]);
-      if (updatedProfile.currentCompanion) ownerTags.push(['current_companion', updatedProfile.currentCompanion]);
-      if (updatedProfile.style) ownerTags.push(['style', updatedProfile.style]);
-      if (updatedProfile.background) ownerTags.push(['background', updatedProfile.background]);
-      if (updatedProfile.title) ownerTags.push(['title', updatedProfile.title]);
-
-      // Add multi-value tags
-      updatedProfile.ownedPets.forEach(petId => ownerTags.push(['has', petId]));
-      updatedProfile.achievements.forEach(achievement => ownerTags.push(['achievements', achievement]));
-      updatedProfile.inventory.forEach(item => ownerTags.push(['storage', `${item.itemId}:${item.quantity}`]));
-
-      // Always preserve the client tag as a convention
-      if (updatedProfile.client) ownerTags.push(['client', updatedProfile.client]);
+      // Use merge utility to preserve unknown tags from Ditto
+      const ownerTags = mergeOwnerProfileTags(updatedProfile);
 
       createEvent({
         kind: KIND_BLOBBONAUT_PROFILE,
-        content: `Owner profile: ${updatedProfile.name}`,
+        content: updatedProfile.rawContent,
         tags: ownerTags,
       });
 

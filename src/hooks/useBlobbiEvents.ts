@@ -16,6 +16,7 @@ import type {
   InventoryItem
 } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
 
 // ============================================================================
 // Owner Profile Event Creation (Kind 11125)
@@ -100,7 +101,7 @@ export function useCreateOwnerProfile() {
       }
 
       const tags = createOwnerProfileTags(input);
-      const content = input.content || `Owner profile: ${input.name}`;
+      const content = input.content || '';
 
       createEvent({
         kind: KIND_BLOBBONAUT_PROFILE,
@@ -138,26 +139,29 @@ export function useUpdateOwnerProfile() {
       const existingProfile = queryClient.getQueryData(['owner-profile', user.pubkey]) as OwnerProfile | null;
 
       // Merge with updates
-      const mergedData: CreateOwnerProfileInput = {
-        profileId: updates.profileId || existingProfile?.id || 'profile',
+      const mergedProfile: OwnerProfile = {
+        id: updates.profileId || existingProfile?.id || 'profile',
         name: updates.name !== undefined ? updates.name : (existingProfile?.name || ''),
-        coins: updates.coins !== undefined ? updates.coins : existingProfile?.coins,
-        pettingLevel: updates.pettingLevel !== undefined ? updates.pettingLevel : existingProfile?.pettingLevel,
-        lifetimeBlobbis: updates.lifetimeBlobbis !== undefined ? updates.lifetimeBlobbis : existingProfile?.lifetimeBlobbis,
+        coins: updates.coins !== undefined ? updates.coins : (existingProfile?.coins ?? 0),
+        pettingLevel: updates.pettingLevel !== undefined ? updates.pettingLevel : (existingProfile?.pettingLevel ?? 0),
+        lifetimeBlobbis: updates.lifetimeBlobbis !== undefined ? updates.lifetimeBlobbis : (existingProfile?.lifetimeBlobbis ?? 0),
         favoriteBlobbi: updates.favoriteBlobbi !== undefined ? updates.favoriteBlobbi : existingProfile?.favoriteBlobbi,
         starterBlobbi: updates.starterBlobbi !== undefined ? updates.starterBlobbi : existingProfile?.starterBlobbi,
         currentCompanion: updates.currentCompanion !== undefined ? updates.currentCompanion : existingProfile?.currentCompanion,
         style: updates.style !== undefined ? updates.style : existingProfile?.style,
         background: updates.background !== undefined ? updates.background : existingProfile?.background,
         title: updates.title !== undefined ? updates.title : existingProfile?.title,
-        ownedPets: updates.ownedPets !== undefined ? updates.ownedPets : existingProfile?.ownedPets,
-        achievements: updates.achievements !== undefined ? updates.achievements : existingProfile?.achievements,
-        inventory: updates.inventory !== undefined ? updates.inventory : existingProfile?.inventory,
-        content: updates.content,
+        ownedPets: updates.ownedPets !== undefined ? updates.ownedPets : (existingProfile?.ownedPets ?? []),
+        achievements: updates.achievements !== undefined ? updates.achievements : (existingProfile?.achievements ?? []),
+        inventory: updates.inventory !== undefined ? updates.inventory : (existingProfile?.inventory ?? []),
+        client: existingProfile?.client,
+        rawTags: existingProfile?.rawTags ?? [],
+        rawContent: existingProfile?.rawContent ?? '',
       };
 
-      const tags = createOwnerProfileTags(mergedData);
-      const content = mergedData.content || `Updated owner profile: ${mergedData.name}`;
+      const tags = mergeOwnerProfileTags(mergedProfile);
+      // Preserve the original content (which may contain JSON missions data from Ditto)
+      const content = updates.content ?? mergedProfile.rawContent;
 
       createEvent({
         kind: KIND_BLOBBONAUT_PROFILE,
@@ -165,7 +169,7 @@ export function useUpdateOwnerProfile() {
         tags,
       });
 
-      return mergedData;
+      return mergedProfile;
     },
     onSuccess: () => {
       // Invalidate related queries

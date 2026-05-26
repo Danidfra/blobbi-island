@@ -14,6 +14,7 @@ import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
 import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
+import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
 
 
 interface PlayActionInput {
@@ -208,31 +209,13 @@ export function useBlobbiPlayAction() {
           return item;
         }).filter(item => item.quantity > 0); // Remove items with 0 quantity
 
-        // Create owner profile tags
-        const ownerTags = [
-          ['d', profile.id],
-          ['name', profile.name],
-          ['coins', profile.coins.toString()],
-          ['pettingLevel', profile.pettingLevel.toString()],
-          ['lifetimeBlobbis', profile.lifetimeBlobbis.toString()],
-        ];
-
-        // Add optional single-value tags
-        if (profile.favoriteBlobbi) ownerTags.push(['favoriteBlobbi', profile.favoriteBlobbi]);
-        if (profile.starterBlobbi) ownerTags.push(['starterBlobbi', profile.starterBlobbi]);
-        if (profile.currentCompanion) ownerTags.push(['current_companion', profile.currentCompanion]);
-        if (profile.style) ownerTags.push(['style', profile.style]);
-        if (profile.background) ownerTags.push(['background', profile.background]);
-        if (profile.title) ownerTags.push(['title', profile.title]);
-
-        // Add multi-value tags
-        profile.ownedPets.forEach(petId => ownerTags.push(['has', petId]));
-        profile.achievements.forEach(achievement => ownerTags.push(['achievements', achievement]));
-        updatedInventory.forEach(item => ownerTags.push(['storage', `${item.itemId}:${item.quantity}`]));
+        // Use merge utility to preserve unknown tags from Ditto
+        const updatedProfile = { ...profile, inventory: updatedInventory };
+        const ownerTags = mergeOwnerProfileTags(updatedProfile);
 
         createEvent({
           kind: KIND_BLOBBONAUT_PROFILE,
-          content: `Owner profile: ${profile.name}`,
+          content: profile.rawContent,
           tags: ownerTags,
         });
       }

@@ -104,6 +104,8 @@ export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
     achievements: getTags(event, 'achievements'),
     inventory,
     client: getTag(event, 'client'),
+    rawTags: event.tags,
+    rawContent: event.content,
   };
 }
 
@@ -302,6 +304,63 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
     sleepState,
     nextCareIn,
   };
+}
+
+// ============================================================================
+// Owner Profile Tag Merging (preserves unknown tags from Ditto)
+// ============================================================================
+
+/**
+ * Tags that blobbi-island manages (knows how to read/write).
+ * Any tag NOT in this set is considered "unknown" and will be preserved as-is
+ * when republishing, so we don't strip tags set by Ditto (like `b`, `blobbi_onboarding_done`,
+ * `xp`, `level`, `room`, etc.).
+ */
+const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
+  'd', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
+  'favoriteBlobbi', 'starterBlobbi', 'current_companion',
+  'style', 'background', 'title', 'client',
+  // Multi-value tags
+  'has', 'achievements', 'storage',
+  // Inventory (accessory) tags
+  'inv',
+]);
+
+/**
+ * Merge owner profile tags for republishing.
+ * Builds managed tags from the profile's current state, then appends any unknown
+ * tags from the original event so that tags set by Ditto are never dropped.
+ */
+export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
+  // Build managed tags from profile fields
+  const tags: string[][] = [
+    ['d', profile.id],
+    ['name', profile.name],
+    ['coins', profile.coins.toString()],
+    ['pettingLevel', profile.pettingLevel.toString()],
+    ['lifetimeBlobbis', profile.lifetimeBlobbis.toString()],
+  ];
+
+  // Add optional single-value tags
+  if (profile.favoriteBlobbi) tags.push(['favoriteBlobbi', profile.favoriteBlobbi]);
+  if (profile.starterBlobbi) tags.push(['starterBlobbi', profile.starterBlobbi]);
+  if (profile.currentCompanion) tags.push(['current_companion', profile.currentCompanion]);
+  if (profile.style) tags.push(['style', profile.style]);
+  if (profile.background) tags.push(['background', profile.background]);
+  if (profile.title) tags.push(['title', profile.title]);
+  if (profile.client) tags.push(['client', profile.client]);
+
+  // Add multi-value tags
+  profile.ownedPets.forEach(petId => tags.push(['has', petId]));
+  profile.achievements.forEach(achievement => tags.push(['achievements', achievement]));
+  profile.inventory.forEach(item => tags.push(['storage', `${item.itemId}:${item.quantity}`]));
+
+  // Preserve unknown tags from the original event (tags we don't manage)
+  // This keeps Ditto's tags like `b`, `blobbi_onboarding_done`, `xp`, `level`, `room`, etc.
+  const unknownTags = profile.rawTags.filter(tag => !MANAGED_OWNER_PROFILE_TAG_NAMES.has(tag[0]));
+  tags.push(...unknownTags);
+
+  return tags;
 }
 
 // ============================================================================
