@@ -217,6 +217,8 @@ export function parsePetState(event: NostrEvent): PetState | null {
     value: parseNumericTag(getTag(event, 'value')),
     carePointsDeducted: parseNumericTag(getTag(event, 'care_points_deducted')),
     client: getTag(event, 'client'),
+    rawTags: event.tags,
+    rawContent: event.content,
   };
 }
 
@@ -319,7 +321,7 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
 const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
   'd', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
   'favoriteBlobbi', 'starterBlobbi', 'current_companion',
-  'style', 'background', 'title', 'client',
+  'style', 'background', 'title',
   // Multi-value tags
   'has', 'achievements', 'storage',
   // Inventory (accessory) tags
@@ -330,6 +332,10 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
  * Merge owner profile tags for republishing.
  * Builds managed tags from the profile's current state, then appends any unknown
  * tags from the original event so that tags set by Ditto are never dropped.
+ *
+ * Tags like `client` are NOT in the managed set — they are preserved as-is from
+ * rawTags so multi-element tags (e.g. `['client', 'Ditto', '31990:...']`) keep
+ * all their values.
  */
 export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Build managed tags from profile fields
@@ -348,7 +354,6 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   if (profile.style) tags.push(['style', profile.style]);
   if (profile.background) tags.push(['background', profile.background]);
   if (profile.title) tags.push(['title', profile.title]);
-  if (profile.client) tags.push(['client', profile.client]);
 
   // Add multi-value tags
   profile.ownedPets.forEach(petId => tags.push(['has', petId]));
@@ -356,8 +361,154 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   profile.inventory.forEach(item => tags.push(['storage', `${item.itemId}:${item.quantity}`]));
 
   // Preserve unknown tags from the original event (tags we don't manage)
-  // This keeps Ditto's tags like `b`, `blobbi_onboarding_done`, `xp`, `level`, `room`, etc.
+  // This keeps Ditto's tags like `b`, `blobbi_onboarding_done`, `xp`, `level`, `room`,
+  // and `client` (which may have 3+ elements) exactly as they were.
   const unknownTags = profile.rawTags.filter(tag => !MANAGED_OWNER_PROFILE_TAG_NAMES.has(tag[0]));
+  tags.push(...unknownTags);
+
+  return tags;
+}
+
+// ============================================================================
+// Pet State Tag Merging (preserves unknown tags from Ditto)
+// ============================================================================
+
+/**
+ * Tags that blobbi-island manages for kind 31124 (Pet State).
+ * Any tag NOT in this set is preserved as-is when republishing.
+ * Tags like `b`, `seed`, `name`, `progression_state`, `progression_started_at`,
+ * `state`, `last_decay_at`, and `client` (which may have 3+ elements) are NOT
+ * managed — they come through from rawTags.
+ */
+const MANAGED_PET_STATE_TAG_NAMES = new Set([
+  'd', 'stage', 'breeding_ready', 'generation',
+  'hunger', 'happiness', 'health', 'hygiene', 'energy',
+  'experience', 'care_streak',
+  // Appearance
+  'base_color', 'secondary_color', 'pattern', 'eye_color', 'special_mark',
+  'adult_type', 'manifestation', 'visual_effect', 'blessing',
+  // Personality
+  'personality', 'trait', 'mood', 'favorite_food', 'voice_type', 'size', 'title', 'skill',
+  // Egg-specific
+  'incubation_time', 'incubation_progress', 'egg_temperature', 'egg_status', 'shell_integrity',
+  // Behavior
+  'is_sleeping', 'is_dirty', 'has_buff', 'has_debuff', 'last_interaction',
+  // Care tracking
+  'last_meal', 'last_clean', 'last_warm', 'last_talk', 'last_check', 'last_sing', 'last_medicine',
+  // Social
+  'adopted_by', 'adopted_from', 'current_location', 'in_party', 'visible_to_others',
+  // Special
+  'fees', 'penalty', 'value', 'care_points_deducted',
+  // Equipment (managed by accessory system)
+  'equip',
+]);
+
+/** Convert Date to Unix timestamp string */
+function dateToTimestamp(date: Date): string {
+  return Math.floor(date.getTime() / 1000).toString();
+}
+
+/**
+ * Merge pet state tags for republishing.
+ * Builds managed tags from the pet's current state, then appends any unknown
+ * tags from the original event so that tags set by Ditto are never dropped.
+ *
+ * @param pet - The pet state (with rawTags from the original event)
+ * @param overrides - Optional tag overrides as [tagName, value] pairs (e.g. updated stats)
+ */
+export function mergePetStateTags(
+  pet: PetState,
+  overrides?: Record<string, string>,
+): string[][] {
+  // Build managed tags from pet fields
+  const tags: string[][] = [
+    ['d', pet.id],
+    ['stage', pet.stage],
+    ['breeding_ready', pet.breedingReady ? 'true' : 'false'],
+    ['generation', pet.generation.toString()],
+    ['hunger', pet.hunger.toString()],
+    ['happiness', pet.happiness.toString()],
+    ['health', pet.health.toString()],
+    ['hygiene', pet.hygiene.toString()],
+    ['energy', pet.energy.toString()],
+    ['experience', pet.experience.toString()],
+    ['care_streak', pet.careStreak.toString()],
+  ];
+
+  // Care tracking timestamps
+  if (pet.lastMeal) tags.push(['last_meal', dateToTimestamp(pet.lastMeal)]);
+  if (pet.lastClean) tags.push(['last_clean', dateToTimestamp(pet.lastClean)]);
+  if (pet.lastWarm) tags.push(['last_warm', dateToTimestamp(pet.lastWarm)]);
+  if (pet.lastTalk) tags.push(['last_talk', dateToTimestamp(pet.lastTalk)]);
+  if (pet.lastCheck) tags.push(['last_check', dateToTimestamp(pet.lastCheck)]);
+  if (pet.lastSing) tags.push(['last_sing', dateToTimestamp(pet.lastSing)]);
+  if (pet.lastMedicine) tags.push(['last_medicine', dateToTimestamp(pet.lastMedicine)]);
+  if (pet.lastInteraction) tags.push(['last_interaction', dateToTimestamp(pet.lastInteraction)]);
+
+  // Appearance
+  if (pet.baseColor) tags.push(['base_color', pet.baseColor]);
+  if (pet.secondaryColor) tags.push(['secondary_color', pet.secondaryColor]);
+  if (pet.pattern) tags.push(['pattern', pet.pattern]);
+  if (pet.eyeColor) tags.push(['eye_color', pet.eyeColor]);
+  if (pet.specialMark) tags.push(['special_mark', pet.specialMark]);
+  if (pet.adultType) tags.push(['adult_type', pet.adultType]);
+  if (pet.manifestation) tags.push(['manifestation', pet.manifestation]);
+  if (pet.visualEffect) tags.push(['visual_effect', pet.visualEffect]);
+  if (pet.blessing) tags.push(['blessing', pet.blessing]);
+
+  // Personality
+  if (pet.personality) tags.push(['personality', pet.personality]);
+  if (pet.trait) tags.push(['trait', pet.trait]);
+  if (pet.mood) tags.push(['mood', pet.mood]);
+  if (pet.favoriteFood) tags.push(['favorite_food', pet.favoriteFood]);
+  if (pet.voiceType) tags.push(['voice_type', pet.voiceType]);
+  if (pet.size) tags.push(['size', pet.size]);
+  if (pet.title) tags.push(['title', pet.title]);
+  if (pet.skill) tags.push(['skill', pet.skill]);
+
+  // Egg-specific
+  if (pet.stage === 'egg') {
+    if (pet.incubationTime) tags.push(['incubation_time', pet.incubationTime.toString()]);
+    if (pet.incubationProgress) tags.push(['incubation_progress', pet.incubationProgress.toString()]);
+    if (pet.eggTemperature) tags.push(['egg_temperature', pet.eggTemperature.toString()]);
+    if (pet.eggStatus) tags.push(['egg_status', pet.eggStatus]);
+    if (pet.shellIntegrity) tags.push(['shell_integrity', pet.shellIntegrity.toString()]);
+  }
+
+  // Behavior
+  tags.push(['is_sleeping', pet.isSleeping ? 'true' : 'false']);
+  tags.push(['is_dirty', pet.isDirty ? 'true' : 'false']);
+  tags.push(['has_buff', pet.hasBuff ? 'true' : 'false']);
+  tags.push(['has_debuff', pet.hasDebuff ? 'true' : 'false']);
+
+  // Social
+  if (pet.adoptedBy) tags.push(['adopted_by', pet.adoptedBy]);
+  if (pet.adoptedFrom) tags.push(['adopted_from', pet.adoptedFrom]);
+  if (pet.currentLocation) tags.push(['current_location', pet.currentLocation]);
+  tags.push(['in_party', pet.inParty ? 'true' : 'false']);
+  tags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
+
+  // Special
+  if (pet.fees) tags.push(['fees', pet.fees.toString()]);
+  if (pet.penalty) tags.push(['penalty', pet.penalty.toString()]);
+  if (pet.value) tags.push(['value', pet.value.toString()]);
+  if (pet.carePointsDeducted) tags.push(['care_points_deducted', pet.carePointsDeducted.toString()]);
+
+  // Apply overrides (replace matching managed tags)
+  if (overrides) {
+    const overrideKeys = new Set(Object.keys(overrides));
+    const filteredTags = tags.filter(tag => !overrideKeys.has(tag[0]));
+    for (const [name, value] of Object.entries(overrides)) {
+      filteredTags.push([name, value]);
+    }
+    // Preserve unknown tags from the original event
+    const unknownTags = pet.rawTags.filter(tag => !MANAGED_PET_STATE_TAG_NAMES.has(tag[0]));
+    filteredTags.push(...unknownTags);
+    return filteredTags;
+  }
+
+  // Preserve unknown tags from the original event
+  const unknownTags = pet.rawTags.filter(tag => !MANAGED_PET_STATE_TAG_NAMES.has(tag[0]));
   tags.push(...unknownTags);
 
   return tags;

@@ -14,7 +14,7 @@ import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
 import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
-import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
+import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
 
 
 interface FeedActionInput {
@@ -136,50 +136,16 @@ export function useBlobbiFeedAction() {
       });
 
       // 2. Update Kind 31124 Pet State
-      const petStateTags = [
-        ['d', petId],
-        ['stage', pet.stage],
-        ['breeding_ready', pet.breedingReady ? 'true' : 'false'],
-        ['generation', pet.generation.toString()],
-        ['hunger', newStats.hunger.toString()],
-        ['happiness', newStats.happiness.toString()],
-        ['health', newStats.health.toString()],
-        ['hygiene', newStats.hygiene.toString()],
-        ['energy', newStats.energy.toString()],
-        ['experience', newExperience.toString()],
-        ['care_streak', newCareStreak.toString()],
-        // Update feeding-specific timestamps
-        ['last_meal', Math.floor(now.getTime() / 1000).toString()],
-        ['last_interaction', Math.floor(now.getTime() / 1000).toString()],
-      ];
-
-      // Preserve all existing last_* timestamps (except the ones we're updating above)
-      if (pet.lastClean) petStateTags.push(['last_clean', Math.floor(pet.lastClean.getTime() / 1000).toString()]);
-      if (pet.lastWarm) petStateTags.push(['last_warm', Math.floor(pet.lastWarm.getTime() / 1000).toString()]);
-      if (pet.lastTalk) petStateTags.push(['last_talk', Math.floor(pet.lastTalk.getTime() / 1000).toString()]);
-      if (pet.lastCheck) petStateTags.push(['last_check', Math.floor(pet.lastCheck.getTime() / 1000).toString()]);
-      if (pet.lastSing) petStateTags.push(['last_sing', Math.floor(pet.lastSing.getTime() / 1000).toString()]);
-      if (pet.lastMedicine) petStateTags.push(['last_medicine', Math.floor(pet.lastMedicine.getTime() / 1000).toString()]);
-
-      // Add existing optional tags
-      if (pet.baseColor) petStateTags.push(['base_color', pet.baseColor]);
-      if (pet.secondaryColor) petStateTags.push(['secondary_color', pet.secondaryColor]);
-      if (pet.pattern) petStateTags.push(['pattern', pet.pattern]);
-      if (pet.eyeColor) petStateTags.push(['eye_color', pet.eyeColor]);
-      if (pet.specialMark) petStateTags.push(['special_mark', pet.specialMark]);
-      if (pet.adultType) petStateTags.push(['adult_type', pet.adultType]);
-      if (pet.personality) petStateTags.push(['personality', pet.personality]);
-      if (pet.trait) petStateTags.push(['trait', pet.trait]);
-      if (pet.mood) petStateTags.push(['mood', pet.mood]);
-      if (pet.favoriteFood) petStateTags.push(['favorite_food', pet.favoriteFood]);
-      if (pet.voiceType) petStateTags.push(['voice_type', pet.voiceType]);
-      if (pet.size) petStateTags.push(['size', pet.size]);
-      if (pet.currentLocation) petStateTags.push(['current_location', pet.currentLocation]);
-      if (pet.isSleeping !== undefined) petStateTags.push(['is_sleeping', pet.isSleeping ? 'true' : 'false']);
-      if (pet.isDirty !== undefined) petStateTags.push(['is_dirty', pet.isDirty ? 'true' : 'false']);
-      if (pet.inParty !== undefined) petStateTags.push(['in_party', pet.inParty ? 'true' : 'false']);
-      if (pet.visibleToOthers !== undefined) petStateTags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
-      if (pet.client !== undefined) petStateTags.push(['client', pet.client]);
+      // Apply stat updates to the pet, then use merge to preserve unknown tags
+      const updatedPet = {
+        ...pet,
+        ...newStats,
+        experience: newExperience,
+        careStreak: newCareStreak,
+        lastMeal: now,
+        lastInteraction: now,
+      };
+      const petStateTags = mergePetStateTags(updatedPet);
 
       // Add current equipment as equip tags
       equipTags.forEach(equipTag => {
@@ -188,7 +154,7 @@ export function useBlobbiFeedAction() {
 
       createEvent({
         kind: KIND_BLOBBI_STATE,
-        content: pet.name || petId,
+        content: pet.rawContent,
         tags: petStateTags,
       });
 
