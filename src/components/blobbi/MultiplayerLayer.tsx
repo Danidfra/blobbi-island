@@ -32,6 +32,7 @@ import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
+import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 type PlayerLike = {
   pubkey: string;
@@ -126,7 +127,7 @@ export function MultiplayerLayer({
         const events = await nostr.query(
           [
             {
-              kinds: [31124],
+              kinds: [KIND_BLOBBI_STATE],
               authors: [player.pubkey],
               limit: 10,
             },
@@ -211,7 +212,7 @@ export function MultiplayerLayer({
   const fetchBlobbi31124 = useCallback(async (pubkey: string, d: string): Promise<BlobbiVisual> => {
     const signal = AbortSignal.timeout(5000);
     const events = await nostr.query([{
-      kinds: [31124],
+      kinds: [KIND_BLOBBI_STATE],
       authors: [pubkey],
       '#d': [d],
       limit: 1,

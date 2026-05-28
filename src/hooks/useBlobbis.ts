@@ -3,6 +3,7 @@ import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import type { PetState } from '@/lib/blobbi-types';
 import { parsePetState, validatePetStateEvent } from '@/lib/blobbi-parsers';
+import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // Legacy interface for backward compatibility
 export interface Blobbi {
@@ -79,7 +80,7 @@ export function useBlobbis() {
 
       // Query for kind 31124 events (Pet State)
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         limit: 25 // Reduced limit for faster initial load
       }], { signal });

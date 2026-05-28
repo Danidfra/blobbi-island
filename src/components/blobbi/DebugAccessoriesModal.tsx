@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { parseInvTags, parseEquipTags, updateInvTags, updateEquipTags, inferSlotFromCode, generateAccessoryUrl, updateInventoryQuantity } from './lib/accessory-utils';
 import { Plus, Minus, Trash2, Settings, Save } from 'lucide-react';
 import type { EquipmentConfig, AccessoryForm } from './lib/accessory-types';
+import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // Check if we're in development mode
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -46,7 +47,7 @@ function DebugInventoryTab() {
       if (!user?.pubkey) return [];
 
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -69,7 +70,7 @@ function DebugInventoryTab() {
 
       // Get current event
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -93,7 +94,7 @@ function DebugInventoryTab() {
       const newTags = updateInvTags(currentTags, updatedInventory);
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content,
         tags: newTags,
       });
@@ -112,7 +113,7 @@ function DebugInventoryTab() {
 
     try {
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -126,7 +127,7 @@ function DebugInventoryTab() {
       const newTags = updateInvTags(currentTags, updatedInventory);
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: events[0].content,
         tags: newTags,
       });
@@ -142,7 +143,7 @@ function DebugInventoryTab() {
 
     try {
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -156,7 +157,7 @@ function DebugInventoryTab() {
       const newTags = updateInvTags(currentTags, updatedInventory);
 
       createEvent({
-        kind: 31125,
+        kind: KIND_BLOBBONAUT_PROFILE,
         content: events[0].content,
         tags: newTags,
       });
@@ -211,7 +212,7 @@ function DebugInventoryTab() {
       {/* Current inventory */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Current Inventory (31125)</CardTitle>
+          <CardTitle className="text-sm">Current Inventory (11125)</CardTitle>
         </CardHeader>
         <CardContent>
           {inventory && inventory.length > 0 ? (
@@ -267,17 +268,17 @@ function DebugEquipTab() {
   const { nostr } = useNostr();
   const { mutate: createEvent } = useNostrPublish();
 
-  // Fetch current companion from kind 31125 to determine which Blobbi's 31124 to modify
+  // Fetch current companion from kind 11125 to determine which Blobbi's 31124 to modify
   const [currentCompanion, setCurrentCompanion] = useState<string | null>(null);
 
-  // Fetch current companion from user's kind 31125
+  // Fetch current companion from user's kind 11125
   const { data: companionData } = useQuery({
     queryKey: ['current-companion', user?.pubkey],
     queryFn: async () => {
       if (!user?.pubkey) return null;
 
       const events = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -304,7 +305,7 @@ function DebugEquipTab() {
       if (!user?.pubkey || !currentCompanion) return [];
 
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [currentCompanion],
         limit: 1,
@@ -325,7 +326,7 @@ function DebugEquipTab() {
     try {
       // Get existing 31124 event for current companion
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [currentCompanion],
         limit: 1,
@@ -367,7 +368,7 @@ function DebugEquipTab() {
 
       // Publish updated event as replacement (same d tag)
       createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content, // Keep original content unchanged
         tags: newTags,
         d: currentCompanion, // Use same d tag as original
@@ -375,7 +376,7 @@ function DebugEquipTab() {
 
       // Also decrement inventory
       const inventoryEvents = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -388,7 +389,7 @@ function DebugEquipTab() {
         const newInventoryTags = updateInvTags(inventoryTags, updatedInventory);
 
         createEvent({
-          kind: 31125,
+          kind: KIND_BLOBBONAUT_PROFILE,
           content: inventoryEvents[0].content,
           tags: newInventoryTags,
         });
@@ -409,7 +410,7 @@ function DebugEquipTab() {
     try {
       // Get existing 31124 event for current companion
       const events = await nostr.query([{
-        kinds: [31124],
+        kinds: [KIND_BLOBBI_STATE],
         authors: [user.pubkey],
         '#d': [currentCompanion],
         limit: 1,
@@ -430,7 +431,7 @@ function DebugEquipTab() {
 
       // Publish updated event as replacement (same d tag)
       createEvent({
-        kind: 31124,
+        kind: KIND_BLOBBI_STATE,
         content: existingEvent.content, // Keep original content unchanged
         tags: newTags,
         d: currentCompanion, // Use same d tag as original
@@ -438,7 +439,7 @@ function DebugEquipTab() {
 
       // Also increment inventory
       const inventoryEvents = await nostr.query([{
-        kinds: [31125],
+        kinds: [...BLOBBONAUT_PROFILE_KINDS],
         authors: [user.pubkey],
         limit: 1,
       }]);
@@ -451,7 +452,7 @@ function DebugEquipTab() {
         const newInventoryTags = updateInvTags(inventoryTags, updatedInventory);
 
         createEvent({
-          kind: 31125,
+          kind: KIND_BLOBBONAUT_PROFILE,
           content: inventoryEvents[0].content,
           tags: newInventoryTags,
         });
@@ -483,7 +484,7 @@ function DebugEquipTab() {
         <Card>
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-              No current companion found. Please set a current companion in kind 31125.
+              No current companion found. Please set a current companion in kind 11125.
             </p>
           </CardContent>
         </Card>
@@ -584,7 +585,7 @@ export function DebugAccessoriesModal({ isOpen, onClose }: DebugAccessoriesModal
         <ScrollArea className="max-h-[60vh] pr-4">
           <Tabs defaultValue="inventory" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="inventory">Inventory (31125)</TabsTrigger>
+              <TabsTrigger value="inventory">Inventory (11125)</TabsTrigger>
               <TabsTrigger value="equip">Equipment (31124)</TabsTrigger>
             </TabsList>
 

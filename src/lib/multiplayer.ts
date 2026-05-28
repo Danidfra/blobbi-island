@@ -8,6 +8,7 @@ import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import type { Position } from '@/lib/types';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 // ============================================================================
 // Constants and Configuration
@@ -113,16 +114,16 @@ export function makeSessionId(): string {
 
 /** Create a Blobbi address string */
 export function makeBlobbiAddr(pubkey: string, d: string): string {
-  return `31124:${pubkey}:${d}`;
+  return `${KIND_BLOBBI_STATE}:${pubkey}:${d}`;
 }
 
 /** Parse an 'a' tag into its components */
 export function parseA(a: string): { kind: number; pubkey: string; blobbi_d: string } {
   const [k, pk, d] = a.split(':');
-  if (k !== '31124' || !pk || !d) {
+  if (k !== String(KIND_BLOBBI_STATE) || !pk || !d) {
     throw new Error('Invalid "a" tag format');
   }
-  return { kind: 31124, pubkey: pk, blobbi_d: d };
+  return { kind: KIND_BLOBBI_STATE, pubkey: pk, blobbi_d: d };
 }
 
 // ============================================================================

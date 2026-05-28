@@ -2,7 +2,7 @@
  * TypeScript types for Blobbi accessory management
  *
  * This system handles:
- * - Kind 31125: Owner Profile with inventory tags (inv)
+ * - Kind 11125: Owner Profile with inventory tags (inv)
  * - Kind 31124: Pet State with equipment tags (equip)
  */
 
@@ -44,7 +44,7 @@ export interface EquipTag {
   ver: string;
 }
 
-/** Inventory tag interface for kind 31125 */
+/** Inventory tag interface for kind 11125 */
 export interface InvTag {
   /** Tag name: "inv" */
   name: 'inv';

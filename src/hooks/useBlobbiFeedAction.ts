@@ -1,8 +1,8 @@
 /**
  * Hook for feeding Blobbi pets with proper Nostr event creation
  *
- * Creates Kind 14919 interaction events and updates Kind 31124 pet state
- * and Kind 31125 owner profile according to Blobbi specification
+ * Creates Kind 1124 interaction events and updates Kind 31124 pet state
+ * and Kind 11125 owner profile according to Blobbi specification
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,8 @@ import { useBlobbonautProfile } from './useBlobbonautProfile';
 import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
+import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
+import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
 
 
 interface FeedActionInput {
@@ -113,76 +115,37 @@ export function useBlobbiFeedAction() {
       // Convert current equipment to equip tags
       const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
 
-      // 1. Create Kind 14919 Interaction Event
-      const interactionTags = [
-        ['blobbi_id', petId],
+      // 1. Create Kind 1124 Interaction Event (Ditto-compatible)
+      const coordinate = `31124:${user.pubkey}:${petId}`;
+      const interactionTags: string[][] = [
+        ['a', coordinate],
+        ['p', user.pubkey],
         ['action', 'feed'],
-        ['action_category', 'enrichment'],
-        ['stat_change', `hunger:+${totalEffects.hunger || 0}`],
-        ['item_used', getItemDisplayName(itemId)],
-        ['experience_gained', experienceGained.toString()],
-        ['care_streak', newCareStreak.toString()],
-        ['care_points', carePoints.toString()],
+        ['source', 'blobbi-island'],
+        ['alt', 'Blobbi interaction: feed'],
       ];
 
-      // Add additional stat changes to tags
-      Object.entries(totalEffects).forEach(([stat, value]) => {
-        if (stat !== 'hunger' && value !== 0) {
-          interactionTags.push(['stat_change', `${stat}:${value > 0 ? '+' : ''}${value}`]);
-        }
-      });
+      if (itemId) {
+        interactionTags.push(['item', itemId]);
+      }
 
       createEvent({
-        kind: 14919,
-        content: `Blobbi fed interaction`,
+        kind: KIND_BLOBBI_INTERACTION,
+        content: '',
         tags: interactionTags,
       });
 
       // 2. Update Kind 31124 Pet State
-      const petStateTags = [
-        ['d', petId],
-        ['stage', pet.stage],
-        ['breeding_ready', pet.breedingReady ? 'true' : 'false'],
-        ['generation', pet.generation.toString()],
-        ['hunger', newStats.hunger.toString()],
-        ['happiness', newStats.happiness.toString()],
-        ['health', newStats.health.toString()],
-        ['hygiene', newStats.hygiene.toString()],
-        ['energy', newStats.energy.toString()],
-        ['experience', newExperience.toString()],
-        ['care_streak', newCareStreak.toString()],
-        // Update feeding-specific timestamps
-        ['last_meal', Math.floor(now.getTime() / 1000).toString()],
-        ['last_interaction', Math.floor(now.getTime() / 1000).toString()],
-      ];
-
-      // Preserve all existing last_* timestamps (except the ones we're updating above)
-      if (pet.lastClean) petStateTags.push(['last_clean', Math.floor(pet.lastClean.getTime() / 1000).toString()]);
-      if (pet.lastWarm) petStateTags.push(['last_warm', Math.floor(pet.lastWarm.getTime() / 1000).toString()]);
-      if (pet.lastTalk) petStateTags.push(['last_talk', Math.floor(pet.lastTalk.getTime() / 1000).toString()]);
-      if (pet.lastCheck) petStateTags.push(['last_check', Math.floor(pet.lastCheck.getTime() / 1000).toString()]);
-      if (pet.lastSing) petStateTags.push(['last_sing', Math.floor(pet.lastSing.getTime() / 1000).toString()]);
-      if (pet.lastMedicine) petStateTags.push(['last_medicine', Math.floor(pet.lastMedicine.getTime() / 1000).toString()]);
-
-      // Add existing optional tags
-      if (pet.baseColor) petStateTags.push(['base_color', pet.baseColor]);
-      if (pet.secondaryColor) petStateTags.push(['secondary_color', pet.secondaryColor]);
-      if (pet.pattern) petStateTags.push(['pattern', pet.pattern]);
-      if (pet.eyeColor) petStateTags.push(['eye_color', pet.eyeColor]);
-      if (pet.specialMark) petStateTags.push(['special_mark', pet.specialMark]);
-      if (pet.adultType) petStateTags.push(['adult_type', pet.adultType]);
-      if (pet.personality) petStateTags.push(['personality', pet.personality]);
-      if (pet.trait) petStateTags.push(['trait', pet.trait]);
-      if (pet.mood) petStateTags.push(['mood', pet.mood]);
-      if (pet.favoriteFood) petStateTags.push(['favorite_food', pet.favoriteFood]);
-      if (pet.voiceType) petStateTags.push(['voice_type', pet.voiceType]);
-      if (pet.size) petStateTags.push(['size', pet.size]);
-      if (pet.currentLocation) petStateTags.push(['current_location', pet.currentLocation]);
-      if (pet.isSleeping !== undefined) petStateTags.push(['is_sleeping', pet.isSleeping ? 'true' : 'false']);
-      if (pet.isDirty !== undefined) petStateTags.push(['is_dirty', pet.isDirty ? 'true' : 'false']);
-      if (pet.inParty !== undefined) petStateTags.push(['in_party', pet.inParty ? 'true' : 'false']);
-      if (pet.visibleToOthers !== undefined) petStateTags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
-      if (pet.client !== undefined) petStateTags.push(['client', pet.client]);
+      // Apply stat updates to the pet, then use merge to preserve unknown tags
+      const updatedPet = {
+        ...pet,
+        ...newStats,
+        experience: newExperience,
+        careStreak: newCareStreak,
+        lastMeal: now,
+        lastInteraction: now,
+      };
+      const petStateTags = mergePetStateTags(updatedPet);
 
       // Add current equipment as equip tags
       equipTags.forEach(equipTag => {
@@ -190,12 +153,12 @@ export function useBlobbiFeedAction() {
       });
 
       createEvent({
-        kind: 31124,
-        content: pet.name || petId,
+        kind: KIND_BLOBBI_STATE,
+        content: pet.rawContent,
         tags: petStateTags,
       });
 
-      // 3. Update Kind 31125 Owner Profile (reduce inventory)
+      // 3. Update Kind 11125 Owner Profile (reduce inventory)
       if (profile) {
         // Create updated inventory
         const updatedInventory = profile.inventory.map(item => {
@@ -208,31 +171,13 @@ export function useBlobbiFeedAction() {
           return item;
         }).filter(item => item.quantity > 0); // Remove items with 0 quantity
 
-        // Create owner profile tags
-        const ownerTags = [
-          ['d', profile.id],
-          ['name', profile.name],
-          ['coins', profile.coins.toString()],
-          ['pettingLevel', profile.pettingLevel.toString()],
-          ['lifetimeBlobbis', profile.lifetimeBlobbis.toString()],
-        ];
-
-        // Add optional single-value tags
-        if (profile.favoriteBlobbi) ownerTags.push(['favoriteBlobbi', profile.favoriteBlobbi]);
-        if (profile.starterBlobbi) ownerTags.push(['starterBlobbi', profile.starterBlobbi]);
-        if (profile.currentCompanion) ownerTags.push(['current_companion', profile.currentCompanion]);
-        if (profile.style) ownerTags.push(['style', profile.style]);
-        if (profile.background) ownerTags.push(['background', profile.background]);
-        if (profile.title) ownerTags.push(['title', profile.title]);
-
-        // Add multi-value tags
-        profile.ownedPets.forEach(petId => ownerTags.push(['has', petId]));
-        profile.achievements.forEach(achievement => ownerTags.push(['achievements', achievement]));
-        updatedInventory.forEach(item => ownerTags.push(['storage', `${item.itemId}:${item.quantity}`]));
+        // Use merge utility to preserve unknown tags from Ditto
+        const updatedProfile = { ...profile, inventory: updatedInventory };
+        const ownerTags = mergeOwnerProfileTags(updatedProfile);
 
         createEvent({
-          kind: 31125,
-          content: `Owner profile: ${profile.name}`,
+          kind: KIND_BLOBBONAUT_PROFILE,
+          content: profile.rawContent,
           tags: ownerTags,
         });
       }

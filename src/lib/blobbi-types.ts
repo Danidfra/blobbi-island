@@ -1,14 +1,14 @@
 /**
  * Comprehensive TypeScript types for Blobbi Nostr events
- * Kind 31125: Owner Profile
+ * Kind 11125: Owner Profile (legacy: 31125)
  * Kind 31124: Pet State
  */
 
 // ============================================================================
-// Kind 31125 - Owner Profile Types
+// Kind 11125 - Owner Profile Types
 // ============================================================================
 
-/** Required tags for kind 31125 Owner Profile events */
+/** Required tags for kind 11125 Owner Profile events */
 export interface OwnerProfileRequiredTags {
   /** Profile ID (required) */
   d: string;
@@ -16,7 +16,7 @@ export interface OwnerProfileRequiredTags {
   name: string;
 }
 
-/** Optional tags for kind 31125 Owner Profile events */
+/** Optional tags for kind 11125 Owner Profile events */
 export interface OwnerProfileOptionalTags {
   /** Currency amount */
   coins?: string;
@@ -40,7 +40,7 @@ export interface OwnerProfileOptionalTags {
   client?: string;
 }
 
-/** Multi-value tags for kind 31125 Owner Profile events */
+/** Multi-value tags for kind 11125 Owner Profile events */
 export interface OwnerProfileMultiTags {
   /** List of owned pet IDs (multiple) */
   has?: string[];
@@ -50,7 +50,7 @@ export interface OwnerProfileMultiTags {
   storage?: string[];
 }
 
-/** Complete tag interface for kind 31125 Owner Profile events */
+/** Complete tag interface for kind 11125 Owner Profile events */
 export type OwnerProfileTags = OwnerProfileRequiredTags &
   OwnerProfileOptionalTags &
   OwnerProfileMultiTags;
@@ -87,6 +87,10 @@ export interface OwnerProfile {
   inventory: InventoryItem[];
   /** Client that created the event */
   client?: string;
+  /** Raw tags from the original event — preserved for republishing so we don't drop unknown tags */
+  rawTags: string[][];
+  /** Raw content from the original event — preserved for republishing so we don't overwrite JSON data */
+  rawContent: string;
 }
 
 /** Input data for creating an owner profile event */
@@ -432,6 +436,10 @@ export interface PetState {
   carePointsDeducted?: number;
   /** Client that created the event */
   client?: string;
+  /** Raw tags from the original event — preserved for republishing so we don't drop unknown tags */
+  rawTags: string[][];
+  /** Raw content from the original event — preserved for republishing so we don't overwrite JSON data */
+  rawContent: string;
 }
 
 // ============================================================================

@@ -1,13 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { loadCustomizedBlobbiSvg, scopeSvgIds } from "@/lib/customizeSvg";
+import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
-
-// Debug flag for multiplayer logging
-const DEBUG_MP = true;
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
@@ -64,10 +60,7 @@ export function CurrentBlobbiDisplay({
   const { data: profile } = useBlobbonautProfile();
   const currentCompanionId = profile?.currentCompanion;
   const [svgContent, setSvgContent] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
   const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
-
-  if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] CurrentBlobbiDisplay(remote)', { visualOverride });
 
   // Only use local data for local player (when visualOverride is not provided)
   useEffect(() => {
@@ -88,72 +81,46 @@ export function CurrentBlobbiDisplay({
 
   // Load the SVG for the current Blobbi or visual override
   useEffect(() => {
-    const loadSvg = async () => {
-      let blobbiData: typeof currentBlobbi | typeof visualOverride;
+    let blobbiData: typeof currentBlobbi | typeof visualOverride;
 
-      if (visualOverride) {
-        // Use visualOverride data for remote players
-        if (!visualOverride.baseColor && !visualOverride.secondaryColor) {
-          setSvgContent("");
-          return;
-        }
-        blobbiData = visualOverride;
-      } else {
-        // Use local data for local player only
-        if (!currentBlobbi) {
-          setSvgContent("");
-          return;
-        }
-        blobbiData = currentBlobbi;
-      }
-
-      setIsLoading(true);
-
-      try {
-        const stage = blobbiData.stage || 'baby';
-        const adultType = stage === 'adult' ?
-          blobbiData.adultType || 'bloomi' :
-          undefined;
-
-        const customizedSvg = await loadCustomizedBlobbiSvg(
-          stage,
-          adultType,
-          blobbiData.baseColor,
-          blobbiData.secondaryColor,
-          blobbiData.eyeColor,
-          isSleeping || eyesClosed, // Close eyes when either sleeping or seated with eyesClosed
-        );
-
-        // Add lazy loading attributes to SVG for performance
-        const optimizedSvg = customizedSvg.replace(
-          /<svg([^>]*)>/,
-          (match, attributes) => {
-            // Add loading attributes if not already present
-            if (!attributes.includes('decoding=')) {
-              attributes += ' decoding="async"';
-            }
-            if (!attributes.includes('fetchpriority=')) {
-              attributes += ' fetchpriority="low"';
-            }
-            return `<svg${attributes}>`;
-          }
-        );
-
-        const scoped = scopeSvgIds(optimizedSvg, scopeIdRef.current);
-        setSvgContent(scoped);
-        if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] svg ready (remote)', { stage: (visualOverride.stage || 'baby') });
-      } catch (err) {
-        console.error('Failed to load Blobbi SVG:', err);
+    if (visualOverride) {
+      // Use visualOverride data for remote players
+      if (!visualOverride.baseColor && !visualOverride.secondaryColor) {
         setSvgContent("");
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
+      blobbiData = visualOverride;
+    } else {
+      // Use local data for local player only
+      if (!currentBlobbi) {
+        setSvgContent("");
+        return;
+      }
+      blobbiData = currentBlobbi;
+    }
 
-    loadSvg();
+    try {
+      const stage = blobbiData.stage || 'baby';
+      const adultType = stage === 'adult' ?
+        blobbiData.adultType || 'bloomi' :
+        undefined;
+
+      const customizedSvg = loadBlobbiSvg(
+        stage,
+        adultType,
+        blobbiData.baseColor,
+        blobbiData.secondaryColor,
+        blobbiData.eyeColor,
+        isSleeping || eyesClosed, // Close eyes when either sleeping or seated with eyesClosed
+        scopeIdRef.current,
+      );
+
+      setSvgContent(customizedSvg);
+    } catch (err) {
+      console.error('Failed to load Blobbi SVG:', err);
+      setSvgContent("");
+    }
   }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
-
-
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -168,19 +135,6 @@ export function CurrentBlobbiDisplay({
       default: return 1.0;
     }
   };
-
-  // Show loading skeleton
-  if (isLoading) {
-    return (
-      <Skeleton
-        className={cn(
-          "rounded-full",
-          sizeClasses[size],
-          className
-        )}
-      />
-    );
-  }
 
   // Show Blobbi SVG
   if (svgContent && (currentBlobbi || visualOverride)) {
@@ -213,16 +167,13 @@ export function CurrentBlobbiDisplay({
           />
 
           {/* Accessory Overlay for transparent mode */}
-          {showAccessories && (() => {
-            if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
-            return (
-              <AccessoryOverlay
-                isStatic={true}
-                sizeMultiplier={getAccessorySizeMultiplier()}
-                className="absolute inset-0"
-              />
-            );
-          })()}
+          {showAccessories && (
+            <AccessoryOverlay
+              isStatic={true}
+              sizeMultiplier={getAccessorySizeMultiplier()}
+              className="absolute inset-0"
+            />
+          )}
         </div>
       );
     }
@@ -251,16 +202,13 @@ export function CurrentBlobbiDisplay({
         />
 
         {/* Accessory Overlay for default mode */}
-        {showAccessories && (() => {
-          if (DEBUG_MP && visualOverride) console.debug('[blobbi][mp][render] accessories', { using: showAccessories });
-          return (
-            <AccessoryOverlay
-              isStatic={true}
-              sizeMultiplier={getAccessorySizeMultiplier()}
-              className="absolute inset-0"
-            />
-          );
-        })()}
+        {showAccessories && (
+          <AccessoryOverlay
+            isStatic={true}
+            sizeMultiplier={getAccessorySizeMultiplier()}
+            className="absolute inset-0"
+          />
+        )}
       </div>
     );
   }
