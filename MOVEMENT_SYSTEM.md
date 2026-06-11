@@ -19,7 +19,7 @@ The Blobbi Movement System provides smooth, responsive character movement for in
 ### 🎨 Visual Effects
 - **Clean Character Display**: Shows only the Blobbi SVG without background circles or borders
 - **Floating Animation**: Subtle floating effect with soft shadow for hovering appearance
-- **Directional Facing**: Character flips horizontally when moving left/right
+- **Directional Gaze**: Movement direction is expressed through eye gaze (pupil tracking); the body orientation stays stable and never mirrors
 - **Movement Feedback**: Slight scale effect during movement for visual feedback
 - **Soft Shadows**: Drop shadows and ground shadows for depth
 - **Transparent Rendering**: Character appears clean and integrated with the scene background

@@ -19,7 +19,15 @@ import { useIslandPresence } from '@/hooks/useIslandPresence';
 import { useLocation } from '@/hooks/useLocation';
 // import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
-import { isBlobbiActive, type BlobbiActivity, type LocalActiveState } from '@/lib/gaze';
+import {
+  resolveAttention,
+  emptyAttention,
+  attentionTargetPosition,
+  LOCAL_GAZE_KEY,
+  type LocalActiveState,
+  type GazeCandidate,
+  type AttentionState,
+} from '@/lib/gaze';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
@@ -48,6 +56,10 @@ type PlayerLike = {
 
 type GazeOffset = { x: number; y: number };
 
+// Local Blobbi's reserved key in the shared maps (re-exported alias for the
+// shared constant, used by both RemoteBlobbiSprite and MultiplayerLayer).
+const LOCAL_ATTENTION_KEY = LOCAL_GAZE_KEY;
+
 /**
  * Renders a single remote player's Blobbi with eye gaze.
  *
@@ -68,6 +80,7 @@ function RemoteBlobbiSprite({
   position,
   playerKey,
   nearbyGazeRef,
+  livePositionsRef,
   headingRef,
   idSuffix,
 }: {
@@ -76,8 +89,10 @@ function RemoteBlobbiSprite({
   /** Current position (percent). Only changes while moving, which already re-renders. */
   position: Position;
   playerKey: string;
-  /** Shared map of nearby gaze targets (percent), refreshed by a throttled timer. */
-  nearbyGazeRef: React.MutableRefObject<Map<string, Position>>;
+  /** Shared map of attention *decisions* (target identity), refreshed by a throttled timer. */
+  nearbyGazeRef: React.MutableRefObject<Map<string, AttentionState>>;
+  /** Shared map of live positions (percent) per key, kept fresh in render. */
+  livePositionsRef: React.MutableRefObject<Map<string, Position>>;
   /** Shared map of last movement headings (normalized) per player. */
   headingRef: React.MutableRefObject<Map<string, GazeOffset>>;
   idSuffix: string;
@@ -87,20 +102,32 @@ function RemoteBlobbiSprite({
   // the shared refs below — so a stationary Blobbi keeps reacting to passers.
   const idleGaze = useIdleGaze(!isMoving);
 
-  // Resolve gaze priority on every render from the latest ref values:
-  //   nearby moving Blobbi -> movement heading -> idle micro-movement.
+  // Resolve gaze priority on every render (self-intent first), identical to the
+  // local Blobbi in MovableBlobbi:
+  //   1. own movement → look where it is walking (heading)
+  //   2. attention     → look at the selected active target (identity from the
+  //      throttled decision in nearbyGazeRef; live position from livePositionsRef)
+  //   3. idle          → organic idle gaze
+  // The attention *decision* (which Blobbi) is throttled to 400ms, but the
+  // target's *live* position is resolved here each render, so the eyes track a
+  // moving target continuously.
   let eyeOffset: GazeOffset = idleGaze;
 
-  const nearbyTarget = nearbyGazeRef.current.get(playerKey) ?? null;
-  if (nearbyTarget) {
-    const tx = nearbyTarget.x - position.x;
-    const ty = nearbyTarget.y - position.y;
-    const len = Math.sqrt(tx * tx + ty * ty) || 1;
-    eyeOffset = { x: tx / len, y: ty / len };
-  } else if (isMoving) {
+  if (isMoving) {
     const heading = headingRef.current.get(playerKey);
     if (heading && (Math.abs(heading.x) > 0.01 || Math.abs(heading.y) > 0.01)) {
       eyeOffset = heading;
+    }
+  } else {
+    const attention = nearbyGazeRef.current.get(playerKey);
+    const attentionTarget = attention
+      ? attentionTargetPosition(attention, livePositionsRef.current, LOCAL_ATTENTION_KEY)
+      : null;
+    if (attentionTarget) {
+      const tx = attentionTarget.x - position.x;
+      const ty = attentionTarget.y - position.y;
+      const len = Math.sqrt(tx * tx + ty * ty) || 1;
+      eyeOffset = { x: tx / len, y: ty / len };
     }
   }
 
@@ -143,12 +170,20 @@ interface MultiplayerLayerProps {
     blobbiVisual: BlobbiVisual
   ) => void;
   /**
-   * Optional shared ref written with the local Blobbi's nearby-gaze target
-   * (the nearest moving remote Blobbi within range, or null). MovableBlobbi
-   * reads this each frame so the local Blobbi can glance at passing Blobbis.
-   * Using a ref avoids triggering re-renders on the ~400ms gaze cadence.
+   * Shared ref holding the local Blobbi's attention *decision* (target
+   * identity), written here by the throttled gaze pass. MovableBlobbi reads it
+   * together with {@link livePositionsRef} to resolve the target's *live*
+   * position each frame, so the local Blobbi tracks a moving target smoothly —
+   * the same mechanism RemoteBlobbiSprite uses.
    */
-  localGazeTargetRef?: React.MutableRefObject<Position | null>;
+  localAttentionRef?: React.MutableRefObject<AttentionState>;
+  /**
+   * Optional shared map (key -> current percent position) for every gaze
+   * candidate, including the local Blobbi under the reserved local key. Kept
+   * fresh in render so gaze can track moving targets without the 400ms snapshot
+   * lag. Shared with MovableBlobbi for the local Blobbi's own gaze.
+   */
+  livePositionsRef?: React.MutableRefObject<Map<string, Position>>;
   /**
    * Optional shared ref carrying the local Blobbi's current position and
    * activity (written by MovableBlobbi each frame). MultiplayerLayer reads it
@@ -174,7 +209,8 @@ export function MultiplayerLayer({
   chatFunctionRef,
   myAnchorId,
   onOtherBlobbiClick,
-  localGazeTargetRef,
+  localAttentionRef: localAttentionRefProp,
+  livePositionsRef: livePositionsRefProp,
   localActiveRef,
 }: MultiplayerLayerProps) {
   const { nostr } = useNostr();
@@ -933,10 +969,28 @@ export function MultiplayerLayer({
   const visiblePlayersRef = React.useRef(visiblePlayers);
   visiblePlayersRef.current = visiblePlayers;
 
-  // "Glance at a nearby moving Blobbi" gaze targets, keyed by player. Refreshed
-  // by a throttled timer (below) — never per animation frame, and crucially
-  // even when no player is moving, so a stationary Blobbi notices passers.
-  const nearbyGazeRef = React.useRef(new Map<string, Position>());
+  // Per-Blobbi attention *decision* (key -> AttentionState), refreshed by the
+  // throttled timer below — never per animation frame. Stores target IDENTITY
+  // (targetKey), not a frozen position, so sprites can resolve the target's
+  // *live* position at render time and track a moving Blobbi continuously.
+  const nearbyGazeRef = React.useRef(new Map<string, AttentionState>());
+  // Continuously-updated live positions (key -> current percent position) for
+  // every candidate, including the local Blobbi under LOCAL_ATTENTION_KEY.
+  // Written in render (cheap: positions only change when a Blobbi moves, which
+  // already re-renders), and read by sprites to track their attention target
+  // smoothly without the 400ms snapshot lag. Shared with MovableBlobbi when
+  // provided so the local Blobbi resolves live positions the same way.
+  const internalLivePositionsRef = React.useRef(new Map<string, Position>());
+  const livePositionsRef = livePositionsRefProp ?? internalLivePositionsRef;
+  // The local Blobbi's own attention decision (what the local Blobbi looks at).
+  // Shared with MovableBlobbi when provided.
+  const internalLocalAttentionRef = React.useRef<AttentionState>(emptyAttention());
+  const localAttentionRef = localAttentionRefProp ?? internalLocalAttentionRef;
+  // Per-Blobbi attention memory (key -> AttentionState), the persistent state
+  // the resolver reads/writes each tick so attention can track the most
+  // recently active Blobbi and linger briefly after it goes quiet. `null` key
+  // is reserved for the local Blobbi's own attention.
+  const attentionRef = React.useRef(new Map<string, AttentionState>());
   // Last movement heading (normalized) per player, used by the sprite to look
   // where it is walking. Updated in render (cheap) since position only changes
   // while moving — which already re-renders the parent.
@@ -947,17 +1001,12 @@ export function MultiplayerLayer({
 
   const computeNearbyGaze = useCallback(() => {
     const remotes = visiblePlayersRef.current;
+    const now = performance.now();
 
     // Unified candidate set: every remote Blobbi PLUS the local Blobbi. Each
-    // entry exposes its position and activity so the same nearest-active-target
-    // rule applies uniformly — this is what lets remotes notice and look at the
+    // entry exposes its position and activity so the same attention resolver
+    // applies uniformly — this is what lets remotes notice and look at the
     // local Blobbi when it walks nearby (and vice-versa).
-    type GazeCandidate = {
-      key: string | null; // null = local Blobbi (handled via localGazeTargetRef)
-      position: Position;
-      activity: BlobbiActivity;
-    };
-
     const candidates: GazeCandidate[] = remotes.map((p) => ({
       key: `${p.pubkey}:${p.sessionId}`,
       position: p.position,
@@ -976,45 +1025,64 @@ export function MultiplayerLayer({
       : null;
     if (localCandidate) candidates.push(localCandidate);
 
-    // For a given "self", find the nearest OTHER *active* candidate within range.
-    const nearestActiveTarget = (self: GazeCandidate): Position | null => {
-      let bestSq = NEARBY_GAZE_THRESHOLD_SQ;
-      let bestPos: Position | null = null;
-      for (const other of candidates) {
-        if (other === self) continue;
-        if (!isBlobbiActive(other.activity)) continue; // only look at active Blobbis
-        const dx = other.position.x - self.position.x;
-        const dy = other.position.y - self.position.y;
-        const distSq = dx * dx + dy * dy;
-        if (distSq < bestSq) {
-          bestSq = distSq;
-          bestPos = other.position;
-        }
-      }
-      return bestPos;
+    // Run the shared attention resolver for one "self": pull its remembered
+    // AttentionState, resolve against all candidates, store the updated state.
+    // All gaze decisions go through resolveAttention — the single source of
+    // truth — so future activity kinds (emotes, interactions, actions) are
+    // picked up everywhere automatically via activityPriority.
+    const attention = attentionRef.current;
+    const seenKeys = new Set<string>();
+    const resolveFor = (self: GazeCandidate, stateKey: string): AttentionState => {
+      seenKeys.add(stateKey);
+      const prev = attention.get(stateKey) ?? emptyAttention();
+      const nextState = resolveAttention(
+        self,
+        candidates,
+        prev,
+        now,
+        NEARBY_GAZE_THRESHOLD_SQ,
+      );
+      attention.set(stateKey, nextState);
+      return nextState;
     };
 
-    // Remote Blobbis: store each one's nearest active target (keyed by player).
-    // Rebuilt fresh each tick — when a target goes inactive it simply drops out,
-    // so the sprite falls back to movement heading / idle gaze automatically.
-    const next = new Map<string, Position>();
+    // Seed live positions from the candidate set so resolution has data even
+    // before the next render (render keeps remotes fresher as they move). The
+    // local Blobbi is stored under LOCAL_ATTENTION_KEY so remotes can track it.
+    const live = livePositionsRef.current;
+    live.clear();
+    for (const c of candidates) {
+      live.set(c.key === null ? LOCAL_ATTENTION_KEY : c.key, c.position);
+    }
+
+    // Remote Blobbis: resolve each one's attention *decision* (target identity),
+    // keyed by player. A target that goes inactive lingers for ATTENTION_HOLD_MS,
+    // then releases, so the sprite falls back to movement heading / idle gaze.
+    // Sprites resolve the target's *live* position at render time.
+    const next = new Map<string, AttentionState>();
     for (const self of candidates) {
       if (self.key === null) continue; // local handled below
-      const bestPos = nearestActiveTarget(self);
-      if (bestPos) next.set(self.key, bestPos);
+      next.set(self.key, resolveFor(self, self.key));
     }
     nearbyGazeRef.current = next;
 
-    // Local Blobbi: nearest active candidate (remote) within range, or null.
-    // Cleared to null when nothing nearby is active → MovableBlobbi reverts to
-    // movement heading / idle gaze.
-    if (localGazeTargetRef && localCandidate) {
-      localGazeTargetRef.current = nearestActiveTarget(localCandidate);
+    // Local Blobbi: resolve its attention *decision* (target identity) under the
+    // reserved local key and store it. MovableBlobbi resolves the live target
+    // position each frame from localAttentionRef + livePositionsRef — the same
+    // identity-based path remote Blobbis use.
+    if (localCandidate) {
+      localAttentionRef.current = resolveFor(localCandidate, LOCAL_ATTENTION_KEY);
     }
-  }, [NEARBY_GAZE_THRESHOLD_SQ, localGazeTargetRef, localActiveRef, myPosRef]);
+
+    // Drop attention memory for Blobbis that are no longer candidates, so the
+    // map can't grow unbounded as players come and go.
+    for (const key of attention.keys()) {
+      if (!seenKeys.has(key)) attention.delete(key);
+    }
+  }, [NEARBY_GAZE_THRESHOLD_SQ, localActiveRef, myPosRef, livePositionsRef, localAttentionRef]);
 
   // Drive nearby-gaze updates on a lightweight timer (not on render). This keeps
-  // nearbyGazeRef + localGazeTargetRef fresh even when nothing is moving (so the
+  // nearbyGazeRef + localAttentionRef fresh even when nothing is moving (so the
   // parent isn't re-rendering), without any per-frame state updates.
   useEffect(() => {
     computeNearbyGaze(); // prime immediately
@@ -1126,6 +1194,14 @@ export function MultiplayerLayer({
 
   if (error) { console.error('Multiplayer error:', error); return null;  }
 
+  // Keep the local Blobbi's live position fresh so remotes watching it track
+  // its current position (not a 400ms snapshot). MovableBlobbi re-renders the
+  // parent tree as it moves, so this stays current while the local Blobbi walks.
+  {
+    const localPos = localActiveRef?.current?.position ?? myPosRef.current;
+    if (localPos) livePositionsRef.current.set(LOCAL_ATTENTION_KEY, localPos);
+  }
+
   return (
     <div className={cn("absolute inset-0 pointer-events-none", className)}>
       {/* Render other players */}
@@ -1152,6 +1228,12 @@ export function MultiplayerLayer({
         const dx = player.position.x - last.x;
         const dy = player.position.y - last.y;
         lastPosRef.current.set(keyId, player.position);
+
+        // Keep the live-positions map fresh in render (positions only change
+        // while moving, which already re-renders here). Sprites watching this
+        // Blobbi resolve its CURRENT position from here, so gaze tracks a moving
+        // target continuously instead of snapping to a 400ms snapshot.
+        livePositionsRef.current.set(keyId, player.position);
 
         if (player.isMoving && (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05)) {
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -1220,6 +1302,7 @@ export function MultiplayerLayer({
               position={player.position}
               playerKey={keyId}
               nearbyGazeRef={nearbyGazeRef}
+              livePositionsRef={livePositionsRef}
               headingRef={headingRef}
               idSuffix={`${player.pubkey}-${player.sessionId}`}
             />

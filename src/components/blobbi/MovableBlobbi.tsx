@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { Position } from '@/lib/types';
-import type { LocalActiveState } from '@/lib/gaze';
+import type { LocalActiveState, AttentionState } from '@/lib/gaze';
+import { attentionTargetPosition, LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
 import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 
@@ -52,11 +53,19 @@ export interface MovableBlobbiProps {
   disableFloating?: boolean;
   anchorId?: string;
   /**
-   * Optional shared ref holding a nearby gaze target (percent coords) for the
-   * local Blobbi — typically the nearest moving remote Blobbi. When set, the
-   * eyes glance toward it with top priority over movement/idle gaze.
+   * Shared ref holding the local Blobbi's attention *decision* (which Blobbi to
+   * look at). Combined with {@link livePositionsRef} the eyes resolve the
+   * target's CURRENT position each frame, so gaze follows a moving target
+   * smoothly. This is the identity-based half of the single attention system;
+   * the position half is {@link livePositionsRef}.
    */
-  gazeTargetRef?: React.RefObject<Position | null>;
+  localAttentionRef?: React.MutableRefObject<AttentionState>;
+  /**
+   * Shared map (key -> current percent position) of every gaze candidate. Read
+   * together with {@link localAttentionRef} to resolve the live gaze-target
+   * position. The local Blobbi's target is keyed under {@link LOCAL_GAZE_KEY}.
+   */
+  livePositionsRef?: React.MutableRefObject<Map<string, Position>>;
   /**
    * Optional shared ref the local Blobbi writes each frame with its current
    * position + activity (e.g. `isMoving`). MultiplayerLayer reads it so remote
@@ -91,7 +100,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       scaleByYPosition = false,
       disableFloating = false,
       anchorId,
-      gazeTargetRef,
+      localAttentionRef,
+      livePositionsRef,
       localActiveRef,
     },
     ref
@@ -442,23 +452,36 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     if (!isVisible) return null;
 
-    const shouldFlip = direction.x < 0;
     const dynamicScale = getDynamicScale(position);
-    // Gaze priority: nearby moving Blobbi -> movement heading -> idle.
-    // While standing still, useIdleGaze drives ~60fps re-renders, so reading
-    // the nearby target ref here tracks a moving Blobbi smoothly without an
-    // extra animation loop.
-    const nearbyTarget = gazeTargetRef?.current ?? null;
+    // Gaze priority (self-intent first):
+    //   1. own movement  → look where it is walking
+    //   2. attention      → look at the selected active target (identity from
+    //      localAttentionRef, live position from livePositionsRef)
+    //   3. idle           → organic idle gaze
+    // Future self-intent (interactions/actions/emotes) slots in at step 1 with
+    // its own gaze rule; external attention only takes over when idle.
+    // While standing still, useIdleGaze drives ~60fps re-renders, so the
+    // attention target's *live* position is read fresh without an extra loop.
     let eyeOffset: { x: number; y: number };
-    if (nearbyTarget) {
-      const tx = nearbyTarget.x - position.x;
-      const ty = nearbyTarget.y - position.y;
-      const len = Math.sqrt(tx * tx + ty * ty) || 1;
-      eyeOffset = { x: tx / len, y: ty / len };
-    } else if (isMoving) {
+    if (isMoving) {
       eyeOffset = { x: direction.x, y: direction.y };
     } else {
-      eyeOffset = idleGaze;
+      const attentionTarget =
+        localAttentionRef && livePositionsRef
+          ? attentionTargetPosition(
+              localAttentionRef.current,
+              livePositionsRef.current,
+              LOCAL_GAZE_KEY,
+            )
+          : null;
+      if (attentionTarget) {
+        const tx = attentionTarget.x - position.x;
+        const ty = attentionTarget.y - position.y;
+        const len = Math.sqrt(tx * tx + ty * ty) || 1;
+        eyeOffset = { x: tx / len, y: ty / len };
+      } else {
+        eyeOffset = idleGaze;
+      }
     }
 
     return (
@@ -505,11 +528,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             zIndex: getDynamicZIndex(position),
           }}
         >
-          {/* ⬇️ wrapper interno recebe scale/flip */}
+          {/* ⬇️ wrapper interno recebe scale (orientação fixa; direção via gaze) */}
           <div
             className="relative"
             style={{
-              transform: `scale(${dynamicScale}) ${shouldFlip ? 'scaleX(-1)' : ''}`,
+              transform: `scale(${dynamicScale})`,
               transformOrigin: 'center center',
             }}
           >

@@ -12,7 +12,8 @@ import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
-import type { LocalActiveState } from '@/lib/gaze';
+import type { LocalActiveState, AttentionState } from '@/lib/gaze';
+import { emptyAttention } from '@/lib/gaze';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
@@ -44,9 +45,12 @@ const getTag = (event: { tags: string[][] }, name: string): string | undefined =
 export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
-  // Shared nearby-gaze target for the local Blobbi (nearest moving remote).
-  // Written by MultiplayerLayer (throttled), read by MovableBlobbi per-frame.
-  const localGazeTargetRef = useRef<Position | null>(null);
+  // Local Blobbi's attention *decision* (target identity) + the live positions
+  // map. MovableBlobbi resolves the target's CURRENT position from these each
+  // frame, so the local Blobbi tracks a moving target continuously — the exact
+  // same mechanism RemoteBlobbiSprite uses, so local and remote can't diverge.
+  const localAttentionRef = useRef<AttentionState>(emptyAttention());
+  const livePositionsRef = useRef(new Map<string, Position>());
   // Shared snapshot of the local Blobbi (position + activity), written by
   // MovableBlobbi and read by MultiplayerLayer so remote Blobbis can look at
   // the local player when it walks (or, later, emotes/acts) nearby.
@@ -526,7 +530,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         sitZIndexOffset={2} // Default offset for chairs
         size={blobbiSize}
         scaleByYPosition={true}
-        gazeTargetRef={localGazeTargetRef}
+        localAttentionRef={localAttentionRef}
+        livePositionsRef={livePositionsRef}
         localActiveRef={localActiveRef}
       />
 
@@ -540,7 +545,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           chatFunctionRef={chatFunctionRef}
           myAnchorId="my-blobbi-anchor"
           onOtherBlobbiClick={handleOtherBlobbiClick}
-          localGazeTargetRef={localGazeTargetRef}
+          localAttentionRef={localAttentionRef}
+          livePositionsRef={livePositionsRef}
           localActiveRef={localActiveRef}
         />
       )}
