@@ -124,26 +124,81 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     // Subtle idle eye micro-movements (only active while standing still).
     const idleGaze = useIdleGaze(!isMoving);
 
+    // ---------------------------------------------------------------------
+    // Per-frame attention tick.
+    //
+    // The eyeOffset is computed every *render* from localAttentionRef +
+    // livePositionsRef. But while standing still, the only thing that drives
+    // re-renders is useIdleGaze — and that intentionally STOPS emitting new
+    // offsets (returns the previous reference, so React bails out) whenever it
+    // is holding a gaze point (the majority of the time, 0.8–2.5s per hold).
+    // During those holds MovableBlobbi does not re-render, so the gaze code
+    // below never re-reads the watched target's CURRENT live position and the
+    // eyes freeze on a stale snapshot — exactly the "start → frozen → final"
+    // bug for the local Blobbi watching a moving remote.
+    //
+    // Fix: while we have an active attention target (i.e. we are watching some
+    // Blobbi) drive a dedicated rAF that forces a cheap re-render every frame,
+    // independent of idle gaze. This makes the local Blobbi track the target's
+    // CURRENT animated position continuously — the same smoothness remotes get
+    // from the parent's per-frame re-render cascade. Idle gaze is untouched.
+    const [, forceGazeFrame] = useState(0);
+    useEffect(() => {
+      // Only needed while standing still: while moving, the movement animation
+      // already re-renders every frame and gaze follows the heading.
+      if (isMoving || !localAttentionRef || !livePositionsRef) return;
+
+      let raf: number;
+      let lastTargetKey = localAttentionRef.current.targetKey;
+      const tick = () => {
+        const targetKey = localAttentionRef.current.targetKey;
+        const targetChanged = targetKey !== lastTargetKey;
+        lastTargetKey = targetKey;
+
+        // Force a re-render so the gaze resolution (eyeOffset) below re-reads
+        // the target's CURRENT live position every frame. Also force exactly
+        // one render when the target changes — in particular on RELEASE
+        // (targetKey -> null): without it nothing re-renders the component, so
+        // the eyes would keep the stale attention direction until the next
+        // idle-gaze emission (up to ~2.5s). When there is no active target and
+        // nothing changed we let idle gaze drive things and don't force renders.
+        if (targetKey || targetChanged) {
+          forceGazeFrame((n) => (n + 1) & 0xffff);
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [isMoving, localAttentionRef, livePositionsRef]);
+
     // Publish the local Blobbi's position + activity to the shared ref so
     // MultiplayerLayer can treat it as a nearby gaze target for remotes.
     // Updates whenever position changes (every frame while moving) or when the
     // moving flag flips — so remotes stop looking once the local Blobbi stops.
+    // Also mirror the position into the shared live-positions map under the
+    // reserved local key, so remotes watching the local Blobbi track its CURRENT
+    // position live (same source MovableBlobbi reads for remotes). Ref writes
+    // only — no re-render is triggered by this.
     useEffect(() => {
-      if (!localActiveRef) return;
-      localActiveRef.current = {
-        position,
-        isMoving,
-        // Future activity flags (emotes/animations/actions) can be added here.
-      };
-    }, [localActiveRef, position, isMoving]);
+      if (localActiveRef) {
+        localActiveRef.current = {
+          position,
+          isMoving,
+          // Future activity flags (emotes/animations/actions) can be added here.
+        };
+      }
+      livePositionsRef?.current.set(LOCAL_GAZE_KEY, position);
+    }, [localActiveRef, livePositionsRef, position, isMoving]);
 
     // Clear the shared local-active snapshot on unmount so remotes don't keep
     // gazing at a Blobbi that left the scene.
     useEffect(() => {
+      const livePositions = livePositionsRef?.current;
       return () => {
         if (localActiveRef) localActiveRef.current = null;
+        livePositions?.delete(LOCAL_GAZE_KEY);
       };
-    }, [localActiveRef]);
+    }, [localActiveRef, livePositionsRef]);
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };

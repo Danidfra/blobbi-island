@@ -219,6 +219,18 @@ export function MultiplayerLayer({
   const { currentLocation } = useLocation();
   const { isPositionBlocked } = useMovementBlocker();
 
+  // Live gaze position source (key -> current percent position), including the
+  // local Blobbi under LOCAL_ATTENTION_KEY. Written every animation frame by the
+  // presence rAF loop (remotes) and by the local Blobbi each frame — never via
+  // React render — so watchers track moving targets smoothly with no extra
+  // re-renders. Declared before useIslandPresence so the loop can write into it.
+  const internalLivePositionsRef = React.useRef(new Map<string, Position>());
+  const livePositionsRef = livePositionsRefProp ?? internalLivePositionsRef;
+  // The local Blobbi's own attention decision (what the local Blobbi looks at).
+  // Shared with MovableBlobbi when provided.
+  const internalLocalAttentionRef = React.useRef<AttentionState>(emptyAttention());
+  const localAttentionRef = localAttentionRefProp ?? internalLocalAttentionRef;
+
   const clickHandledRef = useRef(false);
   const lastPublishTimeRef = useRef<number>(0);
   const publishDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -538,7 +550,11 @@ export function MultiplayerLayer({
     fetch31124: fetchBlobbi31124,
     percentToPixel,
     pixelToPercent,
-    nav: navApi
+    nav: navApi,
+    // Live gaze source: the presence rAF loop writes every remote's current
+    // position here each frame, so watchers track moving targets smoothly
+    // without waiting for a React re-render.
+    livePositionsRef,
   });
 
   // ============================================================================
@@ -974,18 +990,6 @@ export function MultiplayerLayer({
   // (targetKey), not a frozen position, so sprites can resolve the target's
   // *live* position at render time and track a moving Blobbi continuously.
   const nearbyGazeRef = React.useRef(new Map<string, AttentionState>());
-  // Continuously-updated live positions (key -> current percent position) for
-  // every candidate, including the local Blobbi under LOCAL_ATTENTION_KEY.
-  // Written in render (cheap: positions only change when a Blobbi moves, which
-  // already re-renders), and read by sprites to track their attention target
-  // smoothly without the 400ms snapshot lag. Shared with MovableBlobbi when
-  // provided so the local Blobbi resolves live positions the same way.
-  const internalLivePositionsRef = React.useRef(new Map<string, Position>());
-  const livePositionsRef = livePositionsRefProp ?? internalLivePositionsRef;
-  // The local Blobbi's own attention decision (what the local Blobbi looks at).
-  // Shared with MovableBlobbi when provided.
-  const internalLocalAttentionRef = React.useRef<AttentionState>(emptyAttention());
-  const localAttentionRef = localAttentionRefProp ?? internalLocalAttentionRef;
   // Per-Blobbi attention memory (key -> AttentionState), the persistent state
   // the resolver reads/writes each tick so attention can track the most
   // recently active Blobbi and linger briefly after it goes quiet. `null` key
@@ -1046,13 +1050,17 @@ export function MultiplayerLayer({
       return nextState;
     };
 
-    // Seed live positions from the candidate set so resolution has data even
-    // before the next render (render keeps remotes fresher as they move). The
-    // local Blobbi is stored under LOCAL_ATTENTION_KEY so remotes can track it.
+    // Seed live positions only for keys not already present (e.g. a brand-new
+    // candidate before the rAF loop has written it). We do NOT overwrite or
+    // clear existing entries: the presence rAF loop (and the local frame write)
+    // are the authoritative ~60fps live source, and clobbering them here with
+    // throttled candidate snapshots would reintroduce gaze lag. Stale keys for
+    // departed players are pruned via the attention-map cleanup below; the live
+    // map self-heals as the rAF loop only writes current candidates.
     const live = livePositionsRef.current;
-    live.clear();
     for (const c of candidates) {
-      live.set(c.key === null ? LOCAL_ATTENTION_KEY : c.key, c.position);
+      const k = c.key === null ? LOCAL_ATTENTION_KEY : c.key;
+      if (!live.has(k)) live.set(k, c.position);
     }
 
     // Remote Blobbis: resolve each one's attention *decision* (target identity),
@@ -1075,9 +1083,13 @@ export function MultiplayerLayer({
     }
 
     // Drop attention memory for Blobbis that are no longer candidates, so the
-    // map can't grow unbounded as players come and go.
+    // map can't grow unbounded as players come and go. Prune the live-positions
+    // map by the same set (remote keys + the local key match between the two).
     for (const key of attention.keys()) {
       if (!seenKeys.has(key)) attention.delete(key);
+    }
+    for (const key of live.keys()) {
+      if (!seenKeys.has(key)) live.delete(key);
     }
   }, [NEARBY_GAZE_THRESHOLD_SQ, localActiveRef, myPosRef, livePositionsRef, localAttentionRef]);
 
@@ -1194,9 +1206,9 @@ export function MultiplayerLayer({
 
   if (error) { console.error('Multiplayer error:', error); return null;  }
 
-  // Keep the local Blobbi's live position fresh so remotes watching it track
-  // its current position (not a 400ms snapshot). MovableBlobbi re-renders the
-  // parent tree as it moves, so this stays current while the local Blobbi walks.
+  // Backstop for the local Blobbi's live position. The authoritative live write
+  // is MovableBlobbi's per-frame effect (under LOCAL_ATTENTION_KEY); this just
+  // refreshes it on render passes / when MovableBlobbi isn't wired to this ref.
   {
     const localPos = localActiveRef?.current?.position ?? myPosRef.current;
     if (localPos) livePositionsRef.current.set(LOCAL_ATTENTION_KEY, localPos);
@@ -1229,10 +1241,9 @@ export function MultiplayerLayer({
         const dy = player.position.y - last.y;
         lastPosRef.current.set(keyId, player.position);
 
-        // Keep the live-positions map fresh in render (positions only change
-        // while moving, which already re-renders here). Sprites watching this
-        // Blobbi resolve its CURRENT position from here, so gaze tracks a moving
-        // target continuously instead of snapping to a 400ms snapshot.
+        // Backstop write of the live-positions map in render. The authoritative
+        // live source is the presence rAF loop (useIslandPresence), which writes
+        // every frame; this just seeds/refreshes the entry on render passes too.
         livePositionsRef.current.set(keyId, player.position);
 
         if (player.isMoving && (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05)) {

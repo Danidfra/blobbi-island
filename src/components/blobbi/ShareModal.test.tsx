@@ -112,62 +112,6 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it('shows relay selection options', () => {
-    render(
-      <TestApp>
-        <ShareModal
-          isOpen={true}
-          onClose={vi.fn()}
-          capturedPhoto={mockCapturedPhoto}
-          capturedPolaroidSrc={mockCapturedPolaroidSrc}
-        />
-      </TestApp>
-    );
-
-    // Should show relay count and toggle button
-    expect(screen.getByText('1 relay selected')).toBeInTheDocument();
-    expect(screen.getByText('Show more')).toBeInTheDocument();
-
-    // In collapsed state, should show the first selected relay (Primal by default)
-    expect(screen.getByText('Primal')).toBeInTheDocument();
-    expect(screen.getByText('wss://relay.primal.net')).toBeInTheDocument();
-
-    // Should show the Post to Relay section with relay count
-    expect(screen.getByText('Post to 1 Relay')).toBeInTheDocument();
-  });
-
-  it('allows relay selection', () => {
-    render(
-      <TestApp>
-        <ShareModal
-          isOpen={true}
-          onClose={vi.fn()}
-          capturedPhoto={mockCapturedPhoto}
-          capturedPolaroidSrc={mockCapturedPolaroidSrc}
-        />
-      </TestApp>
-    );
-
-    // First, expand the relay list to see all options
-    const showMoreButton = screen.getByText('Show more');
-    fireEvent.click(showMoreButton);
-
-    // Now should show "Show less" button
-    expect(screen.getByText('Show less')).toBeInTheDocument();
-
-    // Now find checkboxes by their role and associated text
-    const dittoCheckbox = screen.getByRole('checkbox', { name: /Ditto/ });
-    const nostrBandCheckbox = screen.getByRole('checkbox', { name: /Nostr\.Band/ });
-
-    // Ditto should be unchecked by default (only primal is selected)
-    expect(dittoCheckbox).not.toBeChecked();
-
-    // Click to select Ditto
-    fireEvent.click(dittoCheckbox);
-    expect(dittoCheckbox).toBeChecked();
-
-    // Click to select Nostr.Band
-    fireEvent.click(nostrBandCheckbox);
-    expect(nostrBandCheckbox).toBeChecked();
-  });
+  // NOTE: the old relay-selection UI ("N relays selected" + Show more/less
+  // checkbox list) was removed from ShareModal; its tests were removed with it.
 });

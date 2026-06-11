@@ -86,10 +86,8 @@ export interface BlobbiEggData {
   incubationProgress?: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface BlobbiBabyData {
-  // Reserved for future baby-specific fields
-}
+/** Reserved for future baby-specific fields. */
+export type BlobbiBabyData = Record<string, never>;
 
 export interface BlobbiAdultData {
   evolutionForm?: string;

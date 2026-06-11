@@ -105,7 +105,13 @@ export function emptyAttention(): AttentionState {
  *  2. Break ties by most-recent activity, then by nearest distance — so when a
  *     second Blobbi starts moving nearby, attention shifts to the newcomer
  *     rather than locking on the closest one forever.
- *  3. If nothing is active right now, KEEP the previous target (refreshing its
+ *  3. Follow-through: `maxDistSq` is an *acquisition* radius only. The target
+ *     currently being watched is exempt from the range gate while it stays
+ *     active, so a Blobbi that caught our eye nearby is followed through its
+ *     WHOLE movement (even across the room) instead of being dropped the
+ *     moment it crosses the radius — which froze the watcher's gaze mid-move
+ *     and made it "jump" on re-acquisition.
+ *  4. If nothing is active right now, KEEP the previous target (refreshing its
  *     position if we can still see it) until {@link ATTENTION_HOLD_MS} elapses
  *     since it was last active, then release to neutral. This is the natural
  *     "look briefly, then return to idle" behaviour.
@@ -114,7 +120,7 @@ export function emptyAttention(): AttentionState {
  * @param candidates  all candidates (may include `self`; it is skipped)
  * @param prev        this Blobbi's previous AttentionState
  * @param now         current time in ms (e.g. performance.now())
- * @param maxDistSq   squared range threshold (percent-units²)
+ * @param maxDistSq   squared acquisition range threshold (percent-units²)
  */
 export function resolveAttention(
   self: GazeCandidate,
@@ -135,11 +141,14 @@ export function resolveAttention(
     const dx = other.position.x - self.position.x;
     const dy = other.position.y - self.position.y;
     const distSq = dx * dx + dy * dy;
-    if (distSq > maxDistSq) continue; // out of range
+
+    // Range-gate NEW candidates only. The currently-watched target is followed
+    // for as long as it stays active, no matter how far it walks (rule 3).
+    const isCurrent = other.key !== null && other.key === prev.targetKey;
+    if (distSq > maxDistSq && !isCurrent) continue; // out of acquisition range
 
     // Prefer higher priority. Within the same priority, prefer the candidate
     // we're already watching (recency / stability), otherwise the nearest.
-    const isCurrent = other.key !== null && other.key === prev.targetKey;
     const better =
       best === null ||
       priority > bestPriority ||

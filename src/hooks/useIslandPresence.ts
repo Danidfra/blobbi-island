@@ -49,6 +49,15 @@ interface UseIslandPresenceOptions {
   nav?: WalkableApi;
   percentToPixel: (p: Position) => { x:number; y:number };
   pixelToPercent: (p: {x:number; y:number}) => Position;
+  /**
+   * Optional shared map (player key -> current percent position) written every
+   * animation frame from the rAF loop, BEFORE the throttled `setPlayers`. This
+   * is the truly-live position source for gaze tracking: consumers (local or
+   * remote watchers) can read a target's current position at ~60fps without
+   * depending on a React re-render. Keyed identically to `players`
+   * (`${pubkey}:${sessionId}`).
+   */
+  livePositionsRef?: React.MutableRefObject<Map<string, Position>>;
 }
 
 interface UseIslandPresenceReturn {
@@ -238,6 +247,18 @@ const animatePlayers = useCallback(() => {
 
   playersAnimRef.current = updated;
 
+  // Mirror every animated position into the shared live-positions ref EACH
+  // FRAME (~60fps), before the throttled setPlayers below. This is the live
+  // gaze source: watchers read a target's current position here without waiting
+  // for a React re-render, so eyes track moving targets smoothly. No re-render
+  // is triggered by this write.
+  const livePositions = opts.livePositionsRef?.current;
+  if (livePositions) {
+    for (const [key, anim] of updated) {
+      livePositions.set(key, anim.pos);
+    }
+  }
+
   if (needsUpdate) {
     setPlayers(prev => {
       const next = new Map(prev);
@@ -250,7 +271,7 @@ const animatePlayers = useCallback(() => {
   }
 
   animationFrameRef.current = requestAnimationFrame(animatePlayers);
-}, [players, opts.percentToPixel, opts.pixelToPercent, navApi, isPositionBlocked]);
+}, [players, opts.percentToPixel, opts.pixelToPercent, opts.livePositionsRef, navApi, isPositionBlocked]);
 
   // Start animation loop
   useEffect(() => {

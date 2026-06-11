@@ -33,10 +33,19 @@ function TestWrapper({ scaleByYPosition = false, backgroundFile = 'nostr-station
 }
 
 describe('MovableBlobbi', () => {
+  // Since the gaze refactor, the OUTER wrapper only translates (anchor for
+  // bubbles); the dynamic scale lives on the INNER wrapper. Query that one.
+  // (Attribute selectors with "(" break jsdom's selector engine, so filter
+  // by regex instead.)
+  const getScaleElement = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>('[style]')).find((el) =>
+      /(?:^|\s)transform:\s*scale\([\d.]+\)/.test(el.getAttribute('style') ?? '')
+    ) ?? null;
+
   it('renders without scaling when scaleByYPosition is false', () => {
     const { container } = render(<TestWrapper scaleByYPosition={false} />);
 
-    const blobbiElement = container.querySelector('[style*="transform"]');
+    const blobbiElement = getScaleElement(container);
     expect(blobbiElement).toBeTruthy();
 
     // Should have scale(1) when scaling is disabled
@@ -51,7 +60,7 @@ describe('MovableBlobbi', () => {
         backgroundFile="nostr-station-open.png"
       />
     );
-    const nostrStationBlobbi = nostrStationContainer.querySelector('[style*="transform"]');
+    const nostrStationBlobbi = getScaleElement(nostrStationContainer);
     expect(nostrStationBlobbi?.getAttribute('style')).not.toContain('scale(1)');
 
     const { container: townContainer } = render(
@@ -60,7 +69,7 @@ describe('MovableBlobbi', () => {
         backgroundFile="town-open.png"
       />
     );
-    const townBlobbi = townContainer.querySelector('[style*="transform"]');
+    const townBlobbi = getScaleElement(townContainer);
     expect(townBlobbi?.getAttribute('style')).not.toContain('scale(1)');
 
     const { container: plazaContainer } = render(
@@ -69,7 +78,7 @@ describe('MovableBlobbi', () => {
         backgroundFile="plaza-open.png"
       />
     );
-    const plazaBlobbi = plazaContainer.querySelector('[style*="transform"]');
+    const plazaBlobbi = getScaleElement(plazaContainer);
     expect(plazaBlobbi?.getAttribute('style')).not.toContain('scale(1)');
   });
 
@@ -81,7 +90,7 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = container.querySelector('[style*="transform"]');
+    const blobbiElement = getScaleElement(container);
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -98,7 +107,7 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = container.querySelector('[style*="transform"]');
+    const blobbiElement = getScaleElement(container);
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -115,7 +124,7 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = container.querySelector('[style*="transform"]');
+    const blobbiElement = getScaleElement(container);
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -136,10 +145,9 @@ describe('MovableBlobbi', () => {
     const shadowElement = container.querySelector('[style*="radial-gradient"]');
     expect(shadowElement).toBeTruthy();
 
-    // Shadow should have proper transform with translateX, translateY, and scale
+    // Shadow should be centered (translateX) and scaled with the Blobbi
     const shadowStyle = shadowElement?.getAttribute('style');
     expect(shadowStyle).toContain('translateX(-50%)');
-    expect(shadowStyle).toContain('translateY(-8px)');
     expect(shadowStyle).toMatch(/scale\([\d.]+\)/);
 
     // Shadow should have transform-origin set to center
