@@ -10,7 +10,9 @@ import React, {
 } from 'react';
 import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { Position } from '@/lib/types';
+import type { LocalActiveState } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
 import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 
@@ -49,6 +51,19 @@ export interface MovableBlobbiProps {
   scaleByYPosition?: boolean;
   disableFloating?: boolean;
   anchorId?: string;
+  /**
+   * Optional shared ref holding a nearby gaze target (percent coords) for the
+   * local Blobbi — typically the nearest moving remote Blobbi. When set, the
+   * eyes glance toward it with top priority over movement/idle gaze.
+   */
+  gazeTargetRef?: React.RefObject<Position | null>;
+  /**
+   * Optional shared ref the local Blobbi writes each frame with its current
+   * position + activity (e.g. `isMoving`). MultiplayerLayer reads it so remote
+   * Blobbis can treat the local player as a nearby *active* gaze target and
+   * look at it while it walks (or, later, emotes/acts) nearby.
+   */
+  localActiveRef?: React.MutableRefObject<LocalActiveState | null>;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -76,6 +91,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       scaleByYPosition = false,
       disableFloating = false,
       anchorId,
+      gazeTargetRef,
+      localActiveRef,
     },
     ref
   ) => {
@@ -94,6 +111,29 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const blobbiRef = useRef<HTMLDivElement>(null);
     const { isPositionBlocked } = useMovementBlocker();
     const { isPhotoBoothOpen } = usePhotoBooth();
+    // Subtle idle eye micro-movements (only active while standing still).
+    const idleGaze = useIdleGaze(!isMoving);
+
+    // Publish the local Blobbi's position + activity to the shared ref so
+    // MultiplayerLayer can treat it as a nearby gaze target for remotes.
+    // Updates whenever position changes (every frame while moving) or when the
+    // moving flag flips — so remotes stop looking once the local Blobbi stops.
+    useEffect(() => {
+      if (!localActiveRef) return;
+      localActiveRef.current = {
+        position,
+        isMoving,
+        // Future activity flags (emotes/animations/actions) can be added here.
+      };
+    }, [localActiveRef, position, isMoving]);
+
+    // Clear the shared local-active snapshot on unmount so remotes don't keep
+    // gazing at a Blobbi that left the scene.
+    useEffect(() => {
+      return () => {
+        if (localActiveRef) localActiveRef.current = null;
+      };
+    }, [localActiveRef]);
 
     const getPixelPosition = useCallback((percentPos: Position): Position => {
       if (!containerRef.current) return { x: 0, y: 0 };
@@ -404,6 +444,22 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     const shouldFlip = direction.x < 0;
     const dynamicScale = getDynamicScale(position);
+    // Gaze priority: nearby moving Blobbi -> movement heading -> idle.
+    // While standing still, useIdleGaze drives ~60fps re-renders, so reading
+    // the nearby target ref here tracks a moving Blobbi smoothly without an
+    // extra animation loop.
+    const nearbyTarget = gazeTargetRef?.current ?? null;
+    let eyeOffset: { x: number; y: number };
+    if (nearbyTarget) {
+      const tx = nearbyTarget.x - position.x;
+      const ty = nearbyTarget.y - position.y;
+      const len = Math.sqrt(tx * tx + ty * ty) || 1;
+      eyeOffset = { x: tx / len, y: ty / len };
+    } else if (isMoving) {
+      eyeOffset = { x: direction.x, y: direction.y };
+    } else {
+      eyeOffset = idleGaze;
+    }
 
     return (
       <>
@@ -469,6 +525,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
                 transparent={true}
                 isSleeping={isSleeping}
                 eyesClosed={eyesClosed}
+                eyeOffset={eyeOffset}
                 className={cn(isMoving && "scale-105")}
               />
             </div>

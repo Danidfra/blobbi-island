@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
+import { applyGazeMarkup } from "@/blobbi/ui/lib/svg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { AccessoryOverlay } from "./AccessoryOverlay";
@@ -17,6 +18,12 @@ export interface CurrentBlobbiDisplayProps {
   showAccessories?: boolean;
   accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
   idSuffix?: string;
+  /**
+   * Normalized gaze direction (each axis roughly -1..1). When provided, the
+   * Blobbi's face is nudged slightly toward this direction to convey "looking".
+   * Undefined (the default) renders statically — used by previews/modals/cards.
+   */
+  eyeOffset?: { x: number; y: number };
   /** New: if provided, component renders THIS visual instead of fetching local hooks */
   visualOverride?: {
     name?: string;
@@ -50,11 +57,15 @@ export function CurrentBlobbiDisplay({
   accessorySizeMultiplier,
   idSuffix,
   visualOverride,
+  eyeOffset,
 }: CurrentBlobbiDisplayProps) {
   const scopeIdRef = useRef<string>(
     idSuffix ??
     `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2,8)}`
   );
+  // Whether this instance participates in eye-gaze. Stable boolean so the SVG
+  // is only re-generated when gaze is toggled on/off, never per gaze update.
+  const gazeEnabled = eyeOffset !== undefined;
   // Always run hooks, but only use data when needed (for local player)
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -115,12 +126,15 @@ export function CurrentBlobbiDisplay({
         scopeIdRef.current,
       );
 
-      setSvgContent(customizedSvg);
+      // When gaze is enabled, mark the pupils/highlights once so they can be
+      // moved via CSS variables. Static contexts (no eyeOffset) keep the SVG
+      // untouched, so previews/modals/cards render exactly as before.
+      setSvgContent(gazeEnabled ? applyGazeMarkup(customizedSvg) : customizedSvg);
     } catch (err) {
       console.error('Failed to load Blobbi SVG:', err);
       setSvgContent("");
     }
-  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed]);
+  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed, gazeEnabled]);
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -135,6 +149,19 @@ export function CurrentBlobbiDisplay({
       default: return 1.0;
     }
   };
+
+  // Build the gaze CSS variables for the wrapper. These only set
+  // `--blobbi-eye-x/y` (consumed by the injected `.blobbi-pupil` style), so
+  // only the pupils/highlights move — not the whole SVG. Undefined eyeOffset
+  // renders statically (no variables, no transition) so previews/modals/cards
+  // are unaffected.
+  const clampGaze = (v: number): number => Math.max(-1, Math.min(1, v));
+  const gazeStyle: CSSProperties | undefined = eyeOffset
+    ? ({
+        ["--blobbi-eye-x" as string]: `${clampGaze(eyeOffset.x)}`,
+        ["--blobbi-eye-y" as string]: `${clampGaze(eyeOffset.y)}`,
+      } as CSSProperties)
+    : undefined;
 
   // Show Blobbi SVG
   if (svgContent && (currentBlobbi || visualOverride)) {
@@ -163,6 +190,7 @@ export function CurrentBlobbiDisplay({
               size === "lg" && "size-20 md:size-24",
               size === "xl" && "size-28 md:size-32"
             )}
+            style={gazeStyle}
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
 
@@ -198,6 +226,7 @@ export function CurrentBlobbiDisplay({
             size === "lg" && "h-14 w-14 md:h-18 md:w-18",
             size === "xl" && "h-20 w-20 md:h-28 md:w-28"
           )}
+          style={gazeStyle}
           dangerouslySetInnerHTML={{ __html: svgContent }}
         />
 

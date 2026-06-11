@@ -12,3 +12,4 @@
 export { lightenColor, darkenColor } from './colors';
 export { uniquifySvgIds } from './ids';
 export { ensureSvgFillsContainer } from './container';
+export { applyGazeMarkup } from './gaze';

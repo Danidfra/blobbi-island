@@ -12,6 +12,7 @@ import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Furniture } from './Furniture';
 import { Position } from '@/lib/types';
+import type { LocalActiveState } from '@/lib/gaze';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
@@ -43,6 +44,13 @@ const getTag = (event: { tags: string[][] }, name: string): string | undefined =
 export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
+  // Shared nearby-gaze target for the local Blobbi (nearest moving remote).
+  // Written by MultiplayerLayer (throttled), read by MovableBlobbi per-frame.
+  const localGazeTargetRef = useRef<Position | null>(null);
+  // Shared snapshot of the local Blobbi (position + activity), written by
+  // MovableBlobbi and read by MultiplayerLayer so remote Blobbis can look at
+  // the local player when it walks (or, later, emotes/acts) nearby.
+  const localActiveRef = useRef<LocalActiveState | null>(null);
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation } = useLocation();
   const { user } = useCurrentUser();
@@ -518,6 +526,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         sitZIndexOffset={2} // Default offset for chairs
         size={blobbiSize}
         scaleByYPosition={true}
+        gazeTargetRef={localGazeTargetRef}
+        localActiveRef={localActiveRef}
       />
 
       {/* Multiplayer Layer */}
@@ -530,6 +540,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           chatFunctionRef={chatFunctionRef}
           myAnchorId="my-blobbi-anchor"
           onOtherBlobbiClick={handleOtherBlobbiClick}
+          localGazeTargetRef={localGazeTargetRef}
+          localActiveRef={localActiveRef}
         />
       )}
 
