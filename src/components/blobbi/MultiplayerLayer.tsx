@@ -430,7 +430,7 @@ export function MultiplayerLayer({
             onEvent(event as NostrEvent);
           } else if (type === 'EOSE') {
             // End of stored events, but subscription remains open for new events
-            console.debug('[Multiplayer] EOSE received, waiting for new events');
+            if (DEBUG_MP) console.debug('[Multiplayer] EOSE received, waiting for new events');
           } else if (type === 'CLOSED') {
             // Subscription was closed
             break;
@@ -599,9 +599,7 @@ export function MultiplayerLayer({
       const results = await Promise.allSettled([publishEvent(event)]);
 
       const successful = results.filter(r => r.status === 'fulfilled').length;
-      if (DEBUG_MP) {
-        console.debug('[blobbi][chat] publish results', { successful, total: results.length });
-      }
+      if (DEBUG_MP) console.debug('[blobbi][chat] publish results', { successful, total: results.length });
 
       // Update rate limit timestamp even on partial success
       lastChatPublishRef.current = now;
@@ -808,7 +806,7 @@ export function MultiplayerLayer({
       return;
     }
 
-    console.debug('[blobbi] CLICK start');
+    if (DEBUG_MP) console.debug('[blobbi] CLICK start');
 
     // Prevent handling the same click multiple times
     clickHandledRef.current = true;
@@ -968,7 +966,7 @@ export function MultiplayerLayer({
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.debug('[blobbi][mp][render] players size', players.size);
+      if (DEBUG_MP) console.debug('[blobbi][mp][render] players size', players.size);
     }
   }, [players.size]);
 
@@ -1219,7 +1217,7 @@ export function MultiplayerLayer({
       {/* Render other players */}
       {visiblePlayers.map((player, idx) => {
         if (DEBUG_MP && (idx % 8 === 0)) {
-          console.debug('[blobbi][mp][render] remote', {
+          if (DEBUG_MP) console.debug('[blobbi][mp][render] remote', {
             key: `${player.pubkey}:${player.sessionId}`,
             hasVisual: !!player.visual,
             name: player.visual?.name,
@@ -1284,7 +1282,7 @@ export function MultiplayerLayer({
                     }
                     return;
                   }
-                  console.log('[blobbi-debug][click] Remote Blobbi clicked:', {
+                  if (DEBUG_MP) console.log('[blobbi-debug][click] Remote Blobbi clicked:', {
                     pubkey: player.pubkey,
                     sessionId: player.sessionId,
                     blobbiD,

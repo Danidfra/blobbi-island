@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CHAT_MAX_LEN } from '@/lib/chat-config';
+import { DOCK_EVENTS } from '@/components/shell/dock-events';
 
 interface ChatInputBarProps {
   onSend: (text: string) => Promise<void>;
@@ -47,6 +48,13 @@ export function ChatInputBar({ onSend, disabled = false, className }: ChatInputB
       handleSend();
     }
   }, [handleSend]);
+
+  // Allow the bottom action dock to focus the chat input via a custom event.
+  useEffect(() => {
+    const focus = () => inputRef.current?.focus();
+    document.addEventListener(DOCK_EVENTS.focusChat, focus);
+    return () => document.removeEventListener(DOCK_EVENTS.focusChat, focus);
+  }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     // Stop propagation to prevent triggering world movement

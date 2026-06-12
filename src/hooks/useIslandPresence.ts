@@ -6,8 +6,12 @@ import { type PlayerAnimState } from '@/lib/multiplayer';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
-// Debug flag for multiplayer logging
-const DEBUG_MP = true;
+// Debug flag for multiplayer logging.
+// Off by default; enable in development by setting localStorage['blobbi-debug-mp'] = '1'.
+const DEBUG_MP =
+  import.meta.env.MODE === 'development' &&
+  typeof localStorage !== 'undefined' &&
+  localStorage.getItem('blobbi-debug-mp') === '1';
 
 // import { useQuery } from '@tanstack/react-query';
 import type { LocationId } from '@/lib/location-types';

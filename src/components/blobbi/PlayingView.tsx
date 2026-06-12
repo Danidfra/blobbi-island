@@ -1,9 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PlaceBackground } from './PlaceBackground';
-import { MapButton } from './MapButton';
 import { ArcadePassIcon } from './ArcadePassIcon';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
-import { LocationIndicator } from './LocationIndicator';
 
 import { InteractiveElements } from './InteractiveElements';
 import { useLocation } from '@/hooks/useLocation';
@@ -28,6 +26,8 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { dbg } from '@/lib/debug';
+import { DOCK_EVENTS } from '@/components/shell/dock-events';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -193,7 +193,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   };
 
   const handleBlobbiClick = () => {
-    console.log('[blobbi-debug][modal] Opening own Blobbi modal - clearing currentRemoteRef:', {
+    dbg('[blobbi-debug][modal] Opening own Blobbi modal - clearing currentRemoteRef:', {
       currentRemoteRefBefore: currentRemoteRef.current,
       timestamp: new Date().toISOString()
     });
@@ -213,7 +213,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // Opens read-only Blobbi info for other users.
   // Receives blobbiD (d-tag), not the sessionId.
   const handleOtherBlobbiClick = async (playerPubkey: string, blobbiD: string, blobbiVisual: BlobbiVisual) => {
-    console.log('[blobbi-debug][handleOtherBlobbiClick] Starting handleOtherBlobbiClick:', {
+    dbg('[blobbi-debug][handleOtherBlobbiClick] Starting handleOtherBlobbiClick:', {
       playerPubkey,
       blobbiD,
       blobbiVisualName: blobbiVisual.name,
@@ -229,7 +229,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       return; // evita abrir modal com dados errados de um "último" evento
     }
 
-    console.log('[blobbi-debug][setState] Setting currentRemoteRef:', {
+    dbg('[blobbi-debug][setState] Setting currentRemoteRef:', {
       playerPubkey,
       blobbiD,
       timestamp: new Date().toISOString()
@@ -237,7 +237,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
     currentRemoteRef.current = { pubkey: playerPubkey, d: blobbiD };
     if (fetchAbortRef.current) {
-      console.log('[blobbi-debug][fetch] Aborting previous fetch request');
+      dbg('[blobbi-debug][fetch] Aborting previous fetch request');
       fetchAbortRef.current.abort();
     }
     fetchAbortRef.current = new AbortController();
@@ -262,7 +262,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     setModalKey(mk);
     setRemotePreviewKey(`${playerPubkey}:${blobbiD}`);
 
-    console.log('[blobbi-debug][setState] Setting externalVisual:', {
+    dbg('[blobbi-debug][setState] Setting externalVisual:', {
       playerPubkey,
       blobbiD,
       visualName: blobbiVisual.name,
@@ -272,7 +272,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
     setExternalVisual(blobbiVisual);
 
-    console.log('[blobbi-debug][setState] Setting basic read-only data:', {
+    dbg('[blobbi-debug][setState] Setting basic read-only data:', {
       playerPubkey,
       blobbiD,
       name: basicBlobbiData.name,
@@ -285,7 +285,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
     // Fetch detailed data in the background
     try {
-      console.log('[blobbi-debug][fetch] Starting nostr.query for detailed data:', {
+      dbg('[blobbi-debug][fetch] Starting nostr.query for detailed data:', {
         playerPubkey,
         blobbiD,
         timestamp: new Date().toISOString()
@@ -298,7 +298,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         limit: 1,
       }], { signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]) });
 
-      console.log('[blobbi-debug][fetch] nostr.query completed:', {
+      dbg('[blobbi-debug][fetch] nostr.query completed:', {
         playerPubkey,
         blobbiD,
         eventsFound: events.length,
@@ -307,7 +307,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       });
 
       if (signal.aborted) {
-        console.log('[blobbi-debug][fetch] Query aborted, not applying results:', {
+        dbg('[blobbi-debug][fetch] Query aborted, not applying results:', {
           playerPubkey,
           blobbiD,
           timestamp: new Date().toISOString()
@@ -327,7 +327,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       const event = events.sort((a, b) => b.created_at - a.created_at)[0];
       const evD = event.tags.find(([k]) => k === 'd')?.[1];
 
-      console.log('[blobbi-debug][modal][debug] applying event', {
+      dbg('[blobbi-debug][modal][debug] applying event', {
         blobbiDFromEvent: evD,
         currentRemoteRef: currentRemoteRef.current,
         created_at: event.created_at,
@@ -350,7 +350,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         currentRemoteRef.current?.d === blobbiD;
 
       if (!isCurrentTarget) {
-        console.log('[blobbi-debug][fetch] Target changed, not applying results:', {
+        dbg('[blobbi-debug][fetch] Target changed, not applying results:', {
           playerPubkey,
           blobbiD,
           currentRemoteRef: currentRemoteRef.current,
@@ -372,7 +372,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         name: blobbiVisual.name || get('name') || 'Unnamed Blobbi',
       };
 
-      console.log('[blobbi-debug][setState] Setting refined externalVisual:', {
+      dbg('[blobbi-debug][setState] Setting refined externalVisual:', {
         playerPubkey,
         blobbiD,
         name: refinedVisual.name,
@@ -406,7 +406,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         mood: getTag(event, 'mood'),
       };
 
-      console.log('[blobbi-debug][setState] Setting detailed read-only data:', {
+      dbg('[blobbi-debug][setState] Setting detailed read-only data:', {
         playerPubkey,
         blobbiD,
         name: detailedBlobbiData.name,
@@ -448,7 +448,17 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     };
   }, []);
 
+  // Listen for the bottom action dock's "My Blobbi" action.
+  const openMyBlobbiRef = useRef<() => void>(() => {});
+  openMyBlobbiRef.current = handleBlobbiClick;
+  useEffect(() => {
+    const open = () => openMyBlobbiRef.current?.();
+    document.addEventListener(DOCK_EVENTS.openMyBlobbi, open);
+    return () => document.removeEventListener(DOCK_EVENTS.openMyBlobbi, open);
+  }, []);
+
   return (
+    <>
     <PlaceBackground ref={containerRef}>
       <BoundaryVisualizer boundary={boundary} />
       {/* Interactive Elements - Background specific */}
@@ -550,30 +560,27 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           localActiveRef={localActiveRef}
         />
       )}
+    </PlaceBackground>
 
-      {/* Chat Input Bar - only show when user is logged in and has a selected Blobbi */}
+      {/* ── UI overlays (NOT world objects): rendered outside the scaled
+          VirtualWorld so they keep full-stage sizing/positioning. Chat bubbles
+          remain inside the world (they portal into the Blobbi anchors). ── */}
+
+      {/* Chat Input Bar - sits above the bottom action dock */}
       {user && selectedBlobbi && (
         <ChatInputBar
           onSend={handleSendChatMessage}
           disabled={!user}
+          className="!bottom-20 sm:!bottom-24"
         />
       )}
-
-      {/* Map Button and Arcade Pass Icon - Top Right */}
+      {/* Arcade Pass Icon - top right, below the shell HUD.
+          (Map and location now live in the shell HUD / dock.) */}
       <div
-        className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center space-x-2"
+        className="absolute top-16 right-2 sm:top-20 sm:right-4 z-20 flex items-center space-x-2"
         data-block-move
       >
         <ArcadePassIcon />
-        <MapButton />
-      </div>
-
-      {/* Current Location Indicator - Top Center */}
-      <div
-        className="absolute top-2 left-1/2 transform -translate-x-1/2 sm:top-4 z-20"
-        data-block-move
-      >
-        <LocationIndicator />
       </div>
 
 
@@ -586,7 +593,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           setIsBlobbiInfoOpen(false);
           setReadOnlyBlobbiData(null);
           setExternalVisual(null);
-          console.log('[blobbi-debug][modal] Modal closed - clearing currentRemoteRef:', {
+          dbg('[blobbi-debug][modal] Modal closed - clearing currentRemoteRef:', {
             currentRemoteRefBefore: currentRemoteRef.current,
             timestamp: new Date().toISOString()
           });
@@ -611,6 +618,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         capturedPhoto={socialShareData.capturedPhoto}
         capturedPolaroidSrc={socialShareData.capturedPolaroidSrc}
       />
-    </PlaceBackground>
+    </>
   );
 }

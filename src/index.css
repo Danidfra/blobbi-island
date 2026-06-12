@@ -10,116 +10,157 @@ img {
   user-select: none;
 }
 
-/* Blobbi Design System Tokens */
+/* ==========================================================================
+   Blobbi Island — Cozy Island Design Tokens (single source of truth)
+   Daytime, warm, toy-like. One identity, light only (dark mode removed).
+   Raw palette:
+     sky #9DDCF9  ocean #55BFEA  grass #7CCB72  sand #F6DFA6
+     wood #B9855B  wood-dark #8C6239  cream #FFF4D8  cream-2 #FBEAC2
+     purple #8E6BE8 (mascot accent)  ink #3A2A1A (text)
+   ========================================================================== */
 :root {
-  --blobbi-border-light: #E9D5FF;
-  --blobbi-border-dark:  #7E22CE;
+  /* Raw island palette */
+  --island-sky: #9DDCF9;
+  --island-ocean: #55BFEA;
+  --island-grass: #7CCB72;
+  --island-grass-dark: #5BAE54;
+  --island-sand: #F6DFA6;
+  --island-wood: #B9855B;
+  --island-wood-dark: #8C6239;
+  --island-cream: #FFF4D8;
+  --island-cream-2: #FBEAC2;
+  --island-purple: #8E6BE8;
+  --island-ink: #3A2A1A;
+  --island-ink-soft: #6B5742;
+  --island-danger: #E06B5E;
+  --island-warn: #E9A23B;
 
-  --blobbi-bg-light: rgba(255, 255, 255, 0.8);
-  --blobbi-bg-dark:  rgba(31, 41, 55, 0.8);
+  /* Cozy game frame tokens */
+  --frame-wood: var(--island-wood);
+  --frame-wood-edge: var(--island-wood-dark);
+  --frame-inner-shadow: rgba(58, 42, 26, 0.18);
+  --hud-surface: var(--island-cream);
+  --dock-surface: var(--island-cream-2);
 
-  --blobbi-text-strong-light: #111827;
-  --blobbi-text-strong-dark:  #F3F4F6;
-  --blobbi-text-muted-light:  #4B5563;
-  --blobbi-text-muted-dark:   #9CA3AF;
+  /* Soft, toy-like shadows (no harsh dashboard shadows) */
+  --shadow-soft: 0 2px 6px rgba(58, 42, 26, 0.10);
+  --shadow-raised: 0 8px 20px rgba(58, 42, 26, 0.14);
+  --shadow-frame: 0 16px 40px rgba(58, 42, 26, 0.22);
+  --shadow-inset: inset 0 2px 8px rgba(58, 42, 26, 0.18);
 
-  --blobbi-yellow-500: #F59E0B;
+  /* Motion */
+  --ease-cozy: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 360ms;
+
+  /* ---- Legacy --blobbi-* aliases (remapped to the island palette) ----
+     Kept so existing .blobbi-* utility classes shift to the cozy look
+     without touching every call site. Will be retired as components migrate. */
+  --blobbi-border-light: rgba(185, 133, 91, 0.35);  /* soft wood edge */
+  --blobbi-border-dark:  rgba(185, 133, 91, 0.35);
+
+  --blobbi-bg-light: rgba(255, 244, 216, 0.9);       /* cream panel */
+  --blobbi-bg-dark:  rgba(255, 244, 216, 0.9);
+
+  --blobbi-text-strong-light: #3A2A1A;
+  --blobbi-text-strong-dark:  #3A2A1A;
+  --blobbi-text-muted-light:  #6B5742;
+  --blobbi-text-muted-dark:   #6B5742;
+
+  --blobbi-yellow-500: #E9A23B;
   --blobbi-yellow-600: #CA8A04;
-  --blobbi-amber-500:  #F59E0B;
-  --blobbi-pink-500:   #EC4899;
-  --blobbi-blue-500:   #3B82F6;
-  --blobbi-green-500:  #10B981;
-  --blobbi-purple-500: #8B5CF6;
+  --blobbi-amber-500:  #E9A23B;
+  --blobbi-pink-500:   #8E6BE8;   /* mascot accent replaces pink */
+  --blobbi-blue-500:   #55BFEA;
+  --blobbi-green-500:  #7CCB72;
+  --blobbi-purple-500: #8E6BE8;
 }
 
 
 @layer base {
   :root {
-    /* Blobbi Island Design System - Light Mode */
-    --background: 45 67% 97%; /* #FFF8EC - warm off-white */
-    --foreground: 32 33% 15%; /* #2C2419 - warm dark brown */
+    /* Blobbi Island — Cozy Island palette (light only) */
+    --background: 38 100% 96%; /* #FFF8EC warm cream-sand page behind the frame */
+    --foreground: 30 38% 16%; /* #3A2A1A warm ink */
 
-    --card: 42 43% 95%; /* #F5F0E8 - slightly darker off-white */
-    --card-foreground: 32 33% 15%; /* #2C2419 - warm dark brown */
+    --card: 43 100% 92%; /* #FFF4D8 cream panel */
+    --card-foreground: 30 38% 16%;
 
-    --popover: 42 43% 95%; /* #F5F0E8 */
-    --popover-foreground: 32 33% 15%; /* #2C2419 */
+    --popover: 43 100% 92%; /* #FFF4D8 */
+    --popover-foreground: 30 38% 16%;
 
-    --primary: 20 42% 39%; /* #8B5A3C - rich warm brown */
-    --primary-foreground: 45 67% 97%; /* #FFF8EC - base background */
+    --primary: 27 40% 54%; /* #B9855B warm wood — default CTA */
+    --primary-foreground: 43 100% 96%; /* near-cream */
 
-    --secondary: 38 29% 84%; /* #E5DDD0 - muted earthy tone */
-    --secondary-foreground: 32 33% 15%; /* #2C2419 */
+    --secondary: 43 82% 81%; /* #F6DFA6 sand */
+    --secondary-foreground: 30 38% 16%;
 
-    --muted: 38 29% 84%; /* #E5DDD0 */
-    --muted-foreground: 28 17% 37%; /* #6B5D4F - softer brown */
+    --muted: 42 88% 87%; /* #FBEAC2 cream-2 */
+    --muted-foreground: 31 24% 34%; /* #6B5742 ink-soft */
 
-    --accent: 38 29% 84%; /* #E5DDD0 */
-    --accent-foreground: 32 33% 15%; /* #2C2419 */
+    --accent: 257 73% 66%; /* #8E6BE8 mascot purple — highlights/active */
+    --accent-foreground: 43 100% 96%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 45 67% 97%;
+    --success: 113 46% 62%; /* #7CCB72 grass — play/online */
+    --success-foreground: 30 38% 16%;
 
-    --border: 38 29% 84%; /* #E5DDD0 - light warm gray */
-    --input: 38 29% 84%; /* #E5DDD0 */
-    --ring: 20 55% 40%; /* #A0522D - focus ring */
+    --destructive: 6 68% 62%; /* #E06B5E soft danger */
+    --destructive-foreground: 43 100% 96%;
 
-    --radius: 0.75rem;
+    --border: 27 40% 54%; /* wood; consumed at low opacity via soft borders */
+    --input: 42 60% 80%;
+    --ring: 197 78% 63%; /* #55BFEA ocean — focus */
 
-    --sidebar-background: 0 0% 98%;
+    --radius: 1rem;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 43 100% 92%;
+    --sidebar-foreground: 30 38% 16%;
+    --sidebar-primary: 27 40% 54%;
+    --sidebar-primary-foreground: 43 100% 96%;
+    --sidebar-accent: 43 82% 81%;
+    --sidebar-accent-foreground: 30 38% 16%;
+    --sidebar-border: 27 40% 54%;
+    --sidebar-ring: 197 78% 63%;
   }
 
+  /*
+   * Dark mode is intentionally NOT a separate theme in this phase.
+   * Blobbi Island commits to one cozy daytime identity. The .dark selector
+   * mirrors the light palette so any residual `dark:` class or `system`
+   * preference can't break the visual identity. A real "evening island"
+   * theme may be added later as a game feature, not a generic dark mode.
+   */
   .dark {
-    /* Blobbi Island Design System - Dark Mode */
-    --background: 30 13% 10%; /* #1C1814 - deep warm brown */
-    --foreground: 42 43% 90%; /* #F0E6D6 - warm off-white */
-
-    --card: 30 17% 14%; /* #252018 - slightly lighter warm brown */
-    --card-foreground: 42 43% 90%; /* #F0E6D6 */
-
-    --popover: 30 17% 14%; /* #252018 */
-    --popover-foreground: 42 43% 90%; /* #F0E6D6 */
-
-    --primary: 43 91% 39%; /* #B8860B - vibrant dark gold */
-    --primary-foreground: 30 13% 10%; /* #1C1814 - base dark background */
-
-    --secondary: 28 17% 21%; /* #3A332A - muted dark brown */
-    --secondary-foreground: 42 43% 90%; /* #F0E6D6 */
-
-    --muted: 28 17% 21%; /* #3A332A */
-    --muted-foreground: 32 17% 67%; /* #A69B8A - soft light brown */
-
-    --accent: 28 17% 21%; /* #3A332A */
-    --accent-foreground: 42 43% 90%; /* #F0E6D6 */
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 42 43% 90%;
-
-    --border: 28 17% 21%; /* #3A332A - subtle dark brown */
-    --input: 28 17% 21%; /* #3A332A */
-    --ring: 51 88% 67%; /* #DAA520 - brighter gold for focus */
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 38 100% 96%;
+    --foreground: 30 38% 16%;
+    --card: 43 100% 92%;
+    --card-foreground: 30 38% 16%;
+    --popover: 43 100% 92%;
+    --popover-foreground: 30 38% 16%;
+    --primary: 27 40% 54%;
+    --primary-foreground: 43 100% 96%;
+    --secondary: 43 82% 81%;
+    --secondary-foreground: 30 38% 16%;
+    --muted: 42 88% 87%;
+    --muted-foreground: 31 24% 34%;
+    --accent: 257 73% 66%;
+    --accent-foreground: 43 100% 96%;
+    --success: 113 46% 62%;
+    --success-foreground: 30 38% 16%;
+    --destructive: 6 68% 62%;
+    --destructive-foreground: 43 100% 96%;
+    --border: 27 40% 54%;
+    --input: 42 60% 80%;
+    --ring: 197 78% 63%;
+    --sidebar-background: 43 100% 92%;
+    --sidebar-foreground: 30 38% 16%;
+    --sidebar-primary: 27 40% 54%;
+    --sidebar-primary-foreground: 43 100% 96%;
+    --sidebar-accent: 43 82% 81%;
+    --sidebar-accent-foreground: 30 38% 16%;
+    --sidebar-border: 27 40% 54%;
+    --sidebar-ring: 197 78% 63%;
   }
 }
 
@@ -134,45 +175,32 @@ img {
 }
 
 @layer components {
-  /* Blobbi Design System Components */
+  /* ------------------------------------------------------------------ *
+   * Blobbi Island cozy components (light-only).
+   * Legacy .blobbi-* names retained so existing call sites adopt the
+   * cozy look automatically; they will be superseded by the new
+   * primitives (BlobbiModal, BlobbiButton variants, HUD chips).
+   * ------------------------------------------------------------------ */
   .blobbi-card {
-    backdrop-filter: blur(4px);
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-soft);
     border: 1px solid var(--blobbi-border-light);
     background: var(--blobbi-bg-light);
-    color: var(--blobbi-text-strong-light);
-    transition: all 0.3s ease;
-  }
-
-  .dark .blobbi-card {
-    border-color: var(--blobbi-border-dark);
-    background: var(--blobbi-bg-dark);
-    color: var(--blobbi-text-strong-dark);
+    color: var(--island-ink);
+    transition: all var(--dur) var(--ease-cozy);
   }
 
   .blobbi-card-xl {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(233, 213, 255, 0.6);
-    border-radius: 1rem;
-    backdrop-filter: blur(4px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-  }
-
-  .dark .blobbi-card-xl {
-    background-color: rgba(31, 41, 55, 0.9);
-    border-color: var(--blobbi-border-dark);
+    background-color: var(--island-cream);
+    border: 1px solid var(--blobbi-border-light);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-raised);
+    transition: all var(--dur) var(--ease-cozy);
   }
 
   .blobbi-card-xl:hover {
-    box-shadow: 0 24px 36px rgba(233, 213, 255, 0.2);
-    border-color: rgba(233, 213, 255, 0.8);
-  }
-
-  .dark .blobbi-card-xl:hover {
-    box-shadow: 0 24px 36px rgba(126, 34, 206, 0.2);
-    border-color: var(--blobbi-border-dark);
+    box-shadow: var(--shadow-frame);
+    border-color: rgba(185, 133, 91, 0.5);
   }
 
   .blobbi-section {
@@ -180,23 +208,16 @@ img {
   }
 
   .blobbi-muted {
-    color: var(--blobbi-text-muted-light);
-  }
-
-  .dark .blobbi-muted {
-    color: var(--blobbi-text-muted-dark);
+    color: var(--island-ink-soft);
   }
 
   .blobbi-hover {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform var(--dur) var(--ease-cozy), box-shadow var(--dur) var(--ease-cozy);
   }
 
   .blobbi-hover:hover {
-    box-shadow: 0 8px 24px rgba(168, 85, 247, 0.1);
-  }
-
-  .dark .blobbi-hover:hover {
-    box-shadow: 0 8px 24px rgba(126, 34, 206, 0.2);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-raised);
   }
 
   /* Badges / Chips */
@@ -208,41 +229,25 @@ img {
     font-size: 0.75rem;
     font-weight: 600;
     border: 1px solid var(--blobbi-border-light);
-    color: #7E22CE;
+    color: var(--island-wood-dark);
     border-radius: 9999px;
     background: transparent;
   }
 
-  .dark .blobbi-badge {
-    border-color: var(--blobbi-border-dark);
-    color: #C4B5FD;
-  }
-
   .blobbi-badge-soft-amber {
     border-color: transparent;
-    background: #FEF3C7;
-    color: #92400E;
-  }
-
-  .dark .blobbi-badge-soft-amber {
-    background: #78350F;
-    color: #FDE68A;
+    background: var(--island-sand);
+    color: var(--island-wood-dark);
   }
 
   .blobbi-badge-baby {
-    background: rgba(243, 232, 255, 0.5);
-    color: #7E22CE;
-    border: 1px solid #E9D5FF;
+    background: var(--island-cream-2);
+    color: var(--island-wood-dark);
+    border: 1px solid var(--blobbi-border-light);
     font-size: 0.75rem;
     padding: 0.25rem 0.625rem;
     border-radius: 9999px;
     font-weight: 600;
-  }
-
-  .dark .blobbi-badge-baby {
-    background: rgba(126, 34, 206, 0.2);
-    color: #C4B5FD;
-    border-color: var(--blobbi-border-dark);
   }
 
   /* Buttons */
@@ -253,114 +258,76 @@ img {
     width: 100%;
     justify-content: flex-start;
     padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     border: 1px solid var(--blobbi-border-light);
-    background: transparent;
-    color: inherit;
-    transition: background-color 0.2s ease;
+    background: var(--island-cream);
+    color: var(--island-ink);
+    transition: background-color var(--dur) var(--ease-cozy), transform var(--dur-fast) var(--ease-cozy);
   }
 
   .blobbi-button:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--island-cream-2);
   }
 
-  .dark .blobbi-button {
-    border-color: var(--blobbi-border-dark);
+  .blobbi-button:active {
+    transform: scale(0.97);
   }
 
-  .dark .blobbi-button:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  /* Gradient containers */
+  /* Soft cream/sand panels (formerly purple/pink gradients) */
   .blobbi-gradient-frame {
-    background-image: linear-gradient(to bottom right, rgba(243,232,255,0.8), rgba(252,231,243,0.8));
-    border: 2px solid rgba(233, 213, 255, 0.6);
+    background-image: linear-gradient(to bottom right, var(--island-cream), var(--island-sand));
+    border: 2px solid var(--blobbi-border-light);
     border-radius: 1rem;
-    transition: border 0.3s ease;
-  }
-
-  .dark .blobbi-gradient-frame {
-    background-image: linear-gradient(to bottom right, rgba(126, 34, 206, 0.2), rgba(236, 72, 153, 0.2));
-    border-color: var(--blobbi-border-dark);
+    transition: border var(--dur) var(--ease-cozy);
   }
 
   .blobbi-gradient-frame:hover {
-    border-color: rgba(233, 213, 255, 0.8);
-  }
-
-  .dark .blobbi-gradient-frame:hover {
-    border-color: var(--blobbi-border-dark);
+    border-color: rgba(185, 133, 91, 0.55);
   }
 
   .blobbi-gradient-container {
-    background-image: linear-gradient(to bottom right, rgba(243,232,255,0.8), rgba(252,231,243,0.8));
-    border: 2px solid rgba(233, 213, 255, 0.6);
+    background-image: linear-gradient(to bottom right, var(--island-cream), var(--island-sand));
+    border: 2px solid var(--blobbi-border-light);
     border-radius: 1rem;
-    transition: border 0.3s ease;
-  }
-
-  .dark .blobbi-gradient-container {
-    background-image: linear-gradient(to bottom right, rgba(126, 34, 206, 0.2), rgba(236, 72, 153, 0.2));
-    border-color: var(--blobbi-border-dark);
+    transition: border var(--dur) var(--ease-cozy);
   }
 
   .blobbi-gradient-container:hover {
-    border-color: rgba(233, 213, 255, 0.8);
+    border-color: rgba(185, 133, 91, 0.55);
   }
 
-  .dark .blobbi-gradient-container:hover {
-    border-color: var(--blobbi-border-dark);
-  }
-
-  /* Icon colors */
-  .icon-yellow   { color: var(--blobbi-yellow-600); }
-  .icon-amber    { color: var(--blobbi-amber-500); }
-  .icon-pink     { color: var(--blobbi-pink-500); }
-  .icon-blue     { color: var(--blobbi-blue-500); }
-  .icon-green    { color: var(--blobbi-green-500); }
-  .icon-purple   { color: var(--blobbi-purple-500); }
+  /* Icon colors (remapped to island palette) */
+  .icon-yellow   { color: var(--island-warn); }
+  .icon-amber    { color: var(--island-warn); }
+  .icon-pink     { color: var(--island-purple); }
+  .icon-blue     { color: var(--island-ocean); }
+  .icon-green    { color: var(--island-grass-dark); }
+  .icon-purple   { color: var(--island-purple); }
 
   /* Status icons */
-  .blobbi-status-icon-yellow { color: #F59E0B; }
-  .blobbi-status-icon-blue   { color: #3B82F6; }
-  .blobbi-status-icon-purple { color: #8B5CF6; }
-  .blobbi-status-icon-red    { color: #EF4444; }
+  .blobbi-status-icon-yellow { color: var(--island-warn); }
+  .blobbi-status-icon-blue   { color: var(--island-ocean); }
+  .blobbi-status-icon-purple { color: var(--island-purple); }
+  .blobbi-status-icon-red    { color: var(--island-danger); }
 
   /* Text styles */
   .blobbi-text {
-    color: #111827;
-  }
-
-  .dark .blobbi-text {
-    color: #F3F4F6;
+    color: var(--island-ink);
   }
 
   .blobbi-text-muted {
-    color: #4B5563;
-  }
-
-  .dark .blobbi-text-muted {
-    color: #9CA3AF;
+    color: var(--island-ink-soft);
   }
 
   .blobbi-stat-label {
-    color: #4B5563;
-  }
-
-  .dark .blobbi-stat-label {
-    color: #9CA3AF;
+    color: var(--island-ink-soft);
   }
 
   .blobbi-stat-value {
-    color: #111827;
-    font-weight: 500;
-  }
-
-  .dark .blobbi-stat-value {
-    color: #F3F4F6;
+    color: var(--island-ink);
+    font-weight: 600;
   }
 }
 

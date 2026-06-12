@@ -22,6 +22,7 @@ import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
+import { dbg } from '@/lib/debug';
 import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
@@ -250,7 +251,7 @@ export function BlobbiInfoModal({
   // Debug logging for externalBlobbiData changes
   useEffect(() => {
     if (readOnly && externalBlobbiData) {
-      console.log('[blobbi-debug][modal] externalBlobbiData changed:', {
+      dbg('[blobbi-debug][modal] externalBlobbiData changed:', {
         name: externalBlobbiData.name,
         stage: externalBlobbiData.stage,
         generation: externalBlobbiData.generation,
@@ -263,7 +264,7 @@ export function BlobbiInfoModal({
   // Debug logging for externalVisual changes
   useEffect(() => {
     if (readOnly && externalVisual) {
-      console.log('[blobbi-debug][modal] externalVisual changed:', {
+      dbg('[blobbi-debug][modal] externalVisual changed:', {
         name: externalVisual.name,
         stage: externalVisual.stage,
         baseColor: externalVisual.baseColor,
@@ -276,7 +277,7 @@ export function BlobbiInfoModal({
 
   // Debug logging for modal open/close
   useEffect(() => {
-    console.log('[blobbi-debug][modal] Modal state changed:', {
+    dbg('[blobbi-debug][modal] Modal state changed:', {
       isOpen,
       readOnly,
       previewKey,

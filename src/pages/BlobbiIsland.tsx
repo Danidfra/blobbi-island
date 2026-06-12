@@ -3,13 +3,12 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
-import { BlobbiHeader } from "@/components/blobbi/BlobbiHeader";
-import { BlobbiGameContainer } from "@/components/blobbi/BlobbiGameContainer";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
 import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen";
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
 
-import { MobileLandscapePrompt } from "@/components/blobbi/MobileLandscapePrompt";
+import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
+import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
 import { LocationProvider } from "@/contexts/LocationContext";
 
 // Lazy load heavy components
@@ -100,12 +99,17 @@ export function BlobbiIsland() {
 
   // Show landscape prompt on mobile portrait
   if (isMobile && !isLandscape) {
-    return <MobileLandscapePrompt />;
+    return <BlobbiPortraitGate />;
   }
 
   const handleBlobbiSelected = (blobbi: Blobbi) => {
     setManualSelection(blobbi);
     setGameState('playing');
+  };
+
+  const handleSwitchBlobbi = () => {
+    setManualSelection(null);
+    setGameState('selection');
   };
 
   const handleCancelSelection = () => {
@@ -118,8 +122,6 @@ export function BlobbiIsland() {
     // Otherwise stay in selection mode
     setGameState('selection');
   };
-
-
 
   const renderGameContent = () => {
     switch (gameState) {
@@ -151,36 +153,21 @@ export function BlobbiIsland() {
     }
   };
 
+  const isPlaying = gameState === 'playing';
+
   return (
     <LocationProvider>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-purple-900 theme-transition">
-        <BlobbiHeader onSwitchBlobbi={() => { setManualSelection(null); setGameState('selection'); }} />
-
-        <main className="container mx-auto py-6">
-          <BlobbiGameContainer>
-            {renderGameContent()}
-            <Suspense fallback={null}>
-              <SceneTransition />
-              <MapModal />
-            </Suspense>
-          </BlobbiGameContainer>
-        </main>
-
-        {/* Footer */}
-        <footer className="text-center py-4 text-sm blobbi-text-muted">
-          <p>
-            Vibed with{" "}
-            <a
-              href="https://soapbox.pub/mkstack"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent hover:underline font-medium"
-            >
-              MKStack
-            </a>
-          </p>
-        </footer>
-      </div>
+      <BlobbiAppShell
+        showGameChrome={isPlaying}
+        inWorld={isPlaying}
+        onOpenCollection={handleSwitchBlobbi}
+      >
+        {renderGameContent()}
+        <Suspense fallback={null}>
+          <SceneTransition />
+          <MapModal />
+        </Suspense>
+      </BlobbiAppShell>
     </LocationProvider>
   );
 }

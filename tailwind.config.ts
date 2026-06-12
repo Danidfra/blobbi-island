@@ -40,6 +40,10 @@ export default {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'
 				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
 					foreground: 'hsl(var(--muted-foreground))'
@@ -56,6 +60,21 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Raw cozy-island palette for new shell/HUD/frame components
+				island: {
+					sky: '#9DDCF9',
+					ocean: '#55BFEA',
+					grass: '#7CCB72',
+					'grass-dark': '#5BAE54',
+					sand: '#F6DFA6',
+					wood: '#B9855B',
+					'wood-dark': '#8C6239',
+					cream: '#FFF4D8',
+					'cream-2': '#FBEAC2',
+					purple: '#8E6BE8',
+					ink: '#3A2A1A',
+					'ink-soft': '#6B5742',
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -66,6 +85,15 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			boxShadow: {
+				'cozy-soft': '0 2px 6px rgba(58, 42, 26, 0.10)',
+				'cozy-raised': '0 8px 20px rgba(58, 42, 26, 0.14)',
+				'cozy-frame': '0 16px 40px rgba(58, 42, 26, 0.22)',
+				'cozy-inset': 'inset 0 2px 8px rgba(58, 42, 26, 0.18)',
+			},
+			transitionTimingFunction: {
+				cozy: 'cubic-bezier(0.34, 1.4, 0.5, 1)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -88,11 +116,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'cozy-pop': {
+					'0%': { transform: 'scale(0.92)', opacity: '0' },
+					'100%': { transform: 'scale(1)', opacity: '1' }
+				},
+				'cozy-wiggle': {
+					'0%, 100%': { transform: 'rotate(-2deg)' },
+					'50%': { transform: 'rotate(2deg)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'cozy-pop': 'cozy-pop 0.24s cubic-bezier(0.34, 1.4, 0.5, 1)',
+				'cozy-wiggle': 'cozy-wiggle 0.5s ease-in-out'
 			},
 			cursor: {
 				pickaxe: "url('/assets/interactive/games/cursor-pickaxe.png') 0 0, auto",

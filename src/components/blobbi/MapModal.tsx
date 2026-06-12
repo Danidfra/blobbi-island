@@ -188,8 +188,6 @@ export function MapModal({ className }: MapModalProps) {
   if (!isMapModalOpen) return null;
 
   const handleLocationClick = (locationId: LocationId) => {
-    console.log(`Clicked location: ${locationId}`);
-
     // Set the new location and close modal for all locations
     setCurrentLocation(locationId);
     setIsMapModalOpen(false);
