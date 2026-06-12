@@ -65,15 +65,24 @@ export function BlobbiActionDock({ compact = false, inWorld = true, className }:
     document.dispatchEvent(
       new CustomEvent<SendChatDetail>(DOCK_EVENTS.sendChat, { detail: { text } }),
     );
-    // Sending a message closes chat mode and restores the normal dock.
-    closeChat();
-  }, [message, closeChat]);
+    // Keep chat mode open for longer conversations: clear the input and keep
+    // focus so the user can immediately type again. Chat mode only closes via
+    // the X button, Escape, or a location change (handled below).
+    setMessage("");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [message]);
 
   // Allow other UI (e.g. a future button) to open chat via the existing event.
   useEffect(() => {
     document.addEventListener(DOCK_EVENTS.focusChat, openChat);
     return () => document.removeEventListener(DOCK_EVENTS.focusChat, openChat);
   }, [openChat]);
+
+  // Close chat mode when the player changes location/screen. Chat otherwise
+  // stays open across sends so longer conversations don't require re-opening.
+  useEffect(() => {
+    closeChat();
+  }, [currentLocation, closeChat]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

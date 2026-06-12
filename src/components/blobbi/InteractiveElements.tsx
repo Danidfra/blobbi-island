@@ -2,7 +2,7 @@ import { FoodShopModal } from './FoodShopModal';
 import { PhotoBoothModal } from './PhotoBoothModal';
 import { ShareModal } from './ShareModal';
 import { NostrHubModal } from '@/components/NostrHubModal';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
@@ -15,6 +15,33 @@ import { NoPassModal } from './NoPassModal';
 import { GameModal } from './GameModal';
 import { Button } from '@/components/ui/button';
 import { Position } from '@/lib/types';
+import { usePendingInteraction, type RequestInteractionOptions } from '@/hooks/usePendingInteraction';
+
+/**
+ * Compute a walk-to target (world-surface percent) from an interactive
+ * element's rect. Uses the element's horizontal center and a point near its
+ * base (feet/doorway level) so the Blobbi walks to the floor in front of the
+ * object rather than into its visual center. The result is relative to the
+ * `[data-world-surface]` container; MovableBlobbi.goTo will clamp it into the
+ * movement boundary.
+ */
+function computeBaseCenterTarget(el: Element): Position | null {
+  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
+  if (!surface) return null;
+  const surfaceRect = surface.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
+
+  const centerX = rect.left + rect.width / 2;
+  // Aim slightly above the very bottom so the point sits on the floor in front
+  // of the object rather than clipped by its lowest pixels.
+  const baseY = rect.bottom - rect.height * 0.1;
+
+  return {
+    x: ((centerX - surfaceRect.left) / surfaceRect.width) * 100,
+    y: ((baseY - surfaceRect.top) / surfaceRect.height) * 100,
+  };
+}
 
 // BackArrow component using SVG
 function BackArrow({ className, onClick }: { className?: string; onClick?: () => void }) {
@@ -60,6 +87,14 @@ interface InteractiveElementProps {
   slideDirection?: 'right' | 'left' | 'up' | 'down';
   isHovered?: boolean;
   type?: 'chair' | 'default';
+  /**
+   * When provided, clicking/tapping this element does NOT fire `onClick`
+   * immediately. Instead the element computes a floor target near its base and
+   * requests a walk-to-interact; `onClick` only fires once the Blobbi is close
+   * enough. Used for doors / navigation / modal-opening items. Chairs and
+   * decorative items leave this undefined and keep their existing behavior.
+   */
+  requestInteraction?: (opts: RequestInteractionOptions) => void;
   chairConfig?: {
     sleepOnSeat?: boolean;
     seatAnchor?: {
@@ -80,27 +115,52 @@ function InteractiveElement({
   slideDirection = 'right',
   isHovered,
   type,
+  requestInteraction,
   chairConfig
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSelfHovered, setIsSelfHovered] = useState(false);
+  // Touch-driven "active" feedback so mobile gets a visual cue equivalent to
+  // desktop hover while the Blobbi walks toward the target.
+  const [isTouchActive, setIsTouchActive] = useState(false);
 
-  const finalIsHovered = isHovered !== undefined ? isHovered : isSelfHovered;
+  const finalIsHovered = isHovered !== undefined ? isHovered : (isSelfHovered || isTouchActive);
 
-  const handleInteraction = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleInteraction = (event: React.MouseEvent<HTMLDivElement>, isTouch = false) => {
     event.stopPropagation();
     if (!onClick) return;
 
-    if (animated && effect !== 'door' && effect !== 'slide') {
+    // Tap-pop animation is only appropriate for small 'scale' items. Doors and
+    // large overlay images ('door'/'opacity'/'slide') must not pop/jump.
+    if (animated && effect === 'scale') {
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 300);
     }
 
-    // For chairs, pass additional data
+    // Chairs keep their existing immediate walk-to-sit behavior.
     if (type === 'chair') {
       const chairId = alt.replace(/\s+/g, '-').toLowerCase();
       onClick(event, chairId, chairConfig);
       return;
+    }
+
+    // Walk-to-interact: defer the action until the Blobbi reaches the target.
+    if (requestInteraction) {
+      const target = computeBaseCenterTarget(event.currentTarget);
+      if (target) {
+        // Show active/touched feedback immediately (mobile parity with hover).
+        setIsTouchActive(true);
+        requestInteraction({
+          target,
+          touch: isTouch,
+          action: () => {
+            setIsTouchActive(false);
+            onClick(event);
+          },
+          onCancel: () => setIsTouchActive(false),
+        });
+        return;
+      }
     }
 
     onClick(event);
@@ -146,7 +206,10 @@ function InteractiveElement({
         'cursor-pointer select-none',
         effect === 'scale' && animated && 'transition-all duration-300 ease-out hover:scale-110',
         effect === 'door' && 'opacity-0 hover:opacity-100',
-        isAnimating && effect !== 'door' && 'animate-tap',
+        // Mobile parity: a tap keeps doors visible while the Blobbi walks over.
+        // Visibility only — no scale/transform, so large doors don't jump.
+        effect === 'door' && isTouchActive && 'opacity-100',
+        isAnimating && effect === 'scale' && 'animate-tap',
         className
       )}
       data-block-move
@@ -155,7 +218,7 @@ function InteractiveElement({
       onMouseLeave={() => setIsSelfHovered(false)}
       onTouchStart={(e) => {
         e.preventDefault(); // evita click extra depois do touch
-        handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>);
+        handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>, true);
       }}
       onPointerDown={(e) => {
         e.stopPropagation();
@@ -170,7 +233,9 @@ function InteractiveElement({
         alt={alt}
         className={cn(
           'w-full h-full object-contain',
-          effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100'
+          effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100',
+          // Mobile parity: keep "on" overlay visible while walking after a tap.
+          effect === 'opacity' && isTouchActive && 'opacity-100'
         )}
       />
     </div>
@@ -204,6 +269,48 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   const [seatedChairId, setSeatedChairId] = useState<string | null>(null);
   const [_isSeated, _setIsSeated] = useState(false);
   const [_eyesClosed, _setEyesClosed] = useState(false);
+
+  // Walk-to-interact model for doors / navigation / modal-opening items.
+  // Reuses the existing movement system (blobbiRef.goTo) and fires the action
+  // only once the Blobbi reaches the target. Cancelled when the location or the
+  // selected Blobbi changes (cancelDeps), on unmount, and when the user clicks
+  // a different world point (handled by the world-surface listener below).
+  const { requestInteraction, cancel: cancelPendingInteraction, hasPending } =
+    usePendingInteraction({
+      blobbiRef,
+      cancelKey: `${currentLocation}:${selectedBlobbi?.id ?? ''}`,
+    });
+
+  // Cancel a pending interaction when the user clicks/taps a *different* world
+  // point. Interactive elements carry data-block-move and stopPropagation, so a
+  // world-surface pointerdown that reaches here means the player tapped empty
+  // ground (or chose another destination) — abandon the pending interaction.
+  //
+  // We resolve the single [data-world-surface] element directly (the local
+  // containerRef is only attached in some location branches, so relying on it
+  // would silently disable cancellation in most rooms). The listener is bound
+  // in the capture phase so it runs even though MovableBlobbi also listens on
+  // the same surface, and regardless of interactive elements' stopPropagation.
+  useEffect(() => {
+    const surface = document.querySelector('[data-world-surface]') as HTMLElement | null;
+    if (!surface) return;
+
+    const onWorldPointerDown = (ev: Event) => {
+      if (!hasPending()) return;
+      const targetEl = ev.target as Element | null;
+      // Ignore clicks that originate on UI / interactive elements; those manage
+      // their own pending lifecycle (and remote Blobbi clicks must not cancel).
+      if (targetEl?.closest('[data-block-move]')) return;
+      cancelPendingInteraction();
+    };
+
+    surface.addEventListener('pointerdown', onWorldPointerDown, { capture: true });
+    surface.addEventListener('touchstart', onWorldPointerDown, { capture: true });
+    return () => {
+      surface.removeEventListener('pointerdown', onWorldPointerDown, { capture: true });
+      surface.removeEventListener('touchstart', onWorldPointerDown, { capture: true });
+    };
+  }, [cancelPendingInteraction, hasPending, currentLocation]);
 
 
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
@@ -312,6 +419,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             alt="Arcade Door"
             animated={false}
             onClick={() => setIsMapModalOpen(true)}
+            requestInteraction={requestInteraction}
             effect="door"
             className="absolute bottom-[22.5%] left-[16.3%]  w-[18.8%] z-15"
       />
@@ -320,6 +428,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             alt="back-yard-door"
             animated={false}
             onClick={() => setCurrentLocation('back-yard')}
+            requestInteraction={requestInteraction}
             effect="door"
             className="absolute bottom-[22.8%] right-[16.5%]  w-[18%] z-15"
       />
@@ -333,6 +442,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
         alt="Go back to home"
         animated={false}
         onClick={() => setCurrentLocation('home')}
+        requestInteraction={requestInteraction}
         effect="door"
         className="absolute bottom-[22.8%] right-[16.5%] w-[18%] z-15"
       />
@@ -361,6 +471,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               slideDirection="right"
               className="scale-x-[-1]"
               onClick={handleElevatorClick}
+              requestInteraction={requestInteraction}
               isHovered={isHovered}
             />
             <InteractiveElement
@@ -369,6 +480,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               effect="slide"
               slideDirection="right"
               onClick={handleElevatorClick}
+              requestInteraction={requestInteraction}
               isHovered={isHovered}
             />
           </div>
@@ -578,6 +690,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 effect='opacity'
                 className='absolute'
                 onClick={handleTicketPurchase}
+                requestInteraction={requestInteraction}
               />
             </div>
 
@@ -874,6 +987,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               effect="opacity"
               className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
               onClick={() => setIsPhotoBoothModalOpen(true)}
+              requestInteraction={requestInteraction}
             />
           </div>
 
@@ -889,6 +1003,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               effect="opacity"
               className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
               onClick={() => setCurrentLocation('clothing-store-inside')}
+              requestInteraction={requestInteraction}
             />
           </div>
 
@@ -918,6 +1033,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               effect="opacity"
               className="absolute bottom-0"
               onClick={() => setIsFoodShopModalOpen(true)}
+              requestInteraction={requestInteraction}
             />
           </div>
           <div>
@@ -931,6 +1047,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               effect="opacity"
               className="absolute bottom-0"
               onClick={() => setIsFoodShopModalOpen(true)}
+              requestInteraction={requestInteraction}
             />
           </div>
         </div>
@@ -1037,6 +1154,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Arcade Door"
               animated={false}
               onClick={() => setCurrentLocation('arcade')}
+              requestInteraction={requestInteraction}
               effect="door"
               className="absolute bottom-0 right-0  w-[40%] z-15"
             />
@@ -1054,6 +1172,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Stage Door"
               animated={false}
               onClick={() => setCurrentLocation('stage')}
+              requestInteraction={requestInteraction}
               effect="opacity"
               className="absolute bottom-0 -right-[1%]  w-[47%] z-15"
             />
@@ -1071,6 +1190,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Shop Door"
               animated={false}
               onClick={() => setCurrentLocation('shop')}
+              requestInteraction={requestInteraction}
               effect="door"
               className="absolute bottom-0 left-0  w-[60%] z-15"
             />
@@ -1155,6 +1275,7 @@ if (backgroundFile === 'nostr-station-open.png') {
             alt="Nostr Station Door"
             animated={false}
             onClick={() => setCurrentLocation('nostr-station-inside')}
+            requestInteraction={requestInteraction}
             effect="door"
             className="absolute bottom-0 left-[10%] w-[31%] z-15"
           />
@@ -1175,6 +1296,7 @@ if (backgroundFile === 'nostr-station-open.png') {
             alt="Cave"
             animated={false}
             onClick={() => setCurrentLocation('cave-open')}
+            requestInteraction={requestInteraction}
             effect="opacity"
             className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-[214px]"
           />
@@ -1193,6 +1315,7 @@ if (backgroundFile === 'nostr-station-open.png') {
             alt="Cave"
             animated={false}
             onClick={() => setCurrentLocation('mine')}
+            requestInteraction={requestInteraction}
             effect="scale"
             className="w-[80%]"
           />
@@ -1234,6 +1357,7 @@ if (backgroundFile === 'plaza-open.png') {
             alt="Plaza Door"
             animated={false}
             onClick={() => setCurrentLocation('plaza-inside')}
+            requestInteraction={requestInteraction}
             effect="door"
             className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[7.6%] z-11"
           />
