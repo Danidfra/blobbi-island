@@ -30,13 +30,41 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
         )}
       >
         {/*
+          Letterbox fill (visual only). Because the playable world is a fixed
+          1046×697 box scaled uniformly + centered, devices whose aspect ratio
+          differs from ~3:2 show empty margins. We fill those margins with a
+          blurred, scaled, dimmed copy of the SAME location background so the
+          empty space looks intentional. This layer:
+            - duplicates only the background image (no world objects),
+            - is purely decorative: pointer-events-none + aria-hidden,
+            - has NO data-world-surface and no interactive children,
+            - sits BELOW the sharp, centered VirtualWorld.
+        */}
+        {shouldShowImage && (
+          <div
+            aria-hidden
+            className="absolute inset-0 overflow-hidden pointer-events-none"
+          >
+            <img
+              src={backgroundImage}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl"
+            />
+            {/* Subtle dark/cream overlay so the world reads as the focus. */}
+            <div className="absolute inset-0 bg-island-ink/40 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-island-cream/10" />
+          </div>
+        )}
+
+        {/*
           Fixed virtual world coordinate space (1046×697), uniformly scaled to
           fit. The background image AND the clickable world surface both live
           inside it so every percent-positioned and px/rem-sized world object
           shares one consistent coordinate system. UI/HUD/dock/chat/modals are
           rendered outside this layer and do not scale as world objects.
         */}
-        <VirtualWorld>
+        <VirtualWorld className="relative z-[1]">
           {/* Background Image */}
           <>
             <img

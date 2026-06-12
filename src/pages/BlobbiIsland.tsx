@@ -136,6 +136,7 @@ export function BlobbiIsland() {
           <BlobbiSelectionScreen
             onBlobbiSelected={handleBlobbiSelected}
             onCancel={handleCancelSelection}
+            canClose={!!selectedBlobbi}
           />
         );
 

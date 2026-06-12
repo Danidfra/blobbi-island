@@ -1,4 +1,4 @@
-import { Settings, PawPrint } from "lucide-react";
+import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "@/hooks/useLocation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { RelaySelector } from "@/components/RelaySelector";
 import { CurrentBlobbiDisplay } from "@/components/blobbi/CurrentBlobbiDisplay";
-import { LocationPill, OnlineCountChip, HudIconButton, ActiveBlobbiChip } from "./hud-primitives";
+import { LocationPill, OnlineCountChip, ActiveBlobbiChip } from "./hud-primitives";
 
 // Friendly display names (kept in sync with LocationIndicator).
 const LOCATION_NAMES: Record<LocationId, string> = {
@@ -44,9 +44,8 @@ interface BlobbiHUDProps {
 /**
  * BlobbiHUD — the in-game top HUD (replaces the website navbar).
  *
- * Left: Blobbi Island wordmark (wooden sign feel).
- * Center: current location pill.
- * Right: online count, active-Blobbi chip, collection, settings.
+ * Left: current location pill (the HUD focuses on location only).
+ * Right: online count, active-Blobbi chip (collection/switch entry), settings.
  *
  * Carries `data-block-move` so taps on the HUD never move the Blobbi. Relay /
  * network settings live behind the Settings popover, not in the main bar.
@@ -59,33 +58,24 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection }: Bl
 
   return (
     <div
-      data-block-move
       className={cn(
-        "flex items-center justify-between gap-2",
+        // Root spans full width; transparent gaps must let world clicks through,
+        // so the root is pointer-events-none and each cluster re-enables them.
+        "pointer-events-none flex items-center justify-between gap-2",
         compact
           ? "px-2 pt-[max(0.4rem,env(safe-area-inset-top))] pb-2"
           : "px-3 sm:px-4 pt-3 pb-2",
       )}
     >
-      {/* Left: wordmark */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full bg-island-wood text-island-cream font-bold shadow-cozy-soft border border-island-wood-dark/40 shrink-0",
-            compact ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
-          )}
-        >
-          <span aria-hidden>🏝️</span>
-          {!compact && <span>Blobbi Island</span>}
-        </div>
-        {/* Location pill */}
+      {/* Left: current location only */}
+      <div data-block-move className="pointer-events-auto flex items-center gap-2 min-w-0">
         <div className="min-w-0">
           <LocationPill label={locationName} size={size} />
         </div>
       </div>
 
       {/* Right: status + actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div data-block-move className="pointer-events-auto flex items-center gap-2 shrink-0">
         {typeof onlineCount === "number" && <OnlineCountChip count={onlineCount} size={size} />}
 
         {user && (
@@ -95,17 +85,9 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection }: Bl
               showFallback={false}
               transparent
               showAccessories={false}
+              className="size-full"
             />
           </ActiveBlobbiChip>
-        )}
-
-        {onOpenCollection && (
-          <HudIconButton
-            size={size}
-            label="My Blobbis"
-            onClick={onOpenCollection}
-            icon={<PawPrint className="size-5 text-island-wood-dark" />}
-          />
         )}
 
         {/* Settings (relay/network tucked away here, not in the bar) */}

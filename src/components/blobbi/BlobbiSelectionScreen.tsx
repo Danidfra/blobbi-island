@@ -6,14 +6,20 @@ import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile, useSetCurrentCompanion } from "@/hooks/useBlobbonautProfile";
 import { BlobbiCard } from "./BlobbiCard";
 import { BlobbiLoadingScreen } from "./BlobbiLoadingScreen";
-import { ExternalLink, ArrowLeft } from "lucide-react";
+import { ExternalLink, ArrowLeft, X } from "lucide-react";
 
 interface BlobbiSelectionScreenProps {
   onBlobbiSelected: (blobbi: Blobbi) => void;
   onCancel?: () => void;
+  /**
+   * Whether this screen can be dismissed without selecting a Blobbi (true when
+   * opened from the HUD during play, where the user already has an active
+   * Blobbi to return to). Shows a persistent close/back control.
+   */
+  canClose?: boolean;
 }
 
-export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSelectionScreenProps) {
+export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = false }: BlobbiSelectionScreenProps) {
   const { user } = useCurrentUser();
   const { data: blobbis, isLoading, error } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion } = useBlobbonautProfile();
@@ -30,6 +36,19 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
       }
     }
   }, [currentCompanionId, blobbis, selectedBlobbi]);
+
+  // Allow Escape to dismiss the screen when it can be closed (opened during play).
+  useEffect(() => {
+    if (!canClose) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel?.();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [canClose, onCancel]);
 
   // Show loading screen while fetching data
   if (!user || isLoading || isLoadingCompanion) {
@@ -85,7 +104,21 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel }: BlobbiSele
   };
 
   return (
-    <div className="h-full blobbi-gradient-container overflow-auto">
+    <div className="relative h-full blobbi-gradient-container overflow-auto">
+      {/* Persistent close/back control — always visible when this screen was
+          opened from the HUD during play, so the user can return to the game
+          without selecting a different Blobbi. */}
+      {canClose && (
+        <button
+          type="button"
+          onClick={() => onCancel?.()}
+          aria-label="Close"
+          title="Close"
+          className="absolute top-3 right-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95 hover:text-red-500 dark:bg-gray-800/90"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      )}
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">

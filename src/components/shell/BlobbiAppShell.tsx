@@ -1,16 +1,15 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useImmersive } from "@/hooks/useImmersive";
 import { BlobbiStage } from "./BlobbiStage";
 import { BlobbiFrame } from "./BlobbiFrame";
 import { BlobbiHUD } from "./BlobbiHUD";
 import { BlobbiActionDock } from "./BlobbiActionDock";
-import { FloatingControls } from "./FloatingControls";
 
 interface BlobbiAppShellProps {
   /** The current game screen (login / loading / selection / playing). */
   children: ReactNode;
-  /** Show the in-world HUD/dock/floating controls (true only while playing). */
+  /** Show the in-world HUD/dock (true only while playing). */
   showGameChrome?: boolean;
   /** Live online player count for the HUD (optional). */
   onlineCount?: number;
@@ -35,14 +34,12 @@ export function BlobbiAppShell({
   onOpenCollection,
   inWorld = false,
 }: BlobbiAppShellProps) {
-  const isMobile = useIsMobile();
-  const immersive = isMobile; // mobile landscape → near-fullscreen
+  const immersive = useImmersive(); // true on real phones/tablets, false on desktop/laptop
 
   const hud = showGameChrome ? (
     <BlobbiHUD compact={immersive} onlineCount={onlineCount} onOpenCollection={onOpenCollection} />
   ) : undefined;
   const dock = showGameChrome ? <BlobbiActionDock compact={immersive} inWorld={inWorld} /> : undefined;
-  const floating = showGameChrome ? <FloatingControls compact={immersive} /> : undefined;
 
   return (
     <div
@@ -59,7 +56,6 @@ export function BlobbiAppShell({
         variant={immersive ? "immersive" : "desktop"}
         hud={hud}
         dock={dock}
-        floating={floating}
       >
         <BlobbiStage fit={immersive ? "fill" : "framed"}>{children}</BlobbiStage>
       </BlobbiFrame>

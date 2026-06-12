@@ -21,13 +21,11 @@ import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { MultiplayerLayer } from './MultiplayerLayer';
-import { ChatInputBar } from '@/components/ChatInputBar';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { dbg } from '@/lib/debug';
-import { DOCK_EVENTS } from '@/components/shell/dock-events';
+import { DOCK_EVENTS, type SendChatDetail } from '@/components/shell/dock-events';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -57,7 +55,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const localActiveRef = useRef<LocalActiveState | null>(null);
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation } = useLocation();
-  const { user } = useCurrentUser();
   const { nostr } = useNostr();
   const [modalKey, setModalKey] = useState<string>('self');
   const currentRemoteRef = useRef<{ pubkey: string; d: string } | null>(null);
@@ -457,6 +454,24 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     return () => document.removeEventListener(DOCK_EVENTS.openMyBlobbi, open);
   }, []);
 
+  // Listen for chat messages sent from the bottom action dock's chat input.
+  // Send still flows through the unchanged chat function (chatFunctionRef).
+  const sendChatRef = useRef<(text: string) => Promise<void>>(async () => {});
+  sendChatRef.current = handleSendChatMessage;
+  useEffect(() => {
+    const onSendChat = (e: Event) => {
+      const detail = (e as CustomEvent<SendChatDetail>).detail;
+      const text = detail?.text?.trim();
+      if (text) {
+        sendChatRef.current?.(text).catch((err) =>
+          console.error('Failed to send chat message:', err),
+        );
+      }
+    };
+    document.addEventListener(DOCK_EVENTS.sendChat, onSendChat);
+    return () => document.removeEventListener(DOCK_EVENTS.sendChat, onSendChat);
+  }, []);
+
   return (
     <>
     <PlaceBackground ref={containerRef}>
@@ -566,14 +581,9 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           VirtualWorld so they keep full-stage sizing/positioning. Chat bubbles
           remain inside the world (they portal into the Blobbi anchors). ── */}
 
-      {/* Chat Input Bar - sits above the bottom action dock */}
-      {user && selectedBlobbi && (
-        <ChatInputBar
-          onSend={handleSendChatMessage}
-          disabled={!user}
-          className="!bottom-20 sm:!bottom-24"
-        />
-      )}
+      {/* Chat input lives in the bottom action dock (BlobbiActionDock), which
+          transforms into a compact chat input when the Chat button is pressed.
+          Sending dispatches DOCK_EVENTS.sendChat, handled above. */}
       {/* Arcade Pass Icon - top right, below the shell HUD.
           (Map and location now live in the shell HUD / dock.) */}
       <div

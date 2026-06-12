@@ -19,6 +19,18 @@ interface Location {
   };
 }
 
+/**
+ * The map art's fixed design resolution. All marker positions (percent) AND
+ * marker sizes (px) below were authored against this exact map image, so we use
+ * it as a stable "virtual map" coordinate system: marker px sizes are converted
+ * to a percentage of the rendered map width, and markers are positioned inside a
+ * box that matches the rendered image rect. This keeps everything aligned and
+ * proportional at any modal size.
+ */
+const MAP_DESIGN_WIDTH = 1046;
+const MAP_DESIGN_HEIGHT = 697;
+const MAP_ASPECT = MAP_DESIGN_WIDTH / MAP_DESIGN_HEIGHT;
+
 const LOCATIONS: Location[] = [
   {
     id: 'home',
@@ -79,8 +91,13 @@ export function MapModal({ className }: MapModalProps) {
   const { isMapModalOpen, setIsMapModalOpen, currentLocation, setCurrentLocation } = useLocation();
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const [imageDimensions, setImageDimensions] = useState<Record<string, ImageDimensions>>({});
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
+  // The rendered map rect (the largest MAP_ASPECT box that fits the stage),
+  // measured in JS so markers can be positioned/sized relative to the ACTUAL
+  // on-screen map image rather than a letterboxed container.
+  const [mapBox, setMapBox] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   // Function to load image dimensions
   const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions> => {
@@ -185,6 +202,36 @@ export function MapModal({ className }: MapModalProps) {
     loadAllImages();
   }, [isMapModalOpen, imageDimensions, loadImageDimensions]);
 
+  // Measure the stage and compute the largest MAP_ASPECT box that fits inside
+  // it (the actual rendered map rect). Markers are positioned relative to this.
+  useEffect(() => {
+    if (!isMapModalOpen) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const recompute = () => {
+      const { width, height } = stage.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      // Contain: bind by whichever dimension is the limiting constraint.
+      let w = width;
+      let h = w / MAP_ASPECT;
+      if (h > height) {
+        h = height;
+        w = h * MAP_ASPECT;
+      }
+      setMapBox((prev) =>
+        Math.abs(prev.width - w) > 0.5 || Math.abs(prev.height - h) > 0.5
+          ? { width: w, height: h }
+          : prev,
+      );
+    };
+
+    recompute();
+    const ro = new ResizeObserver(recompute);
+    ro.observe(stage);
+    return () => ro.disconnect();
+  }, [isMapModalOpen]);
+
   if (!isMapModalOpen) return null;
 
   const handleLocationClick = (locationId: LocationId) => {
@@ -211,6 +258,7 @@ export function MapModal({ className }: MapModalProps) {
       }}
     >
       <div
+        ref={stageRef}
         className="relative w-full h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
@@ -234,28 +282,35 @@ export function MapModal({ className }: MapModalProps) {
 
 
 
-        {/* Map Container */}
+        {/* Map Container — sized to the measured rendered map rect so all
+            markers (children of this box) stay aligned and proportional with
+            the map image at any modal size. */}
         <div
           ref={mapContainerRef}
-          className="relative w-full h-full flex items-center justify-center"
+          className="relative"
+          style={{
+            width: mapBox.width || undefined,
+            height: mapBox.height || undefined,
+            visibility: mapBox.width ? 'visible' : 'hidden',
+          }}
         >
           {/* Island Map Background */}
           <img
             src="/assets/map/blobbi-island.png"
             alt="Blobbi Village Map"
-            className="max-w-full max-h-full object-contain drop-shadow-2xl transition-all duration-500 ease-in-out"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto'
-            }}
+            className="absolute inset-0 w-full h-full object-fill drop-shadow-2xl transition-all duration-500 ease-in-out"
+            draggable={false}
           />
 
           {/* Location Overlays */}
           {LOCATIONS.map((location) => {
             const finalSize = calculateFinalSize(location);
             const isImageLoading = loadingImages.has(location.image);
+
+            // Convert design-pixel sizes (authored against the 1046×697 map) to
+            // a percentage of the map box so markers scale WITH the map image.
+            const widthPct = (finalSize.width / MAP_DESIGN_WIDTH) * 100;
+            const heightPct = (finalSize.height / MAP_DESIGN_HEIGHT) * 100;
 
             return (
               <button
@@ -276,8 +331,8 @@ export function MapModal({ className }: MapModalProps) {
                 style={{
                   left: `${location.position.x}%`,
                   top: `${location.position.y}%`,
-                  width: finalSize.width,
-                  height: finalSize.height,
+                  width: `${widthPct}%`,
+                  height: `${heightPct}%`,
                 }}
                 title={location.name}
                 aria-label={`Go to ${location.name}`}

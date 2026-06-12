@@ -100,9 +100,11 @@ export function HudIconButton({
 }
 
 /**
- * Active-Blobbi chip — wraps an avatar/Blobbi node in a cozy pill.
+ * Active-Blobbi chip — a circular game-style avatar button.
+ *
  * The actual Blobbi art is passed as children (e.g. CurrentBlobbiDisplay) so
- * this primitive stays decoupled from data hooks.
+ * this primitive stays decoupled from data hooks. Rendered as a perfect circle
+ * (not a stretched web pill) with the avatar centered and clipped inside.
  */
 export function ActiveBlobbiChip({
   children,
@@ -123,17 +125,15 @@ export function ActiveBlobbiChip({
       onClick={onClick}
       aria-label={name ? `Your Blobbi: ${name}` : "Your Blobbi"}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-island-wood/30 bg-island-cream/95 shadow-cozy-soft",
-        "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-[0.97]",
+        "inline-flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full",
+        "border border-island-wood/30 bg-island-cream/95 shadow-cozy-soft",
+        "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        size === "compact" ? "p-1" : "py-1 pl-1 pr-3",
+        size === "compact" ? "size-8 p-0.5" : "size-10 p-1",
         className,
       )}
     >
-      <span className={cn("shrink-0", size === "compact" ? "size-7" : "size-9")}>{children}</span>
-      {size !== "compact" && name && (
-        <span className="max-w-[7rem] truncate text-sm font-semibold text-island-ink">{name}</span>
-      )}
+      <span className="flex size-full items-center justify-center">{children}</span>
     </button>
   );
 }

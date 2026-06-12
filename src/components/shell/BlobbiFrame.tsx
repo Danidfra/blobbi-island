@@ -9,8 +9,6 @@ interface BlobbiFrameProps {
   hud?: ReactNode;
   /** Bottom action dock overlay. */
   dock?: ReactNode;
-  /** Floating controls (map, etc.) overlaid on the world. */
-  floating?: ReactNode;
   /**
    * "desktop" — cozy wood frame, centered with breathing room, aspect-locked.
    * "immersive" — near-fullscreen (mobile landscape / embed): thin frame, fills screen.
@@ -30,15 +28,14 @@ interface BlobbiFrameProps {
  * Immersive: minimal chrome, fills the available space (used for mobile
  * landscape and future embed mode).
  *
- * IMPORTANT: HUD/dock/floating overlays must each carry `data-block-move`
- * (handled by their own components) so taps don't trigger world click-to-move.
- * Only the world stage exposes `data-world-surface` (via PlaceBackground).
+ * IMPORTANT: HUD/dock overlays must each carry `data-block-move` (handled by
+ * their own components) so taps don't trigger world click-to-move. Only the
+ * world stage exposes `data-world-surface` (via PlaceBackground).
  */
 export function BlobbiFrame({
   children,
   hud,
   dock,
-  floating,
   variant = "desktop",
   className,
 }: BlobbiFrameProps) {
@@ -46,9 +43,11 @@ export function BlobbiFrame({
     return (
       <div className={cn("relative w-full h-full overflow-hidden bg-island-ink", className)}>
         <div className="absolute inset-0">{children}</div>
-        {hud && <div className="absolute inset-x-0 top-0 z-30">{hud}</div>}
-        {floating && <div className="absolute inset-0 z-20 pointer-events-none">{floating}</div>}
-        {dock && <div className="absolute inset-x-0 bottom-0 z-30">{dock}</div>}
+        {/* HUD/dock wrappers are pointer-events-none so empty space around the
+            visible controls lets world click-to-move through. The controls
+            themselves re-enable pointer events (see BlobbiHUD/BlobbiActionDock). */}
+        {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
+        {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
       </div>
     );
   }
@@ -82,16 +81,11 @@ export function BlobbiFrame({
             {/* World stage */}
             <div className="absolute inset-0">{children}</div>
 
-            {/* Floating controls (over the world, below HUD/dock) */}
-            {floating && (
-              <div className="absolute inset-0 z-20 pointer-events-none">{floating}</div>
-            )}
-
             {/* Top HUD */}
-            {hud && <div className="absolute inset-x-0 top-0 z-30">{hud}</div>}
+            {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
 
             {/* Bottom dock */}
-            {dock && <div className="absolute inset-x-0 bottom-0 z-30">{dock}</div>}
+            {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
           </div>
         </div>
       </div>
