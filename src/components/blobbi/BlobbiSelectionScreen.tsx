@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile, useSetCurrentCompanion } from "@/hooks/useBlobbonautProfile";
+import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiCard } from "./BlobbiCard";
 import { BlobbiLoadingScreen } from "./BlobbiLoadingScreen";
-import { ExternalLink, ArrowLeft, X } from "lucide-react";
+import { MascotBlobbi } from "./MascotBlobbi";
+import { ExternalLink, X, Egg, RotateCw, Sparkles } from "lucide-react";
 
 interface BlobbiSelectionScreenProps {
   onBlobbiSelected: (blobbi: Blobbi) => void;
@@ -27,15 +28,31 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
   const { mutate: setCurrentCompanion, isPending: isUpdatingCompanion } = useSetCurrentCompanion();
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
 
-  // Set initial selection based on current companion
+  // Only modern Blobbis appear in the collection UI. Legacy Blobbis (old format
+  // without a seed / proper d-tag) are excluded — never deleted or mutated.
+  const modernBlobbis = useMemo(
+    () => (blobbis ?? []).filter(isModernBlobbi),
+    [blobbis],
+  );
+
+  // Whether the user's current/active companion is a legacy Blobbi (it exists
+  // in their data but won't show as a selectable card). When true we surface a
+  // friendly notice asking them to pick a newer Blobbi to continue.
+  const currentCompanionIsLegacy = useMemo(() => {
+    if (!currentCompanionId) return false;
+    return !modernBlobbis.some((b) => b.id === currentCompanionId);
+  }, [currentCompanionId, modernBlobbis]);
+
+  // Set initial selection based on current companion — but only if that
+  // companion is a modern Blobbi that's actually selectable in the grid.
   useEffect(() => {
-    if (currentCompanionId && blobbis && !selectedBlobbi) {
-      const currentBlobbi = blobbis.find(b => b.id === currentCompanionId);
+    if (currentCompanionId && !selectedBlobbi) {
+      const currentBlobbi = modernBlobbis.find(b => b.id === currentCompanionId);
       if (currentBlobbi) {
         setSelectedBlobbi(currentBlobbi);
       }
     }
-  }, [currentCompanionId, blobbis, selectedBlobbi]);
+  }, [currentCompanionId, modernBlobbis, selectedBlobbi]);
 
   // Allow Escape to dismiss the screen when it can be closed (opened during play).
   useEffect(() => {
@@ -57,23 +74,27 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full blobbi-gradient-container p-6">
-        <Card className="max-w-md blobbi-card-xl shadow-lg border-2 border-purple-300 dark:border-purple-600">
-          <CardContent className="blobbi-section text-center space-y-4">
-            <div className="text-4xl mb-4">😞</div>
-            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Failed to load your Blobbis</h3>
-            <p className="text-sm blobbi-text-muted">
-              {error instanceof Error ? error.message : 'Unknown error occurred'}
-            </p>
-            <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-              className="w-full blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-            >
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-island-sky/60 via-island-cream to-island-sand/60 p-4 sm:p-6">
+        <div className="w-full max-w-sm rounded-3xl border-4 border-island-wood bg-island-cream p-6 text-center shadow-cozy-frame">
+          <div className="mb-2 flex justify-center">
+            <MascotBlobbi size="sm" sleeping />
+          </div>
+          <h3 className="text-lg font-bold text-island-ink">The nest is hiding</h3>
+          <p className="mt-1 text-sm text-island-ink-soft">
+            We couldn't reach your Blobbis right now.
+            {error instanceof Error && (
+              <span className="mt-1 block text-xs opacity-70">{error.message}</span>
+            )}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="mt-5 w-full rounded-full border-2 border-island-wood/40 bg-island-cream-2 text-island-ink shadow-cozy-soft transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-sand"
+            variant="outline"
+          >
+            <RotateCw className="mr-2 size-4 text-island-ocean" />
+            Try again
+          </Button>
+        </div>
       </div>
     );
   }
@@ -90,9 +111,9 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
   };
 
   const handleCancel = () => {
-    // Reset selection to current companion
-    if (currentCompanionId && blobbis) {
-      const currentBlobbi = blobbis.find(b => b.id === currentCompanionId);
+    // Reset selection to current companion (only if it's a modern, selectable one)
+    if (currentCompanionId) {
+      const currentBlobbi = modernBlobbis.find(b => b.id === currentCompanionId);
       setSelectedBlobbi(currentBlobbi || null);
     } else {
       setSelectedBlobbi(null);
@@ -103,8 +124,11 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
     }
   };
 
+  const hasBlobbis = modernBlobbis.length > 0;
+  const isAlreadyActive = !!selectedBlobbi && selectedBlobbi.id === currentCompanionId;
+
   return (
-    <div className="relative h-full blobbi-gradient-container overflow-auto">
+    <div className="relative flex h-full flex-col overflow-hidden bg-gradient-to-b from-island-sky/55 via-island-cream to-island-sand/60">
       {/* Persistent close/back control — always visible when this screen was
           opened from the HUD during play, so the user can return to the game
           without selecting a different Blobbi. */}
@@ -114,26 +138,42 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
           onClick={() => onCancel?.()}
           aria-label="Close"
           title="Close"
-          className="absolute top-3 right-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-foreground shadow-lg backdrop-blur-sm transition-transform hover:scale-105 active:scale-95 hover:text-red-500 dark:bg-gray-800/90"
+          className="absolute top-3 right-3 z-20 inline-flex size-10 items-center justify-center rounded-full bg-island-cream text-island-ink shadow-cozy-raised transition-transform duration-150 ease-cozy hover:scale-105 hover:text-island-danger active:scale-95"
         >
-          <X className="h-5 w-5" />
+          <X className="size-5" />
         </button>
       )}
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-            Choose Your Blobbi
-          </h2>
-          <p className="blobbi-text-muted">
-            Select which Blobbi you'd like to play with today
-          </p>
-        </div>
 
-        {/* Blobbi Cards Grid */}
-        {blobbis && blobbis.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
-            {blobbis.map((blobbi) => (
+      {/* Header */}
+      <div className="shrink-0 px-4 pt-5 pb-3 text-center landscape:max-md:pt-4 landscape:max-md:pb-2 sm:px-6">
+        <h2 className="text-2xl font-bold text-island-ink landscape:max-md:text-xl">
+          Your Blobbi Nest
+        </h2>
+        <p className="mt-0.5 text-sm text-island-ink-soft landscape:max-md:text-xs">
+          Choose the companion to join you on the island today
+        </p>
+      </div>
+
+      {/* Collection (scrolls; footer stays pinned) */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+        {/* Friendly notice when the current/active companion is from an older
+            format and can't be shown. Only meaningful when there are modern
+            Blobbis to switch to; the empty state covers the no-modern case. */}
+        {currentCompanionIsLegacy && hasBlobbis && (
+          <div className="mx-auto mb-4 max-w-2xl rounded-2xl border-2 border-island-wood/25 bg-island-cream-2/70 p-3 text-center shadow-cozy-soft">
+            <p className="text-sm text-island-ink">
+              <Sparkles className="mr-1 inline size-4 align-text-bottom text-island-purple" />
+              Your current Blobbi is from an older format.
+            </p>
+            <p className="mt-0.5 text-xs text-island-ink-soft">
+              Pick a newer Blobbi below to continue your island adventure.
+            </p>
+          </div>
+        )}
+
+        {hasBlobbis ? (
+          <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 landscape:max-md:grid-cols-4 landscape:max-md:gap-2.5">
+            {modernBlobbis.map((blobbi) => (
               <BlobbiCard
                 key={blobbi.id}
                 blobbi={blobbi}
@@ -145,52 +185,64 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
             ))}
           </div>
         ) : (
-          /* No Blobbis Found */
-          <Card className="border-dashed max-w-md mx-auto blobbi-card border-purple-200 dark:border-purple-700">
-            <CardContent className="py-12 px-8 text-center">
-              <div className="space-y-4">
-                <div className="text-6xl">🥚</div>
-                <h3 className="text-lg font-semibold blobbi-text">No Blobbis Found</h3>
-                <p className="blobbi-text-muted">
-                  Create your first Blobbi at blobbi.pet to get started!
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => window.open('https://blobbi.pet', '_blank')}
-                  className="w-full blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2 icon-purple" />
-                  Create Your First Blobbi
-                </Button>
+          /* Friendly empty state — no modern Blobbis to show (whether the nest
+             is truly empty or only holds older-format Blobbis). */
+          <div className="flex h-full items-center justify-center">
+            <div className="w-full max-w-sm rounded-3xl border-2 border-dashed border-island-wood/35 bg-island-cream/80 p-8 text-center shadow-cozy-soft">
+              <div className="mb-3 flex justify-center">
+                <span className="inline-flex size-16 items-center justify-center rounded-full bg-island-sand text-island-wood-dark shadow-cozy-soft">
+                  <Egg className="size-8" />
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Action Buttons */}
-        {blobbis && blobbis.length > 0 && (
-          <div className="flex justify-center gap-4 max-w-md mx-auto">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="flex-1 blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-              disabled={isUpdatingCompanion}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-
-            <Button
-              onClick={handleConfirmSelection}
-              disabled={!selectedBlobbi || isUpdatingCompanion || selectedBlobbi.id === currentCompanionId}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 font-medium theme-transition"
-            >
-              {isUpdatingCompanion ? "Updating..." :
-               selectedBlobbi?.id === currentCompanionId ? "Already Selected" : "Enter Island"}
-            </Button>
+              <h3 className="text-lg font-bold text-island-ink">
+                {currentCompanionIsLegacy ? "Time for a new Blobbi" : "Your nest is empty"}
+              </h3>
+              <p className="mt-1 text-sm text-island-ink-soft">
+                {currentCompanionIsLegacy
+                  ? "Your Blobbi is from an older format. Hatch a new one to keep playing on the island."
+                  : "Hatch your first Blobbi to start your island adventure."}
+              </p>
+              <Button
+                onClick={() => window.open('https://blobbi.pet', '_blank')}
+                className="mt-5 w-full rounded-full border-2 border-island-wood/40 bg-island-cream-2 text-island-ink shadow-cozy-soft transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-sand"
+                variant="outline"
+              >
+                <ExternalLink className="mr-2 size-4 text-island-purple" />
+                {currentCompanionIsLegacy ? "Hatch a new Blobbi" : "Hatch one at blobbi.pet"}
+              </Button>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Pinned footer action */}
+      {hasBlobbis && (
+        <div className="shrink-0 border-t-2 border-island-wood/15 bg-island-cream/80 px-4 py-3 backdrop-blur-sm sm:px-6 landscape:max-md:py-2">
+          <div className="mx-auto flex max-w-md items-center gap-3">
+            {canClose && (
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isUpdatingCompanion}
+                className="flex-1 rounded-full border-2 border-island-wood/40 bg-island-cream text-island-ink shadow-cozy-soft transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-cream-2"
+              >
+                Back
+              </Button>
+            )}
+            <Button
+              onClick={handleConfirmSelection}
+              disabled={!selectedBlobbi || isUpdatingCompanion || isAlreadyActive}
+              className="flex-1 rounded-full bg-island-purple font-bold text-white shadow-cozy-raised transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-purple/90 disabled:opacity-60"
+            >
+              {isUpdatingCompanion
+                ? "Waking them up..."
+                : isAlreadyActive
+                  ? "Already with you"
+                  : "Enter the island"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

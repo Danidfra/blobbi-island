@@ -16,6 +16,7 @@ import type { LocalActiveState, AttentionState } from '@/lib/gaze';
 import { attentionTargetPosition, LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
 import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
+import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
 
 interface MovementDirection {
   x: number;
@@ -302,7 +303,19 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
           const dx = targetPixelPos.x - currentPixelPos.x;
           const dy = targetPixelPos.y - currentPixelPos.y;
-          const moveDistance = movementSpeed * deltaTime;
+          // `movementSpeed` is expressed in FIXED virtual-world units (px/s
+          // against the 1046×697 world), not rendered screen pixels. The world
+          // is rendered at WORLD_WIDTH then scaled uniformly by VirtualWorld, so
+          // getBoundingClientRect() returns post-transform pixels where
+          // rect.width === WORLD_WIDTH * worldScale. Multiplying by that scale
+          // converts the per-frame step into the SAME on-screen visual pixels
+          // that correspond to a constant world distance — so the same
+          // world-distance takes the same time on desktop and mobile, instead
+          // of being faster on smaller (more-scaled-down) screens.
+          const worldScale = containerRef.current
+            ? containerRef.current.getBoundingClientRect().width / WORLD_WIDTH
+            : 1;
+          const moveDistance = movementSpeed * worldScale * deltaTime;
           const directionLength = Math.sqrt(dx * dx + dy * dy);
           const normalizedDx = dx / directionLength;
           const normalizedDy = dy / directionLength;

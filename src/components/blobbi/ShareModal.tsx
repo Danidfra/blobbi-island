@@ -609,7 +609,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
 
                   <Button
                     onClick={handleNostrShare}
-                    className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
+                    className="w-full mt-4 bg-island-purple hover:bg-island-purple/90 text-white shadow-cozy-soft"
                     disabled={isPosting || !user || !capturedPolaroidSrc}
                   >
                     {isPosting ? (

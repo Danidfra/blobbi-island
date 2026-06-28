@@ -431,7 +431,7 @@ export function BlobbiInfoModal({
                   alt="Blobbi background"
                   fit="cover"
                   fallback={
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-island-sky/40 to-island-sand/60" />
                   }
                 />
               </div>

@@ -1,5 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
+// Phase 3 polish: presentation only (fit-to-frame max-height/scroll + cozy island styling + friendlier copy).
+// Key generation / signup logic is unchanged.
 
 import React, { useState } from 'react';
 import { Download, Key } from 'lucide-react';
@@ -85,69 +87,69 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='sm:max-w-md p-0 overflow-hidden rounded-2xl'>
-        <DialogHeader className='px-6 pt-6 pb-0 relative'>
-          <DialogTitle className='text-xl font-semibold text-center'>
-            {step === 'generate' && 'Create Your Account'}
-            {step === 'download' && 'Download Your Key'}
-            {step === 'done' && 'Setting Up Your Account'}
+      <DialogContent className='sm:max-w-md max-h-[90dvh] flex flex-col p-0 overflow-hidden rounded-2xl border-4 border-island-wood bg-island-cream'>
+        <DialogHeader className='px-6 pt-6 pb-0 relative shrink-0'>
+          <DialogTitle className='text-xl font-semibold text-center text-island-ink'>
+            {step === 'generate' && 'Create your island passport'}
+            {step === 'download' && 'Keep your passport safe'}
+            {step === 'done' && 'Welcome to the island'}
           </DialogTitle>
-          <DialogDescription className='text-center text-muted-foreground mt-2'>
-            {step === 'generate' && 'Generate a secure key for your account'}
-            {step === 'download' && "Keep your key safe - you'll need it to log in"}
-            {step === 'done' && 'Finalizing your account setup'}
+          <DialogDescription className='text-center text-island-ink-soft mt-1'>
+            {step === 'generate' && "We'll make a passport that keeps your Blobbi safe"}
+            {step === 'download' && "You'll need this to come back later"}
+            {step === 'done' && 'Getting things ready...'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className='px-6 py-8 space-y-6'>
+        <div className='px-6 py-6 space-y-6 overflow-y-auto'>
           {step === 'generate' && (
             <div className='text-center space-y-6'>
-              <div className='p-4 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center'>
-                <Key className='w-16 h-16 text-primary' />
+              <div className='p-4 rounded-xl bg-island-cream-2/70 border-2 border-island-wood/20 flex items-center justify-center'>
+                <Key className='w-16 h-16 text-island-wood-dark' />
               </div>
-              <p className='text-sm text-gray-600 dark:text-gray-300'>
-                We'll generate a secure key for your account. You'll need this key to log in later.
+              <p className='text-sm text-island-ink-soft'>
+                We'll create a secure passport just for you. You'll use it to return to the island later.
               </p>
               <Button
                 className='w-full rounded-full py-6'
                 onClick={generateKey}
                 disabled={isLoading}
               >
-                {isLoading ? 'Generating key...' : 'Generate my key'}
+                {isLoading ? 'Creating passport...' : 'Create my passport'}
               </Button>
             </div>
           )}
 
           {step === 'download' && (
             <div className='space-y-6'>
-              <div className='p-4 rounded-lg border bg-gray-50 dark:bg-gray-800 overflow-auto'>
-                <code className='text-xs break-all'>{nsec}</code>
+              <div className='p-4 rounded-xl border-2 border-island-wood/20 bg-island-cream-2/70 overflow-auto'>
+                <code className='text-xs break-all text-island-ink'>{nsec}</code>
               </div>
 
-              <div className='text-sm text-gray-600 dark:text-gray-300 space-y-2'>
-                <p className='font-medium text-red-500'>Important:</p>
+              <div className='text-sm text-island-ink-soft space-y-2'>
+                <p className='font-medium text-island-ink'>Keep it cozy and safe:</p>
                 <ul className='list-disc pl-5 space-y-1'>
-                  <li>This is your only way to access your account</li>
+                  <li>This passport is the only way back to your Blobbi</li>
                   <li>Store it somewhere safe</li>
-                  <li>Never share this key with anyone</li>
+                  <li>Never share it with anyone</li>
                 </ul>
               </div>
 
               <div className='flex flex-col space-y-3'>
                 <Button
                   variant='outline'
-                  className='w-full'
+                  className='w-full border-island-wood/40 bg-island-cream-2 hover:bg-island-sand'
                   onClick={downloadKey}
                 >
                   <Download className='w-4 h-4 mr-2' />
-                  Download Key
+                  Save my passport
                 </Button>
 
                 <Button
                   className='w-full rounded-full py-6'
                   onClick={finishSignup}
                 >
-                  I've saved my key, continue
+                  I've saved it, enter the island
                 </Button>
               </div>
             </div>
@@ -155,7 +157,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
 
           {step === 'done' && (
             <div className='flex justify-center items-center py-8'>
-              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-primary'></div>
+              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-island-wood-dark'></div>
             </div>
           )}
         </div>

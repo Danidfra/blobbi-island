@@ -191,15 +191,15 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       data-overlay
       data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-purple-300 dark:border-purple-600 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90vh]"
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         data-block-move
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-purple-200/60 dark:border-purple-800/60 relative">
-          <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+        <div className="p-4 border-b border-island-wood/20 relative">
+          <h2 className="text-2xl font-bold text-center text-island-ink">
             🍎 Food Shop
           </h2>
           <Button
@@ -235,7 +235,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
                       value={quantities[item.id] || ''}
                       onChange={e => handleQuantityChange(item.id, e.target.value)}
                       placeholder="0"
-                      className="w-full text-center blobbi-button border-purple-200 dark:border-purple-700"
+                      className="w-full text-center blobbi-button border-island-wood/30"
                     />
                   </CardFooter>
                 </Card>
@@ -258,7 +258,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             {!currentPetId && <p className="text-xs blobbi-text-muted mt-1">Select a Blobbi to enable Blobbi inventory delivery.</p>}
           </div>
 
-          <div className="mt-4 p-4 blobbi-card rounded-lg border-purple-200 dark:border-purple-700">
+          <div className="mt-4 p-4 blobbi-card rounded-lg border-island-wood/30">
             <div className="flex justify-between items-center">
               <span className="font-bold text-lg blobbi-text">Total Cost:</span>
               <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
@@ -266,18 +266,18 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             <div className="text-right text-sm blobbi-text-muted">
               Your balance: <span className="icon-yellow font-semibold">{userCoins} coins</span>
             </div>
-            {!canAfford && <p className="text-red-500 dark:text-red-400 text-sm text-center mt-2">You don't have enough coins!</p>}
+            {!canAfford && <p className="text-island-danger text-sm text-center mt-2">You don't have enough coins!</p>}
           </div>
         </div>
 
-        <div className="p-4 border-t border-purple-200/60 dark:border-purple-800/60 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className="blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
+        <div className="p-4 border-t border-island-wood/20 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} className="blobbi-button border-island-wood/40 hover:bg-island-cream-2">
             Cancel
           </Button>
           <Button
             onClick={handleConfirmPurchase}
             disabled={!canAfford || totalCost === 0}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 font-medium theme-transition"
+            className="bg-island-purple hover:bg-island-purple/90 text-white border-0 font-medium shadow-cozy-soft theme-transition"
           >
             Confirm Purchase
           </Button>

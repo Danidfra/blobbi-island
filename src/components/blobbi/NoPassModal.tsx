@@ -10,9 +10,9 @@ interface NoPassModalProps {
 export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md blobbi-card-xl border-2 border-red-300 dark:border-red-600 rounded-2xl theme-transition">
+      <DialogContent className="max-w-md blobbi-card-xl border-2 border-island-danger/40 rounded-2xl theme-transition">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-red-600 dark:text-red-400 mb-4">
+          <DialogTitle className="text-2xl font-bold text-center text-island-danger mb-4">
             🚫 Access Denied
           </DialogTitle>
         </DialogHeader>
@@ -29,7 +29,7 @@ export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
               </p>
             </div>
 
-            <div className="blobbi-card rounded-lg p-3 mb-4 border-yellow-200 dark:border-yellow-700">
+            <div className="blobbi-card rounded-lg p-3 mb-4 border-island-warn/30">
               <p className="text-sm blobbi-text">
                 💡 Look for the ticket counter in the arcade to purchase an Arcade Pass for 20 coins.
               </p>
@@ -38,7 +38,7 @@ export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
 
           <Button
             onClick={onClose}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl border-0 font-bold theme-transition"
+            className="w-full bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
           >
             Got it!
           </Button>

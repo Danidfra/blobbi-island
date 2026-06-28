@@ -46,7 +46,7 @@ export const BackgroundLayer = forwardRef<HTMLDivElement, BackgroundLayerProps>(
 
         {/* Loading state */}
         {!shouldShowImage && (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-br from-island-cream to-island-cream-2 animate-pulse" />
         )}
 
         {/* Fallback state for error */}
@@ -58,7 +58,7 @@ export const BackgroundLayer = forwardRef<HTMLDivElement, BackgroundLayerProps>(
 
         {/* Fallback gradient if no fallback provided */}
         {imageError && !fallback && (
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900" />
+          <div className="absolute inset-0 bg-gradient-to-br from-island-sky/40 to-island-sand/60" />
         )}
       </div>
     );

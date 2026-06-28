@@ -32,7 +32,7 @@ export function SimpleBlobbiDisplay({
     return (
       <div
         className={cn(
-          'rounded-full bg-gradient-to-br from-blue-400 to-purple-500',
+          'rounded-full bg-gradient-to-br from-island-sky to-island-purple',
           'border-2 border-white shadow-lg',
           'animate-float',
           sizeClasses[size],

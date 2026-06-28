@@ -339,8 +339,8 @@ export function MapModal({ className }: MapModalProps) {
                 disabled={isImageLoading}
               >
               {isImageLoading ? (
-                <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-lg">
-                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-full h-full flex items-center justify-center bg-island-cream-2 rounded-lg">
+                  <div className="w-4 h-4 border-2 border-island-wood/40 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               ) : (
                 <img

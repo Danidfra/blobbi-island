@@ -3,6 +3,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
+import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
 import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen";
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
@@ -41,10 +42,17 @@ export function BlobbiIsland() {
   // Derive selected Blobbi synchronously -- no race condition between effects.
   // Manual selection (from the selection screen) takes priority, then falls back
   // to the current_companion from the profile event.
+  //
+  // The auto-fallback only accepts a MODERN companion: if the saved
+  // current_companion is a legacy Blobbi we deliberately resolve to null so the
+  // app routes to the selection screen (which shows a friendly "older format"
+  // notice and a modern-only grid) instead of silently entering the game with a
+  // legacy Blobbi. An explicit manualSelection always wins and is unaffected.
   const selectedBlobbi = useMemo(() => {
     if (manualSelection) return manualSelection;
     if (currentCompanionId && blobbis) {
-      return blobbis.find(b => b.id === currentCompanionId) ?? null;
+      const current = blobbis.find(b => b.id === currentCompanionId);
+      return current && isModernBlobbi(current) ? current : null;
     }
     return null;
   }, [manualSelection, currentCompanionId, blobbis]);

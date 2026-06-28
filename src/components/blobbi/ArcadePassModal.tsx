@@ -41,9 +41,9 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md blobbi-card-xl blobbi-gradient-container border-2 border-purple-300 dark:border-purple-600 rounded-2xl theme-transition">
+      <DialogContent className="max-w-md blobbi-card-xl blobbi-gradient-container border-2 border-island-wood/30 rounded-2xl theme-transition">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-4">
+          <DialogTitle className="text-2xl font-bold text-center text-island-ink mb-4">
             🎟️ Arcade Pass
           </DialogTitle>
         </DialogHeader>
@@ -61,7 +61,7 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
               </p>
             </div>
 
-            <div className="blobbi-card rounded-lg p-3 mb-4 border-blue-200 dark:border-blue-700">
+            <div className="blobbi-card rounded-lg p-3 mb-4 border-island-ocean/30">
               <p className="text-sm blobbi-text">
                 🎮 Access all arcade floors<br/>
                 🏢 Use the elevator freely<br/>
@@ -78,14 +78,14 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
             <Button
               variant="outline"
               onClick={onClose}
-              className="flex-1 blobbi-button rounded-xl border-2 border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
+              className="flex-1 blobbi-button rounded-full border-2 border-island-wood/40 hover:bg-island-cream-2"
             >
               Cancel
             </Button>
             <Button
               onClick={handlePurchasePass}
               disabled={(status.owner?.coins || 0) < 20}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl border-0 font-bold theme-transition"
+              className="flex-1 bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
             >
               Buy Ticket
             </Button>

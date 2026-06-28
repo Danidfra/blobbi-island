@@ -1,5 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
+// Phase 3 polish: presentation only (fit-to-frame max-height/scroll + cozy island styling + friendlier copy).
+// Authentication logic, hooks, and login methods are unchanged.
 
 import React, { useRef, useState } from 'react';
 import { Shield, Upload } from 'lucide-react';
@@ -96,27 +98,27 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='sm:max-w-md p-0 overflow-hidden rounded-2xl'>
-        <DialogHeader className='px-6 pt-6 pb-0 relative'>
-          <DialogTitle className='text-xl font-semibold text-center'>Log in</DialogTitle>
-          <DialogDescription className='text-center text-muted-foreground mt-2'>
-            Access your account securely with your preferred method
+      <DialogContent className='sm:max-w-md max-h-[90dvh] flex flex-col p-0 overflow-hidden rounded-2xl border-4 border-island-wood bg-island-cream'>
+        <DialogHeader className='px-6 pt-6 pb-0 relative shrink-0'>
+          <DialogTitle className='text-xl font-semibold text-center text-island-ink'>Welcome back to the island</DialogTitle>
+          <DialogDescription className='text-center text-island-ink-soft mt-1'>
+            Show your passport to come on in
           </DialogDescription>
         </DialogHeader>
 
-        <div className='px-6 py-8 space-y-6'>
+        <div className='px-6 py-6 space-y-6 overflow-y-auto'>
           <Tabs defaultValue={'nostr' in window ? 'extension' : 'key'} className='w-full'>
-            <TabsList className='grid grid-cols-3 mb-6'>
+            <TabsList className='grid grid-cols-3 mb-6 bg-island-cream-2/70'>
               <TabsTrigger value='extension'>Extension</TabsTrigger>
               <TabsTrigger value='key'>Nsec</TabsTrigger>
               <TabsTrigger value='bunker'>Bunker</TabsTrigger>
             </TabsList>
 
             <TabsContent value='extension' className='space-y-4'>
-              <div className='text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800'>
-                <Shield className='w-12 h-12 mx-auto mb-3 text-primary' />
-                <p className='text-sm text-gray-600 dark:text-gray-300 mb-4'>
-                  Login with one click using the browser extension
+              <div className='text-center p-4 rounded-xl bg-island-cream-2/70 border-2 border-island-wood/20'>
+                <Shield className='w-12 h-12 mx-auto mb-3 text-island-wood-dark' />
+                <p className='text-sm text-island-ink-soft mb-4'>
+                  Sign in with one tap using your browser extension
                 </p>
                 <Button
                   className='w-full rounded-full py-6'
@@ -131,21 +133,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             <TabsContent value='key' className='space-y-4'>
               <div className='space-y-4'>
                 <div className='space-y-2'>
-                  <label htmlFor='nsec' className='text-sm font-medium text-gray-700 dark:text-gray-400'>
-                    Enter your nsec
+                  <label htmlFor='nsec' className='text-sm font-medium text-island-ink'>
+                    Enter your passport key (nsec)
                   </label>
                   <Input
                     type='password'
                     id='nsec'
                     value={nsec}
                     onChange={(e) => setNsec(e.target.value)}
-                    className='rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary'
+                    className='rounded-lg border-island-wood/30 focus-visible:ring-island-purple'
                     placeholder='nsec1...'
                   />
                 </div>
 
                 <div className='text-center'>
-                  <p className='text-sm mb-2 text-gray-600 dark:text-gray-400'>Or upload a key file</p>
+                  <p className='text-sm mb-2 text-island-ink-soft'>Or upload a saved key file</p>
                   <input
                     type='file'
                     accept='.txt'
@@ -155,11 +157,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   />
                   <Button
                     variant='outline'
-                    className='w-full dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700'
+                    className='w-full border-island-wood/40 bg-island-cream-2 hover:bg-island-sand'
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Upload className='w-4 h-4 mr-2' />
-                    Upload Nsec File
+                    Upload Key File
                   </Button>
                 </div>
 
@@ -175,14 +177,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
 
             <TabsContent value='bunker' className='space-y-4'>
               <div className='space-y-2'>
-                <label htmlFor='bunkerUri' className='text-sm font-medium text-gray-700 dark:text-gray-400'>
-                  Bunker URI
+                <label htmlFor='bunkerUri' className='text-sm font-medium text-island-ink'>
+                  Remote signer (Bunker URI)
                 </label>
                 <Input
                   id='bunkerUri'
                   value={bunkerUri}
                   onChange={(e) => setBunkerUri(e.target.value)}
-                  className='rounded-lg border-gray-300 dark:border-gray-700 focus-visible:ring-primary'
+                  className='rounded-lg border-island-wood/30 focus-visible:ring-island-purple'
                   placeholder='bunker://'
                 />
                 {bunkerUri && !bunkerUri.startsWith('bunker://') && (
@@ -201,13 +203,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           </Tabs>
 
           <div className='text-center text-sm'>
-            <p className='text-gray-600 dark:text-gray-400'>
-              Don't have an account?{' '}
+            <p className='text-island-ink-soft'>
+              First time on the island?{' '}
               <button
                 onClick={handleSignupClick}
-                className='text-primary hover:underline font-medium'
+                className='text-island-purple hover:underline font-medium'
               >
-                Sign up
+                Get your passport
               </button>
             </p>
           </div>

@@ -30,10 +30,10 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all w-full blobbi-text theme-transition'>
-          <Avatar className='w-10 h-10 border-2 border-purple-200 dark:border-purple-700'>
+        <button className='flex items-center gap-3 p-3 rounded-full hover:bg-island-cream-2 transition-all w-full blobbi-text theme-transition'>
+          <Avatar className='w-10 h-10 border-2 border-island-wood/30'>
             <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
-            <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 blobbi-text">
+            <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
               {getDisplayName(currentUser).charAt(0)}
             </AvatarFallback>
           </Avatar>
@@ -43,7 +43,7 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <ChevronDown className='w-4 h-4 blobbi-text-muted' />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56 p-2 animate-scale-in blobbi-card border-purple-200 dark:border-purple-700'>
+      <DropdownMenuContent className='w-56 p-2 animate-scale-in blobbi-card border-island-wood/30'>
         <div className='font-medium text-sm px-2 py-1.5 blobbi-text'>Switch Relay</div>
         <RelaySelector className="w-full" />
         <DropdownMenuSeparator />
@@ -52,31 +52,31 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
           <DropdownMenuItem
             key={user.id}
             onClick={() => setLogin(user.id)}
-            className='flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20'
+            className='flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-island-cream-2'
           >
-            <Avatar className='w-8 h-8 border border-purple-200 dark:border-purple-700'>
+            <Avatar className='w-8 h-8 border border-island-wood/30'>
               <AvatarImage src={user.metadata.picture} alt={getDisplayName(user)} />
-              <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 blobbi-text">
+              <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
                 {getDisplayName(user)?.charAt(0) || <UserIcon />}
               </AvatarFallback>
             </Avatar>
             <div className='flex-1 truncate'>
               <p className='text-sm font-medium blobbi-text'>{getDisplayName(user)}</p>
             </div>
-            {user.id === currentUser.id && <div className='w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500'></div>}
+            {user.id === currentUser.id && <div className='w-2 h-2 rounded-full bg-island-purple'></div>}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onAddAccountClick}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-purple-50 dark:hover:bg-purple-900/20'
+          className='flex items-center gap-2 cursor-pointer p-2 rounded-md hover:bg-island-cream-2'
         >
           <UserPlus className='w-4 h-4 icon-purple' />
           <span className="blobbi-text">Add another account</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => removeLogin(currentUser.id)}
-          className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+          className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500 hover:bg-red-50'
         >
           <LogOut className='w-4 h-4' />
           <span>Log out</span>

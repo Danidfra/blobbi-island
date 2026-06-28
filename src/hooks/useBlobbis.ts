@@ -32,6 +32,13 @@ export interface Blobbi {
   skill?: string;
   name?: string;
   adultType?: string; // For adult stage Blobbis (bloomi, breezy, etc.)
+  /**
+   * Raw event tags from the original Nostr event. Preserved (read-only) so UI
+   * code can inspect tags that aren't promoted to typed fields — e.g. `seed`
+   * and `client` — to distinguish modern Blobbis from legacy ones without
+   * re-querying or mutating any data.
+   */
+  rawTags?: string[][];
 }
 
 /** Convert PetState to legacy Blobbi interface */
@@ -62,6 +69,7 @@ function petStateToLegacyBlobbi(petState: PetState): Blobbi {
     skill: petState.skill,
     name: petState.name,
     adultType: petState.adultType,
+    rawTags: petState.rawTags,
   };
 }
 
