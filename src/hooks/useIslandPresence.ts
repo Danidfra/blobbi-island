@@ -107,6 +107,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const fetchingVisualsRef = useRef<Set<string>>(new Set());
   const initRef = useRef(false);
   const lastLocationRef = useRef<LocationId>(location);
+  const lastBlobbiAddrRef = useRef<string>(makeBlobbiAddr(pubkey, blobbiD));
   const playersAnimRef = useRef<Map<string, PlayerAnimState>>(new Map());
   const lastUpdateTimeRef = useRef<number>(performance.now());
   const latestSessionByPubkeyRef = useRef<Map<string, {sessionId:string; seen:number}>>(new Map());
@@ -526,7 +527,11 @@ const animatePlayers = useCallback(() => {
     const filter: NostrFilter = {
       kinds: [31950],
       '#t': ['blobbi:presence', `island:${islandId}`, `loc:${location}`],
-      since: nowSec() - 5,
+      // Load the full window of still-valid presence (not just the last few
+      // seconds). On any (re)subscribe — e.g. location change — this restores
+      // currently-active remote players immediately, instead of leaving them
+      // invisible until their next movement/heartbeat.
+      since: nowSec() - (EXP_SECONDS + 5),
     };
 
     if (DEBUG_MP) console.debug('[blobbi][mp][sub] start', { filter });
@@ -658,6 +663,34 @@ const animatePlayers = useCallback(() => {
   useEffect(() => {
     myPosRef.current = startPos;
   }, [startPos]);
+
+  // Active-Blobbi switch (in place): when the local player swaps their current
+  // Blobbi without leaving the world, the world layer stays MOUNTED and only
+  // `blobbiAddr` changes. Republish presence with the new identity AT THE
+  // CURRENT POSITION (not spawn) so observers see the new Blobbi immediately
+  // and the player isn't teleported. The heartbeat closure captured the old
+  // addr, so rebuild it to broadcast the new identity going forward.
+  useEffect(() => {
+    if (!initRef.current) return;
+    if (lastBlobbiAddrRef.current === blobbiAddr) return;
+    if (DEBUG_MP) console.debug('[blobbi][mp] blobbi switch', { prev: lastBlobbiAddrRef.current, next: blobbiAddr });
+    lastBlobbiAddrRef.current = blobbiAddr;
+
+    publishPresenceLogin(publish, {
+      sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current,
+    }).catch(err => {
+      console.warn('Failed to publish presence on Blobbi switch but continuing:', err);
+    });
+
+    if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+    heartbeatIntervalRef.current = setInterval(() => {
+      publishHeartbeat(
+        publish,
+        { sessionId, islandId, location, blobbiAddr },
+        myPosRef.current
+      ).catch(err => console.error('Failed to publish heartbeat:', err));
+    }, HEARTBEAT_INTERVAL_MS);
+  }, [blobbiAddr, publish, sessionId, islandId, location]);
 
   // Cleanup on unmount
   useEffect(() => {

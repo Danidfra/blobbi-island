@@ -1,16 +1,9 @@
-import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "@/hooks/useLocation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { LocationId } from "@/lib/location-types";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { RelaySelector } from "@/components/RelaySelector";
-import { CurrentBlobbiDisplay } from "@/components/blobbi/CurrentBlobbiDisplay";
-import { LocationPill, OnlineCountChip, ActiveBlobbiChip } from "./hud-primitives";
+import { AccountMenu } from "./AccountMenu";
+import { LocationPill, OnlineCountChip } from "./hud-primitives";
 
 // Friendly display names (kept in sync with LocationIndicator).
 const LOCATION_NAMES: Record<LocationId, string> = {
@@ -40,9 +33,9 @@ interface BlobbiHUDProps {
   /** Open the Blobbi collection / switch screen. */
   onOpenCollection?: () => void;
   /**
-   * Render the global controls (settings, change-Blobbi) inside the HUD.
-   * Desktop framed mode sets this false because those live in the shell header;
-   * immersive / fullscreen (no header) keeps them true so they stay reachable.
+   * Render the global account/menu control inside the HUD. Desktop framed mode
+   * sets this false because the account menu lives in the shell header;
+   * immersive / fullscreen (no header) keeps it true so it stays reachable.
    * Location pill and online count are always shown (world/status info).
    */
   showGlobalControls?: boolean;
@@ -52,10 +45,12 @@ interface BlobbiHUDProps {
  * BlobbiHUD — the in-game top HUD (replaces the website navbar).
  *
  * Left: current location pill (the HUD focuses on location only).
- * Right: online count, active-Blobbi chip (collection/switch entry), settings.
+ * Right: online count + account/menu.
  *
- * Carries `data-block-move` so taps on the HUD never move the Blobbi. Relay /
- * network settings live behind the Settings popover, not in the main bar.
+ * Carries `data-block-move` so taps on the HUD never move the Blobbi. In
+ * immersive / fullscreen mode (no header) the account/menu is the single home
+ * for account, current Blobbi / switch Blobbi, relays/network and logout — it
+ * opens as a touch-friendly bottom sheet rather than a cramped popover.
  */
 export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, showGlobalControls = true }: BlobbiHUDProps) {
   const { currentLocation } = useLocation();
@@ -81,56 +76,14 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
         </div>
       </div>
 
-      {/* Right: status + actions */}
+      {/* Right: status + account/menu */}
       <div data-block-move className="pointer-events-auto flex items-center gap-2 shrink-0">
         {typeof onlineCount === "number" && <OnlineCountChip count={onlineCount} size={size} />}
 
+        {/* Single home for account / current Blobbi / switch Blobbi / relays /
+            logout. Opens as a touch-friendly sheet in immersive/fullscreen. */}
         {showGlobalControls && user && (
-          <ActiveBlobbiChip size={size} onClick={onOpenCollection} name={undefined}>
-            <CurrentBlobbiDisplay
-              size="sm"
-              showFallback={false}
-              transparent
-              showAccessories={false}
-              className="size-full"
-            />
-          </ActiveBlobbiChip>
-        )}
-
-        {/* Settings (relay/network tucked away here, not in the bar) */}
-        {showGlobalControls && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label="Settings"
-                className={cn(
-                  "inline-flex items-center justify-center rounded-full border border-island-wood/30 bg-island-cream/95 text-island-ink shadow-cozy-soft",
-                  "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  compact ? "size-8" : "size-10",
-                )}
-              >
-                <Settings className="size-5 text-island-wood-dark" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              data-block-move
-              className="w-72 rounded-2xl border-2 border-island-wood/30 bg-island-cream shadow-cozy-raised"
-            >
-              <div className="space-y-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-island-ink">Settings</h3>
-                  <p className="text-xs text-island-ink-soft">Connection &amp; advanced options</p>
-                </div>
-                <div className="space-y-1.5">
-                  <span className="text-xs font-medium text-island-ink-soft">Network</span>
-                  <RelaySelector className="w-full" />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <AccountMenu variant="sheet" onSwitchBlobbi={onOpenCollection} />
         )}
       </div>
     </div>

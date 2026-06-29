@@ -113,11 +113,12 @@ export function BlobbiAppShell({
         isFullscreen={isFullscreen}
         onToggleFullscreen={toggle}
         // Pre-login: login lives in the passport card, so hide the header's
-        // duplicate LoginArea. After login the header shows account controls.
+        // duplicate account control. After login the header shows the account
+        // menu (the single home for account / current Blobbi / settings).
         showAccount={!isLogin}
-        // Change-Blobbi is relevant once the player has a world/collection.
-        showSwitchBlobbi={!isLogin && showGameChrome && !!onOpenCollection}
-        onOpenCollection={onOpenCollection}
+        // The account menu hosts "Switch Blobbi"; only relevant once the player
+        // has a world/collection.
+        onOpenCollection={showGameChrome ? onOpenCollection : undefined}
       />
 
       {/* Centered game canvas — takes the remaining height between header and

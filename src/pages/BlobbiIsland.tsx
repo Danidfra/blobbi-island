@@ -42,6 +42,12 @@ export function BlobbiIsland() {
   const [manualSelectionId, setManualSelectionId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState>('login');
   const [isLandscape, setIsLandscape] = useState(true);
+  // When the player switches Blobbi *while already playing*, we keep the world
+  // (PlayingView + multiplayer presence) MOUNTED and show the selection as an
+  // overlay. Unmounting the world would reset the local position to spawn and
+  // wipe the remote-players list — so instead we overlay and let the live world
+  // swap only the Blobbi identity in place. This flag drives that overlay.
+  const [isSwitchingBlobbi, setIsSwitchingBlobbi] = useState(false);
 
   // Derive selected Blobbi synchronously -- no race condition between effects.
   // Manual selection (from the selection screen) takes priority, then falls back
@@ -69,6 +75,7 @@ export function BlobbiIsland() {
     if (!user) {
       setGameState('login');
       setManualSelectionId(null);
+      setIsSwitchingBlobbi(false);
     } else if (isLoadingBlobbis || isLoadingCompanion) {
       // Only show loading for a short time, then fall back to selection
       const loadingTimeout = setTimeout(() => {
@@ -119,15 +126,30 @@ export function BlobbiIsland() {
 
   const handleBlobbiSelected = (blobbi: Blobbi) => {
     setManualSelectionId(blobbi.id);
+    setIsSwitchingBlobbi(false);
     setGameState('playing');
   };
 
   const handleSwitchBlobbi = () => {
+    // If we're already in the world, open the selection as an OVERLAY and keep
+    // the world mounted (preserves position + remote players). Only the Blobbi
+    // identity changes in place once a new one is picked. If we're not playing
+    // yet (no active Blobbi), fall back to the full selection screen.
+    if (gameState === 'playing' && selectedBlobbi) {
+      setIsSwitchingBlobbi(true);
+      return;
+    }
     setManualSelectionId(null);
     setGameState('selection');
   };
 
   const handleCancelSelection = () => {
+    // Overlay switch: just close the overlay and stay in the live world.
+    if (isSwitchingBlobbi) {
+      setIsSwitchingBlobbi(false);
+      return;
+    }
+
     // If user has a current companion, go back to playing
     if (selectedBlobbi) {
       setGameState('playing');
@@ -161,6 +183,18 @@ export function BlobbiIsland() {
             <PlayingView
               selectedBlobbi={selectedBlobbi}
             />
+            {/* Switch-Blobbi overlay: the world stays mounted underneath so
+                position and remote players are preserved; only the Blobbi
+                identity swaps in place once a new one is chosen. */}
+            {isSwitchingBlobbi && (
+              <div className="absolute inset-0 z-40">
+                <BlobbiSelectionScreen
+                  onBlobbiSelected={handleBlobbiSelected}
+                  onCancel={handleCancelSelection}
+                  canClose
+                />
+              </div>
+            )}
           </Suspense>
         );
 
