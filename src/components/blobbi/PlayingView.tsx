@@ -25,6 +25,7 @@ import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { dbg } from '@/lib/debug';
+import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { DOCK_EVENTS, type SendChatDetail } from '@/components/shell/dock-events';
 
 interface PlayingViewProps {
@@ -56,6 +57,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation } = useLocation();
   const { nostr } = useNostr();
+  const { showDebugOverlays } = useDebugOverlays();
   const [modalKey, setModalKey] = useState<string>('self');
   const currentRemoteRef = useRef<{ pubkey: string; d: string } | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
@@ -475,7 +477,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   return (
     <>
     <PlaceBackground ref={containerRef}>
-      <BoundaryVisualizer boundary={boundary} />
+      {showDebugOverlays && <BoundaryVisualizer boundary={boundary} />}
       {/* Interactive Elements - Background specific */}
       <InteractiveElements
         blobbiRef={blobbiRef}

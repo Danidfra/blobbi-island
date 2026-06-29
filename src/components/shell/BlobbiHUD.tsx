@@ -50,7 +50,8 @@ interface BlobbiHUDProps {
  * Carries `data-block-move` so taps on the HUD never move the Blobbi. In
  * immersive / fullscreen mode (no header) the account/menu is the single home
  * for account, current Blobbi / switch Blobbi, relays/network and logout — it
- * opens as a touch-friendly bottom sheet rather than a cramped popover.
+ * opens as a centered, touch-friendly game modal rather than a cramped popover
+ * or a tall bottom drawer.
  */
 export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, showGlobalControls = true }: BlobbiHUDProps) {
   const { currentLocation } = useLocation();
@@ -81,9 +82,11 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
         {typeof onlineCount === "number" && <OnlineCountChip count={onlineCount} size={size} />}
 
         {/* Single home for account / current Blobbi / switch Blobbi / relays /
-            logout. Opens as a touch-friendly sheet in immersive/fullscreen. */}
+            logout. Opens as a centered, touch-friendly game modal in
+            immersive/fullscreen (a bottom drawer wastes scarce landscape
+            height). */}
         {showGlobalControls && user && (
-          <AccountMenu variant="sheet" onSwitchBlobbi={onOpenCollection} />
+          <AccountMenu variant="modal" onSwitchBlobbi={onOpenCollection} />
         )}
       </div>
     </div>

@@ -7,6 +7,7 @@ import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
 import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
+import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 
 interface TestAppProps {
   children: React.ReactNode;
@@ -34,11 +35,13 @@ export function TestApp({ children }: TestAppProps) {
           <NostrLoginProvider storageKey='test-login'>
             <NostrProvider>
               <PhotoBoothProvider>
-                <MovementBlockerProvider>
-                  <BrowserRouter>
-                    {children}
-                  </BrowserRouter>
-                </MovementBlockerProvider>
+                <DebugOverlaysProvider>
+                  <MovementBlockerProvider>
+                    <BrowserRouter>
+                      {children}
+                    </BrowserRouter>
+                  </MovementBlockerProvider>
+                </DebugOverlaysProvider>
               </PhotoBoothProvider>
             </NostrProvider>
           </NostrLoginProvider>

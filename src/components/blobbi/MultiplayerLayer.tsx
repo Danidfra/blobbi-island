@@ -39,6 +39,7 @@ import { locationScalingConfig } from '@/lib/location-scaling-config';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
+import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
@@ -218,6 +219,7 @@ export function MultiplayerLayer({
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { currentLocation } = useLocation();
   const { isPositionBlocked } = useMovementBlocker();
+  const { showDebugOverlays } = useDebugOverlays();
 
   // Live gaze position source (key -> current percent position), including the
   // local Blobbi under LOCAL_ATTENTION_KEY. Written every animation frame by the
@@ -1354,8 +1356,8 @@ export function MultiplayerLayer({
         getAnchorEl={getAnchorEl}
       />
 
-      {/* Debug info (only in development) */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Debug info (developer overlays toggle) */}
+      {showDebugOverlays && (
         <div className="absolute top-4 right-4 bg-black/75 text-white text-xs p-2 rounded">
           <div>Session: {sessionId.slice(0, 8)}...</div>
           <div>Players (all): {players.size}</div>

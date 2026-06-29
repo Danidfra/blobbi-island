@@ -1,7 +1,8 @@
-import { ReactNode, useRef } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useImmersive } from "@/hooks/useImmersive";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { FullscreenPortalContext } from "@/contexts/FullscreenPortalContext";
 import { BlobbiStage } from "./BlobbiStage";
 import { BlobbiFrame } from "./BlobbiFrame";
 import { BlobbiHUD } from "./BlobbiHUD";
@@ -59,8 +60,20 @@ export function BlobbiAppShell({
   footerSlot,
 }: BlobbiAppShellProps) {
   const immersive = useImmersive(); // true on real phones/tablets, false on desktop/laptop
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  // State mirror of the root element so the portal-container context re-renders
+  // consumers once the element mounts (refs alone don't trigger re-renders).
+  const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
+  const setRoot = (el: HTMLDivElement | null) => {
+    rootRef.current = el;
+    setRootEl(el);
+  };
   const { isSupported, isFullscreen, toggle, exit } = useFullscreen(rootRef);
+
+  // While fullscreen is active, overlays (account menu, dialogs, sheets) must
+  // portal INTO the fullscreened element — otherwise they render in
+  // document.body, outside the fullscreen layer, and appear not to open.
+  const portalContainer = isFullscreen ? rootEl : null;
 
   const isLogin = screen === "login";
 
@@ -86,51 +99,57 @@ export function BlobbiAppShell({
 
   if (fillScreen) {
     return (
-      <div ref={rootRef} className="fixed inset-0 overflow-hidden bg-island-ink">
-        <BlobbiFrame variant="immersive" hud={hud} dock={dock}>
-          <BlobbiStage fit="fill">{children}</BlobbiStage>
-        </BlobbiFrame>
+      <FullscreenPortalContext.Provider value={portalContainer}>
+        <div ref={setRoot} className="fixed inset-0 overflow-hidden bg-island-ink">
+          <BlobbiFrame variant="immersive" hud={hud} dock={dock}>
+            <BlobbiStage fit="fill">{children}</BlobbiStage>
+          </BlobbiFrame>
 
-        {/* Desktop fullscreen only: an obvious clickable way out (Esc also
-            works). Not shown in normal mobile-landscape immersive mode. */}
-        {isFullscreen && !immersive && <FullscreenExitButton onExit={exit} />}
-      </div>
+          {/* Desktop fullscreen only: an obvious clickable way out (Esc also
+              works). Not shown in normal mobile-landscape immersive mode.
+              Placed top-LEFT so it never collides with the account/menu control
+              that lives top-right in the HUD. */}
+          {isFullscreen && !immersive && <FullscreenExitButton onExit={exit} />}
+        </div>
+      </FullscreenPortalContext.Provider>
     );
   }
 
   // Desktop: header + centered (smaller) canvas + contextual bottom area.
   return (
-    <div
-      ref={rootRef}
-      className={cn(
-        "fixed inset-0 overflow-hidden",
-        "flex flex-col",
-        "bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
-      )}
-    >
-      <BlobbiShellHeader
-        fullscreenSupported={isSupported}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={toggle}
-        // Pre-login: login lives in the passport card, so hide the header's
-        // duplicate account control. After login the header shows the account
-        // menu (the single home for account / current Blobbi / settings).
-        showAccount={!isLogin}
-        // The account menu hosts "Switch Blobbi"; only relevant once the player
-        // has a world/collection.
-        onOpenCollection={showGameChrome ? onOpenCollection : undefined}
-      />
+    <FullscreenPortalContext.Provider value={portalContainer}>
+      <div
+        ref={setRoot}
+        className={cn(
+          "fixed inset-0 overflow-hidden",
+          "flex flex-col",
+          "bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
+        )}
+      >
+        <BlobbiShellHeader
+          fullscreenSupported={isSupported}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggle}
+          // Pre-login: login lives in the passport card, so hide the header's
+          // duplicate account control. After login the header shows the account
+          // menu (the single home for account / current Blobbi / settings).
+          showAccount={!isLogin}
+          // The account menu hosts "Switch Blobbi"; only relevant once the player
+          // has a world/collection.
+          onOpenCollection={showGameChrome ? onOpenCollection : undefined}
+        />
 
-      {/* Centered game canvas — takes the remaining height between header and
-          footer, and the frame inside is aspect-locked so it never fills the
-          whole viewport. */}
-      <div className="min-h-0 flex-1">
-        <BlobbiFrame variant="desktop" hud={hud} dock={dock}>
-          <BlobbiStage fit="framed">{children}</BlobbiStage>
-        </BlobbiFrame>
+        {/* Centered game canvas — takes the remaining height between header and
+            footer, and the frame inside is aspect-locked so it never fills the
+            whole viewport. */}
+        <div className="min-h-0 flex-1">
+          <BlobbiFrame variant="desktop" hud={hud} dock={dock}>
+            <BlobbiStage fit="framed">{children}</BlobbiStage>
+          </BlobbiFrame>
+        </div>
+
+        <BlobbiShellFooter>{footerSlot}</BlobbiShellFooter>
       </div>
-
-      <BlobbiShellFooter>{footerSlot}</BlobbiShellFooter>
-    </div>
+    </FullscreenPortalContext.Provider>
   );
 }

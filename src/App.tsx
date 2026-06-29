@@ -14,6 +14,7 @@ import { AppProvider } from '@/components/AppProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
+import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -53,6 +54,7 @@ export function App() {
             <NostrLoginProvider storageKey='nostr:login'>
               <NostrProvider>
               <PhotoBoothProvider>
+                <DebugOverlaysProvider>
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
@@ -67,6 +69,7 @@ export function App() {
                       <AppRouter />
                     </Suspense>
                   </TooltipProvider>
+                </DebugOverlaysProvider>
               </PhotoBoothProvider>
               </NostrProvider>
             </NostrLoginProvider>

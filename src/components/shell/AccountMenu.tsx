@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, UserIcon, UserPlus, PawPrint, Settings, ChevronDown } from "lucide-react";
+import { LogOut, UserIcon, UserPlus, PawPrint, Settings, ChevronDown, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -10,12 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { RelaySelector } from "@/components/RelaySelector";
 import { CurrentBlobbiDisplay } from "@/components/blobbi/CurrentBlobbiDisplay";
 import LoginDialog from "@/components/auth/LoginDialog";
@@ -24,15 +25,18 @@ import { LoginArea } from "@/components/auth/LoginArea";
 import { useLoggedInAccounts, type Account } from "@/hooks/useLoggedInAccounts";
 import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
+import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
+import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { genUserName } from "@/lib/genUserName";
 
 interface AccountMenuProps {
   /**
    * "dropdown" — desktop framed header (popover-style dropdown).
-   * "sheet"    — mobile landscape / immersive (touch-friendly bottom sheet),
-   *              opened from the in-canvas HUD where a tiny popover feels cramped.
+   * "modal"    — mobile landscape / immersive / desktop fullscreen. Opens as a
+   *              compact, centered, cozy game modal (not a bottom drawer or a
+   *              cramped popover) since vertical space is limited there.
    */
-  variant?: "dropdown" | "sheet";
+  variant?: "dropdown" | "modal";
   /** Open the switch-Blobbi flow. The menu closes itself first. */
   onSwitchBlobbi?: () => void;
   className?: string;
@@ -40,20 +44,29 @@ interface AccountMenuProps {
 
 /**
  * AccountMenu — the single home for account identity, current Blobbi / switch
- * Blobbi, relays/network, account switching and logout.
+ * Blobbi, relays/network, account switching, logout, and (in dev) the developer
+ * tools toggle.
  *
  * Auth behavior is NOT rewritten: account switching/logout reuse the existing
  * `useLoggedInAccounts` hook (the same logic as the stable AccountSwitcher), and
  * the logged-out state reuses the stable <LoginArea /> login button. This
- * component only restyles and groups those controls into one cozy menu, and adds
- * the current-Blobbi section. Desktop renders a dropdown; mobile/immersive
- * renders a bottom sheet so it's readable and touch-friendly.
+ * component only restyles and groups those controls into one cozy menu.
+ *
+ * Presentation:
+ *   - Desktop framed: a header dropdown/popover.
+ *   - Immersive (mobile landscape) and desktop fullscreen: a centered modal —
+ *     compact, touch-friendly, width-controlled, scrollable, with a backdrop.
+ *
+ * Fullscreen correctness: both surfaces portal into the active fullscreen root
+ * element (via FullscreenPortalContext) so they render ABOVE the fullscreen
+ * layer instead of invisibly into document.body.
  */
 export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }: AccountMenuProps) {
   const { currentUser, otherUsers, setLogin, removeLogin } = useLoggedInAccounts();
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const portalContainer = useFullscreenPortalContainer();
 
   // Logged out: reuse the stable LoginArea login button unchanged.
   if (!currentUser) {
@@ -63,15 +76,15 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
   const getDisplayName = (account: Account): string =>
     account.metadata.name ?? genUserName(account.pubkey);
 
-  const closeSheet = () => setSheetOpen(false);
+  const closeModal = () => setModalOpen(false);
 
   const handleSwitchBlobbi = () => {
-    closeSheet();
+    closeModal();
     onSwitchBlobbi?.();
   };
 
   const handleAddAccount = () => {
-    closeSheet();
+    closeModal();
     setLoginDialogOpen(true);
   };
 
@@ -83,11 +96,11 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
       getDisplayName={getDisplayName}
       onSetLogin={(id) => {
         setLogin(id);
-        closeSheet();
+        closeModal();
       }}
       onRemoveLogin={(id) => {
         removeLogin(id);
-        closeSheet();
+        closeModal();
       }}
       onAddAccount={handleAddAccount}
       onSwitchBlobbi={handleSwitchBlobbi}
@@ -119,25 +132,28 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
 
   return (
     <>
-      {variant === "sheet" ? (
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>{trigger}</SheetTrigger>
-          <SheetContent
-            side="bottom"
+      {variant === "modal" ? (
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogTrigger asChild>{trigger}</DialogTrigger>
+          <DialogContent
+            container={portalContainer}
             data-block-move
-            className="max-h-[85svh] overflow-y-auto rounded-t-3xl border-t-2 border-island-wood/30 bg-island-cream p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="w-[min(92vw,24rem)] max-w-sm max-h-[85svh] overflow-y-auto rounded-3xl border-2 border-island-wood/30 bg-island-cream p-5"
           >
-            <SheetHeader className="text-left">
-              <SheetTitle className="text-island-ink">Menu</SheetTitle>
-            </SheetHeader>
-            <div className="mt-3">{body}</div>
-          </SheetContent>
-        </Sheet>
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-island-ink">Menu</DialogTitle>
+            </DialogHeader>
+            <div className="mt-1">{body}</div>
+          </DialogContent>
+        </Dialog>
       ) : (
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
           <DropdownMenuContent
+            container={portalContainer}
             align="end"
+            data-block-move
             className="w-72 rounded-2xl border-2 border-island-wood/30 bg-island-cream p-2 shadow-cozy-raised animate-scale-in"
           >
             {body}
@@ -185,18 +201,19 @@ function AccountMenuBody({
   onRemoveLogin: (id: string) => void;
   onAddAccount: () => void;
   onSwitchBlobbi: () => void;
-  variant: "dropdown" | "sheet";
+  variant: "dropdown" | "modal";
 }) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
+  const { isDevMode, showDebugOverlays, setShowDebugOverlays } = useDebugOverlays();
   const currentCompanionId = profile?.currentCompanion;
   const currentBlobbi = currentCompanionId
     ? blobbis?.find((b) => b.id === currentCompanionId)
     : undefined;
   const blobbiName = currentBlobbi?.name?.trim();
 
-  // Reusable row styling so the sheet and dropdown look the same. In the
-  // dropdown we use DropdownMenuItem (keyboard nav); in the sheet we use plain
+  // Reusable row styling so the modal and dropdown look the same. In the
+  // dropdown we use DropdownMenuItem (keyboard nav); in the modal we use plain
   // buttons (touch).
   const rowClass =
     "flex w-full items-center gap-2 cursor-pointer rounded-md p-2 text-left hover:bg-island-cream-2";
@@ -307,6 +324,34 @@ function AccountMenuBody({
         <LogOut className="size-4 shrink-0" />
         <span className="text-sm">Log out</span>
       </Row>
+
+      {/* Developer tools — dev/local builds only; never rendered in production. */}
+      {isDevMode && (
+        <>
+          <Divider />
+          <SectionLabel>
+            <span className="inline-flex items-center gap-1.5">
+              <Wrench className="size-3.5" />
+              Developer tools
+            </span>
+          </SectionLabel>
+          {/* Plain label+switch row (no onClick row wrapper, so toggling never
+              closes the menu and the control stays put while on or off). */}
+          <label className="flex w-full items-center gap-2 rounded-md p-2 text-left cursor-pointer hover:bg-island-cream-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-island-ink">Debug overlays</p>
+              <p className="truncate text-xs text-island-ink-soft">
+                Boundaries, blockers &amp; position
+              </p>
+            </div>
+            <Switch
+              checked={showDebugOverlays}
+              onCheckedChange={setShowDebugOverlays}
+              aria-label="Toggle debug overlays"
+            />
+          </label>
+        </>
+      )}
     </div>
   );
 }

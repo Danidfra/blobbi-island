@@ -23,6 +23,7 @@ import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { dbg } from '@/lib/debug';
+import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
@@ -135,6 +136,7 @@ export function BlobbiInfoModal({
   const { mutateAsync: createEvent } = useNostrPublish();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { showDebugOverlays } = useDebugOverlays();
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
 
   const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
@@ -702,8 +704,8 @@ export function BlobbiInfoModal({
                     />
                   </div>
 
-                  {/* Debug button (development only) */}
-                  {process.env.NODE_ENV === 'development' && (
+                  {/* Debug button (developer overlays toggle) */}
+                  {showDebugOverlays && (
                     <div className="pt-4 border-t border-purple-200/60 dark:border-purple-800/60">
                       <Button
                         variant="outline"
