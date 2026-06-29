@@ -39,6 +39,13 @@ interface BlobbiHUDProps {
   onlineCount?: number;
   /** Open the Blobbi collection / switch screen. */
   onOpenCollection?: () => void;
+  /**
+   * Render the global controls (settings, change-Blobbi) inside the HUD.
+   * Desktop framed mode sets this false because those live in the shell header;
+   * immersive / fullscreen (no header) keeps them true so they stay reachable.
+   * Location pill and online count are always shown (world/status info).
+   */
+  showGlobalControls?: boolean;
 }
 
 /**
@@ -50,7 +57,7 @@ interface BlobbiHUDProps {
  * Carries `data-block-move` so taps on the HUD never move the Blobbi. Relay /
  * network settings live behind the Settings popover, not in the main bar.
  */
-export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection }: BlobbiHUDProps) {
+export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, showGlobalControls = true }: BlobbiHUDProps) {
   const { currentLocation } = useLocation();
   const { user } = useCurrentUser();
   const locationName = LOCATION_NAMES[currentLocation] ?? "The Island";
@@ -78,7 +85,7 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection }: Bl
       <div data-block-move className="pointer-events-auto flex items-center gap-2 shrink-0">
         {typeof onlineCount === "number" && <OnlineCountChip count={onlineCount} size={size} />}
 
-        {user && (
+        {showGlobalControls && user && (
           <ActiveBlobbiChip size={size} onClick={onOpenCollection} name={undefined}>
             <CurrentBlobbiDisplay
               size="sm"
@@ -91,38 +98,40 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection }: Bl
         )}
 
         {/* Settings (relay/network tucked away here, not in the bar) */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Settings"
-              className={cn(
-                "inline-flex items-center justify-center rounded-full border border-island-wood/30 bg-island-cream/95 text-island-ink shadow-cozy-soft",
-                "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                compact ? "size-8" : "size-10",
-              )}
+        {showGlobalControls && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Settings"
+                className={cn(
+                  "inline-flex items-center justify-center rounded-full border border-island-wood/30 bg-island-cream/95 text-island-ink shadow-cozy-soft",
+                  "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  compact ? "size-8" : "size-10",
+                )}
+              >
+                <Settings className="size-5 text-island-wood-dark" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              data-block-move
+              className="w-72 rounded-2xl border-2 border-island-wood/30 bg-island-cream shadow-cozy-raised"
             >
-              <Settings className="size-5 text-island-wood-dark" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            data-block-move
-            className="w-72 rounded-2xl border-2 border-island-wood/30 bg-island-cream shadow-cozy-raised"
-          >
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-island-ink">Settings</h3>
-                <p className="text-xs text-island-ink-soft">Connection &amp; advanced options</p>
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-island-ink">Settings</h3>
+                  <p className="text-xs text-island-ink-soft">Connection &amp; advanced options</p>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-xs font-medium text-island-ink-soft">Network</span>
+                  <RelaySelector className="w-full" />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <span className="text-xs font-medium text-island-ink-soft">Network</span>
-                <RelaySelector className="w-full" />
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
     </div>
   );

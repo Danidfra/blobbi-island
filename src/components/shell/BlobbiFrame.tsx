@@ -52,19 +52,23 @@ export function BlobbiFrame({
     );
   }
 
-  // Desktop: aspect-locked wrapper that fits within the available viewport box.
-  // The wrapper is sized by whichever dimension is the binding constraint so the
-  // frame never overflows a small laptop and never causes page scroll.
+  // Desktop: aspect-locked frame that fits within the available box (the band
+  // between the shell header and footer — NOT the full viewport). The whole unit
+  // (wood frame + cream bezel + world) is ONE aspect-locked box. We let it take
+  // the full available width, then cap its height to the band; with a fixed
+  // `aspect-ratio`, the browser shrinks the width to honor `max-height`, so the
+  // frame and canvas always resize together and the 3:2 ratio is preserved.
+  // Whichever axis is tighter (width on narrow windows, height on short ones)
+  // becomes the binding constraint automatically. Never overflows / no scroll.
   return (
     <div className={cn("flex h-full w-full items-center justify-center p-4 sm:p-6", className)}>
       <div
-        className={cn(
-          "relative",
-          // Bind by both width and height; keep the 3:2 ratio.
-          "w-full",
-          "max-w-[min(100%,calc((100dvh-3rem)*1.5))]",
-        )}
-        style={{ aspectRatio: `${STAGE_ASPECT}` }}
+        className="relative w-full"
+        style={{
+          aspectRatio: `${STAGE_ASPECT}`,
+          maxHeight: "100%",
+          maxWidth: "100%",
+        }}
       >
         {/* Cozy wood frame */}
         <div

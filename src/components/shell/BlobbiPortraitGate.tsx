@@ -2,10 +2,11 @@ import { RotateCw } from "lucide-react";
 import { MascotBlobbi } from "@/components/blobbi/MascotBlobbi";
 
 /**
- * BlobbiPortraitGate — cozy, in-world screen shown on mobile portrait.
+ * BlobbiPortraitGate — cozy, welcoming screen shown on mobile portrait.
  *
- * Replaces the old technical "Rotate Your Device" warning with the purple
- * mascot inviting the player to turn their device. Feels like part of the game.
+ * Frames the landscape-first requirement as a friendly invitation rather than a
+ * technical warning: the mascot greets the player, then a gentle rotate hint
+ * shows how to come on in. Feels like part of the game.
  */
 export function BlobbiPortraitGate() {
   return (
@@ -18,9 +19,14 @@ export function BlobbiPortraitGate() {
       </div>
 
       <div className="space-y-2 max-w-xs">
-        <h1 className="text-2xl font-bold text-island-ink">Turn your island sideways!</h1>
+        <h1 className="text-2xl font-bold text-island-ink">Welcome to Blobbi Island</h1>
         <p className="text-island-ink-soft">
-          Blobbi Island is best explored in landscape. Rotate your device to enter the island.
+          This island is best explored sideways. Turn your device to landscape to
+          come on in.
+        </p>
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-island-cream-2/80 px-3 py-1 text-sm font-medium text-island-wood-dark shadow-cozy-soft">
+          <RotateCw className="size-4" />
+          Rotate to enter
         </p>
       </div>
     </div>

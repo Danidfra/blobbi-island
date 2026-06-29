@@ -167,6 +167,7 @@ export function BlobbiIsland() {
   return (
     <LocationProvider>
       <BlobbiAppShell
+        screen={gameState}
         showGameChrome={isPlaying}
         inWorld={isPlaying}
         onOpenCollection={handleSwitchBlobbi}

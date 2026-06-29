@@ -1,14 +1,22 @@
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useImmersive } from "@/hooks/useImmersive";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { BlobbiStage } from "./BlobbiStage";
 import { BlobbiFrame } from "./BlobbiFrame";
 import { BlobbiHUD } from "./BlobbiHUD";
 import { BlobbiActionDock } from "./BlobbiActionDock";
+import { BlobbiShellHeader } from "./BlobbiShellHeader";
+import { BlobbiShellFooter } from "./BlobbiShellFooter";
+import { FullscreenExitButton } from "./FullscreenExitButton";
+
+type ShellScreen = "login" | "loading" | "selection" | "playing";
 
 interface BlobbiAppShellProps {
   /** The current game screen (login / loading / selection / playing). */
   children: ReactNode;
+  /** Which screen is showing — drives which global header controls appear. */
+  screen?: ShellScreen;
   /** Show the in-world HUD/dock (true only while playing). */
   showGameChrome?: boolean;
   /** Live online player count for the HUD (optional). */
@@ -17,48 +25,113 @@ interface BlobbiAppShellProps {
   onOpenCollection?: () => void;
   /** True when the player is actively in the world (enables dock world actions). */
   inWorld?: boolean;
+  /** Optional contextual content for the desktop bottom area (tips/CTA/status). */
+  footerSlot?: ReactNode;
 }
 
 /**
- * BlobbiAppShell — world-first shell. No website navbar, no footer, no page
- * scroll. A soft cozy background supports a centered cozy game frame on desktop,
- * and a near-fullscreen immersive frame on mobile landscape.
+ * BlobbiAppShell — the Blobbi Island game shell.
+ *
+ * Desktop (framed): a cozy browser-game layout inspired by classic web games —
+ * a lightweight header on top carrying GLOBAL controls (account, change-Blobbi,
+ * settings, fullscreen), a centered game canvas (intentionally smaller than the
+ * full viewport so it feels placed, not lost), and a reserved contextual strip
+ * below for tips / CTA / status. A fullscreen control makes the canvas
+ * immersive on demand.
+ *
+ * Mobile landscape AND desktop fullscreen (immersive): no header/footer chrome —
+ * the canvas fills the screen so it feels like a game, not a webpage. Global
+ * controls remain reachable through the in-canvas HUD there, and a subtle exit
+ * button is overlaid when in desktop fullscreen.
+ *
+ * Header = global app/account controls. Canvas/HUD/Dock = gameplay/world.
  *
  * The world's percent-based coordinate system and `data-world-surface` are
  * untouched; this shell only changes the chrome around the stage.
  */
 export function BlobbiAppShell({
   children,
+  screen = "playing",
   showGameChrome = false,
   onlineCount,
   onOpenCollection,
   inWorld = false,
+  footerSlot,
 }: BlobbiAppShellProps) {
   const immersive = useImmersive(); // true on real phones/tablets, false on desktop/laptop
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { isSupported, isFullscreen, toggle, exit } = useFullscreen(rootRef);
 
+  const isLogin = screen === "login";
+
+  // In-canvas HUD/Dock are GAMEPLAY chrome. On desktop framed mode the global
+  // controls live in the header, so the HUD's global cluster (settings, switch-
+  // Blobbi) is redundant — hide it there. In immersive (mobile landscape / no
+  // header) and fullscreen, the HUD keeps those controls so they stay reachable.
+  const desktopFramed = !immersive && !isFullscreen;
   const hud = showGameChrome ? (
-    <BlobbiHUD compact={immersive} onlineCount={onlineCount} onOpenCollection={onOpenCollection} />
+    <BlobbiHUD
+      compact={immersive}
+      onlineCount={onlineCount}
+      onOpenCollection={onOpenCollection}
+      showGlobalControls={!desktopFramed}
+    />
   ) : undefined;
   const dock = showGameChrome ? <BlobbiActionDock compact={immersive} inWorld={inWorld} /> : undefined;
 
+  // Mobile landscape (or any immersive device) and desktop-fullscreen both use
+  // the edge-to-edge presentation: the canvas fills the available space and the
+  // header/footer chrome is hidden.
+  const fillScreen = immersive || isFullscreen;
+
+  if (fillScreen) {
+    return (
+      <div ref={rootRef} className="fixed inset-0 overflow-hidden bg-island-ink">
+        <BlobbiFrame variant="immersive" hud={hud} dock={dock}>
+          <BlobbiStage fit="fill">{children}</BlobbiStage>
+        </BlobbiFrame>
+
+        {/* Desktop fullscreen only: an obvious clickable way out (Esc also
+            works). Not shown in normal mobile-landscape immersive mode. */}
+        {isFullscreen && !immersive && <FullscreenExitButton onExit={exit} />}
+      </div>
+    );
+  }
+
+  // Desktop: header + centered (smaller) canvas + contextual bottom area.
   return (
     <div
+      ref={rootRef}
       className={cn(
-        // Lock the main game view to the viewport — no page scroll.
         "fixed inset-0 overflow-hidden",
-        // Soft cozy backdrop behind the frame.
-        immersive
-          ? "bg-island-ink"
-          : "bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
+        "flex flex-col",
+        "bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
       )}
     >
-      <BlobbiFrame
-        variant={immersive ? "immersive" : "desktop"}
-        hud={hud}
-        dock={dock}
-      >
-        <BlobbiStage fit={immersive ? "fill" : "framed"}>{children}</BlobbiStage>
-      </BlobbiFrame>
+      <BlobbiShellHeader
+        fullscreenSupported={isSupported}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggle}
+        // Pre-login: login lives in the passport card, so hide the header's
+        // duplicate LoginArea. After login the header shows account controls.
+        showAccount={!isLogin}
+        // Change-Blobbi is relevant once the player has a world/collection.
+        showSwitchBlobbi={!isLogin && showGameChrome && !!onOpenCollection}
+        onOpenCollection={onOpenCollection}
+        // Settings (network) graduates from the in-canvas HUD to the header.
+        showSettings={!isLogin}
+      />
+
+      {/* Centered game canvas — takes the remaining height between header and
+          footer, and the frame inside is aspect-locked so it never fills the
+          whole viewport. */}
+      <div className="min-h-0 flex-1">
+        <BlobbiFrame variant="desktop" hud={hud} dock={dock}>
+          <BlobbiStage fit="framed">{children}</BlobbiStage>
+        </BlobbiFrame>
+      </div>
+
+      <BlobbiShellFooter>{footerSlot}</BlobbiShellFooter>
     </div>
   );
 }
