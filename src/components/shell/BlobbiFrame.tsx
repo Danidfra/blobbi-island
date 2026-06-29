@@ -54,12 +54,17 @@ export function BlobbiFrame({
 
   // Desktop: aspect-locked frame that fits within the available box (the band
   // between the shell header and footer — NOT the full viewport). The whole unit
-  // (wood frame + cream bezel + world) is ONE aspect-locked box. We let it take
-  // the full available width, then cap its height to the band; with a fixed
-  // `aspect-ratio`, the browser shrinks the width to honor `max-height`, so the
-  // frame and canvas always resize together and the 3:2 ratio is preserved.
-  // Whichever axis is tighter (width on narrow windows, height on short ones)
-  // becomes the binding constraint automatically. Never overflows / no scroll.
+  // (wood frame + cream bezel + world) is ONE aspect-locked box.
+  //
+  // The frame targets an intentional, comfortable size — a classic browser-game
+  // window that stays centered rather than stretching across huge monitors. We
+  // cap the width at an ideal max (≈ the world art's native 1046px) so it never
+  // grows endlessly; with a fixed `aspect-ratio`, the browser also honors
+  // `max-height: 100%` (the band height) and shrinks the width to match. So:
+  //   • Large desktop → pinned to the ideal max width, centered.
+  //   • Narrow window → width is the binding constraint, shrinks responsively.
+  //   • Short height  → height is binding, shrinks proportionally (3:2 kept).
+  // Frame and canvas always resize as one unit. Never overflows / no scroll.
   return (
     <div className={cn("flex h-full w-full items-center justify-center p-4 sm:p-6", className)}>
       <div
@@ -67,7 +72,7 @@ export function BlobbiFrame({
         style={{
           aspectRatio: `${STAGE_ASPECT}`,
           maxHeight: "100%",
-          maxWidth: "100%",
+          maxWidth: "min(100%, 1040px)",
         }}
       >
         {/* Cozy wood frame */}

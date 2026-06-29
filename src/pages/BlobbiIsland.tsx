@@ -35,7 +35,11 @@ export function BlobbiIsland() {
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
   const currentCompanionId = profile?.currentCompanion;
-  const [manualSelection, setManualSelection] = useState<Blobbi | null>(null);
+  // Track a manual (session) selection by ID only — never a snapshot object.
+  // Resolving the live Blobbi from the ['blobbis'] cache keeps selectedBlobbi
+  // reactive: if the chosen Blobbi's stats/appearance are updated, the playing
+  // view re-reads the fresh object instead of a stale copy captured at click.
+  const [manualSelectionId, setManualSelectionId] = useState<string | null>(null);
   const [gameState, setGameState] = useState<GameState>('login');
   const [isLandscape, setIsLandscape] = useState(true);
 
@@ -49,19 +53,22 @@ export function BlobbiIsland() {
   // notice and a modern-only grid) instead of silently entering the game with a
   // legacy Blobbi. An explicit manualSelection always wins and is unaffected.
   const selectedBlobbi = useMemo(() => {
-    if (manualSelection) return manualSelection;
+    if (manualSelectionId && blobbis) {
+      const manual = blobbis.find(b => b.id === manualSelectionId);
+      if (manual) return manual;
+    }
     if (currentCompanionId && blobbis) {
       const current = blobbis.find(b => b.id === currentCompanionId);
       return current && isModernBlobbi(current) ? current : null;
     }
     return null;
-  }, [manualSelection, currentCompanionId, blobbis]);
+  }, [manualSelectionId, currentCompanionId, blobbis]);
 
   // Determine game state based on user login and data loading
   useEffect(() => {
     if (!user) {
       setGameState('login');
-      setManualSelection(null);
+      setManualSelectionId(null);
     } else if (isLoadingBlobbis || isLoadingCompanion) {
       // Only show loading for a short time, then fall back to selection
       const loadingTimeout = setTimeout(() => {
@@ -111,12 +118,12 @@ export function BlobbiIsland() {
   }
 
   const handleBlobbiSelected = (blobbi: Blobbi) => {
-    setManualSelection(blobbi);
+    setManualSelectionId(blobbi.id);
     setGameState('playing');
   };
 
   const handleSwitchBlobbi = () => {
-    setManualSelection(null);
+    setManualSelectionId(null);
     setGameState('selection');
   };
 

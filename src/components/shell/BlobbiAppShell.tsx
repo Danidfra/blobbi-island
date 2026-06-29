@@ -118,8 +118,6 @@ export function BlobbiAppShell({
         // Change-Blobbi is relevant once the player has a world/collection.
         showSwitchBlobbi={!isLogin && showGameChrome && !!onOpenCollection}
         onOpenCollection={onOpenCollection}
-        // Settings (network) graduates from the in-canvas HUD to the header.
-        showSettings={!isLogin}
       />
 
       {/* Centered game canvas — takes the remaining height between header and
