@@ -1,6 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 // Phase 3 polish: presentation only (fit-to-frame max-height/scroll + cozy island styling + friendlier copy).
+// Copy clarifies that the credential is a Nostr account / secret key (nsec), not a "passport".
 // Authentication logic, hooks, and login methods are unchanged.
 
 import React, { useRef, useState } from 'react';
@@ -102,7 +103,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         <DialogHeader className='px-6 pt-6 pb-0 relative shrink-0'>
           <DialogTitle className='text-xl font-semibold text-center text-island-ink'>Welcome back to the island</DialogTitle>
           <DialogDescription className='text-center text-island-ink-soft mt-1'>
-            Show your passport to come on in
+            Sign in with your Nostr account to come on in
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +135,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
               <div className='space-y-4'>
                 <div className='space-y-2'>
                   <label htmlFor='nsec' className='text-sm font-medium text-island-ink'>
-                    Enter your passport key (nsec)
+                    Your Nostr secret key (nsec)
                   </label>
                   <Input
                     type='password'
@@ -209,7 +210,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 onClick={handleSignupClick}
                 className='text-island-purple hover:underline font-medium'
               >
-                Get your passport
+                Create a Nostr account
               </button>
             </p>
           </div>

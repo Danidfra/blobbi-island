@@ -130,7 +130,7 @@ export function BlobbiAppShell({
           fullscreenSupported={isSupported}
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggle}
-          // Pre-login: login lives in the passport card, so hide the header's
+          // Pre-login: login lives in the Island Pass card, so hide the header's
           // duplicate account control. After login the header shows the account
           // menu (the single home for account / current Blobbi / settings).
           showAccount={!isLogin}

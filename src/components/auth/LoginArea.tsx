@@ -34,7 +34,7 @@ export function LoginArea({ className }: LoginAreaProps) {
           className='flex items-center gap-2 px-4 py-2 rounded-full bg-island-purple hover:bg-island-purple/90 text-white w-full font-medium transition-all border-0 shadow-cozy-soft theme-transition'
         >
           <User className='w-4 h-4' />
-          <span className='truncate'>Log in</span>
+          <span className='truncate'>Enter Island</span>
         </Button>
       )}
 

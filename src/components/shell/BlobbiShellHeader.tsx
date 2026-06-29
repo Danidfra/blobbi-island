@@ -10,7 +10,7 @@ interface BlobbiShellHeaderProps {
   /** Toggle fullscreen on/off. */
   onToggleFullscreen: () => void;
   /**
-   * Pre-login screen: the login CTA lives inside the passport card, so the
+   * Pre-login screen: the login CTA lives inside the Island Pass card, so the
    * header hides its own account control to avoid a duplicate login button.
    */
   showAccount?: boolean;

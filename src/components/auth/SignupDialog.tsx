@@ -1,6 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 // Phase 3 polish: presentation only (fit-to-frame max-height/scroll + cozy island styling + friendlier copy).
+// Copy clarifies that signup creates a Nostr account whose secret key (nsec) is the credential, not a "passport".
 // Key generation / signup logic is unchanged.
 
 import React, { useState } from 'react';
@@ -90,13 +91,13 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
       <DialogContent className='sm:max-w-md max-h-[90dvh] flex flex-col p-0 overflow-hidden rounded-2xl border-4 border-island-wood bg-island-cream'>
         <DialogHeader className='px-6 pt-6 pb-0 relative shrink-0'>
           <DialogTitle className='text-xl font-semibold text-center text-island-ink'>
-            {step === 'generate' && 'Create your island passport'}
-            {step === 'download' && 'Keep your passport safe'}
+            {step === 'generate' && 'Create your Nostr account'}
+            {step === 'download' && 'Save your secret key'}
             {step === 'done' && 'Welcome to the island'}
           </DialogTitle>
           <DialogDescription className='text-center text-island-ink-soft mt-1'>
-            {step === 'generate' && "We'll make a passport that keeps your Blobbi safe"}
-            {step === 'download' && "You'll need this to come back later"}
+            {step === 'generate' && "We'll set up a Nostr account that unlocks your Blobbi Island"}
+            {step === 'download' && "You'll need this secret key to sign in again later"}
             {step === 'done' && 'Getting things ready...'}
           </DialogDescription>
         </DialogHeader>
@@ -108,14 +109,14 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
                 <Key className='w-16 h-16 text-island-wood-dark' />
               </div>
               <p className='text-sm text-island-ink-soft'>
-                We'll create a secure passport just for you. You'll use it to return to the island later.
+                We'll create a secure Nostr account just for you. Its secret key is how you'll sign back in to the island later.
               </p>
               <Button
                 className='w-full rounded-full py-6'
                 onClick={generateKey}
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating passport...' : 'Create my passport'}
+                {isLoading ? 'Creating account...' : 'Create my Nostr account'}
               </Button>
             </div>
           )}
@@ -129,7 +130,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               <div className='text-sm text-island-ink-soft space-y-2'>
                 <p className='font-medium text-island-ink'>Keep it cozy and safe:</p>
                 <ul className='list-disc pl-5 space-y-1'>
-                  <li>This passport is the only way back to your Blobbi</li>
+                  <li>This secret key is the only way back to your Blobbi</li>
                   <li>Store it somewhere safe</li>
                   <li>Never share it with anyone</li>
                 </ul>
@@ -142,7 +143,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
                   onClick={downloadKey}
                 >
                   <Download className='w-4 h-4 mr-2' />
-                  Save my passport
+                  Save my secret key
                 </Button>
 
                 <Button

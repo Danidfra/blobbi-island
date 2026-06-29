@@ -140,12 +140,12 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
             container={portalContainer}
             data-block-move
             onPointerDown={(e) => e.stopPropagation()}
-            className="w-[min(92vw,24rem)] max-w-sm max-h-[85svh] overflow-y-auto rounded-3xl border-2 border-island-wood/30 bg-island-cream p-5"
+            className="flex max-h-[88svh] w-[min(94vw,32rem)] flex-col gap-0 overflow-hidden rounded-3xl border-2 border-island-wood/30 bg-island-cream p-0"
           >
-            <DialogHeader className="text-left">
-              <DialogTitle className="text-island-ink">Menu</DialogTitle>
+            <DialogHeader className="shrink-0 border-b border-island-wood/15 px-4 py-2.5 text-left">
+              <DialogTitle className="text-base text-island-ink">Menu</DialogTitle>
             </DialogHeader>
-            <div className="mt-1">{body}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{body}</div>
           </DialogContent>
         </Dialog>
       ) : (
@@ -247,84 +247,92 @@ function AccountMenuBody({
 
   return (
     <div className="space-y-1">
-      {/* Current account identity */}
-      <div className="flex items-center gap-3 px-2 py-1.5">
-        <Avatar className="size-10 border-2 border-island-wood/30">
-          <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
-          <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
-            {getDisplayName(currentUser).charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-island-ink">
-            {getDisplayName(currentUser)}
-          </p>
-          <p className="truncate text-xs text-island-ink-soft">Signed in</p>
+      {/* Top row: identity + current Blobbi. In the wider modal these sit side
+          by side to cut vertical scrolling; in the dropdown they stack. */}
+      <div className={cn(variant === "modal" && "grid grid-cols-2 gap-2")}>
+        {/* Current account identity */}
+        <div className="flex items-center gap-3 px-2 py-1.5">
+          <Avatar className="size-10 border-2 border-island-wood/30">
+            <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
+            <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
+              {getDisplayName(currentUser).charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-island-ink">
+              {getDisplayName(currentUser)}
+            </p>
+            <p className="truncate text-xs text-island-ink-soft">Signed in</p>
+          </div>
         </div>
+
+        {variant === "dropdown" && <Divider />}
+
+        {/* Current Blobbi */}
+        {variant === "dropdown" && <SectionLabel>Current Blobbi</SectionLabel>}
+        <Row onClick={onSwitchBlobbi} className={cn(variant === "modal" && "!my-0")}>
+          <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-island-wood/30 bg-island-cream-2">
+            <CurrentBlobbiDisplay
+              size="sm"
+              showFallback
+              transparent
+              showAccessories={false}
+              className="size-full"
+            />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-island-ink">
+              {blobbiName || "No Blobbi selected"}
+            </p>
+            <p className="truncate text-xs text-island-ink-soft">Switch Blobbi</p>
+          </div>
+          <PawPrint className="size-4 shrink-0 text-island-purple" />
+        </Row>
       </div>
-
-      <Divider />
-
-      {/* Current Blobbi */}
-      <SectionLabel>Current Blobbi</SectionLabel>
-      <Row onClick={onSwitchBlobbi}>
-        <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-island-wood/30 bg-island-cream-2">
-          <CurrentBlobbiDisplay
-            size="sm"
-            showFallback
-            transparent
-            showAccessories={false}
-            className="size-full"
-          />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-island-ink">
-            {blobbiName || "No Blobbi selected"}
-          </p>
-          <p className="truncate text-xs text-island-ink-soft">Switch Blobbi</p>
-        </div>
-        <PawPrint className="size-4 shrink-0 text-island-purple" />
-      </Row>
 
       <Divider />
 
       {/* Network / settings */}
-      <SectionLabel>
-        <span className="inline-flex items-center gap-1.5">
-          <Settings className="size-3.5" />
-          Network
-        </span>
-      </SectionLabel>
-      <div className="px-1 pb-1">
-        <RelaySelector className="w-full" />
+      <div className={cn(variant === "modal" && "flex items-center gap-2")}>
+        <SectionLabel>
+          <span className="inline-flex items-center gap-1.5">
+            <Settings className="size-3.5" />
+            Network
+          </span>
+        </SectionLabel>
+        <div className={cn("px-1 pb-1", variant === "modal" && "min-w-0 flex-1 pb-0")}>
+          <RelaySelector className="w-full" />
+        </div>
       </div>
 
       <Divider />
 
-      {/* Account actions */}
+      {/* Account actions — in the modal these flow in a 2-col grid to stay compact. */}
       {otherUsers.length > 0 && <SectionLabel>Switch account</SectionLabel>}
-      {otherUsers.map((user) => (
-        <Row key={user.id} onClick={() => onSetLogin(user.id)}>
-          <Avatar className="size-8 border border-island-wood/30">
-            <AvatarImage src={user.metadata.picture} alt={getDisplayName(user)} />
-            <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
-              {getDisplayName(user)?.charAt(0) || <UserIcon />}
-            </AvatarFallback>
-          </Avatar>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-island-ink">
-            {getDisplayName(user)}
-          </span>
-        </Row>
-      ))}
+      <div className={cn(variant === "modal" && "grid grid-cols-2 gap-1")}>
+        {otherUsers.map((user) => (
+          <Row key={user.id} onClick={() => onSetLogin(user.id)}>
+            <Avatar className="size-8 border border-island-wood/30">
+              <AvatarImage src={user.metadata.picture} alt={getDisplayName(user)} />
+              <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
+                {getDisplayName(user)?.charAt(0) || <UserIcon />}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-island-ink">
+              {getDisplayName(user)}
+            </span>
+          </Row>
+        ))}
 
-      <Row onClick={onAddAccount}>
-        <UserPlus className="size-4 shrink-0 text-island-purple" />
-        <span className="text-sm text-island-ink">Add another account</span>
-      </Row>
-      <Row onClick={() => onRemoveLogin(currentUser.id)} className="text-red-500 hover:bg-red-50">
-        <LogOut className="size-4 shrink-0" />
-        <span className="text-sm">Log out</span>
-      </Row>
+        <Row onClick={onAddAccount}>
+          <UserPlus className="size-4 shrink-0 text-island-purple" />
+          <span className="text-sm text-island-ink">Add another account</span>
+        </Row>
+        <Row onClick={() => onRemoveLogin(currentUser.id)} className="text-red-500 hover:bg-red-50">
+          <LogOut className="size-4 shrink-0" />
+          <span className="text-sm">Log out</span>
+        </Row>
+      </div>
 
       {/* Developer tools — dev/local builds only; never rendered in production. */}
       {isDevMode && (
