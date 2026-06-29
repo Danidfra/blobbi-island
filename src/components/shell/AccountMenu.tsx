@@ -24,6 +24,7 @@ import SignupDialog from "@/components/auth/SignupDialog";
 import { LoginArea } from "@/components/auth/LoginArea";
 import { useLoggedInAccounts, type Account } from "@/hooks/useLoggedInAccounts";
 import { useBlobbis } from "@/hooks/useBlobbis";
+import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
@@ -210,7 +211,7 @@ function AccountMenuBody({
   const currentBlobbi = currentCompanionId
     ? blobbis?.find((b) => b.id === currentCompanionId)
     : undefined;
-  const blobbiName = currentBlobbi?.name?.trim();
+  const blobbiName = currentBlobbi ? getBlobbiDisplayName(currentBlobbi) : undefined;
 
   // Reusable row styling so the modal and dropdown look the same. In the
   // dropdown we use DropdownMenuItem (keyboard nav); in the modal we use plain

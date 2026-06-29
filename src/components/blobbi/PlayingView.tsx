@@ -24,6 +24,7 @@ import { MultiplayerLayer } from './MultiplayerLayer';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { dbg } from '@/lib/debug';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { DOCK_EVENTS, type SendChatDetail } from '@/components/shell/dock-events';
@@ -368,7 +369,11 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         specialMark: get('special_mark') ?? get('specialMark') ?? blobbiVisual.specialMark,
         stage: normalizeStage(get('stage') ?? blobbiVisual.stage ?? 'baby'),
         adultType: get('adult_type') ?? get('adultType') ?? blobbiVisual.adultType,
-        name: blobbiVisual.name || get('name') || 'Unnamed Blobbi',
+        name: getBlobbiDisplayName({
+          id: get('d') ?? blobbiD ?? '',
+          name: get('name'),
+          rawTags: event.tags,
+        }),
       };
 
       dbg('[blobbi-debug][setState] Setting refined externalVisual:', {

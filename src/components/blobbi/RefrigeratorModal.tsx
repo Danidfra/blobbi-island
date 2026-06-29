@@ -8,6 +8,7 @@ import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
 import { useBlobbiFeedAction } from '@/hooks/useBlobbiFeedAction';
 import { useToast } from '@/hooks/useToast';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 interface RefrigeratorModalProps {
   isOpen: boolean;
@@ -181,7 +182,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           const itemDisplayName = itemId.replace('food_', '').replace('_', ' ');
           toast({
             title: "Feeding Successful! 🍽️",
-            description: `Fed ${quantity} ${itemDisplayName}(s) to ${status.currentPet?.name}! Gained ${result.experienceGained} XP.`,
+            description: `Fed ${quantity} ${itemDisplayName}(s) to ${status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'}! Gained ${result.experienceGained} XP.`,
           });
           setIsConsumeModalOpen(false);
           setSelectedItemId(null);

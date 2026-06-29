@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Position } from '@/lib/types';
 import type { MovableBlobbiRef } from '@/components/blobbi/MovableBlobbi';
+import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
 
 /**
  * Tunable distance (in world percent units) within which the local Blobbi is
@@ -214,6 +215,22 @@ export function usePendingInteraction({
 
       // Reuse the existing movement system to walk toward the target.
       blobbiRef.current?.goTo(target);
+
+      // Broadcast the walk target to multiplayer presence so REMOTE clients see
+      // this Blobbi walk to the target (e.g. to a door) before any location
+      // change removes it — instead of vanishing instantly. Only broadcast for
+      // real walks (target meaningfully far from the current position); an
+      // underfoot interaction needs no remote movement.
+      const here = blobbiRef.current?.getCurrentPosition?.();
+      if (!here || distance(here, target) > resolvedThreshold) {
+        if (typeof document !== 'undefined') {
+          document.dispatchEvent(
+            new CustomEvent<PresenceMoveDetail>(DOCK_EVENTS.presenceMove, {
+              detail: { target: { x: target.x, y: target.y } },
+            }),
+          );
+        }
+      }
 
       // If already close enough (e.g. interacting with something underfoot),
       // fire immediately rather than waiting a frame.

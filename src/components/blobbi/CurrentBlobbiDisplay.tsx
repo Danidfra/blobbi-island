@@ -3,6 +3,7 @@ import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
 import { applyGazeMarkup } from "@/blobbi/ui/lib/svg";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
+import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
 
@@ -166,7 +167,12 @@ export function CurrentBlobbiDisplay({
   // Show Blobbi SVG
   if (svgContent && (currentBlobbi || visualOverride)) {
     const blobbiData = (currentBlobbi || visualOverride)!;
-    const displayName = blobbiData.name || (visualOverride ? 'Remote Blobbi' : (currentBlobbi?.id || 'Blobbi'));
+    // For a local Blobbi, resolve the friendly user-facing name (never the raw
+    // id/d-tag). For a remote visualOverride, the caller already resolved the
+    // name, so use it as-is with a friendly fallback.
+    const displayName = currentBlobbi
+      ? getBlobbiDisplayName(currentBlobbi)
+      : (visualOverride?.name || 'Remote Blobbi');
     const stage = blobbiData.stage || 'baby';
 
     // Transparent mode - show only the SVG without background

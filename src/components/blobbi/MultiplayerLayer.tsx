@@ -33,13 +33,15 @@ import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { cn } from '@/lib/utils';
-import { nameFromDTag } from '@/lib/blobbi-name';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 import { locationScalingConfig } from '@/lib/location-scaling-config';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
+import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
 import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
@@ -376,7 +378,14 @@ export function MultiplayerLayer({
     // Parse visual data (simplified)
     const get = (n: string) => event.tags.find(([name]) => name === n)?.[1];
     const dTag = get('d');
-    const name = nameFromDTag(dTag) || get('name') || 'Unnamed Blobbi';
+    // Resolve the user-facing name with the SAME priority used in the selection
+    // screen / cards: the real `name` tag wins; never fall back to the raw
+    // id/d-tag-derived code in user-facing labels.
+    const name = getBlobbiDisplayName({
+      id: dTag ?? '',
+      name: get('name'),
+      rawTags: event.tags,
+    });
     const baseColor      = get('base_color')      || get('baseColor');
     const secondaryColor = get('secondary_color') || get('secondaryColor');
     const pattern        = get('pattern');
@@ -532,6 +541,16 @@ export function MultiplayerLayer({
     return { x: (p.x / rect.width) * 100, y: (p.y / rect.height) * 100 };
   }, [containerRef, isPositionBlocked, navApi]);
 
+  // Rendered-pixels-per-world-pixel. The world is rendered at WORLD_WIDTH then
+  // uniformly scaled by VirtualWorld, so rect.width === WORLD_WIDTH * scale.
+  // Remote walk speed is normalized by this (see useIslandPresence) so it
+  // matches the scale-corrected local player on both desktop and mobile.
+  const getWorldScale = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return 1;
+    return rect.width / WORLD_WIDTH;
+  }, [containerRef]);
+
   const {
     sessionId,
     players,
@@ -552,6 +571,7 @@ export function MultiplayerLayer({
     fetch31124: fetchBlobbi31124,
     percentToPixel,
     pixelToPercent,
+    getWorldScale,
     nav: navApi,
     // Live gaze source: the presence rAF loop writes every remote's current
     // position here each frame, so watchers track moving targets smoothly
@@ -956,6 +976,31 @@ export function MultiplayerLayer({
       container.removeEventListener('pointerdown', onPointerDown, { capture: true });
     };
   }, [containerRef, disabled, user, handleContainerClick]);
+
+  // Walk-to-interact (e.g. clicking a door) walks the local Blobbi to a target
+  // and only then changes location. That walk goes through usePendingInteraction
+  // (local-only), so without this remotes never saw the walk — the Blobbi just
+  // vanished when the new-location presence arrived. Forward the broadcast walk
+  // target to presence `moveTo` (publishMove) so remotes animate the walk-to-door
+  // first; by the time the location change removes this player, the remote walk
+  // has had the full travel time to play out.
+  useEffect(() => {
+    if (disabled || !user) return;
+
+    const onPresenceMove = (e: Event) => {
+      const detail = (e as CustomEvent<PresenceMoveDetail>).detail;
+      const target = detail?.target;
+      if (!target) return;
+      moveTo({ x: target.x, y: target.y }).catch((err) => {
+        if (DEBUG_MP) console.debug('[blobbi][mp][ui] presence-move failed', err);
+      });
+    };
+    document.addEventListener(DOCK_EVENTS.presenceMove, onPresenceMove);
+
+    return () => {
+      document.removeEventListener(DOCK_EVENTS.presenceMove, onPresenceMove);
+    };
+  }, [disabled, user, moveTo]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {

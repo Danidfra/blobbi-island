@@ -54,6 +54,16 @@ interface UseIslandPresenceOptions {
   percentToPixel: (p: Position) => { x:number; y:number };
   pixelToPercent: (p: {x:number; y:number}) => Position;
   /**
+   * Current world scale: rendered-pixels-per-world-pixel
+   * (`getBoundingClientRect().width / WORLD_WIDTH`). Used to normalize remote
+   * walk speed so a fixed world-space speed (`DEFAULT_SPEED_PX`, expressed in
+   * world px/s) takes the SAME wall-clock time on desktop and mobile, matching
+   * the local player. Without this, remote players appear faster on smaller
+   * (more scaled-down) screens because the rAF step is done in post-transform
+   * pixels. Defaults to 1 when unavailable.
+   */
+  getWorldScale?: () => number;
+  /**
    * Optional shared map (player key -> current percent position) written every
    * animation frame from the rAF loop, BEFORE the throttled `setPlayers`. This
    * is the truly-live position source for gaze tracking: consumers (local or
@@ -158,6 +168,13 @@ const animatePlayers = useCallback(() => {
   let needsUpdate = false;
   const updated = new Map(playersAnimRef.current);
 
+  // Rendered-pixels-per-world-pixel. `anim.speedPx` is a world-space speed
+  // (px/s against the 1046×697 world); multiplying by worldScale converts the
+  // per-frame step into the SAME on-screen pixels a constant world distance
+  // maps to — so remote walk speed matches the (scale-corrected) local player
+  // and feels identical on desktop and mobile instead of faster on mobile.
+  const worldScale = opts.getWorldScale?.() ?? 1;
+
   for (const [key, anim] of playersAnimRef.current) {
     const player = players.get(key);
     if (!player) continue;
@@ -173,7 +190,7 @@ const animatePlayers = useCallback(() => {
     let moving = false;
 
     if (distPx > 2) {
-      const step = anim.speedPx * dt;         // px/sec * sec = px
+      const step = anim.speedPx * worldScale * dt;  // world px/s * scale * sec = rendered px
       const ux = dx / distPx, uy = dy / distPx;
       newPosPx.x += ux * step;
       newPosPx.y += uy * step;
@@ -276,7 +293,7 @@ const animatePlayers = useCallback(() => {
   }
 
   animationFrameRef.current = requestAnimationFrame(animatePlayers);
-}, [players, opts.percentToPixel, opts.pixelToPercent, opts.livePositionsRef, navApi, isPositionBlocked]);
+}, [players, opts.percentToPixel, opts.pixelToPercent, opts.getWorldScale, opts.livePositionsRef, navApi, isPositionBlocked]);
 
   // Start animation loop
   useEffect(() => {
@@ -327,9 +344,24 @@ const animatePlayers = useCallback(() => {
               key: playerKey, eventLoc: content.location, tagLoc: tagLocation, currentLoc: location
             });
 
+            // Drop the animation state too, so a returning player can't reuse a
+            // stale movement target/goal (e.g. the old walk-to-door target) the
+            // next time they appear in this location.
             const updatedAnim = new Map(playersAnimRef.current);
             updatedAnim.delete(playerKey);
             playersAnimRef.current = updatedAnim;
+
+            // Forget the cached live position so gaze tracking doesn't keep the
+            // player parked at their last (door) position after they leave.
+            opts.livePositionsRef?.current?.delete(playerKey);
+
+            // Forget the latest-session bookkeeping for this session so that
+            // when the player returns they are treated as brand-new for this
+            // location (spawn at entry) instead of resuming stale state.
+            const latest = latestSessionByPubkeyRef.current.get(event.pubkey);
+            if (latest?.sessionId === sessionIdFromTag) {
+              latestSessionByPubkeyRef.current.delete(event.pubkey);
+            }
 
             setPlayers(prev => {
               const next = new Map(prev);
@@ -452,13 +484,30 @@ const animatePlayers = useCallback(() => {
 
      const speed = content.goal?.v ?? DEFAULT_SPEED_PX;
      const existingAnimState = playersAnimRef.current.get(playerKey);
-     const animState: PlayerAnimState = {
-       pos: existingAnimState?.pos ?? initialPos,
-       target: targetPos,
-       speedPx: speed,
-       lastUpdate: performance.now(),
-       moving: content.state === 'moving' && !!content.goal,
-     };
+     // A real, in-progress walk only exists when the event explicitly says so
+     // AND carries a goal. Otherwise this is an idle login/heartbeat and MUST
+     // NOT reuse a stale movement target (e.g. an old walk-to-door target left
+     // over from before the player changed location and came back).
+     const hasActiveGoal = content.state === 'moving' && !!content.goal;
+     const animState: PlayerAnimState = hasActiveGoal
+       ? {
+           // Walk from where the sprite currently is toward the new goal.
+           pos: existingAnimState?.pos ?? initialPos,
+           target: targetPos,
+           speedPx: speed,
+           lastUpdate: performance.now(),
+           moving: true,
+         }
+       : {
+           // Idle: snap target to the current anchor so the animation loop has
+           // nothing stale to walk toward. Anchor it at the freshly-resolved
+           // position rather than the previous (possibly door-parked) pos.
+           pos: initialPos,
+           target: initialPos,
+           speedPx: speed,
+           lastUpdate: performance.now(),
+           moving: false,
+         };
 
       // Update animation state
       const newAnimStates = new Map(playersAnimRef.current);
@@ -618,6 +667,7 @@ const animatePlayers = useCallback(() => {
               if (now - p.lastSeen > STALE) {
                 next.delete(key);
                 playersAnimRef.current.delete(key);
+                opts.livePositionsRef?.current?.delete(key);
                 changed = true;
               }
             }
@@ -714,6 +764,15 @@ const animatePlayers = useCallback(() => {
   if (DEBUG_MP) console.debug('[blobbi][mp] location change', { prev: lastLocationRef.current, next: location });
   lastLocationRef.current = location;
 
+  // The local player left for a new location. Drop ALL remote players and
+  // their animation/goal state from the previous location so none of it is
+  // reused when re-entering (no stale walk-to-door targets, no parked sprites).
+  // The fresh subscription below restores whoever is actually present now.
+  playersAnimRef.current = new Map();
+  latestSessionByPubkeyRef.current.clear();
+  opts.livePositionsRef?.current?.clear();
+  setPlayers(new Map());
+
   publishPresenceLogin(publish, {
     sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current,
   }).catch(err => {
@@ -743,6 +802,7 @@ const animatePlayers = useCallback(() => {
         if (now - p.lastSeen > STALE) {
           next.delete(key);
           playersAnimRef.current.delete(key);
+          opts.livePositionsRef?.current?.delete(key);
         }
       }
       return next;

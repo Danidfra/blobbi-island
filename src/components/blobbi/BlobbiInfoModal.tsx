@@ -27,7 +27,7 @@ import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
-import { displayNameFromId } from '@/lib/blobbi-name';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { Settings } from 'lucide-react';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
@@ -509,7 +509,7 @@ export function BlobbiInfoModal({
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
                       <h2 className="text-xl font-bold blobbi-text">
-                        {readOnly ? blobbiData.name : (displayNameFromId(currentPet?.id) ?? currentPet?.id)}
+                        {readOnly ? blobbiData.name : (currentPet ? getBlobbiDisplayName(currentPet) : 'Blobbi')}
                       </h2>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="outline" className="blobbi-badge text-xs">

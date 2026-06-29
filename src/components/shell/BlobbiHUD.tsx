@@ -44,8 +44,8 @@ interface BlobbiHUDProps {
 /**
  * BlobbiHUD — the in-game top HUD (replaces the website navbar).
  *
- * Left: current location pill (the HUD focuses on location only).
- * Right: online count + account/menu.
+ * Center: current location pill (an in-world location sign, centered at the top).
+ * Right:  online count + account/menu.
  *
  * Carries `data-block-move` so taps on the HUD never move the Blobbi. In
  * immersive / fullscreen mode (no header) the account/menu is the single home
@@ -64,18 +64,30 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
       className={cn(
         // Root spans full width; transparent gaps must let world clicks through,
         // so the root is pointer-events-none and each cluster re-enables them.
-        "pointer-events-none flex items-center justify-between gap-2",
+        // `relative` so the centered location sign can be absolutely positioned
+        // without being pushed around by the left/right clusters.
+        "pointer-events-none relative flex items-center justify-between gap-2",
         compact
           ? "px-2 pt-[max(0.4rem,env(safe-area-inset-top))] pb-2"
           : "px-3 sm:px-4 pt-3 pb-2",
       )}
     >
-      {/* Left: current location only */}
-      <div data-block-move className="pointer-events-auto flex items-center gap-2 min-w-0">
-        <div className="min-w-0">
-          <LocationPill label={locationName} size={size} />
-        </div>
+      {/* Center: current location — an in-world location sign, centered at the
+          top of the canvas. Absolutely centered (both axes) so it never shifts
+          with the right cluster, sits on the same line as the side controls,
+          and never collides with the account/menu (right) or the
+          fullscreen-exit control (left). On very narrow widths the pill's own
+          max-width keeps it clear of the side clusters. */}
+      <div
+        data-block-move
+        className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center"
+      >
+        <LocationPill label={locationName} size={size} />
       </div>
+
+      {/* Left spacer — keeps the right cluster right-aligned via justify-between
+          while the location sign floats centered above. */}
+      <div aria-hidden className="min-w-0 flex-1" />
 
       {/* Right: status + account/menu */}
       <div data-block-move className="pointer-events-auto flex items-center gap-2 shrink-0">

@@ -8,6 +8,7 @@ import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
 import { useBlobbiPlayAction } from '@/hooks/useBlobbiPlayAction';
 import { useToast } from '@/hooks/useToast';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 interface ChestModalProps {
   isOpen: boolean;
@@ -304,7 +305,7 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
           const itemDisplayName = itemId.replace('toy_', '').replace('_', ' ');
           toast({
             title: "Playing Successful! 🎾",
-            description: `Played with ${quantity} ${itemDisplayName}(s) with ${status.currentPet?.name}! Gained ${result.experienceGained} XP.`,
+            description: `Played with ${quantity} ${itemDisplayName}(s) with ${status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'}! Gained ${result.experienceGained} XP.`,
           });
           setIsConsumeModalOpen(false);
           setSelectedItemId(null);
