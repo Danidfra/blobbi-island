@@ -70,10 +70,15 @@ export function BlobbiAppShell({
   };
   const { isSupported, isFullscreen, toggle, exit } = useFullscreen(rootRef);
 
-  // While fullscreen is active, overlays (account menu, dialogs, sheets) must
-  // portal INTO the fullscreened element — otherwise they render in
-  // document.body, outside the fullscreen layer, and appear not to open.
-  const portalContainer = isFullscreen ? rootEl : null;
+  // Overlays (account menu, dialogs, sheets) portal INTO the game shell root
+  // element rather than document.body. This keeps them visually inside the game
+  // window — the auth dialogs read like they appear inside Blobbi Island, and
+  // their backdrop only covers the game window, not the whole browser page.
+  // It is ALSO required for fullscreen: when fullscreen is active the shell root
+  // is the fullscreened element, so anything in document.body would render
+  // outside the fullscreen layer and appear not to open. Using rootEl in every
+  // mode covers desktop-framed, immersive (mobile landscape), and fullscreen.
+  const portalContainer = rootEl;
 
   const isLogin = screen === "login";
 

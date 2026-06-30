@@ -41,6 +41,11 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
 
+  // While an auth modal is open it presents its OWN wooden plate, so hide the
+  // initial plate to avoid two competing wooden signs. The island background
+  // stays visible; the plate fades back in when the modal closes.
+  const authModalOpen = loginDialogOpen || signupDialogOpen;
+
   return (
     <div
       className={`relative flex h-full min-h-full w-full items-center justify-center overflow-hidden bg-island-ocean p-3 sm:p-6 ${className ?? ""}`}
@@ -58,8 +63,15 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
       {/* ── Centered wooden sign (the login container) ──────────────────── */}
       {/* Height-driven + width-capped so the fixed-aspect plate fits inside the
           frame on both axes without ever stretching (desktop & landscape). A
-          small downward nudge on mobile landscape sits it slightly lower. */}
-      <div className="relative z-10 aspect-[1536/1024] h-full max-h-[27rem] w-auto max-w-full landscape:max-md:max-h-full landscape:max-md:translate-y-[3%]">
+          small downward nudge on mobile landscape sits it slightly lower.
+          Hidden (faded out, non-interactive) while an auth modal is open so the
+          modal's own wooden plate is the single visual focus. */}
+      <div
+        aria-hidden={authModalOpen}
+        className={`relative z-10 aspect-[1536/1024] h-full max-h-[27rem] w-auto max-w-full transition-opacity duration-200 landscape:max-md:max-h-full landscape:max-md:translate-y-[3%] ${
+          authModalOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+      >
         {/* The wooden plate art — never stretched. */}
         <img
           src="/assets/map/blobbi-island-login-wood.png"
