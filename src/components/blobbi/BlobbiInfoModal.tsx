@@ -406,7 +406,6 @@ export function BlobbiInfoModal({
           <div className="flex flex-col w-1/3 lg:w-2/5 flex-shrink-0 min-h-0">
             {/* Stage Container - constrained to available height on mobile landscape */}
             <div
-              ref={stageRef}
               className="relative aspect-square w-full max-h-full mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60"
             >
               {/* Background Layer - z-0 */}
@@ -428,32 +427,34 @@ export function BlobbiInfoModal({
 
               {/* Static Blobbi - z-10, centered horizontally, anchored to bottom */}
               <div className="absolute inset-0 z-10 flex justify-center items-end pb-[5%]">
-                <CurrentBlobbiPreview
-                  key={`preview:${previewKey}`}
-                  size="xl"
-                  showFallback={true}
-                  isSleeping={blobbiData.isSleeping}
-                  isStaticPreview={true}
-                  showAccessories={false}
-                  className="transform-gpu"
-                  visualOverride={readOnly ? externalVisual : undefined}
-                  idSuffix={`preview:${previewKey}`}
-                />
-              </div>
+                <div ref={stageRef} className="relative">
+                  <CurrentBlobbiPreview
+                    key={`preview:${previewKey}`}
+                    size="xl"
+                    showFallback={true}
+                    isSleeping={blobbiData.isSleeping}
+                    isStaticPreview={true}
+                    showAccessories={selectedTab !== 'inventory'}
+                    className="transform-gpu"
+                    visualOverride={readOnly ? externalVisual : undefined}
+                    idSuffix={`preview:${previewKey}`}
+                  />
 
-              {/* Single Accessory Overlay - works for both static and draggable modes */}
-              {!readOnly && (
-                <AccessoryOverlay
-                  className="z-20"  // Ensure accessories are on top
-                  containerRef={stageRef}
-                  selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
-                  onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
-                  onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
-                  isStatic={selectedTab === 'primary'}
-                  sizeMultiplier={1.0} // Match the "xl" size multiplier from CurrentBlobbiPreview
-                  pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
-                />
-              )}
+                  {/* Accessory Overlay for inventory editing - positioned relative to blobbi bounds */}
+                  {!readOnly && selectedTab === 'inventory' && (
+                    <AccessoryOverlay
+                      className="absolute inset-0 z-20"
+                      containerRef={stageRef}
+                      selectedAccessory={selectedAccessory}
+                      onAccessorySelect={setSelectedAccessory}
+                      onAccessoryUpdate={(code, updates) => handleAccessoryUpdate(code, updates)}
+                      isStatic={false}
+                      sizeMultiplier={1.0}
+                      pendingUpdates={{ ...committedUpdates, ...pendingUpdates }}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
 
