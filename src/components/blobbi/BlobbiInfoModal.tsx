@@ -426,11 +426,11 @@ export function BlobbiInfoModal({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
               </div>
 
-              {/* Static Blobbi - z-10, centered */}
-              <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
+              {/* Static Blobbi - z-10, centered horizontally, anchored to bottom */}
+              <div className="absolute inset-0 z-10 flex justify-center items-end pb-[5%]">
                 <CurrentBlobbiPreview
                   key={`preview:${previewKey}`}
-                  size="3xl"
+                  size="xl"
                   showFallback={true}
                   isSleeping={blobbiData.isSleeping}
                   isStaticPreview={true}
@@ -450,7 +450,7 @@ export function BlobbiInfoModal({
                   onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
                   onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
                   isStatic={selectedTab === 'primary'}
-                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
+                  sizeMultiplier={1.0} // Match the "xl" size multiplier from CurrentBlobbiPreview
                   pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
                 />
               )}
