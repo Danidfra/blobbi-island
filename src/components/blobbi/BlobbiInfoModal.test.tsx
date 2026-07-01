@@ -91,7 +91,7 @@ describe('BlobbiInfoModal', () => {
     // Should not show coins display in read-only mode
     expect(screen.queryByText('Coins')).not.toBeInTheDocument();
 
-    // Should show close button
-    expect(screen.getByText('Close')).toBeInTheDocument();
+    // Should show the X close button in the header
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
