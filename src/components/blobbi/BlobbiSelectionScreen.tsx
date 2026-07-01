@@ -7,7 +7,7 @@ import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiCard } from "./BlobbiCard";
 import { BlobbiLoadingScreen } from "./BlobbiLoadingScreen";
 import { MascotBlobbi } from "./MascotBlobbi";
-import { ExternalLink, X, Egg, RotateCw, Sparkles } from "lucide-react";
+import { X, Egg, RotateCw, Sparkles } from "lucide-react";
 
 interface BlobbiSelectionScreenProps {
   onBlobbiSelected: (blobbi: Blobbi) => void;
@@ -195,20 +195,25 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
                 </span>
               </div>
               <h3 className="text-lg font-bold text-island-ink">
-                {currentCompanionIsLegacy ? "Time for a new Blobbi" : "Your nest is empty"}
+                Your nest is empty
               </h3>
-              <p className="mt-1 text-sm text-island-ink-soft">
-                {currentCompanionIsLegacy
-                  ? "Your Blobbi is from an older format. Hatch a new one to keep playing on the island."
-                  : "Hatch your first Blobbi to start your island adventure."}
-              </p>
+              <div className="mt-1 space-y-2 text-sm text-island-ink-soft">
+                <p>You don't have a Blobbi yet.</p>
+                <p>
+                  Soon, you'll be able to hatch your very first Blobbi directly
+                  here on the island.
+                </p>
+                <p>We're preparing the nest for new arrivals.</p>
+              </div>
               <Button
-                onClick={() => window.open('https://blobbi.pet', '_blank')}
-                className="mt-5 w-full rounded-full border-2 border-island-wood/40 bg-island-cream-2 text-island-ink shadow-cozy-soft transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-sand"
+                disabled
+                aria-disabled="true"
+                tabIndex={-1}
+                className="mt-5 w-full cursor-not-allowed rounded-full border-2 border-island-wood/40 bg-island-cream-2 text-island-ink shadow-cozy-soft opacity-60"
                 variant="outline"
               >
-                <ExternalLink className="mr-2 size-4 text-island-purple" />
-                {currentCompanionIsLegacy ? "Hatch a new Blobbi" : "Hatch one at blobbi.pet"}
+                <Sparkles className="mr-2 size-4 text-island-purple" />
+                Coming Soon
               </Button>
             </div>
           </div>
