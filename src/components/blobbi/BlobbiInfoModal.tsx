@@ -121,10 +121,7 @@ export function BlobbiInfoModal({
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
   const backgroundSrc = getBlobbiBackground(backgroundKey);
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
-  const [modalMinHeight, setModalMinHeight] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
-  const [primaryTabHeight, setPrimaryTabHeight] = useState<number | null>(null);
-  const primaryContentRef = useRef<HTMLDivElement>(null);
   const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
@@ -331,19 +328,6 @@ export function BlobbiInfoModal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Capture primary tab content height to set as minimum for modal
-  useEffect(() => {
-    if (primaryContentRef.current && selectedTab === 'primary' && !primaryTabHeight) {
-      const height = primaryContentRef.current.offsetHeight;
-      setPrimaryTabHeight(height);
-      // Set modal minimum height based on primary tab content + padding and other elements
-      if (modalRef.current) {
-        const modalHeight = modalRef.current.offsetHeight;
-        setModalMinHeight(`${modalHeight}px`);
-      }
-    }
-  }, [selectedTab, primaryTabHeight]);
-
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && isOpen) {
       onClose();
@@ -394,8 +378,7 @@ export function BlobbiInfoModal({
     >
       <div
         ref={modalRef}
-        className="w-[85%] !h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
-        style={modalMinHeight ? { minHeight: modalMinHeight, height: modalMinHeight } : undefined}
+        className="w-[85%] max-h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
         role="dialog"
         aria-modal="true"
         data-block-move
@@ -418,13 +401,12 @@ export function BlobbiInfoModal({
           </Button>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 p-5">
+        <div className="flex flex-row gap-4 lg:gap-6 flex-1 min-h-0 p-3 lg:p-5">
           {/* Stage - Left side with background and static Blobbi */}
-          <div className="flex flex-col lg:w-2/5 flex-shrink-0">
-            {/* Stage Container - This is line 127 equivalent, keeping exact dimensions */}
+          <div className="flex flex-col w-1/3 lg:w-2/5 flex-shrink-0 min-h-0">
+            {/* Stage Container - constrained to available height on mobile landscape */}
             <div
-              ref={stageRef}
-              className="relative aspect-square w-full max-w-sm mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60 h-full"
+              className="relative aspect-square w-full max-h-full mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60"
             >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
@@ -443,41 +425,43 @@ export function BlobbiInfoModal({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
               </div>
 
-              {/* Static Blobbi - z-10, centered */}
-              <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
-                <CurrentBlobbiPreview
-                  key={`preview:${previewKey}`}
-                  size="3xl"
-                  showFallback={true}
-                  isSleeping={blobbiData.isSleeping}
-                  isStaticPreview={true}
-                  showAccessories={false}
-                  className="transform-gpu"
-                  visualOverride={readOnly ? externalVisual : undefined}
-                  idSuffix={`preview:${previewKey}`}
-                />
-              </div>
+              {/* Static Blobbi - z-10, centered horizontally, anchored to bottom */}
+              <div className="absolute inset-0 z-10 flex justify-center items-end pb-[5%]">
+                <div ref={stageRef} className="relative">
+                  <CurrentBlobbiPreview
+                    key={`preview:${previewKey}`}
+                    size="xl"
+                    showFallback={true}
+                    isSleeping={blobbiData.isSleeping}
+                    isStaticPreview={true}
+                    showAccessories={selectedTab !== 'inventory'}
+                    className="transform-gpu"
+                    visualOverride={readOnly ? externalVisual : undefined}
+                    idSuffix={`preview:${previewKey}`}
+                  />
 
-              {/* Single Accessory Overlay - works for both static and draggable modes */}
-              {!readOnly && (
-                <AccessoryOverlay
-                  className="z-20"  // Ensure accessories are on top
-                  containerRef={stageRef}
-                  selectedAccessory={selectedTab === 'inventory' ? selectedAccessory : undefined}
-                  onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
-                  onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
-                  isStatic={selectedTab === 'primary'}
-                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
-                  pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
-                />
-              )}
+                  {/* Accessory Overlay for inventory editing - positioned relative to blobbi bounds */}
+                  {!readOnly && selectedTab === 'inventory' && (
+                    <AccessoryOverlay
+                      className="absolute inset-0 z-20"
+                      containerRef={stageRef}
+                      selectedAccessory={selectedAccessory}
+                      onAccessorySelect={setSelectedAccessory}
+                      onAccessoryUpdate={(code, updates) => handleAccessoryUpdate(code, updates)}
+                      isStatic={false}
+                      sizeMultiplier={1.0}
+                      pendingUpdates={{ ...committedUpdates, ...pendingUpdates }}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
 
           </div>
 
           {/* Sidebar - Right side with tabbed interface */}
-          <div className="lg:w-3/5 flex-1 min-h-0 flex flex-col">
+          <div className="w-2/3 lg:w-3/5 flex-1 min-h-0 flex flex-col">
             <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as 'primary' | 'inventory')} className="flex flex-col h-full">
               {/* Tabs Header - sticky at top */}
               <div className="sticky top-0 backdrop-blur-sm z-20 rounded-xl border-purple-200/60 dark:border-purple-800/60">
@@ -502,9 +486,9 @@ export function BlobbiInfoModal({
               </div>
 
               {/* Tab Content - scrollable panels */}
-              <div className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+              <div className="flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                 {/* Primary Tab Content */}
-                <TabsContent value="primary" className="mt-4 space-y-4 pb-2 focus-visible:outline-none" ref={primaryContentRef}>
+                <TabsContent value="primary" className="mt-2 space-y-4 pb-2 focus-visible:outline-none">
                   {/* Basic Info */}
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
@@ -690,8 +674,8 @@ export function BlobbiInfoModal({
                 </TabsContent>
 
                 {/* Inventory Tab Content */}
-                <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
-                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+                <TabsContent value="inventory" className="mt-2 pb-2 focus-visible:outline-none flex flex-col">
+                  <div>
                     <AccessoryInventoryUI
                       onEquippedAccessoryClick={setSelectedAccessory}
                       selectedAccessory={selectedAccessory}
@@ -722,12 +706,6 @@ export function BlobbiInfoModal({
               </div>
             </Tabs>
           </div>
-        </div>
-
-        <div className="p-3 border-t border-purple-200/60 dark:border-purple-800/60 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
-          <Button variant="outline" onClick={onClose} className="blobbi-button border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
-            Close
-          </Button>
         </div>
       </div>
 
