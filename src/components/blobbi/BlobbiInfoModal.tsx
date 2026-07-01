@@ -430,12 +430,12 @@ export function BlobbiInfoModal({
               <div className="absolute w-full h-full z-10 flex justify-center items-end bottom-10 p-1">
                 <CurrentBlobbiPreview
                   key={`preview:${previewKey}`}
-                  size="xl"
+                  size="3xl"
                   showFallback={true}
                   isSleeping={blobbiData.isSleeping}
                   isStaticPreview={true}
                   showAccessories={false}
-                  className="transform-gpu lg:h-56 lg:w-56"
+                  className="transform-gpu"
                   visualOverride={readOnly ? externalVisual : undefined}
                   idSuffix={`preview:${previewKey}`}
                 />
@@ -450,7 +450,7 @@ export function BlobbiInfoModal({
                   onAccessorySelect={selectedTab === 'inventory' ? setSelectedAccessory : undefined}
                   onAccessoryUpdate={selectedTab === 'inventory' ? handleAccessoryUpdate : undefined}
                   isStatic={selectedTab === 'primary'}
-                  sizeMultiplier={1.0} // Match the "xl" size multiplier from CurrentBlobbiPreview
+                  sizeMultiplier={2.2} // Match the "3xl" size multiplier from CurrentBlobbiPreview
                   pendingUpdates={{ ...committedUpdates, ...pendingUpdates }} // Merge committed and pending updates
                 />
               )}
@@ -485,9 +485,9 @@ export function BlobbiInfoModal({
               </div>
 
               {/* Tab Content - scrollable panels */}
-              <div className="flex-1 min-h-0 relative overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+              <div className="flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                 {/* Primary Tab Content */}
-                <TabsContent value="primary" className="mt-4 space-y-4 pb-2 focus-visible:outline-none">
+                <TabsContent value="primary" className="mt-2 space-y-4 pb-2 focus-visible:outline-none">
                   {/* Basic Info */}
                   <div className="blobbi-card rounded-lg p-3">
                     <div className="space-y-1.5">
@@ -673,8 +673,8 @@ export function BlobbiInfoModal({
                 </TabsContent>
 
                 {/* Inventory Tab Content */}
-                <TabsContent value="inventory" className="mt-4 pb-2 focus-visible:outline-none h-full flex flex-col">
-                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+                <TabsContent value="inventory" className="mt-2 pb-2 focus-visible:outline-none flex flex-col">
+                  <div>
                     <AccessoryInventoryUI
                       onEquippedAccessoryClick={setSelectedAccessory}
                       selectedAccessory={selectedAccessory}
