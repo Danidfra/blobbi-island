@@ -11,6 +11,7 @@ import { useNostrPublish } from './useNostrPublish';
 
 import { parseOwnerProfile, validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
 import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
 
 export function useBlobbonautProfile() {
   const { nostr } = useNostr();
@@ -91,6 +92,11 @@ export function useSetCurrentCompanion() {
       }
       if (!newTags.some(([tagName]) => tagName === 'name')) {
         newTags.push(['name', '']); // Empty name is allowed
+      }
+      // Ensure canonical ecosystem marker required by @blobbi/core validation.
+      // Additive + idempotent: only added when absent (existing `b` preserved).
+      if (!newTags.some(([tagName]) => tagName === 'b')) {
+        newTags.push(['b', BLOBBI_ECOSYSTEM_NAMESPACE]);
       }
 
       // 4. Create the new event with the updated tags, preserving original

@@ -17,6 +17,7 @@ import type {
 } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
 
 // ============================================================================
 // Owner Profile Event Creation (Kind 11125)
@@ -60,6 +61,8 @@ export interface CreateOwnerProfileInput {
 function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   const tags: string[][] = [
     ['d', input.profileId],
+    // Canonical ecosystem marker required by @blobbi/core validation.
+    ['b', BLOBBI_ECOSYSTEM_NAMESPACE],
     ['name', input.name],
   ];
 
@@ -278,6 +281,10 @@ function dateToTimestamp(date: Date): string {
 function createPetStateTags(input: CreatePetStateInput): string[][] {
   const tags: string[][] = [
     ['d', input.petId],
+    // Canonical ecosystem marker required by @blobbi/core validation.
+    ['b', BLOBBI_ECOSYSTEM_NAMESPACE],
+    // Canonical activity state: derive from isSleeping, default 'active'.
+    ['state', input.isSleeping ? 'sleeping' : 'active'],
     ['stage', input.stage],
     ['breeding_ready', input.breedingReady ? 'true' : 'false'],
     ['generation', (input.generation || 1).toString()],
@@ -288,6 +295,8 @@ function createPetStateTags(input: CreatePetStateInput): string[][] {
     ['energy', (input.energy || 50).toString()],
     ['experience', (input.experience || 0).toString()],
     ['care_streak', (input.careStreak || 0).toString()],
+    // Canonical last_interaction: use provided value or current timestamp.
+    ['last_interaction', input.lastInteraction ? dateToTimestamp(input.lastInteraction) : dateToTimestamp(new Date())],
   ];
 
   // Add optional appearance tags
@@ -325,7 +334,7 @@ function createPetStateTags(input: CreatePetStateInput): string[][] {
   if (input.isDirty !== undefined) tags.push(['is_dirty', input.isDirty ? 'true' : 'false']);
   if (input.hasBuff !== undefined) tags.push(['has_buff', input.hasBuff ? 'true' : 'false']);
   if (input.hasDebuff !== undefined) tags.push(['has_debuff', input.hasDebuff ? 'true' : 'false']);
-  if (input.lastInteraction) tags.push(['last_interaction', dateToTimestamp(input.lastInteraction)]);
+  // Note: last_interaction is emitted canonically above (guaranteed present).
 
   // Add optional care tracking tags
   if (input.lastMeal) tags.push(['last_meal', dateToTimestamp(input.lastMeal)]);

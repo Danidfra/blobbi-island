@@ -21,6 +21,12 @@ import {
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   KIND_BLOBBI_STATE,
 } from './blobbi-kinds';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
+
+/** Find a tag value within a raw tags array (first match). */
+function rawTagValue(rawTags: string[][], name: string): string | undefined {
+  return rawTags.find(([tagName]) => tagName === name)?.[1];
+}
 
 // ============================================================================
 // Tag Parsing Utilities
@@ -315,11 +321,15 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
 /**
  * Tags that blobbi-island manages (knows how to read/write).
  * Any tag NOT in this set is considered "unknown" and will be preserved as-is
- * when republishing, so we don't strip tags set by Ditto (like `b`, `blobbi_onboarding_done`,
- * `xp`, `level`, `room`, etc.).
+ * when republishing, so we don't strip tags set by Ditto (like
+ * `blobbi_onboarding_done`, `xp`, `level`, `room`, etc.).
+ *
+ * `b` is managed: we author the canonical `blobbi:ecosystem:v1` namespace on
+ * write (preferring any existing value), so it must be excluded from the
+ * unknown-tag passthrough to avoid duplication.
  */
 const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
-  'd', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
+  'd', 'b', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
   'favoriteBlobbi', 'starterBlobbi', 'current_companion',
   'style', 'background', 'title',
   // Multi-value tags
@@ -341,6 +351,10 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Build managed tags from profile fields
   const tags: string[][] = [
     ['d', profile.id],
+    // Canonical ecosystem marker required by @blobbi/core validation.
+    // Prefer the existing value from the source event (never overwrite), else
+    // author the canonical namespace. Additive + idempotent.
+    ['b', rawTagValue(profile.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE],
     ['name', profile.name],
     ['coins', profile.coins.toString()],
     ['pettingLevel', profile.pettingLevel.toString()],
@@ -376,12 +390,16 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
 /**
  * Tags that blobbi-island manages for kind 31124 (Pet State).
  * Any tag NOT in this set is preserved as-is when republishing.
- * Tags like `b`, `seed`, `name`, `progression_state`, `progression_started_at`,
- * `state`, `last_decay_at`, and `client` (which may have 3+ elements) are NOT
+ * Tags like `seed`, `progression_state`, `progression_started_at`,
+ * `last_decay_at`, and `client` (which may have 3+ elements) are NOT
  * managed — they come through from rawTags.
+ *
+ * `b` and `state` are managed: we author canonical values on write (preferring
+ * any existing value from the source event), so they must be excluded from the
+ * unknown-tag passthrough to avoid duplication.
  */
 const MANAGED_PET_STATE_TAG_NAMES = new Set([
-  'd', 'stage', 'breeding_ready', 'generation',
+  'd', 'b', 'state', 'stage', 'breeding_ready', 'generation',
   'hunger', 'happiness', 'health', 'hygiene', 'energy',
   'experience', 'care_streak',
   // Appearance
@@ -420,9 +438,28 @@ export function mergePetStateTags(
   pet: PetState,
   overrides?: Record<string, string>,
 ): string[][] {
+  // Canonical ecosystem marker required by @blobbi/core validation.
+  // Prefer the existing value from the source event (never overwrite).
+  const bValue = rawTagValue(pet.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE;
+
+  // Canonical activity state required by @blobbi/core validation.
+  // Preference order: existing `state` tag from source event > derive from
+  // Island's `isSleeping` flag (sleeping/active) > default 'active'.
+  const stateValue =
+    rawTagValue(pet.rawTags, 'state') ?? (pet.isSleeping ? 'sleeping' : 'active');
+
+  // Canonical last_interaction required by @blobbi/core validation.
+  // Preserve the existing value if present, else use the PetState timestamp,
+  // else fall back to the current time so the tag is always emitted.
+  const lastInteractionValue =
+    rawTagValue(pet.rawTags, 'last_interaction') ??
+    (pet.lastInteraction ? dateToTimestamp(pet.lastInteraction) : dateToTimestamp(new Date()));
+
   // Build managed tags from pet fields
   const tags: string[][] = [
     ['d', pet.id],
+    ['b', bValue],
+    ['state', stateValue],
     ['stage', pet.stage],
     ['breeding_ready', pet.breedingReady ? 'true' : 'false'],
     ['generation', pet.generation.toString()],
@@ -433,6 +470,7 @@ export function mergePetStateTags(
     ['energy', pet.energy.toString()],
     ['experience', pet.experience.toString()],
     ['care_streak', pet.careStreak.toString()],
+    ['last_interaction', lastInteractionValue],
   ];
 
   // Care tracking timestamps
@@ -443,7 +481,6 @@ export function mergePetStateTags(
   if (pet.lastCheck) tags.push(['last_check', dateToTimestamp(pet.lastCheck)]);
   if (pet.lastSing) tags.push(['last_sing', dateToTimestamp(pet.lastSing)]);
   if (pet.lastMedicine) tags.push(['last_medicine', dateToTimestamp(pet.lastMedicine)]);
-  if (pet.lastInteraction) tags.push(['last_interaction', dateToTimestamp(pet.lastInteraction)]);
 
   // Appearance
   if (pet.baseColor) tags.push(['base_color', pet.baseColor]);
