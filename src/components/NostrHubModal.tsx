@@ -236,7 +236,7 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
                   )}>
                     {/* Icon with Tron Glow */}
                     <div className={cn(
-                      "transition-all duration-[2000]",
+                      "transition-all [transition-duration:2000ms]",
                       tronPulse,
                       expandedCard === card.id ? "w-32 h-32" : "w-16 h-16"
                     )}
