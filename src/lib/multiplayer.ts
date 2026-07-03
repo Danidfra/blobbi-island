@@ -9,6 +9,7 @@ import { locationBoundaries } from '@/lib/location-boundaries';
 import type { Position } from '@/lib/types';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { buildBlobbiAddress } from '@blobbi/core/blobbi';
 
 // ============================================================================
 // Constants and Configuration
@@ -114,7 +115,7 @@ export function makeSessionId(): string {
 
 /** Create a Blobbi address string */
 export function makeBlobbiAddr(pubkey: string, d: string): string {
-  return `${KIND_BLOBBI_STATE}:${pubkey}:${d}`;
+  return buildBlobbiAddress(pubkey, d);
 }
 
 /** Parse an 'a' tag into its components */
