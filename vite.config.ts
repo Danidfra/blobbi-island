@@ -46,41 +46,21 @@ export default defineConfig(() => ({
   },
   resolve: {
     alias: [
-      // Shared Blobbi packages consumed locally from the Ditto repo source.
-      // NOTE: local source integration only — not published to npm.
-      // Order matters: subpath aliases (`/*`) must precede the bare aliases.
-      {
-        find: /^@blobbi\/core\/(.*)$/,
-        replacement: path.resolve(
-          __dirname,
-          "../ditto/packages/blobbi-core/src/$1",
-        ),
-      },
-      {
-        find: "@blobbi/core",
-        replacement: path.resolve(
-          __dirname,
-          "../ditto/packages/blobbi-core/src/index.ts",
-        ),
-      },
-      {
-        find: /^@blobbi\/react\/(.*)$/,
-        replacement: path.resolve(
-          __dirname,
-          "../ditto/packages/blobbi-react/src/$1",
-        ),
-      },
-      {
-        find: "@blobbi/react",
-        replacement: path.resolve(
-          __dirname,
-          "../ditto/packages/blobbi-react/src/index.ts",
-        ),
-      },
+      // @blobbi/core and @blobbi/react resolve through their installed package
+      // exports in node_modules (file: deps on ../blobbi-kit), not source aliases.
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },
       { find: "react-dom", replacement: path.resolve(__dirname, "node_modules/react-dom") },
     ],
-    dedupe: ["react", "react-dom", "react/jsx-runtime"],
+    // The @blobbi/* packages are file: deps symlinked from ../blobbi-kit, which
+    // has its own node_modules. Dedupe the React-context-bearing singletons so a
+    // symlinked package can't pull in a second copy (which breaks useContext).
+    dedupe: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "@nostrify/react",
+      "@tanstack/react-query",
+    ],
   },
 }));
