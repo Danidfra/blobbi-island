@@ -24,26 +24,26 @@ function TestFoodItem() {
 }
 
 describe('FoodItem', () => {
-  it('renders food item with correct image', () => {
+  it('renders food item with correct image', async () => {
     render(
       <TestApp>
         <TestFoodItem />
       </TestApp>
     );
 
-    const foodImage = screen.getByAltText('Food item');
+    const foodImage = await screen.findByAltText('Food item');
     expect(foodImage).toBeInTheDocument();
     expect(foodImage).toHaveAttribute('src', '/assets/interactive/food/apple.png');
   });
 
-  it('applies correct positioning styles', () => {
+  it('applies correct positioning styles', async () => {
     render(
       <TestApp>
         <TestFoodItem />
       </TestApp>
     );
 
-    const foodContainer = screen.getByAltText('Food item').parentElement;
+    const foodContainer = (await screen.findByAltText('Food item')).parentElement;
     expect(foodContainer).toHaveStyle({
       left: '68px', // 100 - 64/2
       top: '168px', // 200 - 64/2

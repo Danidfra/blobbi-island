@@ -22,7 +22,7 @@ const mockBlobbi: Blobbi = {
 };
 
 describe('PhotoBoothModal', () => {
-  it('renders correctly when open', () => {
+  it('renders correctly when open', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -34,7 +34,7 @@ describe('PhotoBoothModal', () => {
     );
 
     // Check if modal container is rendered (using backdrop class)
-    expect(screen.getByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
 
     // Check if photo booth background image is loaded
     const photoBoothImage = screen.getByAltText('Photo Booth Interior');
@@ -60,7 +60,7 @@ describe('PhotoBoothModal', () => {
     expect(screen.queryByRole('button', { name: /close photo booth/i })).not.toBeInTheDocument();
   });
 
-  it('renders Blobbi when selectedBlobbi is provided', () => {
+  it('renders Blobbi when selectedBlobbi is provided', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -72,13 +72,13 @@ describe('PhotoBoothModal', () => {
     );
 
     // The modal should be visible and Blobbi should be rendered inside
-    expect(screen.getByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
     expect(screen.getByAltText('Photo Booth Interior')).toBeInTheDocument();
     // Note: Testing actual Blobbi component rendering would require more complex setup
     // This test just ensures modal structure is correct
   });
 
-  it('does not render Blobbi when selectedBlobbi is null', () => {
+  it('does not render Blobbi when selectedBlobbi is null', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -90,11 +90,11 @@ describe('PhotoBoothModal', () => {
     );
 
     // Modal should still render but without Blobbi
-    expect(screen.getByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
     expect(screen.getByAltText('Photo Booth Interior')).toBeInTheDocument();
   });
 
-  it('renders Take Photo button when Blobbi is selected', () => {
+  it('renders Take Photo button when Blobbi is selected', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -106,12 +106,12 @@ describe('PhotoBoothModal', () => {
     );
 
     // Check if Take Photo button is present
-    const takePhotoButton = screen.getByRole('button', { name: /take photo/i });
+    const takePhotoButton = await screen.findByRole('button', { name: /take photo/i });
     expect(takePhotoButton).toBeInTheDocument();
     expect(takePhotoButton).toHaveTextContent('Take Photo');
   });
 
-  it('disables Take Photo button when Blobbi is null', () => {
+  it('disables Take Photo button when Blobbi is null', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -123,12 +123,12 @@ describe('PhotoBoothModal', () => {
     );
 
     // Take Photo button should be present but disabled when no Blobbi is selected
-    const takePhotoButton = screen.getByRole('button', { name: /take photo/i });
+    const takePhotoButton = await screen.findByRole('button', { name: /take photo/i });
     expect(takePhotoButton).toBeInTheDocument();
     expect(takePhotoButton).toBeDisabled();
   });
 
-  it('maintains configurable photo composition system', () => {
+  it('maintains configurable photo composition system', async () => {
     // This test verifies that the configuration system exists and is properly structured
     // We can't easily test the actual canvas operations without complex mocking,
     // but we can verify the component structure and button functionality
@@ -144,7 +144,7 @@ describe('PhotoBoothModal', () => {
     );
 
     // Verify that the modal structure is correct for the new composition system
-    expect(screen.getByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /close photo booth/i })).toBeInTheDocument();
     expect(screen.getByAltText('Photo Booth Interior')).toBeInTheDocument();
 
     // Verify Take Photo button is present and functional
@@ -161,7 +161,7 @@ describe('PhotoBoothModal', () => {
     expect(takePhotoButton).toHaveClass('to-pink-500');
   });
 
-  it('renders accessories list on the left side', () => {
+  it('renders accessories list on the left side', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -173,7 +173,7 @@ describe('PhotoBoothModal', () => {
     );
 
     // Check if accessories section is present
-    expect(screen.getByText('Accessories')).toBeInTheDocument();
+    expect(await screen.findByText('Accessories')).toBeInTheDocument();
 
     // Check if specific accessories are listed
     expect(screen.getByText('Hat')).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe('PhotoBoothModal', () => {
     expect(screen.getByText('Double-click to remove')).toBeInTheDocument();
   });
 
-  it('shows updated instructions with accessory information', () => {
+  it('shows updated instructions with accessory information', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -201,12 +201,12 @@ describe('PhotoBoothModal', () => {
     );
 
     // Check that instructions now include accessory information
-    const instructions = screen.getByText(/drag accessories/i);
+    const instructions = await screen.findByText(/drag accessories/i);
     expect(instructions).toBeInTheDocument();
     expect(instructions).toHaveTextContent('Drag accessories');
   });
 
-  it('shows resize instructions in both accessory panel and main instructions', () => {
+  it('shows resize instructions in both accessory panel and main instructions', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -218,7 +218,7 @@ describe('PhotoBoothModal', () => {
     );
 
     // Check rotation instructions - should appear in both places
-    const allInstructions = screen.getAllByText(/click to select & rotate/i);
+    const allInstructions = await screen.findAllByText(/click to select & rotate/i);
     expect(allInstructions).toHaveLength(2);
     expect(allInstructions[0]).toBeInTheDocument();
     expect(allInstructions[1]).toBeInTheDocument();

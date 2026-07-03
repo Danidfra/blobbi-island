@@ -56,7 +56,7 @@ describe('RefrigeratorModal', () => {
     });
   });
 
-  it('displays food items from user inventory', () => {
+  it('displays food items from user inventory', async () => {
     mockUseBlobbonautInventory.mockReturnValue({
       data: [
         { itemId: 'apple', quantity: 5 },
@@ -74,10 +74,10 @@ describe('RefrigeratorModal', () => {
     );
 
     // The modal should be open and display the refrigerator
-    expect(screen.getByAltText('Refrigerator open')).toBeInTheDocument();
+    expect(await screen.findByAltText('Refrigerator open')).toBeInTheDocument();
   });
 
-  it('displays food items with food_ prefix from user inventory', () => {
+  it('displays food items with food_ prefix from user inventory', async () => {
     mockUseBlobbonautInventory.mockReturnValue({
       data: [
         { itemId: 'food_burger', quantity: 4 },
@@ -94,10 +94,10 @@ describe('RefrigeratorModal', () => {
     );
 
     // The modal should be open and display the refrigerator
-    expect(screen.getByAltText('Refrigerator open')).toBeInTheDocument();
+    expect(await screen.findByAltText('Refrigerator open')).toBeInTheDocument();
   });
 
-  it('shows empty state when no food items in inventory', () => {
+  it('shows empty state when no food items in inventory', async () => {
     mockUseBlobbonautInventory.mockReturnValue({
       data: [],
       isLoading: false,
@@ -110,7 +110,7 @@ describe('RefrigeratorModal', () => {
       </TestApp>
     );
 
-    expect(screen.getByText('Your fridge is empty!')).toBeInTheDocument();
+    expect(await screen.findByText('Your fridge is empty!')).toBeInTheDocument();
     expect(screen.getByText('Get some food from the shop')).toBeInTheDocument();
   });
 });

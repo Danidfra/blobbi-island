@@ -17,7 +17,7 @@ import type {
 } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
-import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
 
 // ============================================================================
 // Owner Profile Event Creation (Kind 11125)
@@ -61,7 +61,7 @@ export interface CreateOwnerProfileInput {
 function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   const tags: string[][] = [
     ['d', input.profileId],
-    // Canonical ecosystem marker required by @blobbi/core validation.
+    // Canonical ecosystem marker required by @blobbi-kit/core validation.
     ['b', BLOBBI_ECOSYSTEM_NAMESPACE],
     ['name', input.name],
   ];
@@ -281,7 +281,7 @@ function dateToTimestamp(date: Date): string {
 function createPetStateTags(input: CreatePetStateInput): string[][] {
   const tags: string[][] = [
     ['d', input.petId],
-    // Canonical ecosystem marker required by @blobbi/core validation.
+    // Canonical ecosystem marker required by @blobbi-kit/core validation.
     ['b', BLOBBI_ECOSYSTEM_NAMESPACE],
     // Canonical activity state: derive from isSleeping, default 'active'.
     ['state', input.isSleeping ? 'sleeping' : 'active'],

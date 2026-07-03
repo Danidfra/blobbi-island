@@ -21,7 +21,7 @@ import {
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   KIND_BLOBBI_STATE,
 } from './blobbi-kinds';
-import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
 
 /** Find a tag value within a raw tags array (first match). */
 function rawTagValue(rawTags: string[][], name: string): string | undefined {
@@ -351,7 +351,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Build managed tags from profile fields
   const tags: string[][] = [
     ['d', profile.id],
-    // Canonical ecosystem marker required by @blobbi/core validation.
+    // Canonical ecosystem marker required by @blobbi-kit/core validation.
     // Prefer the existing value from the source event (never overwrite), else
     // author the canonical namespace. Additive + idempotent.
     ['b', rawTagValue(profile.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE],
@@ -438,17 +438,17 @@ export function mergePetStateTags(
   pet: PetState,
   overrides?: Record<string, string>,
 ): string[][] {
-  // Canonical ecosystem marker required by @blobbi/core validation.
+  // Canonical ecosystem marker required by @blobbi-kit/core validation.
   // Prefer the existing value from the source event (never overwrite).
   const bValue = rawTagValue(pet.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE;
 
-  // Canonical activity state required by @blobbi/core validation.
+  // Canonical activity state required by @blobbi-kit/core validation.
   // Preference order: existing `state` tag from source event > derive from
   // Island's `isSleeping` flag (sleeping/active) > default 'active'.
   const stateValue =
     rawTagValue(pet.rawTags, 'state') ?? (pet.isSleeping ? 'sleeping' : 'active');
 
-  // Canonical last_interaction required by @blobbi/core validation.
+  // Canonical last_interaction required by @blobbi-kit/core validation.
   // Preserve the existing value if present, else use the PetState timestamp,
   // else fall back to the current time so the tag is always emitted.
   const lastInteractionValue =

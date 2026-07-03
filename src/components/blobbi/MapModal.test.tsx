@@ -14,7 +14,7 @@ vi.mock('@/hooks/useLocation', () => ({
 }));
 
 describe('MapModal', () => {
-  it('renders modal when open', () => {
+  it('renders modal when open', async () => {
     render(
       <TestApp>
         <div className="relative w-full h-screen">
@@ -23,11 +23,11 @@ describe('MapModal', () => {
       </TestApp>
     );
 
-    expect(screen.getByText(/Click on a location to travel there/)).toBeInTheDocument();
+    expect(await screen.findByText(/Click on a location to travel there/)).toBeInTheDocument();
     expect(screen.getByText(/home/)).toBeInTheDocument();
   });
 
-  it('renders close button', () => {
+  it('renders close button', async () => {
     render(
       <TestApp>
         <div className="relative w-full h-screen">
@@ -36,6 +36,6 @@ describe('MapModal', () => {
       </TestApp>
     );
 
-    expect(screen.getByLabelText('Close Map')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Close Map')).toBeInTheDocument();
   });
 });

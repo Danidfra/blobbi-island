@@ -60,7 +60,7 @@ describe('ShareModal', () => {
   const mockCapturedPhoto = 'data:image/png;base64,test-image-data';
 const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data';
 
-  it('renders correctly when open', () => {
+  it('renders correctly when open', async () => {
     render(
       <TestApp>
         <ShareModal
@@ -72,7 +72,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
       </TestApp>
     );
 
-    expect(screen.getByText('Share Your Photo 📸')).toBeInTheDocument();
+    expect(await screen.findByText('Share Your Photo 📸')).toBeInTheDocument();
     expect(screen.getByAltText('Captured Blobbi Photo')).toBeInTheDocument();
     expect(screen.getByText('Download Photo')).toBeInTheDocument();
     expect(screen.getByText('Share to App')).toBeInTheDocument();
@@ -94,7 +94,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
     expect(screen.queryByText('Share Your Photo 📸')).not.toBeInTheDocument();
   });
 
-  it('calls onClose when close button is clicked', () => {
+  it('calls onClose when close button is clicked', async () => {
     const mockOnClose = vi.fn();
     render(
       <TestApp>
@@ -107,7 +107,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
       </TestApp>
     );
 
-    const closeButton = screen.getByRole('button', { name: /close share modal/i });
+    const closeButton = await screen.findByRole('button', { name: /close share modal/i });
     fireEvent.click(closeButton);
     expect(mockOnClose).toHaveBeenCalled();
   });

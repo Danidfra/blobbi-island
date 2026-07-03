@@ -9,7 +9,7 @@ import { locationBoundaries } from '@/lib/location-boundaries';
 import type { Position } from '@/lib/types';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
-import { buildBlobbiAddress } from '@blobbi/core/blobbi';
+import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
 
 // ============================================================================
 // Constants and Configuration

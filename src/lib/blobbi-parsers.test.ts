@@ -15,7 +15,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { validatePetStateEvent, validateOwnerProfileEvent } from './blobbi-parsers';
 import { KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from './blobbi-kinds';
-import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi/core/blobbi';
+import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
 
 const FOREIGN_ECOSYSTEM = 'pets:ecosystem:v1';
 

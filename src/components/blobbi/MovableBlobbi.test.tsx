@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { MovableBlobbi } from './MovableBlobbi';
 import { useRef } from 'react';
@@ -42,25 +42,32 @@ describe('MovableBlobbi', () => {
       /(?:^|\s)transform:\s*scale\([\d.]+\)/.test(el.getAttribute('style') ?? '')
     ) ?? null;
 
-  it('renders without scaling when scaleByYPosition is false', () => {
+  it('renders without scaling when scaleByYPosition is false', async () => {
     const { container } = render(<TestWrapper scaleByYPosition={false} />);
 
-    const blobbiElement = getScaleElement(container);
-    expect(blobbiElement).toBeTruthy();
+    const blobbiElement = await waitFor(() => {
+      const el = getScaleElement(container);
+      expect(el).toBeTruthy();
+      return el;
+    });
 
     // Should have scale(1) when scaling is disabled
     const style = blobbiElement?.getAttribute('style');
     expect(style).toContain('scale(1)');
   });
 
-  it('applies scaling for approved backgrounds', () => {
+  it('applies scaling for approved backgrounds', async () => {
     const { container: nostrStationContainer } = render(
       <TestWrapper
         scaleByYPosition={true}
         backgroundFile="nostr-station-open.png"
       />
     );
-    const nostrStationBlobbi = getScaleElement(nostrStationContainer);
+    const nostrStationBlobbi = await waitFor(() => {
+      const el = getScaleElement(nostrStationContainer);
+      expect(el).toBeTruthy();
+      return el;
+    });
     expect(nostrStationBlobbi?.getAttribute('style')).not.toContain('scale(1)');
 
     const { container: townContainer } = render(
@@ -69,7 +76,11 @@ describe('MovableBlobbi', () => {
         backgroundFile="town-open.png"
       />
     );
-    const townBlobbi = getScaleElement(townContainer);
+    const townBlobbi = await waitFor(() => {
+      const el = getScaleElement(townContainer);
+      expect(el).toBeTruthy();
+      return el;
+    });
     expect(townBlobbi?.getAttribute('style')).not.toContain('scale(1)');
 
     const { container: plazaContainer } = render(
@@ -78,11 +89,15 @@ describe('MovableBlobbi', () => {
         backgroundFile="plaza-open.png"
       />
     );
-    const plazaBlobbi = getScaleElement(plazaContainer);
+    const plazaBlobbi = await waitFor(() => {
+      const el = getScaleElement(plazaContainer);
+      expect(el).toBeTruthy();
+      return el;
+    });
     expect(plazaBlobbi?.getAttribute('style')).not.toContain('scale(1)');
   });
 
-  it('applies correct scaling for nostr-station background', () => {
+  it('applies correct scaling for nostr-station background', async () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
@@ -90,7 +105,11 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = getScaleElement(container);
+    const blobbiElement = await waitFor(() => {
+      const el = getScaleElement(container);
+      expect(el).toBeTruthy();
+      return el;
+    });
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -99,7 +118,7 @@ describe('MovableBlobbi', () => {
     expect(scaleValue).toBeLessThanOrEqual(1.2);
   });
 
-  it('applies correct scaling for town background', () => {
+  it('applies correct scaling for town background', async () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
@@ -107,7 +126,11 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = getScaleElement(container);
+    const blobbiElement = await waitFor(() => {
+      const el = getScaleElement(container);
+      expect(el).toBeTruthy();
+      return el;
+    });
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -116,7 +139,7 @@ describe('MovableBlobbi', () => {
     expect(scaleValue).toBeLessThanOrEqual(1.2);
   });
 
-  it('applies correct scaling for plaza background', () => {
+  it('applies correct scaling for plaza background', async () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
@@ -124,7 +147,11 @@ describe('MovableBlobbi', () => {
       />
     );
 
-    const blobbiElement = getScaleElement(container);
+    const blobbiElement = await waitFor(() => {
+      const el = getScaleElement(container);
+      expect(el).toBeTruthy();
+      return el;
+    });
     const style = blobbiElement?.getAttribute('style');
     const scaleMatch = style?.match(/scale\(([\d.]+)\)/);
     const scaleValue = scaleMatch ? parseFloat(scaleMatch[1]) : 0;
@@ -133,7 +160,7 @@ describe('MovableBlobbi', () => {
     expect(scaleValue).toBeLessThanOrEqual(1.2);
   });
 
-  it('properly positions and scales the shadow', () => {
+  it('properly positions and scales the shadow', async () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
@@ -142,8 +169,11 @@ describe('MovableBlobbi', () => {
     );
 
     // Find the shadow element (has radial-gradient background)
-    const shadowElement = container.querySelector('[style*="radial-gradient"]');
-    expect(shadowElement).toBeTruthy();
+    const shadowElement = await waitFor(() => {
+      const el = container.querySelector('[style*="radial-gradient"]');
+      expect(el).toBeTruthy();
+      return el;
+    });
 
     // Shadow should be centered (translateX) and scaled with the Blobbi
     const shadowStyle = shadowElement?.getAttribute('style');
@@ -154,9 +184,9 @@ describe('MovableBlobbi', () => {
     expect(shadowStyle).toContain('transform-origin: center center');
   });
 
-  it('renders the Blobbi display component', () => {
-    const { getByTestId } = render(<TestWrapper />);
+  it('renders the Blobbi display component', async () => {
+    const { findByTestId } = render(<TestWrapper />);
 
-    expect(getByTestId('blobbi-display')).toBeInTheDocument();
+    expect(await findByTestId('blobbi-display')).toBeInTheDocument();
   });
 });

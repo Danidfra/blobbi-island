@@ -1,9 +1,9 @@
 /**
  * useBlobbiCoreProbe — first local integration probe for the shared
- * `@blobbi/core` package (consumed from Ditto repo source via aliases).
+ * `@blobbi-kit/core` package (consumed from the published npm package).
  *
  * READ-ONLY. This hook only *reads* the current user's Kind 31124 Blobbi
- * state events and derives a few values using shared `@blobbi/core` helpers.
+ * state events and derives a few values using shared `@blobbi-kit/core` helpers.
  * It publishes nothing, mutates nothing, and touches no inventory/equip,
  * shop/catalog, or write path. It exists to validate that the shared core
  * package parses/derives against real Island data before any deeper migration.
@@ -25,18 +25,18 @@ import {
   KIND_BLOBBI_STATE,
   type BlobbiCompanion,
   type BlobbiStats,
-} from '@blobbi/core/blobbi';
-import { applyBlobbiDecay, getVisibleStats } from '@blobbi/core/blobbi-decay';
+} from '@blobbi-kit/core/blobbi';
+import { applyBlobbiDecay, getVisibleStats } from '@blobbi-kit/core/blobbi-decay';
 import {
   getBlobbiStatDisplayState,
   type StatDisplayState,
-} from '@blobbi/core/blobbi-segments';
-// First read-only @blobbi/react import — projection hook only (no mutations,
+} from '@blobbi-kit/core/blobbi-segments';
+// First read-only @blobbi-kit/react import — projection hook only (no mutations,
 // no catalog resolver; defaults to core's generic effects).
 import {
   useProjectedBlobbiState,
   type ProjectedBlobbiState,
-} from '@blobbi/react/hooks/useProjectedBlobbiState';
+} from '@blobbi-kit/react/hooks/useProjectedBlobbiState';
 
 import { useCurrentUser } from './useCurrentUser';
 
@@ -63,7 +63,7 @@ export interface BlobbiCoreProbeEntry {
 
 /**
  * Fetch the current user's Kind 31124 events and derive read-only,
- * `@blobbi/core`-computed values from them.
+ * `@blobbi-kit/core`-computed values from them.
  */
 export function useBlobbiCoreProbe() {
   const { nostr } = useNostr();
@@ -121,7 +121,7 @@ export function useBlobbiCoreProbe() {
 }
 
 /**
- * Read-only wrapper around `@blobbi/react`'s `useProjectedBlobbiState`.
+ * Read-only wrapper around `@blobbi-kit/react`'s `useProjectedBlobbiState`.
  *
  * Demonstrates that the shared React hook layer resolves and runs against
  * Island's React/Query/Nostrify instances. Read-only projection only — it

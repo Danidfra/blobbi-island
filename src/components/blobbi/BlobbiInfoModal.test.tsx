@@ -4,7 +4,7 @@ import { TestApp } from '@/test/TestApp';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 
 describe('BlobbiInfoModal', () => {
-  it('renders modal when open', () => {
+  it('renders modal when open', async () => {
     render(
       <TestApp>
         <div className="relative w-full h-screen">
@@ -14,7 +14,7 @@ describe('BlobbiInfoModal', () => {
     );
 
     // Since there's no current pet in the test environment, it should show the no pet message
-    expect(screen.getByText('No Blobbi selected')).toBeInTheDocument();
+    expect(await screen.findByText('No Blobbi selected')).toBeInTheDocument();
   });
 
   it('does not render when closed', () => {
@@ -27,7 +27,7 @@ describe('BlobbiInfoModal', () => {
     expect(screen.queryByText('Blobbi Info')).not.toBeInTheDocument();
   });
 
-  it('shows modal with no pet message', () => {
+  it('shows modal with no pet message', async () => {
     render(
       <TestApp>
         <div className="relative w-full h-screen">
@@ -37,11 +37,11 @@ describe('BlobbiInfoModal', () => {
     );
 
     // The modal should show "No Blobbi selected" when there's no pet
-    expect(screen.getByText('No Blobbi selected')).toBeInTheDocument();
+    expect(await screen.findByText('No Blobbi selected')).toBeInTheDocument();
     expect(screen.getByText('Close')).toBeInTheDocument();
   });
 
-  it('shows read-only modal with external Blobbi data', () => {
+  it('shows read-only modal with external Blobbi data', async () => {
     const mockBlobbiData = {
       id: 'test-blobbi-id',
       name: 'Luna',
@@ -79,7 +79,7 @@ describe('BlobbiInfoModal', () => {
     );
 
     // Should show the Blobbi name in the title
-    expect(screen.getByText('Blobbi Info – Luna')).toBeInTheDocument();
+    expect(await screen.findByText('Blobbi Info – Luna')).toBeInTheDocument();
 
     // Should show Blobbi info
     expect(screen.getByText('Luna')).toBeInTheDocument();

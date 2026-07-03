@@ -12,26 +12,26 @@ describe('ConsumeItemModal', () => {
     onUseItem: vi.fn(),
   };
 
-  it('renders the modal with correct item information', () => {
+  it('renders the modal with correct item information', async () => {
     render(
       <TestApp>
         <ConsumeItemModal {...mockProps} />
       </TestApp>
     );
 
-    expect(screen.getByRole('heading', { name: 'Use Item' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Use Item' })).toBeInTheDocument();
     expect(screen.getByText('Apple')).toBeInTheDocument();
     expect(screen.getByText('Max: 5')).toBeInTheDocument();
   });
 
-  it('allows quantity adjustment within limits', () => {
+  it('allows quantity adjustment within limits', async () => {
     render(
       <TestApp>
         <ConsumeItemModal {...mockProps} />
       </TestApp>
     );
 
-    const quantityInput = screen.getByRole('spinbutton');
+    const quantityInput = await screen.findByRole('spinbutton');
 
     // Initial quantity should be 1
     expect(quantityInput).toHaveValue(1);

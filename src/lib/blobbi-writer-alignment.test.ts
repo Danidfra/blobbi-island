@@ -1,6 +1,6 @@
 /**
  * Writer-alignment tests: ensure Island's tag builders emit the canonical
- * tags required by @blobbi/core validation, without duplicating or overwriting
+ * tags required by @blobbi-kit/core validation, without duplicating or overwriting
  * existing values, and without disturbing equip / inv passthrough.
  *
  * These tests exercise the WRITE path only. The Island parser (parsePetState /
@@ -17,7 +17,7 @@ import {
   BLOBBI_ECOSYSTEM_NAMESPACE,
   isValidBlobbiEvent,
   isValidBlobbonautEvent,
-} from '@blobbi/core/blobbi';
+} from '@blobbi-kit/core/blobbi';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ describe('mergePetStateTags — canonical alignment', () => {
     expect(tagValue(tags, 'b')).toBe(BLOBBI_ECOSYSTEM_NAMESPACE);
   });
 
-  it('resulting event passes @blobbi/core isValidBlobbiEvent', () => {
+  it('resulting event passes @blobbi-kit/core isValidBlobbiEvent', () => {
     const pet = makePet([['seed', 'a'.repeat(64)]]);
     const tags = mergePetStateTags(pet);
     expect(isValidBlobbiEvent(asEvent(KIND_BLOBBI_STATE, tags))).toBe(true);
@@ -222,7 +222,7 @@ describe('mergeOwnerProfileTags — canonical alignment', () => {
     expect(tagValue(tags, 'blobbi_onboarding_done')).toBe('true');
   });
 
-  it('resulting event passes @blobbi/core isValidBlobbonautEvent', () => {
+  it('resulting event passes @blobbi-kit/core isValidBlobbonautEvent', () => {
     const profile = makeProfile([]);
     const tags = mergeOwnerProfileTags(profile);
     expect(isValidBlobbonautEvent(asEvent(KIND_BLOBBONAUT_PROFILE, tags))).toBe(true);

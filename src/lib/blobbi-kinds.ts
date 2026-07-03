@@ -1,7 +1,7 @@
 /**
  * Blobbi Nostr Event Kind Constants
  *
- * These values are now sourced from the shared `@blobbi/core` package (the
+ * These values are now sourced from the shared `@blobbi-kit/core` package (the
  * single source of truth) and re-exported here so existing Island imports of
  * `@/lib/blobbi-kinds` keep working unchanged.
  *
@@ -14,13 +14,13 @@
  * Kind 31125: Old owner profile kind (superseded by 11125)
  */
 
-import { KIND_BLOBBI_INTERACTION } from '@blobbi/core/blobbi-interaction';
+import { KIND_BLOBBI_INTERACTION } from '@blobbi-kit/core/blobbi-interaction';
 import {
   KIND_BLOBBONAUT_PROFILE,
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   BLOBBONAUT_PROFILE_KINDS,
   KIND_BLOBBI_STATE,
-} from '@blobbi/core/blobbi';
+} from '@blobbi-kit/core/blobbi';
 
 export {
   /** Blobbi social interaction event (regular). */

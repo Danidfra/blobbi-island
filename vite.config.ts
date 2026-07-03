@@ -46,15 +46,14 @@ export default defineConfig(() => ({
   },
   resolve: {
     alias: [
-      // @blobbi/core and @blobbi/react resolve through their installed package
-      // exports in node_modules (file: deps on ../blobbi-kit), not source aliases.
+      // @blobbi-kit/core and @blobbi-kit/react resolve from their published
+      // npm packages in node_modules — no source aliases.
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },
       { find: "react-dom", replacement: path.resolve(__dirname, "node_modules/react-dom") },
     ],
-    // The @blobbi/* packages are file: deps symlinked from ../blobbi-kit, which
-    // has its own node_modules. Dedupe the React-context-bearing singletons so a
-    // symlinked package can't pull in a second copy (which breaks useContext).
+    // Dedupe the React-context-bearing singletons so that @blobbi-kit/* (and any
+    // transitive dep) can't pull in a second copy, which would break useContext.
     dedupe: [
       "react",
       "react-dom",
