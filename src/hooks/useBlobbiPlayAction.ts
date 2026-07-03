@@ -15,6 +15,7 @@ import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
 import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
+import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
 
 
 interface PlayActionInput {
@@ -120,7 +121,7 @@ export function useBlobbiPlayAction() {
       const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
 
       // 1. Create Kind 1124 Interaction Event (Ditto-compatible)
-      const coordinate = `31124:${user.pubkey}:${petId}`;
+      const coordinate = buildBlobbiAddress(user.pubkey, petId);
       const interactionTags: string[][] = [
         ['a', coordinate],
         ['p', user.pubkey],
