@@ -555,9 +555,25 @@ export function mergePetStateTags(
 // Validation Functions
 // ============================================================================
 
+/**
+ * Ecosystem gate: reject events explicitly tagged with a foreign ecosystem.
+ *
+ * Rules (backward-compatible):
+ * - No `b` tag  → accept (legacy Blobbi events predate the ecosystem tag).
+ * - `b === BLOBBI_ECOSYSTEM_NAMESPACE` → accept.
+ * - `b` present but different (e.g. `pets:ecosystem:v1`) → reject.
+ */
+function isForeignEcosystem(event: NostrEvent): boolean {
+  const b = getTag(event, 'b');
+  return b !== undefined && b !== BLOBBI_ECOSYSTEM_NAMESPACE;
+}
+
 /** Validate a kind 11125 (or legacy 31125) event structure */
 export function validateOwnerProfileEvent(event: NostrEvent): boolean {
   if (event.kind !== KIND_BLOBBONAUT_PROFILE && event.kind !== KIND_BLOBBONAUT_PROFILE_LEGACY) return false;
+
+  // Reject explicit non-Blobbi ecosystem events (missing `b` stays accepted).
+  if (isForeignEcosystem(event)) return false;
 
   const d = getTag(event, 'd');
   const name = getTag(event, 'name');
@@ -568,6 +584,9 @@ export function validateOwnerProfileEvent(event: NostrEvent): boolean {
 /** Validate a kind 31124 event structure */
 export function validatePetStateEvent(event: NostrEvent): boolean {
   if (event.kind !== KIND_BLOBBI_STATE) return false;
+
+  // Reject explicit non-Blobbi ecosystem events (missing `b` stays accepted).
+  if (isForeignEcosystem(event)) return false;
 
   const requiredTags = ['d', 'stage', 'breeding_ready', 'generation',
                        'hunger', 'happiness', 'health', 'hygiene',
