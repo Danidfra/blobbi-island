@@ -45,11 +45,42 @@ export default defineConfig(() => ({
     },
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      react: path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
-    },
-    dedupe: ["react", "react-dom"],
+    alias: [
+      // Shared Blobbi packages consumed locally from the Ditto repo source.
+      // NOTE: local source integration only — not published to npm.
+      // Order matters: subpath aliases (`/*`) must precede the bare aliases.
+      {
+        find: /^@blobbi\/core\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ditto/packages/blobbi-core/src/$1",
+        ),
+      },
+      {
+        find: "@blobbi/core",
+        replacement: path.resolve(
+          __dirname,
+          "../ditto/packages/blobbi-core/src/index.ts",
+        ),
+      },
+      {
+        find: /^@blobbi\/react\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../ditto/packages/blobbi-react/src/$1",
+        ),
+      },
+      {
+        find: "@blobbi/react",
+        replacement: path.resolve(
+          __dirname,
+          "../ditto/packages/blobbi-react/src/index.ts",
+        ),
+      },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+      { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },
+      { find: "react-dom", replacement: path.resolve(__dirname, "node_modules/react-dom") },
+    ],
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
 }));

@@ -24,7 +24,11 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@blobbi/core": ["../ditto/packages/blobbi-core/src/index.ts"],
+      "@blobbi/core/*": ["../ditto/packages/blobbi-core/src/*"],
+      "@blobbi/react": ["../ditto/packages/blobbi-react/src/index.ts"],
+      "@blobbi/react/*": ["../ditto/packages/blobbi-react/src/*"]
     }
   },
   "include": ["src"]
