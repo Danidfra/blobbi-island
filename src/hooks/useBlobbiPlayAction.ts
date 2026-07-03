@@ -13,9 +13,10 @@ import { useBlobbonautProfile } from './useBlobbonautProfile';
 import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { ITEM_DATA } from '@/components/blobbi/ConsumeItemModal';
-import { KIND_BLOBBI_INTERACTION, KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
+import { KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
-import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
+import { buildInteractionEventTemplate } from '@blobbi-kit/core/blobbi-interaction';
+import { calculateInventoryActionXP } from '@blobbi-kit/react/lib/blobbi-xp';
 
 
 interface PlayActionInput {
@@ -103,8 +104,10 @@ export function useBlobbiPlayAction() {
         energy: calculateStatChange(pet.energy, totalEffects.energy || 0),
       };
 
-      // Experience gained (3 points per item used for playing)
-      const experienceGained = quantity * 3;
+      // Experience gained — sourced from the shared blobbi-kit XP table.
+      // NOTE: this changes Island behavior from quantity * 3 to quantity * 8
+      // (play = 8 XP per item in the official kit defaults).
+      const experienceGained = calculateInventoryActionXP('play', quantity);
       const newExperience = pet.experience + experienceGained;
 
       // Care points (1 point per playing action, regardless of quantity)
@@ -120,25 +123,18 @@ export function useBlobbiPlayAction() {
       // Convert current equipment to equip tags
       const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
 
-      // 1. Create Kind 1124 Interaction Event (Ditto-compatible)
-      const coordinate = buildBlobbiAddress(user.pubkey, petId);
-      const interactionTags: string[][] = [
-        ['a', coordinate],
-        ['p', user.pubkey],
-        ['action', 'play'],
-        ['source', 'blobbi-island'],
-        ['alt', 'Blobbi interaction: play'],
-      ];
-
-      if (itemId) {
-        interactionTags.push(['item', itemId]);
-      }
-
-      createEvent({
-        kind: KIND_BLOBBI_INTERACTION,
-        content: '',
-        tags: interactionTags,
+      // 1. Create Kind 1124 Interaction Event using the shared blobbi-kit builder.
+      // The builder applies the official tag ordering and adds the `blobbi`
+      // short-id tag when the pet's d-tag is canonical (blobbi-<12hex>-<10hex>).
+      const interactionTemplate = buildInteractionEventTemplate({
+        ownerPubkey: user.pubkey,
+        blobbiDTag: petId,
+        action: 'play',
+        source: 'blobbi-island',
+        itemId: itemId || undefined,
       });
+
+      createEvent(interactionTemplate);
 
       // 2. Update Kind 31124 Pet State
       // Apply stat updates to the pet, then use merge to preserve unknown tags
