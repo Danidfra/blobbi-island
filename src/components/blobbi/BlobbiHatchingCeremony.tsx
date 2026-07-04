@@ -561,7 +561,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
       {/* Dialog text */}
       {phase === 'dialog' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-16 sm:pb-24 px-8">
+        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-8 sm:pb-24 px-8">
           <div className="relative max-w-md w-full text-center">
             <div
               className="absolute -inset-32"
@@ -576,7 +576,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
             />
             <div className="relative">
               <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
-              <p className="text-sm sm:text-base text-white leading-relaxed font-light min-h-[3em]">
+              <p className="text-xs sm:text-base text-white leading-relaxed font-light min-h-[3em]">
                 {dialogTypewriter.displayed}
                 {!dialogTypewriter.done && (
                   <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
@@ -594,7 +594,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
       {/* Naming */}
       {phase === 'naming' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-16 sm:pb-24 px-8">
+        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-8 sm:pb-24 px-8">
           <div
             className={cn('relative max-w-md w-full text-center', namingVisible ? 'animate-onboard-soft-fade-in' : 'opacity-0')}
           >
@@ -611,7 +611,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
             />
             <div className="relative">
               <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
-              <p className="text-sm sm:text-base text-white/85 leading-relaxed font-light mb-6 min-h-[1.5em] whitespace-pre-line">
+              <p className="text-xs sm:text-base text-white/85 leading-relaxed font-light mb-6 min-h-[1.5em] whitespace-pre-line">
                 {namingTypewriter.displayed}
                 {!namingTypewriter.done && (
                   <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
@@ -628,7 +628,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                     maxLength={32}
                     autoFocus
                     className={cn(
-                      'text-center text-base font-light h-11',
+                      'text-center text-sm sm:text-base font-light h-10 sm:h-11',
                       'bg-white/10 border-transparent text-white placeholder:text-white/30',
                       'focus:bg-white/[0.25] focus-visible:ring-0 focus-visible:ring-offset-0',
                       'rounded-full transition-all duration-300',
