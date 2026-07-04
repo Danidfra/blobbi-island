@@ -559,23 +559,47 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
         </div>
       )}
 
-      {/* Dialog text — bottom-anchored, fixed-height so the typewriter never
-          shifts the block upward as characters are added or the line wraps. */}
+      {/* ── Dialog text — separate mobile & desktop layouts ── */}
+
+      {/* Mobile: a compact bottom panel. Text is centered (not bottom-aligned)
+          inside a small fixed box, so it stays put while typing/wrapping and
+          never climbs into the Blobbi. Only a subtle bottom gradient, no blur. */}
       {phase === 'dialog' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-4 sm:pb-24 px-6 sm:px-8">
-          <div className="relative w-full max-w-[18rem] sm:max-w-md text-center">
-            {/* Subtle bottom gradient on mobile (no heavy blur that covers the
-                Blobbi); rich fog only on sm+. Both are fixed-size so they never
-                recenter around the growing text. */}
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end px-4 pb-2 md:hidden">
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 -z-0"
+            style={{
+              background:
+                'linear-gradient(to top, rgba(0,20,35,0.55) 0%, rgba(0,20,35,0.30) 45%, transparent 100%)',
+            }}
+          />
+          <div className="relative w-full max-w-[18rem] text-center">
+            <p className="text-[10px] text-white/50 tracking-[0.2em] uppercase mb-1">???</p>
+            {/* Fixed small panel, text CENTERED inside it. */}
+            <div className="flex h-14 w-full items-center justify-center">
+              <p className="text-xs text-white leading-relaxed font-light">
+                {dialogTypewriter.displayed}
+                {!dialogTypewriter.done && (
+                  <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
+                )}
+              </p>
+            </div>
+            {/* Reserved indicator slot — never pushes the text upward. */}
+            <div className="h-4">
+              {dialogTypewriter.done && (
+                <span className="text-[10px] text-white/30 animate-onboard-continue-pulse">&#9660;</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: keep the existing fog + fixed-height layout. */}
+      {phase === 'dialog' && (
+        <div className="absolute inset-x-0 bottom-0 hidden justify-center pb-24 px-8 md:flex">
+          <div className="relative w-full max-w-md text-center">
             <div
-              className="absolute inset-x-0 bottom-0 h-40 -z-0 pointer-events-none sm:hidden"
-              style={{
-                background:
-                  'linear-gradient(to top, rgba(0,20,35,0.55) 0%, rgba(0,20,35,0.28) 45%, transparent 100%)',
-              }}
-            />
-            <div
-              className="absolute left-1/2 top-1/2 hidden h-64 w-[36rem] -translate-x-1/2 -translate-y-1/2 sm:block"
+              className="absolute left-1/2 top-1/2 h-64 w-[36rem] -translate-x-1/2 -translate-y-1/2"
               style={{
                 background:
                   'radial-gradient(ellipse at center, rgba(0,30,50,0.40) 0%, rgba(0,30,50,0.18) 35%, transparent 65%)',
@@ -586,19 +610,15 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               }}
             />
             <div className="relative flex flex-col items-center">
-              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-1 sm:mb-3">???</p>
-              {/* Fixed-height text area, bottom-aligned: the sentence grows
-                  upward inside this reserved box instead of moving the block. */}
-              <div className="flex h-[3.5rem] sm:h-[4.5rem] w-full items-end justify-center">
-                <p className="text-xs sm:text-base text-white leading-relaxed font-light">
+              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
+              <div className="flex h-[4.5rem] w-full items-end justify-center">
+                <p className="text-base text-white leading-relaxed font-light">
                   {dialogTypewriter.displayed}
                   {!dialogTypewriter.done && (
                     <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
                   )}
                 </p>
               </div>
-              {/* Reserved (always-present) continue indicator slot so completing
-                  the line never adds height. */}
               <div className="mt-3 h-4">
                 {dialogTypewriter.done && (
                   <span className="text-xs text-white/30 animate-onboard-continue-pulse">&#9660;</span>
@@ -609,22 +629,87 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
         </div>
       )}
 
-      {/* Naming — same bottom-anchored, fixed-height treatment so the prompt
-          typewriter and the appearing input never jump into the Blobbi. */}
+      {/* ── Naming — separate mobile & desktop layouts ── */}
+
+      {/* Mobile: compact bottom panel. Prompt centered in a small box; input +
+          button sit below it, still low and out of the Blobbi. No blur. */}
       {phase === 'naming' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-4 sm:pb-24 px-6 sm:px-8">
+        <div
+          className={cn(
+            'absolute inset-x-0 bottom-0 flex flex-col items-center justify-end px-4 pb-2 md:hidden',
+            namingVisible ? 'animate-onboard-soft-fade-in' : 'opacity-0',
+          )}
+        >
           <div
-            className={cn('relative w-full max-w-[18rem] sm:max-w-md text-center', namingVisible ? 'animate-onboard-soft-fade-in' : 'opacity-0')}
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-40 -z-0"
+            style={{
+              background:
+                'linear-gradient(to top, rgba(0,20,35,0.55) 0%, rgba(0,20,35,0.30) 45%, transparent 100%)',
+            }}
+          />
+          <div className="relative w-full max-w-[18rem] text-center">
+            <p className="text-[10px] text-white/50 tracking-[0.2em] uppercase mb-1">???</p>
+            <div className="flex h-10 w-full items-center justify-center mb-2">
+              <p className="text-xs text-white/85 leading-snug font-light whitespace-pre-line">
+                {namingTypewriter.displayed}
+                {!namingTypewriter.done && (
+                  <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
+                )}
+              </p>
+            </div>
+            {namingTypewriter.done && (
+              <div className="w-full space-y-2 animate-onboard-soft-fade-in">
+                <Input
+                  ref={nameInputRef}
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="…"
+                  maxLength={32}
+                  autoFocus
+                  className={cn(
+                    'text-center text-sm font-light h-10',
+                    'bg-white/10 border-transparent text-white placeholder:text-white/30',
+                    'focus:bg-white/[0.25] focus-visible:ring-0 focus-visible:ring-offset-0',
+                    'rounded-full transition-all duration-300',
+                  )}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && name.trim()) handleNameSubmit();
+                  }}
+                />
+                {name.trim() && (
+                  <Button
+                    onClick={handleNameSubmit}
+                    disabled={isNaming}
+                    variant="ghost"
+                    className={cn(
+                      'max-w-[12rem] mx-auto h-9 px-6 text-sm font-light tracking-wide',
+                      'bg-white/15 hover:bg-white/25 text-white/80 border-transparent',
+                      'rounded-full transition-all duration-300 focus-visible:ring-0 focus-visible:ring-offset-0',
+                    )}
+                  >
+                    {isNaming ? 'Waking them up…' : hatchError ? 'Try again' : "That's the one."}
+                  </Button>
+                )}
+                {hatchError && (
+                  <p role="alert" className="text-xs text-white/70 leading-relaxed pt-1">
+                    {hatchError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop: keep the existing fog + fixed-height layout. */}
+      {phase === 'naming' && (
+        <div className="absolute inset-x-0 bottom-0 hidden justify-center pb-24 px-8 md:flex">
+          <div
+            className={cn('relative w-full max-w-md text-center', namingVisible ? 'animate-onboard-soft-fade-in' : 'opacity-0')}
           >
             <div
-              className="absolute inset-x-0 bottom-0 h-56 -z-0 pointer-events-none sm:hidden"
-              style={{
-                background:
-                  'linear-gradient(to top, rgba(0,20,35,0.55) 0%, rgba(0,20,35,0.28) 45%, transparent 100%)',
-              }}
-            />
-            <div
-              className="absolute left-1/2 top-1/2 hidden h-72 w-[36rem] -translate-x-1/2 -translate-y-1/2 sm:block"
+              className="absolute left-1/2 top-1/2 h-72 w-[36rem] -translate-x-1/2 -translate-y-1/2"
               style={{
                 background:
                   'radial-gradient(ellipse at center, rgba(0,30,50,0.40) 0%, rgba(0,30,50,0.18) 35%, transparent 65%)',
@@ -635,11 +720,9 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               }}
             />
             <div className="relative flex flex-col items-center">
-              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-1 sm:mb-3">???</p>
-              {/* Fixed-height, bottom-aligned prompt area (2 lines) so the
-                  wrapping prompt grows upward without moving the block. */}
-              <div className="flex h-[3rem] sm:h-[3.75rem] w-full items-end justify-center mb-3 sm:mb-6">
-                <p className="text-xs sm:text-base text-white/85 leading-relaxed font-light whitespace-pre-line">
+              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
+              <div className="flex h-[3.75rem] w-full items-end justify-center mb-6">
+                <p className="text-base text-white/85 leading-relaxed font-light whitespace-pre-line">
                   {namingTypewriter.displayed}
                   {!namingTypewriter.done && (
                     <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
@@ -649,7 +732,6 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               {namingTypewriter.done && (
                 <div className="w-full space-y-3 animate-onboard-soft-fade-in">
                   <Input
-                    ref={nameInputRef}
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -657,7 +739,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                     maxLength={32}
                     autoFocus
                     className={cn(
-                      'text-center text-sm sm:text-base font-light h-10 sm:h-11',
+                      'text-center text-base font-light h-11',
                       'bg-white/10 border-transparent text-white placeholder:text-white/30',
                       'focus:bg-white/[0.25] focus-visible:ring-0 focus-visible:ring-offset-0',
                       'rounded-full transition-all duration-300',
@@ -677,18 +759,11 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                         'rounded-full transition-all duration-300 focus-visible:ring-0 focus-visible:ring-offset-0',
                       )}
                     >
-                      {isNaming
-                        ? 'Waking them up…'
-                        : hatchError
-                          ? 'Try again'
-                          : "That's the one."}
+                      {isNaming ? 'Waking them up…' : hatchError ? 'Try again' : "That's the one."}
                     </Button>
                   )}
                   {hatchError && (
-                    <p
-                      role="alert"
-                      className="text-xs text-white/70 leading-relaxed pt-1"
-                    >
+                    <p role="alert" className="text-xs text-white/70 leading-relaxed pt-1">
                       {hatchError}
                     </p>
                   )}
