@@ -1,0 +1,192 @@
+/**
+ * useFirstEggAdoption — first-egg adoption for a brand-new Blobbonaut.
+ *
+ * IMPORTANT (orphan-egg fix): this hook is split into two clearly separated
+ * responsibilities so that mounting the ceremony can NEVER publish a real event:
+ *
+ *   1. `generatePreview()` — a PURE, synchronous, local-only function. It derives
+ *      a deterministic egg preview using `@blobbi-kit/core` helpers (seed,
+ *      canonical d-tag, visual traits). It publishes NOTHING. This is what the
+ *      ceremony uses to render the egg/baby during the animation.
+ *
+ *   2. `finalizeAdoption(preview, name)` — the ONLY function that publishes real
+ *      Nostr events, and only when the user submits the final name.
+ *
+ * finalizeAdoption publish sequence (hardened against orphan/partial profiles):
+ *   a. Query the latest existing profile (canonical 11125 + legacy 31125 read).
+ *   b. Build the DESIRED FINAL profile tags entirely in memory:
+ *        - if no profile exists → buildBlobbonautTags(pubkey) + name + coins,
+ *        - merge has[] (union, never shrink) + newly-adopted d,
+ *        - set current_companion.
+ *   c. Publish the final kind 31124 BABY state with the chosen name.
+ *   d. ONLY after the baby publish succeeds, publish EXACTLY ONE final profile
+ *      kind 11125 event carrying the merged has[] + current_companion.
+ *
+ * Why this ordering matters:
+ *   - No empty/new profile is ever published before the baby exists, so a
+ *     first-time user's successful path performs exactly one profile publish
+ *     (never create-then-update).
+ *   - If the baby publish fails, no profile is created or updated at all.
+ *   - If the baby succeeds but the profile publish fails, the promise rejects so
+ *     the ceremony stays in retry mode and never calls onComplete. On retry we
+ *     re-run from step (a): re-query the latest profile and re-publish the same
+ *     baby coordinate + the same final profile (kind 31124 is replaceable, so
+ *     re-publishing the same d is a harmless overwrite, not a duplicate).
+ *
+ * Design decision — egg events are NOT published at all.
+ * Island does not support/display eggs, and kind 31124 is a replaceable
+ * (addressable) event keyed by `31124:<pubkey>:<d>`. Publishing an egg and then
+ * immediately a baby to the same coordinate would just overwrite the egg, adding
+ * no protocol value while reintroducing the same orphan class if the flow is
+ * abandoned. So we publish only the final baby. Identity/tags still come from
+ * `@blobbi-kit/core` via the preview, so history/compat is preserved.
+ *
+ * Core event/tag/state logic uses `@blobbi-kit/core` helpers. This hook contains
+ * no animation/UI.
+ */
+
+import { useCallback, useRef } from 'react';
+import { useNostr } from './useNostr';
+import { useCurrentUser } from './useCurrentUser';
+import { useNostrPublish } from './useNostrPublish';
+import { useAuthor } from './useAuthor';
+
+import {
+  KIND_BLOBBI_STATE,
+  KIND_BLOBBONAUT_PROFILE,
+  BLOBBONAUT_PROFILE_KINDS,
+} from '@/lib/blobbi-kinds';
+import {
+  buildBlobbonautTags,
+  updateBlobbonautTags,
+  mergeHasForAdoption,
+  getTagValues,
+  INITIAL_BLOBBONAUT_COINS,
+} from '@blobbi-kit/core';
+import { validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
+
+import {
+  generateEggPreview,
+  previewToBabyTags,
+  type BlobbiEggPreview,
+} from '@/lib/blobbi-egg-preview';
+
+export function useFirstEggAdoption() {
+  const { nostr } = useNostr();
+  const { user } = useCurrentUser();
+  const { mutateAsync: publishEvent } = useNostrPublish();
+  const { data: authorData } = useAuthor(user?.pubkey);
+
+  // Duplicate-submit guard: once finalize is in flight (or done) for this hook
+  // instance, remember the promise so a second submit can't create a second
+  // profile/baby. Belt-and-suspenders alongside the ceremony's UI guard.
+  const finalizeInFlightRef = useRef<Promise<string> | null>(null);
+
+  /**
+   * PURE, local-only. Generates a deterministic egg preview. Publishes nothing.
+   * Safe to call on ceremony mount — refreshing/abandoning creates zero events.
+   */
+  const generatePreview = useCallback((): BlobbiEggPreview => {
+    if (!user?.pubkey) throw new Error('User is not logged in');
+    return generateEggPreview(user.pubkey, 'Egg');
+  }, [user?.pubkey]);
+
+  /**
+   * The ONLY real publish path. Called on final naming submit.
+   *
+   * Builds the desired final profile in memory, publishes the final baby state
+   * FIRST, then — only if that succeeds — publishes exactly one final profile
+   * event linking the baby in (has[] + current_companion). Idempotent per hook
+   * instance (guards double-submit). Resolves with the new Blobbi's canonical
+   * d-tag on success; rejects on failure (the ceremony must NOT call onComplete
+   * on rejection). On retry it re-queries the latest profile and re-publishes
+   * the same baby coordinate + final profile.
+   */
+  const finalizeAdoption = useCallback(
+    (preview: BlobbiEggPreview, name: string): Promise<string> => {
+      if (finalizeInFlightRef.current) return finalizeInFlightRef.current;
+
+      const run = async (): Promise<string> => {
+        if (!user?.pubkey) throw new Error('User is not logged in');
+        const pubkey = user.pubkey;
+        const finalName = name.trim() || preview.name || 'Blobbi';
+
+        // ── a. Read the latest profile (canonical 11125 + legacy 31125). This
+        //       runs on every attempt, so a retry always merges against the
+        //       freshest known profile. ──
+        const profileEvents = await nostr.query(
+          [{ kinds: [...BLOBBONAUT_PROFILE_KINDS], authors: [pubkey], limit: 1 }],
+          { signal: AbortSignal.timeout(3000) },
+        );
+        const existingProfile = profileEvents
+          .filter(validateOwnerProfileEvent)
+          .sort((a, b) => b.created_at - a.created_at)[0];
+
+        // ── b. Build the DESIRED FINAL profile tags entirely in memory. Nothing
+        //       is published yet. For a brand-new user we start from
+        //       buildBlobbonautTags + name + coins; for an existing profile we
+        //       start from its current tags/content. Then we union has[] (never
+        //       shrink) with the new d and set current_companion. This is the
+        //       single profile event we will publish AFTER the baby succeeds —
+        //       there is deliberately no earlier "empty" profile publish. ──
+        let baseProfileTags: string[][];
+        let profileContent = '';
+        if (!existingProfile) {
+          const suggestedName =
+            authorData?.metadata?.name ||
+            authorData?.metadata?.display_name ||
+            'Blobbonaut';
+          baseProfileTags = [
+            ...buildBlobbonautTags(pubkey),
+            ['name', suggestedName],
+            ['coins', INITIAL_BLOBBONAUT_COINS.toString()],
+          ];
+        } else {
+          baseProfileTags = existingProfile.tags;
+          profileContent = existingProfile.content ?? '';
+        }
+
+        const existingHas = getTagValues(baseProfileTags, 'has');
+        const newHas = mergeHasForAdoption(existingHas, existingHas, preview.d);
+        const finalProfileTags = updateBlobbonautTags(baseProfileTags, {
+          has: newHas,
+          current_companion: preview.d,
+        });
+
+        // ── c. Publish the final BABY state (kind 31124) with the chosen name.
+        //       No egg is ever published (see file header rationale). If this
+        //       fails we throw before touching the profile, so no profile is
+        //       created/updated. ──
+        const babyTags = previewToBabyTags({ ...preview, name: finalName });
+        await publishEvent({
+          kind: KIND_BLOBBI_STATE,
+          content: '',
+          tags: babyTags,
+        });
+
+        // ── d. Baby is live — publish EXACTLY ONE final profile event. If this
+        //       step fails, run() rejects and the guard is cleared, so the
+        //       ceremony stays in retry mode (no onComplete) and a retry will
+        //       re-query + re-publish the same baby coordinate + final profile. ──
+        await publishEvent({
+          kind: KIND_BLOBBONAUT_PROFILE,
+          content: profileContent,
+          tags: finalProfileTags,
+        });
+
+        return preview.d;
+      };
+
+      const promise = run().catch((err) => {
+        // Clear the guard on failure so the user can retry the submit.
+        finalizeInFlightRef.current = null;
+        throw err;
+      });
+      finalizeInFlightRef.current = promise;
+      return promise;
+    },
+    [nostr, user?.pubkey, authorData, publishEvent],
+  );
+
+  return { generatePreview, finalizeAdoption };
+}

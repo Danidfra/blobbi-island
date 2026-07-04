@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
@@ -16,6 +17,7 @@ import { LocationProvider } from "@/contexts/LocationContext";
 const PlayingView = lazy(() => import("@/components/blobbi/PlayingView").then(module => ({ default: module.PlayingView })));
 const MapModal = lazy(() => import("@/components/blobbi/MapModal").then(module => ({ default: module.MapModal })));
 const SceneTransition = lazy(() => import("@/components/blobbi/SceneTransition").then(module => ({ default: module.SceneTransition })));
+const BlobbiHatchingCeremony = lazy(() => import("@/components/blobbi/BlobbiHatchingCeremony").then(module => ({ default: module.BlobbiHatchingCeremony })));
 
 // Loading component for lazy-loaded game components
 const GameComponentLoading = () => (
@@ -27,11 +29,12 @@ const GameComponentLoading = () => (
   </div>
 );
 
-type GameState = 'login' | 'loading' | 'selection' | 'playing';
+type GameState = 'login' | 'loading' | 'selection' | 'hatching' | 'playing';
 
 export function BlobbiIsland() {
   const { user } = useCurrentUser();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
   const currentCompanionId = profile?.currentCompanion;
@@ -76,25 +79,31 @@ export function BlobbiIsland() {
       setGameState('login');
       setManualSelectionId(null);
       setIsSwitchingBlobbi(false);
-    } else if (isLoadingBlobbis || isLoadingCompanion) {
-      // Only show loading for a short time, then fall back to selection
+      return;
+    }
+
+    const isLoading = isLoadingBlobbis || isLoadingCompanion;
+
+    // While the first-egg hatching ceremony is running, it owns the screen.
+    // Data queries will refetch underneath it; don't yank the player out mid
+    // -ceremony. The ceremony's onComplete handler transitions to 'playing'.
+    setGameState((current) => {
+      if (current === 'hatching') return current;
+      if (isLoading) return 'loading';
+      if (blobbiError || companionError) return 'selection';
+      if (!blobbis || blobbis.length === 0) return 'selection';
+      if (!selectedBlobbi) return 'selection';
+      return 'playing';
+    });
+
+    if (isLoading) {
+      // Only show loading for a short time, then fall back to selection.
       const loadingTimeout = setTimeout(() => {
-        if (isLoadingBlobbis || isLoadingCompanion) {
-          setGameState('selection');
-        }
+        setGameState((current) =>
+          current === 'hatching' || current === 'playing' ? current : 'selection',
+        );
       }, 2000);
-
-      setGameState('loading');
-
       return () => clearTimeout(loadingTimeout);
-    } else if (blobbiError || companionError) {
-      setGameState('selection');
-    } else if (!blobbis || blobbis.length === 0) {
-      setGameState('selection');
-    } else if (!selectedBlobbi) {
-      setGameState('selection');
-    } else {
-      setGameState('playing');
     }
   }, [user, isLoadingBlobbis, isLoadingCompanion, blobbiError, companionError, blobbis, selectedBlobbi]);
 
@@ -127,6 +136,35 @@ export function BlobbiIsland() {
   const handleBlobbiSelected = (blobbi: Blobbi) => {
     setManualSelectionId(blobbi.id);
     setIsSwitchingBlobbi(false);
+    setGameState('playing');
+  };
+
+  // Start the first-egg adoption/hatching ceremony from the empty state.
+  const handleHatchFirstEgg = () => {
+    setGameState('hatching');
+  };
+
+  // Called by the ceremony ONLY after the baby kind 31124 publish has succeeded
+  // (the ceremony gates onComplete on that publish). Because useBlobbis filters
+  // out eggs, we must refetch the collection and confirm the new baby is present
+  // BEFORE entering the world — otherwise the derived-state effect could bounce
+  // back to selection while the baby is still refetching. We select the new
+  // Blobbi first, await the collection refetch, then enter playing.
+  const handleHatchComplete = async (blobbiId: string) => {
+    setManualSelectionId(blobbiId);
+    if (user?.pubkey) {
+      // Refetch the profile in the background (has[]/current_companion), and
+      // AWAIT the collection refetch so `selectedBlobbi` can resolve to the new
+      // baby before we transition to the world.
+      queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile', user.pubkey] });
+      try {
+        await queryClient.refetchQueries({ queryKey: ['blobbis', user.pubkey] });
+      } catch {
+        // A refetch hiccup shouldn't trap the player on the ceremony — the
+        // baby was published successfully. Enter playing anyway; the selection
+        // resolves on the next natural refetch.
+      }
+    }
     setGameState('playing');
   };
 
@@ -173,8 +211,16 @@ export function BlobbiIsland() {
           <BlobbiSelectionScreen
             onBlobbiSelected={handleBlobbiSelected}
             onCancel={handleCancelSelection}
+            onHatchFirstEgg={handleHatchFirstEgg}
             canClose={!!selectedBlobbi}
           />
+        );
+
+      case 'hatching':
+        return (
+          <Suspense fallback={<BlobbiLoadingScreen />}>
+            <BlobbiHatchingCeremony onComplete={handleHatchComplete} />
+          </Suspense>
         );
 
       case 'playing':

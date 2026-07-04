@@ -13,6 +13,11 @@ interface BlobbiSelectionScreenProps {
   onBlobbiSelected: (blobbi: Blobbi) => void;
   onCancel?: () => void;
   /**
+   * Start the first-egg adoption/hatching ceremony. Shown as the empty-state
+   * call to action when the user has no modern Blobbis to select.
+   */
+  onHatchFirstEgg?: () => void;
+  /**
    * Whether this screen can be dismissed without selecting a Blobbi (true when
    * opened from the HUD during play, where the user already has an active
    * Blobbi to return to). Shows a persistent close/back control.
@@ -20,7 +25,7 @@ interface BlobbiSelectionScreenProps {
   canClose?: boolean;
 }
 
-export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = false }: BlobbiSelectionScreenProps) {
+export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirstEgg, canClose = false }: BlobbiSelectionScreenProps) {
   const { user } = useCurrentUser();
   const { data: blobbis, isLoading, error } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion } = useBlobbonautProfile();
@@ -200,20 +205,17 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, canClose = f
               <div className="mt-1 space-y-2 text-sm text-island-ink-soft">
                 <p>You don't have a Blobbi yet.</p>
                 <p>
-                  Soon, you'll be able to hatch your very first Blobbi directly
-                  here on the island.
+                  Hatch your very first Blobbi right here on the island — no need
+                  to leave.
                 </p>
-                <p>We're preparing the nest for new arrivals.</p>
               </div>
               <Button
-                disabled
-                aria-disabled="true"
-                tabIndex={-1}
-                className="mt-5 w-full cursor-not-allowed rounded-full border-2 border-island-wood/40 bg-island-cream-2 text-island-ink shadow-cozy-soft opacity-60"
-                variant="outline"
+                onClick={() => onHatchFirstEgg?.()}
+                disabled={!onHatchFirstEgg}
+                className="mt-5 w-full rounded-full bg-island-purple font-bold text-white shadow-cozy-raised transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-purple/90 disabled:opacity-60"
               >
-                <Sparkles className="mr-2 size-4 text-island-purple" />
-                Coming Soon
+                <Egg className="mr-2 size-4" />
+                Hatch your first Blobbi
               </Button>
             </div>
           </div>

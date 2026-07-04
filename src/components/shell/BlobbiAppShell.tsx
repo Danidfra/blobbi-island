@@ -11,7 +11,7 @@ import { BlobbiShellHeader } from "./BlobbiShellHeader";
 import { BlobbiShellFooter } from "./BlobbiShellFooter";
 import { FullscreenExitButton } from "./FullscreenExitButton";
 
-type ShellScreen = "login" | "loading" | "selection" | "playing";
+type ShellScreen = "login" | "loading" | "selection" | "hatching" | "playing";
 
 interface BlobbiAppShellProps {
   /** The current game screen (login / loading / selection / playing). */
