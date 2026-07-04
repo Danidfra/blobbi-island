@@ -561,10 +561,10 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
       {/* Dialog text */}
       {phase === 'dialog' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-8 sm:pb-24 px-8">
+        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-3 sm:pb-24 px-8">
           <div className="relative max-w-md w-full text-center">
             <div
-              className="absolute -inset-32"
+              className="absolute -inset-x-8 -inset-y-6 sm:-inset-32"
               style={{
                 background:
                   'radial-gradient(ellipse at center, rgba(0,30,50,0.40) 0%, rgba(0,30,50,0.18) 35%, transparent 65%)',
@@ -575,8 +575,8 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               }}
             />
             <div className="relative">
-              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
-              <p className="text-xs sm:text-base text-white leading-relaxed font-light min-h-[3em]">
+              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-1 sm:mb-3">???</p>
+              <p className="text-xs sm:text-base text-white leading-relaxed font-light min-h-[2.25em] sm:min-h-[3em]">
                 {dialogTypewriter.displayed}
                 {!dialogTypewriter.done && (
                   <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
@@ -594,12 +594,12 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
       {/* Naming */}
       {phase === 'naming' && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-8 sm:pb-24 px-8">
+        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-3 sm:pb-24 px-8">
           <div
             className={cn('relative max-w-md w-full text-center', namingVisible ? 'animate-onboard-soft-fade-in' : 'opacity-0')}
           >
             <div
-              className="absolute -inset-32"
+              className="absolute -inset-x-8 -inset-y-6 sm:-inset-32"
               style={{
                 background:
                   'radial-gradient(ellipse at center, rgba(0,30,50,0.40) 0%, rgba(0,30,50,0.18) 35%, transparent 65%)',
@@ -610,8 +610,8 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               }}
             />
             <div className="relative">
-              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-3">???</p>
-              <p className="text-xs sm:text-base text-white/85 leading-relaxed font-light mb-6 min-h-[1.5em] whitespace-pre-line">
+              <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase mb-1 sm:mb-3">???</p>
+              <p className="text-xs sm:text-base text-white/85 leading-relaxed font-light mb-3 sm:mb-6 min-h-[1.5em] whitespace-pre-line">
                 {namingTypewriter.displayed}
                 {!namingTypewriter.done && (
                   <span className="inline-block w-[2px] h-[1em] bg-white/50 ml-0.5 animate-pulse align-text-bottom" />
