@@ -160,7 +160,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
       </div>
 
       {/* Collection (scrolls; footer stays pinned) */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4 sm:px-6">
         {/* Friendly notice when the current/active companion is from an older
             format and can't be shown. Only meaningful when there are modern
             Blobbis to switch to; the empty state covers the no-modern case. */}
@@ -177,7 +177,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
         )}
 
         {hasBlobbis ? (
-          <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 landscape:max-md:grid-cols-4 landscape:max-md:gap-2.5">
+          <div className="mx-auto grid max-w-5xl grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 landscape:max-md:grid-cols-5 landscape:max-md:gap-2">
             {modernBlobbis.map((blobbi) => (
               <BlobbiCard
                 key={blobbi.id}
