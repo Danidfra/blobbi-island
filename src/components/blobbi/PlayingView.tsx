@@ -56,7 +56,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // the local player when it walks (or, later, emotes/acts) nearby.
   const localActiveRef = useRef<LocalActiveState | null>(null);
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
-  const { currentLocation } = useLocation();
+  const { currentLocation, previousLocation } = useLocation();
   const { nostr } = useNostr();
   const { showDebugOverlays } = useDebugOverlays();
   const [modalKey, setModalKey] = useState<string>('self');
@@ -107,7 +107,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
-  const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation);
+  const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation, previousLocation);
   const [myPosition, setMyPosition] = useState<Position>(blobbiInitialPosition);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',

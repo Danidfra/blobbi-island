@@ -8,6 +8,7 @@ interface LocationProviderProps {
 
 export function LocationProvider({ children }: LocationProviderProps) {
   const [currentLocation, setCurrentLocation] = useState<LocationId>('town');
+  const [previousLocation, setPreviousLocation] = useState<LocationId | null>(null);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const transitionTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -18,6 +19,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }
     setIsTransitioning(true);
     transitionTimeout.current = setTimeout(() => {
+      setPreviousLocation(currentLocation);
       setCurrentLocation(location);
 
       // Clear arcade pass when leaving arcade locations
@@ -53,6 +55,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       value={{
         currentLocation,
         setCurrentLocation: transitionToLocation,
+        previousLocation,
         isMapModalOpen,
         setIsMapModalOpen,
         isTransitioning,
