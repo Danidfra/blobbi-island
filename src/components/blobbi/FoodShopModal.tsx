@@ -185,13 +185,13 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
   return (
     <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2"
       onClick={handleBackdropClick}
       onPointerDown={(e) => e.stopPropagation()}
       data-overlay
       data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85vh] sm:max-h-[90vh]"
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[95%]"
         role="dialog"
         aria-modal="true"
         data-block-move
