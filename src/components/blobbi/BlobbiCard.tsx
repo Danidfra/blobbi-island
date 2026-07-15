@@ -62,9 +62,9 @@ export function BlobbiCard({
       aria-pressed={isSelected}
       aria-label={`${displayName}${isCurrent ? " (active companion)" : ""}`}
       className={cn(
-        "group relative flex w-full flex-col items-center rounded-3xl border-2 p-3 text-center",
+        "group relative flex w-full flex-col items-center rounded-2xl border-2 p-2 text-center",
         "shadow-cozy-soft outline-none transition-all duration-200 ease-cozy",
-        "hover:-translate-y-1 hover:shadow-cozy-raised focus-visible:ring-2 focus-visible:ring-island-ocean focus-visible:ring-offset-2",
+        "hover:-translate-y-0.5 hover:shadow-cozy-raised focus-visible:ring-2 focus-visible:ring-island-ocean focus-visible:ring-offset-2",
         isCurrent
           ? "border-island-grass bg-gradient-to-b from-island-grass/15 to-island-cream shadow-cozy-raised"
           : isSelected
@@ -74,7 +74,7 @@ export function BlobbiCard({
     >
       {/* Active companion ribbon */}
       {isCurrent && (
-        <span className="absolute -top-2 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-island-grass px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-island-ink shadow-cozy-soft">
+        <span className="absolute top-1.5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-island-grass px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-island-ink shadow-cozy-soft">
           <Sparkles className="size-3" />
           Active
         </span>
@@ -82,7 +82,7 @@ export function BlobbiCard({
 
       {/* Selected check badge */}
       {isSelected && !isCurrent && (
-        <span className="absolute -top-2 -right-2 z-20 inline-flex size-6 items-center justify-center rounded-full bg-island-ocean text-white shadow-cozy-soft">
+        <span className="absolute top-1 right-1 z-20 inline-flex size-6 items-center justify-center rounded-full bg-island-ocean text-white shadow-cozy-soft">
           <Check className="size-3.5" />
         </span>
       )}
@@ -92,7 +92,7 @@ export function BlobbiCard({
           standing in its own little nest rather than floating on a flat card. */}
       <div
         className={cn(
-          "relative aspect-square w-full overflow-hidden rounded-2xl border-2 shadow-cozy-inset transition-colors duration-200 ease-cozy",
+          "relative aspect-square w-full overflow-hidden rounded-xl border-2 shadow-cozy-inset transition-colors duration-200 ease-cozy",
           "bg-gradient-to-b from-island-sky/45 via-island-sky/15 to-island-cream",
           isCurrent
             ? "border-island-grass/40"
@@ -115,28 +115,28 @@ export function BlobbiCard({
             including the smaller mobile-landscape size — instead of being a
             generic fixed oval detached from the creature. */}
         <div className="absolute inset-x-0 bottom-[14%] flex flex-col items-center">
-          <div className="relative size-24 sm:size-28 landscape:max-md:size-20">
+          <div className="relative size-[4.5rem] sm:size-[5.5rem] landscape:max-md:size-14">
             <div
-              className="size-full drop-shadow-[0_4px_6px_rgba(58,42,26,0.16)] transition-transform duration-200 ease-cozy group-hover:-translate-y-1 group-hover:scale-105"
+              className="size-full drop-shadow-[0_4px_6px_rgba(58,42,26,0.16)] transition-transform duration-200 ease-cozy group-hover:-translate-y-0.5 group-hover:scale-105"
               dangerouslySetInnerHTML={{ __html: svgContent }}
             />
           </div>
           {/* Proportional contact shadow (width = ~64% of art width via w-[64%]
               of the same-sized track below). */}
-          <div className="-mt-1 flex w-24 justify-center sm:w-28 landscape:max-md:w-20">
+          <div className="-mt-1 flex w-[4.5rem] justify-center sm:w-[5.5rem] landscape:max-md:w-14">
             <div className="h-2 w-[64%] rounded-[50%] bg-island-ink/20 blur-[2px] transition-all duration-200 ease-cozy group-hover:w-[72%] group-hover:opacity-80" />
           </div>
         </div>
       </div>
 
       {/* Name + stage */}
-      <div className="mt-2.5 flex w-full flex-col items-center gap-1">
-        <h3 className="max-w-full truncate text-base font-bold text-island-ink landscape:max-md:text-sm">
+      <div className="mt-1.5 flex w-full flex-col items-center gap-0.5">
+        <h3 className="max-w-full truncate text-sm font-bold text-island-ink landscape:max-md:text-xs">
           {displayName}
         </h3>
         <span
           className={cn(
-            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+            "inline-flex items-center rounded-full px-2 py-px text-[0.65rem] font-semibold capitalize",
             isCurrent
               ? "bg-island-grass/25 text-island-grass-dark"
               : "bg-island-cream-2 text-island-wood-dark",
