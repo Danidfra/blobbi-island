@@ -191,7 +191,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       data-overlay
       data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85vh] sm:max-h-[95vh]"
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85vh] sm:max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         data-block-move
