@@ -68,8 +68,8 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
         // without being pushed around by the left/right clusters.
         "pointer-events-none relative flex items-center justify-between gap-2",
         compact
-          ? "px-2 pt-[max(0.4rem,env(safe-area-inset-top))] pb-2"
-          : "px-3 sm:px-4 pt-3 pb-2",
+          ? "px-2 pt-[max(0.25rem,env(safe-area-inset-top))] pb-2"
+          : "px-3 sm:px-4 pt-2 pb-2",
       )}
     >
       {/* Center: current location — an in-world location sign, centered at the
@@ -80,7 +80,7 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
           max-width keeps it clear of the side clusters. */}
       <div
         data-block-move
-        className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center"
+        className="pointer-events-auto absolute left-1/2 top-0 -translate-x-1/2 flex items-center"
       >
         <LocationPill label={locationName} size={size} />
       </div>

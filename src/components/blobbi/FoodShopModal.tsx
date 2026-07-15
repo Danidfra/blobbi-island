@@ -185,21 +185,21 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
   return (
     <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2"
       onClick={handleBackdropClick}
       onPointerDown={(e) => e.stopPropagation()}
       data-overlay
       data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90vh]"
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85%]"
         role="dialog"
         aria-modal="true"
         data-block-move
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-island-wood/20 relative">
-          <h2 className="text-2xl font-bold text-center text-island-ink">
+        <div className="px-3 py-2 border-b border-island-wood/20 relative">
+          <h2 className="text-xl sm:text-2xl font-bold text-center text-island-ink">
             🍎 Food Shop
           </h2>
           <Button
@@ -214,21 +214,21 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
           </Button>
         </div>
 
-        <div className="p-4 flex-1 overflow-y-hidden flex flex-col">
+        <div className="p-3 pb-2 sm:p-4 sm:pb-2 flex-1 overflow-y-hidden flex flex-col">
           <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {shopItems.map(item => (
                 <Card key={item.id} className="overflow-hidden blobbi-card blobbi-hover h-full">
-                 <div className='w-auto h-24'>
+                 <div className='w-auto h-20'>
                   <CardHeader className="p-0 items-center justify-center h-full">
                     <img src={item.imageUrl} alt={item.name} className="object-cover" />
                   </CardHeader>
                  </div>
-                  <CardContent className="p-3 text-center">
+                  <CardContent className="p-2 pt-1 text-center">
                     <p className="font-bold blobbi-text">{item.name}</p>
                     <p className="icon-yellow font-semibold">{item.price} coins</p>
                   </CardContent>
-                  <CardFooter className="p-3">
+                  <CardFooter className="p-2 pt-0">
                     <Input
                       type="number"
                       min="0"
@@ -243,9 +243,9 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             </div>
           </ScrollArea>
 
-          <div className="mt-4">
-            <h3 className="font-bold text-lg mb-2 blobbi-text">Delivery Options</h3>
-            <RadioGroup value={deliveryOption} onValueChange={(value: DeliveryOption) => setDeliveryOption(value)}>
+          <div className="mt-2">
+            <h3 className="font-bold text-sm mb-1 blobbi-text">Delivery Options</h3>
+            <RadioGroup value={deliveryOption} onValueChange={(value: DeliveryOption) => setDeliveryOption(value)} className="flex flex-row gap-4">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="home" id="home" />
                 <Label htmlFor="home" className="blobbi-text">Deliver to home</Label>
@@ -258,7 +258,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             {!currentPetId && <p className="text-xs blobbi-text-muted mt-1">Select a Blobbi to enable Blobbi inventory delivery.</p>}
           </div>
 
-          <div className="mt-4 p-4 blobbi-card rounded-lg border-island-wood/30">
+          <div className="mt-2 p-2 blobbi-card rounded-lg border-island-wood/30">
             <div className="flex justify-between items-center">
               <span className="font-bold text-lg blobbi-text">Total Cost:</span>
               <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
@@ -270,7 +270,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
           </div>
         </div>
 
-        <div className="p-4 border-t border-island-wood/20 flex justify-end gap-2">
+        <div className="py-2 px-3 border-t border-island-wood/20 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} className="blobbi-button border-island-wood/40 hover:bg-island-cream-2">
             Cancel
           </Button>
