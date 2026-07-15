@@ -68,8 +68,8 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
         // without being pushed around by the left/right clusters.
         "pointer-events-none relative flex items-center justify-between gap-2",
         compact
-          ? "px-2 pt-[max(0.4rem,env(safe-area-inset-top))] pb-2"
-          : "px-3 sm:px-4 pt-3 pb-2",
+          ? "px-2 pt-[max(0.25rem,env(safe-area-inset-top))] pb-1"
+          : "px-3 sm:px-4 pt-4 pb-2",
       )}
     >
       {/* Center: current location — an in-world location sign, centered at the
