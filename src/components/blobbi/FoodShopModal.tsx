@@ -191,14 +191,14 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       data-overlay
       data-block-move
     >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[90%]"
+      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85%]"
         role="dialog"
         aria-modal="true"
         data-block-move
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="p-3 border-b border-island-wood/20 relative">
+        <div className="px-3 py-2 border-b border-island-wood/20 relative">
           <h2 className="text-xl sm:text-2xl font-bold text-center text-island-ink">
             🍎 Food Shop
           </h2>
