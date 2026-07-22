@@ -13,7 +13,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import type { OwnerProfile } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
-import { X } from 'lucide-react';
+import { X, Minus, Plus } from 'lucide-react';
 
 interface FoodShopModalProps {
   isOpen: boolean;
@@ -129,6 +129,18 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     }
   };
 
+  const incrementQuantity = (itemId: string) => {
+    setQuantities(prev => ({ ...prev, [itemId]: (prev[itemId] ?? 0) + 1 }));
+  };
+
+  const decrementQuantity = (itemId: string) => {
+    setQuantities(prev => {
+      const current = prev[itemId] ?? 0;
+      if (current <= 0) return prev;
+      return { ...prev, [itemId]: current - 1 };
+    });
+  };
+
   const handleConfirmPurchase = async () => {
     if (!status.owner) {
       toast({ title: 'Error', description: 'Owner profile not found.', variant: 'destructive' });
@@ -229,14 +241,35 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
                     <p className="icon-yellow font-semibold">{item.price} coins</p>
                   </CardContent>
                   <CardFooter className="p-2 pt-0">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={quantities[item.id] || ''}
-                      onChange={e => handleQuantityChange(item.id, e.target.value)}
-                      placeholder="0"
-                      className="w-full text-center blobbi-button border-island-wood/30"
-                    />
+                    <div className="flex items-center w-full gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => decrementQuantity(item.id)}
+                        disabled={(quantities[item.id] ?? 0) <= 0}
+                        className="h-9 w-9 min-w-[36px] shrink-0 blobbi-button border-island-wood/30 hover:bg-island-cream-2"
+                        aria-label={`Decrease ${item.name} quantity`}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={quantities[item.id] || ''}
+                        onChange={e => handleQuantityChange(item.id, e.target.value)}
+                        placeholder="0"
+                        className="flex-1 min-w-0 text-center blobbi-button border-island-wood/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => incrementQuantity(item.id)}
+                        className="h-9 w-9 min-w-[36px] shrink-0 blobbi-button border-island-wood/30 hover:bg-island-cream-2"
+                        aria-label={`Increase ${item.name} quantity`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardFooter>
                 </Card>
               ))}
