@@ -8,7 +8,8 @@ export interface FoodPosition {
 }
 
 interface FoodItemProps {
-  imageUrl: string;
+  imageUrl?: string;
+  emoji?: string;
   position: FoodPosition;
   onPositionChange: (position: FoodPosition) => void;
   containerRef: React.RefObject<HTMLElement>;
@@ -21,6 +22,7 @@ interface FoodItemProps {
 
 export function FoodItem({
   imageUrl,
+  emoji,
   position,
   onPositionChange,
   containerRef,
@@ -116,12 +118,18 @@ export function FoodItem({
       }}
       onClick={handleClick}
     >
-      <img
-        src={imageUrl}
-        alt="Food item"
-        className="w-full h-full object-contain pointer-events-none"
-        draggable={false}
-      />
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt="Food item"
+          className="w-full h-full object-contain pointer-events-none"
+          draggable={false}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center pointer-events-none" style={{ fontSize: size * 0.7 }}>
+          <span role="img" aria-label="Food item">{emoji ?? '📦'}</span>
+        </div>
+      )}
 
       {/* Quantity badge */}
       {quantity !== undefined && quantity > 1 && (

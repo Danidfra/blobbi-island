@@ -41,14 +41,31 @@
  * abandoned. So we publish only the final baby. Identity/tags still come from
  * `@blobbi-kit/core` via the preview, so history/compat is preserved.
  *
+ * Strict publishing (adoption-only):
+ *   The shared `useNostrPublish` primitive intentionally SWALLOWS relay
+ *   timeout/abort errors and resolves as success (it is tuned for lenient,
+ *   fire-and-forget writes like presence/movement). That leniency is unsafe for
+ *   adoption: a baby publish that timed out on every relay would be treated as
+ *   success, the profile would then be published, `onComplete` would fire, and
+ *   the app would enter `playing` — but on reload the baby wouldn't be found and
+ *   the user would bounce back to the empty nest.
+ *
+ *   So this hook publishes the two adoption events through a small, local
+ *   `strictPublish` helper (see below) that signs with the same signer + client
+ *   tag as `useNostrPublish` but treats ANY failure to publish — timeout, abort,
+ *   or all-relays-rejected — as a hard rejection. Success therefore means the
+ *   underlying pool's `.event()` resolved, i.e. AT LEAST ONE configured relay
+ *   accepted the event (NPool.event rejects only when ALL relays reject/fail).
+ *   This is scoped to adoption; no other publisher is changed.
+ *
  * Core event/tag/state logic uses `@blobbi-kit/core` helpers. This hook contains
  * no animation/UI.
  */
 
 import { useCallback, useRef } from 'react';
+import type { NostrEvent } from '@nostrify/nostrify';
 import { useNostr } from './useNostr';
 import { useCurrentUser } from './useCurrentUser';
-import { useNostrPublish } from './useNostrPublish';
 import { useAuthor } from './useAuthor';
 
 import {
@@ -74,13 +91,50 @@ import {
 export function useFirstEggAdoption() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const { mutateAsync: publishEvent } = useNostrPublish();
   const { data: authorData } = useAuthor(user?.pubkey);
 
   // Duplicate-submit guard: once finalize is in flight (or done) for this hook
   // instance, remember the promise so a second submit can't create a second
   // profile/baby. Belt-and-suspenders alongside the ceremony's UI guard.
   const finalizeInFlightRef = useRef<Promise<string> | null>(null);
+
+  /**
+   * Adoption-only STRICT publish. Signs the event (adding the same
+   * `["client","blobbi"]` tag as `useNostrPublish`) and publishes it through the
+   * relay pool with a timeout. Unlike `useNostrPublish`, it does NOT swallow
+   * timeout/abort errors: ANY failure to publish (timeout, abort, or all relays
+   * rejecting) rejects, so a failed baby publish cannot be mistaken for success.
+   *
+   * Resolves only when the pool's `.event()` resolves, which means at least one
+   * configured relay accepted the event (`NPool.event` rejects only when ALL
+   * relays reject/fail).
+   */
+  const strictPublish = useCallback(
+    async (template: {
+      kind: number;
+      content: string;
+      tags: string[][];
+    }): Promise<NostrEvent> => {
+      if (!user) throw new Error('User is not logged in');
+
+      const tags = [...template.tags];
+      if (!tags.some(([name]) => name === 'client')) {
+        tags.push(['client', 'blobbi']);
+      }
+
+      const event = await user.signer.signEvent({
+        kind: template.kind,
+        content: template.content ?? '',
+        tags,
+        created_at: Math.floor(Date.now() / 1000),
+      });
+
+      // Rejects on timeout/abort OR when all relays reject — no leniency here.
+      await nostr.event(event, { signal: AbortSignal.timeout(5000) });
+      return event;
+    },
+    [nostr, user],
+  );
 
   /**
    * PURE, local-only. Generates a deterministic egg preview. Publishes nothing.
@@ -158,7 +212,7 @@ export function useFirstEggAdoption() {
         //       fails we throw before touching the profile, so no profile is
         //       created/updated. ──
         const babyTags = previewToBabyTags({ ...preview, name: finalName });
-        await publishEvent({
+        await strictPublish({
           kind: KIND_BLOBBI_STATE,
           content: '',
           tags: babyTags,
@@ -168,7 +222,7 @@ export function useFirstEggAdoption() {
         //       step fails, run() rejects and the guard is cleared, so the
         //       ceremony stays in retry mode (no onComplete) and a retry will
         //       re-query + re-publish the same baby coordinate + final profile. ──
-        await publishEvent({
+        await strictPublish({
           kind: KIND_BLOBBONAUT_PROFILE,
           content: profileContent,
           tags: finalProfileTags,
@@ -185,7 +239,7 @@ export function useFirstEggAdoption() {
       finalizeInFlightRef.current = promise;
       return promise;
     },
-    [nostr, user?.pubkey, authorData, publishEvent],
+    [nostr, user?.pubkey, authorData, strictPublish],
   );
 
   return { generatePreview, finalizeAdoption };

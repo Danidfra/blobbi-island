@@ -2,29 +2,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { RefrigeratorModal } from './RefrigeratorModal';
+import { buildEmptyInventory, itemIdToAddress } from '@/inventory';
+import { addInventoryItemQuantity } from '@nostr-games/inventory';
 
-// Mock the hooks
-const mockUseBlobbonautInventory = vi.fn();
-const mockUseBlobbonautProfile = vi.fn();
+// Mock the new inventory + status hooks
+const mockUseIslandInventory = vi.fn();
+const mockUseItemCatalog = vi.fn();
 const mockUseOptimizedStatus = vi.fn();
-const mockUseBlobbiFeedAction = vi.fn();
+const mockUseUseItem = vi.fn();
 
-vi.mock('@/hooks/useBlobbonautProfile', () => ({
-  useBlobbonautInventory: () => mockUseBlobbonautInventory(),
-  useBlobbonautProfile: () => mockUseBlobbonautProfile(),
-}));
+vi.mock('@/inventory', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/inventory')>();
+  return {
+    ...actual,
+    useIslandInventory: () => mockUseIslandInventory(),
+    useItemCatalog: () => mockUseItemCatalog(),
+    useUseItem: () => mockUseUseItem(),
+  };
+});
 
 vi.mock('@/hooks/useOptimizedStatus', () => ({
   useOptimizedStatus: () => mockUseOptimizedStatus(),
 }));
 
-vi.mock('@/hooks/useBlobbiFeedAction', () => ({
-  useBlobbiFeedAction: () => mockUseBlobbiFeedAction(),
-}));
-
 describe('RefrigeratorModal', () => {
   beforeEach(() => {
-    // Default mocks
     mockUseOptimizedStatus.mockReturnValue({
       status: {
         currentPet: {
@@ -37,32 +39,27 @@ describe('RefrigeratorModal', () => {
           health: 50,
         },
         owner: null,
+        allPets: [],
       },
-      updatePetStats: vi.fn(),
+      applyOptimisticUpdate: vi.fn(),
     });
 
-    mockUseBlobbonautProfile.mockReturnValue({
-      data: {
-        id: 'profile',
-        name: 'Test User',
-        coins: 100,
-        inventory: [],
-      },
-    });
+    // Catalog undefined -> component falls back to bundled definitions.
+    mockUseItemCatalog.mockReturnValue({ data: undefined });
 
-    mockUseBlobbiFeedAction.mockReturnValue({
+    mockUseUseItem.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     });
   });
 
-  it('displays food items from user inventory', async () => {
-    mockUseBlobbonautInventory.mockReturnValue({
-      data: [
-        { itemId: 'apple', quantity: 5 },
-        { itemId: 'pizza', quantity: 2 },
-        { itemId: 'burger', quantity: 1 },
-      ],
+  it('displays food items from the 31633 inventory', async () => {
+    let inv = buildEmptyInventory('owner-pubkey');
+    inv = addInventoryItemQuantity(inv, itemIdToAddress('food_apple')!, 5);
+    inv = addInventoryItemQuantity(inv, itemIdToAddress('food_pizza')!, 2);
+
+    mockUseIslandInventory.mockReturnValue({
+      data: inv,
       isLoading: false,
       refetch: vi.fn(),
     });
@@ -73,33 +70,12 @@ describe('RefrigeratorModal', () => {
       </TestApp>
     );
 
-    // The modal should be open and display the refrigerator
-    expect(await screen.findByAltText('Refrigerator open')).toBeInTheDocument();
-  });
-
-  it('displays food items with food_ prefix from user inventory', async () => {
-    mockUseBlobbonautInventory.mockReturnValue({
-      data: [
-        { itemId: 'food_burger', quantity: 4 },
-        { itemId: 'food_cake', quantity: 23 },
-      ],
-      isLoading: false,
-      refetch: vi.fn(),
-    });
-
-    render(
-      <TestApp>
-        <RefrigeratorModal isOpen={true} onClose={() => {}} />
-      </TestApp>
-    );
-
-    // The modal should be open and display the refrigerator
     expect(await screen.findByAltText('Refrigerator open')).toBeInTheDocument();
   });
 
   it('shows empty state when no food items in inventory', async () => {
-    mockUseBlobbonautInventory.mockReturnValue({
-      data: [],
+    mockUseIslandInventory.mockReturnValue({
+      data: buildEmptyInventory('owner-pubkey'),
       isLoading: false,
       refetch: vi.fn(),
     });

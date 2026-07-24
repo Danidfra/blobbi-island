@@ -44,16 +44,6 @@ export function useBlobbonautProfile() {
   });
 }
 
-export function useBlobbonautInventory() {
-  const { data: profile, ...rest } = useBlobbonautProfile();
-
-  return {
-    data: profile?.inventory || [],
-    profile,
-    ...rest
-  };
-}
-
 export function useSetCurrentCompanion() {
   const { nostr } = useNostr();
   const { mutateAsync: createEvent } = useNostrPublish();
