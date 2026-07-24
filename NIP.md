@@ -14,8 +14,10 @@ human-readable description for clients that do not understand the kind.
 | Kind | Name | Class | Purpose |
 |------|------|-------|---------|
 | `1124` | Blobbi Social Interaction | Regular | Append-only log of care/social actions (feed, play, etc.) |
-| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: coins, inventory, achievements, current companion |
+| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: coins, owned pets, achievements, current companion |
 | `31124` | Blobbi Pet State | Addressable | Full state of a single Blobbi creature (stats, appearance, care timestamps) |
+| `31632` | Game Item Definition | Addressable | Canonical item catalog (official issuer). See `@nostr-games/inventory`. |
+| `31633` | Game Inventory | Addressable | Player consumable inventory. See `@nostr-games/inventory`. |
 | `31950` | Island Presence | Addressable | Real-time multiplayer presence (location, position, movement) |
 | `21201` | Island Chat | Ephemeral | In-world speech-bubble chat messages |
 
@@ -56,8 +58,32 @@ The player's account/profile. One per pubkey. Co-authored with Ditto; unknown ta
   - `["favorite_blobbi", "<blobbiD>"]`
   - `["pet", "<blobbiD>"]` (repeatable — owned pets)
   - `["achievement", "<id>"]` (repeatable)
-  - `["item", "<id>", "<qty>"]` (repeatable — inventory)
   - `["alt", "Blobbonaut owner profile"]`
+
+> **Note:** The player's consumable inventory is **no longer stored on kind
+> 11125**. It lives in **kind 31633** (Game Inventory). This client does not
+> write inventory tags into 11125.
+
+---
+
+## Kinds 31632 / 31633 — Game Item Definition & Game Inventory
+
+Blobbi Island uses the framework-independent
+[`@nostr-games/inventory`](https://www.npmjs.com/package/@nostr-games/inventory)
+protocol for items and inventory. That package is the source of truth for the
+tag schema, parsing, validation, and quantities.
+
+- **Kind 31632 — Game Item Definition** (addressable, `31632:<issuer>:<d>`):
+  the canonical item catalog. Blobbi's official items are signed by the official
+  issuer `9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9` and
+  use `d` values of the form `blobbi:<category>:<slug>` (e.g. `blobbi:food:apple`).
+  This client only trusts definitions from the official issuer.
+- **Kind 31633 — Game Inventory** (addressable, `31633:<owner>:<d>`): the
+  player's inventory. Blobbi Island uses a single per-user inventory with
+  `d = "blobbi:island"`. Item references are `a` tags pointing at 31632 item
+  addresses with decimal-integer quantities.
+
+See `docs/INVENTORY_ARCHITECTURE.md` for the full Island architecture.
 
 ---
 

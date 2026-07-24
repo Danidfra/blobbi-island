@@ -5,36 +5,43 @@ import { X } from 'lucide-react';
 import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useBlobbonautInventory } from '@/hooks/useBlobbonautProfile';
-import { useBlobbiFeedAction } from '@/hooks/useBlobbiFeedAction';
 import { useToast } from '@/hooks/useToast';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
+import {
+  useIslandInventory,
+  useItemCatalog,
+  toIslandEntries,
+  useUseItem,
+  type IslandInventoryEntry,
+} from '@/inventory';
 
 interface RefrigeratorModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-
+/** Local image overrides for known food items (visual step: image before emoji). */
+const FOOD_IMAGES: Record<string, string> = {
+  food_apple: '/assets/interactive/food/apple.png',
+  food_pizza: '/assets/interactive/food/pizza.png',
+  food_burger: '/assets/interactive/food/burger.png',
+  food_cake: '/assets/interactive/food/cake.png',
+  food_sushi: '/assets/interactive/food/sushi.png',
+};
 
 export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<IslandInventoryEntry | null>(null);
   const [isConsumeModalOpen, setIsConsumeModalOpen] = useState(false);
-  const [optimisticInventory, setOptimisticInventory] = useState<typeof inventory | null>(null);
 
   const { status } = useOptimizedStatus();
-  const { data: inventory, isLoading: isInventoryLoading, refetch: refetchInventory } = useBlobbonautInventory();
-  const { mutate: feedBlobbi, isPending: isFeeding } = useBlobbiFeedAction();
+  const { data: inventory, isLoading: isInventoryLoading, refetch: refetchInventory } = useIslandInventory();
+  const { data: catalog } = useItemCatalog();
+  const { mutate: consumeItem, isPending: isFeeding } = useUseItem();
   const { toast } = useToast();
 
-  // Use optimistic inventory if available, otherwise use real inventory
-  const currentInventory = optimisticInventory ?? inventory;
-
-  // Reset optimistic inventory and refetch when modal opens
   useEffect(() => {
     if (isOpen) {
-      setOptimisticInventory(null);
       refetchInventory();
     }
   }, [isOpen, refetchInventory]);
@@ -42,36 +49,29 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
   // Shelf positions from bottom of modal (in pixels)
   const shelves = useMemo(() => [250, 365, 505], []);
 
-  // Map of available food items with their image paths (only prefixed versions exist)
-  const availableFoodItems = useMemo(() => ({
-    food_apple: '/assets/interactive/food/apple.png',
-    food_pizza: '/assets/interactive/food/pizza.png',
-    food_burger: '/assets/interactive/food/burger.png',
-    food_cake: '/assets/interactive/food/cake.png',
-    food_sushi: '/assets/interactive/food/sushi.png',
-  }), []);
-
-  // Generate food items based on current inventory data (optimistic or real)
-  const foodItems = useMemo(() => {
-    if (!currentInventory || currentInventory.length === 0) return [];
-
-    // Filter inventory to only include food items that we have images for
-    const foodInInventory = currentInventory.filter(item =>
-      item.quantity > 0 && availableFoodItems[item.itemId as keyof typeof availableFoodItems]
+  // Food entries (category food) with quantity > 0.
+  const foodEntries = useMemo(() => {
+    const entries = toIslandEntries(inventory, catalog);
+    return entries.filter(
+      (e) => e.quantity > 0 && e.definition.category === 'food',
     );
+  }, [inventory, catalog]);
 
-    return foodInInventory.map((item) => ({
-      id: item.itemId,
-      imageUrl: availableFoodItems[item.itemId as keyof typeof availableFoodItems],
-      position: { x: 0, y: 0 }, // Will be set properly in useEffect
-      quantity: item.quantity,
-    }));
-  }, [currentInventory, availableFoodItems]);
+  const foodItems = useMemo(
+    () =>
+      foodEntries.map((entry) => ({
+        id: entry.address,
+        entry,
+        imageUrl: entry.itemId ? FOOD_IMAGES[entry.itemId] : undefined,
+        emoji: entry.definition.emoji,
+        position: { x: 0, y: 0 },
+        quantity: entry.quantity,
+      })),
+    [foodEntries],
+  );
 
-  // State for tracking food item positions
   const [foodItemPositions, setFoodItemPositions] = useState<Record<string, FoodPosition>>({});
 
-  // Set initial positions based on container size when modal opens
   useEffect(() => {
     if (isOpen && foodItems.length > 0) {
       const initializePositions = () => {
@@ -80,21 +80,18 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
           const containerWidth = containerRect.width;
           const containerHeight = containerRect.height;
 
-          // Only set positions if we have valid dimensions
           if (containerWidth > 0 && containerHeight > 0) {
             const newPositions: Record<string, FoodPosition> = {};
 
             foodItems.forEach((item, index) => {
-              // Distribute items across shelves
               const shelfIndex = index % shelves.length;
               const itemsPerShelf = Math.ceil(foodItems.length / shelves.length);
               const positionOnShelf = Math.floor(index / shelves.length);
 
-              // Calculate x position based on how many items are on this shelf
               const totalItemsOnShelf = Math.min(itemsPerShelf, foodItems.length - (shelfIndex * itemsPerShelf));
               const xPercentage = totalItemsOnShelf === 1
-                ? 0.5 // Center single items
-                : 0.2 + (positionOnShelf * 0.6 / (totalItemsOnShelf - 1)); // Distribute multiple items
+                ? 0.5
+                : 0.2 + (positionOnShelf * 0.6 / (totalItemsOnShelf - 1));
 
               const xPosition = containerWidth * xPercentage;
               const yPosition = containerHeight - shelves[shelfIndex];
@@ -107,12 +104,8 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
         }
       };
 
-      // Try immediate initialization
       initializePositions();
-
-      // Also try with a delay to ensure image is loaded
       const timer = setTimeout(initializePositions, 100);
-
       return () => clearTimeout(timer);
     }
   }, [isOpen, foodItems, shelves]);
@@ -124,90 +117,57 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
     }));
   };
 
-  const handleFoodClick = (id: string) => {
-    // Normalize the item ID to match the format expected by ConsumeItemModal
-    // Remove the 'food_' prefix if it exists
-    const normalizedId = id.startsWith('food_') ? id.replace('food_', '') : id;
-    setSelectedItemId(normalizedId);
+  const handleFoodClick = (address: string) => {
+    const entry = foodEntries.find((e) => e.address === address);
+    if (!entry) return;
+    setSelectedEntry(entry);
     setIsConsumeModalOpen(true);
   };
 
-  const handleUseItem = (itemId: string, quantity: number) => {
+  const handleUseItem = (entry: IslandInventoryEntry, quantity: number) => {
     if (!status.currentPet) {
       toast({
-        title: "No Pet Selected",
-        description: "Please select a pet to feed first.",
-        variant: "destructive",
+        title: 'No Pet Selected',
+        description: 'Please select a pet to feed first.',
+        variant: 'destructive',
       });
       return;
     }
 
-    // Get current inventory quantity for this item (handle both prefixed and non-prefixed)
-    const currentQuantity = getItemQuantity(itemId);
-
-    if (currentQuantity < quantity) {
+    if (entry.quantity < quantity) {
       toast({
-        title: "Not Enough Items",
-        description: `You only have ${currentQuantity} of this item.`,
-        variant: "destructive",
+        title: 'Not Enough Items',
+        description: `You only have ${entry.quantity} of this item.`,
+        variant: 'destructive',
       });
       return;
     }
 
-    // Apply optimistic inventory update immediately
-    if (currentInventory) {
-      const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
-      const updatedInventory = currentInventory.map(item => {
-        if (item.itemId === prefixedItemId) {
-          return {
-            ...item,
-            quantity: Math.max(0, item.quantity - quantity)
-          };
-        }
-        return item;
-      }).filter(item => item.quantity > 0); // Remove items with 0 quantity
-
-      setOptimisticInventory(updatedInventory);
-    }
-
-    // Use the new Blobbi feed action that creates proper Nostr events
-    feedBlobbi(
+    consumeItem(
       {
+        address: entry.address,
+        definition: entry.definition,
         petId: status.currentPet.id,
-        itemId,
         quantity,
       },
       {
         onSuccess: (result) => {
-          const itemDisplayName = itemId.replace('food_', '').replace('_', ' ');
           toast({
-            title: "Feeding Successful! 🍽️",
-            description: `Fed ${quantity} ${itemDisplayName}(s) to ${status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'}! Gained ${result.experienceGained} XP.`,
+            title: 'Feeding Successful! 🍽️',
+            description: `Fed ${quantity} ${entry.definition.name}(s) to ${status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'}!${result.experienceGained ? ` Gained ${result.experienceGained} XP.` : ''}${result.warning ? ` (${result.warning})` : ''}`,
           });
           setIsConsumeModalOpen(false);
-          setSelectedItemId(null);
+          setSelectedEntry(null);
         },
         onError: (error) => {
-          // Revert optimistic update on error
-          setOptimisticInventory(null);
           toast({
-            title: "Feeding Failed",
+            title: 'Feeding Failed',
             description: error.message,
-            variant: "destructive",
+            variant: 'destructive',
           });
         },
       }
     );
-  };
-
-  const getItemQuantity = (itemId: string): number => {
-    if (!currentInventory) return 0;
-
-    // Inventory items have prefixes, so convert to prefixed version
-    const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
-    const inventoryItem = currentInventory.find(item => item.itemId === prefixedItemId);
-
-    return inventoryItem?.quantity || 0;
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -216,7 +176,6 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
     }
   };
 
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -252,28 +211,14 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
               className="w-full h-auto"
             />
 
-            {/* Invisible shelves for debugging (remove these in production) */}
-            {/* {process.env.NODE_ENV === 'development' && (
-              <>
-                {shelves.map((shelf, index) => (
-                  <div
-                    key={index}
-                    className="absolute left-1/2 transform -translate-x-1/2 w-[60%] border-t-2 border-red-500 opacity-30"
-                    style={{
-                      bottom: `${shelf}px`,
-                    }}
-                  />
-                ))}
-              </>
-            )} */}
-
-            {/* Food items - only render when modal is open and we have inventory data */}
+            {/* Food items */}
             {isOpen && !isInventoryLoading && foodItems.map((food) => {
               const position = foodItemPositions[food.id] || { x: 0, y: 0 };
               return (
                 <FoodItem
                   key={food.id}
                   imageUrl={food.imageUrl}
+                  emoji={food.emoji}
                   position={position}
                   onPositionChange={(newPosition) => updateFoodPosition(food.id, newPosition)}
                   containerRef={containerRef}
@@ -306,17 +251,17 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
         </div>
       </div>
 
-      {/* Consume Item Modal - rendered separately outside the main dialog */}
-      {selectedItemId && (
+      {/* Consume Item Modal */}
+      {selectedEntry && (
         <ConsumeItemModal
           isOpen={isConsumeModalOpen}
           onClose={() => {
             setIsConsumeModalOpen(false);
-            setSelectedItemId(null);
+            setSelectedEntry(null);
           }}
-          itemId={selectedItemId}
-          maxQuantity={getItemQuantity(selectedItemId)}
-          onUseItem={(itemId, quantity) => handleUseItem(itemId, quantity)}
+          definition={selectedEntry.definition}
+          maxQuantity={selectedEntry.quantity}
+          onUseItem={(quantity) => handleUseItem(selectedEntry, quantity)}
           isLoading={isFeeding}
           loadingText="Feeding..."
         />

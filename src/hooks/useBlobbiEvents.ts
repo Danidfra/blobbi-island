@@ -84,9 +84,8 @@ function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   if (input.achievements) {
     input.achievements.forEach(achievement => tags.push(['achievements', achievement]));
   }
-  if (input.inventory) {
-    input.inventory.forEach(item => tags.push(['storage', `${item.itemId}:${item.quantity}`]));
-  }
+  // Consumable inventory is NOT written to kind:11125 — it lives in kind:31633.
+  // The legacy `storage` emission has been intentionally removed.
 
   return tags;
 }

@@ -1,107 +1,40 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import type { OwnerProfile } from '@/lib/blobbi-types';
-import { KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
-import { mergeOwnerProfileTags } from '@/lib/blobbi-parsers';
 import { X } from 'lucide-react';
+import {
+  SHOP_ENTRIES,
+  useItemCatalog,
+  useBatchPurchase,
+} from '@/inventory';
 
 interface FoodShopModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const shopItems = [
-  {
-    id: 'apple',
-    name: 'Apple',
-    imageUrl: '/assets/interactive/food/apple.png',
-    price: 10,
-  },
-  {
-    id: 'pizza',
-    name: 'Pizza',
-    imageUrl: '/assets/interactive/food/pizza.png',
-    price: 30,
-  },
-  {
-    id: 'burger',
-    name: 'Burger',
-    imageUrl: '/assets/interactive/food/burger.png',
-    price: 25,
-  },
-  {
-    id: 'cake',
-    name: 'Cake',
-    imageUrl: '/assets/interactive/food/cake.png',
-    price: 20,
-  },
-  {
-    id: 'sushi',
-    name: 'Sushi',
-    imageUrl: '/assets/interactive/food/sushi.png',
-    price: 40,
-  },
-];
-
-type DeliveryOption = 'home' | 'blobbi';
-
-function useBlobbiEvents() {
-  const { user } = useCurrentUser();
-  const { mutate: createEvent } = useNostrPublish();
-  const queryClient = useQueryClient();
-
-  const useUpdateOwnerProfile = () => useMutation({
-    mutationFn: async (updatedProfile: OwnerProfile) => {
-      if (!user?.pubkey) {
-        throw new Error('User not logged in');
-      }
-
-      // Use merge utility to preserve unknown tags from Ditto
-      const ownerTags = mergeOwnerProfileTags(updatedProfile);
-
-      createEvent({
-        kind: KIND_BLOBBONAUT_PROFILE,
-        content: updatedProfile.rawContent,
-        tags: ownerTags,
-      });
-
-      return updatedProfile;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['owner-profile', user?.pubkey] });
-      queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile', user?.pubkey] });
-    },
-  });
-
-  const { mutateAsync: updateOwnerProfile } = useUpdateOwnerProfile();
-
-  const publishOwnerProfile = (profile: OwnerProfile) => {
-    return updateOwnerProfile(profile);
-  };
-
-  return { publishOwnerProfile };
-}
+/** Local image overrides for known food items. */
+const FOOD_IMAGES: Record<string, string> = {
+  food_apple: '/assets/interactive/food/apple.png',
+  food_pizza: '/assets/interactive/food/pizza.png',
+  food_burger: '/assets/interactive/food/burger.png',
+  food_cake: '/assets/interactive/food/cake.png',
+  food_sushi: '/assets/interactive/food/sushi.png',
+};
 
 export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
   const { status } = useOptimizedStatus();
-  const { publishOwnerProfile } = useBlobbiEvents();
+  const { data: catalog } = useItemCatalog();
+  const { mutateAsync: purchaseBatch, isPending } = useBatchPurchase();
   const { toast } = useToast();
 
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>('home');
 
   const userCoins = status.owner?.coins ?? 0;
-  const currentPetId = status.currentPet?.id;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -113,19 +46,65 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
+  // General store: sell all official items, grouped by category. Kept minimal —
+  // food keeps its images; other categories use their emoji.
+  const shopItems = useMemo(() => {
+    return SHOP_ENTRIES.map((entry) => {
+      const def = catalog?.byAddress.get(entry.address);
+      return {
+        address: entry.address,
+        itemId: entry.itemId,
+        name: def?.name ?? entry.itemId,
+        emoji: def?.emoji ?? '📦',
+        category: def?.category ?? 'unknown',
+        imageUrl: FOOD_IMAGES[entry.itemId],
+        price: entry.price,
+      };
+    });
+  }, [catalog]);
+
+  const CATEGORY_ORDER: { key: string; label: string }[] = useMemo(
+    () => [
+      { key: 'food', label: 'Food' },
+      { key: 'toy', label: 'Toys' },
+      { key: 'medicine', label: 'Medicine' },
+      { key: 'hygiene', label: 'Hygiene' },
+      { key: 'energy', label: 'Energy' },
+    ],
+    [],
+  );
+
   const totalCost = useMemo(() => {
-    return Object.entries(quantities).reduce((total, [itemId, quantity]) => {
-      const item = shopItems.find(i => i.id === itemId);
+    return Object.entries(quantities).reduce((total, [address, quantity]) => {
+      const item = shopItems.find(i => i.address === address);
       return total + (item?.price ?? 0) * quantity;
     }, 0);
-  }, [quantities]);
+  }, [quantities, shopItems]);
+
+  // Selected cart lines (quantity > 0), used both for the confirmation summary
+  // and for the single batch purchase call.
+  const selectedLines = useMemo(() => {
+    return Object.entries(quantities)
+      .filter(([, quantity]) => quantity > 0)
+      .map(([address, quantity]) => {
+        const item = shopItems.find(i => i.address === address);
+        const unitPrice = item?.price ?? 0;
+        return {
+          address,
+          name: item?.name ?? address,
+          quantity,
+          unitPrice,
+          lineCost: unitPrice * quantity,
+        };
+      });
+  }, [quantities, shopItems]);
 
   const canAfford = userCoins >= totalCost;
 
-  const handleQuantityChange = (itemId: string, value: string) => {
+  const handleQuantityChange = (address: string, value: string) => {
     const quantity = parseInt(value, 10);
     if (!isNaN(quantity) && quantity >= 0) {
-      setQuantities(prev => ({ ...prev, [itemId]: quantity }));
+      setQuantities(prev => ({ ...prev, [address]: quantity }));
     }
   };
 
@@ -134,7 +113,11 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       toast({ title: 'Error', description: 'Owner profile not found.', variant: 'destructive' });
       return;
     }
-    if (totalCost === 0) {
+    if (isPending) {
+      // Guard against rapid double-submit.
+      return;
+    }
+    if (selectedLines.length === 0 || totalCost === 0) {
       toast({ title: 'Empty Cart', description: 'Please select items to buy.', variant: 'destructive' });
       return;
     }
@@ -143,33 +126,39 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       return;
     }
 
-    const newCoins = userCoins - totalCost;
-    const newInventory = [...status.owner.inventory];
+    // ONE true multi-item purchase: a single 31633 grant containing all cart
+    // lines, followed by a single 11125 total-coin deduction (non-atomic).
+    try {
+      const result = await purchaseBatch({
+        lines: selectedLines.map(({ address, quantity, unitPrice }) => ({
+          address,
+          quantity,
+          unitPrice,
+        })),
+        currentCoins: userCoins,
+      });
 
-    Object.entries(quantities).forEach(([itemId, quantity]) => {
-      if (quantity > 0) {
-        // Ensure item ID has the food_ prefix for storage
-        const prefixedItemId = itemId.startsWith('food_') ? itemId : `food_${itemId}`;
-
-        const existingItem = newInventory.find(item => item.itemId === prefixedItemId);
-        if (existingItem) {
-          existingItem.quantity += quantity;
-        } else {
-          newInventory.push({ itemId: prefixedItemId, quantity });
-        }
-      }
-    });
-
-    await publishOwnerProfile({
-      ...status.owner,
-      coins: newCoins,
-      inventory: newInventory,
-    });
-
-    toast({
-      title: 'Purchase Successful',
-      description: `You spent ${totalCost} coins. Your items are in your inventory.`,
-    });
+      toast(
+        result.coinsCharged
+          ? {
+              title: 'Purchase Successful',
+              description: `Spent ${result.totalCost} coins. Your items are in your inventory.`,
+            }
+          : {
+              title: 'Purchase Partially Completed',
+              description:
+                'You received all your items, but the coin charge could not be confirmed. Please check your balance.',
+              variant: 'destructive',
+            },
+      );
+    } catch (err) {
+      toast({
+        title: 'Purchase Failed',
+        description: err instanceof Error ? err.message : 'Something went wrong.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setQuantities({});
     onClose();
@@ -200,7 +189,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       >
         <div className="px-3 py-2 border-b border-island-wood/20 relative">
           <h2 className="text-xl sm:text-2xl font-bold text-center text-island-ink">
-            🍎 Food Shop
+            🛒 Shop
           </h2>
           <Button
             variant="ghost"
@@ -216,49 +205,66 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
         <div className="p-3 pb-2 sm:p-4 sm:pb-2 flex-1 overflow-y-hidden flex flex-col">
           <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="grid grid-cols-2 gap-3">
-              {shopItems.map(item => (
-                <Card key={item.id} className="overflow-hidden blobbi-card blobbi-hover h-full">
-                 <div className='w-auto h-20'>
-                  <CardHeader className="p-0 items-center justify-center h-full">
-                    <img src={item.imageUrl} alt={item.name} className="object-cover" />
-                  </CardHeader>
-                 </div>
-                  <CardContent className="p-2 pt-1 text-center">
-                    <p className="font-bold blobbi-text">{item.name}</p>
-                    <p className="icon-yellow font-semibold">{item.price} coins</p>
-                  </CardContent>
-                  <CardFooter className="p-2 pt-0">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={quantities[item.id] || ''}
-                      onChange={e => handleQuantityChange(item.id, e.target.value)}
-                      placeholder="0"
-                      className="w-full text-center blobbi-button border-island-wood/30"
-                    />
-                  </CardFooter>
-                </Card>
-              ))}
+            <div className="space-y-4">
+              {CATEGORY_ORDER.map(({ key, label }) => {
+                const items = shopItems.filter((i) => i.category === key);
+                if (items.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <h3 className="font-bold text-sm mb-2 blobbi-text">{label}</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {items.map(item => (
+                        <Card key={item.address} className="overflow-hidden blobbi-card blobbi-hover h-full">
+                         <div className='w-auto h-20'>
+                          <CardHeader className="p-0 items-center justify-center h-full">
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} className="object-cover" />
+                            ) : (
+                              <span className="text-5xl" role="img" aria-label={item.name}>{item.emoji}</span>
+                            )}
+                          </CardHeader>
+                         </div>
+                          <CardContent className="p-2 pt-1 text-center">
+                            <p className="font-bold blobbi-text">{item.name}</p>
+                            <p className="icon-yellow font-semibold">{item.price} coins</p>
+                          </CardContent>
+                          <CardFooter className="p-2 pt-0">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={quantities[item.address] || ''}
+                              onChange={e => handleQuantityChange(item.address, e.target.value)}
+                              placeholder="0"
+                              className="w-full text-center blobbi-button border-island-wood/30"
+                            />
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
 
-          <div className="mt-2">
-            <h3 className="font-bold text-sm mb-1 blobbi-text">Delivery Options</h3>
-            <RadioGroup value={deliveryOption} onValueChange={(value: DeliveryOption) => setDeliveryOption(value)} className="flex flex-row gap-4">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="home" id="home" />
-                <Label htmlFor="home" className="blobbi-text">Deliver to home</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="blobbi" id="blobbi" disabled={!currentPetId} />
-                <Label htmlFor="blobbi" className="blobbi-text">Add to Blobbi inventory</Label>
-              </div>
-            </RadioGroup>
-            {!currentPetId && <p className="text-xs blobbi-text-muted mt-1">Select a Blobbi to enable Blobbi inventory delivery.</p>}
-          </div>
-
           <div className="mt-2 p-2 blobbi-card rounded-lg border-island-wood/30">
+            {selectedLines.length > 0 && (
+              <div className="mb-2 space-y-1 max-h-24 overflow-y-auto" data-testid="cart-summary">
+                {selectedLines.map((line) => (
+                  <div
+                    key={line.address}
+                    className="flex justify-between items-center text-sm blobbi-text"
+                  >
+                    <span className="truncate mr-2">
+                      {line.name} <span className="blobbi-text-muted">× {line.quantity}</span>
+                    </span>
+                    <span className="icon-yellow font-semibold whitespace-nowrap">
+                      {line.lineCost} coins
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="font-bold text-lg blobbi-text">Total Cost:</span>
               <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
@@ -276,10 +282,10 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
           </Button>
           <Button
             onClick={handleConfirmPurchase}
-            disabled={!canAfford || totalCost === 0}
+            disabled={!canAfford || totalCost === 0 || isPending}
             className="bg-island-purple hover:bg-island-purple/90 text-white border-0 font-medium shadow-cozy-soft theme-transition"
           >
-            Confirm Purchase
+            {isPending ? 'Purchasing...' : 'Confirm Purchase'}
           </Button>
         </div>
       </div>

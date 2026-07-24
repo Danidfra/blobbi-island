@@ -372,7 +372,13 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Add multi-value tags
   profile.ownedPets.forEach(petId => tags.push(['has', petId]));
   profile.achievements.forEach(achievement => tags.push(['achievements', achievement]));
-  profile.inventory.forEach(item => tags.push(['storage', `${item.itemId}:${item.quantity}`]));
+  // NOTE: Consumable inventory is NO LONGER written to kind:11125. It lives in
+  // kind:31633 (`@nostr-games/inventory`). We intentionally do NOT emit the
+  // legacy `storage` tag here, so a profile republish (e.g. a coin update) never
+  // reconstructs or re-writes legacy consumable inventory. `storage` remains in
+  // MANAGED_OWNER_PROFILE_TAG_NAMES so any pre-existing legacy `storage` tags are
+  // dropped rather than passed through. `OwnerProfile.inventory` is still parsed
+  // (a dead legacy read) but never serialized.
 
   // Preserve unknown tags from the original event (tags we don't manage)
   // This keeps Ditto's tags like `b`, `blobbi_onboarding_done`, `xp`, `level`, `room`,
@@ -401,7 +407,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
 const MANAGED_PET_STATE_TAG_NAMES = new Set([
   'd', 'b', 'state', 'stage', 'breeding_ready', 'generation',
   'hunger', 'happiness', 'health', 'hygiene', 'energy',
-  'experience', 'care_streak',
+  'experience', 'care_streak', 'care_streak_last_at', 'care_streak_last_day',
   // Appearance
   'base_color', 'secondary_color', 'pattern', 'eye_color', 'special_mark',
   'adult_type', 'manifestation', 'visual_effect', 'blessing',
@@ -449,11 +455,17 @@ export function mergePetStateTags(
     rawTagValue(pet.rawTags, 'state') ?? (pet.isSleeping ? 'sleeping' : 'active');
 
   // Canonical last_interaction required by @blobbi-kit/core validation.
-  // Preserve the existing value if present, else use the PetState timestamp,
-  // else fall back to the current time so the tag is always emitted.
-  const lastInteractionValue =
-    rawTagValue(pet.rawTags, 'last_interaction') ??
-    (pet.lastInteraction ? dateToTimestamp(pet.lastInteraction) : dateToTimestamp(new Date()));
+  //
+  // IMPORTANT: prefer the LIVE `pet.lastInteraction` (the value a caller just
+  // updated, e.g. an item action setting it to "now") over the stale raw tag
+  // from the source event. Reading the raw tag first caused a regression where
+  // `last_interaction` never advanced on feed/play/clean/medicine actions even
+  // though `care_streak` (read from the live `pet` field) did — leaving the two
+  // inconsistent. Fall back to the source-event tag, then to now, so the tag is
+  // always emitted (satisfying the core-schema guarantee).
+  const lastInteractionValue = pet.lastInteraction
+    ? dateToTimestamp(pet.lastInteraction)
+    : rawTagValue(pet.rawTags, 'last_interaction') ?? dateToTimestamp(new Date());
 
   // Build managed tags from pet fields
   const tags: string[][] = [
@@ -472,6 +484,16 @@ export function mergePetStateTags(
     ['care_streak', pet.careStreak.toString()],
     ['last_interaction', lastInteractionValue],
   ];
+
+  // Care-streak metadata (care_streak_last_at / care_streak_last_day) is managed
+  // by the shared @blobbi-kit streak helpers, not by a typed PetState field.
+  // Preserve any existing values from the source event so they never go stale
+  // when `care_streak` changes; a caller updating the streak passes fresh values
+  // via `overrides`, which replace these preserved tags below.
+  const careStreakLastAt = rawTagValue(pet.rawTags, 'care_streak_last_at');
+  if (careStreakLastAt) tags.push(['care_streak_last_at', careStreakLastAt]);
+  const careStreakLastDay = rawTagValue(pet.rawTags, 'care_streak_last_day');
+  if (careStreakLastDay) tags.push(['care_streak_last_day', careStreakLastDay]);
 
   // Care tracking timestamps
   if (pet.lastMeal) tags.push(['last_meal', dateToTimestamp(pet.lastMeal)]);

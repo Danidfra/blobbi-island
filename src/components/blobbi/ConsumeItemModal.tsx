@@ -1,164 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Minus, Plus, Heart, Zap, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Item data with effects (includes both food and toy items)
-interface ItemData {
-  id: string;
-  name: string;
-  imageUrl: string;
-  effects: {
-    hunger?: number;
-    energy?: number;
-    hygiene?: number;
-    happiness?: number;
-    health?: number;
-  };
-}
-
-// Items database (includes both food and toy items)
-export const ITEM_DATA: Record<string, ItemData> = {
-  // Prefixed versions (actual inventory items)
-  food_apple: {
-    id: 'food_apple',
-    name: 'Apple',
-    imageUrl: '/assets/interactive/food/apple.png',
-    effects: {
-      hunger: 15,
-      energy: 5,
-      hygiene: -2,
-    },
-  },
-  food_pizza: {
-    id: 'food_pizza',
-    name: 'Pizza',
-    imageUrl: '/assets/interactive/food/pizza.png',
-    effects: {
-      hunger: 35,
-      happiness: 10,
-      energy: -9,
-    },
-  },
-  food_burger: {
-    id: 'food_burger',
-    name: 'Burger',
-    imageUrl: '/assets/interactive/food/burger.png',
-    effects: {
-      hunger: 40,
-      happiness: 10,
-      energy: 8,
-      hygiene: -8
-    },
-  },
-  food_cake: {
-    id: 'food_cake',
-    name: 'Cake',
-    imageUrl: '/assets/interactive/food/cake.png',
-    effects: {
-      hunger: 20,
-      happiness: 30,
-      energy: -10,
-    },
-  },
-  food_sushi: {
-    id: 'food_sushi',
-    name: 'Sushi',
-    imageUrl: '/assets/interactive/food/sushi.png',
-    effects: {
-      hunger: 30,
-      health: 10,
-      hygiene: -6,
-      energy: 7
-    },
-  },
-  toy_ball: {
-    id: 'toy_ball',
-    name: 'Ball',
-    imageUrl: '/assets/interactive/toys/ball.png',
-    effects: { happiness: 25, energy: -10, hygiene: -5 },
-  },
-  toy_teddy: {
-    id: 'toy_teddy',
-    name: 'Teddy Bear',
-    imageUrl: '/assets/interactive/toys/bear.png',
-    effects: { happiness: 40, energy: -15 },
-  },
-  // Non-prefixed versions for UI display (when items are normalized for modal)
-  apple: {
-    id: 'apple',
-    name: 'Apple',
-    imageUrl: '/assets/interactive/food/apple.png',
-    effects: {
-      hunger: 15,
-      energy: 5,
-      hygiene: -2,
-    },
-  },
-  pizza: {
-    id: 'pizza',
-    name: 'Pizza',
-    imageUrl: '/assets/interactive/food/pizza.png',
-    effects: {
-      hunger: 35,
-      happiness: 10,
-      energy: -9,
-    },
-  },
-  burger: {
-    id: 'burger',
-    name: 'Burger',
-    imageUrl: '/assets/interactive/food/burger.png',
-    effects: {
-      hunger: 40,
-      happiness: 10,
-      energy: 8,
-      hygiene: -8
-    },
-  },
-  cake: {
-    id: 'cake',
-    name: 'Cake',
-    imageUrl: '/assets/interactive/food/cake.png',
-    effects: {
-      hunger: 20,
-      happiness: 30,
-      energy: -10,
-    },
-  },
-  sushi: {
-    id: 'sushi',
-    name: 'Sushi',
-    imageUrl: '/assets/interactive/food/sushi.png',
-    effects: {
-      hunger: 30,
-      health: 10,
-      hygiene: -6,
-      energy: 7
-    },
-  },
-  ball: {
-    id: 'ball',
-    name: 'Ball',
-    imageUrl: '/assets/interactive/toys/ball.png',
-    effects: { 
-      happiness: 25, 
-      energy: -10, 
-      hygiene: -5 
-    },
-  },
-  teddy: {
-    id: 'teddy',
-    name: 'Teddy Bear',
-    imageUrl: '/assets/interactive/toys/bear.png',
-    effects: { 
-      happiness: 40, 
-      energy: -15 
-    },
-  },
-};
+import type { ResolvedBlobbiItemDefinition } from '@/inventory';
 
 // Effect icons mapping
 const EFFECT_ICONS = {
@@ -172,9 +18,10 @@ const EFFECT_ICONS = {
 interface ConsumeItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  itemId: string;
+  /** Resolved catalog definition (fetched 31632 or bundled fallback). */
+  definition: ResolvedBlobbiItemDefinition;
   maxQuantity: number;
-  onUseItem: (itemId: string, quantity: number) => void;
+  onUseItem: (quantity: number) => void;
   isLoading?: boolean;
   loadingText?: string;
 }
@@ -182,33 +29,29 @@ interface ConsumeItemModalProps {
 export function ConsumeItemModal({
   isOpen,
   onClose,
-  itemId,
+  definition,
   maxQuantity,
   onUseItem,
   isLoading = false,
-  loadingText = "Using...",
+  loadingText = 'Using...',
 }: ConsumeItemModalProps) {
   const [quantity, setQuantity] = useState(1);
 
-  const item = ITEM_DATA[itemId];
-
   // Calculate total effects based on quantity
   const totalEffects = useMemo(() => {
-    if (!item) return {};
-
     const effects: Record<string, number> = {};
-    Object.entries(item.effects).forEach(([key, value]) => {
-      effects[key] = value * quantity;
+    Object.entries(definition.effects).forEach(([key, value]) => {
+      if (typeof value === 'number') effects[key] = value * quantity;
     });
     return effects;
-  }, [item, quantity]);
+  }, [definition, quantity]);
 
   const handleQuantityChange = (newQuantity: number) => {
     setQuantity(Math.max(1, Math.min(maxQuantity, newQuantity)));
   };
 
   const handleUse = () => {
-    onUseItem(itemId, quantity);
+    onUseItem(quantity);
     onClose();
   };
 
@@ -216,10 +59,6 @@ export function ConsumeItemModal({
     setQuantity(1);
     onClose();
   };
-
-  if (!item) {
-    return null;
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -242,14 +81,20 @@ export function ConsumeItemModal({
             <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-600/30">
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-slate-700/50 rounded-xl flex items-center justify-center border border-slate-600/30">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-12 h-12 object-contain"
-                  />
+                  {definition.image ? (
+                    <img
+                      src={definition.image}
+                      alt={definition.name}
+                      className="w-12 h-12 object-contain"
+                    />
+                  ) : (
+                    <span className="text-4xl" role="img" aria-label={definition.name}>
+                      {definition.emoji}
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{item.name}</h3>
+                  <h3 className="text-lg font-semibold text-white">{definition.name}</h3>
                 </div>
               </div>
             </div>
@@ -303,7 +148,7 @@ export function ConsumeItemModal({
                     const Icon = EFFECT_ICONS[effect as keyof typeof EFFECT_ICONS];
                     return (
                       <div key={effect} className="flex items-center space-x-2">
-                        <Icon className="w-4 h-4 text-blue-400" />
+                        {Icon && <Icon className="w-4 h-4 text-blue-400" />}
                         <span className="text-sm text-white capitalize">
                           {value > 0 ? '+' : ''}{value} {effect}
                         </span>
@@ -319,12 +164,12 @@ export function ConsumeItemModal({
               <h4 className="text-white font-medium">Item Effects (per item):</h4>
               <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-600/30">
                 <div className="space-y-2">
-                  {Object.entries(item.effects).map(([effect, value]) => {
+                  {Object.entries(definition.effects).map(([effect, value]) => {
                     const Icon = EFFECT_ICONS[effect as keyof typeof EFFECT_ICONS];
                     return (
                       <div key={effect} className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4 text-slate-400" />
+                          {Icon && <Icon className="w-4 h-4 text-slate-400" />}
                           <span className="text-sm text-slate-300 capitalize">{effect}:</span>
                         </div>
                         <span className="text-sm text-white">{value > 0 ? '+' : ''}{value}</span>
@@ -348,12 +193,12 @@ export function ConsumeItemModal({
                 onClick={handleUse}
                 disabled={isLoading}
                 className={cn(
-                  "flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
-                  "text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200",
-                  "border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  'flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700',
+                  'text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200',
+                  'border-0 disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               >
-                {isLoading ? loadingText : "Use"}
+                {isLoading ? loadingText : 'Use'}
               </Button>
             </div>
           </div>

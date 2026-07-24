@@ -2,12 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { ConsumeItemModal } from './ConsumeItemModal';
+import { bundledFallbackDefinition, itemIdToAddress } from '@/inventory';
 
 describe('ConsumeItemModal', () => {
+  const appleDefinition = bundledFallbackDefinition(itemIdToAddress('food_apple')!)!;
+
   const mockProps = {
     isOpen: true,
     onClose: vi.fn(),
-    itemId: 'apple',
+    definition: appleDefinition,
     maxQuantity: 5,
     onUseItem: vi.fn(),
   };
