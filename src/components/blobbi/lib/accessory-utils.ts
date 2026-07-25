@@ -2,6 +2,7 @@
  * Utility functions for accessory management
  */
 
+import { accessoryImagePath } from '@/lib/asset-paths';
 import type {
   AccessorySlot,
   AccessoryForm,
@@ -310,16 +311,9 @@ export function resolveAccessoryImageUrl(code: string, slot: AccessorySlot, _rem
     return '';
   }
 
-  const _webpPath = `/assets/accessories/${slot}/${code}.webp`;
-  const pngPath = `/assets/accessories/${slot}/${code}.png`;
-
-  // Try legacy misspelled path as fallback
-  const _legacyWebpPath = `/assets/acessories/${slot}/${code}.webp`;
-  const _legacyPngPath = `/assets/acessories/${slot}/${code}.png`;
-
-  // For this implementation, prioritize local PNG assets
-  // The onError handler in the component will handle fallbacks
-  return pngPath;
+  // Prioritize the local PNG asset; the `onError` handlers in the accessory components
+  // walk the remaining fallback chain (.webp, then placeholder).
+  return accessoryImagePath(slot, code, 'png');
 }
 
 // ============================================================================

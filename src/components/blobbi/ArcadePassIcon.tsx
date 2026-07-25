@@ -38,7 +38,7 @@ export function ArcadePassIcon() {
   return (
     <div className="relative">
       <img 
-        src="/assets/interactive/arcade-ticket.png" 
+        src="/assets/items/tickets/arcade-ticket.png" 
         alt="Arcade Pass" 
         className="w-8 h-8 sm:w-10 sm:h-10 drop-shadow-lg animate-pulse"
         title="You have an active Arcade Pass!"

@@ -1,7 +1,7 @@
 const CACHE_NAME = 'blobbi-island-v2'; // bump version when changing cache strategy
 const urlsToCache = [
   '/',
-  '/assets/blobbi-island.png',
+  '/assets/world/map/blobbi-island.png',
   '/manifest.webmanifest'
 ];
 

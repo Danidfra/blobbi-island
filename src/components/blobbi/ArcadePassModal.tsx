@@ -52,7 +52,7 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
           <div className="text-center">
             <div className="blobbi-card rounded-xl p-4 mb-4">
               <img
-                src="/assets/interactive/arcade-ticket.png"
+                src="/assets/items/tickets/arcade-ticket.png"
                 alt="Arcade Pass"
                 className="w-20 h-20 mx-auto mb-2"
               />

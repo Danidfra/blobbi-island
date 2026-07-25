@@ -39,7 +39,7 @@ describe('PhotoBoothModal', () => {
     // Check if photo booth background image is loaded
     const photoBoothImage = screen.getByAltText('Photo Booth Interior');
     expect(photoBoothImage).toBeInTheDocument();
-    expect(photoBoothImage).toHaveAttribute('src', '/assets/places/photo-booth-inside.png');
+    expect(photoBoothImage).toHaveAttribute('src', '/assets/world/backgrounds/photo-booth-inside.png');
 
     // Check if instructions text is present
     expect(screen.getByText(/move blobbi/i)).toBeInTheDocument();

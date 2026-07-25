@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useUpdatePetState, useUpdateOwnerProfile } from '@/hooks/useBlobbiEvents';
+import { miningItemPath } from '@/lib/asset-paths';
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -222,7 +223,7 @@ export function MiningGame() {
         {holes.map((hole, i) => (
           <img
             key={i}
-            src="/assets/interactive/games/mine-wall-hole.png"
+            src={miningItemPath('mine-wall-hole.png')}
             className="absolute"
             style={{ left: hole.x - 15, top: hole.y - 15, width: 40, height: 40 }}
           />
@@ -230,7 +231,7 @@ export function MiningGame() {
         {minedItems.map(item => (
           <img
             key={item.id}
-            src={`/assets/interactive/games/${item.type}`}
+            src={miningItemPath(item.type)}
             className="absolute"
             style={{ left: item.position.x - 5, top: item.position.y - 5, width: 20, height: 20 }}
           />

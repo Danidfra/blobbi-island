@@ -138,8 +138,8 @@ export default {
 				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)'
 			},
 			cursor: {
-				pickaxe: "url('/assets/interactive/games/cursor-pickaxe.png') 0 0, auto",
-				'blobbi-neon': "url('/assets/baby-stage/baby/cursor-blobbi-baby-neon.png') 14 1, auto",
+				pickaxe: "url('/assets/ui/cursors/pickaxe.png') 0 0, auto",
+				'blobbi-neon': "url('/assets/ui/cursors/blobbi-baby-neon.png') 14 1, auto",
 			}
 		}
 	},

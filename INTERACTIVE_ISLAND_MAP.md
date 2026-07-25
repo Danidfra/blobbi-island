@@ -76,7 +76,7 @@ const LOCATIONS = [
   {
     id: 'home',
     name: 'Home', 
-    image: '/assets/home.png',
+    image: '/assets/world/map/miniature-home.png',
     position: { x: 20, y: 40 }, // Percentage positioning
     size: { width: 60, height: 60 } // Pixel sizing
   },

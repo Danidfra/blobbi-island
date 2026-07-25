@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
+import { accessoryImagePath } from '@/lib/asset-paths';
 import type { EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryOverlayProps {
@@ -153,20 +154,14 @@ function AccessoryItem({
           const target = e.target as HTMLImageElement;
           const slot = config.slot;
 
-          // Fallback chain for missing images
-          const webpPath = `/assets/accessories/${slot}/${config.code}.webp`;
-          const pngPath = `/assets/accessories/${slot}/${config.code}.png`;
-          const legacyWebpPath = `/assets/acessories/${slot}/${config.code}.webp`;
-          const legacyPngPath = `/assets/acessories/${slot}/${config.code}.png`;
+          // Fallback chain for missing images: .webp -> .png -> hide.
+          const webpPath = accessoryImagePath(slot, config.code, 'webp');
+          const pngPath = accessoryImagePath(slot, config.code, 'png');
 
           if (!target.src.includes(webpPath)) {
             target.src = webpPath;
           } else if (!target.src.includes(pngPath)) {
             target.src = pngPath;
-          } else if (!target.src.includes(legacyWebpPath)) {
-            target.src = legacyWebpPath;
-          } else if (!target.src.includes(legacyPngPath)) {
-            target.src = legacyPngPath;
           } else {
             // All fallbacks failed, hide the image
             target.style.display = 'none';

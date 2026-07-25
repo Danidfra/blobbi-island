@@ -469,7 +469,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     return (
       <>
       <InteractiveElement
-            src="/assets/interactive/home-door-front.png"
+            src="/assets/locations/home/door-front.png"
             alt="Arcade Door"
             animated={false}
             onClick={() => setIsMapModalOpen(true)}
@@ -478,7 +478,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             className="absolute bottom-[22.5%] left-[16.3%]  w-[18.8%] z-15"
       />
       <InteractiveElement
-            src="/assets/interactive/home-door-back.png"
+            src="/assets/locations/home/door-back.png"
             alt="back-yard-door"
             animated={false}
             onClick={() => setCurrentLocation('back-yard')}
@@ -492,7 +492,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   if (backgroundFile === 'back-yard-open.png') {
     return (
       <InteractiveElement
-        src="/assets/interactive/back-yard-door.png"
+        src="/assets/locations/back-yard/door.png"
         alt="Go back to home"
         animated={false}
         onClick={() => setCurrentLocation('home')}
@@ -519,7 +519,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             onMouseLeave={() => setIsHovered(false)}
           >
             <InteractiveElement
-              src="/assets/interactive/doors/elevator-door.png"
+              src="/assets/locations/arcade/level-b1/elevator-door.png"
               alt="Elevator Door Left"
               effect="slide"
               slideDirection="right"
@@ -529,7 +529,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               isHovered={isHovered}
             />
             <InteractiveElement
-              src="/assets/interactive/doors/elevator-door.png"
+              src="/assets/locations/arcade/level-b1/elevator-door.png"
               alt="Elevator Door Right"
               effect="slide"
               slideDirection="right"
@@ -543,7 +543,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {backgroundFile === 'arcade-minus1.png' && (
             <>
                 <InteractiveElement
-                  src="/assets/interactive/games/dance-machine.png"
+                  src="/assets/locations/arcade/level-b1/dance-machine.png"
                   alt="Dance Machine"
                   effect='scale'
                   className='absolute right-[18%] bottom-[36%]'
@@ -553,32 +553,32 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             {/* Wall decorations */}
              <>
               {/* Left */}
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-guitar-neon.png' alt="ticket counter" className="absolute top-[34%] left-[15%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/pink-headset-neon.png' alt="ticket counter" className="absolute top-[27%] left-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-mic-neon.png' alt="ticket counter" className="absolute top-[27%] left-[2%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-mic-neon.png' alt="ticket counter" className="absolute top-[40%] left-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/song-neon.png' alt="ticket counter" className="absolute top-[48%] left-[2%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/yellow-guitar-neon.png' alt="ticket counter" className="absolute top-[34%] left-[15%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/pink-headset-neon.png' alt="ticket counter" className="absolute top-[27%] left-[10%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/yellow-mic-neon.png' alt="ticket counter" className="absolute top-[27%] left-[2%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/blue-mic-neon.png' alt="ticket counter" className="absolute top-[40%] left-[10%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/song-neon.png' alt="ticket counter" className="absolute top-[48%] left-[2%] w-[4%]" />
 
               {/* Middle */}
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-notes-neon.png' alt="ticket counter" className="absolute top-[32%] left-[28%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/cd-neon.png' alt="ticket counter" className="absolute top-[27%] left-[40%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-wire-mic-neon.png' alt="ticket counter" className="absolute top-[27%] right-[30%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-note-up-neon.png' alt="ticket counter" className="absolute top-[27%] right-[40%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/blue-notes-neon.png' alt="ticket counter" className="absolute top-[32%] left-[28%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/cd-neon.png' alt="ticket counter" className="absolute top-[27%] left-[40%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/blue-wire-mic-neon.png' alt="ticket counter" className="absolute top-[27%] right-[30%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/yellow-note-up-neon.png' alt="ticket counter" className="absolute top-[27%] right-[40%] w-[4%]" />
 
               {/* Right */}
-                <img src='/assets/scenario/arcade/arcade-minus1/notes-neon.png' alt="ticket counter" className="absolute top-[34%] right-[17%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/pink-note-neon.png' alt="ticket counter" className="absolute top-[27%] right-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/yellow-headset-neon.png' alt="ticket counter" className="absolute top-[27%] right-[2%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/purple-note-neon.png' alt="ticket counter" className="absolute top-[40%] right-[10%] w-[4%]" />
-                <img src='/assets/scenario/arcade/arcade-minus1/blue-note-neon.png' alt="ticket counter" className="absolute top-[48%] right-[2%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/notes-neon.png' alt="ticket counter" className="absolute top-[34%] right-[17%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/pink-note-neon.png' alt="ticket counter" className="absolute top-[27%] right-[10%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/yellow-headset-neon.png' alt="ticket counter" className="absolute top-[27%] right-[2%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/purple-note-neon.png' alt="ticket counter" className="absolute top-[40%] right-[10%] w-[4%]" />
+                <img src='/assets/locations/arcade/level-b1/blue-note-neon.png' alt="ticket counter" className="absolute top-[48%] right-[2%] w-[4%]" />
 
-              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-pac-blobbi.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-minus1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
+              <img src='/assets/locations/arcade/level-b1/wall-art-pac-blobbi.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
+              <img src='/assets/locations/arcade/level-b1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
              </>
 
             <div className='flex absolute bottom-[25%] left-[24%] w-[16.5%] gap-[40%]'>
               <InteractiveElement
-                src="/assets/scenario/arcade/left-arcade-chair.png"
+                src="/assets/locations/arcade/level-b1/left-chair.png"
                 alt="Left Chair"
                 type="chair"
                 chairConfig={{
@@ -591,7 +591,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
               />
               <InteractiveElement
-                src="/assets/scenario/arcade/right-arcade-chair.png"
+                src="/assets/locations/arcade/level-b1/right-chair.png"
                 alt="Right Chair"
                 type="chair"
                 chairConfig={{
@@ -603,11 +603,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
               />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
+              <img src='/assets/locations/arcade/level-b1/table.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
             <div className='flex absolute bottom-[25%] right-[24%] w-[16.5%] gap-[40%]'>
               <InteractiveElement
-                src="/assets/scenario/arcade/left-arcade-chair.png"
+                src="/assets/locations/arcade/level-b1/left-chair.png"
                 alt="Left Chair"
                 type="chair"
                 chairConfig={{
@@ -620,7 +620,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 className='left-[18%] bottom-[36%] w-[40%] z-[25]'
               />
               <InteractiveElement
-                src="/assets/scenario/arcade/right-arcade-chair.png"
+                src="/assets/locations/arcade/level-b1/right-chair.png"
                 alt="Right Chair"
                 type="chair"
                 chairConfig={{
@@ -632,13 +632,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 effect='scale'
                 className='left-[30%] bottom-[36%] w-[40%] z-[25]'
               />
-              <img src='/assets/scenario/arcade/table-arcade.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
+              <img src='/assets/locations/arcade/level-b1/table.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
             </div>
 
             <div>
-            <img src='/assets/scenario/arcade/arcade-minus1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
+            <img src='/assets/locations/arcade/level-b1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
               <InteractiveElement
-                src="/assets/interactive/games/arcade-mic.png"
+                src="/assets/locations/arcade/level-b1/mic.png"
                 alt="Right Chair"
                 effect='scale'
                 className='absolute left-1/2 transform -translate-x-1/2 bottom-[18%] w-[3%] z-[30]'
@@ -652,38 +652,38 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Floor 1 */}
           {backgroundFile === 'arcade-1.png' && (
             <>
-              <img src='/assets/scenario/arcade/arcade-1/trophy-neon.png' alt="ticket counter" className="absolute top-[32%] left-[14%] w-[6%]" />
-              <img src='/assets/scenario/arcade/arcade-1/sword-neon.png' alt="ticket counter" className="absolute top-[26%] left-[6%] w-[5%] -rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/play-neon.png' alt="ticket counter" className="absolute top-[44%] left-[6%] w-[6%] -rotate-12" />
+              <img src='/assets/locations/arcade/level-1/trophy-neon.png' alt="ticket counter" className="absolute top-[32%] left-[14%] w-[6%]" />
+              <img src='/assets/locations/arcade/level-1/sword-neon.png' alt="ticket counter" className="absolute top-[26%] left-[6%] w-[5%] -rotate-12" />
+              <img src='/assets/locations/arcade/level-1/play-neon.png' alt="ticket counter" className="absolute top-[44%] left-[6%] w-[6%] -rotate-12" />
 
-              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbizard.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-1/wall-art-blobbi-adventure.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[6%]" />
+              <img src='/assets/locations/arcade/level-1/wall-art-blobbizard.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
+              <img src='/assets/locations/arcade/level-1/wall-art-blobbi-adventure.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[6%]" />
 
-              <img src='/assets/scenario/arcade/arcade-1/controller-neon.png' alt="ticket counter" className="absolute top-[32%] left-[26%] w-[7%] -rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/star-neon.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[27%] w-[5%]" />
-              <img src='/assets/scenario/arcade/arcade-1/dice-neon.png' alt="ticket counter" className="absolute top-[31%] right-[26%] w-[6%]" />
+              <img src='/assets/locations/arcade/level-1/controller-neon.png' alt="ticket counter" className="absolute top-[32%] left-[26%] w-[7%] -rotate-12" />
+              <img src='/assets/locations/arcade/level-1/star-neon.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[27%] w-[5%]" />
+              <img src='/assets/locations/arcade/level-1/dice-neon.png' alt="ticket counter" className="absolute top-[31%] right-[26%] w-[6%]" />
 
-              <img src='/assets/scenario/arcade/arcade-1/pac-man-neon.png' alt="ticket counter" className="absolute top-[32%] right-[15%] w-[4.5%] rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/game-boy-neon.png' alt="ticket counter" className="absolute top-[28%] right-[4%] w-[4%] rotate-12" />
-              <img src='/assets/scenario/arcade/arcade-1/retro-controller-neon.png' alt="ticket counter" className="absolute top-[44%] right-[6%] w-[6%] rotate-12" />
+              <img src='/assets/locations/arcade/level-1/pac-man-neon.png' alt="ticket counter" className="absolute top-[32%] right-[15%] w-[4.5%] rotate-12" />
+              <img src='/assets/locations/arcade/level-1/game-boy-neon.png' alt="ticket counter" className="absolute top-[28%] right-[4%] w-[4%] rotate-12" />
+              <img src='/assets/locations/arcade/level-1/retro-controller-neon.png' alt="ticket counter" className="absolute top-[44%] right-[6%] w-[6%] rotate-12" />
 
                 {/* Left Arcade Machine */}
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-pink.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-pink.png"
                     alt="Arcade Machine Pink"
                     effect='scale'
                     className='absolute left-[18%] w-[12%] bottom-[28%] z-[15]'
                     onClick={() => handleElementClick('dance-machine')}
                     />
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-black.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-black.png"
                     alt="Arcade Machine classic"
                     effect='scale'
                     className='absolute left-[11%] w-[12.5%] bottom-[22%] z-20'
                     onClick={() => handleElementClick('dance-machine')}
                     />
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-classic.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-classic.png"
                     alt="Arcade Machine classic"
                     effect='scale'
                     className='absolute left-[4%] w-[12.5%] bottom-[16%] z-[25]'
@@ -692,7 +692,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
                   {/* Middle */}
                   <InteractiveElement
-                    src="/assets/interactive/games/snooker.png"
+                    src="/assets/locations/arcade/level-1/snooker.png"
                     alt="Arcade Machine Green"
                     effect='scale'
                     className='absolute left-[30%] w-[17.5%] bottom-[10%] z-30'
@@ -700,7 +700,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                   />
 
                   <InteractiveElement
-                    src="/assets/interactive/games/air-hockey.png"
+                    src="/assets/locations/arcade/level-1/air-hockey.png"
                     alt="Arcade Air Hockey"
                     effect='scale'
                     className='absolute right-[30%] w-[17.5%] bottom-[10%] z-30'
@@ -709,21 +709,21 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
                   {/* Right Arcade Machine */}
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-green.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-green.png"
                     alt="Arcade Machine Green"
                     effect='scale'
                     className='absolute right-[18%] w-[12.5%] bottom-[28%] z-[15]'
                     onClick={() => handleElementClick('dance-machine')}
                   />
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-purple.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-purple.png"
                     alt="Arcade Machine Purple"
                     effect='scale'
                     className='absolute right-[11%] w-[12.5%] bottom-[22%] z-20'
                     onClick={() => handleElementClick('dance-machine')}
                   />
                   <InteractiveElement
-                    src="/assets/interactive/games/arcade-machine-red.png"
+                    src="/assets/locations/arcade/level-1/arcade-machine-red.png"
                     alt="Arcade Machine Red"
                     effect='scale'
                     className='absolute right-[4%] w-[12.5%] bottom-[16%] z-[25]'
@@ -736,10 +736,10 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {backgroundFile === 'arcade-inside.png' && (
            <>
             <div className='relative left-[20%] top-[26%]'>
-              <img src='/assets/interactive/furniture/ticket.png' alt="ticket counter"
+              <img src='/assets/locations/arcade/ground/ticket.png' alt="ticket counter"
                 className="absolute" />
               <InteractiveElement
-                src="/assets/interactive/furniture/ticket-out.png"
+                src="/assets/locations/arcade/ground/ticket-out.png"
                 alt="Purchase Arcade Pass"
                 effect='opacity'
                 className='absolute'
@@ -748,15 +748,15 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               />
             </div>
 
-            <img src='/assets/scenario/arcade/arcade-ground/wall-art-super-blobbi.png' alt="ticket counter" className="absolute top-[6%] right-[10%] w-[20%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/wall-art-game-boy.png' alt="ticket counter" className="absolute top-[12%] left-[2%] w-[10%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/play-up-neon.png' alt="ticket counter" className="absolute top-[18%] left-[28%] w-[8%]" />
-            <img src='/assets/scenario/arcade/arcade-ground/trophy-money-neon.png' alt="ticket counter" className="absolute top-[18%] right-[31%] w-[6%]" />
+            <img src='/assets/locations/arcade/ground/wall-art-super-blobbi.png' alt="ticket counter" className="absolute top-[6%] right-[10%] w-[20%]" />
+            <img src='/assets/locations/arcade/ground/wall-art-game-boy.png' alt="ticket counter" className="absolute top-[12%] left-[2%] w-[10%]" />
+            <img src='/assets/locations/arcade/ground/play-up-neon.png' alt="ticket counter" className="absolute top-[18%] left-[28%] w-[8%]" />
+            <img src='/assets/locations/arcade/ground/trophy-money-neon.png' alt="ticket counter" className="absolute top-[18%] right-[31%] w-[6%]" />
 
           {/* Prizes */}
           <div className='absolute right-[7%] top-[33%]'>
             <InteractiveElement
-              src="/assets/interactive/furniture/prizes.png"
+              src="/assets/locations/arcade/ground/prizes.png"
               alt="prizes"
               animated={false}
               effect='scale'
@@ -807,7 +807,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           onMouseLeave={() => setIsHovered(false)}
         >
           <InteractiveElement
-            src="/assets/interactive/curtain.png"
+            src="/assets/locations/stage/curtain.png"
             alt="Curtain"
             effect="slide"
             slideDirection="up"
@@ -816,14 +816,14 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             isHovered={isHovered}
           />
           <img
-            src="/assets/interactive/red-curtain.png"
+            src="/assets/locations/stage/red-curtain.png"
             alt="Red curtain"
             className="w-[90%] h-auto relative left-[5%] top-0 pointer-events-none"
           />
 
         </div>
         <InteractiveElement
-          src="/assets/interactive/stage-open-little-door.png"
+          src="/assets/locations/stage/open-little-door.png"
           alt="Stage little door"
           effect="slide"
           slideDirection="right"
@@ -836,7 +836,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 4 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row1-${i}`}
-              src="/assets/interactive/furniture/stage-chair-left.png"
+              src="/assets/locations/stage/chair-left.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -850,7 +850,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row2-${i}`}
-              src="/assets/interactive/furniture/stage-chair-left.png"
+              src="/assets/locations/stage/chair-left.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -864,7 +864,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row3-${i}`}
-              src="/assets/interactive/furniture/stage-chair-left.png"
+              src="/assets/locations/stage/chair-left.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -879,7 +879,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 4 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row1-${i}`}
-              src="/assets/interactive/furniture/stage-chair.png"
+              src="/assets/locations/stage/chair.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -893,7 +893,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row2-${i}`}
-              src="/assets/interactive/furniture/stage-chair.png"
+              src="/assets/locations/stage/chair.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -907,7 +907,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {Array.from({ length: 5 }).map((_, i) => (
             <InteractiveElement
               key={`chair-row3-${i}`}
-              src="/assets/interactive/furniture/stage-chair.png"
+              src="/assets/locations/stage/chair.png"
               alt="Stage Chair"
               effect="scale"
               className="w-28"
@@ -929,22 +929,22 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
       <>
         <div className="absolute inset-0 pointer-events-none">
           <img
-            src="/assets/scenario/shop/glass-barrier-bottom.png"
+            src="/assets/locations/shop/glass-barrier-bottom.png"
             alt="Glass Barrier"
             className="absolute w-full bottom-[35.3%] object-cover z-[20]"
           />
           <img
-            src="/assets/scenario/shop/glass-barrier-top.png"
+            src="/assets/locations/shop/glass-barrier-top.png"
             alt="Glass Barrier"
             className="absolute w-full top-[28.4%] object-cover z-[10]"
           />
           <img
-            src="/assets/scenario/shop/shop-stairs.png"
+            src="/assets/locations/shop/stairs.png"
             alt="Glass Barrier"
             className="absolute w-[11.8%] bottom-[9.5%] left-0 z-[25]"
           />
           <img
-            src="/assets/scenario/shop/shop-stairs.png"
+            src="/assets/locations/shop/stairs.png"
             alt="Glass Barrier"
             className="absolute w-[11.5%] bottom-[38.7%] right-0 scale-x-[-1] z-[15]"
           />
@@ -956,12 +956,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
        <div>
          <img
-          src="/assets/scenario/shop/belt-barrier.png"
+          src="/assets/locations/shop/belt-barrier.png"
           alt="Belt barrier"
           className='absolute bottom-[7%] right-[18%] w-[6%] z-[26]'
         />
         <img
-          src="/assets/scenario/shop/belt-barrier.png"
+          src="/assets/locations/shop/belt-barrier.png"
           alt="Belt barrier"
           className='absolute bottom-[7%] right-[2%] w-[6%] z-[26]'
         />
@@ -972,7 +972,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
             <img
               />
             <InteractiveElement
-              src="/assets/scenario/shop/coffee-shop.png"
+              src="/assets/locations/shop/coffee-shop.png"
               alt="Shopping coffe shop"
               effect="scale"
               animated={false}
@@ -982,11 +982,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Badges Store */}
           <div className='absolute bottom-[38.5%] -left-[2.5%] z-15 w-[24.5%]'>
             <img
-              src="/assets/scenario/shop/badges-store.png"
+              src="/assets/locations/shop/badges-store.png"
               alt="Shopping badges store"
               />
             <InteractiveElement
-              src="/assets/interactive/doors/badges-store-door.png"
+              src="/assets/locations/shop/doors/badges-store-door.png"
               alt="Badges store"
               effect="opacity"
               className="absolute -bottom-[5%] right-0 w-[29.4%]"
@@ -996,35 +996,35 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
         {/* Plants */}
           <img
             className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png"
+            src="/assets/locations/shop/plant-1.png"
             alt="Photo booth open"
           />
 
           <img
             className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
-            src="/assets/scenario/shop/plant-1.png"
+            src="/assets/locations/shop/plant-1.png"
             alt="Photo booth open"
           />
           <img
             className='absolute bottom-[10.5%] left-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png"
+            src="/assets/locations/shop/plant-2.png"
             alt="Photo booth open"
           />
 
           <img
             className='absolute bottom-[10.5%] right-[20.4%] z-[15] w-[7%]'
-            src="/assets/scenario/shop/plant-2.png"
+            src="/assets/locations/shop/plant-2.png"
             alt="Photo booth open"
           />
           <img
             className='absolute bottom-[66.5%] left-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png"
+            src="/assets/locations/shop/plant-3.png"
             alt="Photo booth open"
           />
 
           <img
             className='absolute bottom-[66.5%] right-[16%] z-[9] w-[6%]'
-            src="/assets/scenario/shop/plant-3.png"
+            src="/assets/locations/shop/plant-3.png"
             alt="Photo booth open"
           />
 
@@ -1032,11 +1032,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Photo Booth */}
           <div className='absolute bottom-[38.5%] left-[33.5%] z-[15] w-[8.5%]'>
             <img
-              src="/assets/scenario/shop/photo-booth.png"
+              src="/assets/locations/shop/photo-booth.png"
               alt="Photo booth open"
               />
             <InteractiveElement
-              src="/assets/interactive/doors/photo-booth-door.png"
+              src="/assets/locations/shop/doors/photo-booth-door.png"
               alt="Photo booth open"
               effect="opacity"
               className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
@@ -1048,11 +1048,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Clothing Store */}
           <div className='absolute bottom-[38.5%] right-[25.5%] z-15 w-[24.5%]'>
             <img
-              src="/assets/scenario/shop/clothing-store.png"
+              src="/assets/locations/shop/clothing-store.png"
               alt="Shopping clothing store"
               />
             <InteractiveElement
-              src="/assets/interactive/doors/clothing-store-door.png"
+              src="/assets/locations/shop/doors/clothing-store-door.png"
               alt="Clothing store door"
               effect="opacity"
               className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
@@ -1064,11 +1064,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Furniture Store */}
           <div className='absolute top-[7.4%] left-1/2 transform -translate-x-1/2 z-15 w-[30%]'>
             <img
-              src="/assets/scenario/shop/furniture-store.png"
+              src="/assets/locations/shop/furniture-store.png"
               alt="Shopping furniture store"
               />
             <InteractiveElement
-              src="/assets/interactive/doors/furniture-store-door.png"
+              src="/assets/locations/shop/doors/furniture-store-door.png"
               alt="Furniture store door"
               effect="opacity"
               className="absolute bottom-0 left-[10%] w-[35.3%]"
@@ -1078,11 +1078,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
         <div className='absolute flex bottom-[12%] right-[4%] z-10 gap-6'>
           <div>
             <img
-              src="/assets/interactive/furniture/self-service-kiosk.png"
+              src="/assets/locations/shop/self-service-kiosk.png"
               alt="Self service kiosk"
               />
             <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              src="/assets/locations/shop/self-service-kiosk-on.png"
               alt="Self service kiosk on"
               effect="opacity"
               className="absolute bottom-0"
@@ -1092,11 +1092,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           </div>
           <div>
             <img
-              src="/assets/interactive/furniture/self-service-kiosk.png"
+              src="/assets/locations/shop/self-service-kiosk.png"
               alt="Self service kiosk"
               />
             <InteractiveElement
-              src="/assets/interactive/furniture/self-service-kiosk-on.png"
+              src="/assets/locations/shop/self-service-kiosk-on.png"
               alt="Self service kiosk on"
               effect="opacity"
               className="absolute bottom-0"
@@ -1126,10 +1126,10 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
         <div>
           <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>
             <img
-              src="/assets/interactive/furniture/shop-table.png"
+              src="/assets/locations/shop/table.png"
               alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
             <InteractiveElement
-                src="/assets/interactive/furniture/shop-left-chair.png"
+                src="/assets/locations/shop/left-chair.png"
               alt="Shop left chair"
               type="chair"
               chairConfig={{
@@ -1142,7 +1142,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
             <InteractiveElement
-                src="/assets/interactive/furniture/shop-right-chair.png"
+                src="/assets/locations/shop/right-chair.png"
               alt="Shop right chair"
               type="chair"
               chairConfig={{
@@ -1157,10 +1157,10 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           </div>
           <div className='flex absolute bottom-[3%] right-[24%] w-[16.5%] gap-[30%]'>
             <img
-              src="/assets/interactive/furniture/shop-table.png"
+              src="/assets/locations/shop/table.png"
               alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
             <InteractiveElement
-                src="/assets/interactive/furniture/shop-left-chair.png"
+                src="/assets/locations/shop/left-chair.png"
               alt="Shop left chair"
               type="chair"
               chairConfig={{
@@ -1173,7 +1173,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
             <InteractiveElement
-                src="/assets/interactive/furniture/shop-right-chair.png"
+                src="/assets/locations/shop/right-chair.png"
               alt="Shop right chair"
               type="chair"
               chairConfig={{
@@ -1199,12 +1199,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
         {/* Arcade - Left side */}
           <div className="absolute left-[18%] top-[25%] w-[21.1%] z-15">
             <img
-              src="/assets/interactive/builds/arcade.png"
+              src="/assets/world/buildings/arcade.png"
               alt="Arcade"
               className="w-full"
             />
             <InteractiveElement
-              src="/assets/interactive/builds/arcade-door.png"
+              src="/assets/world/buildings/arcade-door.png"
               alt="Arcade Door"
               animated={false}
               onClick={() => setCurrentLocation('arcade')}
@@ -1217,12 +1217,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Stage - Center */}
           <div className="absolute left-1/2 top-[22%] w-[27.6%] transform -translate-x-1/2 z-15">
             <img
-              src="/assets/interactive/builds/stage.png"
+              src="/assets/world/buildings/stage.png"
               alt="Stage"
               className="w-full"
             />
             <InteractiveElement
-              src="/assets/interactive/builds/stage-door.png"
+              src="/assets/world/buildings/stage-door.png"
               alt="Stage Door"
               animated={false}
               onClick={() => setCurrentLocation('stage')}
@@ -1235,12 +1235,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           {/* Shop - Right side */}
           <div className="absolute right-[18%] top-[25%] w-[20.5%] z-15">
             <img
-              src="/assets/interactive/builds/shop.png"
+              src="/assets/world/buildings/shop.png"
               alt="Shop"
               className="w-full"
             />
             <InteractiveElement
-              src="/assets/interactive/builds/shop-door.png"
+              src="/assets/world/buildings/shop-door.png"
               alt="Shop Door"
               animated={false}
               onClick={() => setCurrentLocation('shop')}
@@ -1253,7 +1253,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* Bush 3 - Left side, slightly above bush-1 */}
           <InteractiveElement
-            src="/assets/scenario/bush-3.png"
+            src="/assets/world/props/bush-3.png"
             alt="Bush 3"
             animated={false}
             onClick={() => handleElementClick('bush-3')}
@@ -1262,7 +1262,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* Bush 4 - Right side, slightly above bush-2 */}
           <InteractiveElement
-            src="/assets/scenario/bush-4.png"
+            src="/assets/world/props/bush-4.png"
             alt="Bush 4"
             animated={false}
             onClick={() => handleElementClick('bush-4')}
@@ -1271,7 +1271,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* Bush 1 - Bottom left corner (highest z-index) */}
           <InteractiveElement
-            src="/assets/scenario/bush-1.png"
+            src="/assets/world/props/bush-1.png"
             alt="Bush 1"
             animated={false}
             onClick={() => handleElementClick('bush-1')}
@@ -1280,7 +1280,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* Bush 2 - Bottom right corner (highest z-index) */}
           <InteractiveElement
-            src="/assets/scenario/bush-2.png"
+            src="/assets/world/props/bush-2.png"
             alt="Bush 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
@@ -1289,7 +1289,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* streetlight - left */}
           <InteractiveElement
-            src="/assets/scenario/streetlight.png"
+            src="/assets/world/props/streetlight.png"
             alt="streetlight 1"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
@@ -1299,7 +1299,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
         {/* streetlight -right */}
           <InteractiveElement
-            src="/assets/scenario/streetlight.png"
+            src="/assets/world/props/streetlight.png"
             alt="streetlight 2"
             animated={false}
             onClick={() => handleElementClick('bush-2')}
@@ -1319,13 +1319,13 @@ if (backgroundFile === 'nostr-station-open.png') {
         <div className="absolute top-[6%] right-[5%] w-[20%] h-auto">
           {/* Build container - relative */}
           <img
-            src="/assets/interactive/builds/nostr-station-build.png"
+            src="/assets/world/buildings/nostr-station.png"
             alt="Nostr Station"
             className="w-full h-auto"
           />
           {/* Door inside the build */}
           <InteractiveElement
-            src="/assets/interactive/builds/nostr-station-door.png"
+            src="/assets/world/buildings/nostr-station-door.png"
             alt="Nostr Station Door"
             animated={false}
             onClick={() => setCurrentLocation('nostr-station-inside')}
@@ -1346,7 +1346,7 @@ if (backgroundFile === 'nostr-station-open.png') {
         {/* Cave - Center, transparent by default */}
         <div className="absolute left-1/2 top-[40%] sm:top-[42%] transform -translate-x-1/2 z-15">
           <InteractiveElement
-            src="/assets/interactive/cave.png"
+            src="/assets/locations/mine/cave.png"
             alt="Cave"
             animated={false}
             onClick={() => setCurrentLocation('cave-open')}
@@ -1365,7 +1365,7 @@ if (backgroundFile === 'nostr-station-open.png') {
         {/* Cave - Center, transparent by default */}
         <div className="absolute left-[10%] top-[64%] z-20">
           <InteractiveElement
-            src="/assets/interactive/sign.png"
+            src="/assets/locations/cave/sign.png"
             alt="Cave"
             animated={false}
             onClick={() => setCurrentLocation('mine')}
@@ -1385,7 +1385,7 @@ if (backgroundFile === 'nostr-station-open.png') {
         {/* Boat - Center */}
         <div className="absolute left-1/4 top-[34%] sm:top-[39%] transform -translate-x-1/2 z-15">
           <InteractiveElement
-            src="/assets/interactive/boat.png"
+            src="/assets/locations/beach/boat.png"
             alt="Boat"
             animated={false}
             onClick={() => handleElementClick('boat')}
@@ -1402,12 +1402,12 @@ if (backgroundFile === 'plaza-open.png') {
       <div className="absolute inset-x-0 top-0 flex items-center justify-center z-10">
         <div className="relative flex justify-center">
           <img
-            src="/assets/interactive/builds/plaza-build.png"
+            src="/assets/world/buildings/plaza.png"
             alt="Plaza building"
             className="max-w-[50%]"
           />
           <InteractiveElement
-            src="/assets/interactive/builds/plaza-door.png"
+            src="/assets/world/buildings/plaza-door.png"
             alt="Plaza Door"
             animated={false}
             onClick={() => setCurrentLocation('plaza-inside')}
@@ -1418,7 +1418,7 @@ if (backgroundFile === 'plaza-open.png') {
         </div>
       </div>
       <div className="absolute inset-x-0 bottom-10 sm:bottom-28 flex items-center justify-center z-10">
-      <img src="/assets/scenario/plaza/floor.png" alt="Floor" className="max-w-full max-h-full" />
+      <img src="/assets/locations/plaza/floor.png" alt="Floor" className="max-w-full max-h-full" />
       </div>
     </>
   );
@@ -1436,7 +1436,7 @@ if (backgroundFile === 'plaza-inside.png') {
       */}
       <div className='absolute w-[11%] left-[43.9%] top-[34%] z-[9]'>
           <img
-            src="/assets/interactive/doors/plaza-inside-door.png"
+            src="/assets/locations/plaza/inside-door.png"
             alt="Plaza inside door"
             className='block w-full'
           />
@@ -1450,7 +1450,7 @@ if (backgroundFile === 'plaza-inside.png') {
           it via object-contain (~1.9% too small, ~1px off).
         */}
         <InteractiveElement
-          src="/assets/interactive/doors/plaza-inside-door-open.png"
+          src="/assets/locations/plaza/inside-door-open.png"
           alt="Plaza inside door open"
           animated={false}
           effect="door"
@@ -1465,12 +1465,12 @@ if (backgroundFile === 'plaza-inside.png') {
         Same convention as the shopping mall's glass barriers.
       */}
       <img
-        src="/assets/scenario/plaza/plaza-glass-barrier.png"
+        src="/assets/locations/plaza/glass-barrier.png"
         alt="Glass Barrier"
         className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10] pointer-events-none"
       />
       {/* <img
-        src="/assets/scenario/plaza/plaza-glass-barrier.png"
+        src="/assets/locations/plaza/glass-barrier.png"
         alt="Glass Barrier"
         className="absolute top-[30.5%] w-full object-cover z-[2]"
       /> */}
@@ -1478,12 +1478,12 @@ if (backgroundFile === 'plaza-inside.png') {
       {/* Plaza Chill Lounge */}
       <div className='group absolute bottom-[28.2%] right-[6.5%] z-[11] w-[14.3%]'>
         <img
-          src="/assets/scenario/plaza/plaza-chill-lounge.png"
+          src="/assets/locations/plaza/chill-lounge.png"
           alt="Plaza chill lounge"
           className="w-full cursor-pointer"
         />
         <InteractiveElement
-          src="/assets/scenario/plaza/plaza-chill-lounge-interactive.png"
+          src="/assets/locations/plaza/chill-lounge-interactive.png"
           alt="Chill lounge entrace"
           effect="scale"
           className="absolute right-[20%] -bottom-[15%] w-[90%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
@@ -1493,12 +1493,12 @@ if (backgroundFile === 'plaza-inside.png') {
       {/* Plaza Drawing Wall */}
       <div className='group absolute bottom-[35.8%] right-[26.8%] z-[11] w-[8.8%]'>
         <img
-          src="/assets/scenario/plaza/plaza-drawing-wall.png"
+          src="/assets/locations/plaza/drawing-wall.png"
           alt="Plaza drawing wall"
           className="w-full cursor-pointer"
         />
         <InteractiveElement
-          src="/assets/scenario/plaza/plaza-drawing-wall-interactive.png"
+          src="/assets/locations/plaza/drawing-wall-interactive.png"
           alt="Drawing wall entrace"
           effect="scale"
           className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
@@ -1508,12 +1508,12 @@ if (backgroundFile === 'plaza-inside.png') {
       {/* Plaza Information */}
       <div className='group absolute bottom-[29%] left-[6.5%] z-[11] w-[13.2%]'>
         <img
-          src="/assets/scenario/plaza/plaza-information.png"
+          src="/assets/locations/plaza/information.png"
           alt="Plaza information"
           className="w-full cursor-pointer"
         />
         <InteractiveElement
-          src="/assets/scenario/plaza/plaza-information-interactive.png"
+          src="/assets/locations/plaza/information-interactive.png"
           alt="Information door"
           effect="scale"
           className="absolute bottom-[0] right-0 group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
@@ -1522,9 +1522,9 @@ if (backgroundFile === 'plaza-inside.png') {
 
       {/* Plaza Fountain */}
         <div className='absolute left-1/2 transform -translate-x-1/2 bottom-[10%] z-[24]'>
-          <img src="/assets/scenario/plaza/floor.png" alt="Floor" />
-          <img src="/assets/scenario/plaza/fountain-bottom.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[30%] w-[70%]" />
-          <img src="/assets/scenario/plaza/fountain-top.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[80%] w-[25%]" />
+          <img src="/assets/locations/plaza/floor.png" alt="Floor" />
+          <img src="/assets/locations/plaza/fountain-bottom.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[30%] w-[70%]" />
+          <img src="/assets/locations/plaza/fountain-top.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[80%] w-[25%]" />
         </div>
 
       {/* Back button to return to plaza */}
@@ -1546,11 +1546,11 @@ if (backgroundFile === 'nostr-station-inside.png') {
         className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
       />
 
-      <img src='/assets/scenario/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
+      <img src='/assets/locations/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
 
       {/* Nostr Station Chairs */}
       <InteractiveElement
-        src="/assets/interactive/furniture/nostr-station-chair.png"
+        src="/assets/locations/nostr-station/chair.png"
         alt="Nostr Station Chair 1"
         type="chair"
         chairConfig={{
@@ -1563,7 +1563,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         className="absolute left-[17%] bottom-[25%] w-[12%] z-[15]"
       />
       <InteractiveElement
-        src="/assets/interactive/furniture/nostr-station-chair.png"
+        src="/assets/locations/nostr-station/chair.png"
         alt="Nostr Station Chair 2"
         type="chair"
         chairConfig={{
@@ -1576,7 +1576,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         className="absolute left-[30%] bottom-[25%] w-[12%] z-[15]"
       />
       <InteractiveElement
-        src="/assets/interactive/furniture/nostr-station-chair.png"
+        src="/assets/locations/nostr-station/chair.png"
         alt="Nostr Station Chair 3"
         type="chair"
         chairConfig={{
@@ -1589,7 +1589,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         className="absolute right-[17%] bottom-[25%] w-[12%] z-[15]"
       />
       <InteractiveElement
-        src="/assets/interactive/furniture/nostr-station-chair.png"
+        src="/assets/locations/nostr-station/chair.png"
         alt="Nostr Station Chair 4"
         type="chair"
         chairConfig={{

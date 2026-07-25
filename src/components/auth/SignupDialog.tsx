@@ -148,7 +148,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
             CSS rotation). The content layer below is never rotated. */}
         <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
           <img
-            src='/assets/map/blobbi-island-login-modal.png'
+            src='/assets/ui/branding/blobbi-island-login-modal.png'
             alt=''
             aria-hidden='true'
             className='h-full w-full select-none object-contain drop-shadow-[0_18px_30px_rgba(58,42,26,0.45)] landscape:max-md:hidden'
@@ -159,7 +159,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
               object-contain keeps its aspect ratio without distortion or
               rotation. */}
           <img
-            src='/assets/map/blobbi-island-login-wood-mobile.png'
+            src='/assets/ui/branding/blobbi-island-login-wood-mobile.png'
             alt=''
             aria-hidden='true'
             className='hidden h-full w-full select-none object-contain drop-shadow-[0_18px_30px_rgba(58,42,26,0.45)] landscape:max-md:block'

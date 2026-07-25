@@ -22,8 +22,8 @@ interface ChestModalProps {
 
 /** Local image overrides for known toy items. */
 const TOY_IMAGES: Record<string, string> = {
-  toy_ball: '/assets/interactive/toys/ball.png',
-  toy_teddy: '/assets/interactive/toys/bear.png',
+  toy_ball: '/assets/items/toys/ball.png',
+  toy_teddy: '/assets/items/toys/bear.png',
 };
 
 interface ChestItemData {
@@ -329,7 +329,7 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
             </Button>
 
             <img
-              src="/assets/interactive/furniture/chest-open.png"
+              src="/assets/locations/home/chest-open.png"
               alt="Chest open"
               className="w-full h-auto scale-125"
             />

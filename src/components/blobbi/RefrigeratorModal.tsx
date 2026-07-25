@@ -22,11 +22,11 @@ interface RefrigeratorModalProps {
 
 /** Local image overrides for known food items (visual step: image before emoji). */
 const FOOD_IMAGES: Record<string, string> = {
-  food_apple: '/assets/interactive/food/apple.png',
-  food_pizza: '/assets/interactive/food/pizza.png',
-  food_burger: '/assets/interactive/food/burger.png',
-  food_cake: '/assets/interactive/food/cake.png',
-  food_sushi: '/assets/interactive/food/sushi.png',
+  food_apple: '/assets/items/food/apple.png',
+  food_pizza: '/assets/items/food/pizza.png',
+  food_burger: '/assets/items/food/burger.png',
+  food_cake: '/assets/items/food/cake.png',
+  food_sushi: '/assets/items/food/sushi.png',
 };
 
 export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
@@ -206,7 +206,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
             </Button>
 
             <img
-              src="/assets/interactive/furniture/refrigerator-open.png"
+              src="/assets/locations/home/refrigerator-open.png"
               alt="Refrigerator open"
               className="w-full h-auto"
             />

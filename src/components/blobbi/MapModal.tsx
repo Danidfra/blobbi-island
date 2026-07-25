@@ -35,42 +35,42 @@ const LOCATIONS: Location[] = [
   {
     id: 'home',
     name: 'Home',
-    image: '/assets/map/miniature-home.png',
+    image: '/assets/world/map/miniature-home.png',
     position: { x: 64, y: 38 },
     size: { width: 80 }
   },
   {
     id: 'beach',
     name: 'Beach',
-    image: '/assets/map/miniature-beach.png',
+    image: '/assets/world/map/miniature-beach.png',
     position: { x: 60, y: 87 },
     size: { width: 60 }
   },
   {
     id: 'mine',
     name: 'Mine',
-    image: '/assets/map/miniature-mine.png',
+    image: '/assets/world/map/miniature-mine.png',
     position: { x: 24, y: 79 },
     size: { width: 100 }
   },
   {
     id: 'nostr-station',
     name: 'Nostr Station',
-    image: '/assets/map/miniature-nostr-station.png',
+    image: '/assets/world/map/miniature-nostr-station.png',
     position: { x: 80, y: 66 },
     size: { width: 100 }
   },
   {
     id: 'plaza',
     name: 'Plaza',
-    image: '/assets/map/miniature-plaza.png',
+    image: '/assets/world/map/miniature-plaza.png',
     position: { x: 47.5, y: 46 },
     size: { width: 120 }
   },
   {
     id: 'town',
     name: 'Town',
-    image: '/assets/map/miniature-town.png',
+    image: '/assets/world/map/miniature-town.png',
     position: { x: 33, y: 24 },
     size: { width: 140 }
   },
@@ -296,7 +296,7 @@ export function MapModal({ className }: MapModalProps) {
         >
           {/* Island Map Background */}
           <img
-            src="/assets/map/blobbi-island.png"
+            src="/assets/world/map/blobbi-island.png"
             alt="Blobbi Village Map"
             className="absolute inset-0 w-full h-full object-fill drop-shadow-2xl transition-all duration-500 ease-in-out"
             draggable={false}

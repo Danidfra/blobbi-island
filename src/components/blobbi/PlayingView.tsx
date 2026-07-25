@@ -501,8 +501,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
             containerRef={containerRef}
             initialPosition={{ x: 20, y: 70 }}
             boundary={boundary}
-            imageUrl="/assets/interactive/furniture/refrigerator.png"
-            hoverEffectImageUrl="/assets/interactive/furniture/refrigerator-door.png"
+            imageUrl="/assets/locations/home/refrigerator.png"
+            hoverEffectImageUrl="/assets/locations/home/refrigerator-door.png"
             size={{ width: 111, height: 173 }}
             backgroundFile={background}
             onClick={() => setIsRefrigeratorOpen(true)}
@@ -512,8 +512,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
             containerRef={containerRef}
             position={{ x: 40, y: 70 }}
             boundary={boundary}
-            imageUrl="/assets/interactive/furniture/chest.png"
-            hoverEffectImageUrl="/assets/interactive/furniture/chest-lid-open.png"
+            imageUrl="/assets/locations/home/chest.png"
+            hoverEffectImageUrl="/assets/locations/home/chest-lid-open.png"
             size={{ width: 130, height: 130 }}
             backgroundFile={background}
             onClick={() => setIsChestOpen(true)}
@@ -524,7 +524,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
             position={bedPosition}
             onPositionChange={handleBedPositionChange}
             boundary={boundary}
-            imageUrl="/assets/interactive/furniture/bed.png"
+            imageUrl="/assets/locations/home/bed.png"
             size={{ width: 100, height: 100 }}
             backgroundFile={background}
             onClick={handleBedClick}

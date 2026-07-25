@@ -52,7 +52,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
     >
       {/* ── Island scene (full-bleed) ───────────────────────────────────── */}
       <img
-        src="/assets/map/blobbi-island-login.png"
+        src="/assets/ui/branding/blobbi-island-login.png"
         alt="Blobbi Island"
         className="absolute inset-0 h-full w-full object-cover object-center select-none"
         draggable={false}
@@ -74,7 +74,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
       >
         {/* The wooden plate art — never stretched. */}
         <img
-          src="/assets/map/blobbi-island-login-wood.png"
+          src="/assets/ui/branding/blobbi-island-login-wood.png"
           alt=""
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-contain drop-shadow-[0_18px_30px_rgba(58,42,26,0.45)] select-none"
@@ -94,7 +94,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
               top edge — see report: the proper long-term fix is to crop the
               transparent padding in the image asset itself. */}
           <img
-            src="/assets/map/blobbi-island-title.png"
+            src="/assets/ui/branding/blobbi-island-title.png"
             alt="Blobbi Island"
             className="-mt-[6%] h-auto w-full max-w-[21rem] scale-110 object-contain drop-shadow-[0_6px_10px_rgba(58,42,26,0.45)] select-none landscape:max-md:max-w-[16rem]"
             draggable={false}

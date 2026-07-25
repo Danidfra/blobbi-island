@@ -49,13 +49,13 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenShareMo
 
   // Available accessories configuration
   const availableAccessories = useMemo(() => [
-    { id: 'hat', name: 'Hat', imagePath: '/assets/scenario/shop/photo-booth/hat.png' },
-    { id: 'glasses', name: 'Glasses', imagePath: '/assets/scenario/shop/photo-booth/glasses.png' },
-    { id: 'mouth', name: 'Mouth', imagePath: '/assets/scenario/shop/photo-booth/mouth.png' },
-    { id: 'chat-balloon', name: 'Chat Balloon', imagePath: '/assets/scenario/shop/photo-booth/chat-balloon.png' },
-    { id: 'mustache', name: 'Mustache', imagePath: '/assets/scenario/shop/photo-booth/mustache.png' },
-    { id: 'party-hat', name: 'Party Hat', imagePath: '/assets/scenario/shop/photo-booth/party-hat.png' },
-    { id: 'tiara', name: 'Tiara', imagePath: '/assets/scenario/shop/photo-booth/tiara.png' },
+    { id: 'hat', name: 'Hat', imagePath: '/assets/locations/photo-booth/props/hat.png' },
+    { id: 'glasses', name: 'Glasses', imagePath: '/assets/locations/photo-booth/props/glasses.png' },
+    { id: 'mouth', name: 'Mouth', imagePath: '/assets/locations/photo-booth/props/mouth.png' },
+    { id: 'chat-balloon', name: 'Chat Balloon', imagePath: '/assets/locations/photo-booth/props/chat-balloon.png' },
+    { id: 'mustache', name: 'Mustache', imagePath: '/assets/locations/photo-booth/props/mustache.png' },
+    { id: 'party-hat', name: 'Party Hat', imagePath: '/assets/locations/photo-booth/props/party-hat.png' },
+    { id: 'tiara', name: 'Tiara', imagePath: '/assets/locations/photo-booth/props/tiara.png' },
   ], []);
 
   // Use centralized boundary system
@@ -376,7 +376,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenShareMo
     },
     // Background image settings
     background: {
-      imagePath: '/assets/places/photo-booth-inside.png',
+      imagePath: '/assets/world/backgrounds/photo-booth-inside.png',
       zoom: 2.2,        // Zoom level for background (0.8 = 80% of original size)
       offsetX: 0,       // Horizontal offset (-50 = 50px left, 50 = 50px right)
       offsetY: -68,     // Vertical offset (-50 = 50px up, 50 = 50px down)
@@ -966,7 +966,7 @@ const handleCapturePhoto = async () => {
         {/* Photo Booth Background - Exact size */}
         <div ref={containerRef} className="relative w-full h-full">
           <img
-            src="/assets/places/photo-booth-inside.png"
+            src="/assets/world/backgrounds/photo-booth-inside.png"
             alt="Photo Booth Interior"
             className="w-full h-full object-contain drop-shadow-2xl"
             style={{

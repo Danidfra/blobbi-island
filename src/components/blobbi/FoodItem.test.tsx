@@ -12,7 +12,7 @@ function TestFoodItem() {
   return (
     <div ref={containerRef} style={{ width: 400, height: 600 }}>
       <FoodItem
-        imageUrl="/assets/interactive/food/apple.png"
+        imageUrl="/assets/items/food/apple.png"
         position={{ x: 100, y: 200 }}
         onPositionChange={mockOnPositionChange}
         containerRef={containerRef}
@@ -33,7 +33,7 @@ describe('FoodItem', () => {
 
     const foodImage = await screen.findByAltText('Food item');
     expect(foodImage).toBeInTheDocument();
-    expect(foodImage).toHaveAttribute('src', '/assets/interactive/food/apple.png');
+    expect(foodImage).toHaveAttribute('src', '/assets/items/food/apple.png');
   });
 
   it('applies correct positioning styles', async () => {

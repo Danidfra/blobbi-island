@@ -2,6 +2,7 @@ import React, { useState, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
+import { locationBackgroundPath } from '@/lib/asset-paths';
 import { VirtualWorld } from '@/components/shell/VirtualWorld';
 
 interface PlaceBackgroundProps {
@@ -16,7 +17,7 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
     const [imageError, setImageError] = useState(false);
 
     const backgroundImageFile = getBackgroundForLocation(currentLocation);
-    const backgroundImage = `/assets/places/${backgroundImageFile}`;
+    const backgroundImage = locationBackgroundPath(backgroundImageFile);
     const shouldShowImage = imageLoaded && !imageError;
 
     return (
