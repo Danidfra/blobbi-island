@@ -105,6 +105,13 @@ interface InteractiveElementProps {
   };
 }
 
+/**
+ * How long a tap keeps a visibility-only overlay visible on touch devices.
+ * `'door'` / `'opacity'` overlays are driven by `:hover` on desktop, which touch
+ * devices never get, so a tap needs to hold the "open"/"on" art briefly instead.
+ */
+const TOUCH_FEEDBACK_MS = 900;
+
 function InteractiveElement({
   src,
   alt,
@@ -123,12 +130,47 @@ function InteractiveElement({
   // Touch-driven "active" feedback so mobile gets a visual cue equivalent to
   // desktop hover while the Blobbi walks toward the target.
   const [isTouchActive, setIsTouchActive] = useState(false);
+  const touchFeedbackTimer = useRef<number | null>(null);
+
+  /**
+   * `'door'` and `'opacity'` are pure *visibility* effects: they cross-fade a
+   * closed/off image to an open/on one with no transform and no layout impact,
+   * so they are always safe to trigger from a tap.
+   */
+  const isVisibilityEffect = effect === 'door' || effect === 'opacity';
+
+  useEffect(
+    () => () => {
+      if (touchFeedbackTimer.current !== null) {
+        window.clearTimeout(touchFeedbackTimer.current);
+      }
+    },
+    [],
+  );
 
   const finalIsHovered = isHovered !== undefined ? isHovered : (isSelfHovered || isTouchActive);
 
   const handleInteraction = (event: React.MouseEvent<HTMLDivElement>, isTouch = false) => {
     event.stopPropagation();
-    if (!onClick) return;
+
+    if (!onClick) {
+      // Visibility-only overlay (no action attached), e.g. the Plaza inside
+      // door or the furniture-store door. There is nothing to run, but a tap
+      // must still reveal the "open" art so touch devices get feedback
+      // equivalent to the desktop hover. Auto-clears so the overlay doesn't
+      // stay stuck open.
+      if (isTouch && isVisibilityEffect) {
+        setIsTouchActive(true);
+        if (touchFeedbackTimer.current !== null) {
+          window.clearTimeout(touchFeedbackTimer.current);
+        }
+        touchFeedbackTimer.current = window.setTimeout(() => {
+          touchFeedbackTimer.current = null;
+          setIsTouchActive(false);
+        }, TOUCH_FEEDBACK_MS);
+      }
+      return;
+    }
 
     // Tap-pop animation is only appropriate for small 'scale' items. Doors and
     // large overlay images ('door'/'opacity'/'slide') must not pop/jump.
@@ -231,6 +273,18 @@ function InteractiveElement({
       <img
         src={src}
         alt={alt}
+        /*
+         * Sizing contract: `h-full` is intentional and load-bearing — elements
+         * sized by HEIGHT (town streetlights `h-[35%]`) or into a fixed square
+         * box (mine cave / beach boat `size-*`) depend on it, and `object-contain`
+         * keeps them undistorted.
+         *
+         * Consequence for OVERLAYS: if the wrapper is given a definite height
+         * (`h-full`, `inset-0`, ...) while its sibling base image has a different
+         * intrinsic aspect ratio, `object-contain` letterboxes this image and it
+         * silently renders at the wrong scale/offset. Overlays must therefore be
+         * positioned with offsets + a WIDTH only, leaving height automatic.
+         */
         className={cn(
           'w-full h-full object-contain',
           effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100',
@@ -1374,11 +1428,46 @@ if (backgroundFile === 'plaza-open.png') {
 if (backgroundFile === 'plaza-inside.png') {
   return (
     <>
-      {/* Glass barrier overlay */}
+      {/*
+        Plaza inside Door — closed art is the base layer, the open art is a
+        hover/tap overlay on top of it (same pattern as the shopping-mall store
+        doors). Sits at z-[9], the deepest layer of this room, so the balcony /
+        staircase layer below still occludes its base correctly.
+      */}
+      <div className='absolute w-[11%] left-[43.9%] top-[34%] z-[9]'>
+          <img
+            src="/assets/interactive/doors/plaza-inside-door.png"
+            alt="Plaza inside door"
+            className='block w-full'
+          />
+        {/*
+          The open-door PNG has a WIDER canvas than the closed one (432×351 vs
+          424×351) because its panels swing outward past the door frame. Both are
+          drawn on the same grid at the same scale, so rendering the overlay at
+          432/424 = 101.887% of the group width — with height left automatic —
+          reproduces the closed door's exact pixel scale and makes the shared
+          frame/arch line up. Using w-full/h-full/inset-0 instead would letterbox
+          it via object-contain (~1.9% too small, ~1px off).
+        */}
+        <InteractiveElement
+          src="/assets/interactive/doors/plaza-inside-door-open.png"
+          alt="Plaza inside door open"
+          animated={false}
+          effect="door"
+          className="absolute top-0 left-0 w-[101.887%]"
+        />
+      </div>
+
+      {/*
+        Balcony railing + staircase foreground layer. Purely decorative, so it
+        must not capture pointer events: it spans the full width and covers the
+        door above, and without pointer-events-none it swallows the door's hover.
+        Same convention as the shopping mall's glass barriers.
+      */}
       <img
         src="/assets/scenario/plaza/plaza-glass-barrier.png"
         alt="Glass Barrier"
-        className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10]"
+        className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10] pointer-events-none"
       />
       {/* <img
         src="/assets/scenario/plaza/plaza-glass-barrier.png"
@@ -1395,7 +1484,7 @@ if (backgroundFile === 'plaza-inside.png') {
         />
         <InteractiveElement
           src="/assets/scenario/plaza/plaza-chill-lounge-interactive.png"
-          alt="Chill lounge door"
+          alt="Chill lounge entrace"
           effect="scale"
           className="absolute right-[20%] -bottom-[15%] w-[90%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
         />
@@ -1410,7 +1499,7 @@ if (backgroundFile === 'plaza-inside.png') {
         />
         <InteractiveElement
           src="/assets/scenario/plaza/plaza-drawing-wall-interactive.png"
-          alt="Drawing wall door"
+          alt="Drawing wall entrace"
           effect="scale"
           className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
         />
