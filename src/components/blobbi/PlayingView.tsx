@@ -107,6 +107,21 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [eyesClosed, setEyesClosed] = useState(false);
   const [isAttachedToChair, setIsAttachedToChair] = useState(false);
 
+  // ── Hiding spots (Town bushes) ──────────────────────────────────────────
+  // The id of the hiding spot the local player currently occupies, or null.
+  // This is the SINGLE source of truth for "hidden": the interactive element
+  // sets it on confirmed arrival, MovableBlobbi stops rendering the Blobbi
+  // visual while it is set, MultiplayerLayer publishes it as presence state,
+  // and it is cleared the instant movement starts (handleMoveStart below) —
+  // no timers, no polling, no coordinate guessing.
+  const [hiddenIn, setHiddenIn] = useState<string | null>(null);
+
+  // Leaving the location abandons any hiding spot (the Blobbi respawns at the
+  // new location's entry point, and MovableBlobbi is remounted by `key`).
+  useEffect(() => {
+    setHiddenIn(null);
+  }, [currentLocation]);
+
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
   const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation, previousLocation);
@@ -169,6 +184,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
   const handleMoveStart = (destination: Position) => {
     setMyPosition(destination);
+
+    // Any movement — a ground click, a walk-to-interact, another bush — means
+    // the player is leaving their hiding spot: reveal the Blobbi immediately and
+    // let the walk continue from the hiding position. MultiplayerLayer clears
+    // the published state from the same transition.
+    setHiddenIn(null);
 
     // If starting to move while sleeping, wake up and detach from bed
     if (isSleeping || isAttachedToBed) {
@@ -491,6 +512,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         selectedBlobbi={selectedBlobbi}
         onChairArrival={handleChairArrival}
         onChairLeave={handleChairLeave}
+        hiddenIn={hiddenIn}
+        onHideInSpot={setHiddenIn}
       />
 
       {/* Furniture */}
@@ -549,6 +572,9 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi}
+        // Hidden inside a bush: the Blobbi visual is not rendered at all, while
+        // movement, position and world input keep working.
+        visualHidden={hiddenIn !== null}
         initialPosition={blobbiInitialPosition}
         backgroundFile={background}
         onMoveStart={handleMoveStart}
@@ -579,6 +605,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           chatFunctionRef={chatFunctionRef}
           myAnchorId="my-blobbi-anchor"
           onOtherBlobbiClick={handleOtherBlobbiClick}
+          hiddenIn={hiddenIn}
           localAttentionRef={localAttentionRef}
           livePositionsRef={livePositionsRef}
           localActiveRef={localActiveRef}

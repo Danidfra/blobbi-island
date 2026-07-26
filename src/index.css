@@ -363,6 +363,77 @@ img {
     animation: tap 0.3s ease-in-out;
   }
 
+  /* ── Town bush interactions ─────────────────────────────────────────────
+     Lightweight CSS-only effects (no JS animation loop, no libraries):
+       - bush-shake : short rustle when the Blobbi arrives / hides
+       - bush-sway  : subtle hover idle on pointer devices
+       - leaf-burst : a few temporary leaf particles flung out on arrival
+     transform-origin is bottom center so the bush "roots" stay planted. */
+  @keyframes bush-shake {
+    0%   { transform: rotate(0deg) scaleY(1); }
+    15%  { transform: rotate(-3.5deg) scaleY(1.03); }
+    30%  { transform: rotate(3deg) scaleY(0.98); }
+    45%  { transform: rotate(-2.2deg) scaleY(1.02); }
+    60%  { transform: rotate(1.6deg) scaleY(0.99); }
+    75%  { transform: rotate(-0.8deg) scaleY(1.01); }
+    100% { transform: rotate(0deg) scaleY(1); }
+  }
+
+  .animate-bush-shake {
+    animation: bush-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    transform-origin: bottom center;
+  }
+
+  @keyframes bush-sway {
+    0%, 100% { transform: rotate(-1.2deg); }
+    50%      { transform: rotate(1.2deg); }
+  }
+
+  /* Applied only on pointer (hover-capable) devices via the group-hover +
+     media query wrapper in the component; sway is idle, subtle, silent. */
+  .bush-sway-target {
+    transform-origin: bottom center;
+    transition: transform 0.3s ease-out;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .bush-hover-sway:hover .bush-sway-target {
+      animation: bush-sway 1.6s ease-in-out infinite;
+    }
+  }
+
+  /* Each leaf reads its own end offset + rotation from CSS custom properties
+     so a handful of React-rendered spans can fan out in different directions
+     from one keyframe definition. */
+  @keyframes leaf-burst {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) rotate(0deg) scale(0.6);
+    }
+    15% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform:
+        translate(var(--leaf-dx, 0px), var(--leaf-dy, -24px))
+        rotate(var(--leaf-rot, 180deg))
+        scale(1);
+    }
+  }
+
+  .animate-leaf-burst {
+    animation: leaf-burst var(--leaf-duration, 0.7s) ease-out forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-bush-shake,
+    .bush-hover-sway:hover .bush-sway-target,
+    .animate-leaf-burst {
+      animation: none;
+    }
+  }
+
   /* Smooth theme transitions */
   .theme-transition {
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;

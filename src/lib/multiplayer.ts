@@ -56,6 +56,81 @@ export interface PresenceContent {
   anchor: PositionWithTimestamp;
   goal?: MovementGoal;
   blobbiD?: string; // Optional blobbiD for better tracking
+  /**
+   * OPTIONAL semantic hiding state: the id of the hiding spot the player is
+   * currently hidden inside (e.g. a Town bush's id like "town-bush-1"), or
+   * absent/undefined when the player is not hidden.
+   *
+   * This is an explicit, position-independent representation of "hidden in this
+   * spot" so remote clients suppress the player's Blobbi visual reliably rather
+   * than inferring it from approximate coordinates. It is set when the player
+   * arrives and hides, and cleared as soon as they start moving away.
+   *
+   * Backward compatible: older clients that don't understand this field simply
+   * ignore it and keep rendering the Blobbi normally.
+   */
+  hiddenIn?: string;
+  /**
+   * OPTIONAL monotonic publish counter for this session, incremented once per
+   * presence publish (login / move / hide / heartbeat).
+   *
+   * Why it exists: `created_at` has one-second resolution, so a hide and the
+   * movement that leaves it are routinely stamped with the SAME second. Relay
+   * delivery order is not guaranteed either, so a late hide could otherwise
+   * overwrite a newer movement and re-hide a Blobbi that already walked away.
+   * Because presence is keyed by a per-session id, this counter is strictly
+   * increasing for a given player key and gives every update from that session a
+   * deterministic order — independent of clock resolution and delivery order.
+   *
+   * Backward compatible: older clients omit it, and consumers then fall back to
+   * comparing `created_at` exactly as before (see {@link isSupersededPresence}).
+   */
+  seq?: number;
+}
+
+/** Ordering key for one presence update from a single session. */
+export interface PresenceOrder {
+  /** Event `created_at` (seconds). */
+  createdAt: number;
+  /** {@link PresenceContent.seq}, when the publishing client supports it. */
+  seq?: number;
+}
+
+/**
+ * Decide whether an incoming presence update is older than (or a duplicate of)
+ * the newest one already applied for the same player key.
+ *
+ * Ordering rules:
+ *  1. When BOTH sides carry `seq`, order by `seq` alone. It is monotonic per
+ *     session, so it resolves same-second races exactly — a delayed hide with a
+ *     lower `seq` can never override a newer movement.
+ *  2. Otherwise (a legacy publisher on either side) fall back to `created_at`:
+ *     strictly older is dropped, same-second is applied — precisely the previous
+ *     behavior, so nothing regresses for clients that don't send `seq`.
+ */
+export function isSupersededPresence(
+  known: PresenceOrder | undefined,
+  incoming: PresenceOrder,
+): boolean {
+  if (!known) return false;
+
+  if (typeof known.seq === 'number' && typeof incoming.seq === 'number') {
+    return incoming.seq <= known.seq;
+  }
+
+  return incoming.createdAt < known.createdAt;
+}
+
+/** Read the ordering key of a presence event (tolerates legacy payloads). */
+export function presenceOrderOf(
+  content: PresenceContent,
+  createdAt: number,
+): PresenceOrder {
+  const seq = content.seq;
+  return {
+    createdAt,
+    seq: typeof seq === 'number' && Number.isFinite(seq) ? seq : undefined,
+  };
 }
 
 /** Walkable API interface for boundary checking */
@@ -85,6 +160,13 @@ export interface PlayerRenderState {
   lastContent: PresenceContent & { blobbiD?: string }; // Allow blobbiD in lastContent
   animState: PlayerAnimState; // animation state for smooth movement
   blobbiD?: string; // Direct blobbiD for quick access
+  /**
+   * The hiding-spot id this remote player is currently hidden inside, or
+   * undefined when not hidden. Mirrors {@link PresenceContent.hiddenIn} from the
+   * latest presence so renderers can suppress this Blobbi's visual without
+   * re-parsing content.
+   */
+  hiddenIn?: string;
 }
 
 /** Blobbi visual data */
@@ -310,9 +392,11 @@ export async function publishPresenceLogin(
     location: LocationId;
     blobbiAddr: string;
     startPos: Position;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
   }
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, startPos } = params;
+  const { sessionId, islandId, location, blobbiAddr, startPos, seq } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -322,6 +406,7 @@ export async function publishPresenceLogin(
       y: startPos.y,
       ts: nowSec(),
     },
+    ...(seq !== undefined ? { seq } : {}),
   };
 
   const event = buildPresence31950({
@@ -345,13 +430,15 @@ export async function publishMove(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
   },
   from: Position,
   rawClick: Position,
   speedPx: number,
   nav: WalkableApi
 ): Promise<Position> {
-  const { sessionId, islandId, location, blobbiAddr } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
   // Clamp destination to walkable area
   const clampedTo = clampToWalkable(rawClick, from, nav);
@@ -370,6 +457,7 @@ export async function publishMove(
       v: speedPx,
       ts: nowSec(),
     },
+    ...(seq !== undefined ? { seq } : {}),
   };
 
   const event = buildPresence31950({
@@ -385,19 +473,26 @@ export async function publishMove(
 }
 
 /**
- * Publish heartbeat to renew expiration
+ * Publish that the player has arrived at and is now hidden inside a hiding spot
+ * (e.g. a Town bush). Emits an idle presence at the current position carrying
+ * the optional {@link PresenceContent.hiddenIn} semantic state so remote
+ * clients suppress this Blobbi's visual. Cleared by the next movement (which
+ * publishes a normal `moving` presence WITHOUT `hiddenIn`) or heartbeat.
  */
-export async function publishHeartbeat(
+export async function publishHide(
   publish: (event: Record<string, unknown>) => Promise<void>,
   params: {
     sessionId: string;
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
   },
-  currentPos: Position
+  currentPos: Position,
+  hidingSpotId: string
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -407,6 +502,51 @@ export async function publishHeartbeat(
       y: currentPos.y,
       ts: nowSec(),
     },
+    hiddenIn: hidingSpotId,
+    ...(seq !== undefined ? { seq } : {}),
+  };
+
+  const event = buildPresence31950({
+    sessionId,
+    islandId,
+    location,
+    blobbiAddr,
+    content,
+  });
+
+  await publish(event);
+}
+
+/**
+ * Publish heartbeat to renew expiration
+ */
+export async function publishHeartbeat(
+  publish: (event: Record<string, unknown>) => Promise<void>,
+  params: {
+    sessionId: string;
+    islandId: string;
+    location: LocationId;
+    blobbiAddr: string;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
+  },
+  currentPos: Position,
+  hiddenIn?: string
+): Promise<void> {
+  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+
+  const content: PresenceContent = {
+    state: 'idle',
+    location,
+    anchor: {
+      x: currentPos.x,
+      y: currentPos.y,
+      ts: nowSec(),
+    },
+    // Preserve the hiding state across heartbeats so a player who stays hidden
+    // for longer than the expiration window remains hidden for remote clients.
+    ...(hiddenIn ? { hiddenIn } : {}),
+    ...(seq !== undefined ? { seq } : {}),
   };
 
   const event = buildPresence31950({

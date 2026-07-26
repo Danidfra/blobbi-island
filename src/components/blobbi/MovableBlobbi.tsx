@@ -33,6 +33,18 @@ import { locationScalingConfig } from '@/lib/location-scaling-config';
 export interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
   isVisible?: boolean;
+  /**
+   * Hide ONLY the Blobbi's visual representation (sprite, ground shadow and
+   * trail) while keeping everything else alive: the movement animation, the
+   * logical world position, the world-click listener, gameplay state and the
+   * presence/chat anchor element.
+   *
+   * This is how "hidden inside a hiding spot" (e.g. a Town bush) is rendered:
+   * nothing of the Blobbi is painted, so removing the bush art in DevTools
+   * reveals empty ground instead of a Blobbi sitting behind it. Distinct from
+   * `isVisible`, which unmounts the character *and* its input handling.
+   */
+  visualHidden?: boolean;
   initialPosition?: Position;
   movementSpeed?: number;
   boundary?: Boundary;
@@ -81,6 +93,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     {
       containerRef,
       isVisible = true,
+      visualHidden = false,
       initialPosition = { x: 50, y: 75 },
       movementSpeed = 120,
       boundary = { shape: 'rectangle', x: [0, 100], y: [60, 100] },
@@ -554,7 +567,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     return (
       <>
-        {showTrail &&
+        {showTrail && !visualHidden &&
           trail.map((trailPos, index) => (
             <div
               key={index}
@@ -578,12 +591,17 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
               />
             </div>
           ))}
+        {/* Positioned anchor. While `visualHidden` it stays mounted (and empty,
+            so it has no size and paints nothing) because it is the portal anchor
+            for this Blobbi's chat bubbles and keeps the logical world position
+            addressable. Everything *visible* lives inside the guard below. */}
         <div
           ref={blobbiRef}
           id={anchorId}
+          data-visual-hidden={visualHidden ? 'true' : undefined}
           className={cn(
             "absolute transition-all duration-200 ease-out blobbi-character",
-            onBlobbiClick ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
+            onBlobbiClick && !visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
             isMoving && "transition-none",
             className
           )}
@@ -592,49 +610,53 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             top: `${position.y}%`,
             // ⬇️ wrapper externo SEM scale/flip — serve de âncora p/ a bolha
             transform: `translate(-50%, -50%)`,
-            filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
+            filter: visualHidden ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
             zIndex: getDynamicZIndex(position),
           }}
         >
-          {/* ⬇️ wrapper interno recebe scale (orientação fixa; direção via gaze) */}
-          <div
-            className="relative"
-            style={{
-              transform: `scale(${dynamicScale})`,
-              transformOrigin: 'center center',
-            }}
-          >
-            <div
-              className={cn(
-                !isSleeping && !disableFloating && "animate-float",
-                "transition-transform duration-1000 ease-in-out"
-              )}
-            >
-              <CurrentBlobbiDisplay
-                size={size}
-                showFallback={true}
-                transparent={true}
-                isSleeping={isSleeping}
-                eyesClosed={eyesClosed}
-                eyeOffset={eyeOffset}
-                className={cn(isMoving && "scale-105")}
+          {!visualHidden && (
+            <>
+              {/* ⬇️ wrapper interno recebe scale (orientação fixa; direção via gaze) */}
+              <div
+                className="relative"
+                style={{
+                  transform: `scale(${dynamicScale})`,
+                  transformOrigin: 'center center',
+                }}
+              >
+                <div
+                  className={cn(
+                    !isSleeping && !disableFloating && "animate-float",
+                    "transition-transform duration-1000 ease-in-out"
+                  )}
+                >
+                  <CurrentBlobbiDisplay
+                    size={size}
+                    showFallback={true}
+                    transparent={true}
+                    isSleeping={isSleeping}
+                    eyesClosed={eyesClosed}
+                    eyeOffset={eyeOffset}
+                    className={cn(isMoving && "scale-105")}
+                  />
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "absolute top-full left-1/2 h-1.5 rounded-full",
+                  size === "xl" && "w-8 md:w-10",
+                  size === "lg" && "w-6 md:w-8",
+                  size === "md" && "w-4 md:w-6",
+                  size === "sm" && "w-3 md:w-4"
+                )}
+                style={{
+                  background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
+                  transform: `translateX(-50%) scale(${dynamicScale})`,
+                  transformOrigin: 'center center',
+                }}
               />
-            </div>
-          </div>
-          <div
-            className={cn(
-              "absolute top-full left-1/2 h-1.5 rounded-full",
-              size === "xl" && "w-8 md:w-10",
-              size === "lg" && "w-6 md:w-8",
-              size === "md" && "w-4 md:w-6",
-              size === "sm" && "w-3 md:w-4"
-            )}
-            style={{
-              background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-              transform: `translateX(-50%) scale(${dynamicScale})`,
-              transformOrigin: 'center center',
-            }}
-          />
+            </>
+          )}
         </div>
       </>
     );

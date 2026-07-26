@@ -19,6 +19,7 @@ import type { Position } from '@/lib/types';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import {
   type PresenceContent,
+  type PresenceOrder,
   type PlayerRenderState,
   type BlobbiVisual,
   type WalkableApi,
@@ -27,7 +28,10 @@ import {
   publishPresenceLogin,
   publishMove,
   publishHeartbeat,
+  publishHide,
   validatePresenceEvent,
+  isSupersededPresence,
+  presenceOrderOf,
   nowSec,
   createWalkableApi,
   parseA,
@@ -78,6 +82,17 @@ interface UseIslandPresenceReturn {
   sessionId: string;
   players: Map<string, PlayerRenderState>;
   moveTo: (destRaw: Position) => Promise<void>;
+  /**
+   * Publish that the local player has arrived at and is now hidden inside the
+   * given hiding spot (e.g. a Town bush id). Remote clients suppress this
+   * Blobbi's visual. Cleared automatically by the next {@link moveTo}.
+   */
+  hideAt: (hidingSpotId: string) => Promise<void>;
+  /**
+   * Clear the local hidden state (without publishing a move). Rarely needed
+   * directly — {@link moveTo} clears it — but exposed for completeness.
+   */
+  clearHide: () => void;
   myPosRef: React.MutableRefObject<Position>;
   isLoading: boolean;
   error?: string;
@@ -109,6 +124,10 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
 
   // Refs
   const myPosRef = useRef<Position>(startPos);
+  // The local player's current hiding-spot id (e.g. a Town bush id) or null.
+  // Kept in a ref so heartbeats can preserve it without re-subscribing timers,
+  // and so moveTo can clear it synchronously before publishing a move.
+  const myHiddenInRef = useRef<string | null>(null);
   const subscriptionRef = useRef<{ close: () => void } | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gcIntervalRef = useRef<number | null>(null);
@@ -119,12 +138,35 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const lastLocationRef = useRef<LocationId>(location);
   const lastBlobbiAddrRef = useRef<string>(makeBlobbiAddr(pubkey, blobbiD));
   const playersAnimRef = useRef<Map<string, PlayerAnimState>>(new Map());
+  // Newest presence ordering key ({createdAt, seq}) applied per player key.
+  // Presence is an addressable event republished on every move/hide/heartbeat and
+  // relays may deliver those out of order; without this an older event could
+  // resurrect stale state (e.g. put a player back inside a bush they already
+  // walked out of). `seq` resolves same-second races that `created_at` alone
+  // cannot — see isSupersededPresence.
+  const lastEventOrderRef = useRef<Map<string, PresenceOrder>>(new Map());
+  // Monotonic publish counter for THIS session, stamped into every presence we
+  // publish so remote clients can order our updates deterministically. Starts at
+  // 0 and is pre-incremented, so the first published event carries seq 1.
+  const seqRef = useRef(0);
   const lastUpdateTimeRef = useRef<number>(performance.now());
   const latestSessionByPubkeyRef = useRef<Map<string, {sessionId:string; seen:number}>>(new Map());
   const { isPositionBlocked } = useMovementBlocker();
 
   // Memoized values
   const blobbiAddr = useMemo(() => makeBlobbiAddr(pubkey, blobbiD), [pubkey, blobbiD]);
+
+  /**
+   * Take the next publish sequence number. Called at PUBLISH-INTENT time (before
+   * any await), so the numbers reflect the order the player actually acted in —
+   * e.g. arriving in a bush (hide) then immediately clicking elsewhere (move)
+   * yields seq n then n+1 even when both land in the same wall-clock second and
+   * reach a relay out of order.
+   */
+  const nextSeq = useCallback(() => {
+    seqRef.current += 1;
+    return seqRef.current;
+  }, []);
 
   // ============================================================================
   // Visual Fetching
@@ -332,6 +374,25 @@ const animatePlayers = useCallback(() => {
       const aTag = event.tags.find(([name]: string[]) => name === 'a')?.[1];
       const locTag = event.tags.find(([n, v]: string[]) => n === 't' && v?.startsWith('loc:'))?.[1];
       const tagLocation = (locTag?.split(':')[1] ?? content.location) as LocationId;
+
+      // Drop out-of-order / already-superseded presence before it can influence
+      // any state. Ordering uses the publisher's monotonic `seq` when available
+      // (so a delayed hide can never override a newer move published in the SAME
+      // second) and falls back to `created_at` for clients that don't send it.
+      const guardSession = dTag?.startsWith('session:')
+        ? dTag.slice('session:'.length)
+        : null;
+      if (!guardSession) return;
+      const guardKey = `${event.pubkey}:${guardSession}`;
+      const incomingOrder = presenceOrderOf(content, event.created_at);
+      const knownOrder = lastEventOrderRef.current.get(guardKey);
+      if (isSupersededPresence(knownOrder, incomingOrder)) {
+        if (DEBUG_MP) console.debug('[blobbi][mp] EVENT superseded, ignoring', {
+          key: guardKey, incoming: incomingOrder, known: knownOrder,
+        });
+        return;
+      }
+      lastEventOrderRef.current.set(guardKey, incomingOrder);
 
       if (tagLocation !== location || content.location !== location) {
         const dTag = event.tags.find(([n]: string[]) => n === 'd')?.[1];
@@ -545,6 +606,10 @@ const animatePlayers = useCallback(() => {
         lastContent: { ...content, blobbiD: blobbiDFromATag }, // Ensure blobbiD is in lastContent
         animState,
         blobbiD: blobbiDFromATag, // Add blobbiD directly to player state
+        // Explicit, position-independent hiding state (e.g. "town-bush-1").
+        // Absent on clients that don't publish it and on every presence that
+        // isn't a hide, which is exactly how leaving a hiding spot clears it.
+        hiddenIn: content.hiddenIn,
       };
 
       if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {
@@ -596,6 +661,11 @@ const animatePlayers = useCallback(() => {
       const from = myPosRef.current;
       if (DEBUG_MP) console.debug('[blobbi][mp] moveTo', { from, destRaw, location });
 
+      // Starting to move ALWAYS clears any hiding state. The published `moving`
+      // presence below carries no `hiddenIn`, so remotes reveal the Blobbi as
+      // soon as it leaves a hiding spot.
+      myHiddenInRef.current = null;
+
       const clampedDest = await publishMove(
         publish,
         {
@@ -603,6 +673,7 @@ const animatePlayers = useCallback(() => {
           islandId,
           location,
           blobbiAddr,
+          seq: nextSeq(),
         },
         from,
         destRaw,
@@ -622,7 +693,30 @@ const animatePlayers = useCallback(() => {
         setError('Failed to publish movement');
       }
     }
-  }, [publish, sessionId, islandId, location, blobbiAddr, navApi]);
+  }, [publish, sessionId, islandId, location, blobbiAddr, navApi, nextSeq]);
+
+  const hideAt = useCallback(async (hidingSpotId: string): Promise<void> => {
+    try {
+      // Idempotent by content: re-hiding in the same spot publishes the same
+      // state, and presence is addressable (one event per session), so the
+      // newest simply replaces the previous one — a repeated arrival can never
+      // leave observers with a half-applied state.
+      myHiddenInRef.current = hidingSpotId;
+      if (DEBUG_MP) console.debug('[blobbi][mp] hideAt', { pos: myPosRef.current, hidingSpotId });
+      await publishHide(
+        publish,
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        myPosRef.current,
+        hidingSpotId
+      );
+    } catch (error) {
+      console.warn('Hide publish failed but continuing:', error);
+    }
+  }, [publish, sessionId, islandId, location, blobbiAddr, nextSeq]);
+
+  const clearHide = useCallback((): void => {
+    myHiddenInRef.current = null;
+  }, []);
 
   // ============================================================================
   // Lifecycle Management
@@ -638,7 +732,7 @@ const animatePlayers = useCallback(() => {
     const doLoginAndStart = async () => {
       try {
         await publishPresenceLogin(publish, {
-          sessionId, islandId, location, blobbiAddr, startPos,
+          sessionId, islandId, location, blobbiAddr, startPos, seq: nextSeq(),
         });
         if (DEBUG_MP) console.debug('[blobbi][mp] login presence published', { startPos, location });
         if (!mounted) return;
@@ -648,7 +742,7 @@ const animatePlayers = useCallback(() => {
 
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
-          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr }, myPosRef.current)
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined)
             .catch(err => {
               console.warn('Heartbeat publish failed but continuing:', err);
               // Don't treat heartbeat failures as fatal
@@ -667,6 +761,7 @@ const animatePlayers = useCallback(() => {
               if (now - p.lastSeen > STALE) {
                 next.delete(key);
                 playersAnimRef.current.delete(key);
+                lastEventOrderRef.current.delete(key);
                 opts.livePositionsRef?.current?.delete(key);
                 changed = true;
               }
@@ -727,7 +822,7 @@ const animatePlayers = useCallback(() => {
     lastBlobbiAddrRef.current = blobbiAddr;
 
     publishPresenceLogin(publish, {
-      sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current,
+      sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
     }).catch(err => {
       console.warn('Failed to publish presence on Blobbi switch but continuing:', err);
     });
@@ -736,11 +831,12 @@ const animatePlayers = useCallback(() => {
     heartbeatIntervalRef.current = setInterval(() => {
       publishHeartbeat(
         publish,
-        { sessionId, islandId, location, blobbiAddr },
-        myPosRef.current
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        myPosRef.current,
+        myHiddenInRef.current ?? undefined
       ).catch(err => console.error('Failed to publish heartbeat:', err));
     }, HEARTBEAT_INTERVAL_MS);
-  }, [blobbiAddr, publish, sessionId, islandId, location]);
+  }, [blobbiAddr, publish, sessionId, islandId, location, nextSeq]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -770,11 +866,16 @@ const animatePlayers = useCallback(() => {
   // The fresh subscription below restores whoever is actually present now.
   playersAnimRef.current = new Map();
   latestSessionByPubkeyRef.current.clear();
+  lastEventOrderRef.current.clear();
   opts.livePositionsRef?.current?.clear();
   setPlayers(new Map());
 
+  // Leaving the location abandons any hiding spot, so the presence published
+  // below (and every following heartbeat) must not advertise it any more.
+  myHiddenInRef.current = null;
+
   publishPresenceLogin(publish, {
-    sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current,
+    sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
   }).catch(err => {
       console.warn('Failed to publish presence on location change but continuing:', err);
       // Don't treat location change publish failures as fatal
@@ -787,8 +888,9 @@ const animatePlayers = useCallback(() => {
   heartbeatIntervalRef.current = setInterval(() => {
     publishHeartbeat(
       publish,
-      { sessionId, islandId, location, blobbiAddr },
-      myPosRef.current
+      { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+      myPosRef.current,
+      myHiddenInRef.current ?? undefined
     ).catch(err => console.error('Failed to publish heartbeat:', err));
   }, HEARTBEAT_INTERVAL_MS);
 
@@ -802,18 +904,21 @@ const animatePlayers = useCallback(() => {
         if (now - p.lastSeen > STALE) {
           next.delete(key);
           playersAnimRef.current.delete(key);
+          lastEventOrderRef.current.delete(key);
           opts.livePositionsRef?.current?.delete(key);
         }
       }
       return next;
     });
   }, 1000);
-}, [location, publish, sessionId, islandId, blobbiAddr, startSubscription]);
+}, [location, publish, sessionId, islandId, blobbiAddr, startSubscription, nextSeq]);
 
   return {
     sessionId,
     players,
     moveTo,
+    hideAt,
+    clearHide,
     myPosRef,
     isLoading,
     error,

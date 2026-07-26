@@ -16,6 +16,13 @@ import { GameModal } from './GameModal';
 import { Button } from '@/components/ui/button';
 import { Position } from '@/lib/types';
 import { usePendingInteraction, type RequestInteractionOptions } from '@/hooks/usePendingInteraction';
+import { TownBush } from './TownBush';
+import { townBushes } from '@/lib/town-bushes-config';
+import {
+  STREETLIGHT_SRC,
+  streetlightBaseBlocker,
+  townStreetlights,
+} from '@/lib/town-streetlights-config';
 
 /**
  * Compute a walk-to target (world-surface percent) from an interactive
@@ -301,9 +308,19 @@ interface InteractiveElementsProps {
   selectedBlobbi: Blobbi | null;
   onChairArrival?: (position: Position) => void;
   onChairLeave?: () => void;
+  /**
+   * Id of the hiding spot the local player currently occupies (e.g. a Town bush
+   * id), or null when not hidden. Owned by PlayingView so the movement,
+   * rendering and presence layers all read one source of truth.
+   */
+  hiddenIn?: string | null;
+  /** Called when the local player arrives at and hides inside a hiding spot. */
+  onHideInSpot?: (hidingSpotId: string) => void;
 }
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival, onChairLeave }: InteractiveElementsProps) {
+const noopHide = () => {};
+
+export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival, onChairLeave, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1251,61 +1268,52 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
 
           </div>
 
-        {/* Bush 3 - Left side, slightly above bush-1 */}
-          <InteractiveElement
-            src="/assets/world/props/bush-3.png"
-            alt="Bush 3"
-            animated={false}
-            onClick={() => handleElementClick('bush-3')}
-            className="absolute left-0 top-[69%] z-[10]"
-          />
+        {/* Interactive bushes — driven by shared config (art, placement, fixed
+            z-index and the per-bush walk-to target). Each TownBush reuses the
+            existing movement system to walk the Blobbi to the bush's configured
+            center, then reports an explicit hide on arrival (the Blobbi visual
+            stops being rendered; no z-index is touched), shakes, plays the
+            rustle SFX and emits a light leaf burst. */}
+          {townBushes.map((bush) => (
+            <TownBush
+              key={bush.id}
+              config={bush}
+              requestInteraction={requestInteraction}
+              hiddenIn={hiddenIn}
+              onHide={onHideInSpot ?? noopHide}
+            />
+          ))}
 
-        {/* Bush 4 - Right side, slightly above bush-2 */}
-          <InteractiveElement
-            src="/assets/world/props/bush-4.png"
-            alt="Bush 4"
-            animated={false}
-            onClick={() => handleElementClick('bush-4')}
-            className="absolute right-0 top-[69%] z-[10]"
-          />
-
-        {/* Bush 1 - Bottom left corner (highest z-index) */}
-          <InteractiveElement
-            src="/assets/world/props/bush-1.png"
-            alt="Bush 1"
-            animated={false}
-            onClick={() => handleElementClick('bush-1')}
-            className="absolute left-0 bottom-0 z-[20]"
-          />
-
-        {/* Bush 2 - Bottom right corner (highest z-index) */}
-          <InteractiveElement
-            src="/assets/world/props/bush-2.png"
-            alt="Bush 2"
-            animated={false}
-            onClick={() => handleElementClick('bush-2')}
-            className="absolute right-0 bottom-0 z-[20]"
-          />
-
-        {/* streetlight - left */}
-          <InteractiveElement
-            src="/assets/world/props/streetlight.png"
-            alt="streetlight 1"
-            animated={false}
-            onClick={() => handleElementClick('bush-2')}
-            className="absolute left-[6%] bottom-[10%] h-[35%] z-[15]"
-          />
-        <MovementBlocker id="town-buildings" x={8} y={86} width={4.5} height={4} />
-
-        {/* streetlight -right */}
-          <InteractiveElement
-            src="/assets/world/props/streetlight.png"
-            alt="streetlight 2"
-            animated={false}
-            onClick={() => handleElementClick('bush-2')}
-            className="absolute right-[12%] bottom-[10%] h-[35%] z-[15]"
-          />
-        <MovementBlocker id="town-buildings" x={82.5} y={86} width={4.5} height={4} />
+        {/* Streetlights — decorative art plus the movement blocker at each foot.
+            Both come from the SAME config entry (placement + measured sprite
+            footprint), so the blocker can no longer drift away from the artwork
+            the way it did when these were two independent sets of numbers. */}
+          {townStreetlights.map((streetlight) => {
+            const base = streetlightBaseBlocker(streetlight);
+            return (
+              <React.Fragment key={streetlight.id}>
+                <img
+                  src={STREETLIGHT_SRC}
+                  alt="streetlight"
+                  draggable={false}
+                  className="absolute z-[15] select-none pointer-events-none"
+                  style={{
+                    [streetlight.anchor.edge]: `${streetlight.anchor.percent}%`,
+                    bottom: `${streetlight.bottomPercent}%`,
+                    height: `${streetlight.heightPercent}%`,
+                  }}
+                  data-streetlight-id={streetlight.id}
+                />
+                <MovementBlocker
+                  id={streetlight.id}
+                  x={base.x}
+                  y={base.y}
+                  width={base.width}
+                  height={base.height}
+                />
+              </React.Fragment>
+            );
+          })}
       </div>
     );
   }
@@ -1434,7 +1442,7 @@ if (backgroundFile === 'plaza-inside.png') {
         doors). Sits at z-[9], the deepest layer of this room, so the balcony /
         staircase layer below still occludes its base correctly.
       */}
-      <div className='absolute w-[11%] left-[43.9%] top-[34%] z-[9]'>
+      <div className='absolute w-[11.5%] left-[43.6%] top-[33.5%] z-[9]'>
           <img
             src="/assets/locations/plaza/inside-door.png"
             alt="Plaza inside door"
@@ -1454,6 +1462,8 @@ if (backgroundFile === 'plaza-inside.png') {
           alt="Plaza inside door open"
           animated={false}
           effect="door"
+          onClick={() => setCurrentLocation('plaza')}
+          requestInteraction={requestInteraction}
           className="absolute top-0 left-0 w-[101.887%]"
         />
       </div>

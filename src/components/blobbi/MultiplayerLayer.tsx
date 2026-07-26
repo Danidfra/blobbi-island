@@ -195,6 +195,16 @@ interface MultiplayerLayerProps {
    * null while the local Blobbi isn't mounted/visible.
    */
   localActiveRef?: React.MutableRefObject<LocalActiveState | null>;
+  /**
+   * Id of the hiding spot the local player currently occupies (e.g. a Town bush
+   * id like "town-bush-1"), or null when not hidden. Owned by PlayingView.
+   *
+   * Set → published as the optional `hiddenIn` field of the local player's
+   * presence content so REMOTE clients stop rendering this Blobbi.
+   * Back to null → the movement publish that caused it carries no `hiddenIn`,
+   * which is what reveals the Blobbi again for everyone.
+   */
+  hiddenIn?: string | null;
 }
 
 // ============================================================================
@@ -212,6 +222,7 @@ export function MultiplayerLayer({
   chatFunctionRef,
   myAnchorId,
   onOtherBlobbiClick,
+  hiddenIn = null,
   localAttentionRef: localAttentionRefProp,
   livePositionsRef: livePositionsRefProp,
   localActiveRef,
@@ -555,6 +566,8 @@ export function MultiplayerLayer({
     sessionId,
     players,
     moveTo,
+    hideAt,
+    clearHide,
     myPosRef,
     isLoading,
     error,
@@ -1002,6 +1015,40 @@ export function MultiplayerLayer({
     };
   }, [disabled, user, moveTo]);
 
+  // Synchronize the local player's hiding state (e.g. inside a Town bush).
+  //
+  // Publish path: arriving at a hiding spot flips `hiddenIn` to its id, which we
+  // publish as an idle presence carrying the optional `hiddenIn` field. Remotes
+  // suppress this Blobbi's in-world representation until it changes.
+  //
+  // Clear path: leaving always starts with movement, and every local movement
+  // publishes a `moving` presence WITHOUT `hiddenIn` (via `moveTo`, from the
+  // world-click handler or the walk-to-interact broadcast above) — that is what
+  // reveals the Blobbi remotely. Here we only need to drop the local flag so
+  // subsequent heartbeats stop advertising a spot the player already left.
+  //
+  // `syncedHiddenInRef` holds the last state actually synchronized:
+  // `hideAt`/`clearHide` are rebuilt on every render (they close over the
+  // publish callback) and this layer re-renders whenever any player moves, so
+  // without the guard the effect would republish the same hide over and over.
+  // Publishing strictly on TRANSITIONS also means re-entering the same bush can
+  // never duplicate presence events.
+  const syncedHiddenInRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (disabled || !user) return;
+    if (syncedHiddenInRef.current === hiddenIn) return;
+    syncedHiddenInRef.current = hiddenIn;
+
+    if (!hiddenIn) {
+      clearHide();
+      return;
+    }
+
+    hideAt(hiddenIn).catch((err) => {
+      if (DEBUG_MP) console.debug('[blobbi][mp][ui] hide publish failed', err);
+    });
+  }, [hiddenIn, hideAt, clearHide, disabled, user]);
+
   // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
@@ -1056,11 +1103,16 @@ export function MultiplayerLayer({
     // entry exposes its position and activity so the same attention resolver
     // applies uniformly — this is what lets remotes notice and look at the
     // local Blobbi when it walks nearby (and vice-versa).
-    const candidates: GazeCandidate[] = remotes.map((p) => ({
-      key: `${p.pubkey}:${p.sessionId}`,
-      position: p.position,
-      activity: { isMoving: p.isMoving },
-    }));
+    // Players hidden inside a hiding spot are not part of the scene visually, so
+    // they must not attract anyone's gaze — otherwise every nearby Blobbi would
+    // stare straight at the bush and give the hiding player away.
+    const candidates: GazeCandidate[] = remotes
+      .filter((p) => !p.hiddenIn)
+      .map((p) => ({
+        key: `${p.pubkey}:${p.sessionId}`,
+        position: p.position,
+        activity: { isMoving: p.isMoving },
+      }));
 
     // Include the local Blobbi as a candidate target (and as a "self" that
     // looks around). Position comes from myPosRef; activity from MovableBlobbi.
@@ -1296,19 +1348,32 @@ export function MultiplayerLayer({
           headingRef.current.set(keyId, { x: dx / len, y: dy / len });
         }
 
+        // This player is hidden inside a hiding spot (explicit presence state,
+        // never inferred from position). Render ONLY the positioned anchor — no
+        // sprite, no ground shadow, no name label — so nothing of their Blobbi
+        // exists in the DOM while hidden. The anchor stays so their chat bubbles
+        // still have somewhere to portal into.
+        const isHiddenInSpot = !!player.hiddenIn;
+
         return (
           <div
             key={`${player.pubkey}:${player.sessionId}`}
-            className="absolute pointer-events-auto group"
+            className={cn(
+              "absolute group",
+              isHiddenInSpot ? "pointer-events-none" : "pointer-events-auto",
+            )}
             data-player-key={`${player.pubkey}:${player.sessionId}`}
+            data-hidden-in={player.hiddenIn}
             style={{
               left: `${player.position.x}%`,
               top: `${player.position.y}%`,
               transform: `translate(-50%, -50%)`,  // ⬅️ no scale/flip here
               zIndex: dynamicZIndex,
-              filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
+              filter: isHiddenInSpot ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
             }}
           >
+            {!isHiddenInSpot && (
+            <>
             {/* SPRITE – hover target (peer) */}
             <div
               className="peer pointer-events-auto select-none cursor-pointer"
@@ -1391,6 +1456,8 @@ export function MultiplayerLayer({
               </div>
             </div>
           )}
+            </>
+            )}
         </div>
         );
       })}
