@@ -34,8 +34,7 @@ import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
-import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
-import { locationScalingConfig } from '@/lib/location-scaling-config';
+import { resolveBlobbiScale, resolveBlobbiZIndex } from '@/lib/blobbi-world-render';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
@@ -1202,7 +1201,7 @@ export function MultiplayerLayer({
   // Get background file for current location
   const backgroundFile = useMemo(() => {
     const locationToFile: Record<string, string> = {
-      'town': 'town-open.png',
+      'town': 'town-open.webp',
       'home': 'home-inside.png',
       'beach': 'beach-open.png',
       'mine': 'mine-open.png',
@@ -1219,7 +1218,7 @@ export function MultiplayerLayer({
       'cave-open': 'cave-inside.png',
       'clothing-store-inside': 'clothing-store-inside.png',
     };
-    return locationToFile[currentLocation] || 'town-open.png';
+    return locationToFile[currentLocation] || 'town-open.webp';
   }, [currentLocation]);
 
   // Get boundary for current location
@@ -1227,59 +1226,18 @@ export function MultiplayerLayer({
     return locationBoundaries[backgroundFile];
   }, [backgroundFile]);
 
-  // Helper functions for dynamic z-index and scaling (same as MovableBlobbi)
-  const getDynamicZIndex = useCallback((currentPos: Position, sitOffset = 0): number => {
-    if (!backgroundFile) return 20;
-    return calculateBlobbiZIndex(currentPos.y, backgroundFile) + sitOffset;
-  }, [backgroundFile]);
+  // Dynamic z-index and scaling, shared with MovableBlobbi so a remote Blobbi
+  // is drawn exactly as its owner sees it (`src/lib/blobbi-world-render.ts`).
+  const getDynamicZIndex = useCallback(
+    (currentPos: Position, sitOffset = 0): number =>
+      resolveBlobbiZIndex(currentPos, backgroundFile, sitOffset),
+    [backgroundFile],
+  );
 
-  const getDynamicScale = useCallback((currentPos: Position): number => {
-    const scalingConfig = backgroundFile ? locationScalingConfig[backgroundFile] : undefined;
-
-    if (!scalingConfig) {
-      return 1;
-    }
-
-    const { initialScale, finalScale } = scalingConfig;
-
-    // Get the Y boundaries for scaling calculation based on boundary shape
-    let minY: number, maxY: number;
-
-    if (boundary?.shape === 'rectangle') {
-      minY = boundary.y[0]; // Top of allowed movement area
-      maxY = boundary.y[1]; // Bottom of allowed movement area
-    } else if (boundary?.shape === 'semicircle' || boundary?.shape === 'arch') {
-      minY = boundary.top;
-      maxY = boundary.bottom;
-    } else if (boundary?.shape === 'composite') {
-      // For composite boundaries, find the overall min/max Y values
-      minY = Math.min(...boundary.areas.map(area => {
-        if (area.type === 'rectangle') return area.y[0];
-        if (area.type === 'circle') return area.cy - area.r;
-        if (area.type === 'triangle') return Math.min(...area.points.map(p => p.y));
-        return 100;
-      }));
-      maxY = Math.max(...boundary.areas.map(area => {
-        if (area.type === 'rectangle') return area.y[1];
-        if (area.type === 'circle') return area.cy + area.r;
-        if (area.type === 'triangle') return Math.max(...area.points.map(p => p.y));
-        return 0;
-      }));
-    } else {
-      // Fallback to full screen height
-      minY = 0;
-      maxY = 100;
-    }
-
-    // Clamp the position within the boundary
-    const clampedY = Math.max(minY, Math.min(maxY, currentPos.y));
-
-    // Calculate the interpolation factor (0 = top, 1 = bottom)
-    const factor = (maxY - minY) > 0 ? (clampedY - minY) / (maxY - minY) : 0;
-
-    // Interpolate between finalScale (top) and initialScale (bottom)
-    return finalScale + (initialScale - finalScale) * factor;
-  }, [backgroundFile, boundary]);
+  const getDynamicScale = useCallback(
+    (currentPos: Position): number => resolveBlobbiScale(currentPos, backgroundFile, boundary),
+    [backgroundFile, boundary],
+  );
 
   // ============================================================================
   // Render

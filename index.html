@@ -26,12 +26,32 @@
     <link rel="preload" href="/assets/world/map/blobbi-island.png" as="image" type="image/png" />
     -->
 
-    <!-- CSP -->
+    <!--
+      CSP
+
+      The theater embeds YouTube through the official IFrame Player API, which
+      needs exactly two additions — both exact hosts, no wildcards:
+
+      * script-src https://www.youtube.com  — `/iframe_api` itself, which the
+        theater injects into this page, plus the widget bundle it then pulls from
+        `/s/player/<hash>/www-widgetapi.vflset/www-widgetapi.js`.
+      * script-src https://s.ytimg.com      — the legacy host that same bundle is
+        still served from for some clients (`/yts/jsbin/www-widgetapi-*.js`).
+
+      Nothing else is required. A cross-origin iframe runs under its OWN policy,
+      so the video's connections, images and media streams are governed by
+      youtube.com's CSP and not by this one — `connect-src`, `img-src` and
+      `media-src` are deliberately untouched.
+
+      `frame-src` is TIGHTENED here rather than widened: it was `'self' https:`,
+      which permitted framing any HTTPS origin, and the theater embed is the only
+      iframe in the app.
+    -->
     <meta http-equiv="content-security-policy" content="
       default-src 'none';
-      script-src 'self';
+      script-src 'self' https://www.youtube.com https://s.ytimg.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      frame-src 'self' https:;
+      frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com;
       font-src 'self' data: https://fonts.gstatic.com;
       base-uri 'self';
       manifest-src 'self';

@@ -18,6 +18,7 @@ import { ItemBagModal } from './ItemBagModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { SocialShareModal } from './SocialShareModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
+import { resolveSeatedRender } from '@/lib/blobbi-world-render';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
@@ -102,10 +103,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [isSleeping, setIsSleeping] = useState(false);
   const [isAttachedToBed, setIsAttachedToBed] = useState(false);
 
-  // Chair state
-  const [isSeated, setIsSeated] = useState(false);
-  const [eyesClosed, setEyesClosed] = useState(false);
-  const [isAttachedToChair, setIsAttachedToChair] = useState(false);
+  // ── Theater seating ────────────────────────────────────────────────────
+  // The id of the theater seat the local player currently occupies, or null.
+  // Single source of truth for "seated", mirroring `hiddenIn` exactly: the seat
+  // sets it on CONFIRMED ARRIVAL, MovableBlobbi derives the whole seated
+  // presentation from it (rear-facing, per-row scale, no shadow, no float), and
+  // it is cleared the instant movement starts or the location changes.
+  const [sittingIn, setSittingIn] = useState<string | null>(null);
 
   // ── Hiding spots (Town bushes) ──────────────────────────────────────────
   // The id of the hiding spot the local player currently occupies, or null.
@@ -116,10 +120,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // no timers, no polling, no coordinate guessing.
   const [hiddenIn, setHiddenIn] = useState<string | null>(null);
 
-  // Leaving the location abandons any hiding spot (the Blobbi respawns at the
-  // new location's entry point, and MovableBlobbi is remounted by `key`).
+  // Leaving the location abandons any hiding spot AND any seat (the Blobbi
+  // respawns at the new location's entry point, and MovableBlobbi is remounted
+  // by `key`). Leaving the theater therefore always resets the seated state.
   useEffect(() => {
     setHiddenIn(null);
+    setSittingIn(null);
   }, [currentLocation]);
 
   const background = getBackgroundForLocation(currentLocation);
@@ -158,28 +164,21 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const handleWakeUp = () => {
     setIsSleeping(false);
     setIsAttachedToBed(false);
-    // Also wake up from chair if seated
-    if (isSeated) {
-      setIsSeated(false);
-      setEyesClosed(false);
-      setIsAttachedToChair(false);
-    }
   };
 
-  const handleChairArrival = (position: Position) => {
-    setIsSeated(true);
-    setIsAttachedToChair(true);
-
-    // If we have a blobbiRef, snap to exact position and stop movement
-    if (blobbiRef.current) {
-      blobbiRef.current.goTo(position, true); // immediate = true
-    }
-  };
-
-  const handleChairLeave = () => {
-    setIsSeated(false);
-    setEyesClosed(false);
-    setIsAttachedToChair(false);
+  /**
+   * Fired by <TheaterSeat> on CONFIRMED ARRIVAL, never on click.
+   *
+   * The snap target comes from the seat CONFIGURATION rather than the rendered
+   * rect, so the Blobbi lands on exactly the point every other client will later
+   * draw it at — no sub-pixel divergence between who is sitting and where they
+   * appear to be sitting.
+   */
+  const handleSitInSeat = (seatId: string) => {
+    const seated = resolveSeatedRender(seatId);
+    if (!seated) return;
+    setSittingIn(seatId);
+    blobbiRef.current?.goTo(seated.position, true); // immediate = snap onto the seat
   };
 
   const handleMoveStart = (destination: Position) => {
@@ -191,17 +190,15 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     // the published state from the same transition.
     setHiddenIn(null);
 
+    // ...and leaving their seat. Clicking a DIFFERENT seat also routes through
+    // here (the walk starts first), so seat-to-seat transitions stand up cleanly
+    // before the new arrival sets the new seat.
+    setSittingIn(null);
+
     // If starting to move while sleeping, wake up and detach from bed
     if (isSleeping || isAttachedToBed) {
       setIsSleeping(false);
       setIsAttachedToBed(false);
-    }
-
-    // If starting to move while seated, stand up from chair
-    if (isSeated || isAttachedToChair) {
-      setIsSeated(false);
-      setEyesClosed(false);
-      setIsAttachedToChair(false);
     }
   };
 
@@ -510,8 +507,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       <InteractiveElements
         blobbiRef={blobbiRef}
         selectedBlobbi={selectedBlobbi}
-        onChairArrival={handleChairArrival}
-        onChairLeave={handleChairLeave}
+        sittingIn={sittingIn}
+        onSitInSeat={handleSitInSeat}
         hiddenIn={hiddenIn}
         onHideInSpot={setHiddenIn}
       />
@@ -584,10 +581,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         anchorId="my-blobbi-anchor"
         isSleeping={isSleeping}
         isAttachedToBed={isAttachedToBed}
-        _isSeated={isSeated}
-        eyesClosed={eyesClosed}
-        isAttachedToChair={isAttachedToChair}
-        sitZIndexOffset={2} // Default offset for chairs
+        seatedIn={sittingIn}
         size={blobbiSize}
         scaleByYPosition={true}
         localAttentionRef={localAttentionRef}

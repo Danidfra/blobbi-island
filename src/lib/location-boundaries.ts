@@ -7,7 +7,7 @@ export const locationBoundaries: Record<string, Boundary> = {
     bottom: 80,
     curvature: 2,
   },
-  'town-open.png': {
+  'town-open.webp': {
     shape: 'arch',
     top: 58,
     bottom: 70,

@@ -57,7 +57,7 @@ function Harness() {
           anchorId="my-blobbi-anchor"
           initialPosition={{ x: 50, y: 75 }}
           boundary={{ shape: 'rectangle', x: [0, 100], y: [60, 100] }}
-          backgroundFile="town-open.png"
+          backgroundFile="town-open.webp"
           visualHidden={hiddenIn !== null}
           onMoveStart={(destination) => {
             moveStarts.push(destination);

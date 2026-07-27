@@ -104,4 +104,4 @@ export const townBushes: TownBushConfig[] = [
 export const BUSH_RUSTLE_SFX = '/assets/audio/sfx/bush-rustle.mp3';
 
 /** Background file whose walk boundary the bush targets are clamped into. */
-export const TOWN_BACKGROUND_FILE = 'town-open.png';
+export const TOWN_BACKGROUND_FILE = 'town-open.webp';

@@ -96,7 +96,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   },
   // Add more background configurations as needed
   {
-    backgroundFile: 'town-open.png',
+    backgroundFile: 'town-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 25 },  // Bottom area
       { minPosition: 10.01, maxPosition: 14.99, zIndex: 19 },  // Lower middle area
@@ -175,60 +175,60 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
  * Y positions are calculated as percentages where 0% is top and 100% is bottom
  */
 export const interactiveElementsConfig: InteractiveElementConfig[] = [
-  // Town elements (town-open.png)
+  // Town elements (town-open.webp)
   {
     id: 'arcade',
     yPosition: 35, // top-[35%] on mobile, top-[30%] on desktop - using mobile value
     zIndex: 15,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'stage',
     yPosition: 30, // top-[30%] on mobile, top-[26%] on desktop - using mobile value
     zIndex: 15,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'shop',
     yPosition: 35, // top-[35%] on mobile, top-[30%] on desktop - using mobile value
     zIndex: 15,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'bush-3',
     yPosition: 68, // top-[68%] on mobile, top-[63%] on desktop - using mobile value
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'bush-4',
     yPosition: 74, // top-[74%] on mobile, top-[69%] on desktop - using mobile value
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'bush-1',
     yPosition: 100, // bottom-0 = 100% from top
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'bush-2',
     yPosition: 100, // bottom-0 = 100% from top
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'streetlight-left',
     yPosition: 90, // bottom-[10%] = 90% from top
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
   {
     id: 'streetlight-right',
     yPosition: 90, // bottom-[10%] = 90% from top
     zIndex: 25,
-    backgroundFile: 'town-open.png'
+    backgroundFile: 'town-open.webp'
   },
 
   // Mine elements (mine-open.png)

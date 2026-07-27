@@ -32,13 +32,13 @@ describe('Interactive Elements Configuration', () => {
       expect(middle).toBe(9);
     });
 
-    it('should calculate correct z-index for town-open.png background', () => {
+    it('should calculate correct z-index for town-open.webp background', () => {
       // Test position at 95% from top (5% from bottom) - should be z-index 25
-      const nearBottom = calculateBlobbiZIndex(95, 'town-open.png');
+      const nearBottom = calculateBlobbiZIndex(95, 'town-open.webp');
       expect(nearBottom).toBe(25);
 
       // Test position at 85% from top (15% from bottom) - should be z-index 15
-      const higherUp = calculateBlobbiZIndex(85, 'town-open.png');
+      const higherUp = calculateBlobbiZIndex(85, 'town-open.webp');
       expect(higherUp).toBe(15);
     });
 
@@ -111,8 +111,8 @@ describe('Interactive Elements Configuration', () => {
   });
 
   describe('getInteractiveElementsForBackground', () => {
-    it('should return correct elements for town-open.png', () => {
-      const elements = getInteractiveElementsForBackground('town-open.png');
+    it('should return correct elements for town-open.webp', () => {
+      const elements = getInteractiveElementsForBackground('town-open.webp');
       expect(elements).toHaveLength(9); // 9 elements in town
 
       const elementIds = elements.map(e => e.id);

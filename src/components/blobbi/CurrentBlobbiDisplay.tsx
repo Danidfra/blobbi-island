@@ -25,6 +25,17 @@ export interface CurrentBlobbiDisplayProps {
    * Undefined (the default) renders statically — used by previews/modals/cards.
    */
   eyeOffset?: { x: number; y: number };
+  /**
+   * Which way the character is turned. `"back"` renders the Blobbi seen from
+   * behind: same body, colours, silhouette, limbs, accessories and particles,
+   * with the face (eyes, pupils, mouth, nose/beak/whiskers, blush) not drawn.
+   *
+   * This is a semantic rendering mode, not a CSS trick — the SVG itself is
+   * derived (`loadBlobbiSvg(..., 'rear')`), so nothing of the face survives in
+   * the DOM and no mirroring is involved. Face-only accessories are hidden too
+   * (see `REAR_VIEW_HIDDEN_SLOTS`).
+   */
+  facing?: "front" | "back";
   /** New: if provided, component renders THIS visual instead of fetching local hooks */
   visualOverride?: {
     name?: string;
@@ -59,14 +70,18 @@ export function CurrentBlobbiDisplay({
   idSuffix,
   visualOverride,
   eyeOffset,
+  facing = "front",
 }: CurrentBlobbiDisplayProps) {
   const scopeIdRef = useRef<string>(
     idSuffix ??
     `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2,8)}`
   );
+  const isRearFacing = facing === "back";
   // Whether this instance participates in eye-gaze. Stable boolean so the SVG
   // is only re-generated when gaze is toggled on/off, never per gaze update.
-  const gazeEnabled = eyeOffset !== undefined;
+  // A rear-facing Blobbi has no pupils in its markup at all, so gaze is skipped
+  // outright rather than relying on `applyGazeMarkup` finding nothing.
+  const gazeEnabled = eyeOffset !== undefined && !isRearFacing;
   // Always run hooks, but only use data when needed (for local player)
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -125,6 +140,7 @@ export function CurrentBlobbiDisplay({
         blobbiData.eyeColor,
         isSleeping || eyesClosed, // Close eyes when either sleeping or seated with eyesClosed
         scopeIdRef.current,
+        isRearFacing ? 'rear' : 'front',
       );
 
       // When gaze is enabled, mark the pupils/highlights once so they can be
@@ -135,7 +151,7 @@ export function CurrentBlobbiDisplay({
       console.error('Failed to load Blobbi SVG:', err);
       setSvgContent("");
     }
-  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed, gazeEnabled]);
+  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed, gazeEnabled, isRearFacing]);
 
   // Calculate accessory size multiplier based on blobbi size or use custom multiplier
   const getAccessorySizeMultiplier = () => {
@@ -204,6 +220,7 @@ export function CurrentBlobbiDisplay({
           {showAccessories && (
             <AccessoryOverlay
               isStatic={true}
+              facing={facing}
               sizeMultiplier={getAccessorySizeMultiplier()}
               className="absolute inset-0"
             />
@@ -240,6 +257,7 @@ export function CurrentBlobbiDisplay({
         {showAccessories && (
           <AccessoryOverlay
             isStatic={true}
+            facing={facing}
             sizeMultiplier={getAccessorySizeMultiplier()}
             className="absolute inset-0"
           />

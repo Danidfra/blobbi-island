@@ -3,12 +3,18 @@ import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
 import { accessoryImagePath } from '@/lib/asset-paths';
-import type { EquipmentConfig } from './lib/accessory-types';
+import { REAR_VIEW_HIDDEN_SLOTS, type EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryOverlayProps {
   className?: string;
   /** Whether this is a static display (non-interactive) */
   isStatic?: boolean;
+  /**
+   * Which way the character is turned. `"back"` drops the face-only accessory
+   * slots (see {@link REAR_VIEW_HIDDEN_SLOTS}) so a rear-facing Blobbi does not
+   * wear its sunglasses on the back of its head.
+   */
+  facing?: 'front' | 'back';
   /** Size multiplier for accessories relative to the blobbi */
   sizeMultiplier?: number;
   /** Pending updates to apply to accessories (for position syncing during editing) */
@@ -172,9 +178,10 @@ function AccessoryItem({
   );
 }
 
-export function AccessoryOverlay({ 
-  className, 
-  isStatic = true, 
+export function AccessoryOverlay({
+  className,
+  isStatic = true,
+  facing = 'front',
   sizeMultiplier = 1,
   pendingUpdates = {},
   containerRef,
@@ -197,13 +204,17 @@ export function AccessoryOverlay({
     }
   }, [onAccessorySelect, isStatic]);
 
-  if (!equipment || equipment.length === 0) {
+  const visibleEquipment = (equipment ?? []).filter(
+    (accessory) => facing !== 'back' || !REAR_VIEW_HIDDEN_SLOTS.has(accessory.slot),
+  );
+
+  if (visibleEquipment.length === 0) {
     return null;
   }
 
   return (
     <div className={cn("absolute inset-0", className)}>
-      {equipment.map((accessory) => {
+      {visibleEquipment.map((accessory) => {
         // Apply pending updates to sync positions during editing
         const updates = pendingUpdates[accessory.code] || {};
         const currentConfig = { ...accessory, ...updates };

@@ -321,7 +321,7 @@ export function createWalkableApi(location: LocationId): WalkableApi {
  */
 function getBackgroundFileForLocation(location: LocationId): string | undefined {
   const locationToFile: Record<LocationId, string> = {
-    'town': 'town-open.png',
+    'town': 'town-open.webp',
     'home': 'home-inside.png',
     'beach': 'beach-open.png',
     'mine': 'mine-open.png',

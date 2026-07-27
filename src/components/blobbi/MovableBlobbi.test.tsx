@@ -73,7 +73,7 @@ describe('MovableBlobbi', () => {
     const { container: townContainer } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="town-open.png"
+        backgroundFile="town-open.webp"
       />
     );
     const townBlobbi = await waitFor(() => {
@@ -122,7 +122,7 @@ describe('MovableBlobbi', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="town-open.png"
+        backgroundFile="town-open.webp"
       />
     );
 

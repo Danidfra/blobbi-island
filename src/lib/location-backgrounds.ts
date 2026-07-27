@@ -1,7 +1,7 @@
 import { LocationId } from '@/lib/location-types';
 
 export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
-  'town': 'town-open.png',
+  'town': 'town-open.webp',
   'home': 'home-inside.png',
   'beach': 'beach-open.png',
   'mine': 'mine-open.png',
@@ -20,5 +20,5 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
 };
 
 export function getBackgroundForLocation(location: LocationId): string {
-  return LOCATION_BACKGROUNDS[location] || 'town-open.png';
+  return LOCATION_BACKGROUNDS[location] || 'town-open.webp';
 }

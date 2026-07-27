@@ -16,6 +16,24 @@ export type AccessorySlot = 'headwear' | 'eyewear' | 'back' | 'neckwear' | 'hand
 /** Accessory form type */
 export type AccessoryForm = 'default' | 'baby' | 'teen' | 'adult';
 
+/**
+ * Accessory slots that are not drawn when a Blobbi faces away from the camera.
+ *
+ * The rule is "would you still see it from behind?":
+ *  - `eyewear` / `face-mark` sit on the face — gone.
+ *  - `handheld` is held in front of the body; a mirrored placement would need
+ *    per-accessory art, so it is hidden rather than misplaced.
+ *
+ * Everything else stays: `headwear` (hats read fine from behind), `back`
+ * (wings/capes are back-mounted and MORE visible), `neckwear` (wraps the neck),
+ * `aura` (radial, view-independent) and `color-overlay` (a tint).
+ */
+export const REAR_VIEW_HIDDEN_SLOTS: ReadonlySet<AccessorySlot> = new Set<AccessorySlot>([
+  'eyewear',
+  'face-mark',
+  'handheld',
+]);
+
 /** Equipment tag interface for kind 31124 */
 export interface EquipTag {
   /** Tag name: "equip" */

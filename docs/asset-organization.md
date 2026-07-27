@@ -175,7 +175,7 @@ import { accessoryImagePath, miningItemPath, locationBackgroundPath, ASSET_DIRS 
 
 accessoryImagePath('headwear', 'headwear-8');   // -> /assets/characters/blobbi/accessories/headwear/headwear-8.png
 miningItemPath('gem-2.png');                    // -> /assets/minigames/mining/gem-2.png
-locationBackgroundPath('town-open.png');        // -> /assets/world/backgrounds/town-open.png
+locationBackgroundPath('town-open.webp');        // -> /assets/world/backgrounds/town-open.webp
 ASSET_DIRS.worldProps;                          // -> /assets/world/props
 ```
 

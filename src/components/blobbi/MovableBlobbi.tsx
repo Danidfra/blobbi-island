@@ -15,8 +15,12 @@ import { Position } from '@/lib/types';
 import type { LocalActiveState, AttentionState } from '@/lib/gaze';
 import { attentionTargetPosition, LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
-import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import {
+  resolveBlobbiScale,
+  resolveBlobbiZIndex,
+  resolveSeatedRender,
+} from '@/lib/blobbi-world-render';
 
 interface MovementDirection {
   x: number;
@@ -27,8 +31,6 @@ export interface MovableBlobbiRef {
   goTo: (position: Position, immediate?: boolean) => void;
   getCurrentPosition?: () => Position;
 }
-
-import { locationScalingConfig } from '@/lib/location-scaling-config';
 
 export interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
@@ -58,10 +60,18 @@ export interface MovableBlobbiProps {
   onBlobbiClick?: () => void;
   isSleeping?: boolean;
   isAttachedToBed?: boolean;
-  _isSeated?: boolean;
-  eyesClosed?: boolean;
-  isAttachedToChair?: boolean;
-  sitZIndexOffset?: number;
+  /**
+   * Id of the theater seat the local player currently occupies, or null.
+   *
+   * This is the ONLY seating input the renderer takes: everything visual about
+   * sitting — the pinned position, the rear-facing view, the per-row scale, the
+   * suppressed ground shadow and float — is derived from it via
+   * `resolveSeatedRender`, so local and (later) remote seated Blobbis cannot
+   * diverge. It replaces the old `_isSeated` / `eyesClosed` / `isAttachedToChair`
+   * / `sitZIndexOffset` prop cluster, none of which was ever set to a non-default
+   * value because the arrival callback that fed them never fired.
+   */
+  seatedIn?: string | null;
   scaleByYPosition?: boolean;
   disableFloating?: boolean;
   anchorId?: string;
@@ -107,10 +117,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onBlobbiClick,
       isSleeping = false,
       isAttachedToBed = false,
-      _isSeated = false,
-      eyesClosed = false,
-      isAttachedToChair = false,
-      sitZIndexOffset = 0,
+      seatedIn = null,
       scaleByYPosition = false,
       disableFloating = false,
       anchorId,
@@ -239,60 +246,16 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       return Math.sqrt(dx * dx + dy * dy);
     };
 
-    const getDynamicZIndex = useCallback((currentPos: Position): number => {
-      if (!backgroundFile) return 20;
-      const baseZIndex = calculateBlobbiZIndex(currentPos.y, backgroundFile);
-      // Apply sitZIndexOffset when attached to chair
-      return isAttachedToChair ? baseZIndex + sitZIndexOffset : baseZIndex;
-    }, [backgroundFile, isAttachedToChair, sitZIndexOffset]);
+    const getDynamicZIndex = useCallback(
+      (currentPos: Position): number => resolveBlobbiZIndex(currentPos, backgroundFile),
+      [backgroundFile],
+    );
 
-    const getDynamicScale = useCallback((currentPos: Position): number => {
-      const scalingConfig = backgroundFile ? locationScalingConfig[backgroundFile] : undefined;
-
-      if (!scaleByYPosition || !scalingConfig) {
-        return 1;
-      }
-
-      const { initialScale, finalScale } = scalingConfig;
-
-      // Get the Y boundaries for scaling calculation based on boundary shape
-      let minY: number, maxY: number;
-
-      if (boundary.shape === 'rectangle') {
-        minY = boundary.y[0]; // Top of allowed movement area
-        maxY = boundary.y[1]; // Bottom of allowed movement area
-      } else if (boundary.shape === 'semicircle' || boundary.shape === 'arch') {
-        minY = boundary.top;
-        maxY = boundary.bottom;
-      } else if (boundary.shape === 'composite') {
-        // For composite boundaries, find the overall min/max Y values
-        minY = Math.min(...boundary.areas.map(area => {
-          if (area.type === 'rectangle') return area.y[0];
-          if (area.type === 'circle') return area.cy - area.r;
-          if (area.type === 'triangle') return Math.min(...area.points.map(p => p.y));
-          return 100;
-        }));
-        maxY = Math.max(...boundary.areas.map(area => {
-          if (area.type === 'rectangle') return area.y[1];
-          if (area.type === 'circle') return area.cy + area.r;
-          if (area.type === 'triangle') return Math.max(...area.points.map(p => p.y));
-          return 0;
-        }));
-      } else {
-        // Fallback to full screen height
-        minY = 0;
-        maxY = 100;
-      }
-
-      // Clamp the position within the boundary
-      const clampedY = Math.max(minY, Math.min(maxY, currentPos.y));
-
-      // Calculate the interpolation factor (0 = top, 1 = bottom)
-      const factor = (maxY - minY) > 0 ? (clampedY - minY) / (maxY - minY) : 0;
-
-      // Interpolate between finalScale (top) and initialScale (bottom)
-      return finalScale + (initialScale - finalScale) * factor;
-    }, [scaleByYPosition, backgroundFile, boundary]);
+    const getDynamicScale = useCallback(
+      (currentPos: Position): number =>
+        scaleByYPosition ? resolveBlobbiScale(currentPos, backgroundFile, boundary) : 1,
+      [scaleByYPosition, backgroundFile, boundary],
+    );
 
     const animateMovement = useCallback(
       (timestamp: number) => {
@@ -301,6 +264,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         }
         const deltaTime = (timestamp - lastTimeRef.current) / 1000;
         lastTimeRef.current = timestamp;
+        { const w = window as unknown as Record<string, number[]>; (w.__diagDeltas ||= []).push(deltaTime); }
 
         let reached = false;
         setPosition(currentPos => {
@@ -389,6 +353,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     );
 
     useEffect(() => {
+      { const w = window as unknown as Record<string, number>; w.__diagEffectRuns = (w.__diagEffectRuns || 0) + 1; }
       if (isMovingRef.current) {
         lastTimeRef.current = undefined;
         animationRef.current = requestAnimationFrame(animateMovement);
@@ -463,7 +428,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           onWakeUp?.();
           return;
         }
-        if (isAttachedToChair) {
+        if (seatedIn) {
           onWakeUp?.();
         }
 
@@ -505,7 +470,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onWakeUp,
       onBlobbiClick,
       isAttachedToBed,
-      isAttachedToChair,
+      seatedIn,
       isPositionBlocked,
       isPhotoBoothOpen
     ]);
@@ -533,7 +498,10 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     if (!isVisible) return null;
 
-    const dynamicScale = getDynamicScale(position);
+    // Everything the seat changes about how this Blobbi is drawn, resolved from
+    // the seat id alone (shared with the remote renderer).
+    const seated = resolveSeatedRender(seatedIn);
+    const dynamicScale = getDynamicScale(position) * (seated?.scale ?? 1);
     // Gaze priority (self-intent first):
     //   1. own movement  → look where it is walking
     //   2. attention      → look at the selected active target (identity from
@@ -599,6 +567,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           ref={blobbiRef}
           id={anchorId}
           data-visual-hidden={visualHidden ? 'true' : undefined}
+          data-seated-in={seated?.seat.id}
           className={cn(
             "absolute transition-all duration-200 ease-out blobbi-character",
             onBlobbiClick && !visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
@@ -626,7 +595,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
               >
                 <div
                   className={cn(
-                    !isSleeping && !disableFloating && "animate-float",
+                    !isSleeping && !disableFloating && !seated?.disableFloat && "animate-float",
                     "transition-transform duration-1000 ease-in-out"
                   )}
                 >
@@ -635,26 +604,29 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
                     showFallback={true}
                     transparent={true}
                     isSleeping={isSleeping}
-                    eyesClosed={eyesClosed}
+                    facing={seated?.facing ?? 'front'}
                     eyeOffset={eyeOffset}
                     className={cn(isMoving && "scale-105")}
                   />
                 </div>
               </div>
-              <div
-                className={cn(
-                  "absolute top-full left-1/2 h-1.5 rounded-full",
-                  size === "xl" && "w-8 md:w-10",
-                  size === "lg" && "w-6 md:w-8",
-                  size === "md" && "w-4 md:w-6",
-                  size === "sm" && "w-3 md:w-4"
-                )}
-                style={{
-                  background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-                  transform: `translateX(-50%) scale(${dynamicScale})`,
-                  transformOrigin: 'center center',
-                }}
-              />
+              {/* Ground shadow — a seated Blobbi is on a chair, not the floor. */}
+              {!seated?.hideShadow && (
+                <div
+                  className={cn(
+                    "absolute top-full left-1/2 h-1.5 rounded-full",
+                    size === "xl" && "w-8 md:w-10",
+                    size === "lg" && "w-6 md:w-8",
+                    size === "md" && "w-4 md:w-6",
+                    size === "sm" && "w-3 md:w-4"
+                  )}
+                  style={{
+                    background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
+                    transform: `translateX(-50%) scale(${dynamicScale})`,
+                    transformOrigin: 'center center',
+                  }}
+                />
+              )}
             </>
           )}
         </div>

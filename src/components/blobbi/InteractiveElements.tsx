@@ -18,6 +18,9 @@ import { Position } from '@/lib/types';
 import { usePendingInteraction, type RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { TownBush } from './TownBush';
 import { townBushes } from '@/lib/town-bushes-config';
+import { TheaterSeat } from './theater/TheaterSeat';
+import { TheaterStage } from './theater/TheaterStage';
+import { theaterSeats } from '@/lib/theater-seats-config';
 import {
   STREETLIGHT_SRC,
   streetlightBaseBlocker,
@@ -102,13 +105,20 @@ interface InteractiveElementProps {
    * decorative items leave this undefined and keep their existing behavior.
    */
   requestInteraction?: (opts: RequestInteractionOptions) => void;
+  /**
+   * Legacy chair support for the arcade / Nostr Station / shop chairs, which
+   * still use the "click walks the Blobbi to a computed seat point" model.
+   *
+   * The theater does NOT use this: its seats are data-driven `<TheaterSeat>`
+   * components with stable ids and a real arrival callback. Only `seatAnchor`
+   * remains here — `sleepOnSeat` and `sitZIndexOffset` were read exclusively by
+   * a chair-arrival handler that was never called, so they configured nothing.
+   */
   chairConfig?: {
-    sleepOnSeat?: boolean;
     seatAnchor?: {
       xPercent?: number;
       yPercent?: number;
     };
-    sitZIndexOffset?: number;
   };
 }
 
@@ -306,8 +316,14 @@ function InteractiveElement({
 interface InteractiveElementsProps {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
   selectedBlobbi: Blobbi | null;
-  onChairArrival?: (position: Position) => void;
-  onChairLeave?: () => void;
+  /**
+   * Id of the theater seat the local player currently occupies, or null. Owned
+   * by PlayingView, exactly like {@link hiddenIn}, so the movement, rendering
+   * and (later) presence layers all read one source of truth.
+   */
+  sittingIn?: string | null;
+  /** Called when the local player ARRIVES at and sits in a theater seat. */
+  onSitInSeat?: (seatId: string) => void;
   /**
    * Id of the hiding spot the local player currently occupies (e.g. a Town bush
    * id), or null when not hidden. Owned by PlayingView so the movement,
@@ -319,8 +335,9 @@ interface InteractiveElementsProps {
 }
 
 const noopHide = () => {};
+const noopSit = () => {};
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival, onChairLeave, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, onSitInSeat, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -335,11 +352,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
   const [isNostrHubModalOpen, setIsNostrHubModalOpen] = useState(false);
-
-  // Chair state
-  const [seatedChairId, setSeatedChairId] = useState<string | null>(null);
-  const [_isSeated, _setIsSeated] = useState(false);
-  const [_eyesClosed, _setEyesClosed] = useState(false);
 
   // Walk-to-interact model for doors / navigation / modal-opening items.
   // Reuses the existing movement system (blobbiRef.goTo) and fires the action
@@ -384,7 +396,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   }, [cancelPendingInteraction, hasPending, currentLocation]);
 
 
-  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
+  /**
+   * Legacy chair behaviour for the arcade / Nostr Station / shop: walk the
+   * Blobbi to a point derived from the chair's rect. There is no arrival
+   * callback and no seated state — those rooms have never had one. The theater
+   * uses <TheaterSeat> instead.
+   */
+  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, _chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
 
     if (!blobbiRef.current) return;
 
@@ -406,9 +424,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     // Convert to percentage relative to container
     const targetX = ((seatX - containerRect.left) / containerRect.width) * 100;
     const targetY = ((seatY - containerRect.top) / containerRect.height) * 100;
-
-    // Set current chair as target
-    setSeatedChairId(chairId);
 
     // Move Blobbi to the seat position
     blobbiRef.current.goTo({ x: targetX, y: targetY });
@@ -439,35 +454,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     }
   };
 
-  const _handleChairArrival = (position: Position) => {
-    if (!seatedChairId || !blobbiRef.current) return;
-
-    // Find the chair element to get its configuration
-    const chairElement = document.querySelector(`[data-chair-id="${seatedChairId}"]`) as HTMLElement;
-    if (!chairElement) return;
-
-    const chairConfig = JSON.parse(chairElement.dataset.chairConfig || '{}');
-
-    // Snap Blobbi to exact seat position
-    blobbiRef.current.goTo(position, true); // immediate = true
-
-    // Set seated state
-    _setIsSeated(true);
-    _setEyesClosed(chairConfig.sleepOnSeat || false);
-
-    // Notify parent component
-    onChairArrival?.(position);
-  };
-
-  const _handleChairLeave = () => {
-    _setIsSeated(false);
-    _setEyesClosed(false);
-    setSeatedChairId(null);
-
-    // Notify parent component
-    onChairLeave?.();
-  };
-
   const handleTicketPurchase = () => {
     setIsArcadePassModalOpen(true);
   };
@@ -481,7 +467,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     }
   };
 
-  // Town elements (when background is town-open.png)
+  // Town elements (when background is town-open.webp)
   if (backgroundFile === 'home-inside.png') {
     return (
       <>
@@ -599,9 +585,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 alt="Left Chair"
                 type="chair"
                 chairConfig={{
-                  sleepOnSeat: false,
-                  seatAnchor: { xPercent: 50, yPercent: 20 },
-                  sitZIndexOffset: 1
+                  seatAnchor: { xPercent: 50, yPercent: 20 }
                 }}
                 onClick={handleChairClick}
                 effect='scale'
@@ -612,9 +596,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 alt="Right Chair"
                 type="chair"
                 chairConfig={{
-                  sleepOnSeat: false,
-                  seatAnchor: { xPercent: 50, yPercent: 20 },
-                  sitZIndexOffset: 1
+                  seatAnchor: { xPercent: 50, yPercent: 20 }
                 }}
                 onClick={handleChairClick}
                 effect='scale'
@@ -628,9 +610,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 alt="Left Chair"
                 type="chair"
                 chairConfig={{
-                  sleepOnSeat: false,
-                  seatAnchor: { xPercent: 50, yPercent: 20 },
-                  sitZIndexOffset: 1
+                  seatAnchor: { xPercent: 50, yPercent: 20 }
                 }}
                 onClick={handleChairClick}
                 effect='scale'
@@ -641,9 +621,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
                 alt="Right Chair"
                 type="chair"
                 chairConfig={{
-                  sleepOnSeat: false,
-                  seatAnchor: { xPercent: 50, yPercent: 20 },
-                  sitZIndexOffset: 1
+                  seatAnchor: { xPercent: 50, yPercent: 20 }
                 }}
                 onClick={handleChairClick}
                 effect='scale'
@@ -818,27 +796,21 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
   if (backgroundFile === 'stage-inside.png') {
     return (
       <div ref={containerRef} className="w-full h-full relative">
-        <div
-          className='absolute w-full h-[55%] top-[5%] overflow-hidden'
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          <InteractiveElement
-            src="/assets/locations/stage/curtain.png"
-            alt="Curtain"
-            effect="slide"
-            slideDirection="up"
-            className="w-[88%] h-auto absolute left-1/2 -translate-x-1/2 top-0"
-            onClick={() => console.log('Curtain clicked')}
-            isHovered={isHovered}
-          />
-          <img
-            src="/assets/locations/stage/red-curtain.png"
-            alt="Red curtain"
-            className="w-[90%] h-auto relative left-[5%] top-0 pointer-events-none"
-          />
+        {/*
+          Screen, curtain and controls, all driven by one local state machine
+          (`src/lib/theater-state.ts`). The only input is which seat the local
+          Blobbi has ARRIVED at: with nobody sitting down there is no card, no
+          player and no error — just an idle theater with its curtain closed.
 
-        </div>
+          `stage-inside.png` has a genuine transparent rectangle in its
+          proscenium, so the player mounts INSIDE the artwork rather than on top
+          of it (see `theater-layout.ts`). It sits below the curtain and below
+          every seat row, so nothing about the room's stacking order changes.
+        */}
+        <TheaterStage seatId={sittingIn} />
+
+        {/* Little stage door: decoration. It has no behaviour by design — it
+            slides on hover and leads nowhere. */}
         <InteractiveElement
           src="/assets/locations/stage/open-little-door.png"
           alt="Stage little door"
@@ -847,91 +819,24 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
           className="w-[46px] absolute bottom-[22.8%] left-[45.4%]"
         />
 
-        {/* Left side */}
-        {/* Row 1 (Front) - Highest z-index */}
-        <div className="absolute bottom-0 left-0 flex items-center -space-x-4 z-30">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row1-${i}`}
-              src="/assets/locations/stage/chair-left.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
+        {/*
+          Seating. 28 chair sprites — 26 OCCUPIABLE seats plus 2 DECORATIVE
+          chairs — driven by `theaterSeats`, replacing six flex rows of identical
+          clones that all collapsed to one `data-chair-id`. Each occupiable seat
+          carries a stable id, a fixed z-index and a real arrival callback; the
+          two decorative chairs hang off the edges of the world and render as
+          scenery with no interaction at all.
+        */}
+        {theaterSeats.map((seat) => (
+          <TheaterSeat
+            key={seat.id}
+            config={seat}
+            requestInteraction={requestInteraction}
+            sittingIn={sittingIn}
+            onSit={onSitInSeat ?? noopSit}
+          />
+        ))}
 
-        {/* Row 2 (Middle) - Medium z-index */}
-        <div className="absolute bottom-[5%] -left-[6%] flex items-center -space-x-4 z-20">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row2-${i}`}
-              src="/assets/locations/stage/chair-left.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
-
-        {/* Row 3 (Back) - Lowest z-index */}
-        <div className="absolute bottom-[10%] -left-[2%] flex items-center -space-x-4 z-10">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row3-${i}`}
-              src="/assets/locations/stage/chair-left.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
-
-      {/* Right side */}
-        {/* Row 1 (Front) - Highest z-index */}
-        <div className="absolute bottom-0 right-0 flex items-center -space-x-4 z-30">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row1-${i}`}
-              src="/assets/locations/stage/chair.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
-
-        {/* Row 2 (Middle) - Medium z-index */}
-        <div className="absolute bottom-[5%] -right-[6%] flex items-center -space-x-4 z-20">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row2-${i}`}
-              src="/assets/locations/stage/chair.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
-
-        {/* Row 3 (Back) - Lowest z-index */}
-        <div className="absolute bottom-[10%] -right-[2%] flex items-center -space-x-4 z-10">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <InteractiveElement
-              key={`chair-row3-${i}`}
-              src="/assets/locations/stage/chair.png"
-              alt="Stage Chair"
-              effect="scale"
-              className="w-28"
-              onClick={handleChairClick}
-            />
-          ))}
-        </div>
         <BackArrow
           onClick={() => setCurrentLocation('town')}
           className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
@@ -1150,9 +1055,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Shop left chair"
               type="chair"
               chairConfig={{
-                sleepOnSeat: false,
-                seatAnchor: { xPercent: 50, yPercent: 25 },
-                sitZIndexOffset: 1
+                seatAnchor: { xPercent: 50, yPercent: 25 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -1163,9 +1066,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Shop right chair"
               type="chair"
               chairConfig={{
-                sleepOnSeat: false,
-                seatAnchor: { xPercent: 50, yPercent: 25 },
-                sitZIndexOffset: 1
+                seatAnchor: { xPercent: 50, yPercent: 25 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -1181,9 +1082,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Shop left chair"
               type="chair"
               chairConfig={{
-                sleepOnSeat: false,
-                seatAnchor: { xPercent: 50, yPercent: 25 },
-                sitZIndexOffset: 1
+                seatAnchor: { xPercent: 50, yPercent: 25 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -1194,9 +1093,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
               alt="Shop right chair"
               type="chair"
               chairConfig={{
-                sleepOnSeat: false,
-                seatAnchor: { xPercent: 50, yPercent: 25 },
-                sitZIndexOffset: 1
+                seatAnchor: { xPercent: 50, yPercent: 25 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -1208,8 +1105,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     );
   }
 
-  // Town elements (when background is town-open.png)
-  if (backgroundFile === 'town-open.png') {
+  // Town elements (when background is town-open.webp)
+  if (backgroundFile === 'town-open.webp') {
 
     return (
       <div className='relative w-full h-full'>
@@ -1318,7 +1215,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, onChairArrival,
     );
   }
 
-  // Town elements (when background is town-open.png)
+  // Town elements (when background is town-open.webp)
 if (backgroundFile === 'nostr-station-open.png') {
   return (
     <>
@@ -1564,9 +1461,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 1"
         type="chair"
         chairConfig={{
-          sleepOnSeat: false,
-          seatAnchor: { xPercent: 50, yPercent: 38 },
-          sitZIndexOffset: 2
+          seatAnchor: { xPercent: 50, yPercent: 38 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -1577,9 +1472,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 2"
         type="chair"
         chairConfig={{
-          sleepOnSeat: true,
-          seatAnchor: { xPercent: 50, yPercent: 38 },
-          sitZIndexOffset: 2
+          seatAnchor: { xPercent: 50, yPercent: 38 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -1590,9 +1483,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 3"
         type="chair"
         chairConfig={{
-          sleepOnSeat: false,
-          seatAnchor: { xPercent: 50, yPercent: 38 },
-          sitZIndexOffset: 2
+          seatAnchor: { xPercent: 50, yPercent: 38 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -1603,9 +1494,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 4"
         type="chair"
         chairConfig={{
-          sleepOnSeat: true,
-          seatAnchor: { xPercent: 50, yPercent: 38 },
-          sitZIndexOffset: 2
+          seatAnchor: { xPercent: 50, yPercent: 38 }
         }}
         onClick={handleChairClick}
         effect="scale"

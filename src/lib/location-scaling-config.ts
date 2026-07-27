@@ -12,7 +12,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1.4,
     finalScale: 1.3,
   },
-  'town-open.png': {
+  'town-open.webp': {
     initialScale: 1.2,
     finalScale: 0.8,
   },
