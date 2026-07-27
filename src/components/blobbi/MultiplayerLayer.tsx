@@ -34,7 +34,9 @@ import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
-import { resolveBlobbiScale, resolveBlobbiZIndex } from '@/lib/blobbi-world-render';
+import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
+import { resolveBlobbiScale, resolveBlobbiZIndex, resolveSeatedRender } from '@/lib/blobbi-world-render';
+import { resolveRemoteSeatOccupancy, occupiedSeatIds, type RemoteSeatClaim } from '@/lib/theater-occupancy';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
@@ -57,6 +59,15 @@ type PlayerLike = {
 };
 
 type GazeOffset = { x: number; y: number };
+
+/**
+ * Total attempts at the arrival "I am sitting here" presence — one immediate,
+ * then up to two retries. Small on purpose: this is a latency optimization over
+ * a backstop that already exists (the heartbeat), not a delivery guarantee.
+ */
+const MAX_SIT_PUBLISH_ATTEMPTS = 3;
+/** Gap between those attempts. Well under HEARTBEAT_INTERVAL_MS (25 s). */
+const SIT_PUBLISH_RETRY_MS = 1200;
 
 // Local Blobbi's reserved key in the shared maps (re-exported alias for the
 // shared constant, used by both RemoteBlobbiSprite and MultiplayerLayer).
@@ -85,6 +96,8 @@ function RemoteBlobbiSprite({
   livePositionsRef,
   headingRef,
   idSuffix,
+  facing = 'front',
+  size,
 }: {
   visual?: BlobbiVisual;
   isMoving: boolean;
@@ -98,6 +111,24 @@ function RemoteBlobbiSprite({
   /** Shared map of last movement headings (normalized) per player. */
   headingRef: React.MutableRefObject<Map<string, GazeOffset>>;
   idSuffix: string;
+  /**
+   * Which way this Blobbi is turned. `'back'` for a seated theater-goer, whose
+   * rear-facing markup has no face at all — `CurrentBlobbiDisplay` drops the
+   * pupils, so the gaze resolved below is simply unused rather than specially
+   * suppressed here. Identical to the local seated path.
+   */
+  facing?: 'front' | 'back';
+  /**
+   * Sprite size for the CURRENT ROOM — the same `getBlobbiSizeForLocation`
+   * value `MovableBlobbi` uses for the local player.
+   *
+   * This used to be hardcoded to `"lg"`, which drew every remote Blobbi a size
+   * step smaller than its owner saw it in the four `xl` rooms (including the
+   * theater). Seated, that gap is the difference between a Blobbi visible above
+   * the chair back and one completely hidden behind it: the seat looked empty on
+   * every screen but the sitter's own.
+   */
+  size: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   // Idle gaze is active whenever the Blobbi is standing still. While idle it
   // drives ~60fps re-renders of *this* sprite only, and each render re-reads
@@ -135,7 +166,7 @@ function RemoteBlobbiSprite({
 
   return (
     <CurrentBlobbiDisplay
-      size="lg"
+      size={size}
       visualOverride={visual || {
         baseColor: '#4F46E5',
         secondaryColor: '#7C3AED',
@@ -147,6 +178,7 @@ function RemoteBlobbiSprite({
       className={cn(isMoving && "scale-105")}
       idSuffix={idSuffix}
       eyeOffset={eyeOffset}
+      facing={facing}
     />
   );
 }
@@ -204,6 +236,28 @@ interface MultiplayerLayerProps {
    * which is what reveals the Blobbi again for everyone.
    */
   hiddenIn?: string | null;
+  /**
+   * Canonical id of the theater seat the local player currently occupies, or
+   * null when not seated. Owned by PlayingView (`sittingIn`), set only on
+   * CONFIRMED ARRIVAL.
+   *
+   * Set → published as the optional `seatId` field of the local player's
+   * presence content, so REMOTE clients snap this Blobbi to the seat's canonical
+   * anchor and draw it rear-facing.
+   * Back to null → the movement publish that caused it carries no `seatId`,
+   * which is what stands the Blobbi up again for everyone.
+   */
+  sittingIn?: string | null;
+  /**
+   * Reports which theater seats are visually occupied (remote winners plus the
+   * local player's own seat), so the chairs can show it.
+   *
+   * A callback rather than a context because occupancy is DERIVED, not owned:
+   * this layer holds the live presence map, PlayingView owns `sittingIn`, and
+   * the seats need the union. Deriving it here and lifting the result keeps one
+   * answer in the app instead of two components guessing separately.
+   */
+  onOccupiedSeatsChange?: (seatIds: Set<string>) => void;
 }
 
 // ============================================================================
@@ -222,6 +276,8 @@ export function MultiplayerLayer({
   myAnchorId,
   onOtherBlobbiClick,
   hiddenIn = null,
+  sittingIn = null,
+  onOccupiedSeatsChange,
   localAttentionRef: localAttentionRefProp,
   livePositionsRef: livePositionsRefProp,
   localActiveRef,
@@ -567,6 +623,8 @@ export function MultiplayerLayer({
     moveTo,
     hideAt,
     clearHide,
+    sitAt,
+    clearSit,
     myPosRef,
     isLoading,
     error,
@@ -1048,6 +1106,118 @@ export function MultiplayerLayer({
     });
   }, [hiddenIn, hideAt, clearHide, disabled, user]);
 
+  // Synchronize the local player's THEATER SEAT, byte-for-byte the same shape as
+  // the hiding sync above, and for the same reasons.
+  //
+  // Publish path: `sittingIn` only ever becomes non-null on CONFIRMED ARRIVAL
+  // (TheaterSeat fires `onSit` from the walk's arrival callback, never from the
+  // click), so a seat is never advertised while the Blobbi is still walking to
+  // it. Remotes then snap this Blobbi to the seat's canonical anchor.
+  //
+  // Clear path: standing up always starts with movement, and every local
+  // movement publishes a `moving` presence WITHOUT `seatId` (via `moveTo`) —
+  // that is what stands the Blobbi up remotely, immediately, with no separate
+  // event that could arrive out of order. Leaving the room does the same via the
+  // location-change login publish. Both of those already null the hook's own
+  // ref, so the `clearSit()` below publishes nothing and is normally redundant;
+  // it exists so the hook's copy cannot outlive this prop if the seat is ever
+  // cleared without moving. See `clearSit`'s contract in useIslandPresence.
+  //
+  // `syncedSeatIdRef` holds the last state actually synchronized: `sitAt` /
+  // `clearSit` are rebuilt every render and this layer re-renders whenever any
+  // player moves, so without the guard the effect would republish the same sit
+  // continuously. Publishing strictly on TRANSITIONS also means re-entering the
+  // same seat cannot duplicate presence events.
+  //
+  // Retry: the arrival publish is the ONLY thing that seats you remotely in a
+  // timely way. If it fails (relay hiccup, offline for a moment) the next
+  // heartbeat still carries the seat — but that is up to HEARTBEAT_INTERVAL_MS
+  // away, so everyone else would watch you stand in front of your chair for ~25
+  // seconds. So the seat is marked synchronized only once it is actually
+  // published, and a transient failure schedules a bounded retry.
+  //
+  // Bounded on purpose, and only for TRANSIENT failures: a `'rejected'` id is
+  // invalid and would fail identically forever, and after the attempt cap the
+  // heartbeat remains the backstop. Neither path can turn into a publish loop.
+  // ⚠️ THE CLAIM MUST BE TAKEN SYNCHRONOUSLY. `sitAt` gets a NEW identity on
+  // every single render of this component — it closes over the `publish` arrow
+  // built inline in the `useIslandPresence({...})` call below, which is a fresh
+  // object each render — and this component re-renders constantly (every remote
+  // player position update). So this effect re-runs many times per second, and
+  // the ONLY thing standing between that and a publish flood is the guard above
+  // seeing its own claim already recorded.
+  //
+  // Recording the claim inside the `await`'s `.then()` instead is what caused a
+  // real flood: the effect re-ran (new `sitAt`) before the publish resolved, so
+  // the claim was never recorded, so the guard never matched, so it published
+  // again — several times per second, forever. Worse, `syncedSeatIdRef` being
+  // stuck at `null` also made the `!sittingIn` branch a no-op on stand-up, so
+  // `clearSit()` never ran and heartbeats kept advertising a seat the player had
+  // already walked away from.
+  //
+  // Hence: claim first, publish second, and never cancel an in-flight publish
+  // just because the effect re-ran with a new callback identity.
+  const syncedSeatIdRef = useRef<string | null>(null);
+  const sitAttemptsRef = useRef<{ seatId: string | null; count: number }>({ seatId: null, count: 0 });
+  const sitRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sitRetryTick, setSitRetryTick] = React.useState(0);
+  useEffect(() => {
+    if (disabled || !user) return;
+    if (syncedSeatIdRef.current === sittingIn) return;
+
+    // Claim, before anything asynchronous can happen.
+    syncedSeatIdRef.current = sittingIn;
+    // A pending retry belongs to the seat we just stopped caring about.
+    if (sitRetryTimerRef.current) {
+      clearTimeout(sitRetryTimerRef.current);
+      sitRetryTimerRef.current = null;
+    }
+
+    if (!sittingIn) {
+      sitAttemptsRef.current = { seatId: null, count: 0 };
+      clearSit();
+      return;
+    }
+
+    const attempt =
+      sitAttemptsRef.current.seatId === sittingIn ? sitAttemptsRef.current.count + 1 : 1;
+    sitAttemptsRef.current = { seatId: sittingIn, count: attempt };
+
+    void sitAt(sittingIn).then((result) => {
+      // Settled: published, or refused for good. The claim stands, so no
+      // re-render can publish this seat again.
+      if (result !== 'failed') return;
+
+      // The player left the seat (or took another one) while this was in
+      // flight. Retrying now would publish a seat they are no longer in.
+      if (syncedSeatIdRef.current !== sittingIn) return;
+
+      if (attempt >= MAX_SIT_PUBLISH_ATTEMPTS) {
+        if (DEBUG_MP) {
+          console.debug('[blobbi][mp][ui] sit publish gave up; heartbeat will carry the seat', {
+            seatId: sittingIn, attempts: attempt,
+          });
+        }
+        return; // Claim stands: stop trying. The heartbeat is the backstop.
+      }
+
+      // Release the claim so the retry can re-enter, and wake the effect — its
+      // deps would otherwise only change on an unrelated re-render.
+      syncedSeatIdRef.current = null;
+      sitRetryTimerRef.current = setTimeout(() => {
+        sitRetryTimerRef.current = null;
+        setSitRetryTick((n) => n + 1);
+      }, SIT_PUBLISH_RETRY_MS);
+    });
+    // `sitRetryTick` is the retry trigger; see above.
+  }, [sittingIn, sitAt, clearSit, disabled, user, sitRetryTick]);
+
+  // Drop a pending retry on unmount only — NOT on every effect re-run, which is
+  // what would cancel the in-flight publish this whole design depends on.
+  useEffect(() => () => {
+    if (sitRetryTimerRef.current) clearTimeout(sitRetryTimerRef.current);
+  }, []);
+
   // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => {
@@ -1067,6 +1237,44 @@ export function MultiplayerLayer({
     () => Array.from(players.values()).filter(p => p.lastContent?.location === currentLocation),
     [players, currentLocation]
   );
+
+  // ── Theater seat occupancy ──────────────────────────────────────────────
+  // Which REMOTE claim wins each seat. Derived fresh from the live presence map,
+  // so a player who walks away, changes room or simply stops publishing releases
+  // their seat through the existing presence expiry — there is no separate
+  // occupancy record to go stale, and nothing here to garbage-collect.
+  //
+  // `resolveRemoteSeatOccupancy` owns the duplicate-claim policy in full (local
+  // player keeps their own seat; otherwise lowest hex pubkey wins; losers fall
+  // back to normal rendering) — see `src/lib/theater-occupancy.ts`.
+  const remoteSeatWinners = React.useMemo(() => {
+    const claims: RemoteSeatClaim[] = [];
+    for (const p of visiblePlayers) {
+      if (p.seatId) claims.push({ seatId: p.seatId, pubkey: p.pubkey, sessionId: p.sessionId });
+    }
+    return resolveRemoteSeatOccupancy(claims, sittingIn);
+  }, [visiblePlayers, sittingIn]);
+
+  // Report the union (remote winners + the local seat) upward for the chairs.
+  // Keyed on a stable signature so an unchanged occupancy set cannot loop the
+  // parent's state update, which would re-render this layer, which would rebuild
+  // the set, and so on.
+  const occupiedSeats = React.useMemo(
+    () => occupiedSeatIds(remoteSeatWinners, sittingIn),
+    [remoteSeatWinners, sittingIn],
+  );
+  const occupiedSeatsSignature = React.useMemo(
+    () => Array.from(occupiedSeats).sort().join('|'),
+    [occupiedSeats],
+  );
+  const occupiedSeatsRef = useRef(occupiedSeats);
+  occupiedSeatsRef.current = occupiedSeats;
+  useEffect(() => {
+    // Reads through the ref on purpose: the effect must fire on a change of
+    // occupancy CONTENT (the signature), not on every new Set identity.
+    void occupiedSeatsSignature;
+    onOccupiedSeatsChange?.(occupiedSeatsRef.current);
+  }, [occupiedSeatsSignature, onOccupiedSeatsChange]);
 
   // track last positions to infer heading (prevents weird flips on vertical moves)
   const lastPosRef = React.useRef(new Map<string, Position>());
@@ -1226,6 +1434,10 @@ export function MultiplayerLayer({
     return locationBoundaries[backgroundFile];
   }, [backgroundFile]);
 
+  // Sprite size for this room — the SAME value MovableBlobbi gives the local
+  // player, so a remote Blobbi is drawn at the size its owner sees.
+  const blobbiSize = useMemo(() => getBlobbiSizeForLocation(currentLocation), [currentLocation]);
+
   // Dynamic z-index and scaling, shared with MovableBlobbi so a remote Blobbi
   // is drawn exactly as its owner sees it (`src/lib/blobbi-world-render.ts`).
   const getDynamicZIndex = useCallback(
@@ -1283,9 +1495,34 @@ export function MultiplayerLayer({
           });
         }
 
+        // Seated presentation, resolved from the published seat id ALONE through
+        // the same shared resolver the local Blobbi uses — never from the
+        // player's coordinates. Unknown, stale and decorative ids resolve to
+        // null, and a seat this player lost to another claimant is not theirs to
+        // sit in, so both cases fall straight back to normal presence-position
+        // rendering rather than snapping to some arbitrary chair.
+        const seatWinner = player.seatId ? remoteSeatWinners.get(player.seatId) : undefined;
+        const ownsSeat =
+          seatWinner?.pubkey === player.pubkey && seatWinner?.sessionId === player.sessionId;
+        const seated = ownsSeat ? resolveSeatedRender(player.seatId) : null;
+
+        if (DEBUG_MP && player.seatId && !seated) {
+          console.debug('[blobbi][mp][seat] ignoring unusable seat claim', {
+            pubkey: player.pubkey,
+            seatId: player.seatId,
+            reason: ownsSeat ? 'unknown or decorative seat' : 'seat claimed by another player',
+          });
+        }
+
+        // The world point this Blobbi is DRAWN at: the seat's canonical anchor
+        // while seated, the animated presence position otherwise. Depth and
+        // perspective scale are read from the same point, so a seated remote
+        // stacks exactly like the seated local Blobbi does.
+        const renderPos = seated ? seated.position : player.position;
+
         // Calculate dynamic z-index and scale (same as MovableBlobbi)
-        const dynamicZIndex = getDynamicZIndex(player.position);
-        const dynamicScale = getDynamicScale(player.position);
+        const dynamicZIndex = getDynamicZIndex(renderPos);
+        const dynamicScale = getDynamicScale(renderPos) * (seated?.scale ?? 1);
 
         // Determine heading from last position to drive eye gaze, and store it
         // in headingRef so RemoteBlobbiSprite can read it on its own re-renders.
@@ -1322,9 +1559,10 @@ export function MultiplayerLayer({
             )}
             data-player-key={`${player.pubkey}:${player.sessionId}`}
             data-hidden-in={player.hiddenIn}
+            data-seated-in={seated?.seat.id}
             style={{
-              left: `${player.position.x}%`,
-              top: `${player.position.y}%`,
+              left: `${renderPos.x}%`,
+              top: `${renderPos.y}%`,
               transform: `translate(-50%, -50%)`,  // ⬅️ no scale/flip here
               zIndex: dynamicZIndex,
               filter: isHiddenInSpot ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
@@ -1372,27 +1610,38 @@ export function MultiplayerLayer({
               }}
             >
           <div className={cn(
-            !player.isMoving && "animate-float",
+            // A bobbing seated Blobbi fights the chair it is sitting in — the
+            // same rule the local seated renderer applies.
+            !player.isMoving && !seated?.disableFloat && "animate-float",
             "transition-transform duration-1000 ease-in-out"
           )}>
             <RemoteBlobbiSprite
               visual={player.visual}
               isMoving={player.isMoving}
-              position={player.position}
+              position={renderPos}
               playerKey={keyId}
               nearbyGazeRef={nearbyGazeRef}
               livePositionsRef={livePositionsRef}
               headingRef={headingRef}
               idSuffix={`${player.pubkey}-${player.sessionId}`}
+              facing={seated?.facing ?? 'front'}
+              size={blobbiSize}
             />
           </div>
         </div>
 
-          {/* Drop shadow/ellipse below Blobbi (same as MovableBlobbi) */}
+          {/* Drop shadow/ellipse below Blobbi (same as MovableBlobbi) —
+              suppressed while seated: a Blobbi in a chair is not standing on
+              the floor. */}
+          {!seated?.hideShadow && (
           <div
             className={cn(
+              // Widths track the sprite size, matching MovableBlobbi's shadow.
               "absolute top-full left-1/2 h-1.5 rounded-full",
-              "w-6 md:w-8" // lg size equivalent
+              blobbiSize === "xl" && "w-8 md:w-10",
+              blobbiSize === "lg" && "w-6 md:w-8",
+              blobbiSize === "md" && "w-4 md:w-6",
+              blobbiSize === "sm" && "w-3 md:w-4",
             )}
             style={{
               background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
@@ -1400,6 +1649,7 @@ export function MultiplayerLayer({
               transformOrigin: 'center center',
             }}
           />
+          )}
 
           {/* Player name label (hidden until hover) */}
           {player.visual?.name && (

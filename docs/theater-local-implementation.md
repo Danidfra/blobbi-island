@@ -4,9 +4,14 @@ What exists in the code today for the Blobbi Island theater (`LocationId: 'stage
 Phases 1–3 of the plan in
 [`docs/protocol/shared-playback-session.md`](protocol/shared-playback-session.md) §19.
 
-Everything here is **single-viewer and offline**. No Nostr event is published, no session exists,
-no invitation code is generated. Phases 4–9 (the shared-playback protocol) layer on top; the
-seams they attach to are called out below.
+**Playback is single-viewer and offline**: no session exists, no invitation code is generated, and
+no shared-playback event (`31951`/`21951`) is published or read. Phases 4–9 (the shared-playback
+protocol) layer on top; the seams they attach to are called out below.
+
+The one multiplayer thing that *is* implemented is **seating**: the existing island presence event
+(kind `31950`) now carries which seat a player is sitting in, so everyone in the room sees everyone
+else in their chair (§2, "Multiplayer seating"). It is rendering state only — advisory,
+self-expiring, and authoritative over nothing.
 
 ---
 
@@ -223,7 +228,139 @@ an off-world chair.
 `resolveSeatedRender`. `MovableBlobbi` and `MultiplayerLayer` had private, identical copies of
 the first two (~50 lines each); a change made in one and forgotten in the other renders the
 local player differently from how everyone else sees them. Both now call the shared module.
-Multiplayer seating (Phase 8) uses `resolveSeatedRender` unchanged.
+Multiplayer seating uses `resolveSeatedRender` unchanged — see below.
+
+### Multiplayer seating (remote players)
+
+**Files** — `src/lib/multiplayer.ts`, `src/hooks/useIslandPresence.ts`,
+`src/lib/theater-occupancy.ts`, `src/components/blobbi/MultiplayerLayer.tsx`,
+`src/components/blobbi/PlayingView.tsx`, `src/components/blobbi/InteractiveElements.tsx`,
+`src/components/blobbi/theater/TheaterSeat.tsx`, `NIP.md`.
+
+This is **rendering and presence only**. No `31951`, no `21951`, no shared media state, no
+invitation codes, no host/guest authority, no session discovery. A seated Blobbi still does not
+know that sessions exist.
+
+#### The presence field
+
+Kind 31950 content gains one optional, additive string, following the `hiddenIn` precedent and
+matching the shape reserved in the protocol document (§14.2):
+
+```jsonc
+{ "state": "idle", "location": "stage", "anchor": { … }, "seq": 42, "seatId": "theater-seat-a4" }
+```
+
+`state` is untouched — it describes MOTION, so a seated player is `idle`. The value is always a
+canonical *occupiable* seat id; decorative chairs cannot be clicked, walked to or made
+`sittingIn`, so they can never be published.
+
+Why an explicit field rather than reading coordinates: three seat rows overlap, chairs are 96 px
+apart, and the published `anchor` is the *walk-to cushion point*, not the *render anchor*. A
+client that guessed from position would put Blobbis near chairs instead of in them. This is the
+same reason `hiddenIn` exists.
+
+#### Lifecycle
+
+| moment | what happens |
+| --- | --- |
+| seat clicked | walk starts; `sittingIn` is still null; **nothing is published** |
+| CONFIRMED ARRIVAL | `PlayingView.sittingIn = seatId` → `MultiplayerLayer` publishes `publishSit` (idle presence + `seatId`) |
+| heartbeat (25 s) | `seatId` preserved — a whole film without moving must not eject you |
+| any movement starts | `moveTo` clears the seat **synchronously, before publishing**, and the `moving` presence carries no `seatId` — that *is* the stand-up |
+| location change | `PlayingView` clears `sittingIn`; `useIslandPresence` independently clears its own copy |
+| active Blobbi swapped in place | the identity republish carries no `seatId`, so the seat is **re-asserted immediately afterwards** with a higher `seq` — swapping your Blobbi does not get you out of your chair |
+| disconnect | nothing published; the whole presence event expires via NIP-40 |
+
+`sitAt()` validates the id against the canonical registry **before publishing**, so a decorative or
+unknown seat can never reach the wire even if a future caller invokes the hook incorrectly — the
+guarantee `NIP.md` makes about `seatId` is enforced, not just documented. Refusal is permanent and
+is never retried.
+
+If the arrival publish itself fails (relay hiccup), it is retried a small, bounded number of times
+about a second apart, because the heartbeat backstop is up to 25 s away and until then nobody would
+see the player sit down. `clearSit()` publishes nothing: it is bookkeeping that stops later
+heartbeats advertising a seat the player already left, and every path above already nulls that state
+itself. There is deliberately no dedicated stand-up event.
+
+Two guarantees fall out of this. First, no observer can ever see the contradictory "seated in A4
+while walking across the room" state, because the clear precedes the publish. Second, standing up
+needs no dedicated event, so there is no stand-up message to lose or reorder — and `seq` (already
+present) orders a sit against a same-second move regardless of relay delivery order.
+
+`MultiplayerLayer` publishes strictly on **transitions** of the `sittingIn` prop
+(`syncedSeatIdRef`), so re-renders and re-arrivals in the same seat cannot duplicate events.
+
+#### Remote rendering
+
+For a remote player whose presence carries a usable `seatId`, `MultiplayerLayer` resolves the
+pose through **the same `resolveSeatedRender(seatId)` the local Blobbi uses** — one resolver, so
+there is no second interpretation of theater geometry to drift. The remote Blobbi is drawn:
+
+* snapped to `seatAnchorPosition(seat)`, **ignoring the published coordinates**;
+* rear-facing (`facing="back"`), whose markup contains no face elements at all;
+* at the row's `seatedScale`, on the inner sprite wrapper only — never the positioned anchor,
+  which chat bubbles portal into;
+* with no ground shadow and no float animation;
+* with depth and perspective scale read from the seat anchor, so it stacks exactly as the local
+  seated Blobbi does.
+
+There is **one element per player**: the seated pose replaces the floating renderer rather than
+being drawn beside it, so a seated remote can never appear twice.
+
+An id that is unknown, stale, decorative, non-string or lost to another claimant resolves to
+`null` and the player falls back to normal presence-position rendering. Nothing crashes and
+nothing snaps to an arbitrary chair. In development (`blobbiDebug`) an ignored claim logs why.
+
+#### Visual occupancy and the duplicate policy
+
+`src/lib/theater-occupancy.ts` is a pure module deriving which seats *look* taken, from live
+remote presence plus the local `sittingIn`. `MultiplayerLayer` computes it and lifts it to
+`PlayingView`, which passes it to the seats — so the room has one answer instead of two
+components guessing separately. A taken seat reports `data-seat-occupied` and loses its
+hover-to-sit affordance.
+
+It is **visual occupancy only**: it reserves nothing, gates nothing and is never written back to
+a relay. A remotely occupied seat therefore stays clickable — presence is advisory and
+self-expiring, and refusing the click would let someone who closed their laptop lock a chair for
+the whole expiry window.
+
+Nothing prevents two players walking into the same chair, so the duplicate policy is explicit and
+deterministic:
+
+1. **The local player always keeps their own seat on their own screen.** A stranger's claim must
+   never stand you up, spin your Blobbi around or tear down your control card. Remote claims on
+   the local seat are dropped.
+2. **Among the remaining remote claimants, the lowest hex pubkey wins**, ties broken by session
+   id. Lexicographic order over a hex string is total and identical on every client, so no
+   negotiation is needed.
+3. **Losers fall back to normal presence-position rendering** — still in the room, still walking
+   around, just not drawn in that chair.
+
+Stated plainly: if A and B both sit in seat X, A sees itself seated and B standing, B sees itself
+seated and A standing, and every third party sees exactly one seated Blobbi (the lower pubkey).
+**No client ever draws two seated Blobbis in one chair.** The asymmetry between the two
+conflicting players is the deliberate price of rule 1.
+
+#### Stale presence
+
+There is no expiry logic in the occupancy layer at all. Claims are read from the live presence
+map, which is already self-cleaning: NIP-40 expiration (35 s) plus `useIslandPresence`'s
+per-second sweep of anything older than `EXP_SECONDS + 5`. A player who closes their tab stops
+publishing, ages out of `players`, and their seat is released by that alone — no second timer to
+maintain, and no way for occupancy and presence to disagree about who is still in the room.
+
+Because that behaviour is *entirely* borrowed, it is pinned from both ends rather than assumed:
+`multiplayer.seating.test.ts` asserts the sit event actually carries a future `expiration` tag and
+that `validatePresenceEvent` rejects it once that time passes, and the layer test drives the real
+presence GC — seat still held at 30 s, released at 45 s — instead of deleting a claim by hand.
+
+#### The boundary this stops at
+
+Presence answers **"who is visibly sitting where, right now"** and nothing else. It is advisory,
+self-expiring and per-client. Authoritative shared state — who is hosting, what is playing, where
+the playhead is — belongs to the session event (kind `31951`), which is **not implemented**. The
+two meet only in the theater UI, by id, never by shared state
+(`docs/protocol/shared-playback-session.md` §14.1, §14.3).
 
 ### Tests
 
@@ -235,6 +372,20 @@ Multiplayer seating (Phase 8) uses `resolveSeatedRender` unchanged.
 * `src/components/blobbi/MovableBlobbi.seating.test.tsx` — rear facing, per-row scale on the
   sprite wrapper only, no shadow, no float, stand-up on movement, off-world id rejected.
 * `src/components/blobbi/InteractiveElements.stage.test.tsx` — room structure and stacking order.
+* `src/lib/multiplayer.seating.test.ts` — `seatId` published on a sit, absent from every move,
+  preserved across heartbeats, independent of `hiddenIn`, `seq`-stamped, idempotent on re-sit,
+  valid with and without the field; and `parseSeatId` accepting only non-empty strings.
+* `src/lib/theater-occupancy.test.ts` — the duplicate policy in full: order-independent lowest-
+  pubkey winner, at most one winner per seat, session-id tiebreak, the local player's exemption,
+  decorative/unknown/empty ids refused, junk claims unable to displace valid ones, release on
+  claim removal.
+* `src/components/blobbi/MultiplayerLayer.seating.test.tsx` — real presence events through the
+  subscription: canonical-anchor snap despite contradictory coordinates, rear-facing renderer,
+  per-row seated scale, no shadow/float, exactly one sprite (no floating copy), stand-up on a
+  `moving` presence, stale re-delivery ignored, decorative/unknown/non-string claims falling back,
+  duplicate claims resolving, occupancy reported to the seats, seat released by presence GC, and
+  the publish lifecycle (nothing before arrival, once on arrival, no republish, cleared by
+  movement and by a location change).
 
 ---
 
@@ -531,8 +682,9 @@ captions.
 | Apply a remote canonical state | `applyCommand(state, command)` — already pure |
 | Position arithmetic | `clampPosition` / `resolveSkipTarget` / `normalizeRate` |
 | Choose the control surface | `<TheaterStage role="host" \| "guest" />` |
-| Draw a remote seated Blobbi | `resolveSeatedRender(seatId)` in `blobbi-world-render.ts` |
-| Publish who is sitting where | `PlayingView.sittingIn` → presence `seatId` (Phase 8) |
+| Draw a remote seated Blobbi | **done** — `resolveSeatedRender(seatId)` in `MultiplayerLayer` |
+| Publish who is sitting where | **done** — `PlayingView.sittingIn` → presence `seatId` |
+| Attach a session to a seated player | `PresenceContent.activity` (address string only) — NOT implemented |
 | Drive the room's UI from a session | `theaterReducer` in `theater-state.ts` — the guest path adds events, not booleans |
 | Turn a Blobbi around | `facing="back"`, derived from `theaterSeats[seatId].facing` |
 
@@ -572,6 +724,62 @@ with the curtain still closed and the input still available · Change video clos
 restoring the input · clicking the floor removing the card, closing the curtain and leaving **zero**
 iframes · reloading the room clean.
 
+### Two-user seating, verified with two real identities
+
+Verified against **two separate Nostr identities on a local in-memory relay** (`nak serve`, so no
+test data was written to a public relay), in two browser contexts kept apart by origin
+(`localhost` vs `127.0.0.1`, which gives them independent `localStorage` and therefore independent
+logins). Both loaded the real `/dev/theater` harness, which mounts the real `PlayingView`,
+`MultiplayerLayer` and seats.
+
+Confirmed by hand, reading both the rendered DOM and the relay's event log:
+
+* **Walk before sit, remotely too.** The seat click published `state: "moving"` with a goal and
+  **no `seatId`**; `seatId` appeared only in the later `idle` presence, after arrival. Sampling the
+  sitter's own DOM across the walk showed `data-seated-in` still null mid-walk (at 29.4 % / 90.2 %)
+  and set only on arrival.
+* **Canonical anchor, on both sides.** Sitter and observer both put the Blobbi at
+  **32.8872 % / 87.6471 %** — `seatAnchorPosition('theater-seat-a4')` exactly, to four decimals,
+  from configuration rather than from the published coordinates.
+* **Rear-facing.** The observer's mounted SVG for the seated remote contains no pupil, eye or mouth
+  blocks; visually, the back of the Blobbi's head shows above the chair back.
+* **No second copy.** One `[data-player-key]` element, one `<svg>`, no ground shadow, no float, and
+  the row's `scale(0.85)` on the sprite wrapper only.
+* **Occupancy.** The chair reported `data-seat-occupied="true"` with `data-seat-occupied-by="remote"`
+  on the observer and `"local"` on the sitter.
+* **Duplicate claim.** With both users claiming `theater-seat-a4`, **each screen rendered exactly
+  one seated Blobbi** (`document.querySelectorAll('[data-seated-in]').length === 1`): each client
+  seated its own player and drew the other with the normal floating renderer (shadow restored).
+  This is the documented policy, asymmetry included.
+* **Release and hand-off.** When the sitter stood up (a floor click), the observer saw the seated
+  pose disappear and normal movement rendering resume within a second — and the still-claiming
+  other user immediately won the seat, flipping the chair to `occupied-by="remote"`.
+* **Stale presence.** Navigating one client away from the app stopped its heartbeats; the observer
+  dropped the player and cleared `data-seat-occupied` entirely, through the existing presence GC.
+* **No shared playback.** The relay saw only kinds `0`, `11125`, `31124` and `31950` for the whole
+  session. Zero `31951`, zero `21951`.
+
+**Two real defects were found this way and fixed** — neither was reachable from jsdom:
+
+1. **The seat fell out of presence ~25 s after sitting.** The heartbeat interval is rebuilt on every
+   location change, and *entering the theater is a location change*; that rebuilt interval did not
+   pass the seat, so the next heartbeat published presence without `seatId` and un-seated the player
+   on every other screen. It needed location-change → sit → heartbeat in that order to show up. The
+   regression test in `MultiplayerLayer.seating.test.tsx` now performs exactly that sequence (and
+   was confirmed to fail before the fix).
+2. **Remote Blobbis were drawn a size smaller than their owners saw them.** `MultiplayerLayer`
+   hardcoded `size="lg"` while `MovableBlobbi` uses `getBlobbiSizeForLocation`, which is `xl` in the
+   theater. Standing, this was a subtle mismatch; *seated*, it was the difference between visible
+   above the chair back and completely hidden behind it — the seat looked empty on every screen but
+   the sitter's own. Remote sprites (and their ground shadows) now use the room's size, which is
+   what the local/remote parity module exists for.
+
+> The `document.hidden` trap recorded above applies to this flow too, and is worse for it: an
+> occluded automation window gets **zero** `requestAnimationFrame` callbacks, and all arrival is
+> rAF-driven, so seats appear completely inert. Shimming `requestAnimationFrame` onto `setTimeout`
+> in the page restores movement (throttled to ~1 fps, which the dt-based step handles fine) and was
+> how the walk-and-arrive flow above was driven. That is a harness workaround, not an app change.
+
 **Not exercised in a real browser:** the fullscreen *grant* path, and a video actually rendering
 frames. The automated Chrome window runs occluded (`document.hidden === true`), which both throttles
 `requestAnimationFrame` and prevents a user-activated fullscreen request; and this sandbox could not
@@ -580,7 +788,11 @@ spinner and the "Still loading…" copy). The fullscreen *refusal* path is cover
 
 ## 6. Known gaps
 
-* **Shared playback is not implemented.** No session, no invitation code, no Nostr event.
+* **Shared playback is not implemented.** No kind `31951`, no kind `21951`, no session, no
+  invitation code, no synchronized play/pause/seek, no host or guest authority, no session
+  discovery. Presence now carries `seatId`, and that is the *only* multiplayer state the theater
+  has: who is visibly sitting where. `PresenceContent.activity` (the session address string) is
+  not implemented either.
 * **Guest mode is unreachable in the product** — it exists as a prop with no caller until
   sessions exist.
 * **Moderation.** The open catalog removes the audit's only moderation mechanism; see the

@@ -46,6 +46,16 @@ interface TheaterSeatProps {
   requestInteraction: (opts: RequestInteractionOptions) => void;
   /** The seat the LOCAL player currently occupies, or null. Owned by PlayingView. */
   sittingIn: string | null;
+  /**
+   * A REMOTE player is currently drawn in this seat (their presence claims it
+   * and they won it — see `src/lib/theater-occupancy.ts`).
+   *
+   * Visual only. The seat stays clickable: presence is advisory and
+   * self-expiring, so refusing the click would let a player who closed their
+   * laptop lock a chair for up to 40 seconds. If two people do end up claiming
+   * one seat, the occupancy policy decides who is drawn in it.
+   */
+  occupiedRemotely?: boolean;
   /** Called on CONFIRMED ARRIVAL, never on click. */
   onSit: (seatId: string) => void;
 }
@@ -72,8 +82,17 @@ interface TheaterSeatProps {
  * so it cannot even swallow the click that would walk the Blobbi past it. There
  * is no code path by which it can start a walk or become `sittingIn`.
  */
-export function TheaterSeat({ config, requestInteraction, sittingIn, onSit }: TheaterSeatProps) {
+export function TheaterSeat({
+  config,
+  requestInteraction,
+  sittingIn,
+  occupiedRemotely = false,
+  onSit,
+}: TheaterSeatProps) {
   const isSittingHere = sittingIn === config.id;
+  // Someone is drawn in this chair — me, or a remote player. Both read the same
+  // canonical seat id, so "occupied" means exactly one thing in this room.
+  const isOccupied = isSittingHere || occupiedRemotely;
   // Read inside the click handler without making it depend on renders.
   const isSittingHereRef = useRef(isSittingHere);
   isSittingHereRef.current = isSittingHere;
@@ -123,10 +142,11 @@ export function TheaterSeat({ config, requestInteraction, sittingIn, onSit }: Th
     <div
       data-block-move
       data-seat-id={config.id}
-      data-seat-occupied={isSittingHere ? 'true' : undefined}
+      data-seat-occupied={isOccupied ? 'true' : undefined}
+      data-seat-occupied-by={isSittingHere ? 'local' : occupiedRemotely ? 'remote' : undefined}
       className={cn(
         'absolute select-none cursor-pointer transition-transform duration-300 ease-out',
-        !isSittingHere && 'hover:scale-105',
+        !isOccupied && 'hover:scale-105',
       )}
       style={positionStyle}
       onClick={handleClick}

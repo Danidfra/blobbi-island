@@ -71,6 +71,39 @@ export interface PresenceContent {
    */
   hiddenIn?: string;
   /**
+   * OPTIONAL semantic seating state: the canonical id of the theater seat the
+   * player is currently sitting in (e.g. `"theater-seat-a4"`), or absent when
+   * the player is not seated.
+   *
+   * This is the multiplayer counterpart of the local `sittingIn` state owned by
+   * `PlayingView`, and it exists for the same reason as {@link hiddenIn}: remote
+   * clients must learn "this Blobbi is IN that seat" as an explicit fact, not
+   * guess it from coordinates. Coordinates cannot answer it — three seat rows
+   * overlap, chairs are 96 px apart, and the published anchor is the walk-to
+   * cushion point rather than the render anchor. A remote client that trusted
+   * position would put Blobbis near seats instead of in them.
+   *
+   * The value is ALWAYS a canonical occupiable seat id from
+   * `theater-seats-config.ts`. Decorative chairs (the two off-world row-B ones)
+   * are never published: they cannot be clicked, cannot be walked to and cannot
+   * become `sittingIn`, and the render path rejects them a second time via
+   * `resolveSeatedRender`.
+   *
+   * Lifecycle: set on CONFIRMED ARRIVAL (never on click), preserved across
+   * heartbeats, and absent from every `moving` presence — so the movement that
+   * leaves a seat is itself what clears it, with no separate "stand up" event to
+   * lose or reorder. Cleared on location change and on disconnect (the whole
+   * presence event expires via NIP-40).
+   *
+   * Backward compatible: older clients that don't understand this field simply
+   * ignore it and keep rendering the Blobbi with the normal floating renderer.
+   *
+   * NOT authoritative. Presence is advisory, self-expiring occupancy for
+   * RENDERING only — it reserves nothing and grants nothing. See
+   * `docs/protocol/shared-playback-session.md` §14.
+   */
+  seatId?: string;
+  /**
    * OPTIONAL monotonic publish counter for this session, incremented once per
    * presence publish (login / move / hide / heartbeat).
    *
@@ -133,6 +166,32 @@ export function presenceOrderOf(
   };
 }
 
+/**
+ * Read the seating claim out of presence content, tolerating anything.
+ *
+ * Presence content is attacker-controlled JSON from an open relay, so this
+ * accepts ONLY a non-empty string and answers `undefined` for everything else —
+ * missing (legacy clients), null, numbers, objects, arrays, empty strings.
+ *
+ * It deliberately does NOT check the id against the seat registry: that is a
+ * *rendering* decision, made by `resolveSeatedRender` / the occupancy resolver,
+ * which know about theater geometry. This layer stays a transport parser, so
+ * presence has no dependency on any one room's furniture.
+ */
+export function parseSeatId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  // Blank INCLUDES whitespace-only: `"   "` is not an id, it is a missing value
+  // wearing a costume. Rejecting it here means "seated" and "not seated" stay
+  // the only two states a reader can end up in.
+  if (value.trim().length === 0) return undefined;
+  // Deliberately NOT trim-normalized. Returning `" theater-seat-a4 "` unchanged
+  // lets the exact-match seat registry reject it downstream, which is the
+  // predictable outcome; trimming would instead *accept* a padded spelling and
+  // give one seat two wire representations — and occupancy is keyed by this
+  // string. Canonical ids contain no whitespace, so nothing legitimate is lost.
+  return value;
+}
+
 /** Walkable API interface for boundary checking */
 export interface WalkableApi {
   isWalkable(x: number, y: number): boolean;
@@ -167,6 +226,17 @@ export interface PlayerRenderState {
    * re-parsing content.
    */
   hiddenIn?: string;
+  /**
+   * The canonical theater seat id this remote player claims to be sitting in, or
+   * undefined when they are not seated. Mirrors {@link PresenceContent.seatId}
+   * from the latest presence, already sanitized by {@link parseSeatId}.
+   *
+   * A CLAIM, not a fact: the renderer still resolves it through the canonical
+   * seat registry (`resolveSeatedRender`) and the occupancy resolver still
+   * arbitrates duplicate claims, so an unknown, decorative or contested id can
+   * never pin a Blobbi to a chair.
+   */
+  seatId?: string;
 }
 
 /** Blobbi visual data */
@@ -518,6 +588,55 @@ export async function publishHide(
 }
 
 /**
+ * Publish that the player has ARRIVED at and is now sitting in a theater seat.
+ *
+ * Emits an idle presence at the current position carrying the optional
+ * {@link PresenceContent.seatId} semantic state, so remote clients snap this
+ * Blobbi to the seat's canonical anchor and draw it rear-facing.
+ *
+ * Called on CONFIRMED ARRIVAL only. Cleared by the next movement (which
+ * publishes a normal `moving` presence WITHOUT `seatId`), by a location change,
+ * and by presence expiry.
+ */
+export async function publishSit(
+  publish: (event: Record<string, unknown>) => Promise<void>,
+  params: {
+    sessionId: string;
+    islandId: string;
+    location: LocationId;
+    blobbiAddr: string;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
+  },
+  currentPos: Position,
+  seatId: string
+): Promise<void> {
+  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+
+  const content: PresenceContent = {
+    state: 'idle',
+    location,
+    anchor: {
+      x: currentPos.x,
+      y: currentPos.y,
+      ts: nowSec(),
+    },
+    seatId,
+    ...(seq !== undefined ? { seq } : {}),
+  };
+
+  const event = buildPresence31950({
+    sessionId,
+    islandId,
+    location,
+    blobbiAddr,
+    content,
+  });
+
+  await publish(event);
+}
+
+/**
  * Publish heartbeat to renew expiration
  */
 export async function publishHeartbeat(
@@ -531,7 +650,8 @@ export async function publishHeartbeat(
     seq?: number;
   },
   currentPos: Position,
-  hiddenIn?: string
+  hiddenIn?: string,
+  seatId?: string
 ): Promise<void> {
   const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
@@ -546,6 +666,9 @@ export async function publishHeartbeat(
     // Preserve the hiding state across heartbeats so a player who stays hidden
     // for longer than the expiration window remains hidden for remote clients.
     ...(hiddenIn ? { hiddenIn } : {}),
+    // Same for seating: a player who watches a whole film without moving would
+    // otherwise pop out of their chair every time presence was renewed.
+    ...(seatId ? { seatId } : {}),
     ...(seq !== undefined ? { seq } : {}),
   };
 

@@ -322,6 +322,13 @@ interface InteractiveElementsProps {
    * and (later) presence layers all read one source of truth.
    */
   sittingIn?: string | null;
+  /**
+   * Theater seats that currently LOOK occupied — remote players' winning
+   * presence claims plus {@link sittingIn}. Visual only: a seat listed here is
+   * still clickable, because presence reserves nothing (see
+   * `src/lib/theater-occupancy.ts`).
+   */
+  occupiedSeats?: ReadonlySet<string>;
   /** Called when the local player ARRIVES at and sits in a theater seat. */
   onSitInSeat?: (seatId: string) => void;
   /**
@@ -336,8 +343,9 @@ interface InteractiveElementsProps {
 
 const noopHide = () => {};
 const noopSit = () => {};
+const NO_OCCUPIED_SEATS: ReadonlySet<string> = new Set();
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, onSitInSeat, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, occupiedSeats = NO_OCCUPIED_SEATS, onSitInSeat, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -833,6 +841,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             config={seat}
             requestInteraction={requestInteraction}
             sittingIn={sittingIn}
+            occupiedRemotely={occupiedSeats.has(seat.id) && sittingIn !== seat.id}
             onSit={onSitInSeat ?? noopSit}
           />
         ))}

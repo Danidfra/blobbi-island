@@ -128,11 +128,34 @@ locally rather than streaming positions.
     "location": "<locationId>",
     "anchor": { "x": <0-100>, "y": <0-100>, "ts": <unix-seconds> },
     "goal": { "from": {"x","y"}, "to": {"x","y"}, "v": <px/s>, "ts": <unix-seconds> },
-    "blobbiD": "<blobbiD>"
+    "blobbiD": "<blobbiD>",
+    "hiddenIn": "<hiding-spot-id>",
+    "seatId": "<theater-seat-id>",
+    "seq": <monotonic-counter>
   }
   ```
   Positions are percentages of the location's playable area (`0–100`), making them
   resolution-independent. `goal` is omitted when the player is stationary.
+
+  The last three fields are **optional and additive** — clients that do not
+  understand them ignore them and keep rendering the player normally:
+
+  - **`hiddenIn`** — id of the hiding spot the player is hidden inside (e.g.
+    `"town-bush-1"`). Remote clients suppress the Blobbi's visual entirely.
+  - **`seatId`** — canonical id of the theater seat the player is sitting in
+    (e.g. `"theater-seat-a4"`). Remote clients snap the Blobbi to that seat's
+    configured anchor and draw it rear-facing, **ignoring `anchor`** for the
+    seated pose. Set only on confirmed arrival, preserved across heartbeats, and
+    always absent from `state: "moving"` presence — so the movement that leaves a
+    seat is itself what clears it. This is advisory, self-expiring *visual*
+    occupancy: it reserves nothing, and clients resolve two players claiming one
+    seat locally (lowest hex pubkey wins).
+  - **`seq`** — monotonic publish counter for the session. `created_at` has
+    one-second resolution, so a sit/hide and the movement that ends it routinely
+    share a second; `seq` orders them regardless of relay delivery order.
+
+> Note: `state` (`idle`/`moving`/`emote`) describes MOTION only. Sitting and
+> hiding are separate semantic fields, so a seated player is `state: "idle"`.
 
 > Note: `state: "emote"` is reserved for a future emote/reaction feature and is not
 > yet produced by this client.

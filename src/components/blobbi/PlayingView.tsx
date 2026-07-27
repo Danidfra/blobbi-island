@@ -111,6 +111,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // it is cleared the instant movement starts or the location changes.
   const [sittingIn, setSittingIn] = useState<string | null>(null);
 
+  // Theater seats that should LOOK occupied — remote players whose presence
+  // claims a seat, plus the local player's own. Derived by MultiplayerLayer
+  // (which holds the live presence map) and lifted here so the seats, which are
+  // rendered by a sibling, can read a single answer. Purely visual: it reserves
+  // nothing and never gates sitting down. See `src/lib/theater-occupancy.ts`.
+  const [occupiedSeats, setOccupiedSeats] = useState<Set<string>>(() => new Set());
+
   // ── Hiding spots (Town bushes) ──────────────────────────────────────────
   // The id of the hiding spot the local player currently occupies, or null.
   // This is the SINGLE source of truth for "hidden": the interactive element
@@ -508,6 +515,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         blobbiRef={blobbiRef}
         selectedBlobbi={selectedBlobbi}
         sittingIn={sittingIn}
+        occupiedSeats={occupiedSeats}
         onSitInSeat={handleSitInSeat}
         hiddenIn={hiddenIn}
         onHideInSpot={setHiddenIn}
@@ -600,6 +608,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           myAnchorId="my-blobbi-anchor"
           onOtherBlobbiClick={handleOtherBlobbiClick}
           hiddenIn={hiddenIn}
+          sittingIn={sittingIn}
+          onOccupiedSeatsChange={setOccupiedSeats}
           localAttentionRef={localAttentionRef}
           livePositionsRef={livePositionsRef}
           localActiveRef={localActiveRef}

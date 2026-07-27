@@ -29,6 +29,8 @@ import {
   publishMove,
   publishHeartbeat,
   publishHide,
+  publishSit,
+  parseSeatId,
   validatePresenceEvent,
   isSupersededPresence,
   presenceOrderOf,
@@ -40,6 +42,7 @@ import {
   EXP_SECONDS,
 } from '@/lib/multiplayer';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
+import { isOccupiableSeat } from '@/lib/theater-seats-config';
 
 // ============================================================================
 // Types
@@ -78,6 +81,21 @@ interface UseIslandPresenceOptions {
   livePositionsRef?: React.MutableRefObject<Map<string, Position>>;
 }
 
+/**
+ * Outcome of a {@link UseIslandPresenceReturn.sitAt} call.
+ *
+ * The distinction that matters is PERMANENT vs TRANSIENT: a caller must retry
+ * one and never the other. `'rejected'` will fail identically forever, so
+ * retrying it is a publish loop with no possible success.
+ */
+export type SitResult =
+  /** Presence carrying the seat was published. */
+  | 'published'
+  /** The id is not a seat a Blobbi may occupy. Permanent — do not retry. */
+  | 'rejected'
+  /** The publish itself failed (relay down, offline). Transient — retry. */
+  | 'failed';
+
 interface UseIslandPresenceReturn {
   sessionId: string;
   players: Map<string, PlayerRenderState>;
@@ -93,6 +111,38 @@ interface UseIslandPresenceReturn {
    * directly — {@link moveTo} clears it — but exposed for completeness.
    */
   clearHide: () => void;
+  /**
+   * Publish that the local player has ARRIVED at and is now sitting in the given
+   * canonical theater seat. Remote clients snap this Blobbi to the seat's anchor
+   * and draw it rear-facing. Cleared automatically by the next {@link moveTo}
+   * and by a location change.
+   *
+   * Never throws. The outcome is returned so the caller can tell a PERMANENT
+   * refusal from a TRANSIENT failure and retry only the second — see
+   * {@link SitResult}.
+   */
+  sitAt: (seatId: string) => Promise<SitResult>;
+  /**
+   * Forget the local seat, WITHOUT publishing anything.
+   *
+   * This is bookkeeping only: it stops later heartbeats advertising a seat the
+   * player has left. It is deliberately not a "stand up" message, because
+   * standing up is already published by the action that causes it:
+   *
+   * | how the player leaves the seat | what clears it FOR OBSERVERS | clears the local ref |
+   * | --- | --- | --- |
+   * | walks away (floor click, another seat, walk-to-interact) | {@link moveTo}'s `moving` presence, which carries no `seatId` | `moveTo`, synchronously before publishing |
+   * | leaves the room | the location-change `publishPresenceLogin`, which carries no `seatId` | the location-change effect |
+   * | closes the tab / loses the network | nothing — the presence event expires (NIP-40) and remote GC drops the player | n/a |
+   *
+   * Every one of those paths already nulls the ref itself, so calling this is
+   * normally REDUNDANT — `MultiplayerLayer` calls it when its `sittingIn` prop
+   * goes null purely so the hook's copy cannot outlive the UI's copy if some
+   * future caller clears the seat without moving. Adding a dedicated stand-up
+   * publish here would create a second event that could arrive out of order with
+   * the movement that already means the same thing.
+   */
+  clearSit: () => void;
   myPosRef: React.MutableRefObject<Position>;
   isLoading: boolean;
   error?: string;
@@ -128,6 +178,12 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // Kept in a ref so heartbeats can preserve it without re-subscribing timers,
   // and so moveTo can clear it synchronously before publishing a move.
   const myHiddenInRef = useRef<string | null>(null);
+  // The local player's current theater seat id, or null. Same reasoning as
+  // myHiddenInRef: heartbeats must be able to preserve it without re-subscribing
+  // timers, and moveTo must be able to clear it SYNCHRONOUSLY before publishing
+  // a move — otherwise a heartbeat racing a walk could re-seat a Blobbi that is
+  // already halfway down the aisle.
+  const mySeatIdRef = useRef<string | null>(null);
   const subscriptionRef = useRef<{ close: () => void } | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gcIntervalRef = useRef<number | null>(null);
@@ -610,6 +666,12 @@ const animatePlayers = useCallback(() => {
         // Absent on clients that don't publish it and on every presence that
         // isn't a hide, which is exactly how leaving a hiding spot clears it.
         hiddenIn: content.hiddenIn,
+        // Explicit, position-independent seating claim (e.g. "theater-seat-a4").
+        // Sanitized here to a non-empty string or undefined; whether it names a
+        // real, occupiable, uncontested seat is decided by the renderer and the
+        // occupancy resolver, which is where seat geometry belongs. Absent on
+        // every `moving` presence, which is how standing up clears it.
+        seatId: parseSeatId(content.seatId),
       };
 
       if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {
@@ -666,6 +728,13 @@ const animatePlayers = useCallback(() => {
       // soon as it leaves a hiding spot.
       myHiddenInRef.current = null;
 
+      // ...and any seat. The `moving` presence below carries no `seatId`, which
+      // is exactly what stands this Blobbi up on every remote client. Clearing
+      // the ref FIRST means no heartbeat can slip a stale seat back in, and no
+      // observer ever sees the contradictory "seated while walking somewhere
+      // else" state.
+      mySeatIdRef.current = null;
+
       const clampedDest = await publishMove(
         publish,
         {
@@ -718,6 +787,50 @@ const animatePlayers = useCallback(() => {
     myHiddenInRef.current = null;
   }, []);
 
+  const sitAt = useCallback(async (seatId: string): Promise<SitResult> => {
+    // OUTBOUND VALIDATION. `publishSit` will serialize whatever string it is
+    // given, and `NIP.md` promises the wire only ever carries a canonical,
+    // occupiable seat id — so the promise has to be enforced somewhere, and this
+    // is the boundary where presence meets the theater. Doing it here (rather
+    // than in `parseSeatId`, which must stay geometry-free, or only in the UI)
+    // means no future caller can publish a decorative chair or a typo by
+    // invoking the hook incorrectly.
+    //
+    // It also protects the local ref: refusing WITHOUT setting `mySeatIdRef`
+    // stops a bad id leaking into every subsequent heartbeat.
+    if (!isOccupiableSeat(seatId)) {
+      if (import.meta.env.MODE === 'development') {
+        console.warn('[blobbi][mp] refusing to publish a non-occupiable seat id', { seatId });
+      }
+      return 'rejected';
+    }
+
+    try {
+      // Idempotent by content, like hideAt: presence is addressable, so
+      // re-publishing the same seat simply replaces the previous event. A
+      // repeated arrival can never leave observers half-seated.
+      mySeatIdRef.current = seatId;
+      if (DEBUG_MP) console.debug('[blobbi][mp] sitAt', { pos: myPosRef.current, seatId });
+      await publishSit(
+        publish,
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        myPosRef.current,
+        seatId
+      );
+      return 'published';
+    } catch (error) {
+      // NOT fatal and NOT silent. The local ref stays set on purpose, so the
+      // next heartbeat still advertises the seat — that is the backstop. But the
+      // caller is told, so it can retry sooner than a whole heartbeat interval.
+      console.warn('Sit publish failed but continuing:', error);
+      return 'failed';
+    }
+  }, [publish, sessionId, islandId, location, blobbiAddr, nextSeq]);
+
+  const clearSit = useCallback((): void => {
+    mySeatIdRef.current = null;
+  }, []);
+
   // ============================================================================
   // Lifecycle Management
   // ============================================================================
@@ -742,7 +855,7 @@ const animatePlayers = useCallback(() => {
 
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
-          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined)
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined)
             .catch(err => {
               console.warn('Heartbeat publish failed but continuing:', err);
               // Don't treat heartbeat failures as fatal
@@ -823,6 +936,21 @@ const animatePlayers = useCallback(() => {
 
     publishPresenceLogin(publish, {
       sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
+    }).then(() => {
+      // Swapping your Blobbi does not get you out of your chair. The login
+      // presence above carries no `seatId` (by design — it is the "here I am"
+      // event), so on its own it would stand a seated player up on every remote
+      // screen until the next heartbeat ~25 s later. Re-assert the seat
+      // immediately, with a HIGHER seq so it cannot be reordered behind the
+      // login. The ref only ever holds an id `sitAt` already validated.
+      const seatId = mySeatIdRef.current;
+      if (!seatId) return;
+      return publishSit(
+        publish,
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        myPosRef.current,
+        seatId,
+      );
     }).catch(err => {
       console.warn('Failed to publish presence on Blobbi switch but continuing:', err);
     });
@@ -833,7 +961,8 @@ const animatePlayers = useCallback(() => {
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
         myPosRef.current,
-        myHiddenInRef.current ?? undefined
+        myHiddenInRef.current ?? undefined,
+        mySeatIdRef.current ?? undefined
       ).catch(err => console.error('Failed to publish heartbeat:', err));
     }, HEARTBEAT_INTERVAL_MS);
   }, [blobbiAddr, publish, sessionId, islandId, location, nextSeq]);
@@ -873,6 +1002,9 @@ const animatePlayers = useCallback(() => {
   // Leaving the location abandons any hiding spot, so the presence published
   // below (and every following heartbeat) must not advertise it any more.
   myHiddenInRef.current = null;
+  // ...and any seat: walking out of the theater must not leave a ghost sitting
+  // in a chair there.
+  mySeatIdRef.current = null;
 
   publishPresenceLogin(publish, {
     sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
@@ -890,7 +1022,13 @@ const animatePlayers = useCallback(() => {
       publish,
       { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
       myPosRef.current,
-      myHiddenInRef.current ?? undefined
+      myHiddenInRef.current ?? undefined,
+      // Read at CALL time, not capture time. This interval is REBUILT on every
+      // location change, and entering the theater IS a location change — so a
+      // heartbeat that forgot the seat here would eject every player from their
+      // chair ~25 s after they sat down. (Caught in a real browser; jsdom never
+      // saw it because it needs location-change → sit → heartbeat in that order.)
+      mySeatIdRef.current ?? undefined
     ).catch(err => console.error('Failed to publish heartbeat:', err));
   }, HEARTBEAT_INTERVAL_MS);
 
@@ -919,6 +1057,8 @@ const animatePlayers = useCallback(() => {
     moveTo,
     hideAt,
     clearHide,
+    sitAt,
+    clearSit,
     myPosRef,
     isLoading,
     error,

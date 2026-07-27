@@ -35,31 +35,42 @@ interface Harness {
   sits: string[];
   seat: HTMLElement | null;
   container: HTMLElement;
-  rerenderWith: (sittingIn: string | null) => void;
+  rerenderWith: (sittingIn: string | null, occupiedRemotely?: boolean) => void;
 }
 
-function renderSeat(config: TheaterSeatConfig, initialSittingIn: string | null = null): Harness {
+function renderSeat(
+  config: TheaterSeatConfig,
+  initialSittingIn: string | null = null,
+  initialOccupiedRemotely = false,
+): Harness {
   const requests: RequestInteractionOptions[] = [];
   const sits: string[] = [];
 
-  const ui = (sittingIn: string | null) => (
+  const ui = (sittingIn: string | null, occupiedRemotely: boolean) => (
     <div data-world-surface>
       <TheaterSeat
         config={config}
         requestInteraction={(opts) => requests.push(opts)}
         sittingIn={sittingIn}
+        occupiedRemotely={occupiedRemotely}
         onSit={(id) => sits.push(id)}
       />
     </div>
   );
 
-  const { container, rerender } = render(ui(initialSittingIn));
+  const { container, rerender } = render(ui(initialSittingIn, initialOccupiedRemotely));
   const surface = container.querySelector('[data-world-surface]') as HTMLElement;
   const seat = container.querySelector<HTMLElement>(`[data-seat-id="${config.id}"]`);
   vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue(SURFACE_RECT);
   if (seat) vi.spyOn(seat, 'getBoundingClientRect').mockReturnValue(SEAT_RECT);
 
-  return { requests, sits, seat, container, rerenderWith: (v) => rerender(ui(v)) };
+  return {
+    requests,
+    sits,
+    seat,
+    container,
+    rerenderWith: (v, occupied = false) => rerender(ui(v, occupied)),
+  };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -148,6 +159,35 @@ describe('TheaterSeat', () => {
   it('marks the occupied seat in the DOM', () => {
     const h = renderSeat(seatA1, seatA1.id);
     expect(h.seat).toHaveAttribute('data-seat-occupied', 'true');
+    expect(h.seat).toHaveAttribute('data-seat-occupied-by', 'local');
+  });
+
+  it('looks occupied when a REMOTE player is sitting in it', () => {
+    // Remote occupancy is derived from live presence (`theater-occupancy.ts`)
+    // and keyed on the SAME canonical seat id the local state uses, so the room
+    // has one notion of "taken" rather than a local one and a remote one.
+    const h = renderSeat(seatA1, null, true);
+    expect(h.seat).toHaveAttribute('data-seat-occupied', 'true');
+    expect(h.seat).toHaveAttribute('data-seat-occupied-by', 'remote');
+    // Nobody is hovering an empty chair: the invite-to-sit affordance is off.
+    expect(h.seat!.className).not.toContain('hover:scale-105');
+  });
+
+  it('is free again once the remote occupant leaves or their presence expires', () => {
+    const h = renderSeat(seatA1, null, true);
+    act(() => h.rerenderWith(null, false));
+
+    expect(h.seat).not.toHaveAttribute('data-seat-occupied');
+    expect(h.seat!.className).toContain('hover:scale-105');
+  });
+
+  it('still accepts a click on a remotely occupied seat', () => {
+    // Presence is advisory and self-expiring: refusing the click would let a
+    // player who closed their laptop lock a chair for the whole expiry window.
+    // A genuine double-claim is settled by the occupancy policy instead.
+    const h = renderSeat(seatA1, null, true);
+    fireEvent.click(h.seat!);
+    expect(h.requests).toHaveLength(1);
   });
 
   it('is clickable while still blocking world movement', () => {
