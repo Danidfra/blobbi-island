@@ -49,6 +49,19 @@ export interface MovementGoal {
   ts: number; // timestamp when movement started
 }
 
+/**
+ * A reference to a shared activity, carried by presence.
+ *
+ * `type` exists so a future shared activity (a game, a jukebox) is additive
+ * rather than a second field, and so a reader can tell what kind of address
+ * `session` is without parsing it.
+ */
+export interface PresenceActivity {
+  type: 'shared-playback';
+  /** An opaque address string to this layer — deliberately not parsed here. */
+  session: string;
+}
+
 /** Presence content structure */
 export interface PresenceContent {
   state: PlayerState;
@@ -103,6 +116,29 @@ export interface PresenceContent {
    * `docs/protocol/shared-playback-session.md` §14.
    */
   seatId?: string;
+  /**
+   * OPTIONAL reference to the shared activity this player is participating in.
+   *
+   * It answers exactly one question — *which shared activity is this visible
+   * player in?* — and carries **only the address string** of that activity, no
+   * duplicate of its state (`docs/protocol/shared-playback-session.md` §14.2,
+   * §14.3). No revision, no playhead, no media, no host. Presence is advisory
+   * and self-expiring; the session event (kind `31951`) is the canonical store,
+   * and neither is authoritative for the other.
+   *
+   * Why it exists at all: without it, a client can see who is sitting in the
+   * theater but not who is watching *together*, so a participant count and a
+   * "these two are in the same session" answer would have to come from
+   * enumerating relay state instead of from the room.
+   *
+   * Lifecycle: set once a session has actually been created or joined (never
+   * while a code is merely being typed), preserved across heartbeats, cleared
+   * immediately on leaving the session, on standing up, and on a location
+   * change. It must never be left pointing at a session the player has left.
+   *
+   * Backward compatible: older clients ignore it.
+   */
+  activity?: PresenceActivity;
   /**
    * OPTIONAL monotonic publish counter for this session, incremented once per
    * presence publish (login / move / hide / heartbeat).
@@ -192,6 +228,24 @@ export function parseSeatId(value: unknown): string | undefined {
   return value;
 }
 
+/**
+ * Read the shared-activity reference out of presence content, tolerating
+ * anything.
+ *
+ * Like {@link parseSeatId}, this is a TRANSPORT parser: it accepts only the
+ * documented shape and answers `undefined` for everything else. It deliberately
+ * does NOT check that `session` is a well-formed session address — that is a
+ * protocol question, answered by the shared-playback library, and presence must
+ * not grow a dependency on any one activity's addressing rules.
+ */
+export function parseActivity(value: unknown): PresenceActivity | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const candidate = value as { type?: unknown; session?: unknown };
+  if (candidate.type !== 'shared-playback') return undefined;
+  if (typeof candidate.session !== 'string' || candidate.session.trim().length === 0) return undefined;
+  return { type: 'shared-playback', session: candidate.session };
+}
+
 /** Walkable API interface for boundary checking */
 export interface WalkableApi {
   isWalkable(x: number, y: number): boolean;
@@ -237,6 +291,15 @@ export interface PlayerRenderState {
    * never pin a Blobbi to a chair.
    */
   seatId?: string;
+  /**
+   * The shared activity this remote player claims to be in, or undefined.
+   * Mirrors {@link PresenceContent.activity}, already sanitized by
+   * {@link parseActivity}.
+   *
+   * A CLAIM about participation, never a source of playback state: what is
+   * playing and where the playhead is comes from the session event alone.
+   */
+  activity?: PresenceActivity;
 }
 
 /** Blobbi visual data */
@@ -506,7 +569,17 @@ export async function publishMove(
   from: Position,
   rawClick: Position,
   speedPx: number,
-  nav: WalkableApi
+  nav: WalkableApi,
+  /**
+   * The shared activity, preserved across movement.
+   *
+   * Unlike `seatId` and `hiddenIn` — which movement is *defined* to clear,
+   * because they are claims about being stationary somewhere — participation in
+   * a session says nothing about where a Blobbi is standing. Dropping it here
+   * would make every walk look like leaving the session and rejoining it 25 s
+   * later. Leaving is published explicitly instead ({@link publishActivity}).
+   */
+  activity?: PresenceActivity
 ): Promise<Position> {
   const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
@@ -527,6 +600,7 @@ export async function publishMove(
       v: speedPx,
       ts: nowSec(),
     },
+    ...(activity ? { activity } : {}),
     ...(seq !== undefined ? { seq } : {}),
   };
 
@@ -609,7 +683,8 @@ export async function publishSit(
     seq?: number;
   },
   currentPos: Position,
-  seatId: string
+  seatId: string,
+  activity?: PresenceActivity
 ): Promise<void> {
   const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
@@ -622,6 +697,61 @@ export async function publishSit(
       ts: nowSec(),
     },
     seatId,
+    // A player who sits down while already in a watch session must not appear
+    // to have left it for the 25 s until the next heartbeat.
+    ...(activity ? { activity } : {}),
+    ...(seq !== undefined ? { seq } : {}),
+  };
+
+  const event = buildPresence31950({
+    sessionId,
+    islandId,
+    location,
+    blobbiAddr,
+    content,
+  });
+
+  await publish(event);
+}
+
+/**
+ * Publish that the player joined or left a shared activity.
+ *
+ * One idle presence, published at the moment participation actually changes,
+ * because waiting up to 25 s for the next heartbeat would show everyone else a
+ * stale answer to "who is watching this together?" — and, on leaving, would keep
+ * pointing at a session the player is no longer in.
+ *
+ * Passing `activity: null` is the clear: the event carries no `activity` field
+ * at all, which is exactly how `hiddenIn` and `seatId` are cleared.
+ */
+export async function publishActivity(
+  publish: (event: Record<string, unknown>) => Promise<void>,
+  params: {
+    sessionId: string;
+    islandId: string;
+    location: LocationId;
+    blobbiAddr: string;
+    /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
+    seq?: number;
+  },
+  currentPos: Position,
+  activity: PresenceActivity | null,
+  seatId?: string
+): Promise<void> {
+  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+
+  const content: PresenceContent = {
+    state: 'idle',
+    location,
+    anchor: {
+      x: currentPos.x,
+      y: currentPos.y,
+      ts: nowSec(),
+    },
+    // The seat is preserved: joining a session does not stand you up.
+    ...(seatId ? { seatId } : {}),
+    ...(activity ? { activity } : {}),
     ...(seq !== undefined ? { seq } : {}),
   };
 
@@ -651,7 +781,8 @@ export async function publishHeartbeat(
   },
   currentPos: Position,
   hiddenIn?: string,
-  seatId?: string
+  seatId?: string,
+  activity?: PresenceActivity
 ): Promise<void> {
   const { sessionId, islandId, location, blobbiAddr, seq } = params;
 
@@ -669,6 +800,9 @@ export async function publishHeartbeat(
     // Same for seating: a player who watches a whole film without moving would
     // otherwise pop out of their chair every time presence was renewed.
     ...(seatId ? { seatId } : {}),
+    // And the same for the watch session — a two-hour film is a lot of
+    // heartbeats to drop out of the participant list on.
+    ...(activity ? { activity } : {}),
     ...(seq !== undefined ? { seq } : {}),
   };
 

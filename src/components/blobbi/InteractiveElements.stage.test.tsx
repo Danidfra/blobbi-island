@@ -11,9 +11,10 @@
  * these tests fail if merely entering the theater starts building a player.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { LocationContext } from '@/contexts/LocationContextValue';
 import { InteractiveElements } from './InteractiveElements';
+import { TestApp } from '@/test/TestApp';
 import type { MovableBlobbiRef } from './MovableBlobbi';
 import {
   THEATER_OCCUPIABLE_SEAT_COUNT,
@@ -22,12 +23,20 @@ import {
 } from '@/lib/theater-seats-config';
 import { THEATER_Z } from '@/lib/theater-layout';
 
-function renderTheater(sittingIn: string | null = null) {
+/**
+ * The theater now needs the Nostr providers: a seated player can start or join a
+ * watch session, so `TheaterStage` reads the signer. `NostrLoginProvider` reads
+ * its storage through a promise and renders nothing until it resolves, which is
+ * why this helper is async — a synchronous render would assert against an empty
+ * document.
+ */
+async function renderTheater(sittingIn: string | null = null) {
   const blobbiRef: React.RefObject<MovableBlobbiRef> = {
     current: { goTo: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 80 }) },
   };
 
-  return render(
+  const view = render(
+    <TestApp>
     <LocationContext.Provider
       value={{
         currentLocation: 'stage',
@@ -46,28 +55,35 @@ function renderTheater(sittingIn: string | null = null) {
           onSitInSeat={vi.fn()}
         />
       </div>
-    </LocationContext.Provider>,
+    </LocationContext.Provider>
+    </TestApp>,
   );
+
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  return view;
 }
 
 describe('theater room', () => {
-  it('renders 28 chairs: 26 occupiable seats and 2 decorative', () => {
-    const { container } = renderTheater();
+  it('renders 28 chairs: 26 occupiable seats and 2 decorative', async () => {
+    const { container } = await renderTheater();
     const chairImages = container.querySelectorAll('img[src*="/stage/chair"]');
     expect(chairImages).toHaveLength(28);
     expect(container.querySelectorAll('[data-seat-id]')).toHaveLength(THEATER_OCCUPIABLE_SEAT_COUNT);
     expect(theaterSeats.length - occupiableTheaterSeats.length).toBe(2);
   });
 
-  it('gives every occupiable chair a distinct id — the old markup gave all 28 the same one', () => {
-    const { container } = renderTheater();
+  it('gives every occupiable chair a distinct id — the old markup gave all 28 the same one', async () => {
+    const { container } = await renderTheater();
     const ids = [...container.querySelectorAll('[data-seat-id]')].map((el) => el.getAttribute('data-seat-id'));
     expect(new Set(ids).size).toBe(THEATER_OCCUPIABLE_SEAT_COUNT);
     expect(container.querySelector('[data-chair-id="stage-chair"]')).toBeNull();
   });
 
-  it('shows nothing but scenery before anybody sits down', () => {
-    const { container } = renderTheater(null);
+  it('shows nothing but scenery before anybody sits down', async () => {
+    const { container } = await renderTheater(null);
     // No control card, no video surface, no error — an empty theater is idle.
     expect(container.querySelector('[data-theater-controls]')).toBeNull();
     expect(container.querySelector('[data-theater-screen]')).toBeNull();
@@ -77,8 +93,8 @@ describe('theater room', () => {
     expect(container.querySelector('[data-theater-curtain]')).toHaveAttribute('data-curtain-open', 'false');
   });
 
-  it('shows the control card once the Blobbi has arrived at a seat', () => {
-    const { container } = renderTheater('theater-seat-a1');
+  it('shows the control card once the Blobbi has arrived at a seat', async () => {
+    const { container } = await renderTheater('theater-seat-a1');
     expect(container.querySelector('[data-theater-controls]')).not.toBeNull();
     expect(container.querySelector('[data-theater-controls]')).toHaveAttribute(
       'data-theater-status',
@@ -89,8 +105,8 @@ describe('theater room', () => {
     expect(container.querySelector('[data-theater-curtain]')).toHaveAttribute('data-curtain-open', 'false');
   });
 
-  it('ignores a decorative chair id — sitting on scenery is not a state', () => {
-    const { container } = renderTheater('theater-seat-b1');
+  it('ignores a decorative chair id — sitting on scenery is not a state', async () => {
+    const { container } = await renderTheater('theater-seat-b1');
     // The stage still opens its card (the seat system owns validity), but no
     // Blobbi can ever be pinned there; `resolveSeatedRender` is the guard and is
     // covered in TheaterSeat.test.tsx. What matters here is that the room does
@@ -110,15 +126,15 @@ describe('theater room', () => {
     expect(THEATER_Z.controls).toBeGreaterThan(Math.max(...theaterSeats.map((s) => s.zIndex)));
   });
 
-  it('leaves the curtain block without a z-index, as it always was', () => {
-    const { container } = renderTheater();
+  it('leaves the curtain block without a z-index, as it always was', async () => {
+    const { container } = await renderTheater();
     const block = container.querySelector<HTMLElement>('[data-theater-curtain]')!;
     expect(block.style.zIndex).toBe('');
     expect(block.className).not.toMatch(/\bz-\d/);
   });
 
-  it('keeps the back arrow reachable above the seats it overlaps', () => {
-    const { container } = renderTheater();
+  it('keeps the back arrow reachable above the seats it overlaps', async () => {
+    const { container } = await renderTheater();
     // z-20 in the markup; row A seats are z-30 but sit at the bottom of the room.
     expect(container.querySelector('.z-20')).not.toBeNull();
   });

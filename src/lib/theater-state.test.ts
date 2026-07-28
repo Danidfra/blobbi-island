@@ -151,6 +151,36 @@ describe('theaterReducer', () => {
     expect(isCurtainOpen(next)).toBe(false);
   });
 
+  describe('retaining the screen while a shared session runs', () => {
+    it('vacates the chair without touching the screen', () => {
+      const state = theaterReducer(ready(), { type: 'stand', retain: true });
+      expect(state.seatId).toBeNull();
+      // The film is still on for everyone else in the room.
+      expect(state.status).toBe('video-ready');
+      expect(state.request).toEqual(ready().request);
+      expect(isPlayerMounted(state)).toBe(true);
+      expect(isCurtainOpen(state)).toBe(true);
+      // …but the controls live on the chair.
+      expect(isControlCardVisible(state)).toBe(false);
+    });
+
+    it('gives the chair back without rebuilding anything', () => {
+      const standing = theaterReducer(ready(), { type: 'stand', retain: true });
+      const seated = theaterReducer(standing, { type: 'sit', seatId: 'theater-seat-c5', retain: true });
+      expect(seated.seatId).toBe('theater-seat-c5');
+      expect(seated.request).toBe(standing.request);
+      expect(isControlCardVisible(seated)).toBe(true);
+      expect(isCurtainOpen(seated)).toBe(true);
+    });
+
+    it('still releases everything when NOT retaining', () => {
+      expect(theaterReducer(ready(), { type: 'stand' })).toEqual(INITIAL_THEATER_STATE);
+      const other = theaterReducer(ready(), { type: 'sit', seatId: 'theater-seat-c5' });
+      expect(other.request).toBeNull();
+      expect(other.status).toBe('seated-idle');
+    });
+  });
+
   it('shows the control card exactly while seated', () => {
     expect(isControlCardVisible(INITIAL_THEATER_STATE)).toBe(false);
     for (const state of [seated(), loading(), ready(), theaterReducer(loading(), { type: 'player-error', error: ERROR })]) {

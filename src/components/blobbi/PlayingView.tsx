@@ -5,6 +5,8 @@ import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 
 import { InteractiveElements } from './InteractiveElements';
 import { useLocation } from '@/hooks/useLocation';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { forgetWatchSession } from '@/hooks/useSharedPlayback';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import type { Blobbi } from '@/hooks/useBlobbis';
@@ -59,6 +61,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const localActiveRef = useRef<LocalActiveState | null>(null);
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
   const { currentLocation, previousLocation } = useLocation();
+  const { user } = useCurrentUser();
   const { nostr } = useNostr();
   const { showDebugOverlays } = useDebugOverlays();
   const [modalKey, setModalKey] = useState<string>('self');
@@ -111,6 +114,18 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // it is cleared the instant movement starts or the location changes.
   const [sittingIn, setSittingIn] = useState<string | null>(null);
 
+  // The shared watch session the local player is participating in, as the
+  // session ADDRESS STRING and nothing else. Owned here for the same reason
+  // `sittingIn` is: the theater reports it, presence publishes it, and both need
+  // one answer. It is never a copy of playback state — what is playing lives in
+  // the session event (see `docs/protocol/shared-playback-session.md` §14).
+  const [activitySession, setActivitySession] = useState<string | null>(null);
+
+  // How many visible players presence says are in that session, including this
+  // one. Derived by MultiplayerLayer (which holds the live presence map) and
+  // lifted here so the theater card can show it. Advisory, like seat occupancy.
+  const [sessionParticipants, setSessionParticipants] = useState(1);
+
   // Theater seats that should LOOK occupied — remote players whose presence
   // claims a seat, plus the local player's own. Derived by MultiplayerLayer
   // (which holds the live presence map) and lifted here so the seats, which are
@@ -133,7 +148,16 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   useEffect(() => {
     setHiddenIn(null);
     setSittingIn(null);
-  }, [currentLocation]);
+    // Walking out of the theater ends participation in whatever was playing
+    // there; presence must never point at a session the player has left.
+    //
+    // This is the ONLY implicit way out of a watch session. Standing up, walking
+    // around the theater and changing seats all keep it — the session belongs to
+    // being in the room, not to a chair. Leaving the room also forgets the
+    // session for good, so walking back in does not silently rejoin it.
+    setActivitySession(null);
+    forgetWatchSession(user?.pubkey);
+  }, [currentLocation, user?.pubkey]);
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
@@ -517,6 +541,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         sittingIn={sittingIn}
         occupiedSeats={occupiedSeats}
         onSitInSeat={handleSitInSeat}
+        sessionParticipants={sessionParticipants}
+        onActivityChange={setActivitySession}
         hiddenIn={hiddenIn}
         onHideInSpot={setHiddenIn}
       />
@@ -610,6 +636,8 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           hiddenIn={hiddenIn}
           sittingIn={sittingIn}
           onOccupiedSeatsChange={setOccupiedSeats}
+          activitySession={activitySession}
+          onSessionParticipantsChange={setSessionParticipants}
           localAttentionRef={localAttentionRef}
           livePositionsRef={livePositionsRef}
           localActiveRef={localActiveRef}

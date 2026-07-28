@@ -76,10 +76,15 @@ export const THEATER_PLAYER_RECT = (() => {
  * Row C's chair sprites start at y ≈ 72.4 %, so a card taller than ~12 % of the
  * world overlaps them. It is drawn above them ({@link THEATER_Z.controls}), which
  * is correct: controls must never be occluded by furniture.
+ *
+ * The top edge sits just below the curtain's painted hem (~60 %). It was moved
+ * up by 2 points once the card grew a session row: the taller card was ending up
+ * against the seats and reading as cramped, and this is the whole of the space
+ * available above the hem.
  */
 export const THEATER_CONTROL_CARD_RECT = {
   leftPercent: THEATER_PLAYER_RECT.leftPercent,
-  topPercent: 60.5,
+  topPercent: 58.5,
   widthPercent: THEATER_PLAYER_RECT.widthPercent,
 } as const;
 

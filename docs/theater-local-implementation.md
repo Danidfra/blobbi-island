@@ -4,9 +4,12 @@ What exists in the code today for the Blobbi Island theater (`LocationId: 'stage
 Phases 1–3 of the plan in
 [`docs/protocol/shared-playback-session.md`](protocol/shared-playback-session.md) §19.
 
-**Playback is single-viewer and offline**: no session exists, no invitation code is generated, and
-no shared-playback event (`31951`/`21951`) is published or read. Phases 4–9 (the shared-playback
-protocol) layer on top; the seams they attach to are called out below.
+**This document covers the LOCAL half only** — seats, curtain, player, controls — which is
+single-viewer and works with no relay at all. Shared watch sessions (kinds `31951`/`21951`,
+invitation codes, host/guest authority) are now implemented on top of these seams and are
+documented separately in
+[`docs/theater-shared-watch-implementation.md`](theater-shared-watch-implementation.md).
+The seams they attach to are called out below.
 
 The one multiplayer thing that *is* implemented is **seating**: the existing island presence event
 (kind `31950`) now carries which seat a player is sitting in, so everyone in the room sees everyone
@@ -356,10 +359,11 @@ presence GC — seat still held at 30 s, released at 45 s — instead of deletin
 
 #### The boundary this stops at
 
-Presence answers **"who is visibly sitting where, right now"** and nothing else. It is advisory,
-self-expiring and per-client. Authoritative shared state — who is hosting, what is playing, where
-the playhead is — belongs to the session event (kind `31951`), which is **not implemented**. The
-two meet only in the theater UI, by id, never by shared state
+Presence answers **"who is visibly sitting where, and which shared activity are they in"** — and
+nothing else. It is advisory, self-expiring and per-client, and the `activity` field carries a
+session ADDRESS STRING with no playback state in it. Authoritative shared state — who is hosting,
+what is playing, where the playhead is — belongs to the session event (kind `31951`). The two meet
+only in the theater UI, by id, never by shared state
 (`docs/protocol/shared-playback-session.md` §14.1, §14.3).
 
 ### Tests
@@ -597,9 +601,15 @@ deleted, embedding disabled, region blocked — surface from the player as the e
 There are two curtain layers. The **red** one is static painted scenery and is unchanged. The
 **yellow** one is movable and follows application state through a CSS transition:
 
+> **One exception, added with shared playback:** while a shared session is
+> attached, standing up keeps the screen (and therefore the curtain) — the film
+> is still running for everyone else in the room. Only the control card, which
+> lives on the chair, disappears. Local-only playback is unchanged: standing up
+> stops it. See `docs/theater-shared-watch-implementation.md` §6.2.
+
 | state | curtain |
 | --- | --- |
-| not seated | closed |
+| not seated (local-only) | closed |
 | seated, nothing loaded | closed |
 | loading | closed |
 | video ready | **open**, and it stays open |
@@ -678,14 +688,14 @@ captions.
 
 | Seam | Where |
 | --- | --- |
-| Publish a paired `21951` + `31951` | `LocalControllerOptions.onCommand(command, state)` |
-| Apply a remote canonical state | `applyCommand(state, command)` — already pure |
+| Publish a paired `21951` + `31951` | **done** — `useTheaterPlayback(request, { onCommand })` → `useSharedPlayback` |
+| Apply a remote canonical state | **done** — the shared controller drives the local one with publication suppressed |
 | Position arithmetic | `clampPosition` / `resolveSkipTarget` / `normalizeRate` |
 | Choose the control surface | `<TheaterStage role="host" \| "guest" />` |
 | Draw a remote seated Blobbi | **done** — `resolveSeatedRender(seatId)` in `MultiplayerLayer` |
 | Publish who is sitting where | **done** — `PlayingView.sittingIn` → presence `seatId` |
-| Attach a session to a seated player | `PresenceContent.activity` (address string only) — NOT implemented |
-| Drive the room's UI from a session | `theaterReducer` in `theater-state.ts` — the guest path adds events, not booleans |
+| Attach a session to a seated player | **done** — `PresenceContent.activity` (address string only) |
+| Drive the room's UI from a session | **done** — `useSharedPlayback` dispatches `submit` into `theaterReducer`; the reducer is unchanged |
 | Turn a Blobbi around | `facing="back"`, derived from `theaterSeats[seatId].facing` |
 
 The decoupling rules in the protocol document (§14.3) still hold: the seat system imports
@@ -756,8 +766,10 @@ Confirmed by hand, reading both the rendered DOM and the relay's event log:
   other user immediately won the seat, flipping the chair to `occupied-by="remote"`.
 * **Stale presence.** Navigating one client away from the app stopped its heartbeats; the observer
   dropped the player and cleared `data-seat-occupied` entirely, through the existing presence GC.
-* **No shared playback.** The relay saw only kinds `0`, `11125`, `31124` and `31950` for the whole
-  session. Zero `31951`, zero `21951`.
+* **No shared playback** *(true when this seating pass was validated)*. The relay saw only kinds
+  `0`, `11125`, `31124` and `31950` for the whole session. Zero `31951`, zero `21951`. The later
+  shared-playback validation, with those kinds live, is recorded in
+  [`docs/theater-shared-watch-implementation.md`](theater-shared-watch-implementation.md) §10.
 
 **Two real defects were found this way and fixed** — neither was reachable from jsdom:
 
@@ -788,13 +800,12 @@ spinner and the "Still loading…" copy). The fullscreen *refusal* path is cover
 
 ## 6. Known gaps
 
-* **Shared playback is not implemented.** No kind `31951`, no kind `21951`, no session, no
-  invitation code, no synchronized play/pause/seek, no host or guest authority, no session
-  discovery. Presence now carries `seatId`, and that is the *only* multiplayer state the theater
-  has: who is visibly sitting where. `PresenceContent.activity` (the session address string) is
-  not implemented either.
-* **Guest mode is unreachable in the product** — it exists as a prop with no caller until
-  sessions exist.
+* **Shared playback is implemented** — see
+  [`docs/theater-shared-watch-implementation.md`](theater-shared-watch-implementation.md) for the
+  event shapes, authority matrix, synchronization model and its own limitations. Presence now
+  carries both `seatId` (who is visibly sitting where) and `activity` (which session they are
+  watching, as an address string only).
+* **Guest mode is reachable**: joining a session with a code selects the guest surface.
 * **Moderation.** The open catalog removes the audit's only moderation mechanism; see the
   deviation note above.
 * **Fullscreen** requests fullscreen on the embed iframe only. It has not been tested against the

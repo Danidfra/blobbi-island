@@ -35,12 +35,24 @@
  * Two rules the room depends on:
  *
  *  - **The curtain rises on `video-ready` and on nothing else.** Not on mount,
- *    not on hover, not because an iframe appeared. And once up it stays up:
- *    there is no transition out of `video-ready` that is not an explicit user
- *    action (change video, stand up, leave) or a real playback failure.
- *  - **A player exists only while `request` is set.** No seat, no player; no
- *    chosen video, no player. An idle theater cannot produce a player error
- *    because it has no player.
+ *    not on hover, not because an iframe appeared, and never because a session
+ *    merely exists. Once up it stays up until an explicit user action (change
+ *    video, leave) or a real playback failure.
+ *  - **A player exists only while `request` is set.**
+ *
+ * ## Seating and the player are separate lifetimes
+ *
+ * `seatId` says where the local Blobbi is; it does NOT own the screen. Standing
+ * up out of a local, single-viewer session releases the player — walking out of
+ * your own film should stop it. But standing up while a SHARED session is
+ * running must not: the session is still playing for everybody else, and tearing
+ * the player down would black the screen out, close the curtain and force a
+ * catch-up seek for the sake of getting out of a chair.
+ *
+ * So `sit` and `stand` take a `retain` flag, set by the caller that knows
+ * whether a session is attached. Retaining keeps `status`, `request` and `error`
+ * exactly as they are and moves only `seatId` — which is why the control card
+ * (seated-only) disappears while the video (player-only) keeps playing.
  */
 
 import type { MediaRef } from '@/lib/theater-playback';
@@ -77,10 +89,21 @@ export const INITIAL_THEATER_STATE: TheaterLocalState = {
 };
 
 export type TheaterEvent =
-  /** CONFIRMED arrival at a seat — never a click. */
-  | { type: 'sit'; seatId: string }
-  /** Movement started, the location changed, or the seat was otherwise left. */
-  | { type: 'stand' }
+  /**
+   * CONFIRMED arrival at a seat — never a click.
+   *
+   * `retain` means "a shared session is attached, keep what is on screen": the
+   * media, the player and the curtain carry straight across, and only the seat
+   * changes. Without it, arriving at a different seat is a fresh sitting.
+   */
+  | { type: 'sit'; seatId: string; retain?: boolean }
+  /**
+   * Movement started, the location changed, or the seat was otherwise left.
+   *
+   * `retain` keeps the screen alive while the viewer is on their feet — used
+   * exactly when a shared session is still running.
+   */
+  | { type: 'stand'; retain?: boolean }
   /** A parsed, valid video id was submitted. */
   | { type: 'submit'; media: MediaRef; startSeconds?: number }
   /** The player reported the requested media is ready/cued/playing. */
@@ -95,13 +118,18 @@ export function theaterReducer(state: TheaterLocalState, event: TheaterEvent): T
       // Re-arriving at the seat you are already in changes nothing — a new
       // object here would tear down a playing video for no reason.
       if (state.status !== 'not-seated' && state.seatId === event.seatId) return state;
-      // A DIFFERENT seat is a fresh sitting: the video is released and the card
-      // returns to the input, rather than appearing to follow you around.
+      // With a session attached, a chair is just a chair: sit down anywhere and
+      // the same film is still on the same screen.
+      if (event.retain) return { ...state, seatId: event.seatId };
+      // Otherwise a DIFFERENT seat is a fresh sitting: the video is released and
+      // the card returns to the input, rather than appearing to follow you around.
       return { status: 'seated-idle', seatId: event.seatId, request: null, error: null };
     }
 
     case 'stand':
-      if (state.status === 'not-seated') return state;
+      if (state.seatId === null) return state;
+      // The session keeps the screen; only the chair is vacated.
+      if (event.retain) return { ...state, seatId: null };
       return INITIAL_THEATER_STATE;
 
     case 'submit':
@@ -135,9 +163,15 @@ export function theaterReducer(state: TheaterLocalState, event: TheaterEvent): T
 // Every one of these is a pure function of the state, so no two parts of the
 // room can disagree about what is happening.
 
-/** The control card exists only while the local Blobbi is sitting in a seat. */
+/**
+ * The control card exists only while the local Blobbi is sitting in a seat.
+ *
+ * Keyed on the SEAT, not on the status: with a shared session retained, the
+ * screen keeps playing while the viewer is standing, and the controls must not
+ * follow them around the room.
+ */
 export function isControlCardVisible(state: TheaterLocalState): boolean {
-  return state.status !== 'not-seated';
+  return state.seatId !== null;
 }
 
 /**

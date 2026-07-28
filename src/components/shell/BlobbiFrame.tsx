@@ -39,19 +39,22 @@ export function BlobbiFrame({
   variant = "desktop",
   className,
 }: BlobbiFrameProps) {
-  if (variant === "immersive") {
-    return (
-      <div className={cn("relative w-full h-full overflow-hidden bg-island-ink", className)}>
-        <div className="absolute inset-0">{children}</div>
-        {/* HUD/dock wrappers are pointer-events-none so empty space around the
-            visible controls lets world click-to-move through. The controls
-            themselves re-enable pointer events (see BlobbiHUD/BlobbiActionDock). */}
-        {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
-        {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
-      </div>
-    );
-  }
+  const immersive = variant === "immersive";
 
+  // ⚠️ ONE TREE, TWO PRESENTATIONS — never two trees.
+  //
+  // This component used to `return` a completely different element chain per
+  // variant: immersive nested the world two levels deep, desktop four. React
+  // identifies state by POSITION, so switching variant unmounted everything
+  // below and mounted it again — destroying the world's React state (seat,
+  // position, watch session) and the YouTube player with it. Toggling
+  // fullscreen changes `variant`, so a fullscreen click reset the game.
+  //
+  // The chain below is therefore IDENTICAL in both variants; only classes and
+  // the aspect lock differ. The extra wrappers are visually inert when
+  // immersive (full-size, unstyled), and `{children}` keeps the same position
+  // in the tree, which is what keeps it mounted.
+  //
   // Desktop: aspect-locked frame that fits within the available box (the band
   // between the shell header and footer — NOT the full viewport). The whole unit
   // (wood frame + cream bezel + world) is ONE aspect-locked box.
@@ -66,34 +69,55 @@ export function BlobbiFrame({
   //   • Short height  → height is binding, shrinks proportionally (3:2 kept).
   // Frame and canvas always resize as one unit. Never overflows / no scroll.
   return (
-    <div className={cn("flex h-full w-full items-center justify-center p-4 sm:p-6", className)}>
+    <div
+      className={cn(
+        immersive
+          ? "relative h-full w-full overflow-hidden bg-island-ink"
+          : "flex h-full w-full items-center justify-center p-4 sm:p-6",
+        className,
+      )}
+    >
       <div
-        className="relative w-full"
-        style={{
-          aspectRatio: `${STAGE_ASPECT}`,
-          maxHeight: "100%",
-          maxWidth: "min(100%, 1040px)",
-        }}
+        className={immersive ? "relative h-full w-full" : "relative w-full"}
+        style={
+          immersive
+            ? undefined
+            : {
+                aspectRatio: `${STAGE_ASPECT}`,
+                maxHeight: "100%",
+                maxWidth: "min(100%, 1040px)",
+              }
+        }
       >
-        {/* Cozy wood frame */}
+        {/* Cozy wood frame (desktop) / inert wrapper (immersive) */}
         <div
           className={cn(
-            "relative h-full w-full overflow-hidden rounded-[1.75rem]",
-            "bg-island-wood",
-            "p-2 sm:p-3",
-            "shadow-cozy-frame",
-            "ring-1 ring-island-wood-dark/40",
+            "relative h-full w-full overflow-hidden",
+            !immersive && [
+              "rounded-[1.75rem]",
+              "bg-island-wood",
+              "p-2 sm:p-3",
+              "shadow-cozy-frame",
+              "ring-1 ring-island-wood-dark/40",
+            ],
           )}
         >
-          {/* Inner cream bezel + world */}
-          <div className="relative h-full w-full overflow-hidden rounded-[1.25rem] bg-island-cream shadow-[inset_0_2px_8px_rgba(58,42,26,0.18)]">
+          {/* Inner cream bezel + world (desktop) / inert wrapper (immersive) */}
+          <div
+            className={cn(
+              "relative h-full w-full overflow-hidden",
+              !immersive &&
+                "rounded-[1.25rem] bg-island-cream shadow-[inset_0_2px_8px_rgba(58,42,26,0.18)]",
+            )}
+          >
             {/* World stage */}
             <div className="absolute inset-0">{children}</div>
 
-            {/* Top HUD */}
+            {/* HUD/dock wrappers are pointer-events-none so empty space around
+                the visible controls lets world click-to-move through. The
+                controls themselves re-enable pointer events. */}
             {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
 
-            {/* Bottom dock */}
             {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
           </div>
         </div>

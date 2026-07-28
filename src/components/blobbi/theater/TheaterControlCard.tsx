@@ -5,7 +5,9 @@ import type { TheaterPlaybackController, TheaterPlaybackSnapshot } from '@/lib/t
 import type { TheaterLocalState } from '@/lib/theater-state';
 import type { MediaError } from '@/lib/youtube-player';
 import { TheaterMediaInput } from './TheaterMediaInput';
+import { TheaterSessionPanel } from './TheaterSessionPanel';
 import { GuestControls, HostControls, type TheaterRole } from './TheaterControls';
+import type { SharedWatchState } from '@/hooks/useSharedPlayback';
 
 interface TheaterControlCardProps {
   state: TheaterLocalState;
@@ -17,6 +19,14 @@ interface TheaterControlCardProps {
   onRetryPlayer: () => void;
   onSubmit: (videoId: string, startSeconds?: number) => void;
   onChangeVideo: () => void;
+  shared: SharedWatchState;
+  participants: number;
+  canPublish: boolean;
+  onCreateSession: () => void;
+  onJoinSession: (code: string) => void;
+  onLeaveSession: () => void;
+  onEndSession: () => void;
+  onDismissSessionError: () => void;
 }
 
 const FULLSCREEN_DENIED_MESSAGE =
@@ -50,6 +60,14 @@ export function TheaterControlCard({
   onRetryPlayer,
   onSubmit,
   onChangeVideo,
+  shared,
+  participants,
+  canPublish,
+  onCreateSession,
+  onJoinSession,
+  onLeaveSession,
+  onEndSession,
+  onDismissSessionError,
 }: TheaterControlCardProps) {
   const [fullscreenDenied, setFullscreenDenied] = useState(false);
   const isHost = role === 'host';
@@ -59,7 +77,11 @@ export function TheaterControlCard({
       data-theater-controls
       data-theater-status={state.status}
       data-block-move
-      className="absolute flex flex-col items-stretch gap-1.5 rounded-xl border border-white/10 bg-black/60 px-3 py-2 backdrop-blur-sm"
+      // The BACKGROUND is what got lighter — `bg-black/45` instead of `/60` —
+      // so more of the room shows through the card. Everything drawn on top of
+      // it (text, icons, buttons, inputs) keeps its own full opacity, and the
+      // blur stays, which is what holds the contrast up over busy scenery.
+      className="absolute flex flex-col items-stretch gap-1.5 rounded-xl border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-sm"
       style={{
         left: `${THEATER_CONTROL_CARD_RECT.leftPercent}%`,
         top: `${THEATER_CONTROL_CARD_RECT.topPercent}%`,
@@ -156,6 +178,37 @@ export function TheaterControlCard({
           )}
         </>
       )}
+
+      {/* A session problem is NOT a player problem: it gets its own line, and
+          the video above it keeps playing. */}
+      {shared.error && (
+        <div className="flex items-center gap-2">
+          <p role="alert" data-theater-session-error={shared.error.code} className="flex-1 px-1 text-[11px] text-amber-200/90">
+            {shared.error.message}
+          </p>
+          <button
+            type="button"
+            onClick={onDismissSessionError}
+            aria-label="Dismiss session message"
+            className="shrink-0 rounded-full border border-white/20 px-2 py-0.5 text-[11px] text-white/60 transition-colors hover:text-white"
+          >
+            OK
+          </button>
+        </div>
+      )}
+
+      {/* Watching together is a property of the room you are already in, so the
+          session controls live in this card rather than in a dialog over it. */}
+      <TheaterSessionPanel
+        shared={shared}
+        hasMedia={snapshot.media !== null}
+        canPublish={canPublish}
+        participants={participants}
+        onCreate={onCreateSession}
+        onJoin={onJoinSession}
+        onLeave={onLeaveSession}
+        onEnd={onEndSession}
+      />
     </div>
   );
 }

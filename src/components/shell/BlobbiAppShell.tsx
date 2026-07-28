@@ -102,58 +102,64 @@ export function BlobbiAppShell({
   // header/footer chrome is hidden.
   const fillScreen = immersive || isFullscreen;
 
-  if (fillScreen) {
-    return (
-      <FullscreenPortalContext.Provider value={portalContainer}>
-        <div ref={setRoot} className="fixed inset-0 overflow-hidden bg-island-ink">
-          <BlobbiFrame variant="immersive" hud={hud} dock={dock}>
-            <BlobbiStage fit="fill">{children}</BlobbiStage>
-          </BlobbiFrame>
-
-          {/* Desktop fullscreen only: an obvious clickable way out (Esc also
-              works). Not shown in normal mobile-landscape immersive mode.
-              Placed top-LEFT so it never collides with the account/menu control
-              that lives top-right in the HUD. */}
-          {isFullscreen && !immersive && <FullscreenExitButton onExit={exit} />}
-        </div>
-      </FullscreenPortalContext.Provider>
-    );
-  }
-
-  // Desktop: header + centered (smaller) canvas + contextual bottom area.
+  // ⚠️ ONE TREE, TWO PRESENTATIONS.
+  //
+  // This shell used to `return` early for the fill-screen case, producing a
+  // structurally different tree: the framed layout has the header at child
+  // index 0, the fill layout has the frame there. React matches state by
+  // POSITION, so every toggle of `isFullscreen` unmounted the entire game and
+  // mounted a fresh copy — new `PlayingView` (Blobbi back at its spawn point,
+  // seat lost), new `MultiplayerLayer` (new presence session id, ghost player
+  // on every other screen until the old one expired), new `TheaterStage` (the
+  // YouTube player destroyed and the watch session dropped, orphaning a host's
+  // own session). Nothing navigated and nothing reloaded — it was a remount,
+  // and it looked exactly like a reload.
+  //
+  // So the chain is now identical in both presentations: the header and footer
+  // are conditional CHILDREN in fixed slots, and everything below the canvas
+  // wrapper keeps its position. Only classes and props change.
   return (
     <FullscreenPortalContext.Provider value={portalContainer}>
       <div
         ref={setRoot}
         className={cn(
           "fixed inset-0 overflow-hidden",
-          "flex flex-col",
-          "bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
+          fillScreen
+            ? "bg-island-ink"
+            : "flex flex-col bg-gradient-to-b from-island-sky/70 via-island-cream to-island-sand/60",
         )}
       >
-        <BlobbiShellHeader
-          fullscreenSupported={isSupported}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={toggle}
-          // Pre-login: login lives in the Island Pass card, so hide the header's
-          // duplicate account control. After login the header shows the account
-          // menu (the single home for account / current Blobbi / settings).
-          showAccount={!isLogin}
-          // The account menu hosts "Switch Blobbi"; only relevant once the player
-          // has a world/collection.
-          onOpenCollection={showGameChrome ? onOpenCollection : undefined}
-        />
+        {!fillScreen && (
+          <BlobbiShellHeader
+            fullscreenSupported={isSupported}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggle}
+            // Pre-login: login lives in the Island Pass card, so hide the header's
+            // duplicate account control. After login the header shows the account
+            // menu (the single home for account / current Blobbi / settings).
+            showAccount={!isLogin}
+            // The account menu hosts "Switch Blobbi"; only relevant once the player
+            // has a world/collection.
+            onOpenCollection={showGameChrome ? onOpenCollection : undefined}
+          />
+        )}
 
-        {/* Centered game canvas — takes the remaining height between header and
-            footer, and the frame inside is aspect-locked so it never fills the
-            whole viewport. */}
-        <div className="min-h-0 flex-1">
-          <BlobbiFrame variant="desktop" hud={hud} dock={dock}>
-            <BlobbiStage fit="framed">{children}</BlobbiStage>
+        {/* Game canvas. Framed: takes the remaining height between header and
+            footer, aspect-locked inside so it never fills the whole viewport.
+            Fill: the whole fixed root. */}
+        <div className={fillScreen ? "relative h-full w-full" : "min-h-0 flex-1"}>
+          <BlobbiFrame variant={fillScreen ? "immersive" : "desktop"} hud={hud} dock={dock}>
+            <BlobbiStage fit={fillScreen ? "fill" : "framed"}>{children}</BlobbiStage>
           </BlobbiFrame>
         </div>
 
-        <BlobbiShellFooter>{footerSlot}</BlobbiShellFooter>
+        {!fillScreen && <BlobbiShellFooter>{footerSlot}</BlobbiShellFooter>}
+
+        {/* Desktop fullscreen only: an obvious clickable way out (Esc also
+            works). Not shown in normal mobile-landscape immersive mode.
+            Placed top-LEFT so it never collides with the account/menu control
+            that lives top-right in the HUD. */}
+        {isFullscreen && !immersive && <FullscreenExitButton onExit={exit} />}
       </div>
     </FullscreenPortalContext.Provider>
   );

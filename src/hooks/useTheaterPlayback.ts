@@ -12,6 +12,7 @@ import {
   type TheaterPlaybackController,
   type TheaterPlaybackSnapshot,
 } from '@/lib/theater-playback';
+import type { PlaybackCommand, PlaybackState } from '@/lib/theater-playback';
 import type { TheaterMediaRequest } from '@/lib/theater-state';
 
 /** Position polling cadence. Cheap, local, and never produces network traffic. */
@@ -37,6 +38,7 @@ const IDLE_SNAPSHOT: TheaterPlaybackSnapshot = {
   availableRates: [1],
   autoplayBlocked: false,
   stalled: false,
+  playerPlaying: false,
 };
 
 export interface UseTheaterPlaybackResult {
@@ -73,8 +75,28 @@ export interface UseTheaterPlaybackResult {
  * but an orphaned YouTube iframe keeps playing audio, so the cleanup below is
  * what makes "walk out of the theater" mean silence.
  */
-export function useTheaterPlayback(request: TheaterMediaRequest | null): UseTheaterPlaybackResult {
+export interface UseTheaterPlaybackOptions {
+  /**
+   * The publication seam. Called for every command the LOCAL controller
+   * produces, including the `set-media` issued while adopting a freshly built
+   * player — which is exactly the event shared playback needs when a host
+   * changes video, and is why the listener is installed at construction rather
+   * than attached by a later effect.
+   *
+   * Local playback passes nothing and publishes nothing.
+   */
+  onCommand?: (command: PlaybackCommand, state: PlaybackState) => void;
+}
+
+export function useTheaterPlayback(
+  request: TheaterMediaRequest | null,
+  options: UseTheaterPlaybackOptions = {},
+): UseTheaterPlaybackResult {
   const hostRef = useRef<HTMLDivElement>(null);
+  // Held in a ref so a new callback identity never rebuilds the player: a
+  // rebuilt player is a black screen and a lost position.
+  const onCommandRef = useRef(options.onCommand);
+  onCommandRef.current = options.onCommand;
   const controllerRef = useRef<LocalTheaterPlaybackController | null>(null);
   const [controller, setController] = useState<LocalTheaterPlaybackController | null>(null);
   const [snapshot, setSnapshot] = useState<TheaterPlaybackSnapshot>(IDLE_SNAPSHOT);
@@ -176,7 +198,10 @@ export function useTheaterPlayback(request: TheaterMediaRequest | null): UseThea
           adapter.destroy();
           return;
         }
-        const instance = new LocalTheaterPlaybackController({ adapter });
+        const instance = new LocalTheaterPlaybackController({
+          adapter,
+          onCommand: (command, state) => onCommandRef.current?.(command, state),
+        });
         controllerRef.current = instance;
         // The player was constructed around this video: adopt it into the state
         // WITHOUT re-issuing a load, which would discard the embed's head start.

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { PlayingView } from '@/components/blobbi/PlayingView';
+import { BlobbiAppShell } from '@/components/shell/BlobbiAppShell';
 import { LocationProvider } from '@/contexts/LocationContext';
-import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
 import { useLocation } from '@/hooks/useLocation';
 import type { Blobbi } from '@/hooks/useBlobbis';
 
@@ -51,14 +51,16 @@ function ForceStage() {
 export function DevTheater() {
   return (
     <LocationProvider>
-      {/* `PlaceBackground` inside PlayingView provides the VirtualWorld layer;
-          the blocker provider normally comes from `BlobbiStage` in the shell. */}
-      <MovementBlockerProvider>
-        <div className="h-screen w-screen overflow-hidden bg-black">
-          <ForceStage />
-          <PlayingView selectedBlobbi={FIXTURE_BLOBBI} />
-        </div>
-      </MovementBlockerProvider>
+      {/* The REAL shell, not a bare div.
+          The harness used to mount `PlayingView` directly, which quietly made it
+          a worse reproduction than the product: the shell owns fullscreen, and a
+          fullscreen bug that reset the whole world was therefore invisible here.
+          `BlobbiStage` inside the shell provides the movement-blocker context
+          the world needs, exactly as it does on the real route. */}
+      <BlobbiAppShell screen="playing" showGameChrome inWorld>
+        <ForceStage />
+        <PlayingView selectedBlobbi={FIXTURE_BLOBBI} />
+      </BlobbiAppShell>
     </LocationProvider>
   );
 }

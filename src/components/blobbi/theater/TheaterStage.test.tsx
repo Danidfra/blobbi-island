@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { StrictMode } from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { TheaterStage } from './TheaterStage';
+import { TestApp } from '@/test/TestApp';
 import { AMBIGUOUS_PLAYBACK_MESSAGE, YT_STATE, resetYouTubeApiCacheForTests } from '@/lib/youtube-player';
 
 const API_SRC = 'https://www.youtube.com/iframe_api';
@@ -140,7 +141,7 @@ afterEach(() => {
 
 describe('TheaterStage — before sitting down', () => {
   it('renders no card, no player and no error', async () => {
-    render(<TheaterStage seatId={null} />);
+    render(<TheaterStage seatId={null} />, { wrapper: TestApp });
     await settle();
 
     expect(card()).toBeNull();
@@ -154,14 +155,14 @@ describe('TheaterStage — before sitting down', () => {
     // should cost a network request, let alone an error message.
     resetYouTubeApiCacheForTests();
     delete window.YT;
-    render(<TheaterStage seatId={null} />);
+    render(<TheaterStage seatId={null} />, { wrapper: TestApp });
     await settle();
     expect(document.querySelectorAll(`script[src="${API_SRC}"]`)).toHaveLength(0);
     expect(players).toHaveLength(0);
   });
 
   it('keeps the curtain closed', async () => {
-    render(<TheaterStage seatId={null} />);
+    render(<TheaterStage seatId={null} />, { wrapper: TestApp });
     await settle();
     expect(curtainOpen()).toBe(false);
   });
@@ -171,7 +172,7 @@ describe('TheaterStage — before sitting down', () => {
 
 describe('TheaterStage — seated with nothing playing', () => {
   it('shows the card with the URL input, and still no player', async () => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
 
     expect(status()).toBe('seated-idle');
@@ -182,20 +183,20 @@ describe('TheaterStage — seated with nothing playing', () => {
   });
 
   it('shows no player error before a video has been submitted', async () => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/couldn't/i)).toBeNull();
   });
 
   it('keeps the curtain closed', async () => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     expect(curtainOpen()).toBe(false);
   });
 
   it('appears only after arrival: mounting unseated then seating flips it on', async () => {
-    const { rerender } = render(<TheaterStage seatId={null} />);
+    const { rerender } = render(<TheaterStage seatId={null} />, { wrapper: TestApp });
     await settle();
     expect(card()).toBeNull();
 
@@ -211,7 +212,7 @@ describe('TheaterStage — loading a video', () => {
   it('reaches the player with the parsed id when Load Video is pressed', async () => {
     // The bug this pins: the button used to call `controller?.setMedia(...)` on
     // a controller that was always null, and nothing happened, silently.
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -227,7 +228,7 @@ describe('TheaterStage — loading a video', () => {
     ['bare id', 'dQw4w9WgXcQ'],
     ['padded input', '   dQw4w9WgXcQ   '],
   ])('accepts a %s through the form, not just the parser', async (_label, input) => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo(input);
 
@@ -236,7 +237,7 @@ describe('TheaterStage — loading a video', () => {
   });
 
   it('rejects malformed input without building a player', async () => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo('https://vimeo.com/12345');
 
@@ -247,7 +248,7 @@ describe('TheaterStage — loading a video', () => {
   });
 
   it('submits via Enter as well as the button, and never navigates', async () => {
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
 
     const form = document.querySelector('form')!;
@@ -265,7 +266,7 @@ describe('TheaterStage — loading a video', () => {
 
   it('keeps the curtain closed while loading and says what it is doing', async () => {
     behaviour = { kind: 'hang' };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -276,7 +277,7 @@ describe('TheaterStage — loading a video', () => {
 
   it('blocks a duplicate submission while one is in flight', async () => {
     behaviour = { kind: 'hang' };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -288,7 +289,7 @@ describe('TheaterStage — loading a video', () => {
 
   it('offers a way out while loading', async () => {
     behaviour = { kind: 'hang' };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -305,7 +306,7 @@ describe('TheaterStage — loading a video', () => {
 
 describe('TheaterStage — video ready', () => {
   async function readyStage() {
-    const view = render(<TheaterStage seatId={SEAT} />);
+    const view = render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
     await waitFor(() => expect(status()).toBe('video-ready'));
@@ -314,7 +315,7 @@ describe('TheaterStage — video ready', () => {
 
   it('opens the curtain only once the player reports readiness', async () => {
     behaviour = { kind: 'hang' };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -436,7 +437,7 @@ describe('TheaterStage — failure states', () => {
     [150, 'embedding disabled'],
   ])('reports YouTube error %s with honest, non-committal copy', async (code) => {
     behaviour = { kind: 'error', code };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -448,7 +449,7 @@ describe('TheaterStage — failure states', () => {
 
   it('keeps the curtain closed and the input available after a failure', async () => {
     behaviour = { kind: 'error', code: 150 };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
     await waitFor(() => expect(status()).toBe('video-error'));
@@ -459,7 +460,7 @@ describe('TheaterStage — failure states', () => {
 
   it('lets the next video be tried immediately after a failure', async () => {
     behaviour = { kind: 'error', code: 100 };
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
     await waitFor(() => expect(status()).toBe('video-error'));
@@ -478,7 +479,7 @@ describe('TheaterStage — failure states', () => {
     delete window.YT;
     resetYouTubeApiCacheForTests();
 
-    render(<TheaterStage seatId={SEAT} />);
+    render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
     await loadVideo();
 
@@ -506,6 +507,7 @@ describe('TheaterStage — React Strict Mode', () => {
       <StrictMode>
         <TheaterStage seatId={SEAT} />
       </StrictMode>,
+      { wrapper: TestApp },
     );
     await settle();
     await loadVideo();

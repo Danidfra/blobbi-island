@@ -30,7 +30,10 @@ import {
   publishHeartbeat,
   publishHide,
   publishSit,
+  publishActivity,
   parseSeatId,
+  parseActivity,
+  type PresenceActivity,
   validatePresenceEvent,
   isSupersededPresence,
   presenceOrderOf,
@@ -143,6 +146,15 @@ interface UseIslandPresenceReturn {
    * the movement that already means the same thing.
    */
   clearSit: () => void;
+  /**
+   * Publish which shared activity the local player is participating in, as an
+   * ADDRESS STRING and nothing else, or `null` to leave.
+   *
+   * Publishes once per transition (never per render), preserves the seat, and
+   * is preserved by heartbeats. Never throws: presence is advisory, and a failed
+   * publish is corrected by the next heartbeat.
+   */
+  setActivity: (sessionAddress: string | null) => Promise<void>;
   myPosRef: React.MutableRefObject<Position>;
   isLoading: boolean;
   error?: string;
@@ -184,6 +196,12 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // a move — otherwise a heartbeat racing a walk could re-seat a Blobbi that is
   // already halfway down the aisle.
   const mySeatIdRef = useRef<string | null>(null);
+  // The shared activity the local player is participating in (the session
+  // ADDRESS STRING and nothing else), or null. Same reasoning as the two refs
+  // above: heartbeats must preserve it without rebuilding their timer, and it
+  // must be clearable synchronously so no publish can advertise a session the
+  // player has already left.
+  const myActivityRef = useRef<PresenceActivity | null>(null);
   const subscriptionRef = useRef<{ close: () => void } | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const gcIntervalRef = useRef<number | null>(null);
@@ -672,6 +690,9 @@ const animatePlayers = useCallback(() => {
         // occupancy resolver, which is where seat geometry belongs. Absent on
         // every `moving` presence, which is how standing up clears it.
         seatId: parseSeatId(content.seatId),
+        // Which shared activity this player says they are in. A reference, not
+        // a state: what is playing comes from the session event alone.
+        activity: parseActivity(content.activity),
       };
 
       if (DEBUG_MP) console.debug('[blobbi][mp] players.set', {
@@ -735,6 +756,18 @@ const animatePlayers = useCallback(() => {
       // else" state.
       mySeatIdRef.current = null;
 
+      // ...but NOT the shared activity. Participation belongs to being in the
+      // room, not to a chair: standing up, crossing the theater and moving to
+      // another seat all keep the watch session, and the `moving` presence
+      // carries `activity` through so nobody blinks out of the participant list
+      // mid-walk. Only an explicit leave, or leaving the location, clears it.
+      //
+      // This also means no cleanup event follows a stand-up at all — which is
+      // what keeps the movement canonical. An `idle` clear published a moment
+      // after the walk would carry a higher `seq` and no `goal`, and every
+      // remote client would correctly treat it as the newest word and freeze the
+      // Blobbi mid-aisle.
+
       const clampedDest = await publishMove(
         publish,
         {
@@ -747,7 +780,10 @@ const animatePlayers = useCallback(() => {
         from,
         destRaw,
         DEFAULT_SPEED_PX,
-        navApi
+        navApi,
+        // Participation in a shared activity survives walking: it is not a
+        // claim about standing still, so only leaving clears it.
+        myActivityRef.current ?? undefined
       );
       if (DEBUG_MP) console.debug('[blobbi][mp] moveTo published', { clampedDest });
 
@@ -815,7 +851,8 @@ const animatePlayers = useCallback(() => {
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
         myPosRef.current,
-        seatId
+        seatId,
+        myActivityRef.current ?? undefined
       );
       return 'published';
     } catch (error) {
@@ -830,6 +867,45 @@ const animatePlayers = useCallback(() => {
   const clearSit = useCallback((): void => {
     mySeatIdRef.current = null;
   }, []);
+
+  const setActivity = useCallback(
+    async (sessionAddress: string | null): Promise<void> => {
+      const next: PresenceActivity | null = sessionAddress
+        ? { type: 'shared-playback', session: sessionAddress }
+        : null;
+
+      // Transitions only — publishing on every render would be a flood, and
+      // publishing on nothing would leave observers 25 s behind.
+      //
+      // This guard is also LOAD-BEARING for movement: when a stand-up already
+      // cleared the activity inside `moveTo`, the React cleanup that arrives a
+      // moment later asks for the same clear again and must publish nothing. A
+      // second, newer `idle` presence would carry no `goal` and would supersede
+      // the movement on every remote client.
+      if (myActivityRef.current?.session === next?.session) return;
+
+      // Set the ref FIRST so any heartbeat that fires during the publish already
+      // agrees with it — and, on a clear, so no heartbeat can re-advertise a
+      // session the player has left.
+      myActivityRef.current = next;
+
+      try {
+        if (DEBUG_MP) console.debug('[blobbi][mp] setActivity', { session: next?.session ?? null });
+        await publishActivity(
+          publish,
+          { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+          myPosRef.current,
+          next,
+          mySeatIdRef.current ?? undefined,
+        );
+      } catch (error) {
+        // Not fatal: the ref is already correct, so the next heartbeat carries
+        // the right answer. Presence is advisory and self-healing by design.
+        console.warn('Activity publish failed but continuing:', error);
+      }
+    },
+    [publish, sessionId, islandId, location, blobbiAddr, nextSeq],
+  );
 
   // ============================================================================
   // Lifecycle Management
@@ -855,7 +931,7 @@ const animatePlayers = useCallback(() => {
 
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
-          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined)
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined, myActivityRef.current ?? undefined)
             .catch(err => {
               console.warn('Heartbeat publish failed but continuing:', err);
               // Don't treat heartbeat failures as fatal
@@ -962,7 +1038,8 @@ const animatePlayers = useCallback(() => {
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
         myPosRef.current,
         myHiddenInRef.current ?? undefined,
-        mySeatIdRef.current ?? undefined
+        mySeatIdRef.current ?? undefined,
+        myActivityRef.current ?? undefined
       ).catch(err => console.error('Failed to publish heartbeat:', err));
     }, HEARTBEAT_INTERVAL_MS);
   }, [blobbiAddr, publish, sessionId, islandId, location, nextSeq]);
@@ -1005,6 +1082,9 @@ const animatePlayers = useCallback(() => {
   // ...and any seat: walking out of the theater must not leave a ghost sitting
   // in a chair there.
   mySeatIdRef.current = null;
+  // ...and any shared activity. A player who walked out of the theater is not
+  // in its watch session, and presence must never point at one they left.
+  myActivityRef.current = null;
 
   publishPresenceLogin(publish, {
     sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
@@ -1028,7 +1108,10 @@ const animatePlayers = useCallback(() => {
       // heartbeat that forgot the seat here would eject every player from their
       // chair ~25 s after they sat down. (Caught in a real browser; jsdom never
       // saw it because it needs location-change → sit → heartbeat in that order.)
-      mySeatIdRef.current ?? undefined
+      mySeatIdRef.current ?? undefined,
+      // Same story for the watch session: it is read at CALL time so a session
+      // joined after this interval was built is still advertised.
+      myActivityRef.current ?? undefined
     ).catch(err => console.error('Failed to publish heartbeat:', err));
   }, HEARTBEAT_INTERVAL_MS);
 
@@ -1059,6 +1142,7 @@ const animatePlayers = useCallback(() => {
     clearHide,
     sitAt,
     clearSit,
+    setActivity,
     myPosRef,
     isLoading,
     error,

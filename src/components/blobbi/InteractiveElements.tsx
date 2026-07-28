@@ -332,6 +332,14 @@ interface InteractiveElementsProps {
   /** Called when the local player ARRIVES at and sits in a theater seat. */
   onSitInSeat?: (seatId: string) => void;
   /**
+   * Reports the address of the shared watch session the local player is in, or
+   * null. Threaded straight through to `PlayingView`, which owns it and hands it
+   * to presence — this component never interprets it.
+   */
+  onActivityChange?: (sessionAddress: string | null) => void;
+  /** Visible players presence says are in that session, including this one. */
+  sessionParticipants?: number;
+  /**
    * Id of the hiding spot the local player currently occupies (e.g. a Town bush
    * id), or null when not hidden. Owned by PlayingView so the movement,
    * rendering and presence layers all read one source of truth.
@@ -345,7 +353,7 @@ const noopHide = () => {};
 const noopSit = () => {};
 const NO_OCCUPIED_SEATS: ReadonlySet<string> = new Set();
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, occupiedSeats = NO_OCCUPIED_SEATS, onSitInSeat, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, occupiedSeats = NO_OCCUPIED_SEATS, onSitInSeat, onActivityChange, sessionParticipants = 1, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -815,7 +823,11 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           of it (see `theater-layout.ts`). It sits below the curtain and below
           every seat row, so nothing about the room's stacking order changes.
         */}
-        <TheaterStage seatId={sittingIn} />
+        <TheaterStage
+          seatId={sittingIn}
+          onActivityChange={onActivityChange}
+          participants={sessionParticipants}
+        />
 
         {/* Little stage door: decoration. It has no behaviour by design — it
             slides on hover and leads nowhere. */}

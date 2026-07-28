@@ -258,6 +258,25 @@ interface MultiplayerLayerProps {
    * answer in the app instead of two components guessing separately.
    */
   onOccupiedSeatsChange?: (seatIds: Set<string>) => void;
+  /**
+   * Address of the shared watch session the local player is participating in,
+   * or null. Owned by PlayingView, which gets it from the theater.
+   *
+   * Published as presence `activity` — the ADDRESS STRING only, never any
+   * playback state (`docs/protocol/shared-playback-session.md` §14.2). It
+   * answers "who is watching this together?" and nothing else.
+   */
+  activitySession?: string | null;
+  /**
+   * Reports how many VISIBLE players presence says are in that session,
+   * including the local one.
+   *
+   * Derived here for the same reason seat occupancy is: this layer holds the
+   * live presence map. Advisory and self-expiring — the session event carries no
+   * participant list by design (§14.1), so this is a count of who is in the room
+   * and claiming the session, not an authoritative roster.
+   */
+  onSessionParticipantsChange?: (count: number) => void;
 }
 
 // ============================================================================
@@ -278,6 +297,8 @@ export function MultiplayerLayer({
   hiddenIn = null,
   sittingIn = null,
   onOccupiedSeatsChange,
+  activitySession = null,
+  onSessionParticipantsChange,
   localAttentionRef: localAttentionRefProp,
   livePositionsRef: livePositionsRefProp,
   localActiveRef,
@@ -625,6 +646,7 @@ export function MultiplayerLayer({
     clearHide,
     sitAt,
     clearSit,
+    setActivity,
     myPosRef,
     isLoading,
     error,
@@ -1275,6 +1297,40 @@ export function MultiplayerLayer({
     void occupiedSeatsSignature;
     onOccupiedSeatsChange?.(occupiedSeatsRef.current);
   }, [occupiedSeatsSignature, onOccupiedSeatsChange]);
+
+  // ── Shared watch session ────────────────────────────────────────────────
+  // Publish participation strictly on TRANSITIONS, exactly like the seat above:
+  // `setActivity` is rebuilt every render and this layer re-renders whenever any
+  // player moves, so without the claim guard the effect would republish the same
+  // session several times a second.
+  //
+  // No retry loop here, deliberately. Unlike a sit — where 25 s of standing in
+  // front of your chair is very visible — the only thing a lost activity publish
+  // costs is a participant count that is briefly one short, and the next
+  // heartbeat carries it anyway. `setActivity` never throws.
+  const syncedActivityRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (disabled || !user) return;
+    if (syncedActivityRef.current === activitySession) return;
+    syncedActivityRef.current = activitySession;
+    void setActivity(activitySession);
+  }, [activitySession, disabled, setActivity, user]);
+
+  // How many visible players claim this same session. Presence only — a player
+  // who closed their laptop ages out through the existing expiry, with no second
+  // timer and no way for this count to disagree with who is in the room.
+  const participantCount = React.useMemo(() => {
+    if (!activitySession) return 0;
+    let remote = 0;
+    for (const p of visiblePlayers) {
+      if (p.activity?.session === activitySession) remote += 1;
+    }
+    return remote + 1; // the local player
+  }, [activitySession, visiblePlayers]);
+
+  useEffect(() => {
+    onSessionParticipantsChange?.(participantCount);
+  }, [onSessionParticipantsChange, participantCount]);
 
   // track last positions to infer heading (prevents weird flips on vertical moves)
   const lastPosRef = React.useRef(new Map<string, Position>());

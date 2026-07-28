@@ -20,6 +20,8 @@ human-readable description for clients that do not understand the kind.
 | `31633` | Game Inventory | Addressable | Player consumable inventory. See `@nostr-games/inventory`. |
 | `31950` | Island Presence | Addressable | Real-time multiplayer presence (location, position, movement) |
 | `21201` | Island Chat | Ephemeral | In-world speech-bubble chat messages |
+| `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
+| `21951` | Shared Playback Command | Ephemeral | Low-latency playback commands for a watch session |
 
 ### Legacy / superseded kinds (queried for backward compatibility, not written)
 
@@ -131,13 +133,14 @@ locally rather than streaming positions.
     "blobbiD": "<blobbiD>",
     "hiddenIn": "<hiding-spot-id>",
     "seatId": "<theater-seat-id>",
+    "activity": { "type": "shared-playback", "session": "31951:<host-pubkey>:<session-d>" },
     "seq": <monotonic-counter>
   }
   ```
   Positions are percentages of the location's playable area (`0–100`), making them
   resolution-independent. `goal` is omitted when the player is stationary.
 
-  The last three fields are **optional and additive** — clients that do not
+  The last four fields are **optional and additive** — clients that do not
   understand them ignore them and keep rendering the player normally:
 
   - **`hiddenIn`** — id of the hiding spot the player is hidden inside (e.g.
@@ -150,6 +153,18 @@ locally rather than streaming positions.
     seat is itself what clears it. This is advisory, self-expiring *visual*
     occupancy: it reserves nothing, and clients resolve two players claiming one
     seat locally (lowest hex pubkey wins).
+  - **`activity`** — a reference to the shared activity the player is taking
+    part in: `{"type": "shared-playback", "session": "31951:<host>:<d>"}`. It
+    carries the session ADDRESS and nothing else — no revision, no playhead, no
+    media — so presence can answer "who is watching this together?" without ever
+    becoming a second copy of the session state. Set once a session is actually
+    created or joined (never while a code is being typed) and preserved across
+    heartbeats **and across all movement** — participation belongs to being in
+    the room, not to a chair, so standing up, walking and changing seats all keep
+    it while `seatId` alone is cleared. It is cleared by an explicit leave (an
+    `idle` event, since there is no movement to preserve) and by a location
+    change. Nothing else publishes a clear, which is also what stops a cleanup
+    event from ever superseding the movement it would have followed.
   - **`seq`** — monotonic publish counter for the session. `created_at` has
     one-second resolution, so a sit/hide and the movement that ends it routinely
     share a second; `seq` orders them regardless of relay delivery order.
@@ -187,6 +202,88 @@ expected to be stored.
   ```
   Received `text` is HTML-stripped before rendering. Messages are deduplicated per
   `pubkey:d` within a short window.
+
+---
+
+## Kinds 31951 / 21951 — Shared Playback Session & Command
+
+Host-authoritative synchronized playback of recorded media (the Blobbi Island
+theater's "watch together"). The full specification, including the reasoning
+behind every rule, is
+[`docs/protocol/shared-playback-session.md`](docs/protocol/shared-playback-session.md);
+what this client actually implements is
+[`docs/theater-shared-watch-implementation.md`](docs/theater-shared-watch-implementation.md).
+
+> **Experimental, and application-private by convention only.** These kind
+> numbers are not registered anywhere — Nostr has no registry with allocation
+> authority — so any other application may already use them. Every consumer
+> MUST validate structurally and ignore anything that does not parse as this
+> schema, rather than trusting the kind number.
+
+**Two layers, one contract.** `31951` is the recoverable source of truth;
+`21951` is a latency optimization. A client that never sees a single `21951` is
+still correct, and a client that misses one is corrected by the next `31951`.
+Both events for one action carry the same `rev`.
+
+### Kind 31951 — Shared Playback Session (Addressable, NIP-40)
+
+- **`d`**: a fresh UUIDv4 per session, never reused. Address:
+  `31951:<host-pubkey>:<d>` — the host is the event's author, so authority is
+  derived from authorship and a session's host can never change.
+- **Tags**: `["r", "blobbi-island:theater:main"]` (reusable room),
+  `["c", "<6-char code>"]` (invitation code, indexed, required while active),
+  `["t", "shared-playback"]`, `["t", "<provider>"]`, `["provider", ...]`,
+  `["media", ...]`, `["status", "active"|"ended"]`, `["client", "blobbi-island"]`,
+  `["alt", ...]`, `["expiration", "<unix-seconds>"]` (4 h, rolled forward on
+  every publish; 10 min once ended).
+- **`content`** (JSON):
+  ```json
+  {
+    "version": 1,
+    "rev": 0,
+    "media": { "provider": "youtube", "id": "<11-char id>" },
+    "playback": { "state": "playing"|"paused", "position": 0, "updatedAt": 1785175200000, "rate": 1 },
+    "permissions": { "mode": "host-only" }
+  }
+  ```
+  `position` is in **seconds** and `updatedAt` is the host's wall clock in
+  **milliseconds** — deliberately finer than `created_at`, which is too coarse
+  for playback timing. Together they are an anchor, not a live value: clients
+  extrapolate `position + elapsed × rate` while playing. `provider`, `media` and
+  `status` are unqueryable mirrors of the content; on any disagreement the
+  content wins.
+
+The host republishes the current state every 20 s with the **same `rev`**, a
+refreshed `expiration` and a re-anchored `updatedAt`/`position`. This keeps the
+session alive, keeps every guest's clock-offset estimate fresh, and doubles as a
+liveness signal.
+
+### Kind 21951 — Shared Playback Command (Ephemeral, NIP-40)
+
+- **Tags**: `["a", "31951:<host>:<d>", "<relay hint>"]` (exactly one; required),
+  `["p", "<host pubkey>"]`, `["t", "shared-playback"]`, `["client", ...]`,
+  `["alt", ...]`, `["expiration", "<now + 30s>"]`.
+- **`content`** (JSON): one of
+  `play` · `pause` · `seek` · `set-media` · `set-rate` · `end-session`, each
+  carrying `version`, `rev`, `position`, `updatedAt` (and `rate`, except
+  `end-session`). `seek` may carry `reason`
+  (`direct`/`skip-forward`/`skip-backward`/`restart`) as **presentation-only**
+  metadata.
+
+**Absolute positions only.** `+10 s` publishes the resulting position, never a
+delta — that is what makes a command idempotent under duplicate delivery,
+independently applicable after a missed one, and safely ignorable when
+superseded.
+
+**Authority (v1: `host-only`).** A command is accepted only when its `a` tag
+names the session the client is in AND `event.pubkey` equals the host pubkey
+embedded in that address. Guests have no protocol write path; a command from any
+other signer is discarded by signature, not by UI.
+
+**Ordering.** Greater `rev` wins; ties break on `created_at`, then on the
+lexicographically greater event id. A command or state with `rev` less than or
+equal to the last applied revision is ignored, so a late or replayed event can
+never rewind a player.
 
 ---
 

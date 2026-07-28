@@ -104,6 +104,17 @@ export interface TheaterPlaybackSnapshot extends PlaybackState {
   autoplayBlocked: boolean;
   /** Buffering has gone on long enough to be worth mentioning. */
   stalled: boolean;
+  /**
+   * What the PLAYER is doing, as opposed to what {@link PlaybackState.status}
+   * intends.
+   *
+   * They disagree more often than one would like — autoplay refusals, a guest
+   * pressing pause on the embed's own controls, a video that ended. Shared
+   * playback has to reconcile against the truth rather than against the wish,
+   * so the truth is reported separately instead of being inferred from `phase`
+   * (which cannot tell playing from paused).
+   */
+  playerPlaying: boolean;
 }
 
 /** Clamp a position into a video's valid range. Unknown duration is unbounded. */
@@ -203,6 +214,14 @@ export interface TheaterPlaybackController {
   // ── Reading ──
   getSnapshot(): TheaterPlaybackSnapshot;
   subscribe(listener: (snapshot: TheaterPlaybackSnapshot) => void): () => void;
+  /**
+   * Refresh the live readings (position, duration, title) from the player.
+   *
+   * Cheap, idempotent, and **never publishes anything**. The theater's own poll
+   * calls it on a timer; the shared layer calls it before measuring drift or
+   * anchoring a keepalive, so neither depends on when that poll last ran.
+   */
+  tick(): void;
 
   /** Release the underlying player. Leaving the room MUST stop the audio. */
   destroy(): void;
@@ -310,6 +329,7 @@ export class LocalTheaterPlaybackController implements TheaterPlaybackController
     availableRates: [1],
     autoplayBlocked: false,
     stalled: false,
+    playerPlaying: false,
   };
 
   constructor({ adapter, now = Date.now, onCommand }: LocalControllerOptions) {
@@ -460,12 +480,14 @@ export class LocalTheaterPlaybackController implements TheaterPlaybackController
 
   /** Report the player's own play/pause, which may disagree with the intent. */
   handlePlayingChange(isPlaying: boolean): void {
+    this.local.playerPlaying = isPlaying;
     // A player that refuses to start while the shared state says "playing" is
     // the autoplay-blocked case — surfaced, never fought.
     this.local.autoplayBlocked = !isPlaying && this.state.status === 'playing' && this.local.phase === 'ready';
     if (isPlaying) this.local.autoplayBlocked = false;
     this.emit();
   }
+
 
   handleError(error: MediaError): void {
     this.local.error = error;
