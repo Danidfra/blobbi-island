@@ -5,6 +5,7 @@ import { PlayingView } from '@/components/blobbi/PlayingView';
 import { BlobbiAppShell } from '@/components/shell/BlobbiAppShell';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { useLocation } from '@/hooks/useLocation';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { Button } from '@/components/ui/button';
 
@@ -30,9 +31,20 @@ import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
 import { DEFAULT_DANCE_CHART, type DanceChart } from '@/arcade/dance/chart';
 import { NEON_HOP_TRACK } from '@/arcade/dance/track';
 import { DANCE_REWARD_TUNING } from '@/arcade/dance/dance-reward';
+import { DANCE_STAT_KEYS } from '@/arcade/dance/dance-result';
+import { DANCE_JUDGMENTS } from '@/arcade/dance/judgment';
+import {
+  COMBO_SCALE_CLASS,
+  DANCE_COMBO_TIERS,
+  DANCE_LANE_VISUALS,
+  comboTier,
+  judgmentReadoutClass,
+} from '@/components/blobbi/arcade/dance/dance-visuals';
+import { DanceMascot } from '@/components/blobbi/arcade/dance/DanceMascot';
 import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
 import { ArcadeRewardWriterError } from '@/inventory/arcade-reward-writer';
-import { claimLockKind, clearClaims, readClaims } from '@/lib/arcade-claim-ledger';
+import { claimLockKind, clearClaims, persistClaim, readClaims } from '@/lib/arcade-claim-ledger';
+import { cn } from '@/lib/utils';
 
 import { ITEM_CATALOG_QUERY_KEY, type ItemCatalog } from '@/inventory/useItemCatalog';
 import {
@@ -199,6 +211,91 @@ function createDevWriter(
   };
 }
 
+/**
+ * Dance result fixtures.
+ *
+ * A run is sixty-eight seconds long, and there is no way to shorten one without
+ * changing the chart. Reviewing the results screen — every metric, every grade
+ * band, and the zero-ticket outcome — by playing the song through each time is
+ * how a results screen ends up reviewed once and never again.
+ *
+ * These dispatch a REAL `finish` into the REAL lifecycle reducer with a
+ * hand-built result, so the screen that renders is the production one, driven by
+ * the production reward policy. Nothing about the policy is faked: `dud` earns
+ * nothing because `completedNaturally` is 0, which is exactly the rule the
+ * policy applies to a run that was cut short.
+ */
+type DanceResultFixture = 'flawless' | 'decent' | 'scrappy' | 'dud';
+
+const DANCE_RESULT_FIXTURES: readonly DanceResultFixture[] = [
+  'flawless',
+  'decent',
+  'scrappy',
+  'dud',
+];
+
+function danceFixtureResult(
+  runId: string,
+  machineId: string,
+  gameId: string,
+  fixture: DanceResultFixture,
+): ArcadeGameResult {
+  const shape = {
+    flawless: { accuracy: 100, perfect: 110, good: 0, okay: 0, miss: 0, maxCombo: 110, score: 148_500 },
+    decent: { accuracy: 79, perfect: 62, good: 31, okay: 11, miss: 6, maxCombo: 38, score: 96_400 },
+    scrappy: { accuracy: 52, perfect: 21, good: 30, okay: 29, miss: 30, maxCombo: 9, score: 41_200 },
+    dud: { accuracy: 33, perfect: 9, good: 14, okay: 18, miss: 69, maxCombo: 4, score: 18_050 },
+  }[fixture];
+
+  const total = shape.perfect + shape.good + shape.okay + shape.miss;
+  return {
+    runId,
+    gameId,
+    machineId,
+    difficulty: 'normal',
+    cleared: shape.accuracy >= 70,
+    score: shape.score,
+    // Fixed timestamps: a harness must be reproducible.
+    startedAt: 1_700_000_000_000,
+    endedAt: 1_700_000_068_000,
+    stats: {
+      [DANCE_STAT_KEYS.accuracy]: shape.accuracy,
+      [DANCE_STAT_KEYS.maxCombo]: shape.maxCombo,
+      [DANCE_STAT_KEYS.perfect]: shape.perfect,
+      [DANCE_STAT_KEYS.good]: shape.good,
+      [DANCE_STAT_KEYS.okay]: shape.okay,
+      [DANCE_STAT_KEYS.miss]: shape.miss,
+      [DANCE_STAT_KEYS.totalNotes]: total,
+      [DANCE_STAT_KEYS.fullCombo]: shape.miss === 0 ? 1 : 0,
+      // The one field that decides eligibility. `dud` is the zero-ticket case:
+      // a run that never reached the end of the song.
+      [DANCE_STAT_KEYS.completedNaturally]: fixture === 'dud' ? 0 : 1,
+      [DANCE_STAT_KEYS.durationMs]: 68_000,
+      [DANCE_STAT_KEYS.chartVersion]: DEFAULT_DANCE_CHART.version,
+    },
+  };
+}
+
+/**
+ * Shell-box presets for the viewport audit.
+ *
+ * These constrain the shell's BOX, not the viewport: CSS media queries still
+ * evaluate at the real window width, so a `sm:` rule does not turn off just
+ * because the box is 320 px wide. They catch overflow, cramped controls and
+ * unreachable buttons at a glance; a genuine breakpoint check still needs device
+ * emulation, and saying so beats a harness that quietly proves less than it
+ * appears to.
+ */
+type ViewportPresetId = 'auto' | '320' | '375' | '390' | '768';
+
+const VIEWPORT_PRESETS: readonly { id: ViewportPresetId; label: string; css: string }[] = [
+  { id: 'auto', label: 'auto', css: '' },
+  { id: '320', label: '320×568', css: 'width:320px!important;height:568px!important;' },
+  { id: '375', label: '375×667', css: 'width:375px!important;height:667px!important;' },
+  { id: '390', label: '390×844', css: 'width:390px!important;height:844px!important;' },
+  { id: '768', label: '768×1024', css: 'width:768px!important;height:1024px!important;' },
+];
+
 const FLOOR_LOCATIONS: Record<ArcadeFloorId, 'arcade' | 'arcade-1' | 'arcade-minus1'> = {
   ground: 'arcade',
   'floor-1': 'arcade-1',
@@ -267,13 +364,19 @@ export function DevArcade() {
   const [machineId, setMachineId] = useState(arcadeMachines[0].id);
   const [lifecycle, dispatch] = useReducer(arcadeMachineReducer, INITIAL_ARCADE_MACHINE_STATE);
   const hasPass = useArcadePass();
+  /** Read-only. The harness never signs and never publishes; it needs the pubkey
+   *  only because the claim ledger is keyed by owner. */
+  const { user } = useCurrentUser();
+  const pubkey = user?.pubkey;
   const [note, setNote] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   // ── Dance harness state ─────────────────────────────────────────────────
   const [danceOpen, setDanceOpen] = useState(false);
   const [danceChart, setDanceChart] = useState<'valid' | 'invalid'>('valid');
   const [writerOutcome, setWriterOutcome] = useState<WriterOutcome>('confirm');
-  const [narrowShell, setNarrowShell] = useState(false);
+  const [viewport, setViewport] = useState<ViewportPresetId>('auto');
+  const [showGallery, setShowGallery] = useState(false);
   const [forceReducedMotion, setForceReducedMotion] = useState(false);
   const [remountKey, setRemountKey] = useState(0);
   const [writerLog, setWriterLog] = useState<string[]>([]);
@@ -307,6 +410,67 @@ export function DevArcade() {
     });
     setDanceOpen(true);
   }, [danceMachine]);
+
+  /**
+   * Drop the dance machine straight onto its results screen.
+   *
+   * A real `finish` through the real reducer, with a hand-built result — so the
+   * reward panel that renders is the production one, calculated by the
+   * production policy, with the fake writer still standing between it and any
+   * relay.
+   */
+  const showDanceResult = useCallback(
+    (fixture: DanceResultFixture, alreadyClaimed = false) => {
+      fixtureRunCounter += 1;
+      const runId = `dev-dance-${fixture}-${fixtureRunCounter}`;
+      const result = danceFixtureResult(
+        runId,
+        danceMachine.id,
+        danceMachine.gameId ?? '',
+        fixture,
+      );
+
+      if (alreadyClaimed) {
+        // Seed the durable ledger BEFORE the machine hydrates it, which is the
+        // only way to reach `already-claimed` without publishing anything.
+        //
+        // The ledger is keyed by OWNER, so this needs the same pubkey the reward
+        // hook will read with. Read-only, and it signs nothing — but it does
+        // mean the state is unreachable in a signed-out browser, which the
+        // harness says out loud rather than showing a chip that quietly does
+        // nothing.
+        if (!pubkey) {
+          setNote(
+            'already-claimed needs a signed-in browser: the claim ledger is keyed by owner, ' +
+              'so there is no record to seed without one. Nothing was published.',
+          );
+          return;
+        }
+        persistClaim(pubkey, {
+          runId,
+          gameId: danceMachine.gameId ?? '',
+          machineId: danceMachine.id,
+          status: 'claimed',
+          tickets: 8,
+          createdAt: 1_700_000_000_000,
+          updatedAt: 1_700_000_000_000,
+          attempts: 1,
+          failure: null,
+          quantityBefore: 0,
+          reconcileAttempts: 0,
+        });
+      }
+
+      setWriterLog([]);
+      danceDispatch({ type: 'close' });
+      danceDispatch({ type: 'open', machineId: danceMachine.id, gameId: danceMachine.gameId });
+      danceDispatch({ type: 'start', runId, difficulty: 'normal' });
+      danceDispatch({ type: 'countdown-complete' });
+      danceDispatch({ type: 'finish', result });
+      setDanceOpen(true);
+    },
+    [danceMachine, pubkey],
+  );
 
   /**
    * Force `prefers-reduced-motion` on for this tab.
@@ -442,8 +606,27 @@ export function DevArcade() {
       </BlobbiAppShell>
 
       {/* The control panel deliberately sits OUTSIDE the world, like the shell. */}
-      <aside className="fixed bottom-0 left-0 right-0 z-[1000] max-h-[45vh] overflow-y-auto border-t-2 border-fuchsia-500 bg-white/95 p-3 text-xs text-black">
-        <p className="mb-2 font-bold">
+      <aside
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-[1000] overflow-y-auto border-t-2 border-fuchsia-500 bg-white/95 p-3 text-xs text-black',
+          panelOpen ? 'max-h-[45vh]' : 'max-h-10',
+        )}
+      >
+        <p className="mb-2 flex items-center gap-2 font-bold">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setPanelOpen((v) => !v)}
+            className="h-6 rounded-full px-2 text-[11px]"
+          >
+            {panelOpen ? 'hide ▾' : 'show ▴'}
+          </Button>
+          {/*
+            Collapsible because the panel is 45 vh tall and the arcade shell it
+            drives is centred — reviewing the bottom half of a game screen from
+            behind the controls that opened it is not a review.
+          */}
           /dev/arcade — DEV only. Nothing here publishes to a relay.
         </p>
 
@@ -514,12 +697,37 @@ export function DevArcade() {
           <Chip active={forceReducedMotion} onClick={toggleReducedMotion}>
             reduced motion: {forceReducedMotion ? 'on' : 'off'}
           </Chip>
-          <Chip active={narrowShell} onClick={() => setNarrowShell((v) => !v)}>
-            narrow shell
-          </Chip>
           <span className="ml-2 font-mono">
             status={danceLifecycle.status} run={danceLifecycle.runId ?? '—'}
           </span>
+        </Section>
+
+        <Section title="Dance results (no run needed)">
+          {DANCE_RESULT_FIXTURES.map((fixture) => (
+            <Chip key={fixture} onClick={() => showDanceResult(fixture)}>
+              {fixture}
+              {fixture === 'dud' ? ' (0 tickets)' : ''}
+            </Chip>
+          ))}
+          <Chip onClick={() => showDanceResult('flawless', true)}>already-claimed</Chip>
+          <span className="ml-2 font-mono">
+            pair with a writer outcome below to reach confirmed / failed / unresolved
+          </span>
+        </Section>
+
+        <Section title="Shell box (not the viewport)">
+          {VIEWPORT_PRESETS.map((preset) => (
+            <Chip
+              key={preset.id}
+              active={viewport === preset.id}
+              onClick={() => setViewport(preset.id)}
+            >
+              {preset.label}
+            </Chip>
+          ))}
+          <Chip active={showGallery} onClick={() => setShowGallery((v) => !v)}>
+            presentation gallery
+          </Chip>
         </Section>
 
         <Section title="Fake reward writer">
@@ -537,7 +745,7 @@ export function DevArcade() {
             start balance: {startingBalance}
           </Chip>
           <span className="ml-2 font-mono">
-            claims={Object.keys(readClaims(FIXTURE_PUBKEY)).length} · cross-tab lock:{' '}
+            claims={Object.keys(readClaims(pubkey)).length} · cross-tab lock:{' '}
             {claimLockKind()} · max {DANCE_REWARD_TUNING.maxPerRun}/run ·{' '}
             {NEON_HOP_TRACK.title} ({Math.round(NEON_HOP_TRACK.durationMs / 1000)}s,{' '}
             {NEON_HOP_TRACK.readiness})
@@ -563,15 +771,19 @@ export function DevArcade() {
       </aside>
 
       {/*
-        A narrow-shell override, for eyeballing the mobile layout without
-        resizing the window. It constrains the BOX only — CSS media queries still
+        Shell-box overrides, for eyeballing the mobile layout without resizing
+        the window. They constrain the BOX only — CSS media queries still
         evaluate at the real viewport width, so genuine narrow-viewport checks
         need device emulation. Saying so beats a harness that quietly proves less
         than it appears to.
       */}
-      {narrowShell && (
-        <style>{`[data-arcade-shell]{width:386px!important;max-width:386px!important;height:840px!important;max-height:90vh!important;}`}</style>
+      {viewport !== 'auto' && (
+        <style>{`[data-arcade-shell]{${
+          VIEWPORT_PRESETS.find((p) => p.id === viewport)?.css ?? ''
+        }max-width:none!important;max-height:95vh!important;}`}</style>
       )}
+
+      {showGallery && <DancePresentationGallery reducedMotion={forceReducedMotion} />}
 
       {/*
         The REAL dance machine — real chart, real judgement, real lifecycle, real
@@ -651,6 +863,140 @@ function ResultsFixture({ award }: { award: ReturnType<typeof calculateTicketAwa
         Phase 2 grants nothing: no inventory mutation and no publish exists.
       </p>
     </div>
+  );
+}
+
+/**
+ * Every transient piece of dance presentation, side by side and standing still.
+ *
+ * The playfield paints a judgement by writing `className` onto a DOM node inside
+ * the frame loop, and a combo tier the same way. Those states last 420 ms and
+ * arrive only when a player earns them, which makes "does Miss read clearly?"
+ * and "is the top combo tier too loud?" questions nobody can answer by playing.
+ *
+ * This renders them from the SAME helpers the live renderer calls —
+ * `judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS` — so what is
+ * reviewed here is what ships. It is DEV-only twice over: the whole module is
+ * behind `import.meta.env.DEV`, and nothing in the arcade imports it.
+ */
+function DancePresentationGallery({ reducedMotion }: { reducedMotion: boolean }) {
+  /**
+   * The live readout ends its pop at `opacity: 0` — it is meant to vanish. That
+   * makes the animated class useless for SIDE-BY-SIDE comparison, so the gallery
+   * shows the settled form by default and replays the real animation on demand.
+   */
+  const [pop, setPop] = useState(0);
+  const animated = pop > 0 && !reducedMotion;
+  useEffect(() => {
+    if (pop === 0) return;
+    const timer = setTimeout(() => setPop(0), 700);
+    return () => clearTimeout(timer);
+  }, [pop]);
+
+  return (
+    <aside className="fixed left-2 top-2 z-[1001] max-h-[80vh] w-72 overflow-y-auto rounded-xl border-2 border-fuchsia-500 bg-[#15102a] p-3 text-[11px] text-white/80">
+      <p className="mb-2 font-bold uppercase tracking-widest text-fuchsia-300">
+        Dance presentation gallery
+      </p>
+
+      <p className="mb-1 flex items-center justify-between font-semibold">
+        Judgements
+        <button
+          type="button"
+          onClick={() => setPop((n) => n + 1)}
+          className="rounded-full border border-fuchsia-400 px-2 py-0.5 text-[10px]"
+        >
+          replay pop
+        </button>
+      </p>
+      <div className="mb-3 grid grid-cols-2 gap-2 rounded-lg bg-black/30 p-2">
+        {DANCE_JUDGMENTS.map((judgment) => (
+          // Keyed on the replay counter so each press re-mounts and re-runs the
+          // animation rather than leaving a finished one on screen.
+          // The scale lives on the WRAPPER so it cannot fight the pop's own
+          // transform when the animation is replayed.
+          <div key={`${judgment}-${pop}`} className="flex h-8 items-center justify-center">
+            <p className={cn('scale-[0.62]', judgmentReadoutClass(judgment, !animated))}>
+              {judgment === 'perfect' ? 'Perfect!' : judgment === 'miss' ? 'Miss' : judgment}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mb-1 font-semibold">Combo tiers</p>
+      <div className="mb-3 grid grid-cols-5 gap-1 rounded-lg bg-black/30 p-2">
+        {DANCE_COMBO_TIERS.map((tier) => (
+          <div key={tier.id} className="flex h-11 items-center justify-center overflow-hidden">
+            <div className={cn(COMBO_SCALE_CLASS, comboTier(tier.min).className)}>
+              <span className="font-mono text-base font-black leading-none">{tier.min}</span>
+              <span className="text-[7px] font-bold uppercase tracking-[0.15em]">combo</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mb-1 font-semibold">Notes · receptors · touch controls</p>
+      <div className="mb-3 space-y-2 rounded-lg bg-black/30 p-2">
+        <div className="grid grid-cols-4 gap-1">
+          {DANCE_LANE_VISUALS.map((visual) => (
+            <span
+              key={visual.lane}
+              className={cn(
+                'flex h-9 items-center justify-center rounded-xl border-2 text-lg font-black text-white',
+                visual.token,
+              )}
+            >
+              {visual.glyph}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {DANCE_LANE_VISUALS.map((visual) => (
+            <span
+              key={visual.lane}
+              className={cn(
+                'flex h-9 items-center justify-center rounded-xl border-2 bg-white/5 text-lg font-black',
+                visual.receptor,
+              )}
+            >
+              {visual.glyph}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {DANCE_LANE_VISUALS.map((visual) => (
+            <span
+              key={visual.lane}
+              className={cn(
+                'flex h-12 flex-col items-center justify-center rounded-xl border-2 text-xl font-black text-white',
+                visual.touch,
+              )}
+            >
+              {visual.glyph}
+              <span className="text-[9px] tracking-widest opacity-80">{visual.keyCap}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <p className="mb-1 font-semibold">Mascot moods</p>
+      <div className="flex items-end justify-around rounded-lg bg-black/30 p-2">
+        {(['idle', 'perfect', 'good', 'miss'] as const).map((mood) => (
+          <div key={mood} className="text-center">
+            <DanceMascot
+              // The live game sets `data-mood` imperatively; here it is set on
+              // mount so all four can be compared at once.
+              ref={(node) => node?.setAttribute('data-mood', mood)}
+              beatMs={500}
+              dancing={mood === 'idle'}
+              reducedMotion={reducedMotion}
+              className="mx-auto h-10 w-10"
+            />
+            <span className="text-[9px]">{mood}</span>
+          </div>
+        ))}
+      </div>
+    </aside>
   );
 }
 

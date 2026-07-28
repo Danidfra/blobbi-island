@@ -64,6 +64,16 @@ export interface ArcadeGameShellProps {
   /** Actions rendered along the bottom (Start, Play again, Close, …). */
   footer?: React.ReactNode;
   className?: string;
+  /**
+   * Overrides for the scrolling content area.
+   *
+   * The default is right for a panel of text. It is wrong for a LIVE run: a
+   * stray drag on a phone scrolls the lanes off screen mid-song, and the padding
+   * that makes a paragraph readable is playfield a rhythm game needs. A game
+   * passes `overflow-hidden` and tighter padding for exactly the statuses where
+   * a run is on screen, and nothing else changes.
+   */
+  contentClassName?: string;
 }
 
 /** Statuses in which a live run exists and pause/exit are meaningful. */
@@ -82,6 +92,7 @@ export function ArcadeGameShell({
   children,
   footer,
   className,
+  contentClassName,
 }: ArcadeGameShellProps) {
   const reducedMotion = useReducedMotion();
 
@@ -200,10 +211,15 @@ export function ArcadeGameShell({
           </div>
         </header>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">{children}</div>
+        <div
+          data-arcade-content
+          className={cn('flex-1 min-h-0 overflow-y-auto px-4 py-4', contentClassName)}
+        >
+          {children}
+        </div>
 
         {footer && (
-          <footer className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-island-wood/20 shrink-0">
+          <footer className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-island-wood/20 shrink-0">
             {footer}
           </footer>
         )}

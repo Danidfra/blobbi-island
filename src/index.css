@@ -731,3 +731,169 @@ img {
     filter: none !important;
   }
 }
+
+/* ── Blobbi Dance — arcade cabinet presentation ────────────────────────────
+   CSS-only decoration for the dance machine.
+
+   Three rules hold everything in this block together:
+
+     1. **Only `transform`, `opacity` and `box-shadow` animate.** No width, no
+        height, no top/left — nothing that forces layout while the song plays.
+     2. **Nothing here is driven by React state.** The frame loop toggles a class
+        or a data attribute a handful of times a second; the browser owns the
+        tween. A decoration must never queue a re-render at 60 Hz, because the
+        input handler is on the same thread as reconciliation and a rhythm game
+        may not have input lag.
+     3. **Every animation is decoration.** Reduced motion removes all of it and
+        the game stays completely playable: the notes keep moving (that is the
+        gameplay, not a flourish), the judgement word still appears, the
+        receptors still light up, and no timing changes at all.
+
+   Durations that must agree with the music read `--dance-beat`, which the stage
+   sets once per run from the track's tempo. */
+
+@keyframes dance-bulb {
+  0%, 100% { opacity: 0.3; transform: scale(0.86); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
+
+.dance-bulb {
+  animation: dance-bulb calc(var(--dance-beat, 500ms) * 2) ease-in-out infinite;
+  animation-delay: var(--dance-bulb-delay, 0ms);
+}
+
+@keyframes dance-judgment-pop {
+  0%   { opacity: 0; transform: scale(0.72) translateY(10px); }
+  22%  { opacity: 1; transform: scale(1.14) translateY(0); }
+  62%  { opacity: 1; transform: scale(1)    translateY(-2px); }
+  100% { opacity: 0; transform: scale(1)    translateY(-14px); }
+}
+
+.dance-judgment-pop {
+  animation: dance-judgment-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes dance-receptor-pulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 var(--dance-lane-glow, rgba(255, 255, 255, 0.6)); }
+  35%  { transform: scale(1.18); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.dance-receptor-pulse {
+  animation: dance-receptor-pulse 280ms ease-out;
+}
+
+/* A fixed handful of sparks, rendered once as static markup and replayed by the
+   pulse class. Nothing is ever appended to the DOM on a hit. */
+@keyframes dance-spark {
+  0%   { opacity: 0.9; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0;   transform: translate(var(--dance-spark-dx, 0), var(--dance-spark-dy, -20px)) scale(0.35); }
+}
+
+.dance-receptor-pulse .dance-spark {
+  animation: dance-spark 340ms ease-out forwards;
+}
+
+@keyframes dance-lane-flash {
+  from { opacity: 0.38; }
+  to   { opacity: 0; }
+}
+
+.dance-lane-flash {
+  animation: dance-lane-flash 260ms ease-out forwards;
+}
+
+@keyframes dance-countdown-tick {
+  0%   { opacity: 0; transform: scale(1.8); }
+  35%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.dance-countdown-tick {
+  animation: dance-countdown-tick 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dance-combo-bump {
+  0%   { transform: var(--dance-combo-scale, scale(1)); }
+  40%  { transform: var(--dance-combo-scale, scale(1)) translateY(-3px); }
+  100% { transform: var(--dance-combo-scale, scale(1)); }
+}
+
+.dance-combo-bump {
+  animation: dance-combo-bump 260ms ease-out;
+}
+
+/* The mascot bobs on the beat rather than on a timer of its own, so it reads as
+   dancing to the same song the player is playing. */
+@keyframes dance-mascot-bob {
+  0%, 100% { transform: translateY(0)     rotate(-3deg); }
+  50%      { transform: translateY(-9%)   rotate(3deg); }
+}
+
+.dance-mascot-bob {
+  animation: dance-mascot-bob calc(var(--dance-beat, 500ms) * 2) ease-in-out infinite;
+}
+
+@keyframes dance-mascot-cheer {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-16%) scale(1.1); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes dance-mascot-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  30%      { transform: rotate(-9deg); }
+  65%      { transform: rotate(7deg); }
+}
+
+[data-dance-mascot][data-mood='perfect'] .dance-mascot-art,
+[data-dance-mascot][data-mood='good'] .dance-mascot-art {
+  animation: dance-mascot-cheer 420ms ease-out;
+}
+
+[data-dance-mascot][data-mood='miss'] .dance-mascot-art {
+  animation: dance-mascot-wobble 420ms ease-out;
+}
+
+/* The reaction bubble is static markup whose visibility is an attribute switch —
+   no mount, no unmount, no state update per hit. */
+[data-dance-reaction] {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 140ms ease-out, transform 140ms ease-out;
+}
+
+[data-dance-mascot][data-mood='perfect'] [data-dance-reaction='perfect'],
+[data-dance-mascot][data-mood='good'] [data-dance-reaction='good'],
+[data-dance-mascot][data-mood='miss'] [data-dance-reaction='miss'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Touch lanes: no text selection, no iOS tap flash, no double-tap zoom, and no
+   page scrolling started from inside a lane button. Deliberately scoped to the
+   lane controls — the rest of the document scrolls normally. */
+.dance-touch-lane {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dance-bulb,
+  .dance-judgment-pop,
+  .dance-receptor-pulse,
+  .dance-receptor-pulse .dance-spark,
+  .dance-lane-flash,
+  .dance-countdown-tick,
+  .dance-combo-bump,
+  .dance-mascot-bob,
+  [data-dance-mascot] .dance-mascot-art {
+    animation: none !important;
+  }
+
+  [data-dance-reaction] {
+    transition: none !important;
+  }
+}

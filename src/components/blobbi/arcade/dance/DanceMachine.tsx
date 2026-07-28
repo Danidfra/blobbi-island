@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useArcadeReward, ARCADE_TICKET_ADDRESS } from '@/hooks/useArcadeReward';
 import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
@@ -18,6 +19,7 @@ import type { DanceTrack } from '@/arcade/dance/track';
 import { NEON_HOP_TRACK, getDanceTrack } from '@/arcade/dance/track';
 import type { DanceAudioEngine, DanceAudioFactory } from '@/arcade/dance/dance-audio';
 import { createDanceAudioEngine } from '@/arcade/dance/dance-audio';
+import { isArcadeMuted, setArcadeMuted } from '@/arcade/audio/arcade-audio';
 import type { ArcadeMachineConfig } from '@/lib/arcade-machines-config';
 
 import { ArcadeGameShell } from '../ArcadeGameShell';
@@ -103,6 +105,38 @@ export function DanceMachine({
   const engineRef = useRef<DanceAudioEngine | null>(null);
   const [engine, setEngine] = useState<DanceAudioEngine | null>(null);
 
+  /**
+   * The persisted arcade mute setting, mirrored into React so a control can
+   * render it.
+   *
+   * The storage and the engine hook already existed — `isArcadeMuted`,
+   * `setArcadeMuted` and `DanceAudioEngine.setMuted` all shipped in earlier
+   * phases — and nothing in the product had ever offered a way to reach them.
+   * This adds the control, not the capability, and it changes no timing: muting
+   * takes the master gain to zero while the `AudioContext` (and therefore the
+   * clock every judgement is made against) keeps running exactly as before.
+   */
+  const [muted, setMuted] = useState<boolean>(() => isArcadeMuted());
+  /**
+   * The authoritative value, so the toggle never has to read `muted` from a
+   * closure that a second click in the same tick would have made stale.
+   *
+   * The alternative — deriving `next` inside `setMuted`'s updater — would put
+   * the storage write and the engine call inside a function React is entitled to
+   * invoke twice (and does, under StrictMode) and to discard the result of. A
+   * state updater must be pure; a ref is the honest place for the value the side
+   * effects need.
+   */
+  const mutedRef = useRef(muted);
+
+  const handleToggleMute = useCallback(() => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMuted(next);
+    setArcadeMuted(next);
+    engineRef.current?.setMuted(next);
+  }, []);
+
   const track: DanceTrack = useMemo(
     () => getDanceTrack(chart.trackId) ?? NEON_HOP_TRACK,
     [chart.trackId],
@@ -186,6 +220,12 @@ export function DanceMachine({
     }
 
     setAudioError(null);
+    // The engine reads the persisted flag itself, but say it explicitly: in a
+    // private-mode browser the write may not have persisted, and the control the
+    // player just used must still be obeyed for this run. Read from the ref, not
+    // from the rendered `muted`, so a toggle that has not yet re-rendered still
+    // reaches the engine this call is building.
+    created.engine.setMuted(mutedRef.current);
     engineRef.current = created.engine;
     setEngine(created.engine);
     return true;
@@ -279,6 +319,8 @@ export function DanceMachine({
         onAbort={handleAbort}
         onPause={() => dispatch({ type: 'pause' })}
         engine={engine}
+        muted={muted}
+        onToggleMute={handleToggleMute}
       />
     );
   } else if (showResults && result) {
@@ -302,25 +344,52 @@ export function DanceMachine({
         chart={chart}
         chartProblems={chartProblems}
         abortNotice={status === 'aborted' ? abortNotice : null}
+        muted={muted}
+        onToggleMute={handleToggleMute}
       />
     );
   }
 
+  /**
+   * The footer, with a deliberate hierarchy: ONE bright primary action and one
+   * quiet way out.
+   *
+   * Before this pass Close and Start were the same size and nearly the same
+   * weight, so the screen offered a child two equally-loud choices and let them
+   * work out which one plays the game. `islandCtaButtonClass` is the island's
+   * existing primary CTA — the same pill used to enter the island — so the
+   * loudest thing on the screen is the thing the player came for.
+   */
   const footer = playing ? null : (
     <>
-      <Button type="button" variant="outline" onClick={onClose} className="rounded-full">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onClose}
+        className="rounded-full text-island-ink-soft"
+      >
         Close
       </Button>
       {chartProblems.length === 0 &&
         !audioError &&
         (status === 'preview' ? (
-          <Button type="button" data-dance-start onClick={handleStart} className="rounded-full">
+          <button
+            type="button"
+            data-dance-start
+            onClick={handleStart}
+            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
+          >
             Start
-          </Button>
+          </button>
         ) : (
-          <Button type="button" data-dance-replay onClick={handleReplay} className="rounded-full">
+          <button
+            type="button"
+            data-dance-replay
+            onClick={handleReplay}
+            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
+          >
             Play again
-          </Button>
+          </button>
         ))}
     </>
   );
@@ -337,6 +406,12 @@ export function DanceMachine({
       onPause={playing ? () => dispatch({ type: 'pause' }) : undefined}
       onResume={status === 'paused' ? () => dispatch({ type: 'resume' }) : undefined}
       footer={footer}
+      /*
+        A live run must not be able to scroll: a stray drag on a phone would take
+        the lanes off screen mid-song. Every other state keeps the shell's normal
+        scrolling, because a results panel at 320 × 568 genuinely needs it.
+      */
+      contentClassName={playing ? 'overflow-hidden px-2 py-2 sm:px-4 sm:py-3' : undefined}
     >
       {content}
     </ArcadeGameShell>
