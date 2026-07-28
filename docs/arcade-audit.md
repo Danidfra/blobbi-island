@@ -2,6 +2,25 @@
 
 Audit date: 2026-07-27 · Branch: `production` @ `13b1cad` · Working tree clean at start and end.
 
+> **Implementation status (added 2026-07-28).**
+>
+> Delivery follows this **canonical sequence**, which every other document uses:
+>
+> | | | status |
+> | --- | --- | --- |
+> | **Phase 1** | Official Arcade Ticket registry + `currency` support | shipped — `docs/protocol/arcade-ticket-publication.md` |
+> | **Phase 2** | Shared Arcade Foundation | shipped — **[`docs/arcade-foundation.md`](./arcade-foundation.md)** |
+> | **Phase 3** | Dance game | next |
+> | later | rewards, prize shop, further games | not started |
+>
+> **§17 below uses its own, earlier numbering** and is deliberately left as
+> written: it was the audit's proposal, not the plan that was executed. Read it
+> through this mapping — audit Phase 0 + Phase 1 (stop the arcade lying + arcade
+> foundation) were delivered together as canonical **Phase 2**; audit Phase 2
+> (Arcade Ticket item) was delivered first, as canonical **Phase 1**; audit
+> Phase 3 (rhythm game) is canonical **Phase 3**. The findings below are the
+> audit as written and are **not** revised here.
+
 **Scope:** establish what the arcade actually is today, and recommend the architecture for
 Arcade Tickets, a shared minigame foundation, and the first playable game. **No games,
 ticket rewards, inventory writes or Nostr kinds were implemented.** Nothing was committed.
@@ -763,6 +782,10 @@ sinks are limited, so cheating buys little; scores shared over Nostr are self-re
 ---
 
 ## 17. Prioritised implementation roadmap
+
+> **Numbering note.** The phase numbers in this section are the AUDIT's own
+> proposal and are **not** the canonical delivery sequence. See the mapping in
+> the implementation-status box at the top of this document.
 
 **Phase 0 — Stop the arcade lying (small, standalone, shippable immediately).**
 Nine machines must not all claim to be a dance game. Either give each machine an honest

@@ -1,4 +1,5 @@
 import { LocationId } from '@/lib/location-types';
+import { hasArcadePass } from '@/lib/arcade-pass';
 
 export interface InitialPosition {
   x: number;
@@ -23,6 +24,30 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'cave-open': { x: 50, y: 75 },
   'clothing-store-inside': { x: 50, y: 80 },
 };
+
+/**
+ * The arcade ground floor's walk boundary is the full-width rectangle
+ * `y ∈ [48, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [36, 48]` — the
+ * space in front of the elevator doors.
+ *
+ * These two constants exist because the pass-holder spawn used to be `{50, 48}`,
+ * on the alcove's own boundary line. From there the Blobbi could not reach the
+ * ticket counter: the walk stalled far from its target and `usePendingInteraction`
+ * correctly cancelled itself (`STALL_MAX_DISTANCE_FACTOR`), so clicking the
+ * counter produced no movement and no modal at all. Reproduced in a browser
+ * during the audit, and fixed by spawning on the open floor instead.
+ *
+ * `arcade-spawn.test.ts` pins both: the spawn is inside the walkable area, it is
+ * clear of the alcove, and a straight line from it to each ground-floor
+ * destination stays on walkable floor the whole way.
+ */
+export const ARCADE_ELEVATOR_ALCOVE = { x: [45, 55], y: [36, 48] } as const;
+
+/** Where a pass holder arrives: on the open floor, below the alcove mouth. */
+export const ARCADE_PASS_HOLDER_SPAWN: InitialPosition = { x: 50, y: 58 };
+
+/** Where everyone else arrives: mid-floor, within easy reach of the counter. */
+export const ARCADE_DEFAULT_SPAWN: InitialPosition = { x: 50, y: 75 };
 
 /**
  * Maps a child location to the position near its door on the parent location.
@@ -65,14 +90,7 @@ export function getBlobbiInitialPosition(location: string, previousLocation?: st
   const defaultPosition = LOCATION_INITIAL_POSITIONS[location as LocationId] || { x: 50, y: 75 };
 
   if (location === 'arcade') {
-    const hasArcadePass = sessionStorage.getItem('has-arcade-pass') === 'true';
-    if (hasArcadePass) {
-      // Player has the arcade pass, set initial position near the elevator
-      return { x: 50, y: 48 };
-    } else {
-      // Player does not have the arcade pass, set initial position near the ticket booth
-      return { x: 50, y: 75 };
-    }
+    return hasArcadePass() ? ARCADE_PASS_HOLDER_SPAWN : ARCADE_DEFAULT_SPAWN;
   }
 
   // Handle modal backgrounds (like photo-booth-inside.png)

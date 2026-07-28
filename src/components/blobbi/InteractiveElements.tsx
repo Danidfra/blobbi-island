@@ -2,20 +2,18 @@ import { FoodShopModal } from './FoodShopModal';
 import { PhotoBoothModal } from './PhotoBoothModal';
 import { ShareModal } from './ShareModal';
 import { NostrHubModal } from '@/components/NostrHubModal';
-import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useState, useRef } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
 import type { Blobbi } from '@/hooks/useBlobbis';
-import { ArcadePassModal } from './ArcadePassModal';
-import { ElevatorModal } from './ElevatorModal';
-import { NoPassModal } from './NoPassModal';
-import { GameModal } from './GameModal';
-import { Button } from '@/components/ui/button';
-import { Position } from '@/lib/types';
-import { usePendingInteraction, type RequestInteractionOptions } from '@/hooks/usePendingInteraction';
+import { usePendingInteraction } from '@/hooks/usePendingInteraction';
+import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOnWorldClick';
+import { BackArrow } from './BackArrow';
+import { InteractiveElement, type InteractiveElementProps } from './InteractiveElement';
+import { ArcadeRoom } from './arcade/ArcadeRoom';
+import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
 import { townBushes } from '@/lib/town-bushes-config';
 import { TheaterSeat } from './theater/TheaterSeat';
@@ -26,292 +24,6 @@ import {
   streetlightBaseBlocker,
   townStreetlights,
 } from '@/lib/town-streetlights-config';
-
-/**
- * Compute a walk-to target (world-surface percent) from an interactive
- * element's rect. Uses the element's horizontal center and a point near its
- * base (feet/doorway level) so the Blobbi walks to the floor in front of the
- * object rather than into its visual center. The result is relative to the
- * `[data-world-surface]` container; MovableBlobbi.goTo will clamp it into the
- * movement boundary.
- */
-function computeBaseCenterTarget(el: Element): Position | null {
-  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
-  if (!surface) return null;
-  const surfaceRect = surface.getBoundingClientRect();
-  const rect = el.getBoundingClientRect();
-  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
-
-  const centerX = rect.left + rect.width / 2;
-  // Aim slightly above the very bottom so the point sits on the floor in front
-  // of the object rather than clipped by its lowest pixels.
-  const baseY = rect.bottom - rect.height * 0.1;
-
-  return {
-    x: ((centerX - surfaceRect.left) / surfaceRect.width) * 100,
-    y: ((baseY - surfaceRect.top) / surfaceRect.height) * 100,
-  };
-}
-
-// BackArrow component using SVG
-function BackArrow({ className, onClick }: { className?: string; onClick?: () => void }) {
-  return (
-    <div
-      className={cn(
-        'cursor-pointer select-none transition-all duration-300 ease-out hover:scale-110 active:scale-95',
-        className
-      )}
-      data-block-move
-      onClick={onClick}
-      onMouseDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full"
-      >
-        <path
-          d="M19 12H5M5 12L12 19M5 12L12 5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
-}
-
-interface InteractiveElementProps {
-  src: string;
-  alt: string;
-  className?: string;
-  animated?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLDivElement>, chairId?: string, chairConfig?: InteractiveElementProps['chairConfig']) => void;
-  effect?: 'scale' | 'opacity' | 'door' | 'slide';
-  slideDirection?: 'right' | 'left' | 'up' | 'down';
-  isHovered?: boolean;
-  type?: 'chair' | 'default';
-  /**
-   * When provided, clicking/tapping this element does NOT fire `onClick`
-   * immediately. Instead the element computes a floor target near its base and
-   * requests a walk-to-interact; `onClick` only fires once the Blobbi is close
-   * enough. Used for doors / navigation / modal-opening items. Chairs and
-   * decorative items leave this undefined and keep their existing behavior.
-   */
-  requestInteraction?: (opts: RequestInteractionOptions) => void;
-  /**
-   * Legacy chair support for the arcade / Nostr Station / shop chairs, which
-   * still use the "click walks the Blobbi to a computed seat point" model.
-   *
-   * The theater does NOT use this: its seats are data-driven `<TheaterSeat>`
-   * components with stable ids and a real arrival callback. Only `seatAnchor`
-   * remains here — `sleepOnSeat` and `sitZIndexOffset` were read exclusively by
-   * a chair-arrival handler that was never called, so they configured nothing.
-   */
-  chairConfig?: {
-    seatAnchor?: {
-      xPercent?: number;
-      yPercent?: number;
-    };
-  };
-}
-
-/**
- * How long a tap keeps a visibility-only overlay visible on touch devices.
- * `'door'` / `'opacity'` overlays are driven by `:hover` on desktop, which touch
- * devices never get, so a tap needs to hold the "open"/"on" art briefly instead.
- */
-const TOUCH_FEEDBACK_MS = 900;
-
-function InteractiveElement({
-  src,
-  alt,
-  className,
-  animated = true,
-  onClick,
-  effect = 'scale',
-  slideDirection = 'right',
-  isHovered,
-  type,
-  requestInteraction,
-  chairConfig
-}: InteractiveElementProps) {
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [isSelfHovered, setIsSelfHovered] = useState(false);
-  // Touch-driven "active" feedback so mobile gets a visual cue equivalent to
-  // desktop hover while the Blobbi walks toward the target.
-  const [isTouchActive, setIsTouchActive] = useState(false);
-  const touchFeedbackTimer = useRef<number | null>(null);
-
-  /**
-   * `'door'` and `'opacity'` are pure *visibility* effects: they cross-fade a
-   * closed/off image to an open/on one with no transform and no layout impact,
-   * so they are always safe to trigger from a tap.
-   */
-  const isVisibilityEffect = effect === 'door' || effect === 'opacity';
-
-  useEffect(
-    () => () => {
-      if (touchFeedbackTimer.current !== null) {
-        window.clearTimeout(touchFeedbackTimer.current);
-      }
-    },
-    [],
-  );
-
-  const finalIsHovered = isHovered !== undefined ? isHovered : (isSelfHovered || isTouchActive);
-
-  const handleInteraction = (event: React.MouseEvent<HTMLDivElement>, isTouch = false) => {
-    event.stopPropagation();
-
-    if (!onClick) {
-      // Visibility-only overlay (no action attached), e.g. the Plaza inside
-      // door or the furniture-store door. There is nothing to run, but a tap
-      // must still reveal the "open" art so touch devices get feedback
-      // equivalent to the desktop hover. Auto-clears so the overlay doesn't
-      // stay stuck open.
-      if (isTouch && isVisibilityEffect) {
-        setIsTouchActive(true);
-        if (touchFeedbackTimer.current !== null) {
-          window.clearTimeout(touchFeedbackTimer.current);
-        }
-        touchFeedbackTimer.current = window.setTimeout(() => {
-          touchFeedbackTimer.current = null;
-          setIsTouchActive(false);
-        }, TOUCH_FEEDBACK_MS);
-      }
-      return;
-    }
-
-    // Tap-pop animation is only appropriate for small 'scale' items. Doors and
-    // large overlay images ('door'/'opacity'/'slide') must not pop/jump.
-    if (animated && effect === 'scale') {
-      setIsAnimating(true);
-      setTimeout(() => setIsAnimating(false), 300);
-    }
-
-    // Chairs keep their existing immediate walk-to-sit behavior.
-    if (type === 'chair') {
-      const chairId = alt.replace(/\s+/g, '-').toLowerCase();
-      onClick(event, chairId, chairConfig);
-      return;
-    }
-
-    // Walk-to-interact: defer the action until the Blobbi reaches the target.
-    if (requestInteraction) {
-      const target = computeBaseCenterTarget(event.currentTarget);
-      if (target) {
-        // Show active/touched feedback immediately (mobile parity with hover).
-        setIsTouchActive(true);
-        requestInteraction({
-          target,
-          touch: isTouch,
-          action: () => {
-            setIsTouchActive(false);
-            onClick(event);
-          },
-          onCancel: () => setIsTouchActive(false),
-        });
-        return;
-      }
-    }
-
-    onClick(event);
-  };
-
-  const getSlideTransform = () => {
-    if (!finalIsHovered) return 'translate(0, 0)';
-    switch (slideDirection) {
-      case 'right':
-        return 'translateX(100%)';
-      case 'left':
-        return 'translateX(-100%)';
-      case 'up':
-        return 'translateY(-100%)';
-      case 'down':
-        return 'translateY(100%)';
-      default:
-        return 'translate(0, 0)';
-    }
-  };
-
-  if (effect === 'slide') {
-    return (
-      <div
-        className={cn('cursor-pointer select-none', className)}
-        onMouseEnter={() => setIsSelfHovered(true)}
-        onMouseLeave={() => setIsSelfHovered(false)}
-        onClick={handleInteraction}
-      >
-        <div
-          className="transition-transform duration-300 ease-in-out"
-          style={{ transform: getSlideTransform() }}
-        >
-          <img src={src} alt={alt} className="w-full h-full object-contain" />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        'cursor-pointer select-none',
-        effect === 'scale' && animated && 'transition-all duration-300 ease-out hover:scale-110',
-        effect === 'door' && 'opacity-0 hover:opacity-100',
-        // Mobile parity: a tap keeps doors visible while the Blobbi walks over.
-        // Visibility only — no scale/transform, so large doors don't jump.
-        effect === 'door' && isTouchActive && 'opacity-100',
-        isAnimating && effect === 'scale' && 'animate-tap',
-        className
-      )}
-      data-block-move
-      onClick={handleInteraction}
-      onMouseEnter={() => setIsSelfHovered(true)}
-      onMouseLeave={() => setIsSelfHovered(false)}
-      onTouchStart={(e) => {
-        e.preventDefault(); // evita click extra depois do touch
-        handleInteraction(e as unknown as React.MouseEvent<HTMLDivElement>, true);
-      }}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-      }}
-      {...(type === 'chair' && {
-        'data-chair-id': alt.replace(/\s+/g, '-').toLowerCase(),
-        'data-chair-config': JSON.stringify(chairConfig || {})
-      })}
-    >
-      <img
-        src={src}
-        alt={alt}
-        /*
-         * Sizing contract: `h-full` is intentional and load-bearing — elements
-         * sized by HEIGHT (town streetlights `h-[35%]`) or into a fixed square
-         * box (mine cave / beach boat `size-*`) depend on it, and `object-contain`
-         * keeps them undistorted.
-         *
-         * Consequence for OVERLAYS: if the wrapper is given a definite height
-         * (`h-full`, `inset-0`, ...) while its sibling base image has a different
-         * intrinsic aspect ratio, `object-contain` letterboxes this image and it
-         * silently renders at the wrong scale/offset. Overlays must therefore be
-         * positioned with offsets + a WIDTH only, leaving height automatic.
-         */
-        className={cn(
-          'w-full h-full object-contain',
-          effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100',
-          // Mobile parity: keep "on" overlay visible while walking after a tap.
-          effect === 'opacity' && isTouchActive && 'opacity-100'
-        )}
-      />
-    </div>
-  );
-}
 
 interface InteractiveElementsProps {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
@@ -357,12 +69,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isArcadePassModalOpen, setIsArcadePassModalOpen] = useState(false);
-  const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
-  const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
-  const [isGameModalOpen, setIsGameModalOpen] = useState(false);
-  const [gameModalContent, setGameModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
   const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -374,49 +80,19 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   // only once the Blobbi reaches the target. Cancelled when the location or the
   // selected Blobbi changes (cancelDeps), on unmount, and when the user clicks
   // a different world point (handled by the world-surface listener below).
-  const { requestInteraction, cancel: cancelPendingInteraction, hasPending } =
-    usePendingInteraction({
-      blobbiRef,
-      cancelKey: `${currentLocation}:${selectedBlobbi?.id ?? ''}`,
-    });
-
-  // Cancel a pending interaction when the user clicks/taps a *different* world
-  // point. Interactive elements carry data-block-move and stopPropagation, so a
-  // world-surface pointerdown that reaches here means the player tapped empty
-  // ground (or chose another destination) — abandon the pending interaction.
-  //
-  // We resolve the single [data-world-surface] element directly (the local
-  // containerRef is only attached in some location branches, so relying on it
-  // would silently disable cancellation in most rooms). The listener is bound
-  // in the capture phase so it runs even though MovableBlobbi also listens on
-  // the same surface, and regardless of interactive elements' stopPropagation.
-  useEffect(() => {
-    const surface = document.querySelector('[data-world-surface]') as HTMLElement | null;
-    if (!surface) return;
-
-    const onWorldPointerDown = (ev: Event) => {
-      if (!hasPending()) return;
-      const targetEl = ev.target as Element | null;
-      // Ignore clicks that originate on UI / interactive elements; those manage
-      // their own pending lifecycle (and remote Blobbi clicks must not cancel).
-      if (targetEl?.closest('[data-block-move]')) return;
-      cancelPendingInteraction();
-    };
-
-    surface.addEventListener('pointerdown', onWorldPointerDown, { capture: true });
-    surface.addEventListener('touchstart', onWorldPointerDown, { capture: true });
-    return () => {
-      surface.removeEventListener('pointerdown', onWorldPointerDown, { capture: true });
-      surface.removeEventListener('touchstart', onWorldPointerDown, { capture: true });
-    };
-  }, [cancelPendingInteraction, hasPending, currentLocation]);
-
+  const pendingInteraction = usePendingInteraction({
+    blobbiRef,
+    cancelKey: `${currentLocation}:${selectedBlobbi?.id ?? ''}`,
+  });
+  const { requestInteraction } = pendingInteraction;
+  useCancelInteractionOnWorldClick(pendingInteraction, currentLocation);
 
   /**
-   * Legacy chair behaviour for the arcade / Nostr Station / shop: walk the
-   * Blobbi to a point derived from the chair's rect. There is no arrival
-   * callback and no seated state — those rooms have never had one. The theater
-   * uses <TheaterSeat> instead.
+   * Legacy chair behaviour for the Nostr Station / shop: walk the Blobbi to a
+   * point derived from the chair's rect. There is no arrival callback and no
+   * seated state — those rooms have never had one. The theater uses
+   * <TheaterSeat> instead, and the arcade's chairs now go through the shared
+   * walk-to-interact system (see `arcade/ArcadeRoom.tsx`).
    */
   const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, _chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
 
@@ -451,36 +127,18 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
     }
   };
 
+  /**
+   * Placeholder for elements that still have no behaviour (currently only the
+   * beach boat). It logs and does nothing else.
+   *
+   * It used to special-case the literal string `'dance-machine'` and open a
+   * hard-coded "Dance Dance Blobbi" modal — and all nine arcade machines,
+   * including a pool table and an air hockey table, passed that string. That
+   * dispatch is gone: arcade machines are a registry, and what a machine opens
+   * is decided from its own configuration in `arcade/ArcadeRoom.tsx`.
+   */
   const handleElementClick = (elementName: string) => {
     console.log(`Interactive element clicked: ${elementName} (location: ${currentLocation})`);
-    // TODO: Add navigation or action logic here
-    // This could trigger navigation to specific sub-locations,
-    // open mini-games, or show specific UI components
-    if (elementName === 'dance-machine') {
-      setGameModalContent({
-        title: 'Dance Dance Blobbi',
-        content: (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-lg mb-4">Get ready to dance!</p>
-            <Button>Start Game</Button>
-          </div>
-        ),
-      });
-      setIsGameModalOpen(true);
-    }
-  };
-
-  const handleTicketPurchase = () => {
-    setIsArcadePassModalOpen(true);
-  };
-
-  const handleElevatorClick = () => {
-    const hasPass = sessionStorage.getItem('has-arcade-pass') === 'true';
-    if (hasPass) {
-      setIsElevatorModalOpen(true);
-    } else {
-      setIsNoPassModalOpen(true);
-    }
   };
 
   // Town elements (when background is town-open.webp)
@@ -522,290 +180,24 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
     );
   }
 
-  if (backgroundFile === 'arcade-inside.png' || backgroundFile === 'arcade-1.png' || backgroundFile === 'arcade-minus1.png') {
+  /*
+    Arcade — all three floors, delegated to `arcade/ArcadeRoom.tsx`.
+
+    This branch used to be ~285 lines: nine machines that all called
+    `handleElementClick('dance-machine')`, four chairs in two byte-identical
+    table groups, two counters, an elevator, four modals and the game-modal
+    state. The arcade owns its own walk-to-interact instance, its own lifecycle
+    state machine and its own shell now, so adding a real game does not grow
+    this file at all.
+  */
+  const arcadeFloor = arcadeFloorForBackground(backgroundFile);
+  if (arcadeFloor) {
     return (
-      <>
-        <div ref={containerRef} className="w-full h-full relative">
-          {/* Elevator */}
-          <div
-            className={cn(
-              'absolute flex left-1/2 -translate-x-1/2 overflow-hidden z-10',
-              backgroundFile === 'arcade-inside.png' && 'top-[16%] w-[17.5%] ',
-              backgroundFile === 'arcade-1.png' && 'top-[40.5%] w-[10%] ',
-              backgroundFile === 'arcade-minus1.png' && 'top-[41.4%] w-[7.8%] ',
-            )}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            <InteractiveElement
-              src="/assets/locations/arcade/level-b1/elevator-door.png"
-              alt="Elevator Door Left"
-              effect="slide"
-              slideDirection="right"
-              className="scale-x-[-1]"
-              onClick={handleElevatorClick}
-              requestInteraction={requestInteraction}
-              isHovered={isHovered}
-            />
-            <InteractiveElement
-              src="/assets/locations/arcade/level-b1/elevator-door.png"
-              alt="Elevator Door Right"
-              effect="slide"
-              slideDirection="right"
-              onClick={handleElevatorClick}
-              requestInteraction={requestInteraction}
-              isHovered={isHovered}
-            />
-          </div>
-
-          {/* Floor -1 */}
-          {backgroundFile === 'arcade-minus1.png' && (
-            <>
-                <InteractiveElement
-                  src="/assets/locations/arcade/level-b1/dance-machine.png"
-                  alt="Dance Machine"
-                  effect='scale'
-                  className='absolute right-[18%] bottom-[36%]'
-                  onClick={() => handleElementClick('dance-machine')}
-                />
-
-            {/* Wall decorations */}
-             <>
-              {/* Left */}
-                <img src='/assets/locations/arcade/level-b1/yellow-guitar-neon.png' alt="ticket counter" className="absolute top-[34%] left-[15%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/pink-headset-neon.png' alt="ticket counter" className="absolute top-[27%] left-[10%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/yellow-mic-neon.png' alt="ticket counter" className="absolute top-[27%] left-[2%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/blue-mic-neon.png' alt="ticket counter" className="absolute top-[40%] left-[10%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/song-neon.png' alt="ticket counter" className="absolute top-[48%] left-[2%] w-[4%]" />
-
-              {/* Middle */}
-                <img src='/assets/locations/arcade/level-b1/blue-notes-neon.png' alt="ticket counter" className="absolute top-[32%] left-[28%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/cd-neon.png' alt="ticket counter" className="absolute top-[27%] left-[40%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/blue-wire-mic-neon.png' alt="ticket counter" className="absolute top-[27%] right-[30%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/yellow-note-up-neon.png' alt="ticket counter" className="absolute top-[27%] right-[40%] w-[4%]" />
-
-              {/* Right */}
-                <img src='/assets/locations/arcade/level-b1/notes-neon.png' alt="ticket counter" className="absolute top-[34%] right-[17%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/pink-note-neon.png' alt="ticket counter" className="absolute top-[27%] right-[10%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/yellow-headset-neon.png' alt="ticket counter" className="absolute top-[27%] right-[2%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/purple-note-neon.png' alt="ticket counter" className="absolute top-[40%] right-[10%] w-[4%]" />
-                <img src='/assets/locations/arcade/level-b1/blue-note-neon.png' alt="ticket counter" className="absolute top-[48%] right-[2%] w-[4%]" />
-
-              <img src='/assets/locations/arcade/level-b1/wall-art-pac-blobbi.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/locations/arcade/level-b1/wall-art-blobbi-kong.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[5%]" />
-             </>
-
-            <div className='flex absolute bottom-[25%] left-[24%] w-[16.5%] gap-[40%]'>
-              <InteractiveElement
-                src="/assets/locations/arcade/level-b1/left-chair.png"
-                alt="Left Chair"
-                type="chair"
-                chairConfig={{
-                  seatAnchor: { xPercent: 50, yPercent: 20 }
-                }}
-                onClick={handleChairClick}
-                effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-              />
-              <InteractiveElement
-                src="/assets/locations/arcade/level-b1/right-chair.png"
-                alt="Right Chair"
-                type="chair"
-                chairConfig={{
-                  seatAnchor: { xPercent: 50, yPercent: 20 }
-                }}
-                onClick={handleChairClick}
-                effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-              />
-              <img src='/assets/locations/arcade/level-b1/table.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
-            </div>
-            <div className='flex absolute bottom-[25%] right-[24%] w-[16.5%] gap-[40%]'>
-              <InteractiveElement
-                src="/assets/locations/arcade/level-b1/left-chair.png"
-                alt="Left Chair"
-                type="chair"
-                chairConfig={{
-                  seatAnchor: { xPercent: 50, yPercent: 20 }
-                }}
-                onClick={handleChairClick}
-                effect='scale'
-                className='left-[18%] bottom-[36%] w-[40%] z-[25]'
-              />
-              <InteractiveElement
-                src="/assets/locations/arcade/level-b1/right-chair.png"
-                alt="Right Chair"
-                type="chair"
-                chairConfig={{
-                  seatAnchor: { xPercent: 50, yPercent: 20 }
-                }}
-                onClick={handleChairClick}
-                effect='scale'
-                className='left-[30%] bottom-[36%] w-[40%] z-[25]'
-              />
-              <img src='/assets/locations/arcade/level-b1/table.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[44%] z-[27]" />
-            </div>
-
-            <div>
-            <img src='/assets/locations/arcade/level-b1/arcade-tundra-stage.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-[50%]" />
-              <InteractiveElement
-                src="/assets/locations/arcade/level-b1/mic.png"
-                alt="Right Chair"
-                effect='scale'
-                className='absolute left-1/2 transform -translate-x-1/2 bottom-[18%] w-[3%] z-[30]'
-                // onClick={() => handleElementClick('dance-machine')}
-              />
-            </div>
-
-            </>
-          )}
-
-          {/* Floor 1 */}
-          {backgroundFile === 'arcade-1.png' && (
-            <>
-              <img src='/assets/locations/arcade/level-1/trophy-neon.png' alt="ticket counter" className="absolute top-[32%] left-[14%] w-[6%]" />
-              <img src='/assets/locations/arcade/level-1/sword-neon.png' alt="ticket counter" className="absolute top-[26%] left-[6%] w-[5%] -rotate-12" />
-              <img src='/assets/locations/arcade/level-1/play-neon.png' alt="ticket counter" className="absolute top-[44%] left-[6%] w-[6%] -rotate-12" />
-
-              <img src='/assets/locations/arcade/level-1/wall-art-blobbizard.png' alt="ticket counter" className="absolute top-[42%] left-[34%] w-[5%]" />
-              <img src='/assets/locations/arcade/level-1/wall-art-blobbi-adventure.png' alt="ticket counter" className="absolute top-[42%] right-[34%] w-[6%]" />
-
-              <img src='/assets/locations/arcade/level-1/controller-neon.png' alt="ticket counter" className="absolute top-[32%] left-[26%] w-[7%] -rotate-12" />
-              <img src='/assets/locations/arcade/level-1/star-neon.png' alt="ticket counter" className="absolute left-1/2 transform -translate-x-1/2 top-[27%] w-[5%]" />
-              <img src='/assets/locations/arcade/level-1/dice-neon.png' alt="ticket counter" className="absolute top-[31%] right-[26%] w-[6%]" />
-
-              <img src='/assets/locations/arcade/level-1/pac-man-neon.png' alt="ticket counter" className="absolute top-[32%] right-[15%] w-[4.5%] rotate-12" />
-              <img src='/assets/locations/arcade/level-1/game-boy-neon.png' alt="ticket counter" className="absolute top-[28%] right-[4%] w-[4%] rotate-12" />
-              <img src='/assets/locations/arcade/level-1/retro-controller-neon.png' alt="ticket counter" className="absolute top-[44%] right-[6%] w-[6%] rotate-12" />
-
-                {/* Left Arcade Machine */}
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-pink.png"
-                    alt="Arcade Machine Pink"
-                    effect='scale'
-                    className='absolute left-[18%] w-[12%] bottom-[28%] z-[15]'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-black.png"
-                    alt="Arcade Machine classic"
-                    effect='scale'
-                    className='absolute left-[11%] w-[12.5%] bottom-[22%] z-20'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-classic.png"
-                    alt="Arcade Machine classic"
-                    effect='scale'
-                    className='absolute left-[4%] w-[12.5%] bottom-[16%] z-[25]'
-                    onClick={() => handleElementClick('dance-machine')}
-                    />
-
-                  {/* Middle */}
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/snooker.png"
-                    alt="Arcade Machine Green"
-                    effect='scale'
-                    className='absolute left-[30%] w-[17.5%] bottom-[10%] z-30'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/air-hockey.png"
-                    alt="Arcade Air Hockey"
-                    effect='scale'
-                    className='absolute right-[30%] w-[17.5%] bottom-[10%] z-30'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-
-                  {/* Right Arcade Machine */}
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-green.png"
-                    alt="Arcade Machine Green"
-                    effect='scale'
-                    className='absolute right-[18%] w-[12.5%] bottom-[28%] z-[15]'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-purple.png"
-                    alt="Arcade Machine Purple"
-                    effect='scale'
-                    className='absolute right-[11%] w-[12.5%] bottom-[22%] z-20'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-                  <InteractiveElement
-                    src="/assets/locations/arcade/level-1/arcade-machine-red.png"
-                    alt="Arcade Machine Red"
-                    effect='scale'
-                    className='absolute right-[4%] w-[12.5%] bottom-[16%] z-[25]'
-                    onClick={() => handleElementClick('dance-machine')}
-                  />
-            </>
-          )}
-
-          {/* Ticket Counter - Only on main floor */}
-          {backgroundFile === 'arcade-inside.png' && (
-           <>
-            <div className='relative left-[20%] top-[26%]'>
-              <img src='/assets/locations/arcade/ground/ticket.png' alt="ticket counter"
-                className="absolute" />
-              <InteractiveElement
-                src="/assets/locations/arcade/ground/ticket-out.png"
-                alt="Purchase Arcade Pass"
-                effect='opacity'
-                className='absolute'
-                onClick={handleTicketPurchase}
-                requestInteraction={requestInteraction}
-              />
-            </div>
-
-            <img src='/assets/locations/arcade/ground/wall-art-super-blobbi.png' alt="ticket counter" className="absolute top-[6%] right-[10%] w-[20%]" />
-            <img src='/assets/locations/arcade/ground/wall-art-game-boy.png' alt="ticket counter" className="absolute top-[12%] left-[2%] w-[10%]" />
-            <img src='/assets/locations/arcade/ground/play-up-neon.png' alt="ticket counter" className="absolute top-[18%] left-[28%] w-[8%]" />
-            <img src='/assets/locations/arcade/ground/trophy-money-neon.png' alt="ticket counter" className="absolute top-[18%] right-[31%] w-[6%]" />
-
-          {/* Prizes */}
-          <div className='absolute right-[7%] top-[33%]'>
-            <InteractiveElement
-              src="/assets/locations/arcade/ground/prizes.png"
-              alt="prizes"
-              animated={false}
-              effect='scale'
-              onClick={() => handleElementClick('prizes')}
-            />
-          </div>
-           </>
-          )}
-
-        </div>
-
-        {/* Modals */}
-        <ArcadePassModal
-          isOpen={isArcadePassModalOpen}
-          onClose={() => setIsArcadePassModalOpen(false)}
-        />
-        <ElevatorModal
-          isOpen={isElevatorModalOpen}
-          onClose={() => setIsElevatorModalOpen(false)}
-        />
-        <NoPassModal
-          isOpen={isNoPassModalOpen}
-          onClose={() => setIsNoPassModalOpen(false)}
-        />
-        {gameModalContent && (
-          <GameModal
-            isOpen={isGameModalOpen}
-            onClose={() => setIsGameModalOpen(false)}
-            title={gameModalContent.title}
-          >
-            {gameModalContent.content}
-          </GameModal>
-        )}
-        <BackArrow
-          onClick={() => setCurrentLocation('town')}
-          className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-        />
-      </>
+      <ArcadeRoom
+        blobbiRef={blobbiRef}
+        floor={arcadeFloor}
+        selectedBlobbiId={selectedBlobbi?.id ?? null}
+      />
     );
   }
 

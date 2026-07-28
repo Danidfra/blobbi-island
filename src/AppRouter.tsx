@@ -8,16 +8,21 @@ const MultiplayerDemo = lazy(() => import("./pages/MultiplayerDemo").then(m => (
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /**
- * Development-only theater harness.
+ * Development-only harnesses.
  *
  * `import.meta.env.DEV` is replaced by a literal `false` in a production build,
- * so the ternary below collapses to `null` and the dynamic import inside the
- * dead branch is dropped along with it — the page is not merely unrouted in
- * production, its chunk is never emitted. `npm run build` is the check: no
- * `DevTheater` chunk may appear in `dist/`.
+ * so each ternary below collapses to `null` and the dynamic import inside the
+ * dead branch is dropped along with it — the pages are not merely unrouted in
+ * production, their chunks are never emitted. `npm run build` is the check: no
+ * `DevTheater` or `DevArcade` chunk may appear in `dist/`, which
+ * `src/dev-routes.test.ts` asserts against the built output.
  */
 const DevTheater = import.meta.env.DEV
   ? lazy(() => import("./pages/DevTheater").then(m => ({ default: m.DevTheater })))
+  : null;
+
+const DevArcade = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevArcade").then(m => ({ default: m.DevArcade })))
   : null;
 
 // Loading component for lazy-loaded routes
@@ -49,6 +54,13 @@ export function AppRouter() {
           <Route path="/dev/theater" element={
             <Suspense fallback={<PageLoading />}>
               <DevTheater />
+            </Suspense>
+          } />
+        )}
+        {DevArcade && (
+          <Route path="/dev/arcade" element={
+            <Suspense fallback={<PageLoading />}>
+              <DevArcade />
             </Suspense>
           } />
         )}

@@ -25,6 +25,7 @@ import { resolveSeatedRender } from '@/lib/blobbi-world-render';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
+import { clearArcadePass } from '@/lib/arcade-pass';
 import { MultiplayerLayer } from './MultiplayerLayer';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
@@ -69,10 +70,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const currentRemoteRef = useRef<{ pubkey: string; d: string } | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
-  // Clear arcade pass when leaving arcade locations
+  // The Arcade Pass is valid only inside the arcade, so leaving revokes it.
+  // Routed through the shared store rather than `sessionStorage` directly, so
+  // the HUD chip learns about it from a notification instead of a 1 Hz poll.
   React.useEffect(() => {
     if (!currentLocation.startsWith('arcade')) {
-      sessionStorage.removeItem('has-arcade-pass');
+      clearArcadePass();
     }
   }, [currentLocation]);
   const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
