@@ -13,11 +13,23 @@ import {
   unknownItemDefinition,
   GENERIC_ITEM_EMOJI,
 } from '@/inventory';
+import {
+  ACTIVE_OFFICIAL_ITEMS,
+  DEPRECATED_OFFICIAL_ITEMS,
+  RESERVED_OFFICIAL_ITEMS,
+} from '@/protocol/event-registry';
 
 describe('official item registry', () => {
-  it('contains exactly the 19 official items', () => {
-    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(19);
-    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(19);
+  it('contains 20 published official items and nothing reserved', () => {
+    // All 20 definitions (19 consumables + the Arcade Ticket currency) are now
+    // published and issuer-signed. Purchasability is a separate question — see
+    // shop-catalog.test.ts.
+    expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(20);
+    expect(RESERVED_OFFICIAL_ITEMS).toHaveLength(0);
+    expect(DEPRECATED_OFFICIAL_ITEMS).toHaveLength(0);
+
+    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(20);
+    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(20);
   });
 
   it('builds every address from the official issuer', () => {
@@ -60,9 +72,9 @@ describe('official item registry', () => {
 });
 
 describe('bundled fallback catalog', () => {
-  it('resolves all 19 official addresses', () => {
+  it('resolves EVERY registered official address', () => {
     const catalog = bundledFallbackCatalog();
-    expect(catalog).toHaveLength(19);
+    expect(catalog).toHaveLength(OFFICIAL_ITEM_ADDRESSES.length);
     for (const address of OFFICIAL_ITEM_ADDRESSES) {
       expect(bundledFallbackDefinition(address)).not.toBeNull();
     }
@@ -139,12 +151,16 @@ describe('emoji fallback', () => {
 });
 
 /**
- * Exact-metadata verification for ALL 19 bundled fallbacks against the values
- * published in the official kind:31632 events (fetched from the official relays
- * during the audit on the current definitions). Covers name, type, category,
- * effects, action, stages, emoji, and topics — not only effects/action/stages.
+ * Exact-metadata verification for every PUBLISHED (`active`) bundled fallback
+ * against the values in the official kind:31632 events. Covers name, type,
+ * category, effects, action, stages, emoji, and topics — not only
+ * effects/action/stages.
+ *
+ * Iterates `ACTIVE_OFFICIAL_ITEMS`, so an item is only asserted here once its
+ * definition is actually published; a `reserved` item has no published event to
+ * match against. All 20 are published as of 2026-07-28.
  */
-describe('bundled fallback exact metadata (all 19)', () => {
+describe('bundled fallback exact metadata (all 20 published items)', () => {
   const EXPECTED: Record<
     string,
     {
@@ -152,7 +168,7 @@ describe('bundled fallback exact metadata (all 19)', () => {
       type: string;
       category: string;
       emoji: string;
-      action: string;
+      action: string | null;
       stages: string[];
       topics: string[];
       effects: Record<string, number>;
@@ -177,13 +193,19 @@ describe('bundled fallback exact metadata (all 19)', () => {
     hyg_bubble: { name: 'Bubble Bath', type: 'consumable', category: 'hygiene', emoji: '🛁', action: 'clean', stages: ['egg', 'baby', 'adult'], topics: ['hygiene', 'cleaning'], effects: { hygiene: 70, happiness: 25 } },
     hyg_towel: { name: 'Soft Towel', type: 'consumable', category: 'hygiene', emoji: '🏖️', action: 'clean', stages: ['egg', 'baby', 'adult'], topics: ['hygiene', 'cleaning'], effects: { hygiene: 25, happiness: 5 } },
     nrg_drink: { name: 'Energy Drink', type: 'consumable', category: 'energy', emoji: '🧃', action: 'boost', stages: ['baby', 'adult'], topics: ['energy', 'boost'], effects: { energy: 35, happiness: 5 } },
+    // Currency. Published 2026-07-28; verified on both official relays. Unlike
+    // the 19 consumables it carries an `image` and has NO action and NO effects.
+    cur_arcade_ticket: { name: 'Arcade Ticket', type: 'currency', category: 'currency', emoji: '🎟️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
   };
 
-  it('covers exactly the 19 official items', () => {
-    expect(Object.keys(EXPECTED)).toHaveLength(19);
+  it('covers exactly the 20 published items', () => {
+    expect(Object.keys(EXPECTED)).toHaveLength(20);
+    expect(Object.keys(EXPECTED).sort()).toEqual(
+      ACTIVE_OFFICIAL_ITEMS.map((i) => i.itemId).sort(),
+    );
   });
 
-  for (const entry of OFFICIAL_ITEM_REGISTRY) {
+  for (const entry of ACTIVE_OFFICIAL_ITEMS) {
     it(`matches published metadata for ${entry.itemId}`, () => {
       const def = bundledFallbackDefinition(entry.address)!;
       const exp = EXPECTED[entry.itemId];

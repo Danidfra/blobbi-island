@@ -45,7 +45,23 @@ The canonical identity of an item is its full kind:31632 address
 `31632:<issuer>:<d>`. The legacy `itemId` (e.g. `food_apple`) is a
 compatibility/UI identifier only; the item `name` is never identity.
 
-- Registry: `src/inventory/registry.ts` (the 19 official items).
+- Canonical source: **`src/protocol/event-registry.ts`** — the single
+  machine-readable registry of every application event kind and every official
+  item. `src/inventory/registry.ts`, `catalog-fallback.ts`, `shop-catalog.ts` and
+  the generated `docs/protocol/blobbi-island-event-registry.md` are all
+  projections of it, so they cannot drift apart.
+- Registry projection: `src/inventory/registry.ts` (addresses + id maps for the
+  19 published consumables plus the reserved `blobbi:currency:arcade-ticket`).
+- **Prices are NOT in the protocol registry.** A coin price is Island-local
+  economy configuration with its own lifecycle (balancing, promotions, a future
+  ticket currency), not a kind:31632 definition fact. `src/inventory/shop-catalog.ts`
+  owns the coin price table and **validates it against the canonical registry at
+  module load**: a duplicate entry, a price for an unregistered item, a price for
+  a non-consumable category, or a non-positive-integer price all throw. A
+  separate domain, not a drifting duplicate.
+- Purchasability is separate from recognition: an official item with no price
+  entry is not for sale, and `priceForAddress` returns `null` (never `0`), so
+  `usePurchaseItem` rejects it.
 - Deterministic maps: `itemIdToAddress`, `addressToItemId`, `dTagToAddress`.
 - Addresses are built with the package's `buildGameItemAddress`, so they cannot
   drift from the issuer constant.
@@ -150,11 +166,22 @@ Concurrency model:
 - The official kind:31632 content JSON uses the shape
   `{ "effects": { "game:blobbi": { <stat>: n } }, "metadata": { itemId, action,
   stages, emoji, stackable } }`. The adapter reads exactly these paths (with a
-  flat-shape fallback for forward compatibility). All 19 bundled fallbacks mirror
-  the exact published `name`, `type` (`consumable`), `category`, `effects`,
-  `action`, `stages`, `emoji`, and `topics`.
+  flat-shape fallback for forward compatibility). The bundled fallbacks for the
+  19 `active` items mirror the exact published `name`, `type` (`consumable`),
+  `category`, `effects`, `action`, `stages`, `emoji`, and `topics`.
+- **Item categories** are `food`, `toy`, `medicine`, `hygiene`, `energy` and
+  `currency`. The first five are consumable care items. `currency` items carry
+  `action: null` and no effects, so `useUseItem` rejects them
+  (`Item has no usable action`) and they are rendered read-only in the Item Bag.
+  All three validation points — `ItemCategory`, the adapter's `VALID_CATEGORIES`
+  and the bag's sections — derive from `ITEM_CATEGORIES` in the canonical
+  registry, so a category can never be accepted by one and dropped by another.
+- **Reserved items:** an item whose identity is claimed but whose issuer-signed
+  kind:31632 event is not published yet (today: the Arcade Ticket) resolves from
+  the bundled fallback and switches to the published definition automatically.
+  See `docs/protocol/arcade-ticket-publication.md`.
 - The catalog uses a single canonical query key `['blobbi-item-catalog']`. The
-  configured relay is an internal query input only, NOT part of the key (the 19
+  configured relay is an internal query input only, NOT part of the key (the
   official addresses are the identity). `NostrProvider` resets queries on relay
   change.
 

@@ -1,6 +1,5 @@
 /**
- * Blobbi Island — Resolved item-definition model and bundled fallback catalog
- * (Phase 3).
+ * Blobbi Island — Resolved item-definition model and bundled fallback catalog.
  *
  * A `ResolvedBlobbiItemDefinition` is the Island view model for an item. It is
  * produced by resolving, in order:
@@ -8,33 +7,51 @@
  *   2. the bundled canonical fallback (below), keyed by address;
  *   3. a generic "unknown item" model.
  *
- * The bundled fallback uses the EXACT currently-published metadata (effects,
- * action, stages, emoji, category, topics). It exists so the game remains
- * playable when relays are unavailable and so the app never blocks on a fetch.
- * It is not a re-implementation of the protocol — parsing/validation of fetched
- * definitions is done by `@nostr-games/inventory`.
+ * The bundled fallback is now a PROJECTION of the canonical registry
+ * (`src/protocol/event-registry.ts`) rather than a second hand-maintained copy
+ * of the same metadata. It exists so the game remains playable when relays are
+ * unavailable and so the app never blocks on a fetch. It is not a
+ * re-implementation of the protocol — parsing/validation of fetched definitions
+ * is done by `@nostr-games/inventory`.
+ *
+ * For `active` items the fallback mirrors the currently-published kind:31632
+ * events exactly. For `reserved` items (identity claimed, official event not
+ * published yet — e.g. the Arcade Ticket) the fallback is what the definition
+ * WILL say, so the client renders the item correctly today and switches to the
+ * published definition automatically the moment it exists.
  */
+
+import {
+  ADDRESSED_OFFICIAL_ITEMS,
+  type ItemActionName,
+  type ItemCategoryName,
+  type ItemEffectsShape,
+  type ItemStageName,
+} from '@/protocol/event-registry';
 
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from './constants';
 import { OFFICIAL_ITEM_REGISTRY } from './registry';
 
-/** Blobbi stat effects an item applies when used. */
-export interface ItemEffects {
-  hunger?: number;
-  energy?: number;
-  hygiene?: number;
-  happiness?: number;
-  health?: number;
-}
+/**
+ * Blobbi stat effects an item applies when used.
+ *
+ * Re-exported from the canonical registry so there is one shape, not two.
+ */
+export type ItemEffects = ItemEffectsShape;
 
 /** The gameplay action an item triggers. */
-export type ItemAction = 'feed' | 'play' | 'medicine' | 'clean' | 'boost';
+export type ItemAction = ItemActionName;
 
 /** Blobbi lifecycle stages an item may be used on. */
-export type ItemStage = 'egg' | 'baby' | 'adult';
+export type ItemStage = ItemStageName;
 
-/** High-level item type/category used by UI grouping. */
-export type ItemCategory = 'food' | 'toy' | 'medicine' | 'hygiene' | 'energy';
+/**
+ * High-level item type/category used by UI grouping.
+ *
+ * Includes `currency`, which is NOT a care category: currency items have
+ * `action: null`, no stat effects, and are never offered as consumables.
+ */
+export type ItemCategory = ItemCategoryName;
 
 /**
  * Island view model for an item definition. `source` records where the
@@ -55,13 +72,17 @@ export interface ResolvedBlobbiItemDefinition {
   category: ItemCategory | 'unknown';
   /** Stat effects applied on use. */
   effects: ItemEffects;
-  /** Gameplay action, or `null` for unknown items. */
+  /**
+   * Gameplay action, or `null` for items that cannot be used on a Blobbi
+   * (unknown items and currency). `useUseItem` rejects a null action, which is
+   * what keeps currency out of every care flow.
+   */
   action: ItemAction | null;
   /** Allowed Blobbi stages. */
   stages: ItemStage[];
   /** Emoji fallback (used when no image is present). */
   emoji: string;
-  /** Optional image URL (from a future definition `image` tag). */
+  /** Optional image URL (from a definition `image` tag). */
   image?: string;
   /** `t` topic tags. */
   topics: string[];
@@ -70,222 +91,41 @@ export interface ResolvedBlobbiItemDefinition {
 }
 
 /**
- * Canonical fallback metadata, keyed by `d` tag. Values MUST match the
- * currently-published kind:31632 definitions exactly.
+ * Canonical fallback metadata, keyed by `d` tag, derived from the single
+ * canonical registry. For `active` items the values MUST match the
+ * currently-published kind:31632 definitions exactly; the registry is where
+ * that guarantee is maintained and tested.
  */
 interface FallbackMeta {
   name: string;
   type: string;
   category: ItemCategory;
   effects: ItemEffects;
-  action: ItemAction;
+  /** `null` for items with no gameplay action (currency). */
+  action: ItemAction | null;
   stages: ItemStage[];
   emoji: string;
+  /** Official artwork URL, when one exists. */
+  image?: string;
   topics: string[];
 }
 
-const FALLBACK_BY_D: Record<string, FallbackMeta> = {
-  // --- Food (action: feed; stages: baby, adult) ---
-  'blobbi:food:apple': {
-    name: 'Apple',
-    type: 'consumable',
-    category: 'food',
-    effects: { hunger: 25, hygiene: -2, energy: 5 },
-    action: 'feed',
-    stages: ['baby', 'adult'],
-    emoji: '🍎',
-    topics: ['edible', 'food'],
-  },
-  'blobbi:food:burger': {
-    name: 'Burger',
-    type: 'consumable',
-    category: 'food',
-    effects: { hunger: 45, happiness: 10, hygiene: -8, energy: 8 },
-    action: 'feed',
-    stages: ['baby', 'adult'],
-    emoji: '🍔',
-    topics: ['edible', 'food'],
-  },
-  'blobbi:food:cake': {
-    name: 'Cake',
-    type: 'consumable',
-    category: 'food',
-    effects: { hunger: 25, happiness: 30, hygiene: -10, energy: 10 },
-    action: 'feed',
-    stages: ['baby', 'adult'],
-    emoji: '🎂',
-    topics: ['edible', 'food'],
-  },
-  'blobbi:food:pizza': {
-    name: 'Pizza',
-    type: 'consumable',
-    category: 'food',
-    effects: { hunger: 40, happiness: 15, hygiene: -9, energy: 10 },
-    action: 'feed',
-    stages: ['baby', 'adult'],
-    emoji: '🍕',
-    topics: ['edible', 'food'],
-  },
-  'blobbi:food:sushi': {
-    name: 'Sushi',
-    type: 'consumable',
-    category: 'food',
-    effects: { hunger: 35, health: 10, hygiene: -5, energy: 7 },
-    action: 'feed',
-    stages: ['baby', 'adult'],
-    emoji: '🍣',
-    topics: ['edible', 'food'],
-  },
-
-  // --- Toys (action: play; stages: baby, adult) ---
-  'blobbi:toy:ball': {
-    name: 'Ball',
-    type: 'consumable',
-    category: 'toy',
-    effects: { happiness: 25, energy: -10, hygiene: -5 },
-    action: 'play',
-    stages: ['baby', 'adult'],
-    emoji: '⚽',
-    topics: ['toy', 'playable'],
-  },
-  'blobbi:toy:teddy': {
-    name: 'Teddy Bear',
-    type: 'consumable',
-    category: 'toy',
-    effects: { happiness: 45, energy: -5 },
-    action: 'play',
-    stages: ['baby', 'adult'],
-    emoji: '🧸',
-    topics: ['toy', 'playable'],
-  },
-  'blobbi:toy:blocks': {
-    name: 'Building Blocks',
-    type: 'consumable',
-    category: 'toy',
-    effects: { happiness: 30, energy: -10 },
-    action: 'play',
-    stages: ['baby', 'adult'],
-    emoji: '🧱',
-    topics: ['toy', 'playable'],
-  },
-
-  // --- Medicine ---
-  'blobbi:medicine:vitamins': {
-    name: 'Vitamins',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 25, energy: 5 },
-    action: 'medicine',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '💊',
-    topics: ['medicine', 'healing'],
-  },
-  'blobbi:medicine:super': {
-    name: 'Super Medicine',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 50, energy: 20, happiness: -10 },
-    action: 'medicine',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '💉',
-    topics: ['medicine', 'healing'],
-  },
-  'blobbi:medicine:bandage': {
-    name: 'Bandage',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 25 },
-    action: 'medicine',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🩹',
-    topics: ['medicine', 'healing'],
-  },
-  'blobbi:medicine:health-elixir': {
-    name: 'Health Elixir',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 75, happiness: 20, energy: 10 },
-    action: 'medicine',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🧪',
-    topics: ['medicine', 'healing'],
-  },
-  'blobbi:medicine:shell-repair-kit': {
-    name: 'Shell Repair Kit',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 30 },
-    action: 'medicine',
-    // Egg-only per published definition.
-    stages: ['egg'],
-    emoji: '🥚',
-    topics: ['medicine', 'healing', 'egg'],
-  },
-  'blobbi:medicine:calcium': {
-    name: 'Calcium Supplement',
-    type: 'consumable',
-    category: 'medicine',
-    effects: { health: 35 },
-    action: 'medicine',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🦴',
-    topics: ['medicine', 'healing'],
-  },
-
-  // --- Hygiene (action: clean; stages: egg, baby, adult) ---
-  'blobbi:hygiene:soap': {
-    name: 'Soap',
-    type: 'consumable',
-    category: 'hygiene',
-    effects: { hygiene: 25 },
-    action: 'clean',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🧼',
-    topics: ['hygiene', 'cleaning'],
-  },
-  'blobbi:hygiene:shampoo': {
-    name: 'Shampoo',
-    type: 'consumable',
-    category: 'hygiene',
-    effects: { hygiene: 50, happiness: 10 },
-    action: 'clean',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🧴',
-    topics: ['hygiene', 'cleaning'],
-  },
-  'blobbi:hygiene:bubble-bath': {
-    name: 'Bubble Bath',
-    type: 'consumable',
-    category: 'hygiene',
-    effects: { hygiene: 70, happiness: 25 },
-    action: 'clean',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🛁',
-    topics: ['hygiene', 'cleaning'],
-  },
-  'blobbi:hygiene:soft-towel': {
-    name: 'Soft Towel',
-    type: 'consumable',
-    category: 'hygiene',
-    effects: { hygiene: 25, happiness: 5 },
-    action: 'clean',
-    stages: ['egg', 'baby', 'adult'],
-    emoji: '🏖️',
-    topics: ['hygiene', 'cleaning'],
-  },
-
-  // --- Energy (action: boost; stages: baby, adult) ---
-  'blobbi:energy:drink': {
-    name: 'Energy Drink',
-    type: 'consumable',
-    category: 'energy',
-    effects: { energy: 35, happiness: 5 },
-    action: 'boost',
-    stages: ['baby', 'adult'],
-    emoji: '🧃',
-    topics: ['energy', 'boost'],
-  },
-};
+const FALLBACK_BY_D: Record<string, FallbackMeta> = Object.fromEntries(
+  ADDRESSED_OFFICIAL_ITEMS.map((item) => [
+    item.d,
+    {
+      name: item.name,
+      type: item.type,
+      category: item.category,
+      effects: { ...item.effects },
+      action: item.action,
+      stages: [...item.stages],
+      emoji: item.emoji,
+      ...(item.image ? { image: item.image } : {}),
+      topics: [...item.topics],
+    } satisfies FallbackMeta,
+  ]),
+);
 
 /**
  * itemId → emoji fallback map (visual resolution order step 3), derived from
@@ -329,6 +169,7 @@ export function bundledFallbackDefinition(
     action: meta.action,
     stages: meta.stages,
     emoji: meta.emoji,
+    ...(meta.image ? { image: meta.image } : {}),
     topics: meta.topics,
     source: 'fallback',
   };

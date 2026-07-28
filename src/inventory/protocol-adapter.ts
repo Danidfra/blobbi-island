@@ -19,6 +19,12 @@ import {
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import {
+  ITEM_ACTIONS,
+  ITEM_CATEGORIES,
+  ITEM_STAGES,
+} from '@/protocol/event-registry';
+
+import {
   type ItemAction,
   type ItemCategory,
   type ItemStage,
@@ -30,21 +36,17 @@ import {
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from './constants';
 import { addressToItemId } from './registry';
 
-const VALID_ACTIONS: ReadonlySet<string> = new Set([
-  'feed',
-  'play',
-  'medicine',
-  'clean',
-  'boost',
-]);
-const VALID_STAGES: ReadonlySet<string> = new Set(['egg', 'baby', 'adult']);
-const VALID_CATEGORIES: ReadonlySet<string> = new Set([
-  'food',
-  'toy',
-  'medicine',
-  'hygiene',
-  'energy',
-]);
+/**
+ * Validation sets for the metadata a fetched definition may carry.
+ *
+ * All three DERIVE from the canonical registry (`src/protocol/event-registry.ts`)
+ * rather than repeating literal lists here. That is what guarantees a category
+ * added to the registry — `currency`, for example — is accepted by the adapter
+ * instead of silently degrading a valid definition to `unknown`.
+ */
+const VALID_ACTIONS: ReadonlySet<string> = new Set<string>(ITEM_ACTIONS);
+const VALID_STAGES: ReadonlySet<string> = new Set<string>(ITEM_STAGES);
+const VALID_CATEGORIES: ReadonlySet<string> = new Set<string>(ITEM_CATEGORIES);
 
 /**
  * Parse a kind:31632 event into a package `GameItemDefinition`, enforcing the

@@ -9,6 +9,16 @@ tags when republishing replaceable/addressable events.
 All custom kinds include a NIP-31 `alt` tag where applicable to provide a
 human-readable description for clients that do not understand the kind.
 
+> **Canonical registry.** The machine-checked inventory of every kind, every
+> official kind:31632 item definition, every canonical address, the issuer, the
+> definition relays and the recovery boundary lives in
+> [`docs/protocol/blobbi-island-event-registry.md`](docs/protocol/blobbi-island-event-registry.md),
+> which is **generated** from `src/protocol/event-registry.ts` (`npm run
+> docs:registry`; a test fails if it goes stale). This document explains the
+> protocol and the reasoning behind it; the registry is the source of truth for
+> the facts. Where they disagree, the registry is right and this file needs
+> updating.
+
 ## Summary
 
 | Kind | Name | Class | Purpose |
@@ -84,6 +94,19 @@ tag schema, parsing, validation, and quantities.
   player's inventory. Blobbi Island uses a single per-user inventory with
   `d = "blobbi:island"`. Item references are `a` tags pointing at 31632 item
   addresses with decimal-integer quantities.
+
+Items fall into two kinds of category. **Consumable care items** (`food`, `toy`,
+`medicine`, `hygiene`, `energy`) carry stat effects and a gameplay `action`, and
+are used on a Blobbi. **Currency items** (`currency`) carry no effects and no
+action; they are held as a stackable quantity in the same 31633 inventory and can
+never be used on a Blobbi. The Arcade Ticket
+(`blobbi:currency:arcade-ticket`) is the first of these.
+
+The complete, machine-checked list — every official `d`, its canonical
+`31632:<issuer>:<d>` address, category, action, effects, artwork and publication
+status — is in
+[`docs/protocol/blobbi-island-event-registry.md`](docs/protocol/blobbi-island-event-registry.md).
+It is generated from `src/protocol/event-registry.ts` and is not duplicated here.
 
 See `docs/INVENTORY_ARCHITECTURE.md` for the full Island architecture.
 

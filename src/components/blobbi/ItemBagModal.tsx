@@ -20,8 +20,63 @@ interface ItemBagModalProps {
   onClose: () => void;
 }
 
-/** Categories shown in the bag, in display order, with section labels. */
-const CATEGORY_SECTIONS: { category: ItemCategory; label: string }[] = [
+/**
+ * An item's visual, following the catalog's documented resolution order:
+ * definition `image` → `emoji`.
+ *
+ * Generic on purpose — it takes a resolved definition and knows nothing about
+ * which item it is drawing, so every current and future item with artwork gets
+ * the same treatment. Today only the Arcade Ticket has an `image`, and the 19
+ * consumables keep rendering exactly the emoji they rendered before.
+ *
+ * The image is a REMOTE asset, so it can fail (host down, offline, blocked). A
+ * failed load falls back to the emoji rather than leaving a broken-image glyph,
+ * matching how the rest of the catalog always degrades to something renderable.
+ */
+function ItemVisual({ definition }: { definition: IslandInventoryEntry['definition'] }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const url = definition.image;
+
+  if (url && !imageFailed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        aria-hidden
+        className="h-8 w-8 object-contain"
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <span className="text-3xl" role="img" aria-label={definition.name}>
+      {definition.emoji}
+    </span>
+  );
+}
+
+interface CategorySection {
+  category: ItemCategory;
+  label: string;
+  /**
+   * Read-only sections are DISPLAY ONLY: they render a plain tile with no click
+   * target, so there is no path from them into `ConsumeItemModal` or
+   * `useUseItem`. Currency is read-only because it has no gameplay action —
+   * `useUseItem` would reject it anyway, but offering the affordance at all
+   * would be a lie.
+   */
+  readOnly?: boolean;
+}
+
+/**
+ * Categories shown in the bag, in display order, with section labels.
+ *
+ * Currency comes FIRST: it is a balance, not a thing you rummage past the
+ * sandwiches to find. Everything below it is a consumable care item.
+ */
+const CATEGORY_SECTIONS: CategorySection[] = [
+  { category: 'currency', label: 'Currency', readOnly: true },
   { category: 'food', label: 'Food' },
   { category: 'toy', label: 'Toys' },
   { category: 'medicine', label: 'Medicine' },
@@ -111,6 +166,7 @@ export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
             <DialogTitle>🎒 Item Bag</DialogTitle>
             <DialogDescription>
               Use food, toys, medicine, hygiene, and energy items on your Blobbi.
+              Currency is shown for reference and cannot be used on a Blobbi.
             </DialogDescription>
           </DialogHeader>
 
@@ -133,30 +189,46 @@ export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
                   const items = byCategory.get(section.category) ?? [];
                   if (items.length === 0) return null;
                   return (
-                    <div key={section.category}>
+                    <div key={section.category} data-bag-section={section.category}>
                       <h3 className="text-sm font-semibold mb-2">{section.label}</h3>
                       <div className="grid grid-cols-3 gap-2">
-                        {items.map((entry) => (
-                          <Button
-                            key={entry.address}
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedEntry(entry);
-                              setIsConsumeOpen(true);
-                            }}
-                            className="h-auto flex flex-col items-center gap-1 py-2 relative"
-                          >
-                            <span className="text-3xl" role="img" aria-label={entry.definition.name}>
-                              {entry.definition.emoji}
-                            </span>
-                            <span className="text-xs truncate w-full text-center">
-                              {entry.definition.name}
-                            </span>
-                            <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
-                              {entry.quantity}
-                            </span>
-                          </Button>
-                        ))}
+                        {items.map((entry) =>
+                          section.readOnly ? (
+                            // Display-only tile: a <div>, not a <Button>. No
+                            // handler, no consume modal, no "Use".
+                            <div
+                              key={entry.address}
+                              data-readonly-item={entry.address}
+                              className="h-auto flex flex-col items-center gap-1 py-2 px-2 relative rounded-md border border-input bg-background"
+                            >
+                              <ItemVisual definition={entry.definition} />
+                              <span className="text-xs truncate w-full text-center">
+                                {entry.definition.name}
+                              </span>
+                              <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
+                                {entry.quantity}
+                              </span>
+                            </div>
+                          ) : (
+                            <Button
+                              key={entry.address}
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEntry(entry);
+                                setIsConsumeOpen(true);
+                              }}
+                              className="h-auto flex flex-col items-center gap-1 py-2 relative"
+                            >
+                              <ItemVisual definition={entry.definition} />
+                              <span className="text-xs truncate w-full text-center">
+                                {entry.definition.name}
+                              </span>
+                              <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
+                                {entry.quantity}
+                              </span>
+                            </Button>
+                          ),
+                        )}
                       </div>
                     </div>
                   );

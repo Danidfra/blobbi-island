@@ -11,11 +11,25 @@ import {
   useItemCatalog,
   useBatchPurchase,
 } from '@/inventory';
+import {
+  ITEM_CATEGORIES,
+  type ItemCategoryName,
+} from '@/protocol/event-registry';
 
 interface FoodShopModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+/** Section titles for shop categories. */
+const CATEGORY_LABELS: Record<ItemCategoryName, string> = {
+  food: 'Food',
+  toy: 'Toys',
+  medicine: 'Medicine',
+  hygiene: 'Hygiene',
+  energy: 'Energy',
+  currency: 'Currency',
+};
 
 /** Local image overrides for known food items. */
 const FOOD_IMAGES: Record<string, string> = {
@@ -63,14 +77,22 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     });
   }, [catalog]);
 
+  /**
+   * Display order for shop sections.
+   *
+   * Derived from the canonical category list so a category added to the
+   * registry can never be silently DROPPED from the shop: an unlabelled
+   * category still gets a section (titled by its own name) rather than
+   * disappearing. In practice the shop only ever contains purchasable items —
+   * `SHOP_ENTRIES` excludes anything with no coin price, so currency never
+   * appears here and its section renders as nothing.
+   */
   const CATEGORY_ORDER: { key: string; label: string }[] = useMemo(
-    () => [
-      { key: 'food', label: 'Food' },
-      { key: 'toy', label: 'Toys' },
-      { key: 'medicine', label: 'Medicine' },
-      { key: 'hygiene', label: 'Hygiene' },
-      { key: 'energy', label: 'Energy' },
-    ],
+    () =>
+      ITEM_CATEGORIES.map((key) => ({
+        key,
+        label: CATEGORY_LABELS[key],
+      })),
     [],
   );
 

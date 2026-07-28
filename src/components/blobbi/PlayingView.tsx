@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PlaceBackground } from './PlaceBackground';
 import { ArcadePassIcon } from './ArcadePassIcon';
+import { ArcadeTicketBalance } from './ArcadeTicketBalance';
 import { MovableBlobbi, MovableBlobbiRef } from './MovableBlobbi';
 
 import { InteractiveElements } from './InteractiveElements';
@@ -668,6 +669,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         >
           🎒
         </button>
+        {/*
+          Two DISTINCT arcade concepts, deliberately not merged (see
+          `ArcadeTicketBalance`): the ticket balance is persistent kind:31633
+          currency, the pass is temporary sessionStorage floor access. Both are
+          arcade-scoped, so neither clutters the rest of the island.
+        */}
+        {currentLocation.startsWith('arcade') && <ArcadeTicketBalance />}
         <ArcadePassIcon />
       </div>
 
