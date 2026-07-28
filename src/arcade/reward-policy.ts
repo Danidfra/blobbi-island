@@ -35,6 +35,9 @@
 
 import type { ArcadeDifficulty, ArcadeGameResult } from './types';
 import { validateArcadeGameResult } from './types';
+import { DANCE_REWARD_POLICY } from './dance/dance-reward';
+
+export { DANCE_REWARD_POLICY };
 
 /**
  * Economy levers. Starting values from `docs/arcade-audit.md` §12.2; every one
@@ -72,8 +75,38 @@ export const ARCADE_REWARD_TUNING = {
  * `base` is the ONLY thing a game controls, and it must be pure: same result in,
  * same number out, no clock, no storage, no randomness.
  */
+/**
+ * How much of the shared economy a policy opts into.
+ *
+ * - **`scaled`** — the full pipeline: participation floor, difficulty
+ *   multiplier, first-clear / daily / personal-best bonuses, then the caps.
+ * - **`flat`** — the policy's own `base` IS the award, subject only to the
+ *   participation floor and the caps. The difficulty multiplier and the history
+ *   bonuses are skipped.
+ *
+ * `flat` is not a loophole: a flat policy still cannot exceed the shared hard
+ * cap, still cannot pay below the participation floor for a clear, and still
+ * goes through this one function. It exists because a bonus the app cannot
+ * SUBSTANTIATE must not be paid — the dance game ships with no first-clear
+ * ledger, no personal-best store and no per-day rewarded-run counter, so a
+ * `scaled` dance policy would have to be fed a context of permanent `false`s and
+ * would advertise bonuses that can never fire.
+ */
+export type ArcadeRewardShape = 'scaled' | 'flat';
+
 export interface ArcadeRewardPolicy {
   readonly gameId: string;
+  /**
+   * Stable identity of the POLICY, distinct from the game's id. A game may
+   * eventually be re-tuned into a second policy while keeping its id; a claim
+   * records which policy paid it.
+   */
+  readonly policyId: string;
+  /**
+   * Bumped whenever the numbers change. Recorded on the reward calculation so a
+   * support question about "why did I get 4?" has a version to answer against.
+   */
+  readonly version: number;
   /**
    * `draft` policies are placeholders: they exist so the framework has something
    * to exercise, and {@link getProductionRewardPolicy} refuses to return them.
@@ -81,10 +114,21 @@ export interface ArcadeRewardPolicy {
    * effect of shipping a game.
    */
   readonly status: 'draft' | 'active';
+  readonly shape: ArcadeRewardShape;
   /** Tickets for a CLEARED run, before floor, multiplier, bonuses and caps. */
   readonly base: (result: ArcadeGameResult) => number;
   /** This game's own ceiling. Must not exceed the shared hard cap. */
   readonly maxTicketsPerRun: number;
+  /**
+   * Extra eligibility rule the game owns, evaluated BEFORE any arithmetic.
+   *
+   * Returns a reason string to refuse, or `null` to allow. The dance game uses
+   * it to refuse a run that did not reach the end of the song, which is the one
+   * thing the shared layer cannot know: `ArcadeGameResult` has no "was this run
+   * interrupted?" field, and inventing one would put a game-specific concept in
+   * the shared contract.
+   */
+  readonly ineligible?: (result: ArcadeGameResult) => string | null;
 }
 
 /** What the app knows about the player's history with this game. */
@@ -190,8 +234,15 @@ export function calculateTicketAward(
   if (policy.maxTicketsPerRun > ARCADE_REWARD_TUNING.hardCapPerRun) {
     return emptyAward(policy.gameId, result.runId, 'policy cap exceeds the shared hard cap');
   }
+  // A game-owned refusal runs before any arithmetic, so an ineligible run has no
+  // award to accidentally read a total off.
+  const gameRefusal = policy.ineligible?.(result) ?? null;
+  if (gameRefusal) {
+    return emptyAward(policy.gameId, result.runId, gameRefusal);
+  }
 
   const tuning = ARCADE_REWARD_TUNING;
+  const isFlat = policy.shape === 'flat';
   const dailyLimitReached = context.rewardedRunsToday >= tuning.rewardedRunsPerGamePerDay;
 
   const breakdown: TicketAwardLine[] = [];
@@ -228,7 +279,9 @@ export function calculateTicketAward(
   const base = participationFloorApplied ? tuning.participationFloor : safeBase;
   breakdown.push({ label: 'Clear', tickets: base });
 
-  const multiplier = tuning.difficultyMultipliers[result.difficulty] ?? 1;
+  // A flat policy declines the multiplier and the history bonuses; it does NOT
+  // decline the floor above or the caps below.
+  const multiplier = isFlat ? 1 : (tuning.difficultyMultipliers[result.difficulty] ?? 1);
   const multiplied = Math.round(base * multiplier);
   if (multiplied !== base) {
     breakdown.push({
@@ -239,9 +292,9 @@ export function calculateTicketAward(
   }
 
   const bonuses = {
-    firstClear: context.firstClearEver ? tuning.bonuses.firstClear : 0,
-    dailyFirstPlay: context.firstPlayToday ? tuning.bonuses.dailyFirstPlay : 0,
-    personalBest: context.newPersonalBest ? tuning.bonuses.personalBest : 0,
+    firstClear: !isFlat && context.firstClearEver ? tuning.bonuses.firstClear : 0,
+    dailyFirstPlay: !isFlat && context.firstPlayToday ? tuning.bonuses.dailyFirstPlay : 0,
+    personalBest: !isFlat && context.newPersonalBest ? tuning.bonuses.personalBest : 0,
   };
   if (bonuses.firstClear) breakdown.push({ label: 'First clear', tickets: bonuses.firstClear });
   if (bonuses.dailyFirstPlay) {
@@ -274,33 +327,104 @@ export function calculateTicketAward(
   };
 }
 
-// ── Policy registry ────────────────────────────────────────────────────────
+// ── Structured reward calculation ──────────────────────────────────────────
 
 /**
- * The dance game's placeholder policy.
+ * The full, self-describing answer to "what is this run worth, and may it be
+ * paid?" — the object the claim boundary and the results UI both read.
  *
- * **`draft`, and it must stay draft until the real rhythm game exists.** Its
- * `base` is a plausible curve over a 0–100 accuracy stat, chosen only so the
- * shared machinery has something non-trivial to exercise and so the band test
- * has a real policy to check. It is not a balancing decision, no beat map has
- * been authored to produce those scores, and nothing consumes it: this phase
- * grants no tickets at all.
+ * It exists on top of {@link TicketAward} because an award answers only "how
+ * many". A claim needs to know WHICH item, under WHICH policy version, and
+ * whether it is allowed at all — and a UI that has to infer "not eligible" from
+ * `total === 0` will eventually infer it wrongly.
+ *
+ * **Computing one performs no writes.** It touches no storage, no relay and no
+ * clock; the caller supplies the item address, so this module still holds no
+ * inventory identity of its own.
  */
-export const DANCE_REWARD_POLICY: ArcadeRewardPolicy = {
-  gameId: 'blobbi-dance',
-  status: 'draft',
-  base: (result) => {
-    // `accuracy` is a 0..100 percentage the future game will report. A missing
-    // stat degrades to the bottom of the band rather than to zero, so a policy
-    // bug can never silently pay nothing for a genuine clear.
-    const accuracy = result.stats.accuracy;
-    if (!Number.isFinite(accuracy)) return ARCADE_REWARD_TUNING.targetBand.min;
-    const { min, max } = ARCADE_REWARD_TUNING.targetBand;
-    const t = Math.min(1, Math.max(0, accuracy / 100));
-    return Math.round(min + t * (max - min));
-  },
-  maxTicketsPerRun: ARCADE_REWARD_TUNING.hardCapPerRun,
-};
+export interface ArcadeRewardCalculation {
+  readonly policyId: string;
+  readonly policyVersion: number;
+  readonly gameId: string;
+  readonly runId: string;
+  /** Canonical kind:31632 address of the item to grant. Supplied by the caller. */
+  readonly itemAddress: string;
+  /** Units to grant. Always `0` when `eligible` is false. */
+  readonly quantity: number;
+  readonly eligible: boolean;
+  /** Why not, when `eligible` is false. Null otherwise. */
+  readonly ineligibleReason: string | null;
+  /** Line-by-line reasons, rendered verbatim by the results screen. */
+  readonly components: readonly TicketAwardLine[];
+  readonly capApplied: boolean;
+  /** The ceiling that was in force, whether or not it bit. */
+  readonly cap: number;
+  /** The underlying award, for callers that want the raw arithmetic. */
+  readonly award: TicketAward;
+}
+
+export interface CalculateArcadeRewardInput {
+  readonly policy: ArcadeRewardPolicy;
+  readonly result: ArcadeGameResult;
+  /** Canonical kind:31632 address of the reward item. */
+  readonly itemAddress: string;
+  readonly context?: ArcadeRewardContext;
+  /**
+   * Set to `false` to evaluate a DRAFT policy for inspection (the DEV harness
+   * does this). Production callers must leave it `true`, which is what makes a
+   * draft policy unable to pay.
+   */
+  readonly requireProductionPolicy?: boolean;
+}
+
+/**
+ * Turn a finished result into a payable — or explicitly unpayable — grant.
+ *
+ * Eligibility is refused, in this order, for: a non-production policy, a missing
+ * or malformed item address, a rejected award (invalid result, wrong game, the
+ * game's own refusal), and a zero total. Each returns a reason a human can read,
+ * because "not eligible" with no explanation is the copy that makes players
+ * think the arcade is broken.
+ */
+export function calculateArcadeReward(input: CalculateArcadeRewardInput): ArcadeRewardCalculation {
+  const { policy, result, itemAddress, context, requireProductionPolicy = true } = input;
+  const award = calculateTicketAward(policy, result, context);
+  const cap = Math.min(policy.maxTicketsPerRun, ARCADE_REWARD_TUNING.hardCapPerRun);
+
+  const base = {
+    policyId: policy.policyId,
+    policyVersion: policy.version,
+    gameId: policy.gameId,
+    runId: award.runId,
+    itemAddress,
+    components: award.breakdown,
+    capApplied: award.capped,
+    cap,
+    award,
+  } as const;
+
+  const refuse = (reason: string): ArcadeRewardCalculation => ({
+    ...base,
+    quantity: 0,
+    eligible: false,
+    ineligibleReason: reason,
+  });
+
+  if (requireProductionPolicy && policy.status !== 'active') {
+    return refuse('this game has no production reward policy yet');
+  }
+  if (typeof itemAddress !== 'string' || itemAddress.trim().length === 0) {
+    return refuse('no reward item address was supplied');
+  }
+  if (award.rejected !== null) return refuse(award.rejected);
+  if (!Number.isInteger(award.total) || award.total <= 0) {
+    return refuse('this run earned no tickets');
+  }
+
+  return { ...base, quantity: award.total, eligible: true, ineligibleReason: null };
+}
+
+// ── Policy registry ────────────────────────────────────────────────────────
 
 const POLICIES: readonly ArcadeRewardPolicy[] = [DANCE_REWARD_POLICY];
 

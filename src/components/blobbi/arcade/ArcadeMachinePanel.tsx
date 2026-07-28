@@ -32,7 +32,15 @@ export function ArcadeMachinePanel({
   blurb,
   showControls = false,
 }: ArcadeMachinePanelProps) {
-  const badge = availability === 'preview' ? 'Coming next' : 'Coming soon';
+  // A playable machine never reaches this panel — it has its own controller —
+  // but the badge is exhaustive so a mis-wiring says something true rather than
+  // announcing a live game as "coming soon".
+  const badge =
+    availability === 'playable'
+      ? 'Ready to play'
+      : availability === 'preview'
+        ? 'Coming next'
+        : 'Coming soon';
 
   return (
     <div

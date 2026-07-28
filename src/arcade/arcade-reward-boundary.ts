@@ -58,9 +58,14 @@
  *  - **Verification closes the last gap.** Strict publishing removes "timeout
  *    read as success"; the read-back removes "accepted by a relay that then
  *    dropped it". Only the two together let the UI claim the tickets are real.
- *  - **Idempotency makes strictness cheap.** The expensive failure mode of a
+ *  - **Idempotency makes strictness cheap.** ~~The expensive failure mode of a
  *    strict publish is retrying something that actually succeeded — and with a
- *    `runId`-keyed claimed set, that retry costs nothing.
+ *    `runId`-keyed claimed set, that retry costs nothing.~~ **This was wrong and
+ *    it produced a duplicate grant.** A claimed set written only on confirmed
+ *    success says nothing about an attempt whose outcome is unknown, and the
+ *    grant is ADDITIVE, so retrying one that actually landed pays it twice. An
+ *    unknown outcome is now `ambiguous` and is never republished — see the
+ *    status documentation below and `docs/blobbi-dance.md` §8.
  *
  * Rejected: changing `useNostrPublish` globally now; adding a `strict: true`
  * option to it for a caller that does not exist yet; trusting the optimistic
@@ -86,8 +91,24 @@ export type ArcadeClaimStatus =
   | 'verifying'
   /** Confirmed on a relay. Terminal and one-way. */
   | 'claimed'
-  /** Something went wrong. Retryable with the SAME runId. */
-  | 'failed';
+  /**
+   * Something went wrong **before anything was sent**. Retryable with the SAME
+   * runId, because nothing crossed the publish boundary.
+   */
+  | 'failed'
+  /**
+   * The event MAY have been published and we cannot prove either way.
+   *
+   * This status exists because of a real, reproduced defect: it used to be
+   * folded into `failed`, the UI offered "Try again", and the retry issued a
+   * SECOND additive `+N` — turning a 3-ticket reward into 6. See
+   * `docs/arcade-reward-publication-boundary.md` §6.
+   *
+   * An `ambiguous` claim is **never republishable**. The only thing that may
+   * happen to it is read-only reconciliation, which can move it to `claimed` if
+   * the evidence is sufficient and otherwise leaves it exactly where it is.
+   */
+  | 'ambiguous';
 
 /**
  * Why a claim failed. The UI must distinguish these: a `publish-timeout` is
@@ -96,18 +117,53 @@ export type ArcadeClaimStatus =
  * retryable; only the copy differs.
  */
 export type ArcadeClaimFailure =
-  /** Strict publish timed out — NOT treated as success. */
+  /** Strict publish timed out — NOT treated as success, and NOT retryable. */
   | 'publish-timeout'
-  /** Every relay rejected the event. */
+  /** Every relay definitively rejected the event. Nothing was stored. */
   | 'publish-rejected'
-  /** The signer refused or is unavailable. */
+  /** The signer refused before returning a signed event. Nothing was sent. */
   | 'sign-failed'
   /** The read-back did not show the expected quantity. */
   | 'verify-mismatch'
   /** The verification read itself failed. */
   | 'verify-unavailable'
+  /**
+   * The BASELINE read failed, before anything was sent.
+   *
+   * Distinct from `verify-unavailable`, and the distinction is load-bearing:
+   * without a baseline there is nothing to reconcile against later, so the claim
+   * refuses to publish at all rather than becoming permanently unresolvable.
+   * Nothing crossed the publish boundary, so this is retryable.
+   */
+  | 'baseline-unavailable'
+  /** The claim could not be recorded durably, so nothing was sent. */
+  | 'ledger-unavailable'
+  /** Another tab or document holds the claim lock. Nothing was sent. */
+  | 'lock-unavailable'
   /** The result or award was rejected before anything was sent. */
   | 'invalid-claim';
+
+/**
+ * Failures that are provably PRE-publication, and therefore safely retryable.
+ *
+ * Everything not in this set may have crossed the publish boundary and must
+ * become {@link ArcadeClaimStatus} `ambiguous` instead. The default is
+ * deliberately the unsafe-to-retry side: a failure mode nobody has classified
+ * yet must not become a second additive write.
+ */
+export const RETRYABLE_FAILURES: ReadonlySet<ArcadeClaimFailure> = new Set([
+  'sign-failed',
+  'publish-rejected',
+  'baseline-unavailable',
+  'ledger-unavailable',
+  'lock-unavailable',
+  'invalid-claim',
+]);
+
+/** True when this failure happened before anything could have been published. */
+export function isPrePublishFailure(failure: ArcadeClaimFailure): boolean {
+  return RETRYABLE_FAILURES.has(failure);
+}
 
 /**
  * The persisted record of one reward claim.
@@ -131,6 +187,16 @@ export interface ArcadeRewardClaim {
   /** How many publish attempts have been made. */
   readonly attempts: number;
   readonly failure: ArcadeClaimFailure | null;
+  /**
+   * The ticket quantity read immediately BEFORE the publish attempt.
+   *
+   * This is the only durable evidence reconciliation has. Without it, "did the
+   * grant land?" has no answer at all — which is why a claim whose baseline read
+   * failed never publishes (see `baseline-unavailable`).
+   */
+  readonly quantityBefore: number | null;
+  /** How many read-only reconciliation attempts have been made. */
+  readonly reconcileAttempts: number;
 }
 
 export type ArcadeClaimOutcome =
@@ -187,7 +253,10 @@ export const ARCADE_REWARD_WRITER_UNIMPLEMENTED: ArcadeRewardWriter = {
  *  - the result is not serialisable, so the record could not survive a refresh;
  *  - the award belongs to a different run or game;
  *  - the award was itself rejected, or is zero (nothing to grant);
- *  - this `runId` has already been claimed — the idempotency guarantee.
+ *  - a durable record for this `runId` already BLOCKS a new grant — claimed,
+ *    in flight, or ambiguous. This is the idempotency guarantee, and it is
+ *    deliberately wider than "already claimed": a claim that may have been
+ *    published is exactly as dangerous to repeat as one that certainly was.
  *
  * An ABORTED run never gets here: an aborted run has no result at all (see
  * `arcade-machine-state.ts`), so there is nothing to pass in.
@@ -196,7 +265,7 @@ export function createPendingClaim(
   result: ArcadeGameResult,
   award: TicketAward,
   now: number,
-  alreadyClaimedRunIds: readonly string[] = [],
+  existing: ArcadeRewardClaim | null = null,
 ): ArcadeClaimOutcome {
   const validation = validateArcadeGameResult(result);
   if (!validation.ok) {
@@ -215,8 +284,8 @@ export function createPendingClaim(
   if (!Number.isInteger(award.total) || award.total <= 0) {
     return { ok: false, reason: 'award has nothing to grant' };
   }
-  if (alreadyClaimedRunIds.includes(result.runId)) {
-    return { ok: false, reason: 'run already claimed' };
+  if (existing && blocksNewGrant(existing)) {
+    return { ok: false, reason: blockedReason(existing) };
   }
   if (!Number.isFinite(now) || now <= 0) {
     return { ok: false, reason: 'invalid timestamp' };
@@ -230,31 +299,91 @@ export function createPendingClaim(
       machineId: result.machineId,
       status: 'pending',
       tickets: award.total,
-      createdAt: now,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      attempts: 0,
+      // A retry after a PRE-publish failure is the same claim, so its attempt
+      // count carries forward rather than restarting at zero.
+      attempts: existing?.attempts ?? 0,
       failure: null,
+      quantityBefore: null,
+      reconcileAttempts: existing?.reconcileAttempts ?? 0,
     },
   };
 }
 
+/**
+ * Whether a recorded claim forbids starting a new grant for the same run.
+ *
+ * The four blocking statuses, and why each one blocks:
+ *
+ * | status | why |
+ * | --- | --- |
+ * | `claimed` | it was paid; paying again is theft from the economy |
+ * | `publishing` | a write is in flight in this or another tab |
+ * | `verifying` | a write completed and is being checked |
+ * | `ambiguous` | a write MAY have completed and cannot be proven either way |
+ *
+ * Only `pending` (recorded, nothing sent) and `failed` (provably pre-publish)
+ * leave the door open.
+ */
+export function blocksNewGrant(claim: ArcadeRewardClaim): boolean {
+  return (
+    claim.status === 'claimed' ||
+    claim.status === 'publishing' ||
+    claim.status === 'verifying' ||
+    claim.status === 'ambiguous'
+  );
+}
+
+function blockedReason(claim: ArcadeRewardClaim): string {
+  switch (claim.status) {
+    case 'claimed':
+      return 'run already claimed';
+    case 'ambiguous':
+      return 'a previous attempt for this run may already have been published';
+    default:
+      return 'a claim for this run is already in progress';
+  }
+}
+
 export type ArcadeClaimEvent =
-  /** Start (or retry) a strict publish. */
-  | { readonly type: 'begin-publish'; readonly now: number }
+  /**
+   * Start (or retry) a strict publish, recording the baseline quantity.
+   *
+   * The baseline is REQUIRED. It is the only evidence reconciliation will have,
+   * so a caller that could not read it must not reach this event at all.
+   */
+  | { readonly type: 'begin-publish'; readonly now: number; readonly quantityBefore: number }
   /** The publish resolved strictly; now verify it. */
   | { readonly type: 'begin-verify'; readonly now: number }
   /**
    * The read-back confirmed the quantity moved by exactly the awarded amount.
-   * The caller passes both numbers so the boundary — not the caller — decides
-   * whether "confirmed" is true.
+   * The caller passes the observed quantity; the boundary — not the caller —
+   * decides whether "confirmed" is true, against the baseline it recorded.
    */
-  | {
-      readonly type: 'confirm';
-      readonly now: number;
-      readonly quantityBefore: number;
-      readonly quantityAfter: number;
-    }
-  | { readonly type: 'fail'; readonly now: number; readonly failure: ArcadeClaimFailure };
+  | { readonly type: 'confirm'; readonly now: number; readonly quantityAfter: number }
+  /**
+   * A PRE-PUBLICATION failure. Retryable, because nothing was sent.
+   *
+   * The boundary refuses to accept a post-publication failure through this
+   * event: passing one produces `ambiguous`, not `failed`. That refusal is the
+   * fix for the duplicate-grant defect — a caller can no longer mislabel
+   * "we don't know" as "it definitely didn't happen".
+   */
+  | { readonly type: 'fail'; readonly now: number; readonly failure: ArcadeClaimFailure }
+  /**
+   * The attempt MAY have been published. Terminal until reconciled, and never
+   * republishable.
+   */
+  | { readonly type: 'ambiguous'; readonly now: number; readonly failure: ArcadeClaimFailure }
+  /**
+   * A READ-ONLY reconciliation observed the current quantity.
+   *
+   * Confirms only when the evidence is sufficient. Otherwise the claim stays
+   * `ambiguous` with one more attempt recorded — it never becomes retryable, and
+   * it never publishes.
+   */
+  | { readonly type: 'reconcile'; readonly now: number; readonly quantityNow: number | null };
 
 /**
  * The claim's transition function. Pure, exhaustive, and unforgiving in exactly
@@ -268,14 +397,17 @@ export function advanceClaim(claim: ArcadeRewardClaim, event: ArcadeClaimEvent):
 
   switch (event.type) {
     case 'begin-publish':
-      // Retryable from `pending` and from `failed`, and only from those: a claim
-      // already publishing must not be sent twice by a double-click.
+      // From `pending` and `failed` ONLY. `ambiguous` is deliberately absent:
+      // that is the transition whose absence stops a "we don't know" outcome
+      // from becoming a second additive grant.
       if (claim.status !== 'pending' && claim.status !== 'failed') return claim;
+      if (!Number.isFinite(event.quantityBefore)) return claim;
       return {
         ...claim,
         status: 'publishing',
         attempts: claim.attempts + 1,
         failure: null,
+        quantityBefore: event.quantityBefore,
         updatedAt: event.now,
       };
 
@@ -285,24 +417,71 @@ export function advanceClaim(claim: ArcadeRewardClaim, event: ArcadeClaimEvent):
 
     case 'confirm': {
       if (claim.status !== 'verifying') return claim;
-      const moved = event.quantityAfter - event.quantityBefore;
+      const baseline = claim.quantityBefore;
+      // No baseline means nothing can be proven. `begin-publish` refuses to run
+      // without one, so this is unreachable in practice and is kept as the
+      // safe branch rather than an assumption.
+      if (baseline === null) {
+        return { ...claim, status: 'ambiguous', failure: 'verify-mismatch', updatedAt: event.now };
+      }
       // The read-back must show EXACTLY the awarded delta. Anything else means
-      // we are looking at a different write (or none), and a claim that cannot
-      // prove itself stays retryable rather than being marked paid.
-      if (moved !== claim.tickets) {
-        return { ...claim, status: 'failed', failure: 'verify-mismatch', updatedAt: event.now };
+      // we are looking at a different write, or at a relay that has not caught
+      // up — and a claim that cannot prove itself is AMBIGUOUS, not failed.
+      if (event.quantityAfter - baseline !== claim.tickets) {
+        return { ...claim, status: 'ambiguous', failure: 'verify-mismatch', updatedAt: event.now };
       }
       return { ...claim, status: 'claimed', failure: null, updatedAt: event.now };
     }
 
     case 'fail':
+      // A caller that hands a post-publication failure to `fail` gets
+      // `ambiguous` anyway. The boundary, not the caller, decides what is safe
+      // to retry.
+      if (!isPrePublishFailure(event.failure)) {
+        return { ...claim, status: 'ambiguous', failure: event.failure, updatedAt: event.now };
+      }
+      // A pre-publish failure from a state that has already published would be
+      // a mislabelling; refuse rather than downgrade an ambiguous claim.
+      if (claim.status === 'verifying' || claim.status === 'ambiguous') return claim;
       return { ...claim, status: 'failed', failure: event.failure, updatedAt: event.now };
+
+    case 'ambiguous':
+      return { ...claim, status: 'ambiguous', failure: event.failure, updatedAt: event.now };
+
+    case 'reconcile': {
+      if (claim.status !== 'ambiguous') return claim;
+      const next = {
+        ...claim,
+        reconcileAttempts: claim.reconcileAttempts + 1,
+        updatedAt: event.now,
+      };
+      const baseline = claim.quantityBefore;
+      if (event.quantityNow === null || baseline === null) return next;
+      // Sufficient evidence is "the balance is at least the baseline plus the
+      // award". `>=` rather than `===` on purpose: an unrelated grant landing in
+      // between can only push the number UP, and erring toward confirming can
+      // only ever cost the player a payment they were owed — never pay one
+      // twice. Paying twice is the failure mode this whole file exists to stop.
+      if (event.quantityNow >= baseline + claim.tickets) {
+        return { ...next, status: 'claimed', failure: null };
+      }
+      return next;
+    }
   }
 }
 
-/** A failed claim can always be retried, and always with the same `runId`. */
+/**
+ * A claim that may safely be published (or re-published).
+ *
+ * `ambiguous` is NOT retryable, and that is the entire point.
+ */
 export function isRetryable(claim: ArcadeRewardClaim): boolean {
   return claim.status === 'failed' || claim.status === 'pending';
+}
+
+/** A claim whose only legal next step is a read-only reconciliation. */
+export function needsReconciliation(claim: ArcadeRewardClaim): boolean {
+  return claim.status === 'ambiguous';
 }
 
 /** Whether the tickets are real and the UI may say so. */

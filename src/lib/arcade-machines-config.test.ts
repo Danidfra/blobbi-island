@@ -104,10 +104,15 @@ describe('game assignment', () => {
     expect(withGames[0].floor).toBe('basement');
   });
 
-  it('marks every machine without a game as coming-soon', () => {
+  it('marks every machine without a game as coming-soon, and only a machine WITH one as playable', () => {
     for (const machine of arcadeMachines) {
       if (machine.gameId === null) expect(machine.availability).toBe('coming-soon');
-      else expect(machine.availability).toBe('preview');
+      else expect(machine.availability).toBe('playable');
+    }
+    // The inverse is the load-bearing direction: a machine cannot be made
+    // playable by editing a presentation field.
+    for (const machine of arcadeMachines) {
+      if (machine.availability === 'playable') expect(machine.gameId).not.toBeNull();
     }
   });
 

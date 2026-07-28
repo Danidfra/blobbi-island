@@ -10,8 +10,26 @@ Audit date: 2026-07-27 · Branch: `production` @ `13b1cad` · Working tree clean
 > | --- | --- | --- |
 > | **Phase 1** | Official Arcade Ticket registry + `currency` support | shipped — `docs/protocol/arcade-ticket-publication.md` |
 > | **Phase 2** | Shared Arcade Foundation | shipped — **[`docs/arcade-foundation.md`](./arcade-foundation.md)** |
-> | **Phase 3** | Dance game | next |
-> | later | rewards, prize shop, further games | not started |
+> | **Phase 3** | Dance game **+ the ticket reward loop** | shipped — **[`docs/blobbi-dance.md`](./blobbi-dance.md)** |
+> | later | prize shop, further games | not started |
+>
+> **Phase 3 closed the audit's two headline findings.** §1 said the arcade had no
+> games and told players it did; `arcade-dance-machine` now runs a real
+> 68-second, 110-note rhythm game and the other eight machines still have no
+> `gameId` at all. §16.2 said the shared publish primitive was the highest-severity
+> obstacle to a trustworthy reward loop; the loop now sits behind a local strict
+> publish plus a verify-after-write read, with `useNostrPublish` unchanged — the
+> exact strategy `docs/arcade-reward-publication-boundary.md` settled on.
+>
+> Reward numbers differ deliberately from §12.2's starting proposal. The dance
+> policy is a bounded **8 tickets per run** (participation 2 + one accuracy tier
+> up to 4 + full combo 2), declared `shape: 'flat'` because this phase ships no
+> store for the first-clear, personal-best or per-day counters §12.1 assumed.
+> The shared caps, the participation floor and the single `calculateTicketAward`
+> still apply, so no game has its own economy. See `docs/blobbi-dance.md` §6.
+>
+> Still open from the audit: §20's product decisions, the prize shop, movement
+> blockers (§8), and latency calibration.
 >
 > **§17 below uses its own, earlier numbering** and is deliberately left as
 > written: it was the audit's proposal, not the plan that was executed. Read it
@@ -581,6 +599,12 @@ tests (`theater-playback.ts`) rather than object contracts:
 export interface ArcadeGameResult {
   gameId: string;
   runId: string;          // generated at countdown→playing; the idempotency key
+                          // ⚠️ CORRECTED IN PHASE 3: `runId` is an idempotency
+                          // key only for LOCAL claim records. It is not carried
+                          // in kind:31633, so it cannot make an additive grant
+                          // idempotent against a relay. Taking this line at face
+                          // value produced a real duplicate grant — see
+                          // docs/arcade-reward-publication-boundary.md §6.
   difficulty: 'easy' | 'normal' | 'hard';
   cleared: boolean;
   score: number;

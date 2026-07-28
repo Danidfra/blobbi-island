@@ -40,9 +40,13 @@ function result(overrides: Partial<ArcadeGameResult> = {}): ArcadeGameResult {
 const fixed = (
   base: number,
   max: number = ARCADE_REWARD_TUNING.hardCapPerRun,
+  shape: ArcadeRewardPolicy['shape'] = 'scaled',
 ): ArcadeRewardPolicy => ({
   gameId: 'blobbi-dance',
+  policyId: 'test-policy',
+  version: 1,
   status: 'draft',
+  shape,
   base: () => base,
   maxTicketsPerRun: max,
 });
@@ -168,7 +172,10 @@ describe('shared award layer', () => {
   it('survives a policy that returns nonsense', () => {
     const broken: ArcadeRewardPolicy = {
       gameId: 'blobbi-dance',
+      policyId: 'test-policy',
+      version: 1,
       status: 'draft',
+      shape: 'scaled',
       base: () => Number.NaN,
       maxTicketsPerRun: 25,
     };
@@ -208,7 +215,7 @@ describe('policy registry', () => {
     }
   });
 
-  it('keeps a normal-difficulty clear inside the target band, before bonuses', () => {
+  it('keeps every clear inside the band its shape promises', () => {
     const { min, max } = ARCADE_REWARD_TUNING.targetBand;
 
     for (const policy of arcadeRewardPolicies) {
@@ -216,36 +223,103 @@ describe('policy registry', () => {
       for (const accuracy of [0, 25, 50, 75, 100]) {
         const award = calculateTicketAward(
           policy,
-          result({ gameId: policy.gameId, difficulty: 'normal', stats: { accuracy } }),
+          result({
+            gameId: policy.gameId,
+            difficulty: 'normal',
+            stats: { accuracy, completedNaturally: 1 },
+          }),
         );
-        expect(award.base).toBeGreaterThanOrEqual(min);
-        expect(award.base).toBeLessThanOrEqual(max);
+        if (policy.shape === 'flat') {
+          // A flat policy's ceiling IS its promise. The shared target band is a
+          // statement about SCALED policies, whose base is then multiplied and
+          // bonused; applying it to a policy that opts out of both would be
+          // asserting a property nothing depends on.
+          expect(award.total).toBeGreaterThanOrEqual(0);
+          expect(award.total).toBeLessThanOrEqual(policy.maxTicketsPerRun);
+        } else {
+          expect(award.base).toBeGreaterThanOrEqual(min);
+          expect(award.base).toBeLessThanOrEqual(max);
+        }
       }
     }
   });
 
-  it('registers no production-ready policy in this phase', () => {
-    // Phase 2 grants nothing. A caller reaching for a live policy must get
-    // nothing back rather than accidentally paying out.
+  it('gives every registered policy an id and a version', () => {
     for (const policy of arcadeRewardPolicies) {
-      expect(getProductionRewardPolicy(policy.gameId)).toBeUndefined();
+      expect(policy.policyId.length).toBeGreaterThan(0);
+      expect(Number.isInteger(policy.version) && policy.version > 0).toBe(true);
     }
-    expect(arcadeRewardPolicies.every((p) => p.status === 'draft')).toBe(true);
+    // Policy ids must be unique, or a claim cannot say which policy paid it.
+    const ids = arcadeRewardPolicies.map((p) => p.policyId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('exposes the dance policy as the production policy for its game', () => {
+    // Phase 3 promotes exactly one policy. `getProductionRewardPolicy` is what
+    // stops any other game from paying out by accident.
+    expect(getProductionRewardPolicy('blobbi-dance')).toBe(DANCE_REWARD_POLICY);
+    expect(getProductionRewardPolicy('not-a-game')).toBeUndefined();
+    for (const policy of arcadeRewardPolicies) {
+      if (policy.status !== 'active') {
+        expect(getProductionRewardPolicy(policy.gameId)).toBeUndefined();
+      }
+    }
   });
 
   it('resolves the dance policy by id, and nothing for an unknown game', () => {
     expect(getRewardPolicy('blobbi-dance')).toBe(DANCE_REWARD_POLICY);
     expect(getRewardPolicy('not-a-game')).toBeUndefined();
   });
+});
 
-  it('gives the dance policy a base that rises with accuracy', () => {
-    const at = (accuracy: number) =>
-      DANCE_REWARD_POLICY.base(result({ stats: { accuracy } }));
-    expect(at(0)).toBeLessThan(at(50));
-    expect(at(50)).toBeLessThan(at(100));
-    // A missing stat degrades to the bottom of the band, never to zero.
-    expect(DANCE_REWARD_POLICY.base(result({ stats: {} }))).toBe(
-      ARCADE_REWARD_TUNING.targetBand.min,
+describe('flat policies', () => {
+  const flatResult = () =>
+    result({ difficulty: 'hard', stats: { accuracy: 100, completedNaturally: 1 } });
+
+  it('ignores the difficulty multiplier', () => {
+    const scaled = calculateTicketAward(fixed(6, 25, 'scaled'), flatResult());
+    const flat = calculateTicketAward(fixed(6, 25, 'flat'), flatResult());
+
+    expect(scaled.multiplier).toBe(1.5);
+    expect(scaled.total).toBe(9);
+    expect(flat.multiplier).toBe(1);
+    expect(flat.total).toBe(6);
+  });
+
+  it('ignores the history bonuses, even when the context claims them', () => {
+    const flat = calculateTicketAward(fixed(6, 25, 'flat'), flatResult(), {
+      firstClearEver: true,
+      firstPlayToday: true,
+      newPersonalBest: true,
+      rewardedRunsToday: 0,
+    });
+    expect(flat.bonuses).toEqual({ firstClear: 0, dailyFirstPlay: 0, personalBest: 0 });
+    expect(flat.total).toBe(6);
+  });
+
+  it('still obeys the participation floor and the caps', () => {
+    expect(calculateTicketAward(fixed(0, 25, 'flat'), flatResult()).total).toBe(
+      ARCADE_REWARD_TUNING.participationFloor,
     );
+    expect(calculateTicketAward(fixed(40, 8, 'flat'), flatResult()).total).toBe(8);
+    expect(calculateTicketAward(fixed(40, 8, 'flat'), flatResult()).capped).toBe(true);
+  });
+});
+
+describe("a policy's own eligibility rule", () => {
+  it('refuses before any arithmetic, and says why', () => {
+    const refusing: ArcadeRewardPolicy = {
+      ...fixed(8),
+      ineligible: () => 'the run did not reach the end of the song',
+    };
+    const award = calculateTicketAward(refusing, result());
+    expect(award.total).toBe(0);
+    expect(award.rejected).toMatch(/did not reach the end/);
+    expect(award.breakdown).toEqual([]);
+  });
+
+  it('is skipped when it returns null', () => {
+    const allowing: ArcadeRewardPolicy = { ...fixed(8), ineligible: () => null };
+    expect(calculateTicketAward(allowing, result({ difficulty: 'easy' })).total).toBe(8);
   });
 });

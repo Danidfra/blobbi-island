@@ -46,6 +46,33 @@ vi.mock('@/hooks/useLocation', () => ({
   }),
 }));
 
+/*
+  The dance machine's reward hook needs a relay pool, a query client and a login
+  context. This file tests the ROOM — which machine opens what, and when — so the
+  claim path is stubbed out rather than provided. It is exercised for real in
+  `useArcadeReward.test.tsx` and `dance/DanceMachine.test.tsx`, both against a
+  fake writer. Nothing in this file can publish.
+*/
+vi.mock('@/hooks/useArcadeReward', () => ({
+  ARCADE_TICKET_ADDRESS: '31632:issuer:blobbi:currency:arcade-ticket',
+  useArcadeReward: () => ({
+    state: {
+      phase: 'idle',
+      claim: null,
+      failure: null,
+      quantity: 0,
+      message: '',
+      ledgerUnavailable: false,
+    },
+    claimReward: vi.fn(),
+    reconcileClaim: vi.fn(),
+    hydrate: vi.fn(),
+    reset: vi.fn(),
+    isAlreadyClaimed: () => false,
+    isLoggedIn: false,
+  }),
+}));
+
 vi.mock('../ArcadePassModal', () => ({
   ArcadePassModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="pass-modal" /> : null,
@@ -148,23 +175,20 @@ describe('every machine has its own honest identity', () => {
     },
   );
 
-  it('opens the dance machine preview, honestly labelled', () => {
+  it('opens the REAL dance game, not a coming-soon panel', () => {
     renderRoom('basement');
 
     const el = screen.getByRole('button', { name: /dance machine/i });
     expect(clickAndArrive(el)).toBe(true);
 
     expect(shell()).toHaveAttribute('data-arcade-game', 'blobbi-dance');
-    expect(panel()).toHaveAttribute('data-arcade-panel', 'preview');
-    expect(
-      screen.getByRole('dialog', { name: 'Dance Dance Blobbi' }),
-    ).toBeInTheDocument();
-    expect(
-      within(panel()!).getByText('Rhythm game coming in the next arcade update.'),
-    ).toBeInTheDocument();
-    // Honest: a preview, not a playable game. Nothing starts anything.
-    expect(within(shell()!).queryByRole('button', { name: /start/i })).toBeNull();
-    expect(within(shell()!).queryByRole('button', { name: /^play/i })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Dance Dance Blobbi' })).toBeInTheDocument();
+
+    // The one machine that is genuinely playable gets the game's own preview,
+    // with a Start button. Every other machine still gets the honest panel.
+    expect(document.querySelector('[data-dance-preview]')).not.toBeNull();
+    expect(panel()).toBeNull();
+    expect(within(shell()!).getByRole('button', { name: /^start$/i })).toBeInTheDocument();
   });
 
   it('announces the coming-soon state rather than only showing it', () => {
@@ -204,6 +228,8 @@ describe('nothing opens before the Blobbi arrives', () => {
     fireEvent.click(screen.getByRole('button', { name: /leave/i }));
     expect(shell()).toBeNull();
     expect(document.querySelector('[data-arcade-panel]')).toBeNull();
+    expect(document.querySelector('[data-dance-preview]')).toBeNull();
+    expect(document.querySelector('[data-dance-stage]')).toBeNull();
   });
 });
 

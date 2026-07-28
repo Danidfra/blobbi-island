@@ -14,8 +14,10 @@ import { NoPassModal } from '../NoPassModal';
 import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
 import { ArcadeMachinePanel } from './ArcadeMachinePanel';
+import { DanceMachine } from './dance/DanceMachine';
 
 import {
+  BLOBBI_DANCE_GAME_ID,
   arcadeBoundaryForFloor,
   arcadeMachinesForFloor,
   getArcadeMachine,
@@ -134,8 +136,22 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
     else setIsNoPassModalOpen(true);
   }, [hasPass]);
 
+  /**
+   * The one machine with a real game.
+   *
+   * Resolved from the OPEN target's configured `gameId`, never from its id or
+   * its artwork — so a machine becomes playable by being given a game, which is
+   * the property that stops the other eight from opening a rhythm game the way
+   * all nine used to.
+   */
+  const danceMachine = useMemo(() => {
+    if (target?.kind !== 'machine') return null;
+    const machine = getArcadeMachine(target.id);
+    return machine?.gameId === BLOBBI_DANCE_GAME_ID ? machine : null;
+  }, [target]);
+
   const shellContent = useMemo(() => {
-    if (!target) return null;
+    if (!target || danceMachine) return null;
     if (target.kind === 'prize-counter') {
       return {
         title: ARCADE_PRIZE_COUNTER.displayName,
@@ -165,7 +181,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
         />
       ),
     };
-  }, [target]);
+  }, [target, danceMachine]);
 
   return (
     <>
@@ -326,6 +342,20 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       )}
       {isNoPassModalOpen && (
         <NoPassModal isOpen onClose={() => setIsNoPassModalOpen(false)} />
+      )}
+
+      {/*
+        The dance machine brings its own shell, because a playable game needs
+        footer actions, a pause control and a reward panel that a coming-soon
+        panel has no use for. Every other machine keeps the plain honest one.
+      */}
+      {danceMachine && lifecycle.status !== 'closed' && (
+        <DanceMachine
+          machine={danceMachine}
+          lifecycle={lifecycle}
+          dispatch={dispatch}
+          onClose={closeShell}
+        />
       )}
 
       {shellContent && (

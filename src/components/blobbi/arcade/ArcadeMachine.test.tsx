@@ -292,7 +292,7 @@ describe('accessibility', () => {
     const h = renderMachines([dance(), pool()]);
     expect(h.machineEl('arcade-dance-machine')).toHaveAttribute(
       'data-arcade-availability',
-      'preview',
+      'playable',
     );
     expect(h.machineEl('arcade-pool-table')).toHaveAttribute(
       'data-arcade-availability',

@@ -1,8 +1,15 @@
 # Blobbi Island — Arcade Foundation (Phase 2)
 
-Status: implemented. **No game is playable, and no Arcade Ticket is granted.**
-This document describes the shared technical foundation every arcade game will
-use, and states precisely what Phase 3 has to build on top of it.
+Status: implemented, and now **built on**. This document describes the shared
+technical foundation every arcade game uses, as it was designed in Phase 2 and as
+Phase 3 actually consumed it.
+
+> **Superseded in places by Phase 3.** When it shipped, this document could say
+> "no game is playable and no Arcade Ticket is granted". Both are now false:
+> `arcade-dance-machine` runs a real rhythm game and the arcade grants tickets
+> through one audited path. Sections 8, 9 and 13 carry inline notes where Phase 3
+> changed or completed what they describe; **[`docs/blobbi-dance.md`](./blobbi-dance.md)**
+> is the current word on the game, the reward policy and the claim semantics.
 
 It is the follow-up to `docs/arcade-audit.md`, which found that the arcade had no
 games and — more importantly — told the player it did: nine machines, including a
@@ -62,7 +69,7 @@ pending-interaction instance behaves identically to every other room).
 
 | id | floor | display name | game | availability |
 | --- | --- | --- | --- | --- |
-| `arcade-dance-machine` | basement | Dance Dance Blobbi | `blobbi-dance` | preview |
+| `arcade-dance-machine` | basement | Dance Dance Blobbi | `blobbi-dance` | **playable** (Phase 3) |
 | `arcade-cabinet-pink` | floor-1 | Pink Cabinet | — | coming-soon |
 | `arcade-cabinet-black` | floor-1 | Black Cabinet | — | coming-soon |
 | `arcade-cabinet-classic` | floor-1 | Classic Cabinet | — | coming-soon |
@@ -79,7 +86,9 @@ Rules the config enforces (all covered by `arcade-machines-config.test.ts`):
   `alt` "Arcade Machine Green".
 - **Game identity is separate from visual identity.** `gameId` is `null` for
   eight of nine. That is the structural reason they cannot fake gameplay: the
-  lifecycle reducer refuses `start` without a game id.
+  lifecycle reducer refuses `start` without a game id. Phase 3 added a
+  `playable` availability value and gave it to exactly one machine — the one that
+  already had a `gameId`, which a config test now asserts in both directions.
 - **A game id is not a Nostr address or an item id.** `blobbi-dance` is a stable
   string with its own lifecycle.
 - Unique ids, unique display names, unique accessible names; every machine on a
@@ -239,9 +248,13 @@ Two mitigations, both in place:
   keyboard on the same action type, and removes every listener on unmount or
   disable. **No gamepad** — no precedent in the repo, no requirement, and it
   would double the mapping surface.
-- **`useArcadeInterruption.ts`**: `visibilitychange → hidden` and `window` blur
-  both PAUSE (never abort). No automatic resume, no background continuation, and
-  no `focus`/`pageshow` handling (too noisy on mobile Safari).
+- **`useArcadeInterruption.ts`**: `visibilitychange → hidden` and `window` blur.
+  No automatic resume, no background continuation, and no `focus`/`pageshow`
+  handling (too noisy on mobile Safari). **Phase 3 split the two signals**: the
+  hook now reports which one fired, because a hidden tab (rAF stopped, audio
+  clock still advancing — unrecoverable) and a blurred-but-visible tab (nothing
+  is wrong, the player clicked elsewhere) are not equally severe. Blobbi Dance
+  aborts on the first and pauses on the second.
 - **`useReducedMotion.ts`**: `prefers-reduced-motion: reduce`, reactive,
   jsdom/SSR-safe, used by the shell to drop its decorative zoom. It must never
   change game timing or remove a gameplay cue — those are information, not
@@ -252,6 +265,15 @@ Two mitigations, both in place:
 ## 8. Audio decision
 
 `src/arcade/audio/arcade-audio.ts`. **No track, no scheduler, no notes.**
+
+> **Phase 3 built the layer above this one.** `src/arcade/dance/dance-audio.ts`
+> owns the track scheduler and the song clock; this module still owns the single
+> `AudioContext`, the persisted mute and the persisted latency offset. The
+> decision below held exactly as written: `AudioContext.currentTime` is the
+> authoritative clock, `requestAnimationFrame` only samples it, and the context is
+> created inside the Start click. **The calibration UI was NOT built** — the
+> offset is read and applied, but nothing lets a player set it (see
+> `docs/blobbi-dance.md` §14).
 
 | | UI one-shots | Timing-critical music |
 | --- | --- | --- |
@@ -284,9 +306,18 @@ Starting values (`ARCADE_REWARD_TUNING`, all tunable): participation 2, ×1/1.25
 +10 first clear, +5 first play today, +5 personal best, hard cap 25, 6 rewarded
 runs per game per UTC day, target band 3–15 for a normal clear before bonuses.
 
-The dance policy is registered as **`draft`**. `getProductionRewardPolicy()`
-returns `undefined` for a draft, so there is currently no production policy at
-all and a caller cannot accidentally pay out.
+The dance policy was registered as **`draft`**. `getProductionRewardPolicy()`
+returns `undefined` for a draft, so at the end of Phase 2 there was no production
+policy at all and a caller could not accidentally pay out.
+
+> **Phase 3 promoted it to `active`** — deliberately, once the game existed, the
+> result contract was complete, the calculation was pure and tested, aborted runs
+> were excluded and the writer was integrated. It is the only `active` policy in
+> the arcade. Phase 3 also added `policyId`, `version`, a `shape` (`scaled` |
+> `flat`) and a per-game `ineligible` hook to `ArcadeRewardPolicy`, plus
+> `calculateArcadeReward()` — a structured, self-describing grant carrying the
+> item address, the quantity, eligibility and the cap. Numbers and worked
+> examples: `docs/blobbi-dance.md` §6.
 
 ### Claim lifecycle
 
@@ -306,11 +337,27 @@ correct for presence heartbeats and wrong for a one-shot grant of a scarce
 resource — but tightening it globally would turn every relay hiccup into a
 user-visible error across presence, chat, playback, profile, Blobbi state and
 inventory. `useFirstEggAdoption` already solved this locally, so the pattern is
-precedented rather than invented. Idempotency on `runId` is what makes strictness
-cheap: retrying something that actually succeeded costs nothing.
+precedented rather than invented. ~~Idempotency on `runId` is what makes
+strictness cheap: retrying something that actually succeeded costs nothing.~~
+
+> **Corrected in Phase 3.** That last sentence was wrong and it produced a real
+> duplicate grant (a 3-ticket reward paid twice). `runId` is not carried in
+> kind:31633 and the grant is ADDITIVE, so a retry after a publish that actually
+> landed simply adds the award a second time. An attempt that may have been
+> published is now `ambiguous` and is never republished — only reconciled,
+> read-only. See `docs/arcade-reward-publication-boundary.md` §6.
 
 `ARCADE_REWARD_WRITER_UNIMPLEMENTED` rejects both of its methods, so a future
 caller wired up too early fails loudly instead of silently doing nothing.
+
+> **Phase 3 implemented the real writer** in
+> `src/inventory/arcade-reward-writer.ts` — outside `src/arcade/`, because
+> `boundaries.test.ts` proves that nothing under `src/arcade/` can reach a relay
+> or an inventory, and that property was worth more than keeping the files
+> together. The lifecycle above shipped exactly as drawn: persist the pending
+> claim, strict-publish, read the quantity back, and reach `claimed` only when the
+> delta matches. `ARCADE_REWARD_WRITER_UNIMPLEMENTED` remains as the default for
+> any game that has no writer.
 
 ---
 
@@ -408,7 +455,22 @@ logged in".
 
 ---
 
-## 13. What Phase 3 must implement
+## 13. What Phase 3 had to implement — and what it did
+
+> **Scorecard.** 1 ✅ (one track, one difficulty, four lanes, an authored chart in
+> committed data, exactly one `ArcadeGameResult`, no inventory or Nostr reference
+> — but **four** judgements plus a combo counter, not three, because a distinct
+> Okay tier is what makes the accuracy curve legible). 2 ✅ engine, ❌ calibration
+> screen. 3 ✅ as `useArcadeReward`. 4 ✅. 5 ✅ as `DanceResults` (the daily-limit
+> explanation is absent because a `flat` policy has no daily limit to explain).
+> 6 ✅ — the touch zones are 56 px tall, above `ARCADE_TOUCH_ZONE_MIN_PX`. 7 ✅ for
+> input and interruption; ❌ movement blockers, still deliberately absent.
+>
+> One deliberate change: `useArcadeInterruption` now reports WHICH signal fired,
+> and Blobbi Dance aborts on `hidden` while pausing on `blur` — see
+> `docs/blobbi-dance.md` §10 for why the two are not equally severe.
+
+### The original list
 
 1. **The rhythm game itself** on `arcade-dance-machine`: one track, one
    difficulty, ~60–90 s, four lanes, three judgements plus a combo counter, a
@@ -443,11 +505,13 @@ prevented.
 
 ## 14. Known limitations
 
-- The arcade still publishes **nothing** except the Arcade Pass coin charge. The
-  ticket balance is read-only, and `src/arcade/boundaries.test.ts` enforces
+- ~~The arcade still publishes **nothing** except the Arcade Pass coin charge.~~
+  **Superseded by Phase 3**: the arcade now publishes kind:31633 ticket grants
+  through `useArcadeReward`. `src/arcade/boundaries.test.ts` still enforces
   against the real import graph that `src/arcade/` can reach neither the
-  inventory layer nor a Nostr client — so "grants no tickets" is structural, not
-  a promise in a comment.
+  inventory layer nor a Nostr client, and now additionally that exactly one
+  arcade component reaches the reward boundary — so "the game itself grants
+  nothing" remains structural rather than a promise in a comment.
 - Movement blockers are absent, so a Blobbi can still walk through a cabinet.
 - The basement chairs walk the Blobbi over and stop; there is no seated pose or
   state, exactly as before.

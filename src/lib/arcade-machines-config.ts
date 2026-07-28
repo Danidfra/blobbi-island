@@ -76,17 +76,21 @@ export function arcadeBoundaryForFloor(floor: ArcadeFloorId): Boundary | undefin
 }
 
 /**
- * How ready a machine is, in the only two states that exist right now.
+ * How ready a machine is.
  *
- * `preview` — a real game is coming and the shell shows what it will be.
+ * `playable` — a real game runs on this machine. Added in Phase 3, when one
+ * finally did; before that its ABSENCE was what made "no machine can pretend to
+ * be playable" a type-level fact rather than a promise.
+ * `preview` — a real game is designed and coming, and the shell shows what it
+ * will be. Nothing carries this today.
  * `coming-soon` — no game is designed for this machine yet, and the UI says so
  * without implying otherwise.
  *
- * There is deliberately no `playable`: adding it is Phase 3's job, and its
- * absence is what makes "no machine can pretend to be playable" a type-level
- * fact rather than a promise.
+ * `availability` is presentation. The load-bearing fact is still `gameId`: the
+ * lifecycle reducer refuses to start a run without one, so a machine cannot be
+ * made playable by editing this field.
  */
-export type ArcadeMachineAvailability = 'preview' | 'coming-soon';
+export type ArcadeMachineAvailability = 'playable' | 'preview' | 'coming-soon';
 
 export interface ArcadeMachineConfig {
   /** Stable, unique identity. Never derived from the filename. */
@@ -165,8 +169,8 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     zIndex: 5,
     interactionAnchor: { x: 0.5, y: 0.92 },
     gameId: BLOBBI_DANCE_GAME_ID,
-    availability: 'preview',
-    blurb: 'Rhythm game coming in the next arcade update.',
+    availability: 'playable',
+    blurb: 'A 68-second rhythm game. Finish a run to earn Arcade Tickets.',
   },
 
   // ── Floor 1: six cabinets and two tables, none of them a game yet ────────

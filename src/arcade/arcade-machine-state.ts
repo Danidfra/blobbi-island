@@ -41,8 +41,13 @@
  * 6. **Closing mid-run aborts it.** The closed state records `lastOutcome:
  *    'aborted'` so "did that run count?" has an answer after the shell is gone.
  * 7. **One reward per `runId`, ever.** A run that reached `rewarded` is recorded
- *    in `rewardedRunIds` and can never re-enter `claiming` — this is what makes
- *    a retry after an unconfirmed publish safe.
+ *    in `rewardedRunIds` and can never re-enter `claiming`.
+ *
+ *    This is necessary and NOT sufficient, and Phase 3 learned that the hard
+ *    way: a run whose publish was unconfirmed never reaches `rewarded`, so this
+ *    set does not cover it, and a "retry" of an additive grant that actually
+ *    landed pays it twice. The durable claim ledger is what covers that case —
+ *    see `src/lib/arcade-claim-ledger.ts` and `docs/blobbi-dance.md` §8.
  * 8. **Replay is a NEW run.** New `runId`, cleared result. Never a re-run of an
  *    old one.
  * 9. **No award arithmetic lives here.** The reducer never sees, stores or

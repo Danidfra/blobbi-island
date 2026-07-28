@@ -101,7 +101,9 @@ describe('the arcade does not depend on the theater', () => {
 });
 
 describe('no arcade component performs an inventory or coin write except the pass purchase', () => {
-  const files = sourceFiles(ARCADE_COMPONENTS_DIR).filter((f) => !f.endsWith('.test.tsx'));
+  const files = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
+    (f) => !/\.test\.tsx?$|\/test-/.test(f),
+  );
 
   it.each(files.map((f) => [f.replace(`${process.cwd()}/`, ''), f]))(
     '%s imports no write hook',
@@ -116,6 +118,40 @@ describe('no arcade component performs an inventory or coin write except the pas
       }
     },
   );
+
+  it('routes the ONE inventory write through useArcadeReward, and nowhere else', () => {
+    // Phase 3 gave the arcade a reward. The rule above still holds — no arcade
+    // component imports a raw write hook — because the grant goes through one
+    // named boundary, `useArcadeReward`, which is the only module allowed to
+    // hold an `ArcadeRewardWriter`. This asserts BOTH halves: exactly one arcade
+    // component reaches for the boundary, and the boundary is what actually
+    // owns the writer.
+    const users = files
+      .filter((file) => importsOf(file).some((s) => /useArcadeReward/.test(s)))
+      .map((f) => f.replace(`${process.cwd()}/`, ''))
+      .sort();
+    expect(users).toEqual([
+      // The controller — the one component that can start a claim.
+      'src/components/blobbi/arcade/dance/DanceMachine.tsx',
+      // The results screen, which imports the hook's STATE TYPE only, so that
+      // its copy cannot drift away from the phases it has to distinguish.
+      'src/components/blobbi/arcade/dance/DanceResults.tsx',
+    ]);
+    expect(readFileSync(join(process.cwd(), users[1]), 'utf8')).toContain(
+      "import type { ArcadeRewardState }",
+    );
+
+    const hook = importsOf(join(process.cwd(), 'src/hooks/useArcadeReward.ts'));
+    expect(hook.some((s) => /arcade-reward-writer/.test(s))).toBe(true);
+
+    // And the writer itself never touches coins. Checked against IMPORTS, not
+    // free text — the module's header explains at length why kind:11125 is out
+    // of scope, and a prose match would flag exactly the comment that says so.
+    const writerImports = importsOf(
+      join(process.cwd(), 'src/inventory/arcade-reward-writer.ts'),
+    );
+    expect(writerImports.some((s) => /useCoinsMutation|blobbi-kinds/.test(s))).toBe(false);
+  });
 
   it('leaves the ONE coin write in ArcadePassModal, and nowhere else', () => {
     // The pass purchase is the arcade's only write of any kind, and it writes

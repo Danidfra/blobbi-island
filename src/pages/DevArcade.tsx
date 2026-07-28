@@ -26,6 +26,14 @@ import {
 import { clearArcadePass, grantArcadePass } from '@/lib/arcade-pass';
 import { useArcadePass } from '@/hooks/useArcadePass';
 
+import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
+import { DEFAULT_DANCE_CHART, type DanceChart } from '@/arcade/dance/chart';
+import { NEON_HOP_TRACK } from '@/arcade/dance/track';
+import { DANCE_REWARD_TUNING } from '@/arcade/dance/dance-reward';
+import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
+import { ArcadeRewardWriterError } from '@/inventory/arcade-reward-writer';
+import { claimLockKind, clearClaims, readClaims } from '@/lib/arcade-claim-ledger';
+
 import { ITEM_CATALOG_QUERY_KEY, type ItemCatalog } from '@/inventory/useItemCatalog';
 import {
   buildEmptyInventory,
@@ -71,7 +79,21 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  *    exercise the emoji degradation path;
  *  - **lifecycle fixtures** — drives the real reducer through countdown, pause,
  *    abort and results without a game existing;
- *  - **anchors** — draws each machine's configured walk-to point on the floor.
+ *  - **anchors** — draws each machine's configured walk-to point on the floor;
+ *  - **Blobbi Dance** — the REAL machine (real chart, real judgement, real
+ *    lifecycle, real claim boundary) with a FAKE `ArcadeRewardWriter` whose
+ *    balance is ADDITIVE, like the real kind:31633 grant. Every claim outcome is
+ *    reachable — confirmed, signer-refused, timed out, verified against the
+ *    wrong quantity, unverifiable, and **`lagging-relay`, which reproduces the
+ *    duplicate-grant defect exactly**: the publish lands and the verification
+ *    read is a beat behind. The writer log shows every publish and every read,
+ *    so "how many publications did that take?" is answerable at a glance. A
+ *    deliberately broken chart is one chip away, and so is a forced
+ *    `prefers-reduced-motion`.
+ *
+ * Walking the Blobbi to the dance machine in the world below opens the REAL
+ * machine with the REAL writer. It still publishes nothing, because the harness
+ * has no signed-in user and the claim path refuses before it sends anything.
  */
 
 const FIXTURE_BLOBBI: Blobbi = {
@@ -105,6 +127,77 @@ const FIXTURE_PUBKEY = '0'.repeat(64);
 
 /** Monotonic, so every fixture run gets a distinct id (no clock, no randomness). */
 let fixtureRunCounter = 0;
+
+/**
+ * A chart that fails validation, so the preview's error state can be seen
+ * without hand-editing the shipped one.
+ */
+const BROKEN_CHART: DanceChart = { ...DEFAULT_DANCE_CHART, version: 99 };
+
+/** Every way the reward writer can behave, without a relay or a signer. */
+type WriterOutcome =
+  | 'confirm'
+  | 'sign-refused'
+  | 'timeout'
+  | 'verify-mismatch'
+  | 'verify-unreadable'
+  | 'lagging-relay';
+
+const WRITER_OUTCOMES: readonly WriterOutcome[] = [
+  'confirm',
+  'sign-refused',
+  'timeout',
+  'verify-mismatch',
+  'verify-unreadable',
+  'lagging-relay',
+];
+
+/**
+ * A fake `ArcadeRewardWriter`.
+ *
+ * The whole point of the writer being an INTERFACE rather than a hook: every
+ * branch of the claim boundary — including the two that must never be reported
+ * as success — is reachable here with no key, no relay and no published event.
+ */
+function createDevWriter(
+  outcome: WriterOutcome,
+  startingBalance: number,
+  log: (line: string) => void,
+): ArcadeRewardWriter {
+  // The balance is ADDITIVE, exactly like the real kind:31633 grant. That is
+  // what makes `lagging-relay` a faithful reproduction of the manual defect:
+  // the first publish really does land, and only the read is behind.
+  let quantity = startingBalance;
+  let reads = 0;
+  let publishes = 0;
+  return {
+    async publishTicketGrant(claim) {
+      publishes += 1;
+      log(`publish #${publishes} (+${claim.tickets}) → ${outcome}`);
+      if (outcome === 'sign-refused') {
+        throw new ArcadeRewardWriterError('DEV: the signer refused', 'sign-failed');
+      }
+      if (outcome === 'timeout') {
+        quantity += claim.tickets; // it landed; we just never heard back
+        throw Object.assign(new Error('DEV: publish timed out'), { name: 'TimeoutError' });
+      }
+      quantity += claim.tickets;
+      if (outcome === 'verify-mismatch') quantity -= claim.tickets - 1;
+    },
+    async readTicketQuantity() {
+      reads += 1;
+      if (outcome === 'verify-unreadable' && reads > 1) {
+        log(`read #${reads} → null (read failed)`);
+        return null;
+      }
+      // The verification read (the second one) lags a beat behind. This is the
+      // ordinary relay behaviour that produced the real duplicate grant.
+      const value = outcome === 'lagging-relay' && reads === 2 ? startingBalance : quantity;
+      log(`read #${reads} → ${value}${value === quantity ? '' : ' (stale)'}`);
+      return value;
+    },
+  };
+}
 
 const FLOOR_LOCATIONS: Record<ArcadeFloorId, 'arcade' | 'arcade-1' | 'arcade-minus1'> = {
   ground: 'arcade',
@@ -175,6 +268,64 @@ export function DevArcade() {
   const [lifecycle, dispatch] = useReducer(arcadeMachineReducer, INITIAL_ARCADE_MACHINE_STATE);
   const hasPass = useArcadePass();
   const [note, setNote] = useState<string | null>(null);
+
+  // ── Dance harness state ─────────────────────────────────────────────────
+  const [danceOpen, setDanceOpen] = useState(false);
+  const [danceChart, setDanceChart] = useState<'valid' | 'invalid'>('valid');
+  const [writerOutcome, setWriterOutcome] = useState<WriterOutcome>('confirm');
+  const [narrowShell, setNarrowShell] = useState(false);
+  const [forceReducedMotion, setForceReducedMotion] = useState(false);
+  const [remountKey, setRemountKey] = useState(0);
+  const [writerLog, setWriterLog] = useState<string[]>([]);
+  const [danceLifecycle, danceDispatch] = useReducer(
+    arcadeMachineReducer,
+    INITIAL_ARCADE_MACHINE_STATE,
+  );
+
+  const danceMachine = useMemo(
+    () => arcadeMachines.find((m) => m.gameId === 'blobbi-dance')!,
+    [],
+  );
+
+  const [startingBalance, setStartingBalance] = useState(10);
+
+  const devWriter = useMemo(
+    () =>
+      createDevWriter(writerOutcome, startingBalance, (line) =>
+        setWriterLog((l) => [...l.slice(-8), line]),
+      ),
+    [writerOutcome, startingBalance],
+  );
+
+  const openDance = useCallback(() => {
+    setWriterLog([]);
+    danceDispatch({ type: 'close' });
+    danceDispatch({
+      type: 'open',
+      machineId: danceMachine.id,
+      gameId: danceMachine.gameId,
+    });
+    setDanceOpen(true);
+  }, [danceMachine]);
+
+  /**
+   * Force `prefers-reduced-motion` on for this tab.
+   *
+   * `useReducedMotion` reads `matchMedia` through `useSyncExternalStore`, and a
+   * patched `matchMedia` cannot notify existing subscribers — so the harness
+   * remounts the machine rather than pretending the change propagated.
+   */
+  const toggleReducedMotion = useCallback(() => {
+    const next = !forceReducedMotion;
+    setForceReducedMotion(next);
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = ((query: string) => {
+      const mql = original(query);
+      if (!next || !query.includes('prefers-reduced-motion')) return mql;
+      return { ...mql, matches: true, addEventListener() {}, removeEventListener() {} } as MediaQueryList;
+    }) as typeof window.matchMedia;
+    setRemountKey((k) => k + 1);
+  }, [forceReducedMotion]);
 
   const machine = useMemo(
     () => arcadeMachines.find((m) => m.id === machineId)!,
@@ -342,6 +493,63 @@ export function DevArcade() {
           </span>
         </Section>
 
+        <Section title="Blobbi Dance (real game, fake writer)">
+          <Chip active={danceOpen} onClick={openDance}>
+            open dance machine
+          </Chip>
+          <Chip
+            onClick={() => {
+              danceDispatch({ type: 'close' });
+              setDanceOpen(false);
+            }}
+          >
+            close
+          </Chip>
+          <Chip
+            active={danceChart === 'invalid'}
+            onClick={() => setDanceChart((c) => (c === 'valid' ? 'invalid' : 'valid'))}
+          >
+            chart: {danceChart}
+          </Chip>
+          <Chip active={forceReducedMotion} onClick={toggleReducedMotion}>
+            reduced motion: {forceReducedMotion ? 'on' : 'off'}
+          </Chip>
+          <Chip active={narrowShell} onClick={() => setNarrowShell((v) => !v)}>
+            narrow shell
+          </Chip>
+          <span className="ml-2 font-mono">
+            status={danceLifecycle.status} run={danceLifecycle.runId ?? '—'}
+          </span>
+        </Section>
+
+        <Section title="Fake reward writer">
+          {WRITER_OUTCOMES.map((outcome) => (
+            <Chip
+              key={outcome}
+              active={writerOutcome === outcome}
+              onClick={() => setWriterOutcome(outcome)}
+            >
+              {outcome}
+            </Chip>
+          ))}
+          <Chip onClick={() => clearClaims()}>clear claim ledger</Chip>
+          <Chip onClick={() => setStartingBalance((b) => (b === 10 ? 0 : 10))}>
+            start balance: {startingBalance}
+          </Chip>
+          <span className="ml-2 font-mono">
+            claims={Object.keys(readClaims(FIXTURE_PUBKEY)).length} · cross-tab lock:{' '}
+            {claimLockKind()} · max {DANCE_REWARD_TUNING.maxPerRun}/run ·{' '}
+            {NEON_HOP_TRACK.title} ({Math.round(NEON_HOP_TRACK.durationMs / 1000)}s,{' '}
+            {NEON_HOP_TRACK.readiness})
+          </span>
+        </Section>
+
+        {writerLog.length > 0 && (
+          <pre className="mb-1.5 max-h-20 overflow-y-auto rounded bg-black/5 p-1 text-[10px]">
+            {writerLog.join('\n')}
+          </pre>
+        )}
+
         <Section title="Inventory / catalog (cache only)">
           <Chip onClick={() => seedTickets(0)}>tickets: 0</Chip>
           <Chip onClick={() => seedTickets(7)}>tickets: 7</Chip>
@@ -353,6 +561,38 @@ export function DevArcade() {
 
         {note && <p className="mt-1 text-fuchsia-700">{note}</p>}
       </aside>
+
+      {/*
+        A narrow-shell override, for eyeballing the mobile layout without
+        resizing the window. It constrains the BOX only — CSS media queries still
+        evaluate at the real viewport width, so genuine narrow-viewport checks
+        need device emulation. Saying so beats a harness that quietly proves less
+        than it appears to.
+      */}
+      {narrowShell && (
+        <style>{`[data-arcade-shell]{width:386px!important;max-width:386px!important;height:840px!important;max-height:90vh!important;}`}</style>
+      )}
+
+      {/*
+        The REAL dance machine — real chart, real judgement, real lifecycle, real
+        claim boundary — with a fake writer. It publishes nothing: `rewardWriter`
+        replaces the only component that could.
+      */}
+      {danceOpen && danceLifecycle.status !== 'closed' && (
+        <DanceMachine
+          key={remountKey}
+          machine={danceMachine}
+          lifecycle={danceLifecycle}
+          dispatch={danceDispatch}
+          onClose={() => {
+            danceDispatch({ type: 'close' });
+            setDanceOpen(false);
+          }}
+          chart={danceChart === 'valid' ? DEFAULT_DANCE_CHART : BROKEN_CHART}
+          rewardWriter={devWriter}
+          showDebugDetails
+        />
+      )}
 
       {/* The real shell, driven by the real reducer, with fixture content. */}
       {lifecycle.status !== 'closed' && (
