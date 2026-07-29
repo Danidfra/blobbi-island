@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useArcadeReward, ARCADE_TICKET_ADDRESS } from '@/hooks/useArcadeReward';
 import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
@@ -18,7 +18,7 @@ import type { DanceTrack } from '@/arcade/dance/track';
 import { NEON_HOP_TRACK, getDanceTrack } from '@/arcade/dance/track';
 import type { DanceAudioEngine, DanceAudioFactory } from '@/arcade/dance/dance-audio';
 import { createDanceAudioEngine } from '@/arcade/dance/dance-audio';
-import type { ArcadeMachineConfig } from '@/lib/arcade-machines-config';
+import { isArcadeMuted, setArcadeMuted } from '@/arcade/audio/arcade-audio';
 
 import { ArcadeGameShell } from '../ArcadeGameShell';
 import { BlobbiDanceGame } from './BlobbiDanceGame';
@@ -42,13 +42,43 @@ import { DanceResults } from './DanceResults';
  *    unconfirmed publish is still possible and a confirmed one can never repeat.
  *  - **Replay is a new run.** New id, cleared result, and the reward hook's state
  *    is reset so the previous run's message cannot linger over a fresh one.
+ *
+ * ## Identity is passed in, and it is always the dance machine's
+ *
+ * It used to take an `ArcadeMachineConfig` and read the game's id and name off
+ * it. It now takes `machineId`, `gameId` and `title` as plain values: `gameId`
+ * and `title` come from the game registry, `machineId` from the machine the
+ * player walked to.
+ *
+ * In production that machine is ALWAYS `arcade-dance-machine`, and it is not
+ * this component's job to make that true — `canLaunchArcadeGame` refuses a
+ * Blobbi Dance launch from anywhere else, so no other machine can produce a run
+ * to hand here. A brief corrective pass had the catalogue launching this game
+ * from any of nine cabinets, which would have written a pool table's id into a
+ * ticket claim; the fix is the launch rule, not a check inside the game.
  */
 
 export interface DanceMachineProps {
-  readonly machine: ArcadeMachineConfig;
+  /** The cabinet this run happens on. Recorded in the result and the claim. */
+  readonly machineId: string;
+  /** Canonical game id, from the catalogue. Never derived from the machine. */
+  readonly gameId: string;
+  /** The game's name, from the catalogue. Titles the shell. */
+  readonly title: string;
   readonly lifecycle: ArcadeMachineState;
   readonly dispatch: (event: ArcadeEvent) => void;
-  readonly onClose: () => void;
+  /** Leave the game. Where that lands is the navigation model's decision. */
+  readonly onExit: () => void;
+  /**
+   * Text for the single dismiss control while NOT mid-run.
+   *
+   * Supplied by the caller because only the caller knows the destination: a
+   * dedicated machine returns to the arcade room, a catalogue-launched game
+   * returns to the catalogue, and a control that says the wrong one is worse
+   * than one that says nothing.
+   */
+  readonly exitLabel: string;
+  readonly exitAriaLabel: string;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: DanceAudioFactory;
   /** Substitute reward writer. Production passes nothing. */
@@ -77,10 +107,14 @@ const ABORT_COPY: Record<string, string> = {
 };
 
 export function DanceMachine({
-  machine,
+  machineId,
+  gameId,
+  title,
   lifecycle,
   dispatch,
-  onClose,
+  onExit,
+  exitLabel,
+  exitAriaLabel,
   audioFactory = createDanceAudioEngine,
   rewardWriter,
   chart = DEFAULT_DANCE_CHART,
@@ -102,6 +136,38 @@ export function DanceMachine({
    */
   const engineRef = useRef<DanceAudioEngine | null>(null);
   const [engine, setEngine] = useState<DanceAudioEngine | null>(null);
+
+  /**
+   * The persisted arcade mute setting, mirrored into React so a control can
+   * render it.
+   *
+   * The storage and the engine hook already existed — `isArcadeMuted`,
+   * `setArcadeMuted` and `DanceAudioEngine.setMuted` all shipped in earlier
+   * phases — and nothing in the product had ever offered a way to reach them.
+   * This adds the control, not the capability, and it changes no timing: muting
+   * takes the master gain to zero while the `AudioContext` (and therefore the
+   * clock every judgement is made against) keeps running exactly as before.
+   */
+  const [muted, setMuted] = useState<boolean>(() => isArcadeMuted());
+  /**
+   * The authoritative value, so the toggle never has to read `muted` from a
+   * closure that a second click in the same tick would have made stale.
+   *
+   * The alternative — deriving `next` inside `setMuted`'s updater — would put
+   * the storage write and the engine call inside a function React is entitled to
+   * invoke twice (and does, under StrictMode) and to discard the result of. A
+   * state updater must be pure; a ref is the honest place for the value the side
+   * effects need.
+   */
+  const mutedRef = useRef(muted);
+
+  const handleToggleMute = useCallback(() => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMuted(next);
+    setArcadeMuted(next);
+    engineRef.current?.setMuted(next);
+  }, []);
 
   const track: DanceTrack = useMemo(
     () => getDanceTrack(chart.trackId) ?? NEON_HOP_TRACK,
@@ -186,6 +252,12 @@ export function DanceMachine({
     }
 
     setAudioError(null);
+    // The engine reads the persisted flag itself, but say it explicitly: in a
+    // private-mode browser the write may not have persisted, and the control the
+    // player just used must still be obeyed for this run. Read from the ref, not
+    // from the rendered `muted`, so a toggle that has not yet re-rendered still
+    // reaches the engine this call is building.
+    created.engine.setMuted(mutedRef.current);
     engineRef.current = created.engine;
     setEngine(created.engine);
     return true;
@@ -267,8 +339,8 @@ export function DanceMachine({
   } else if (playing && engine) {
     content = (
       <BlobbiDanceGame
-        machineId={machine.id}
-        gameId={machine.gameId ?? ''}
+        machineId={machineId}
+        gameId={gameId}
         chart={chart}
         track={track}
         status={status}
@@ -279,6 +351,8 @@ export function DanceMachine({
         onAbort={handleAbort}
         onPause={() => dispatch({ type: 'pause' })}
         engine={engine}
+        muted={muted}
+        onToggleMute={handleToggleMute}
       />
     );
   } else if (showResults && result) {
@@ -302,25 +376,48 @@ export function DanceMachine({
         chart={chart}
         chartProblems={chartProblems}
         abortNotice={status === 'aborted' ? abortNotice : null}
+        muted={muted}
+        onToggleMute={handleToggleMute}
       />
     );
   }
 
+  /**
+   * The footer holds exactly ONE action: the thing the player came for.
+   *
+   * Before this pass Close and Start were the same size and nearly the same
+   * weight, so the screen offered a child two equally-loud choices and let them
+   * work out which one plays the game. `islandCtaButtonClass` is the island's
+   * existing primary CTA — the same pill used to enter the island — so the
+   * loudest thing on the screen is the thing the player came for.
+   *
+   * Phase 4 removed the footer's quiet "Close" as well. It did the same thing as
+   * the header's dismiss control while wearing a different word, and once that
+   * control started saying where it goes ("Back to games"), two differently
+   * labelled buttons with one destination was worse than one.
+   */
   const footer = playing ? null : (
     <>
-      <Button type="button" variant="outline" onClick={onClose} className="rounded-full">
-        Close
-      </Button>
       {chartProblems.length === 0 &&
         !audioError &&
         (status === 'preview' ? (
-          <Button type="button" data-dance-start onClick={handleStart} className="rounded-full">
+          <button
+            type="button"
+            data-dance-start
+            onClick={handleStart}
+            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
+          >
             Start
-          </Button>
+          </button>
         ) : (
-          <Button type="button" data-dance-replay onClick={handleReplay} className="rounded-full">
+          <button
+            type="button"
+            data-dance-replay
+            onClick={handleReplay}
+            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
+          >
             Play again
-          </Button>
+          </button>
         ))}
     </>
   );
@@ -328,15 +425,29 @@ export function DanceMachine({
   return (
     <ArcadeGameShell
       open={status !== 'closed'}
-      onClose={onClose}
-      title={machine.displayName}
+      onClose={onExit}
+      title={title}
       description={`${track.title} · ${Math.round(track.durationMs / 1000)} seconds`}
-      machineId={machine.id}
-      gameId={machine.gameId}
+      machineId={machineId}
+      gameId={gameId}
       status={status}
+      surface="game"
+      /*
+        One dismiss control, labelled for where it actually goes. Mid-run it
+        abandons the run, so it says so; everywhere else it says where the
+        player lands, which only the caller knows.
+      */
+      closeLabel={playing ? 'Leave' : exitLabel}
+      closeAriaLabel={playing ? `Leave ${title} and end this run` : exitAriaLabel}
       onPause={playing ? () => dispatch({ type: 'pause' }) : undefined}
       onResume={status === 'paused' ? () => dispatch({ type: 'resume' }) : undefined}
       footer={footer}
+      /*
+        A live run must not be able to scroll: a stray drag on a phone would take
+        the lanes off screen mid-song. Every other state keeps the shell's normal
+        scrolling, because a results panel at 320 × 568 genuinely needs it.
+      */
+      contentClassName={playing ? 'overflow-hidden px-2 py-2 sm:px-4 sm:py-3' : undefined}
     >
       {content}
     </ArcadeGameShell>

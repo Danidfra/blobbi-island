@@ -67,30 +67,51 @@ pending-interaction instance behaves identically to every other room).
 
 `src/lib/arcade-machines-config.ts` — one record per machine.
 
-| id | floor | display name | game | availability |
-| --- | --- | --- | --- | --- |
-| `arcade-dance-machine` | basement | Dance Dance Blobbi | `blobbi-dance` | **playable** (Phase 3) |
-| `arcade-cabinet-pink` | floor-1 | Pink Cabinet | — | coming-soon |
-| `arcade-cabinet-black` | floor-1 | Black Cabinet | — | coming-soon |
-| `arcade-cabinet-classic` | floor-1 | Classic Cabinet | — | coming-soon |
-| `arcade-cabinet-green` | floor-1 | Green Cabinet | — | coming-soon |
-| `arcade-cabinet-purple` | floor-1 | Purple Cabinet | — | coming-soon |
-| `arcade-cabinet-red` | floor-1 | Red Cabinet | — | coming-soon |
-| `arcade-pool-table` | floor-1 | Pool Table | — | coming-soon |
-| `arcade-air-hockey` | floor-1 | Air Hockey Table | — | coming-soon |
+> **Superseded in part by Phase 4.** `gameId`, `availability` and `blurb` were
+> removed from this record and replaced by ONE discriminated field, `activation`,
+> which says whether a machine opens the shared cabinet catalogue, launches one
+> specific game, or shows one specific game's coming-soon screen. Six generic
+> cabinets take the first; the dance machine, the pool table and the air hockey
+> table are dedicated machines and take the other two. See
+> `docs/arcade-catalogue.md` §2.
+
+| id | floor | display name | activation |
+| --- | --- | --- | --- |
+| `arcade-dance-machine` | basement | Blobbi Dance Machine | dedicated-game → `blobbi-dance` |
+| `arcade-pool-table` | floor-1 | Pool Table | dedicated-preview → `blobbi-pool` |
+| `arcade-air-hockey` | floor-1 | Air Hockey Table | dedicated-preview → `blobbi-air-hockey` |
+| `arcade-cabinet-pink` | floor-1 | Pink Cabinet | shared-catalogue |
+| `arcade-cabinet-black` | floor-1 | Black Cabinet | shared-catalogue |
+| `arcade-cabinet-classic` | floor-1 | Classic Cabinet | shared-catalogue |
+| `arcade-cabinet-green` | floor-1 | Green Cabinet | shared-catalogue |
+| `arcade-cabinet-purple` | floor-1 | Purple Cabinet | shared-catalogue |
+| `arcade-cabinet-red` | floor-1 | Red Cabinet | shared-catalogue |
+
+The dance machine was called **"Dance Dance Blobbi"**, and is now **"Blobbi Dance
+Machine"** — named for the game it hosts, and named the same as that game. It is
+a DEDICATED machine, so a player should be able to find the dance game by reading
+the room. (An intermediate pass renamed it "Dance Pad Cabinet" to satisfy a rule
+that turned out to apply only to the generic six; the rule, not the name, was the
+mistake.) A config test forbids a *generic cabinet* being named after a game, and
+forbids the dance machine losing its game name.
 
 Rules the config enforces (all covered by `arcade-machines-config.test.ts`):
 
 - **Identity is the id, never the filename.** `snooker.png` is the Pool Table and
   `arcade-machine-green.png` is the Green Cabinet; the two previously shared the
   `alt` "Arcade Machine Green".
-- **Game identity is separate from visual identity.** `gameId` is `null` for
-  eight of nine. That is the structural reason they cannot fake gameplay: the
-  lifecycle reducer refuses `start` without a game id. Phase 3 added a
-  `playable` availability value and gave it to exactly one machine — the one that
-  already had a `gameId`, which a config test now asserts in both directions.
+- **What a machine does is one explicit field.** ~~`gameId` is `null` for eight of
+  nine.~~ **Phase 4**: `activation` replaced `gameId`, `availability` and `blurb`,
+  and a test asserts all three are absent rather than merely unused. The
+  structural guarantee did not weaken — it moved: the lifecycle reducer still
+  refuses `start` without a game id, and the only thing that can supply one is a
+  registry entry that passes `canLaunchArcadeGame` for **this machine and this
+  surface**. "A machine owns no game" was never a universal rule; it is true of
+  the six generic cabinets and false of the three dedicated machines.
 - **A game id is not a Nostr address or an item id.** `blobbi-dance` is a stable
-  string with its own lifecycle.
+  string with its own lifecycle, now declared once in `src/arcade/catalogue.ts`
+  (it used to be written out in both this registry and the reward policy, each
+  with a comment saying it mirrored the other).
 - Unique ids, unique display names, unique accessible names; every machine on a
   real floor; deterministic back-to-front render order; every interaction anchor
   proven to land on walkable floor.
@@ -107,6 +128,15 @@ seating groups, the elevator, and the two ground-floor counters.
 ---
 
 ## 3. The lifecycle state machine
+
+> **Unchanged by Phase 4.** The reducer already took `machineId` and `gameId` as
+> independent fields on `open`; only its CALLER assumed the second could be
+> derived from the first. Which screen the player is on is a separate, tiny state
+> machine (`src/arcade/arcade-navigation.ts`) rather than extra lifecycle
+> statuses, and it now models three flows: generic cabinet → catalogue, dance
+> machine → game, table → that table's own screen. See
+> `docs/arcade-catalogue.md` §4.
+
 
 `src/arcade/arcade-machine-state.ts` — pure, exhaustive, no React/DOM/timers.
 
@@ -180,12 +210,45 @@ There is deliberately **no leaderboard shape**.
 
 ## 5. The shell boundary
 
+> **Extended in Phase 4.** `ArcadeGameShell` now hosts three surfaces — the
+> shared catalogue, a running game, and a notice/coming-soon panel —
+> distinguished by a `surface` prop rendered as `data-arcade-surface`. `status`
+> became OPTIONAL, because a catalogue is a screen and not a run; when it is
+> absent there is no `data-arcade-status` and no pause control. The dismiss
+> control's label and accessible name are the caller's to set, so they can
+> describe the destination.
+>
+> It also stopped portaling to `document.body` — see **Where it renders** below.
+
 `arcade/ArcadeGameShell.tsx` replaces `GameModal`, which has been deleted.
 
-- **Renders outside the world.** Radix `Dialog`, portalled to `document.body`,
-  exactly like every other modal in the app. `GameModal` was a plain
-  `absolute inset-0` div inside `VirtualWorld`, so it was scaled with the room
-  and clipped to the fixed 1046 × 697 box.
+- **Renders outside the world, and inside the game window.** A Radix `Dialog`
+  portalled into the **stage overlay host** that `BlobbiFrame` provides through
+  `StageOverlayContext` — `container={useStageOverlayHost()}` plus `inFrame`.
+  Two separate mistakes are being avoided at once:
+  - `GameModal` was a plain `absolute inset-0` div INSIDE `VirtualWorld`, so it
+    inherited the world's scale transform and was clipped to the fixed
+    1046 × 697 box. The host sits outside the world subtree, so that cannot
+    recur.
+  - Portalling to `document.body` (Phase 2 → the first Phase 4 pass) fixed the
+    scaling but covered the whole browser page: the wood frame, the shell header
+    and footer and the page behind them all disappeared behind a full-viewport
+    dialog. The host is level with the world INSIDE the frame's bezel, so the
+    overlay dims the game window and nothing else — on desktop, in immersive and
+    in fullscreen alike, with no second code path.
+
+  Every arcade modal takes this path, not just the shell: `ArcadePassModal`,
+  `ElevatorModal` and `NoPassModal` too. See `docs/arcade-catalogue.md` §5.
+- **Card dialogs must bring their own padding and margins.** `DialogContent`'s
+  two branches are not symmetrical — the body-portal branch carries `p-6`, the
+  `inFrame` branch carries positioning and animation only (the in-frame dialogs
+  written first are full-bleed artwork boards that pass `p-0`). A dialog moved
+  into the frame therefore loses its padding, and its `w-full` starts resolving
+  against the stage instead of the viewport, so it loses its side margins too.
+  `inFrameDialogPanelClass` in `ui/dialog.tsx` is the one rule that puts both
+  back; `ArcadeDialogs.containment.test.tsx` holds the three arcade dialogs to
+  it. `ArcadeGameShell` opts out deliberately — a machine's screen is *meant* to
+  fill the stage.
 - **Unmounts on close.** `GameModal` set its content and never cleared it, so the
   last game's markup stayed mounted forever behind a closed modal.
 - **Owns** open/close, title, pause/resume/leave controls, and the

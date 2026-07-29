@@ -1,5 +1,13 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  inFrameDialogPanelClass,
+} from '@/components/ui/dialog';
+import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
@@ -42,6 +50,7 @@ const floors: FloorOption[] = [
 ];
 
 export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
+  const stageOverlayHost = useStageOverlayHost();
   const { setCurrentLocation } = useLocation();
 
   const handleFloorSelect = (location: string) => {
@@ -51,7 +60,18 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-2xl">
+      <DialogContent
+        /* Contained in the game window, like every other arcade surface, and
+           sized against the STAGE rather than the viewport — see
+           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
+           dialog moved here must bring its own padding and side margins. */
+        container={stageOverlayHost}
+        inFrame
+        className={cn(
+          inFrameDialogPanelClass,
+          'bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-2xl',
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center text-blue-800 mb-4">
             🛗 Select Floor
@@ -68,7 +88,7 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
               <Button
                 key={floor.id}
                 onClick={() => handleFloorSelect(floor.location)}
-                className="flex justify-between w-full p-4 h-auto bg-white hover:bg-blue-50 text-left border-2 border-blue-200 hover:border-blue-400 rounded-xl transition-all duration-200"
+                className="flex min-h-[44px] justify-between w-full p-4 h-auto bg-white hover:bg-blue-50 text-left border-2 border-blue-200 hover:border-blue-400 rounded-xl transition-all duration-200"
                 variant="outline"
               >
                   <div className='flex items-center space-x-4'>
@@ -86,7 +106,7 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
           <Button
             variant="outline"
             onClick={onClose}
-            className="w-full mt-6 rounded-xl border-2 border-gray-300 hover:bg-gray-50"
+            className="min-h-[44px] w-full mt-4 rounded-xl border-2 border-gray-300 hover:bg-gray-50"
           >
             Cancel
           </Button>

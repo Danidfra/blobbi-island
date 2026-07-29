@@ -29,7 +29,11 @@ import {
   INITIAL_ARCADE_MACHINE_STATE,
   arcadeMachineReducer,
 } from '@/arcade/arcade-machine-state';
-import { getArcadeMachine } from '@/lib/arcade-machines-config';
+import {
+  BLOBBI_DANCE_GAME_ID,
+  BLOBBI_DANCE_MACHINE_ID,
+  getCatalogueEntry,
+} from '@/arcade/catalogue';
 import { DEFAULT_DANCE_CHART, buildChartFromBars, type DanceChart } from '@/arcade/dance/chart';
 import { NEON_HOP_TRACK } from '@/arcade/dance/track';
 import { resetClaimLocks } from '@/lib/arcade-claim-ledger';
@@ -57,7 +61,18 @@ vi.mock('@nostrify/react', async () => {
   };
 });
 
-const MACHINE = getArcadeMachine('arcade-dance-machine')!;
+/**
+ * The machine and the game, kept apart but never mismatched.
+ *
+ * The machine says WHERE a run happened and the registry says WHAT was played.
+ * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine` — it is a
+ * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else
+ * — so the harness uses the id the product uses. A brief corrective pass ran
+ * this game from a generic cabinet, which would have written a cabinet's id
+ * into a ticket claim.
+ */
+const MACHINE_ID = BLOBBI_DANCE_MACHINE_ID;
+const ENTRY = getCatalogueEntry(BLOBBI_DANCE_GAME_ID)!;
 
 /** A three-note chart, so a whole run fits in a handful of clock moves. */
 const TINY_CHART: DanceChart = buildChartFromBars({
@@ -78,8 +93,8 @@ function Harness({ chart, audio, writer, audioFactory }: HarnessOptions) {
   const [lifecycle, dispatch] = useReducer(arcadeMachineReducer, INITIAL_ARCADE_MACHINE_STATE, () =>
     arcadeMachineReducer(INITIAL_ARCADE_MACHINE_STATE, {
       type: 'open',
-      machineId: MACHINE.id,
-      gameId: MACHINE.gameId,
+      machineId: MACHINE_ID,
+      gameId: ENTRY.id,
     }),
   );
   const [closed, setClosed] = useState(false);
@@ -89,10 +104,14 @@ function Harness({ chart, audio, writer, audioFactory }: HarnessOptions) {
 
   return (
     <DanceMachine
-      machine={MACHINE}
+      machineId={MACHINE_ID}
+      gameId={ENTRY.id}
+      title={ENTRY.title}
+      exitLabel="Back to the arcade"
+      exitAriaLabel="Back to the arcade room"
       lifecycle={lifecycle}
       dispatch={dispatch}
-      onClose={() => {
+      onExit={() => {
         dispatch({ type: 'close' });
         setClosed(true);
       }}
@@ -145,7 +164,7 @@ afterEach(() => {
 describe('preview', () => {
   it('opens on the real preview, with a Start button', () => {
     renderMachine();
-    expect(screen.getByRole('dialog', { name: 'Dance Dance Blobbi' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Blobbi Dance' })).toBeInTheDocument();
     expect(document.querySelector('[data-dance-preview]')).not.toBeNull();
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-arcade-status', 'preview');
@@ -183,9 +202,9 @@ describe('an invalid chart', () => {
     expect(screen.queryByRole('button', { name: /^start$/i })).toBeNull();
   });
 
-  it('leaves Close available, so the player is never trapped', () => {
+  it('leaves a way back to the game list, so the player is never trapped', () => {
     renderMachine({ chart: broken });
-    expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to the arcade room/i })).toBeInTheDocument();
   });
 });
 
@@ -199,7 +218,7 @@ describe('a browser with no Web Audio', () => {
     expect(shell()).toHaveAttribute('data-arcade-status', 'preview');
     expect(screen.getByRole('alert').textContent).toMatch(/no Web Audio support/i);
     expect(screen.queryByRole('button', { name: /^start$/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to the arcade room/i })).toBeInTheDocument();
   });
 });
 

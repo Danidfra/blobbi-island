@@ -1,5 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
+import { StageOverlayContext } from "@/contexts/StageOverlayContext";
 import { STAGE_ASPECT } from "./BlobbiStage";
 
 interface BlobbiFrameProps {
@@ -40,6 +41,10 @@ export function BlobbiFrame({
   className,
 }: BlobbiFrameProps) {
   const immersive = variant === "immersive";
+
+  // The in-world overlay host. State rather than a ref, because consumers portal
+  // into this element and must re-render once it exists.
+  const [overlayHost, setOverlayHost] = useState<HTMLDivElement | null>(null);
 
   // ⚠️ ONE TREE, TWO PRESENTATIONS — never two trees.
   //
@@ -111,7 +116,11 @@ export function BlobbiFrame({
             )}
           >
             {/* World stage */}
-            <div className="absolute inset-0">{children}</div>
+            <div className="absolute inset-0">
+              <StageOverlayContext.Provider value={overlayHost}>
+                {children}
+              </StageOverlayContext.Provider>
+            </div>
 
             {/* HUD/dock wrappers are pointer-events-none so empty space around
                 the visible controls lets world click-to-move through. The
@@ -119,6 +128,32 @@ export function BlobbiFrame({
             {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
 
             {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
+
+            {/*
+              In-world overlay host — where the arcade's surfaces are portaled.
+
+              Position matters three ways:
+                • INSIDE the cream bezel, so on desktop the overlay covers the
+                  game window and nothing else: the wood frame, the shell header
+                  and footer, and the page behind them all stay visible. In
+                  immersive and fullscreen this same box IS the screen, so one
+                  rule covers all three presentations.
+                • ABOVE the HUD and dock (z-30), because a machine's screen
+                  should not leave the action dock pokable behind it.
+                • OUTSIDE the world's own subtree, so a portaled surface never
+                  inherits the world's scale transform — the mistake that made
+                  `GameModal` shrink its own text on a narrow viewport, and the
+                  reason the arcade shell moved to a Radix portal in Phase 2.
+
+              `pointer-events-none` with children re-enabling is load-bearing:
+              this element always covers the whole stage, so without it an EMPTY
+              host would swallow every click-to-move in the world.
+            */}
+            <div
+              ref={setOverlayHost}
+              data-stage-overlay-host
+              className="pointer-events-none absolute inset-0 z-40 [&>*]:pointer-events-auto"
+            />
           </div>
         </div>
       </div>

@@ -182,6 +182,53 @@ describe('controls', () => {
     expect(screen.getByRole('button', { name: 'Pause Dance Dance Blobbi' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Leave Dance Dance Blobbi' })).toBeInTheDocument();
   });
+
+  it('lets the caller label the dismiss control for where it actually goes', () => {
+    // Phase 4: this dialog hosts a catalogue, a game and a notice panel, and
+    // "Leave" is only right for one of them. The label and its accessible name
+    // are the caller's to set, because the caller is what knows the destination.
+    renderShell({
+      closeLabel: 'Back to games',
+      closeAriaLabel: 'Back to the game list',
+    });
+    const back = screen.getByRole('button', { name: 'Back to the game list' });
+    expect(back).toHaveTextContent('Back to games');
+    expect(screen.queryByRole('button', { name: /^leave/i })).toBeNull();
+  });
+
+  it('offers exactly one dismiss control, whatever it is called', () => {
+    renderShell({ closeLabel: 'Close' });
+    expect(document.querySelectorAll('[data-arcade-close]')).toHaveLength(1);
+  });
+
+  it('declares a 44 px touch target on every header control', () => {
+    renderShell({ status: 'playing', onPause: vi.fn() });
+    for (const name of [/^pause/i, /^leave/i]) {
+      expect(screen.getByRole('button', { name }).className).toContain('min-h-[44px]');
+    }
+  });
+});
+
+describe('surfaces without a run', () => {
+  it('shows no pause control and reports no status when none is given', () => {
+    // A catalogue is a screen, not a run. Borrowing an `ArcadeStatus` for it
+    // would put a UI concept inside the lifecycle, which is the thing
+    // `arcade-navigation.ts` exists to avoid.
+    renderShell({ status: undefined, surface: 'catalogue', onPause: vi.fn() });
+
+    expect(shell()!.getAttribute('data-arcade-status')).toBeNull();
+    expect(shell()).toHaveAttribute('data-arcade-surface', 'catalogue');
+    expect(screen.queryByRole('button', { name: /^pause/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^resume/i })).toBeNull();
+  });
+
+  it('distinguishes the three surfaces it hosts', () => {
+    for (const surface of ['catalogue', 'game', 'notice'] as const) {
+      const view = renderShell({ surface });
+      expect(shell()).toHaveAttribute('data-arcade-surface', surface);
+      view.unmount();
+    }
+  });
 });
 
 describe('accessibility', () => {
@@ -263,16 +310,28 @@ describe('accessibility', () => {
 });
 
 describe('reduced motion', () => {
+  /**
+   * The in-frame dialog base carries `motion-reduce:` variants of the same
+   * neutralising classes, so a substring match on "zoom-in-100" is always true.
+   * These assert the UNPREFIXED tokens — the ones this component adds — which is
+   * what actually differs between the two cases.
+   */
+  const unprefixed = (className: string) =>
+    className.split(/\s+/).filter((token) => !token.includes(':') || token.startsWith('data-['));
+
   it('drops the decorative zoom when the OS asks for reduced motion', () => {
     setReducedMotion(true);
     renderShell();
-    expect(shell()!.className).toContain('zoom-in-100');
-    expect(shell()!.className).toContain('duration-0');
+    const tokens = unprefixed(shell()!.className);
+    expect(tokens).toContain('data-[state=open]:zoom-in-100');
+    expect(tokens).toContain('duration-0');
   });
 
   it('keeps the entrance animation otherwise', () => {
     setReducedMotion(false);
     renderShell();
-    expect(shell()!.className).not.toContain('zoom-in-100');
+    const tokens = unprefixed(shell()!.className);
+    expect(tokens).not.toContain('data-[state=open]:zoom-in-100');
+    expect(tokens).not.toContain('duration-0');
   });
 });

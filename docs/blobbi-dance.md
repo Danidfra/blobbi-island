@@ -3,13 +3,21 @@
 Status: **implemented and playable.** The first real game in the Blobbi Island
 arcade, and the first code path in the application that grants an Arcade Ticket.
 
+Phase 3.2 added a presentation pass — the cabinet framing, the note and receptor
+treatment, the judgement feedback, the Blobbi on stage, the rebuilt start and
+results screens, a mute control, and the mobile and reduced-motion behaviour that
+goes with them. See **§14**. It changed no rule: the chart, the judgement windows,
+the scoring, the reward policy, the claim boundary and the Nostr event flow are
+exactly as Phase 3 left them. **The track is still the synthesised placeholder.**
+
 It runs on exactly one machine — `arcade-dance-machine`, game id `blobbi-dance`
 — and nothing else in the arcade became playable. The other eight machines still
 have `gameId: null`, which the lifecycle reducer treats as "cannot start a run".
 
 Phase sequence: **Phase 1** Arcade Ticket registry and currency support →
 **Phase 2** [shared arcade foundation](./arcade-foundation.md) → **Phase 3** this
-document → later, the Prize Shop and additional games.
+document → **Phase 4** the shared arcade catalogue → then the Guest Game runtime,
+and the Prize Shop after that (§16).
 
 ---
 
@@ -36,6 +44,31 @@ No game. No ticket. No publish.
 ```
 
 ### After
+
+> **Phase 4 changed how it is WIRED, not what it is.** Blobbi Dance remains what
+> it has always been: the game on the basement dance machine. Walking up to
+> `arcade-dance-machine` opens it directly — there is no menu in between, and it
+> is **not** listed in the shared cabinet catalogue, which the six generic
+> cabinets open.
+>
+> Three wiring consequences, and nothing else in this document is affected:
+>
+> - `DanceMachine` takes `machineId`, `gameId` and `title` instead of an
+>   `ArcadeMachineConfig`. `gameId` and `title` come from the game registry;
+>   `machineId` comes from the machine the player walked to, which for this game
+>   is **always** `arcade-dance-machine` — `canLaunchArcadeGame` refuses the game
+>   on every other machine and from the shared catalogue, so a result and a claim
+>   can only ever record the dance machine.
+> - Leaving the game returns to the **arcade room**, not to a catalogue. The
+>   single dismiss control says where it goes: *Leave* mid-run (which aborts,
+>   exactly as before), *Back to the arcade* everywhere else. The footer's
+>   duplicate "Close" was removed; the footer now holds one action, Start or Play
+>   again.
+> - The shell renders inside the game window rather than over the browser page.
+>
+> The chart, the clock, the judgement, the scoring, the reward policy, the claim
+> ledger and the publish/verify semantics are untouched. See
+> `docs/arcade-catalogue.md`.
 
 ```
 src/arcade/dance/                 pure: no React, no DOM, no Nostr, no inventory
@@ -90,10 +123,16 @@ combo and costs its points; it costs nothing else, and there is no fail state.
 
 | Lane | Desktop | Also | Touch |
 | --- | --- | --- | --- |
-| Left | `←` | `A` | far-left button |
-| Down | `↓` | `S` | centre-left button |
-| Up | `↑` | `W` | centre-right button |
-| Right | `→` | `D` | far-right button |
+| Left | `←` | `A` | far-left button, under the far-left lane |
+| Down | `↓` | `S` | centre-left button, under the centre-left lane |
+| Up | `↑` | `W` | centre-right button, under the centre-right lane |
+| Right | `→` | `D` | far-right button, under the far-right lane |
+
+Each touch button sits **directly under the lane it fires** and shows that lane's
+arrow with its key cap (`A` / `S` / `W` / `D`) beneath it, so the mapping is
+readable without a legend and without relying on colour. The buttons are 56 px
+tall and the full width of their column — comfortably over the 44 px minimum in
+`ARCADE_TOUCH_ZONE_MIN_PX`.
 
 All input goes through the shared `useArcadeInput` layer from Phase 2 — there is
 no ad-hoc global listener inside the game. Key auto-repeat is dropped, modified
@@ -754,13 +793,44 @@ that genuinely cannot be resumed.
 - **No rapid full-screen flashes.** The judgement readout is a small centred word;
   the countdown is a static number over a dim overlay.
 
+Added in Phase 3.2:
+
+- **A second non-colour cue per lane.** Each touch control shows its arrow *and*
+  its key cap (`A` / `S` / `W` / `D`). At 320 px two arrows a centimetre apart
+  start to look alike, and colour is decoration in this game — the arrow and the
+  letter are the information.
+- **The Blobbi on stage is inert.** It is `aria-hidden`, `pointer-events-none`,
+  contains nothing focusable, and is rendered outside the note field, so it can
+  neither swallow a lane press nor cover a note.
+- **The reward panel carries a status chip** as well as its message, and the chip
+  vocabulary is deliberately non-committal: an unresolved claim reads "Not
+  confirmed", never anything that could be mistaken for "saved".
+- **Both reward actions declare `min-h-[44px]`**, so a long translation cannot
+  squeeze a claim button below a comfortable touch target.
+- **A mute control**, with `aria-pressed` carrying the state as well as the icon.
+  It is a volume decision only: the `AudioContext` keeps running and the clock
+  every judgement is made against is untouched.
+
 ### Reduced motion
 
-`prefers-reduced-motion: reduce` removes the receptor colour transitions, the
-touch-button press scale and the shell's entrance zoom. It does **not** remove
-note movement, which is the gameplay, nor change any timing — a note is due when
-the audio clock says it is, and the accessibility setting has no vote. The stage
-exposes `data-reduced-motion` so the state is inspectable.
+`prefers-reduced-motion: reduce` removes every decoration added in Phase 3.2 —
+the marquee bulbs, the judgement pop, the receptor pulse and its sparks, the lane
+flash, the countdown tick, the combo bump and the mascot's bob and reactions —
+along with the receptor colour transitions, the touch-button press scale and the
+shell's entrance zoom.
+
+It does **not** remove anything that carries information: the notes still move
+(that is the gameplay, not a flourish), the judgement word still appears in the
+same place, the receptors still light up while a lane is held, the combo still
+grows, and the mascot's `data-mood` still changes. And it changes **no timing at
+all** — a note is due when the audio clock says it is, and the accessibility
+setting has no vote. `DanceUI.test.tsx` asserts exactly that: the same input
+produces the same judgement and the same blip with every animation suppressed.
+
+Suppression is belt and braces: the components omit the animation classes when
+`useReducedMotion()` is true, *and* a `@media (prefers-reduced-motion: reduce)`
+block in `src/index.css` disables the same animations by name. The stage exposes
+`data-reduced-motion` so the state is inspectable.
 
 ---
 
@@ -791,6 +861,71 @@ about a dozen at a time, never the whole 110-note chart.
 bottleneck, and a canvas would cost the focus outlines, the text scaling and the
 screen-reader story that come free with elements.
 
+### What the Phase 3.2 decorations cost
+
+Every effect added in the polish pass obeys the same split, and none of them
+queues a React render:
+
+| Effect | Mechanism | Frequency |
+| --- | --- | --- |
+| judgement pop | one `className` write on a node React does not own | per judgement (≤ ~8/s) |
+| receptor pulse + sparks | one class toggle on a static child | per hit |
+| lane flash | one class toggle on a static overlay | per hit or miss |
+| combo tier + bump | one `className` write, **only when the tier changes** | a few times a run |
+| field emphasis ring | `classList` add/remove, same guard | a few times a run |
+| mascot mood | one `setAttribute('data-mood', …)`; CSS does the rest | per judgement |
+| mascot bob, marquee bulbs | pure CSS, duration from `--dance-beat` | never touched by JS |
+
+Only `transform`, `opacity` and `box-shadow` are animated, so the compositor owns
+every tween. Nothing is appended to the DOM on a hit: the sparks are five static
+spans rendered once per receptor and replayed by a class, which is the difference
+between a bounded decoration and a particle system that can eat a frame budget.
+
+Two deliberate costs, both bounded:
+
+1. **One forced reflow per judgement.** Restarting a CSS animation that is already
+   running requires removing the class, reading layout, and re-adding it. That is
+   a handful of reads a second, never one per frame — and it is skipped entirely
+   under reduced motion.
+2. **A layout measurement on resize and on phase change**, never inside the frame
+   loop, to work out how far a note travels.
+
+### Paint order inside the field
+
+The field is one stacking context, so DOM order is the z-order. It is, deliberately:
+
+```
+lane rails → judgement readout → notes → receptors → countdown
+```
+
+The readout sits **below the notes**. A judgement is 420 ms of feedback; a note
+is the thing the player is aiming at, and a note hidden behind a word is a note
+that gets missed. The cost is that a note crossing the readout covers part of the
+word — acceptable, because the word keeps its colour, its size and its position,
+and the player's eye is at the judgement line rather than at mid-field when it
+appears.
+
+### One drawing bug fixed
+
+Notes were positioned by `progress × fieldHeight` with the note's **top** edge on
+that point, while the receptors sat in a padded row above the field's bottom
+edge. At the moment a note was due, its token was therefore a full receptor-height
+*below* the ring it was supposed to land in — the picture disagreed with the
+clock by about 34 px at desktop size, measured in the browser.
+
+The fix is presentation-only and is worth stating precisely, because it is the
+one change in this pass that touched anything near the engine:
+
+- `noteProgress()` and `isNoteVisible()` in `dance-visuals.ts` are **unchanged**;
+- no note time, judgement window, audio origin or result value moved;
+- the component now measures the receptor row's **centre** (`travelRef`) and
+  draws each note as a zero-size point with the visible token centred on it, so
+  `progress === 1` puts the token's centre exactly on the receptor's centre.
+
+The judgement line moved inside the receptor row for the same reason: it was
+offset from the field's bottom edge and drifted above the targets at small sizes.
+It is now centred on the row, which is correct at every size by construction.
+
 ---
 
 ## 13. The DEV harness
@@ -806,10 +941,32 @@ Phase 3 additions, under **Blobbi Dance** and **Fake reward writer**:
 | `open dance machine` | mounts the REAL `DanceMachine` — real chart, real judgement, real lifecycle, real claim boundary |
 | `chart: valid / invalid` | swaps in a deliberately broken chart to see the error state |
 | `reduced motion: on / off` | forces `prefers-reduced-motion` for this tab and remounts |
-| `narrow shell` | constrains the shell box to 386 × 840 |
-| `confirm / reject / timeout / verify-mismatch / verify-unreadable` | picks the fake writer's behaviour |
+| `confirm / reject / timeout / verify-mismatch / verify-unreadable / lagging-relay` | picks the fake writer's behaviour |
 | `clear claim ledger` | wipes the `localStorage` claim record |
 | writer log | the last few `publishTicketGrant` / `readTicketQuantity` calls |
+
+Phase 3.2 additions, all of them there because the states they show are otherwise
+either 68 seconds away or 420 milliseconds long:
+
+| Control | What it does |
+| --- | --- |
+| `hide ▾ / show ▴` | collapses the panel, which is 45 vh tall and was covering the bottom half of the very screen it drives |
+| `flawless / decent / scrappy / dud (0 tickets)` | dispatches a REAL `finish` with a hand-built result, so the results screen renders from the production reward policy without playing the song. `dud` is the zero-ticket case — `completedNaturally: 0`, refused by the policy's own rule |
+| `already-claimed` | seeds the durable claim ledger before the machine hydrates it, the only way to reach that phase without publishing. Needs a signed-in browser (the ledger is keyed by owner) and says so when there isn't one |
+| `320×568 / 375×667 / 390×844 / 768×1024` | shell-box presets for the viewport audit |
+| `presentation gallery` | every judgement readout, every combo tier, the note / receptor / touch treatments and all four mascot moods, side by side and standing still |
+
+The gallery renders from the **same helpers the live renderer calls** —
+`judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS` — so what a reviewer
+compares there is what a player sees mid-song. It has a `replay pop` button
+because the live readout's animation ends at `opacity: 0`: it is meant to vanish,
+which makes the animated form useless for side-by-side comparison.
+
+**Neither the panel nor the gallery can leak into production.** The whole module
+is behind `import.meta.env.DEV`, nothing in `src/components/blobbi/arcade/`
+imports it, and `src/dev-routes.test.ts` proves the chunk is absent from a build.
+`showDebugDetails` — which is what puts `Policy blobbi-dance-tickets v1` on the
+results screen — is passed only by this harness and defaults to `false`.
 
 **It publishes nothing.** The fake `ArcadeRewardWriter` replaces the only
 component that could, so every claim outcome — including the two that must never
@@ -822,13 +979,119 @@ The harness still **never fakes a playable game for a machine whose `gameId` is
 `null`** — the lifecycle fixtures leave a coming-soon cabinet in `preview` and
 say why, because the reducer genuinely refuses to start a run without a game id.
 
-`narrow shell` constrains the BOX only; CSS media queries still evaluate at the
-real viewport width, so genuine narrow-viewport checks need device emulation.
-The harness says so, rather than proving less than it appears to.
+The viewport presets constrain the **box** only; CSS media queries still evaluate
+at the real window width, so a `sm:` rule does not switch off just because the box
+is 320 px wide. That makes them a *conservative* check — the shell is drawn with
+the roomier desktop paddings and type sizes inside the smaller box, so anything
+that fits under a preset also fits on the real device. Genuine breakpoint checks
+still need device emulation, and the harness says so rather than proving less
+than it appears to.
 
 ---
 
-## 14. Known limitations
+## 14. Presentation and visual design (Phase 3.2)
+
+Phase 3 shipped a game that worked and looked like the developer prototype it
+was: a grey bordered box of coloured squares on the shell's cream background,
+with the tuning table printed on the start screen. Phase 3.2 is a presentation
+pass over the same game. **No rule changed** — not the chart, not a judgement
+window, not the scoring, not the reward policy, not the claim boundary, and not
+one Nostr event.
+
+### The direction
+
+A **cozy neon cabinet**. The island's cream-and-wood palette forms the machine —
+a marquee with blinking bulbs, a wood-toned bezel, soft depth from flat drop
+shadows — and the playfield inside it is a deep violet screen with neon lane
+accents. Rounded forms, chunky arcade tokens, expressive but restrained feedback,
+and nothing that reads as a slot machine.
+
+It is deliberately **not a picture of a cabinet**: no side art, no coin slot, no
+image asset of any kind. The whole frame is four borders, a gradient and a row of
+CSS dots, because on a 320 px phone every pixel spent drawing a machine is a pixel
+taken from the lanes. The frame's job is to focus attention on the playfield.
+
+### Screen by screen
+
+| Screen | Before | After |
+| --- | --- | --- |
+| **Start** | a badge, a title, a two-column control table, and three paragraphs — judgement windows in milliseconds, the full ticket formula (participation, every accuracy tier, the full-combo bonus, the per-run cap), and the audio notice | a marquee with the Blobbi and the song title, one plain-language objective sentence, the duration, a control diagram showing each lane's coloured button with its name and keys, one line naming *both* input methods, and two short honest notes: tickets are earned by finishing and by playing well, and the audio is a placeholder |
+| **Playfield** | a grey rounded box, thin lane dividers, 36 px coloured squares, a dashed line, a bare score/combo row | a cabinet with a bulb-lit marquee (song, mascot, mute, progress), a violet highway with four tinted rails, layered arcade tokens with a lift shadow, a bright judgement line running through the receptors, and a HUD of exactly two live numbers |
+| **Feedback** | a coloured word that appeared and disappeared | the word pops and drifts, the hit receptor pulses a ring and throws five sparks, the lane flashes, the Blobbi reacts, and a long combo scales up and rings the field |
+| **Countdown** | a bare number over a dim overlay | "Get ready" over `• · 3 · 2 · 1 · Go!`, each tick popping in on its own beat |
+| **Results** | a grade box, a percentage, and a six-row two-column table of labels | a celebration card — grade, a sentence that says what the grade *means*, the score, a full-combo star — then two metric tiles, four colour-coded judgement counts, and a ticket panel with the earned quantity as the headline and a status chip |
+
+### Combo, without moving the playfield
+
+The combo lives in a **fixed 96 × 32 box** and grows by scaling its contents
+through five tiers (`none → start → hot → blazing → unreal`, thresholds 0 / 2 /
+10 / 20 / 40). The top two tiers add a soft ring around the field. Nothing
+reflows: a counter that resized the HUD would move the lanes under the player's
+hands at the exact moment they were doing well.
+
+### The Blobbi on stage
+
+`MascotBlobbi` — the existing standalone SVG mascot, no hooks, no Nostr, no
+position system — rendered small in the marquee. It bobs on the beat (the CSS
+duration is `--dance-beat`, set once per run from the track's tempo) and reacts
+to Perfect / Good / Miss through a `data-mood` attribute the frame loop writes.
+
+The player's own Blobbi was considered and rejected: `MovableBlobbi` is wired to
+the world's position system, the gaze tracker, the accessory overlay, the
+multiplayer layer and a live Nostr query, and dragging all of that into a rhythm
+game's frame budget to make a character wave is not a trade worth making. A small
+decorative mascot is what the brief asks for and what ships.
+
+### Sound
+
+A **mute toggle**, in the marquee during play and on the start screen before it.
+The storage (`blobbi:arcade:audio-muted`) and the engine hook
+(`DanceAudioEngine.setMuted`) both shipped in earlier phases and had simply never
+been given a control. **This adds the control, not the capability.** There is no
+volume slider: that would need a new persisted setting, a new engine parameter
+and a migration, none of which exist.
+
+**The track is still the synthesised placeholder** — `readiness: 'development'`,
+generated in the browser from code in this repository, no asset and no licence to
+clear. Nothing in this pass changed the audio, the schedule, or the timing model.
+
+### What moved out of the player's way
+
+- The **reward formula** is no longer on the start screen. The two facts a player
+  needs are there in words ("finish to earn some, dance accurately to earn more",
+  "leaving early earns nothing"); the arithmetic appears at the results, where it
+  describes something that actually happened.
+- The **judgement windows in milliseconds** are gone from the player's view
+  entirely. They remain in `DANCE_JUDGMENT_WINDOWS` and in this document.
+- **Policy identity** (`blobbi-dance-tickets v1`) stays behind `showDebugDetails`,
+  which only the DEV harness passes.
+
+### Responsive behaviour
+
+The shell is already full-viewport on phones (`w-screen h-[100dvh]`, `dvh` so
+browser chrome cannot crop the controls) and a panel from `sm:` up. On top of
+that:
+
+- a live run gets `overflow-hidden` on the shell's content area, so a stray drag
+  cannot scroll the lanes off screen mid-song. Every other state keeps normal
+  scrolling, because a results panel at 320 × 568 genuinely needs it;
+- the lane controls carry `touch-action: none`, `user-select: none` and
+  `-webkit-tap-highlight-color: transparent`, scoped to the buttons — the rest of
+  the document scrolls normally;
+- the shell footer and the lane strip respect `env(safe-area-inset-bottom)`;
+- the field re-measures its note travel on `resize`, which covers orientation
+  changes and a mobile browser collapsing its URL bar.
+
+Measured in Chrome with the shell box constrained to 320 × 568 (see §13 for what
+that does and does not prove): no horizontal overflow anywhere in the document or
+the content area, a 264 × 221 CSS px playfield, 60 × 56 px lane buttons, and the
+touch strip fully inside the shell. Landscape phone is usable but cramped — the
+marquee and the lane strip leave little height for the highway — and portrait is
+the supported orientation.
+
+---
+
+## 15. Known limitations
 
 1. **The track is a placeholder.** `readiness: 'development'`. Replacing it is a
    new `DanceTrack` record and no chart change.
@@ -868,25 +1131,110 @@ The harness says so, rather than proving less than it appears to.
     the automated browser (which starves rAF unconditionally) and an unverified
     watchdog that fires spuriously would be worse than the problem.
 
+### Visual limitations remaining after Phase 3.2
+
+13. **The mascot is a mascot, not the player's Blobbi.** It is the standalone
+    purple `MascotBlobbi`, identical for everyone. Showing the player's own
+    Blobbi would mean either mounting `MovableBlobbi` (and its position system,
+    gaze tracker, accessory overlay and live query) inside a rhythm game, or
+    building a second, lighter renderer for the same artwork. Neither belongs in
+    a polish pass.
+14. **The mascot's expression is a bubble, not a face.** Perfect / Good / Miss
+    change a small emoji and a hop; the artwork itself does not change pose.
+    Frame-by-frame or skeletal character animation was explicitly out of scope.
+15. **Landscape phone is cramped.** Portrait is the supported orientation; in
+    landscape the marquee and the lane strip leave little height for the highway.
+    A landscape layout that moved the lane controls to the sides would be a real
+    improvement and is deferred.
+16. **The countdown reads `• 3 2 1 Go!`, not `3 2 1 Go!`.** The track's lead-in is
+    four beats, so there is one tick before the three-count; it shows a dot rather
+    than a "4". Making it a true three-count would mean changing `leadInMs`, which
+    is a track property every note time is written against — a timing change for a
+    cosmetic gain, which the brief rules out.
+17. **Narrow-viewport checks were made with the shell box constrained, not with a
+    320 px viewport.** Chrome on macOS will not open a window that narrow, so
+    `sm:` rules were still active during the audit (§13 explains why this is
+    conservative rather than optimistic). A real 320 px device has not been
+    tested by hand.
+18. **The reward breakdown is still a single "Clear +8" line.** The dance policy's
+    `base` is one number, so the shared calculator has one line to show. Splitting
+    it into participation / accuracy / full-combo lines would be a reward-policy
+    change, which this pass may not make.
+19. **No hit-error meter, no per-note timing feedback beyond the judgement word,
+    and no lane-specific accuracy.** All deferred.
+20. **A note crossing the judgement readout covers part of the word.** Notes paint
+    above it on purpose (see §12); the alternative — feedback covering a target —
+    is worse. Any in-field position for the readout is crossed by notes, so the
+    only real fix is moving it out of the field, which costs it the player's
+    eyeline.
+21. **The mount-time note measurement is taken while the shell is still zooming
+    in**, so it is a few per cent short for the length of the countdown. Nothing
+    is due then (the first note is at the end of the lead-in) and the phase
+    change into `playing` re-measures, so it is not visible in play — but it does
+    mean the geometry is briefly wrong rather than briefly absent.
+22. **A viewport change that fires neither `resize` nor `orientationchange` is
+    not caught.** In practice both fire for window resizes, orientation changes
+    and mobile URL-bar collapse; a `visualViewport`-only change (some in-app
+    browsers) would leave the note travel stale until the next phase change.
+
+### Deliberately deferred
+
+Latency calibration UI, a second track or chart, multiple difficulties, a hit
+score display during play, high scores, a landscape layout, real music, character
+pose animation, and any decoration that would need an image asset.
+
 ---
 
-## 15. What the next phase should implement
+## 16. What the next phase should implement
 
-**Phase 4 — the Prize Shop.** It is the only thing that makes a ticket worth
-having: today a player can earn up to 8 per run and do nothing at all with them.
-The pieces it needs already exist — the canonical ticket address, the balance
-read, and a `PRIZES` counter with an honest coming-soon state that is already
-wired to the shell.
+> **Phase 4 shipped, with one scope correction.** The catalogue described below
+> exists — `docs/arcade-catalogue.md` — but it belongs to the **six generic
+> cabinets only**. Blobbi Dance, Pool and Air Hockey are dedicated machines and
+> are not in it; the dance machine opens this game directly. What remains from
+> this section is the **Guest Game Runtime**, deliberately split out and now
+> Phase 5.
 
-Specifically:
+**Phase 4 — the Shared Arcade Catalogue.** *(delivered, for generic cabinets)*
 
-1. A prize catalogue with ticket prices, validated against the official item
-   registry the way `shop-catalog.ts` validates coin prices (which already
-   *rejects* a currency price, so the ticket needs its own price domain).
-2. A spend path: the mirror of this phase's grant — fresh read, strict publish,
-   verify-after-write, and idempotency on a purchase id rather than a run id.
-3. Insufficient-balance and already-owned states that are honest about a balance
-   the client cannot fully trust.
+Today every cabinet is either Blobbi Dance or an honest "coming soon" panel, and
+the only way to reach a game is to know which cabinet it lives on. The next phase
+makes **every GENERIC arcade cabinet open the same catalogue**, so an
+interchangeable cabinet becomes a door into the arcade's content rather than a
+dead screen. Machines that ARE a specific physical game — the dance pad, the pool
+table, the air hockey table — keep their own experience.
 
-Deliberately after that, not before: latency calibration, a second chart, a
-second machine, and any leaderboard.
+The catalogue separates two kinds of content, and the separation is the point:
+
+1. **Island Games**
+   - integrated with the Island;
+   - may produce validated results;
+   - may grant Arcade Tickets;
+   - **Blobbi Dance is the first one**, and everything this document describes —
+     the lifecycle reducer, the result contract, the reward policy and the claim
+     boundary — is what an Island Game is *made of*.
+
+2. **Guest Games**
+   - curated external HTML5 / WebXDC packages;
+   - initially only from the official Blobbi issuer;
+   - **no signer, no inventory, no coins and no Arcade Tickets**;
+   - executed later, through a Blobbi-owned restricted runtime.
+
+The catalogue phase must define discovery, presentation, categories,
+availability, controls, ticket labels and the launch lifecycle. **It must not yet
+execute untrusted packages** — a Guest Game entry in the catalogue is a listing,
+not a running program, until the runtime exists.
+
+The secure **Guest Game Runtime** follows in a separate phase. Splitting it out
+is deliberate: the catalogue is a presentation and data problem, the runtime is a
+sandboxing and capability problem, and shipping them together would mean
+reviewing both under whichever deadline the first one sets.
+
+**The Prize Shop remains deferred** until the arcade has more content and more
+earning sources. It is still the thing that makes a ticket worth having, and the
+pieces it will need already exist — the canonical ticket address, the balance
+read, and a `PRIZES` counter with an honest coming-soon state already wired to
+the shell — but a shop stocked from a single 8-tickets-per-run source is a
+smaller product than a shop stocked from an arcade.
+
+Deliberately after all of that, not before: latency calibration, a second chart,
+a second machine, and any leaderboard.
