@@ -29,7 +29,8 @@
  *     returned for the whole cart (favor-the-user; no relay rollback).
  *
  * Never writes kind:11125.storage (coins go through `useCoinsMutation`, which
- * routes via `mergeOwnerProfileTags` and drops legacy consumable storage).
+ * routes via `mergeOwnerProfileTags`; that writer never emits `storage`, and
+ * passes any pre-existing legacy `storage` tag through opaquely).
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';

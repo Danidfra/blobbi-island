@@ -22,8 +22,8 @@
  * favor-the-user leak) rather than "item consumed but no effect" (item lost for
  * nothing). We surface partial-failure state to the caller.
  *
- * Never writes kind:11125.storage. Never depends on the legacy InventoryItem
- * model.
+ * Never writes kind:11125.storage. Never depends on the legacy consumable
+ * model, which no longer exists in this client.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';

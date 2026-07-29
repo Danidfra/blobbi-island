@@ -6,7 +6,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import type {
   OwnerProfile,
   PetState,
-  InventoryItem,
   PetStage,
   BooleanString,
   CareStatus,
@@ -63,23 +62,18 @@ export function parseTimestampTag(value: string | undefined): Date | undefined {
   return new Date(timestamp * 1000); // Convert from Unix timestamp
 }
 
-/** Parse inventory items from storage tags */
-export function parseInventoryItems(storageTags: string[]): InventoryItem[] {
-  return storageTags
-    .map(tag => {
-      const [itemId, quantityStr] = tag.split(':');
-      const quantity = parseInt(quantityStr, 10);
-      if (!itemId || isNaN(quantity)) return null;
-      return { itemId, quantity };
-    })
-    .filter((item): item is InventoryItem => item !== null);
-}
-
 // ============================================================================
 // Owner Profile Parser (Kind 11125, with legacy 31125 support)
 // ============================================================================
 
-/** Parse a kind 11125 (or legacy 31125) event into an OwnerProfile */
+/**
+ * Parse a kind 11125 (or legacy 31125) event into an OwnerProfile.
+ *
+ * Legacy `storage` tags are NOT parsed and NOT exposed. Consumable inventory
+ * lives exclusively in kind:31632/31633 (`@nostr-games/inventory`). Any
+ * pre-existing `storage` tag stays reachable only via `rawTags`, from which
+ * `mergeOwnerProfileTags` passes it through opaquely on republish.
+ */
 export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
   if (event.kind !== KIND_BLOBBONAUT_PROFILE && event.kind !== KIND_BLOBBONAUT_PROFILE_LEGACY) return null;
 
@@ -90,9 +84,6 @@ export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
     // Missing required tags
     return null;
   }
-
-  const storageTags = getTags(event, 'storage');
-  const inventory = parseInventoryItems(storageTags);
 
   return {
     id,
@@ -108,7 +99,6 @@ export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
     title: getTag(event, 'title'),
     ownedPets: getTags(event, 'has'),
     achievements: getTags(event, 'achievements'),
-    inventory,
     client: getTag(event, 'client'),
     rawTags: event.tags,
     rawContent: event.content,
@@ -327,14 +317,21 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
  * `b` is managed: we author the canonical `blobbi:ecosystem:v1` namespace on
  * write (preferring any existing value), so it must be excluded from the
  * unknown-tag passthrough to avoid duplication.
+ *
+ * `storage` is deliberately NOT managed. Legacy kind:11125 consumable inventory
+ * is not ours to read, write, normalize or delete — it is an opaque host
+ * extension tag, exactly as `@blobbi-kit/core` 0.3.0 treats it. Leaving it out
+ * of this set routes it through the unknown-tag passthrough below, so existing
+ * `storage` tags survive a republish verbatim (original order, arity and
+ * values), while nothing in this client can ever create or modify one.
  */
 const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
   'd', 'b', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
   'favoriteBlobbi', 'starterBlobbi', 'current_companion',
   'style', 'background', 'title',
   // Multi-value tags
-  'has', 'achievements', 'storage',
-  // Inventory (accessory) tags
+  'has', 'achievements',
+  // Accessory/cosmetic tags — caller-managed via updateInvTags, never rewritten here.
   'inv',
 ]);
 
@@ -372,17 +369,16 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Add multi-value tags
   profile.ownedPets.forEach(petId => tags.push(['has', petId]));
   profile.achievements.forEach(achievement => tags.push(['achievements', achievement]));
-  // NOTE: Consumable inventory is NO LONGER written to kind:11125. It lives in
-  // kind:31633 (`@nostr-games/inventory`). We intentionally do NOT emit the
-  // legacy `storage` tag here, so a profile republish (e.g. a coin update) never
-  // reconstructs or re-writes legacy consumable inventory. `storage` remains in
-  // MANAGED_OWNER_PROFILE_TAG_NAMES so any pre-existing legacy `storage` tags are
-  // dropped rather than passed through. `OwnerProfile.inventory` is still parsed
-  // (a dead legacy read) but never serialized.
+  // NOTE: Consumable inventory is never written to kind:11125. It lives in
+  // kind:31632/31633 (`@nostr-games/inventory`). No `storage` tag is emitted
+  // from profile state here, so a republish (e.g. a coin update) can never
+  // create, replace or resurrect legacy consumable inventory. Pre-existing
+  // `storage` tags ride through the unknown-tag passthrough below untouched.
 
-  // Preserve unknown tags from the original event (tags we don't manage)
-  // This keeps Ditto's tags like `b`, `blobbi_onboarding_done`, `xp`, `level`, `room`,
-  // and `client` (which may have 3+ elements) exactly as they were.
+  // Preserve unknown tags from the original event (tags we don't manage).
+  // This keeps Ditto's tags like `blobbi_onboarding_done`, `xp`, `level`, `room`,
+  // `client` (which may have 3+ elements), and legacy `storage`, exactly as they
+  // were — same order, same arity, same values.
   const unknownTags = profile.rawTags.filter(tag => !MANAGED_OWNER_PROFILE_TAG_NAMES.has(tag[0]));
   tags.push(...unknownTags);
 

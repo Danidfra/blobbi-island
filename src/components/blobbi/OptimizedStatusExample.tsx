@@ -154,19 +154,6 @@ export function OptimizedStatusExample() {
                 </div>
               )}
 
-              {owner.inventory.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Inventory</p>
-                  <div className="space-y-1">
-                    {owner.inventory.map((item, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>{item.itemId}</span>
-                        <span className="text-muted-foreground">×{item.quantity}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <p className="text-muted-foreground">No owner profile found</p>

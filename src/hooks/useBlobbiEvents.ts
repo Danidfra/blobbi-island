@@ -12,8 +12,7 @@ import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
 import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import type {
   OwnerProfile,
-  PetState,
-  InventoryItem
+  PetState
 } from '@/lib/blobbi-types';
 import { KIND_BLOBBONAUT_PROFILE, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergeOwnerProfileTags, mergePetStateTags } from '@/lib/blobbi-parsers';
@@ -51,8 +50,6 @@ export interface CreateOwnerProfileInput {
   ownedPets?: string[];
   /** List of earned achievement IDs */
   achievements?: string[];
-  /** Inventory items */
-  inventory?: InventoryItem[];
   /** Content for the event */
   content?: string;
 }
@@ -84,8 +81,9 @@ function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   if (input.achievements) {
     input.achievements.forEach(achievement => tags.push(['achievements', achievement]));
   }
-  // Consumable inventory is NOT written to kind:11125 — it lives in kind:31633.
-  // The legacy `storage` emission has been intentionally removed.
+  // Consumable inventory is NOT written to kind:11125 — it lives in
+  // kind:31632/31633. A freshly created profile therefore never carries a
+  // `storage` tag, and there is no input field that could add one.
 
   return tags;
 }
@@ -155,7 +153,6 @@ export function useUpdateOwnerProfile() {
         title: updates.title !== undefined ? updates.title : existingProfile?.title,
         ownedPets: updates.ownedPets !== undefined ? updates.ownedPets : (existingProfile?.ownedPets ?? []),
         achievements: updates.achievements !== undefined ? updates.achievements : (existingProfile?.achievements ?? []),
-        inventory: updates.inventory !== undefined ? updates.inventory : (existingProfile?.inventory ?? []),
         client: existingProfile?.client,
         rawTags: existingProfile?.rawTags ?? [],
         rawContent: existingProfile?.rawContent ?? '',
