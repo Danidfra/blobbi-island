@@ -1,5 +1,13 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  inFrameDialogPanelClass,
+} from '@/components/ui/dialog';
+import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface NoPassModalProps {
@@ -8,16 +16,28 @@ interface NoPassModalProps {
 }
 
 export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
+  const stageOverlayHost = useStageOverlayHost();
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md blobbi-card-xl border-2 border-island-danger/40 rounded-2xl theme-transition">
+      <DialogContent
+        /* Contained in the game window, like every other arcade surface, and
+           sized against the STAGE rather than the viewport — see
+           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
+           dialog moved here must bring its own padding and side margins. */
+        container={stageOverlayHost}
+        inFrame
+        className={cn(
+          inFrameDialogPanelClass,
+          'blobbi-card-xl border-2 border-island-danger/40 rounded-2xl theme-transition',
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center text-island-danger mb-4">
             🚫 Access Denied
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 p-4">
+        <div className="space-y-6">
           <div className="text-center">
             <div className="blobbi-card rounded-xl p-6 mb-4">
               <div className="text-6xl mb-4">🛗</div>
@@ -38,7 +58,7 @@ export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
 
           <Button
             onClick={onClose}
-            className="w-full bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
+            className="min-h-[44px] w-full bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
           >
             Got it!
           </Button>

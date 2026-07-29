@@ -5,9 +5,8 @@
  * `handleElementClick('dance-machine')` — a pool table, an air hockey table and
  * six generic cabinets included. The audit's headline finding was that the
  * arcade *told players it had games it does not have*; this file is where that
- * stops being possible, because identity, floor, artwork, accessible name and
- * game assignment are now one record per machine instead of nine copies of a
- * string literal.
+ * stops being possible, because identity, floor, artwork and accessible name are
+ * now one record per machine instead of nine copies of a string literal.
  *
  * Same shape as `theater-seats-config.ts` and `town-bushes-config.ts`, for the
  * same reasons: stable ids, measured placement, and tests that check the numbers
@@ -18,9 +17,18 @@
  * - **Identity is the `id`, never the filename.** `arcade-machine-green.png` and
  *   `snooker.png` were both labelled "Arcade Machine Green"; ids make that
  *   collision impossible and survive an artwork swap.
- * - **Game identity is separate from visual identity.** `gameId` is `null` for
- *   eight of the nine machines, which is the structural reason they cannot fake
- *   gameplay: the lifecycle reducer refuses to start a run without one.
+ * - **What a machine DOES is one explicit, discriminated field.** `activation`
+ *   says whether a machine opens the shared cabinet catalogue, launches one
+ *   specific game, or shows one specific game's coming-soon screen. It replaced
+ *   a nullable `gameId` plus a loose `availability` plus a free-text `blurb`,
+ *   three fields whose combinations included several that meant nothing, and
+ *   then briefly replaced NOTHING at all — a pass that made every machine open
+ *   the shared catalogue, which turned a pool table into a menu. Behaviour is
+ *   never inferred from a filename, artwork or a display name.
+ * - **The arcade has two kinds of machine.** Six *generic cabinets* whose screens
+ *   can show anything, and three *dedicated machines* — a dance pad, a pool
+ *   table, an air hockey table — that ARE one physical game and can never be
+ *   another. Only the generic six open the shared catalogue.
  * - **Placement is numeric.** Percentages applied via inline `style`, not
  *   arbitrary-value Tailwind classes, so the arithmetic is checkable and a
  *   mistake is visible to a test rather than only to an eye.
@@ -41,6 +49,12 @@
 
 import type { Boundary } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
+import {
+  ARCADE_AIR_HOCKEY_MACHINE_ID,
+  ARCADE_POOL_MACHINE_ID,
+  BLOBBI_DANCE_GAME_ID,
+  BLOBBI_DANCE_MACHINE_ID,
+} from '@/arcade/catalogue';
 
 /** The virtual world is a fixed 1046 × 697 box, uniformly scaled to the viewport. */
 export const ARCADE_WORLD_WIDTH = 1046;
@@ -76,21 +90,28 @@ export function arcadeBoundaryForFloor(floor: ArcadeFloorId): Boundary | undefin
 }
 
 /**
- * How ready a machine is.
+ * What happens when a Blobbi arrives at a machine.
  *
- * `playable` — a real game runs on this machine. Added in Phase 3, when one
- * finally did; before that its ABSENCE was what made "no machine can pretend to
- * be playable" a type-level fact rather than a promise.
- * `preview` — a real game is designed and coming, and the shell shows what it
- * will be. Nothing carries this today.
- * `coming-soon` — no game is designed for this machine yet, and the UI says so
- * without implying otherwise.
- *
- * `availability` is presentation. The load-bearing fact is still `gameId`: the
- * lifecycle reducer refuses to start a run without one, so a machine cannot be
- * made playable by editing this field.
+ * A closed, discriminated set, because "what does this machine do?" has exactly
+ * three answers today and a fourth would be a product decision rather than a
+ * new combination of flags.
  */
-export type ArcadeMachineAvailability = 'playable' | 'preview' | 'coming-soon';
+export type ArcadeMachineActivation =
+  /**
+   * A generic cabinet. Opens the shared catalogue of games available to every
+   * cabinet. The machine's id is carried through as context.
+   */
+  | { readonly type: 'shared-catalogue' }
+  /**
+   * A dedicated machine with a playable game. Launches that game directly — no
+   * menu in between, because the physical object IS the game.
+   */
+  | { readonly type: 'dedicated-game'; readonly gameId: string }
+  /**
+   * A dedicated machine whose game is not built yet. Shows THAT game's own
+   * coming-soon screen: a pool table talks about pool.
+   */
+  | { readonly type: 'dedicated-preview'; readonly experienceId: string };
 
 export interface ArcadeMachineConfig {
   /** Stable, unique identity. Never derived from the filename. */
@@ -124,21 +145,9 @@ export interface ArcadeMachineConfig {
    * than inside its artwork.
    */
   readonly interactionAnchor: { readonly x: number; readonly y: number };
-  /**
-   * The game this machine runs, or `null` when none exists.
-   *
-   * A stable game id, never a Nostr address and never an item id: those identify
-   * protocol objects with their own lifecycles, and coupling a game's identity to
-   * one would mean republishing an item to rename a game.
-   */
-  readonly gameId: string | null;
-  readonly availability: ArcadeMachineAvailability;
-  /** One-line honest description shown in the shell. Copy lives with the data. */
-  readonly blurb: string;
+  /** What arriving at this machine does. See {@link ArcadeMachineActivation}. */
+  readonly activation: ArcadeMachineActivation;
 }
-
-/** The dance game's stable id. The only game id that exists. */
-export const BLOBBI_DANCE_GAME_ID = 'blobbi-dance';
 
 const pct = (px: number) => (px / ARCADE_WORLD_WIDTH) * 100;
 
@@ -147,14 +156,23 @@ const FRONT_OF_MACHINE = { x: 0.5, y: 0.9 } as const;
 /** Tables: stand at the near edge, where a player would actually reach. */
 const NEAR_EDGE_OF_TABLE = { x: 0.5, y: 0.95 } as const;
 
+/** Shared by the six generic cabinets. One object, so they cannot drift apart. */
+const SHARED_CATALOGUE = { type: 'shared-catalogue' } as const;
+
 export const arcadeMachines: readonly ArcadeMachineConfig[] = [
-  // ── Basement: the music venue, and the only machine with a game ──────────
+  // ── Basement: the dance machine, on the music-venue floor ────────────────
+  //
+  // A DEDICATED machine. It is the Blobbi Dance machine and nothing else, so it
+  // is named for the game it hosts: a player looking for the dance game should
+  // be able to find it by reading the room. (A corrective pass briefly renamed
+  // it "Dance Pad Cabinet" to satisfy an architectural rule that turned out to
+  // be wrong — the rule, not the name, was the mistake.)
   {
-    id: 'arcade-dance-machine',
+    id: BLOBBI_DANCE_MACHINE_ID,
     floor: 'basement',
-    displayName: 'Dance Dance Blobbi',
+    displayName: 'Blobbi Dance Machine',
     src: '/assets/locations/arcade/level-b1/dance-machine.png',
-    alt: 'Dance Dance Blobbi dance machine',
+    alt: 'Blobbi Dance machine',
     anchor: 'right',
     offsetPercent: 18,
     // The original markup gave this sprite no width class, so it rendered at its
@@ -168,12 +186,14 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     // 9), so a player standing at the pad is always drawn in front of it.
     zIndex: 5,
     interactionAnchor: { x: 0.5, y: 0.92 },
-    gameId: BLOBBI_DANCE_GAME_ID,
-    availability: 'playable',
-    blurb: 'A 68-second rhythm game. Finish a run to earn Arcade Tickets.',
+    activation: { type: 'dedicated-game', gameId: BLOBBI_DANCE_GAME_ID },
   },
 
-  // ── Floor 1: six cabinets and two tables, none of them a game yet ────────
+  // ── Floor 1: six generic cabinets, and two dedicated tables ─────────────
+  //
+  // The six cabinets are interchangeable furniture and open the shared
+  // catalogue. The pool table and the air hockey table are not: each is one
+  // physical game, and each shows its own coming-soon screen.
   {
     id: 'arcade-cabinet-pink',
     floor: 'floor-1',
@@ -187,9 +207,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 195, height: 298 },
     zIndex: 15,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
   {
     id: 'arcade-cabinet-black',
@@ -204,9 +222,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 194, height: 296 },
     zIndex: 20,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
   {
     id: 'arcade-cabinet-classic',
@@ -221,16 +237,15 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 176, height: 300 },
     zIndex: 25,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
   {
-    id: 'arcade-pool-table',
+    id: ARCADE_POOL_MACHINE_ID,
     floor: 'floor-1',
     displayName: 'Pool Table',
     // Previously labelled "Arcade Machine Green", colliding with the actual
-    // green cabinet, and it opened a dance game when clicked.
+    // green cabinet, and it opened a dance game when clicked. It is a POOL
+    // table: it opens pool's own screen, and never a menu or another game.
     src: '/assets/locations/arcade/level-1/snooker.png',
     alt: 'Pool table',
     anchor: 'left',
@@ -240,12 +255,10 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 353, height: 175 },
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'Nobody has racked the balls yet. Pool is not playable.',
+    activation: { type: 'dedicated-preview', experienceId: 'blobbi-pool' },
   },
   {
-    id: 'arcade-air-hockey',
+    id: ARCADE_AIR_HOCKEY_MACHINE_ID,
     floor: 'floor-1',
     displayName: 'Air Hockey Table',
     src: '/assets/locations/arcade/level-1/air-hockey.png',
@@ -257,9 +270,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 350, height: 160 },
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'The puck is still in the box. Air hockey is not playable.',
+    activation: { type: 'dedicated-preview', experienceId: 'blobbi-air-hockey' },
   },
   {
     id: 'arcade-cabinet-green',
@@ -274,9 +285,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 197, height: 285 },
     zIndex: 15,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
   {
     id: 'arcade-cabinet-purple',
@@ -291,9 +300,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 195, height: 296 },
     zIndex: 20,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
   {
     id: 'arcade-cabinet-red',
@@ -308,9 +315,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 209, height: 296 },
     zIndex: 25,
     interactionAnchor: FRONT_OF_MACHINE,
-    gameId: null,
-    availability: 'coming-soon',
-    blurb: 'This cabinet has no game yet. Its screen is dark for now.',
+    activation: SHARED_CATALOGUE,
   },
 ];
 
@@ -330,6 +335,16 @@ export function arcadeMachinesForFloor(floor: ArcadeFloorId): ArcadeMachineConfi
   return arcadeMachines
     .filter((m) => m.floor === floor)
     .sort((a, b) => a.zIndex - b.zIndex);
+}
+
+/** The six generic cabinets — every machine that opens the shared catalogue. */
+export function sharedCatalogueMachines(): ArcadeMachineConfig[] {
+  return arcadeMachines.filter((m) => m.activation.type === 'shared-catalogue');
+}
+
+/** The dance machine, the pool table and the air hockey table. */
+export function dedicatedMachines(): ArcadeMachineConfig[] {
+  return arcadeMachines.filter((m) => m.activation.type !== 'shared-catalogue');
 }
 
 /** Rendered height of a machine's sprite, in percent of world height. */

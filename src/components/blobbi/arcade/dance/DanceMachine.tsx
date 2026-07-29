@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useArcadeReward, ARCADE_TICKET_ADDRESS } from '@/hooks/useArcadeReward';
@@ -20,7 +19,6 @@ import { NEON_HOP_TRACK, getDanceTrack } from '@/arcade/dance/track';
 import type { DanceAudioEngine, DanceAudioFactory } from '@/arcade/dance/dance-audio';
 import { createDanceAudioEngine } from '@/arcade/dance/dance-audio';
 import { isArcadeMuted, setArcadeMuted } from '@/arcade/audio/arcade-audio';
-import type { ArcadeMachineConfig } from '@/lib/arcade-machines-config';
 
 import { ArcadeGameShell } from '../ArcadeGameShell';
 import { BlobbiDanceGame } from './BlobbiDanceGame';
@@ -44,13 +42,43 @@ import { DanceResults } from './DanceResults';
  *    unconfirmed publish is still possible and a confirmed one can never repeat.
  *  - **Replay is a new run.** New id, cleared result, and the reward hook's state
  *    is reset so the previous run's message cannot linger over a fresh one.
+ *
+ * ## Identity is passed in, and it is always the dance machine's
+ *
+ * It used to take an `ArcadeMachineConfig` and read the game's id and name off
+ * it. It now takes `machineId`, `gameId` and `title` as plain values: `gameId`
+ * and `title` come from the game registry, `machineId` from the machine the
+ * player walked to.
+ *
+ * In production that machine is ALWAYS `arcade-dance-machine`, and it is not
+ * this component's job to make that true — `canLaunchArcadeGame` refuses a
+ * Blobbi Dance launch from anywhere else, so no other machine can produce a run
+ * to hand here. A brief corrective pass had the catalogue launching this game
+ * from any of nine cabinets, which would have written a pool table's id into a
+ * ticket claim; the fix is the launch rule, not a check inside the game.
  */
 
 export interface DanceMachineProps {
-  readonly machine: ArcadeMachineConfig;
+  /** The cabinet this run happens on. Recorded in the result and the claim. */
+  readonly machineId: string;
+  /** Canonical game id, from the catalogue. Never derived from the machine. */
+  readonly gameId: string;
+  /** The game's name, from the catalogue. Titles the shell. */
+  readonly title: string;
   readonly lifecycle: ArcadeMachineState;
   readonly dispatch: (event: ArcadeEvent) => void;
-  readonly onClose: () => void;
+  /** Leave the game. Where that lands is the navigation model's decision. */
+  readonly onExit: () => void;
+  /**
+   * Text for the single dismiss control while NOT mid-run.
+   *
+   * Supplied by the caller because only the caller knows the destination: a
+   * dedicated machine returns to the arcade room, a catalogue-launched game
+   * returns to the catalogue, and a control that says the wrong one is worse
+   * than one that says nothing.
+   */
+  readonly exitLabel: string;
+  readonly exitAriaLabel: string;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: DanceAudioFactory;
   /** Substitute reward writer. Production passes nothing. */
@@ -79,10 +107,14 @@ const ABORT_COPY: Record<string, string> = {
 };
 
 export function DanceMachine({
-  machine,
+  machineId,
+  gameId,
+  title,
   lifecycle,
   dispatch,
-  onClose,
+  onExit,
+  exitLabel,
+  exitAriaLabel,
   audioFactory = createDanceAudioEngine,
   rewardWriter,
   chart = DEFAULT_DANCE_CHART,
@@ -307,8 +339,8 @@ export function DanceMachine({
   } else if (playing && engine) {
     content = (
       <BlobbiDanceGame
-        machineId={machine.id}
-        gameId={machine.gameId ?? ''}
+        machineId={machineId}
+        gameId={gameId}
         chart={chart}
         track={track}
         status={status}
@@ -351,25 +383,21 @@ export function DanceMachine({
   }
 
   /**
-   * The footer, with a deliberate hierarchy: ONE bright primary action and one
-   * quiet way out.
+   * The footer holds exactly ONE action: the thing the player came for.
    *
    * Before this pass Close and Start were the same size and nearly the same
    * weight, so the screen offered a child two equally-loud choices and let them
    * work out which one plays the game. `islandCtaButtonClass` is the island's
    * existing primary CTA — the same pill used to enter the island — so the
    * loudest thing on the screen is the thing the player came for.
+   *
+   * Phase 4 removed the footer's quiet "Close" as well. It did the same thing as
+   * the header's dismiss control while wearing a different word, and once that
+   * control started saying where it goes ("Back to games"), two differently
+   * labelled buttons with one destination was worse than one.
    */
   const footer = playing ? null : (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onClose}
-        className="rounded-full text-island-ink-soft"
-      >
-        Close
-      </Button>
       {chartProblems.length === 0 &&
         !audioError &&
         (status === 'preview' ? (
@@ -397,12 +425,20 @@ export function DanceMachine({
   return (
     <ArcadeGameShell
       open={status !== 'closed'}
-      onClose={onClose}
-      title={machine.displayName}
+      onClose={onExit}
+      title={title}
       description={`${track.title} · ${Math.round(track.durationMs / 1000)} seconds`}
-      machineId={machine.id}
-      gameId={machine.gameId}
+      machineId={machineId}
+      gameId={gameId}
       status={status}
+      surface="game"
+      /*
+        One dismiss control, labelled for where it actually goes. Mid-run it
+        abandons the run, so it says so; everywhere else it says where the
+        player lands, which only the caller knows.
+      */
+      closeLabel={playing ? 'Leave' : exitLabel}
+      closeAriaLabel={playing ? `Leave ${title} and end this run` : exitAriaLabel}
       onPause={playing ? () => dispatch({ type: 'pause' }) : undefined}
       onResume={status === 'paused' ? () => dispatch({ type: 'resume' }) : undefined}
       footer={footer}

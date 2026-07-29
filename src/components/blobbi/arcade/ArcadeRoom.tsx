@@ -14,15 +14,28 @@ import { NoPassModal } from '../NoPassModal';
 import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
 import { ArcadeMachinePanel } from './ArcadeMachinePanel';
-import { DanceMachine } from './dance/DanceMachine';
+import { ArcadeCatalogueShell } from './ArcadeCatalogue';
+import { ArcadeDedicatedPreview } from './ArcadeDedicatedPreview';
+import { resolveNativeArcadeGame } from './native-games';
 
 import {
-  BLOBBI_DANCE_GAME_ID,
   arcadeBoundaryForFloor,
   arcadeMachinesForFloor,
   getArcadeMachine,
   type ArcadeFloorId,
 } from '@/lib/arcade-machines-config';
+import { canLaunchArcadeGame, getCatalogueEntry } from '@/arcade/catalogue';
+import {
+  ARCADE_VIEW_CLOSED,
+  closeArcadeView,
+  exitGame,
+  launchGame,
+  openCatalogue,
+  openDedicatedGame,
+  openDedicatedPreview,
+  openNotice,
+  type ArcadeView,
+} from '@/arcade/arcade-navigation';
 import {
   ARCADE_ELEVATOR_DOOR_SRC,
   ARCADE_ELEVATOR_Z_INDEX,
@@ -53,9 +66,40 @@ import {
  *  - the arcade lifecycle state machine and the shared game shell;
  *  - the pass / elevator / no-pass modals.
  *
- * What does NOT live here: any product copy (it is in the machine registry), any
- * game logic (there is none yet), and any inventory or Nostr write (the arcade
+ * What does NOT live here: any product copy (it is in the machine registry and
+ * the catalogue), any game logic, and any inventory or Nostr write (the arcade
  * performs none).
+ *
+ * ## Two state machines, kept apart (Phase 4)
+ *
+ * - **`view`** (`arcade-navigation.ts`) — which SCREEN is up: nothing, the
+ *   catalogue, a game, or a notice panel. Walking up to a cabinet opens the
+ *   catalogue and starts no run at all.
+ * - **`lifecycle`** (`arcade-machine-state.ts`) — whether a RUN exists, whether
+ *   it may advance, and whether it may be rewarded. Untouched by this phase.
+ *
+ * They move together in exactly three handlers — arriving at a dedicated game
+ * machine opens both, selecting from the catalogue opens both, and leaving a
+ * game closes the run and steps the view back. There is no fourth place that
+ * changes one of them, which is why they cannot drift.
+ *
+ * ## Three flows, because the arcade has two kinds of machine
+ *
+ * ```
+ *   generic cabinet (×6)   Room ──► Shared catalogue ──► Room
+ *   dance machine          Room ──► Blobbi Dance (preview → run → results) ──► Room
+ *   pool / air hockey      Room ──► that game's own coming-soon screen ──► Room
+ * ```
+ *
+ * `handleMachineArrival` switches on the machine's `activation` field and does
+ * nothing else — no branch on an id, a filename or a display name. That is what
+ * makes "a pool table is a pool table" a property of the data rather than of
+ * this component.
+ *
+ * A run that is interrupted (tab hidden) does NOT jump back on its own: the game
+ * shows what happened and offers Play again, and the player leaves when they
+ * choose. A run the player explicitly leaves is aborted through the reducer and
+ * lands wherever `exitGame` says — the catalogue it came from, or the room.
  */
 
 interface ArcadeRoomProps {
@@ -66,11 +110,6 @@ interface ArcadeRoomProps {
   selectedBlobbiId?: string | null;
 }
 
-/** Everything the shell can be opened for: a machine, or the prize counter. */
-type ArcadeTarget =
-  | { kind: 'machine'; id: string }
-  | { kind: 'prize-counter' };
-
 export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: ArcadeRoomProps) {
   const { currentLocation, setCurrentLocation } = useLocation();
   const hasPass = useArcadePass();
@@ -79,11 +118,20 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
   const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
-  const [target, setTarget] = useState<ArcadeTarget | null>(null);
+  /** Which screen is up. Never a run — see the two-state-machines note above. */
+  const [view, setView] = useState<ArcadeView>(ARCADE_VIEW_CLOSED);
+  /**
+   * Why the last launch was refused, shown on the catalogue.
+   *
+   * It exists because "nothing happened" is the worst possible answer to a tap.
+   * A coming-soon card has no button at all, so this is only reachable when the
+   * catalogue and the resolver disagree — which is a bug, and should say so
+   * plainly rather than silently doing nothing.
+   */
+  const [launchError, setLaunchError] = useState<string | null>(null);
 
-  // The shared minigame lifecycle. In this phase it never leaves `closed` or
-  // `preview` — no machine has a runnable game — but the shell, the room and the
-  // future controller all read the same state value from day one.
+  // The shared minigame lifecycle. It is opened only when a game is launched
+  // from the catalogue, and closed whenever the player steps back out of one.
   const [lifecycle, dispatch] = useReducer(
     arcadeMachineReducer,
     INITIAL_ARCADE_MACHINE_STATE,
@@ -111,24 +159,110 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   const walkBoundary = arcadeBoundaryForFloor(floor);
   const elevatorStand = arcadeElevatorStandPoint[floor];
 
-  /** Fired on CONFIRMED ARRIVAL at a machine, never on click. */
+  /**
+   * Fired on CONFIRMED ARRIVAL at a machine, never on click.
+   *
+   * One `switch` over the machine's declared `activation`, and nothing else. No
+   * branch on an id, a filename, a display name or a piece of artwork — which is
+   * what makes "a pool table opens pool" a property of the registry that a test
+   * can check, rather than a convention this component happens to follow.
+   *
+   * A dedicated game opens with NO menu in between, because the physical object
+   * is the game. If its renderer cannot be resolved (a registry entry with no
+   * implementation), it falls back to that same game's coming-soon screen —
+   * which is the honest thing to show, and is never another game's.
+   */
   const handleMachineArrival = useCallback((machineId: string) => {
     const machine = getArcadeMachine(machineId);
     if (!machine) return;
-    setTarget({ kind: 'machine', id: machineId });
-    dispatch({ type: 'open', machineId, gameId: machine.gameId });
+    setLaunchError(null);
+
+    const activation = machine.activation;
+    if (activation.type === 'shared-catalogue') {
+      setView(openCatalogue(machineId));
+      return;
+    }
+
+    if (activation.type === 'dedicated-preview') {
+      setView(openDedicatedPreview(machineId, activation.experienceId));
+      return;
+    }
+
+    const entry = getCatalogueEntry(activation.gameId);
+    const canLaunch = resolveNativeArcadeGame({
+      game: entry,
+      machineId,
+      surface: 'dedicated-machine',
+    });
+    if (!entry || !canLaunch) {
+      setView(openDedicatedPreview(machineId, activation.gameId));
+      return;
+    }
+    // Both state machines move together: the view opens the game, and the
+    // lifecycle opens a run slot on THIS machine — which is what carries a
+    // correct `machineId` into the result and the reward claim.
+    dispatch({ type: 'open', machineId, gameId: entry.id });
+    setView(openDedicatedGame(machineId, entry.id));
   }, []);
 
   const handlePrizeCounterArrival = useCallback(() => {
-    setTarget({ kind: 'prize-counter' });
-    dispatch({ type: 'open', machineId: ARCADE_PRIZE_COUNTER.id });
+    setView(openNotice(ARCADE_PRIZE_COUNTER.id));
   }, []);
 
-  const closeShell = useCallback(() => {
-    // `close` aborts a live run; nothing can be live in this phase, but the
-    // controller must go through the reducer so that stays true when one can.
+  /**
+   * Launch a game from the SHARED catalogue, on the generic cabinet the player
+   * walked to.
+   *
+   * Nothing reaches this today — no game is offered by the shared cabinets — and
+   * the checks matter for exactly that reason: the first game added must not be
+   * able to skip them. `canLaunchArcadeGame` refuses a dedicated-machine game
+   * here on `host`, so Blobbi Dance can never be started from a cabinet however
+   * a caller asks.
+   */
+  const handleSelectGame = useCallback(
+    (gameId: string) => {
+      if (view.kind !== 'catalogue') return;
+      const entry = getCatalogueEntry(gameId);
+      if (!entry) {
+        setLaunchError('That game is not in the arcade.');
+        return;
+      }
+      const request = {
+        game: entry,
+        machineId: view.machineId,
+        surface: 'shared-catalogue' as const,
+      };
+      if (!canLaunchArcadeGame(request) || !resolveNativeArcadeGame(request)) {
+        setLaunchError(`${entry.title} cannot be played on this cabinet.`);
+        return;
+      }
+      setLaunchError(null);
+      dispatch({ type: 'open', machineId: view.machineId, gameId: entry.id });
+      setView((current) => launchGame(current, entry.id));
+    },
+    [view],
+  );
+
+  /**
+   * Leave the game, landing where the player came from.
+   *
+   * `close` aborts a live run and records it as aborted, so leaving mid-song is
+   * never silently forgiven. WHERE it lands is `exitGame`'s decision: back to
+   * the catalogue for a catalogue-launched game, out to the room for a dedicated
+   * machine's own game. Blobbi Dance is the second kind, so leaving it returns
+   * the player to the arcade — not to a list that does not contain it.
+   */
+  const handleExitGame = useCallback(() => {
     dispatch({ type: 'close' });
-    setTarget(null);
+    setLaunchError(null);
+    setView((current) => exitGame(current));
+  }, []);
+
+  /** Dismiss everything and hand the room back. */
+  const closeShell = useCallback(() => {
+    dispatch({ type: 'close' });
+    setLaunchError(null);
+    setView(closeArcadeView());
   }, []);
 
   const handleElevatorClick = useCallback(() => {
@@ -136,52 +270,33 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
     else setIsNoPassModalOpen(true);
   }, [hasPass]);
 
-  /**
-   * The one machine with a real game.
-   *
-   * Resolved from the OPEN target's configured `gameId`, never from its id or
-   * its artwork — so a machine becomes playable by being given a game, which is
-   * the property that stops the other eight from opening a rhythm game the way
-   * all nine used to.
-   */
-  const danceMachine = useMemo(() => {
-    if (target?.kind !== 'machine') return null;
-    const machine = getArcadeMachine(target.id);
-    return machine?.gameId === BLOBBI_DANCE_GAME_ID ? machine : null;
-  }, [target]);
+  /** The machine the open view belongs to, for its title and its artwork. */
+  const openMachine = useMemo(
+    () => (view.kind === 'closed' ? undefined : getArcadeMachine(view.machineId)),
+    [view],
+  );
 
-  const shellContent = useMemo(() => {
-    if (!target || danceMachine) return null;
-    if (target.kind === 'prize-counter') {
-      return {
-        title: ARCADE_PRIZE_COUNTER.displayName,
-        gameId: null as string | null,
-        machineId: ARCADE_PRIZE_COUNTER.id,
-        panel: (
-          <ArcadeMachinePanel
-            displayName={ARCADE_PRIZE_COUNTER.displayName}
-            availability="coming-soon"
-            blurb={ARCADE_PRIZE_COUNTER.blurb}
-          />
-        ),
-      };
-    }
-    const machine = getArcadeMachine(target.id);
-    if (!machine) return null;
-    return {
-      title: machine.displayName,
-      gameId: machine.gameId,
-      machineId: machine.id,
-      panel: (
-        <ArcadeMachinePanel
-          displayName={machine.displayName}
-          availability={machine.availability}
-          blurb={machine.blurb}
-          showControls={machine.availability === 'preview'}
-        />
-      ),
+  /**
+   * The game to mount, resolved fresh from the view.
+   *
+   * `null` for anything that must not run — checked HERE as well as at every
+   * entry point, and with the same surface the view was opened from, so a game
+   * cannot be rendered under a rule looser than the one that let it in.
+   */
+  const activeGame = useMemo(() => {
+    if (view.kind !== 'game') return null;
+    const entry = getCatalogueEntry(view.gameId);
+    const request = {
+      game: entry,
+      machineId: view.machineId,
+      surface:
+        view.from === 'shared-catalogue'
+          ? ('shared-catalogue' as const)
+          : ('dedicated-machine' as const),
     };
-  }, [target, danceMachine]);
+    const render = resolveNativeArcadeGame(request);
+    return entry && render ? { entry, render, from: view.from } : null;
+  }, [view]);
 
   return (
     <>
@@ -345,29 +460,76 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       )}
 
       {/*
-        The dance machine brings its own shell, because a playable game needs
-        footer actions, a pause control and a reward panel that a coming-soon
-        panel has no use for. Every other machine keeps the plain honest one.
+        The shared catalogue — the SIX generic cabinets only. The dance machine,
+        the pool table and the air hockey table never reach this branch, because
+        their `activation` sends them somewhere else.
       */}
-      {danceMachine && lifecycle.status !== 'closed' && (
-        <DanceMachine
-          machine={danceMachine}
-          lifecycle={lifecycle}
-          dispatch={dispatch}
+      {view.kind === 'catalogue' && (
+        <ArcadeCatalogueShell
+          open
+          machineId={view.machineId}
+          machineName={openMachine?.displayName ?? 'Arcade Cabinet'}
+          machineImage={openMachine?.src}
+          onSelect={handleSelectGame}
+          onClose={closeShell}
+          launchError={launchError}
+        />
+      )}
+
+      {/*
+        The running game, which brings its own shell: a playable game needs a
+        pause control, footer actions and a reward panel that a catalogue has no
+        use for. It is mounted only while a run slot is open, so closing one can
+        never leave a timer or an audio node alive behind a hidden dialog.
+
+        The dismiss label is decided HERE, because the room is what knows where
+        leaving lands.
+      */}
+      {view.kind === 'game' &&
+        activeGame &&
+        lifecycle.status !== 'closed' &&
+        activeGame.render({
+          machineId: view.machineId,
+          entry: activeGame.entry,
+          lifecycle,
+          dispatch,
+          onExit: handleExitGame,
+          exitLabel: activeGame.from === 'shared-catalogue' ? 'Back to games' : 'Back to the arcade',
+          exitAriaLabel:
+            activeGame.from === 'shared-catalogue'
+              ? 'Back to the game list'
+              : 'Back to the arcade room',
+        })}
+
+      {/*
+        A dedicated machine whose game is not built: the pool table, the air
+        hockey table. Each talks about ITS OWN game and offers no Start, because
+        there is nothing to start.
+      */}
+      {view.kind === 'preview' && (
+        <ArcadeDedicatedPreview
+          open
+          machineId={view.machineId}
+          experienceId={view.experienceId}
           onClose={closeShell}
         />
       )}
 
-      {shellContent && (
+      {/* The prize counter: not a game, and it does not pretend to be one. */}
+      {view.kind === 'notice' && (
         <ArcadeGameShell
-          open={lifecycle.status !== 'closed'}
+          open
           onClose={closeShell}
-          title={shellContent.title}
-          machineId={shellContent.machineId}
-          gameId={shellContent.gameId}
-          status={lifecycle.status}
+          title={ARCADE_PRIZE_COUNTER.displayName}
+          machineId={ARCADE_PRIZE_COUNTER.id}
+          surface="notice"
+          closeLabel="Close"
+          closeAriaLabel="Close and go back to the arcade"
         >
-          {shellContent.panel}
+          <ArcadeMachinePanel
+            displayName={ARCADE_PRIZE_COUNTER.displayName}
+            blurb={ARCADE_PRIZE_COUNTER.blurb}
+          />
         </ArcadeGameShell>
       )}
 

@@ -36,7 +36,11 @@ import {
   INITIAL_ARCADE_MACHINE_STATE,
   arcadeMachineReducer,
 } from '@/arcade/arcade-machine-state';
-import { getArcadeMachine } from '@/lib/arcade-machines-config';
+import {
+  BLOBBI_DANCE_GAME_ID,
+  BLOBBI_DANCE_MACHINE_ID,
+  getCatalogueEntry,
+} from '@/arcade/catalogue';
 import { buildChartFromBars, type DanceChart } from '@/arcade/dance/chart';
 import { NEON_HOP_TRACK } from '@/arcade/dance/track';
 import { resetClaimLocks } from '@/lib/arcade-claim-ledger';
@@ -63,7 +67,18 @@ vi.mock('@nostrify/react', async () => {
   };
 });
 
-const MACHINE = getArcadeMachine('arcade-dance-machine')!;
+/**
+ * The machine and the game, kept apart but never mismatched.
+ *
+ * The machine says WHERE a run happened and the registry says WHAT was played.
+ * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine` — it is a
+ * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else
+ * — so the harness uses the id the product uses. A brief corrective pass ran
+ * this game from a generic cabinet, which would have written a cabinet's id
+ * into a ticket claim.
+ */
+const MACHINE_ID = BLOBBI_DANCE_MACHINE_ID;
+const ENTRY = getCatalogueEntry(BLOBBI_DANCE_GAME_ID)!;
 
 const TINY_CHART: DanceChart = buildChartFromBars({
   id: 'tiny',
@@ -93,18 +108,22 @@ function Harness({ audio, writer, chart }: HarnessOptions) {
   const [lifecycle, dispatch] = useReducer(arcadeMachineReducer, INITIAL_ARCADE_MACHINE_STATE, () =>
     arcadeMachineReducer(INITIAL_ARCADE_MACHINE_STATE, {
       type: 'open',
-      machineId: MACHINE.id,
-      gameId: MACHINE.gameId,
+      machineId: MACHINE_ID,
+      gameId: ENTRY.id,
     }),
   );
   const [runs, setRuns] = useState(0);
 
   return (
     <DanceMachine
-      machine={MACHINE}
+      machineId={MACHINE_ID}
+      gameId={ENTRY.id}
+      title={ENTRY.title}
+      exitLabel="Back to the arcade"
+      exitAriaLabel="Back to the arcade room"
       lifecycle={lifecycle}
       dispatch={dispatch}
-      onClose={() => dispatch({ type: 'close' })}
+      onExit={() => dispatch({ type: 'close' })}
       chart={chart ?? TINY_CHART}
       audioFactory={audio?.factory}
       rewardWriter={writer}
@@ -1201,15 +1220,23 @@ describe('a narrow layout', () => {
    */
   it('keeps a way out, and a way to play, on the start screen', () => {
     renderMachine();
-    expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /leave/i })).toBeInTheDocument();
+    // Exactly ONE dismiss control, and it says where it goes. Two ghost buttons
+    // — a header "Leave" and a footer "Close" — did the same thing under
+    // different words until Phase 4 removed the second.
+    const back = screen.getByRole('button', { name: /back to the arcade room/i });
+    expect(back).toBeInTheDocument();
+    expect(back).toHaveTextContent('Back to the arcade');
+    expect(screen.queryByRole('button', { name: /^close$/i })).toBeNull();
   });
 
   it('keeps pause and leave reachable during a run', async () => {
     await play();
     expect(screen.getByRole('button', { name: /^pause/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /leave/i })).toBeInTheDocument();
+    // Mid-run the same control abandons the run, so it says "Leave" rather than
+    // "Back to games" — one control, labelled for what it actually does here.
+    const leave = screen.getByRole('button', { name: /leave blobbi dance and end this run/i });
+    expect(leave).toHaveTextContent('Leave');
   });
 
   it('gives every lane control a target no smaller than the touch minimum', async () => {
@@ -1228,7 +1255,7 @@ describe('a narrow layout', () => {
     await playToResults();
     expect(screen.getByRole('button', { name: /claim 8 tickets/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /play again/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^close$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to the arcade room/i })).toBeInTheDocument();
     // Both reward actions declare a 44 px minimum height rather than relying on
     // padding that a long translation could squeeze out.
     const claim = document.querySelector('[data-dance-claim]') as HTMLElement;

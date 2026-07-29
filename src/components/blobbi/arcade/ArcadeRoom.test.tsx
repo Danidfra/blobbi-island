@@ -143,6 +143,7 @@ function clickAndArrive(element: HTMLElement) {
 const shell = () => document.querySelector('[data-arcade-shell]') as HTMLElement | null;
 /** The panel inside the shell — the shell's own title bar repeats the name. */
 const panel = () => document.querySelector('[data-arcade-panel]') as HTMLElement | null;
+const catalogue = () => document.querySelector('[data-arcade-catalogue]') as HTMLElement | null;
 
 beforeEach(() => {
   requests.length = 0;
@@ -155,49 +156,206 @@ afterEach(() => {
   clearArcadePass();
 });
 
-describe('every machine has its own honest identity', () => {
-  it.each(arcadeMachines.filter((m) => m.floor === 'floor-1').map((m) => [m.id, m] as const))(
-    '%s opens its own panel, not a dance game',
+const GENERIC_CABINETS = [
+  'arcade-cabinet-pink',
+  'arcade-cabinet-black',
+  'arcade-cabinet-classic',
+  'arcade-cabinet-green',
+  'arcade-cabinet-purple',
+  'arcade-cabinet-red',
+];
+
+describe('generic cabinets open the shared catalogue', () => {
+  it.each(GENERIC_CABINETS.map((id) => [id, arcadeMachines.find((m) => m.id === id)!] as const))(
+    '%s opens the shared game list',
     (_id, machine) => {
-      renderRoom('floor-1');
+      renderRoom(machine.floor);
 
-      const el = screen.getByRole('button', { name: machine.alt });
-      expect(clickAndArrive(el)).toBe(true);
+      expect(clickAndArrive(screen.getByRole('button', { name: machine.alt }))).toBe(true);
 
-      expect(within(panel()!).getByText(machine.displayName)).toBeInTheDocument();
-      expect(within(panel()!).getByText(machine.blurb)).toBeInTheDocument();
+      expect(shell()).toHaveAttribute('data-arcade-surface', 'catalogue');
       expect(shell()).toHaveAttribute('data-arcade-machine', machine.id);
       expect(screen.getByRole('dialog', { name: machine.displayName })).toBeInTheDocument();
-      // No coming-soon machine may claim to be the dance game.
+      expect(catalogue()).not.toBeNull();
+
+      // Opening a list is not opening a run: no game is mounted and the
+      // lifecycle has not been touched.
+      expect(shell()!.getAttribute('data-arcade-status')).toBeNull();
       expect(shell()!.getAttribute('data-arcade-game')).toBeNull();
-      expect(shell()!.textContent).not.toMatch(/Dance Dance Blobbi/);
-      expect(panel()).toHaveAttribute('data-arcade-panel', 'coming-soon');
+      expect(document.querySelector('[data-dance-preview]')).toBeNull();
     },
   );
 
-  it('opens the REAL dance game, not a coming-soon panel', () => {
+  it('never offers Blobbi Dance on a cabinet', () => {
+    // The correction. Blobbi Dance belongs to the dance machine, so it is not in
+    // the shared catalogue and there is no control that could start it here.
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
+
+    expect(catalogue()!.textContent).not.toMatch(/blobbi dance/i);
+    expect(within(catalogue()!).queryByRole('button', { name: /^play /i })).toBeNull();
+    expect(document.querySelector('[data-catalogue-card="blobbi-dance"]')).toBeNull();
+  });
+
+  it('shows an honest prepared state rather than an empty grid', () => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
+
+    expect(catalogue()).toHaveAttribute('data-catalogue-games', '0');
+    expect(within(catalogue()!).getByRole('heading', { name: 'Arcade Games' })).toBeInTheDocument();
+    expect(
+      within(catalogue()!).getByText(/new games are being prepared for these cabinets/i),
+    ).toBeInTheDocument();
+    // No cards at all — real or placeholder.
+    expect(catalogue()!.querySelector('[data-catalogue-card]')).toBeNull();
+  });
+
+  it('explains both kinds of game in one sentence each, with no protocol talk', () => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
+
+    const island = catalogue()!.querySelector('[data-catalogue-note="island"]') as HTMLElement;
+    const guest = catalogue()!.querySelector('[data-catalogue-note="guest"]') as HTMLElement;
+    expect(island.textContent).toMatch(/earn arcade tickets/i);
+    expect(guest.textContent).toMatch(/just for fun/i);
+    expect(guest.textContent).toMatch(/never give arcade tickets/i);
+    expect(guest.textContent).toMatch(/coming soon/i);
+
+    const text = catalogue()!.textContent!.toLowerCase();
+    for (const jargon of ['webxdc', 'nostr', 'npub', 'kind:', 'sandbox', 'iframe', 'issuer']) {
+      expect(text, jargon).not.toContain(jargon);
+    }
+  });
+
+  it('closes back to the arcade room', () => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /close and go back to the arcade/i }));
+    expect(shell()).toBeNull();
+    expect(catalogue()).toBeNull();
+  });
+
+  it('carries the cabinet the player chose, and resets it for the next one', () => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
+    expect(shell()).toHaveAttribute('data-arcade-machine', 'arcade-cabinet-pink');
+
+    fireEvent.click(screen.getByRole('button', { name: /close and go back to the arcade/i }));
+    clickAndArrive(screen.getByRole('button', { name: /^green arcade cabinet$/i }));
+
+    expect(shell()).toHaveAttribute('data-arcade-machine', 'arcade-cabinet-green');
+    expect(screen.getByRole('dialog', { name: 'Green Cabinet' })).toBeInTheDocument();
+  });
+});
+
+describe('the dance machine is dedicated', () => {
+  it('opens Blobbi Dance directly, with no catalogue in between', () => {
     renderRoom('basement');
+    expect(clickAndArrive(screen.getByRole('button', { name: /blobbi dance machine/i }))).toBe(
+      true,
+    );
 
-    const el = screen.getByRole('button', { name: /dance machine/i });
-    expect(clickAndArrive(el)).toBe(true);
-
+    expect(catalogue()).toBeNull();
+    expect(shell()).toHaveAttribute('data-arcade-surface', 'game');
     expect(shell()).toHaveAttribute('data-arcade-game', 'blobbi-dance');
-    expect(screen.getByRole('dialog', { name: 'Dance Dance Blobbi' })).toBeInTheDocument();
-
-    // The one machine that is genuinely playable gets the game's own preview,
-    // with a Start button. Every other machine still gets the honest panel.
+    expect(shell()).toHaveAttribute('data-arcade-status', 'preview');
+    expect(screen.getByRole('dialog', { name: 'Blobbi Dance' })).toBeInTheDocument();
     expect(document.querySelector('[data-dance-preview]')).not.toBeNull();
-    expect(panel()).toBeNull();
     expect(within(shell()!).getByRole('button', { name: /^start$/i })).toBeInTheDocument();
   });
 
-  it('announces the coming-soon state rather than only showing it', () => {
-    renderRoom('floor-1');
-    clickAndArrive(screen.getByRole('button', { name: /pool table/i }));
+  it('always runs on arcade-dance-machine', () => {
+    // What a result and a ticket claim record. It is fixed by the machine the
+    // player walked to, and only one machine can start this game.
+    renderRoom('basement');
+    clickAndArrive(screen.getByRole('button', { name: /blobbi dance machine/i }));
+    expect(shell()).toHaveAttribute('data-arcade-machine', 'arcade-dance-machine');
+  });
 
-    const status = within(shell()!).getByRole('status');
-    expect(status).toHaveTextContent('Pool Table');
-    expect(status).toHaveTextContent(/not/i);
+  it('leaves to the arcade room, not to a game list', () => {
+    renderRoom('basement');
+    clickAndArrive(screen.getByRole('button', { name: /blobbi dance machine/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /back to the arcade room/i }));
+
+    expect(shell()).toBeNull();
+    expect(catalogue()).toBeNull();
+    expect(document.querySelector('[data-dance-preview]')).toBeNull();
+    expect(document.querySelector('[data-dance-stage]')).toBeNull();
+  });
+});
+
+describe('pool and air hockey are dedicated too', () => {
+  const TABLES = [
+    {
+      machineId: 'arcade-pool-table',
+      alt: /pool table/i,
+      title: 'Pool',
+      own: /cue|balls/i,
+      other: /puck|dance|arrow/i,
+    },
+    {
+      machineId: 'arcade-air-hockey',
+      alt: /air hockey table/i,
+      title: 'Air Hockey',
+      own: /puck/i,
+      other: /cue|dance|arrow/i,
+    },
+  ];
+
+  it.each(TABLES)('$title opens its own coming-soon screen', (table) => {
+    renderRoom('floor-1');
+    expect(clickAndArrive(screen.getByRole('button', { name: table.alt }))).toBe(true);
+
+    // Not the shared catalogue, and not another game's screen.
+    expect(catalogue()).toBeNull();
+    expect(shell()).toHaveAttribute('data-arcade-machine', table.machineId);
+    expect(screen.getByRole('dialog', { name: table.title })).toBeInTheDocument();
+
+    const panel_ = panel()!;
+    expect(within(panel_).getByText(table.title)).toBeInTheDocument();
+    expect(panel_.textContent).toMatch(table.own);
+    expect(panel_.textContent).not.toMatch(table.other);
+    expect(within(panel_).getByText(/coming soon/i)).toBeInTheDocument();
+  });
+
+  it.each(TABLES)('$title offers no way to start anything', (table) => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: table.alt }));
+
+    expect(within(shell()!).queryByRole('button', { name: /^start$/i })).toBeNull();
+    expect(within(shell()!).queryByRole('button', { name: /^play/i })).toBeNull();
+    expect(document.querySelector('[data-dance-preview]')).toBeNull();
+    // One way out, and it says where it goes.
+    const buttons = within(shell()!).getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName(/close and go back to the arcade/i);
+  });
+
+  it.each(TABLES)('$title closes back to the arcade room', (table) => {
+    renderRoom('floor-1');
+    clickAndArrive(screen.getByRole('button', { name: table.alt }));
+
+    fireEvent.click(screen.getByRole('button', { name: /close and go back to the arcade/i }));
+    expect(shell()).toBeNull();
+  });
+});
+
+describe('no machine is a no-op', () => {
+  it('opens something for every machine on every floor', () => {
+    for (const floor of ['ground', 'floor-1', 'basement'] as const) {
+      for (const machine of arcadeMachines.filter((m) => m.floor === floor)) {
+        const view = renderRoom(floor);
+        expect(clickAndArrive(screen.getByRole('button', { name: machine.alt })), machine.id).toBe(
+          true,
+        );
+        expect(shell(), machine.id).not.toBeNull();
+        expect(shell()!.getAttribute('data-arcade-machine'), machine.id).toBe(machine.id);
+        view.unmount();
+        requests.length = 0;
+      }
+    }
   });
 });
 
@@ -222,10 +380,10 @@ describe('nothing opens before the Blobbi arrives', () => {
 
   it('closes the shell without leaving anything mounted', () => {
     renderRoom('basement');
-    clickAndArrive(screen.getByRole('button', { name: /dance machine/i }));
+    clickAndArrive(screen.getByRole('button', { name: /blobbi dance machine/i }));
     expect(shell()).not.toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /leave/i }));
+    fireEvent.click(screen.getByRole('button', { name: /back to the arcade room/i }));
     expect(shell()).toBeNull();
     expect(document.querySelector('[data-arcade-panel]')).toBeNull();
     expect(document.querySelector('[data-dance-preview]')).toBeNull();
@@ -241,7 +399,10 @@ describe('dead affordances are gone', () => {
     expect(clickAndArrive(counter.parentElement as HTMLElement)).toBe(true);
 
     expect(screen.getByRole('dialog', { name: 'Prize Counter' })).toBeInTheDocument();
+    expect(shell()).toHaveAttribute('data-arcade-surface', 'notice');
     expect(within(panel()!).getByText(/not open yet/i)).toBeInTheDocument();
+    // A counter is not a cabinet: it opens no catalogue and lists no games.
+    expect(catalogue()).toBeNull();
   });
 
   it('renders the stage microphone as scenery, with no affordance at all', () => {

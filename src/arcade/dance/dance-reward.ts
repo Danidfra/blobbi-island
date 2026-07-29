@@ -57,6 +57,7 @@
 
 import type { ArcadeGameResult } from '../types';
 import type { ArcadeRewardPolicy } from '../reward-policy';
+import { BLOBBI_DANCE_GAME_ID } from '../catalogue';
 import {
   DANCE_CLEAR_ACCURACY,
   completedNaturally,
@@ -64,8 +65,15 @@ import {
   wasFullCombo,
 } from './dance-result';
 
-/** The dance game's stable id. Mirrors `BLOBBI_DANCE_GAME_ID` in the machine registry. */
-export const BLOBBI_DANCE_GAME_ID = 'blobbi-dance';
+/**
+ * The dance game's stable id.
+ *
+ * Re-exported, not redeclared. It was written out here AND in the machine
+ * registry, each with a comment saying it mirrored the other — two constants
+ * that a rename would have silently desynchronised. The catalogue owns game
+ * identity now, so it owns the string; this module borrows it.
+ */
+export { BLOBBI_DANCE_GAME_ID };
 
 /**
  * Every constant the policy pays from, in one frozen object.

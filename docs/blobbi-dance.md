@@ -45,6 +45,31 @@ No game. No ticket. No publish.
 
 ### After
 
+> **Phase 4 changed how it is WIRED, not what it is.** Blobbi Dance remains what
+> it has always been: the game on the basement dance machine. Walking up to
+> `arcade-dance-machine` opens it directly — there is no menu in between, and it
+> is **not** listed in the shared cabinet catalogue, which the six generic
+> cabinets open.
+>
+> Three wiring consequences, and nothing else in this document is affected:
+>
+> - `DanceMachine` takes `machineId`, `gameId` and `title` instead of an
+>   `ArcadeMachineConfig`. `gameId` and `title` come from the game registry;
+>   `machineId` comes from the machine the player walked to, which for this game
+>   is **always** `arcade-dance-machine` — `canLaunchArcadeGame` refuses the game
+>   on every other machine and from the shared catalogue, so a result and a claim
+>   can only ever record the dance machine.
+> - Leaving the game returns to the **arcade room**, not to a catalogue. The
+>   single dismiss control says where it goes: *Leave* mid-run (which aborts,
+>   exactly as before), *Back to the arcade* everywhere else. The footer's
+>   duplicate "Close" was removed; the footer now holds one action, Start or Play
+>   again.
+> - The shell renders inside the game window rather than over the browser page.
+>
+> The chart, the clock, the judgement, the scoring, the reward policy, the claim
+> ledger and the publish/verify semantics are untouched. See
+> `docs/arcade-catalogue.md`.
+
 ```
 src/arcade/dance/                 pure: no React, no DOM, no Nostr, no inventory
 ├── track.ts                      track identity + metadata + readiness
@@ -1162,12 +1187,21 @@ pose animation, and any decoration that would need an image asset.
 
 ## 16. What the next phase should implement
 
-**Phase 4 — the Shared Arcade Catalogue.**
+> **Phase 4 shipped, with one scope correction.** The catalogue described below
+> exists — `docs/arcade-catalogue.md` — but it belongs to the **six generic
+> cabinets only**. Blobbi Dance, Pool and Air Hockey are dedicated machines and
+> are not in it; the dance machine opens this game directly. What remains from
+> this section is the **Guest Game Runtime**, deliberately split out and now
+> Phase 5.
+
+**Phase 4 — the Shared Arcade Catalogue.** *(delivered, for generic cabinets)*
 
 Today every cabinet is either Blobbi Dance or an honest "coming soon" panel, and
 the only way to reach a game is to know which cabinet it lives on. The next phase
-makes **every arcade cabinet open the same catalogue**, so a machine becomes a
-door into the arcade's content rather than a fixed mapping to one game.
+makes **every GENERIC arcade cabinet open the same catalogue**, so an
+interchangeable cabinet becomes a door into the arcade's content rather than a
+dead screen. Machines that ARE a specific physical game — the dance pad, the pool
+table, the air hockey table — keep their own experience.
 
 The catalogue separates two kinds of content, and the separation is the point:
 

@@ -92,6 +92,43 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+/**
+ * Sizing and padding for a normal CARD dialog rendered with `inFrame`.
+ *
+ * ## Why this exists
+ *
+ * The two branches above are not symmetrical, and the asymmetry is easy to miss:
+ * the body-portal branch carries `p-6` (plus `border`, `bg-background`,
+ * `shadow-lg`), and the `inFrame` branch carries **positioning and animation
+ * only**. That is deliberate — the in-frame dialogs written first are full-bleed
+ * artwork boards that pass `p-0 border-0 bg-transparent` — but it means a dialog
+ * MOVED from `document.body` to a frame silently loses all of its padding, and
+ * its `w-full` starts resolving against the game stage instead of the viewport,
+ * so it also loses its side margins.
+ *
+ * That is exactly what happened to the three arcade dialogs when they were
+ * contained: `blobbi-card-xl` supplies background, border, radius and shadow but
+ * no padding, so their titles ended up flush against the card edge and the card
+ * itself was flush against the stage.
+ *
+ * ## The rule
+ *
+ * - `w-[calc(100%-2rem)]` — 1rem of visible stage on each side, at every size.
+ *   Percent of the STAGE, not of the viewport: `vw` units would measure the
+ *   browser window, which is the thing a contained dialog is no longer sized by.
+ * - `max-w-md` — a normal card on desktop, where the stage is wide.
+ * - `max-h-[calc(100%-2rem)]` + `overflow-y-auto` — a tall dialog scrolls inside
+ *   itself instead of overflowing the stage, which the frame's `overflow-hidden`
+ *   would otherwise clip.
+ * - `p-5 sm:p-6` — the padding the body-portal branch would have given it.
+ *
+ * Callers append their own surface classes (`blobbi-card-xl`, borders, radius).
+ * Anything here can still be overridden per dialog: `cn()` is tailwind-merge, so
+ * a later `max-w-lg` or `p-0` wins.
+ */
+export const inFrameDialogPanelClass =
+  "w-[calc(100%-2rem)] max-w-md max-h-[calc(100%-2rem)] overflow-y-auto p-5 sm:p-6"
+
 const DialogHeader = ({
   className,
   ...props

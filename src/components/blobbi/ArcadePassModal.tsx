@@ -1,5 +1,13 @@
 import { useRef, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  inFrameDialogPanelClass,
+} from '@/components/ui/dialog';
+import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
@@ -90,6 +98,7 @@ interface ArcadePassModalProps {
  * neither is a number.
  */
 export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
+  const stageOverlayHost = useStageOverlayHost();
   const { status, refreshFromRelay } = useOptimizedStatus();
   const { toast } = useToast();
   const { mutateAsync: changeCoins, isPending: isPurchasing } = useCoinsMutation();
@@ -159,14 +168,25 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md blobbi-card-xl blobbi-gradient-container border-2 border-island-wood/30 rounded-2xl theme-transition">
+      <DialogContent
+        /* Contained in the game window, like every other arcade surface, and
+           sized against the STAGE rather than the viewport — see
+           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
+           dialog moved here must bring its own padding and side margins. */
+        container={stageOverlayHost}
+        inFrame
+        className={cn(
+          inFrameDialogPanelClass,
+          'blobbi-card-xl blobbi-gradient-container border-2 border-island-wood/30 rounded-2xl theme-transition',
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center text-island-ink mb-4">
             🎟️ Arcade Pass
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 p-4">
+        <div className="space-y-6">
           <div className="text-center">
             <div className="blobbi-card rounded-xl p-4 mb-4">
               <img
@@ -251,14 +271,14 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
               variant="outline"
               onClick={onClose}
               disabled={isPurchasing}
-              className="flex-1 blobbi-button rounded-full border-2 border-island-wood/40 hover:bg-island-cream-2"
+              className="min-h-[44px] flex-1 blobbi-button rounded-full border-2 border-island-wood/40 hover:bg-island-cream-2"
             >
               Cancel
             </Button>
             <Button
               onClick={handlePurchasePass}
               disabled={!canPurchase}
-              className="flex-1 bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
+              className="min-h-[44px] flex-1 bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
             >
               {isPurchasing ? 'Buying…' : 'Buy Ticket'}
             </Button>

@@ -11,6 +11,21 @@ import { Button } from '@/components/ui/button';
 
 import { ArcadeGameShell } from '@/components/blobbi/arcade/ArcadeGameShell';
 import { ArcadeMachinePanel } from '@/components/blobbi/arcade/ArcadeMachinePanel';
+import { ArcadeCatalogueShell } from '@/components/blobbi/arcade/ArcadeCatalogue';
+import { ArcadeDedicatedPreview } from '@/components/blobbi/arcade/ArcadeDedicatedPreview';
+import { ArcadePassModal } from '@/components/blobbi/ArcadePassModal';
+import { ElevatorModal } from '@/components/blobbi/ElevatorModal';
+import { NoPassModal } from '@/components/blobbi/NoPassModal';
+import { resolveNativeArcadeGame } from '@/components/blobbi/arcade/native-games';
+import {
+  ARCADE_CATALOGUE,
+  BLOBBI_DANCE_GAME_ID,
+  BLOBBI_DANCE_MACHINE_ID,
+  canLaunchArcadeGame,
+  getCatalogueEntry,
+  sharedCabinetCatalogue,
+  type ArcadeCatalogueEntry,
+} from '@/arcade/catalogue';
 import {
   INITIAL_ARCADE_MACHINE_STATE,
   arcadeMachineReducer,
@@ -91,6 +106,19 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  *    exercise the emoji degradation path;
  *  - **lifecycle fixtures** — drives the real reducer through countdown, pause,
  *    abort and results without a game existing;
+ *  - **the catalogue** — the REAL shared catalogue in the REAL shell, for any
+ *    of the six GENERIC cabinets, with four entry sets: the shipped registry
+ *    (which offers no cabinet game, and says so), one with a hypothetical
+ *    future cabinet game so the card layout can be reviewed, one with a Guest
+ *    Game (which must get no Play button), and one listing a game with no
+ *    implementation (which must fail safely and say so). Only the first exists
+ *    in the shipped registry;
+ *  - **dedicated machines** — Blobbi Dance opening DIRECTLY, and the pool and
+ *    air hockey tables opening their own coming-soon screens. None of them ever
+ *    shows the shared catalogue, which is the thing to check here;
+ *  - **overlay containment** — every surface above is portaled into the frame's
+ *    stage overlay host, so what a reviewer sees is a panel inside the game
+ *    window rather than one covering the browser page;
  *  - **anchors** — draws each machine's configured walk-to point on the floor;
  *  - **Blobbi Dance** — the REAL machine (real chart, real judgement, real
  *    lifecycle, real claim boundary) with a FAKE `ArcadeRewardWriter` whose
@@ -145,6 +173,81 @@ let fixtureRunCounter = 0;
  * without hand-editing the shipped one.
  */
 const BROKEN_CHART: DanceChart = { ...DEFAULT_DANCE_CHART, version: 99 };
+
+/**
+ * Catalogue fixtures, for the states the shipped registry cannot be in.
+ *
+ * The registry has no Guest Game and no broken entry, and it must not gain one
+ * to make them reviewable. These are passed as the catalogue's `entries` prop —
+ * the same prop, the same component, the same cards — so what is reviewed here
+ * is the real presentation of a hypothetical row.
+ */
+type CatalogueFixture = 'real' | 'future-game' | 'with-guest' | 'unresolvable';
+
+const CATALOGUE_FIXTURES: readonly CatalogueFixture[] = [
+  'real',
+  'future-game',
+  'with-guest',
+  'unresolvable',
+];
+
+/**
+ * A hypothetical future game that a GENERIC cabinet could offer.
+ *
+ * The shipped registry has none — every game belongs to a dedicated machine —
+ * so the card layout the catalogue is built to grow into has nothing to render
+ * it with. This is that card, and it must never be added to the real registry:
+ * the empty state is the honest one until a shared-cabinet game actually
+ * exists.
+ */
+const DEV_FUTURE_CABINET_GAME: ArcadeCatalogueEntry = {
+  id: 'dev-future-cabinet-game',
+  title: 'Blobbi Blocks',
+  shortDescription: 'Stack the falling blocks and clear a line before they reach the top.',
+  category: 'island',
+  availability: 'playable',
+  launchMode: 'native',
+  grantsTickets: false,
+  controls: [{ scheme: 'keyboard', label: 'Arrow keys' }],
+  estimatedDurationMs: 120_000,
+  source: 'blobbi-internal',
+  host: 'shared-cabinet',
+};
+
+/**
+ * A Guest Game that claims to be playable.
+ *
+ * The important thing about this fixture is what it does NOT get: no Play
+ * button, because `canLaunchArcadeGame` refuses it on CATEGORY before it ever
+ * looks at `launchMode` or `availability`. It is here so that refusal can be
+ * seen rather than trusted.
+ */
+const DEV_GUEST_ENTRY: ArcadeCatalogueEntry = {
+  id: 'dev-guest-example',
+  title: 'A Guest Game',
+  shortDescription: 'A little game made by somebody else. Just for fun.',
+  category: 'guest',
+  availability: 'playable',
+  launchMode: 'guest-runtime',
+  grantsTickets: false,
+  controls: [{ scheme: 'pointer', label: 'Tap or click' }],
+  source: 'external-publisher',
+  host: 'shared-cabinet',
+};
+
+/** An island game the catalogue offers and the resolver has never heard of. */
+const DEV_UNRESOLVABLE_ENTRY: ArcadeCatalogueEntry = {
+  id: 'dev-missing-implementation',
+  title: 'A Game With No Code',
+  shortDescription: 'Listed as playable, with nothing behind it. Launching must fail safely.',
+  category: 'island',
+  availability: 'playable',
+  launchMode: 'native',
+  grantsTickets: false,
+  controls: [],
+  source: 'blobbi-internal',
+  host: 'shared-cabinet',
+};
 
 /** Every way the reward writer can behave, without a relay or a signer. */
 type WriterOutcome =
@@ -385,10 +488,65 @@ export function DevArcade() {
     INITIAL_ARCADE_MACHINE_STATE,
   );
 
-  const danceMachine = useMemo(
-    () => arcadeMachines.find((m) => m.gameId === 'blobbi-dance')!,
+  /**
+   * The catalogue entry the harness drives, and the cabinet it pretends the
+   * player walked to.
+   *
+   * A cabinet no longer owns a game, so the harness picks one of each — which is
+   * also what makes "the same game, launched from a different machine id" a
+   * thing this panel can demonstrate.
+   */
+  const danceEntry = getCatalogueEntry(BLOBBI_DANCE_GAME_ID)!;
+  /**
+   * Blobbi Dance's machine is not a choice. It is a DEDICATED machine's game,
+   * and `canLaunchArcadeGame` refuses it anywhere else — so a harness chip that
+   * let you pick a cabinet would demonstrate something the product refuses to
+   * do, which is the exact false confidence a harness exists to prevent.
+   */
+  const danceMachineId = BLOBBI_DANCE_MACHINE_ID;
+
+  // ── Catalogue harness state ─────────────────────────────────────────────
+  /** Only a GENERIC cabinet can open the shared catalogue, so only those are offered. */
+  const genericCabinets = useMemo(
+    () => arcadeMachines.filter((m) => m.activation.type === 'shared-catalogue'),
     [],
   );
+  const [catalogueMachineId, setCatalogueMachineId] = useState(genericCabinets[0].id);
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
+  /**
+   * Which dedicated coming-soon screen is open, if any.
+   *
+   * The REAL component the room renders, not a copy — a harness that rebuilds
+   * the panel it is meant to review proves nothing about the panel.
+   */
+  const [dedicatedPreview, setDedicatedPreview] = useState<string | null>(null);
+  /**
+   * The room's three card dialogs, openable without walking anywhere.
+   *
+   * All three open on ARRIVAL — at the ticket counter, at the elevator — and
+   * arrival needs a walk, which needs `requestAnimationFrame`. That makes their
+   * LAYOUT unreviewable in any automated browser (rAF is starved there) and
+   * tedious in a real one. They are also the three that regressed when the
+   * arcade moved into the stage overlay host: `inFrame` supplies no padding, so
+   * they lost theirs. One chip each keeps that reviewable.
+   */
+  const [roomModal, setRoomModal] = useState<'pass' | 'elevator' | 'no-pass' | null>(null);
+  const [catalogueError, setCatalogueError] = useState<string | null>(null);
+  const [catalogueFixture, setCatalogueFixture] = useState<CatalogueFixture>('real');
+
+  /** Which catalogue the harness shows. See {@link CATALOGUE_FIXTURES}. */
+  const catalogueEntries: readonly ArcadeCatalogueEntry[] =
+    catalogueFixture === 'real'
+      ? ARCADE_CATALOGUE
+      : catalogueFixture === 'future-game'
+        ? [...ARCADE_CATALOGUE, DEV_FUTURE_CABINET_GAME]
+        : catalogueFixture === 'with-guest'
+          ? [...ARCADE_CATALOGUE, DEV_GUEST_ENTRY]
+          : [...ARCADE_CATALOGUE, DEV_UNRESOLVABLE_ENTRY];
+
+  /** The catalogue entry the lifecycle-fixture panel drives. */
+  const [fixtureGameId, setFixtureGameId] = useState<string>(BLOBBI_DANCE_GAME_ID);
+  const fixtureEntry = getCatalogueEntry(fixtureGameId) ?? danceEntry;
 
   const [startingBalance, setStartingBalance] = useState(10);
 
@@ -405,11 +563,11 @@ export function DevArcade() {
     danceDispatch({ type: 'close' });
     danceDispatch({
       type: 'open',
-      machineId: danceMachine.id,
-      gameId: danceMachine.gameId,
+      machineId: danceMachineId,
+      gameId: danceEntry.id,
     });
     setDanceOpen(true);
-  }, [danceMachine]);
+  }, [danceEntry.id, danceMachineId]);
 
   /**
    * Drop the dance machine straight onto its results screen.
@@ -423,12 +581,7 @@ export function DevArcade() {
     (fixture: DanceResultFixture, alreadyClaimed = false) => {
       fixtureRunCounter += 1;
       const runId = `dev-dance-${fixture}-${fixtureRunCounter}`;
-      const result = danceFixtureResult(
-        runId,
-        danceMachine.id,
-        danceMachine.gameId ?? '',
-        fixture,
-      );
+      const result = danceFixtureResult(runId, danceMachineId, danceEntry.id, fixture);
 
       if (alreadyClaimed) {
         // Seed the durable ledger BEFORE the machine hydrates it, which is the
@@ -448,8 +601,8 @@ export function DevArcade() {
         }
         persistClaim(pubkey, {
           runId,
-          gameId: danceMachine.gameId ?? '',
-          machineId: danceMachine.id,
+          gameId: danceEntry.id,
+          machineId: danceMachineId,
           status: 'claimed',
           tickets: 8,
           createdAt: 1_700_000_000_000,
@@ -463,13 +616,13 @@ export function DevArcade() {
 
       setWriterLog([]);
       danceDispatch({ type: 'close' });
-      danceDispatch({ type: 'open', machineId: danceMachine.id, gameId: danceMachine.gameId });
+      danceDispatch({ type: 'open', machineId: danceMachineId, gameId: danceEntry.id });
       danceDispatch({ type: 'start', runId, difficulty: 'normal' });
       danceDispatch({ type: 'countdown-complete' });
       danceDispatch({ type: 'finish', result });
       setDanceOpen(true);
     },
-    [danceMachine, pubkey],
+    [danceEntry.id, danceMachineId, pubkey],
   );
 
   /**
@@ -546,20 +699,31 @@ export function DevArcade() {
       fixtureRunCounter += 1;
       const runId = `dev-run-${to}-${fixtureRunCounter}`;
       dispatch({ type: 'close' });
-      // The machine's REAL game id, never a forced one. A harness that fakes a
-      // game onto a coming-soon cabinet can demonstrate states the product
-      // cannot reach, which is exactly the kind of false confidence it exists to
-      // prevent.
-      dispatch({ type: 'open', machineId: machine.id, gameId: machine.gameId });
+      // A REAL catalogue id, never a forced one. A harness that fakes a
+      // launchable game onto a coming-soon entry can demonstrate states the
+      // product cannot reach, which is exactly the kind of false confidence it
+      // exists to prevent.
+      // The REAL rule, with the REAL machine: a fixture that ignored it could
+      // demonstrate a run on a machine the product refuses to start one on.
+      const launchable = canLaunchArcadeGame({
+        game: fixtureEntry,
+        machineId: machine.id,
+        surface: 'dedicated-machine',
+      });
+      dispatch({
+        type: 'open',
+        machineId: machine.id,
+        gameId: launchable ? fixtureEntry.id : null,
+      });
       if (to === 'preview') {
         setNote(null);
         return;
       }
 
-      if (machine.gameId === null) {
+      if (!launchable) {
         setNote(
-          `${machine.displayName} has no game, so the reducer refuses to start a run — ` +
-            'select Dance Dance Blobbi to exercise the run states.',
+          `${fixtureEntry.title} cannot be launched from ${machine.displayName}, so the reducer ` +
+            'refuses to start a run — select Blobbi Dance and the Blobbi Dance Machine.',
         );
         return;
       }
@@ -581,7 +745,7 @@ export function DevArcade() {
 
       dispatch({
         type: 'finish',
-        result: fixtureResult(runId, machine.gameId, machine.id, true),
+        result: fixtureResult(runId, fixtureEntry.id, machine.id, true),
       });
       if (to === 'claiming') dispatch({ type: 'claim' });
       if (to === 'rewarded') {
@@ -589,7 +753,7 @@ export function DevArcade() {
         dispatch({ type: 'claim-succeeded' });
       }
     },
-    [machine],
+    [machine, fixtureEntry],
   );
 
   const award = useMemo(() => {
@@ -603,6 +767,136 @@ export function DevArcade() {
         <FloorSwitcher floor={floor} />
         <PlayingView selectedBlobbi={FIXTURE_BLOBBI} />
         {showAnchors && <AnchorOverlay floor={floor} />}
+
+        {/*
+          The harness's arcade surfaces live INSIDE the shell, exactly as the
+          real room's do.
+
+          They used to be siblings of `BlobbiAppShell`, which put them outside
+          the frame's stage-overlay host — so they portaled to `document.body`
+          and covered the whole browser page. That made the harness incapable of
+          showing the containment it exists to verify: a panel reviewed here
+          would look nothing like the one a player gets.
+        */}
+      {danceOpen && danceLifecycle.status !== 'closed' && (
+        <DanceMachine
+          key={remountKey}
+          machineId={danceMachineId}
+          gameId={danceEntry.id}
+          title={danceEntry.title}
+          lifecycle={danceLifecycle}
+          dispatch={danceDispatch}
+          onExit={() => {
+            danceDispatch({ type: 'close' });
+            setDanceOpen(false);
+          }}
+          exitLabel="Back to the arcade"
+          exitAriaLabel="Back to the arcade room"
+          chart={danceChart === 'valid' ? DEFAULT_DANCE_CHART : BROKEN_CHART}
+          rewardWriter={devWriter}
+          showDebugDetails
+        />
+      )}
+
+      {/*
+        The REAL shared catalogue, in the REAL shell, for whichever cabinet is
+        selected. Selecting Blobbi Dance here goes through the same resolver the
+        room uses, with the same machine id — which is what makes "the same game
+        from a different cabinet" checkable without walking anywhere.
+      */}
+      {/* The REAL room dialogs, in the REAL stage overlay host. */}
+      {roomModal === 'pass' && <ArcadePassModal isOpen onClose={() => setRoomModal(null)} />}
+      {roomModal === 'elevator' && <ElevatorModal isOpen onClose={() => setRoomModal(null)} />}
+      {roomModal === 'no-pass' && <NoPassModal isOpen onClose={() => setRoomModal(null)} />}
+
+      {/* The REAL dedicated coming-soon screen, for whichever table is chosen. */}
+      {dedicatedPreview && (
+        <ArcadeDedicatedPreview
+          open
+          machineId={dedicatedPreview}
+          experienceId={
+            (() => {
+              const activation = arcadeMachines.find((m) => m.id === dedicatedPreview)?.activation;
+              return activation?.type === 'dedicated-preview' ? activation.experienceId : '';
+            })()
+          }
+          onClose={() => setDedicatedPreview(null)}
+        />
+      )}
+
+      {catalogueOpen && (
+        <ArcadeCatalogueShell
+          open
+          machineId={catalogueMachineId}
+          machineName={
+            arcadeMachines.find((m) => m.id === catalogueMachineId)?.displayName ?? 'Arcade Cabinet'
+          }
+          machineImage={arcadeMachines.find((m) => m.id === catalogueMachineId)?.src}
+          entries={catalogueEntries}
+          launchError={catalogueError}
+          onSelect={(gameId) => {
+            // Resolved against the entries being RENDERED, not the shipped
+            // registry: a fixture entry is not in the registry, and looking it up
+            // there would report "not in the arcade" for the one case this
+            // fixture exists to show — a listed game with no implementation.
+            const entry = catalogueEntries.find((e) => e.id === gameId) ?? null;
+            if (!entry) {
+              setCatalogueError('That game is not in the arcade.');
+              return;
+            }
+            const request = {
+              game: entry,
+              machineId: catalogueMachineId,
+              surface: 'shared-catalogue' as const,
+            };
+            if (!canLaunchArcadeGame(request) || !resolveNativeArcadeGame(request)) {
+              setCatalogueError(`${entry.title} cannot be played on this cabinet.`);
+              return;
+            }
+            setCatalogueError(null);
+            setCatalogueOpen(false);
+            setNote(
+              `${entry.title} would launch here. No shared-cabinet game is implemented yet, so ` +
+                'the harness stops at the boundary rather than mounting something that does not exist.',
+            );
+          }}
+          onClose={() => {
+            setCatalogueOpen(false);
+            setCatalogueError(null);
+          }}
+        />
+      )}
+
+      {/* The real shell, driven by the real reducer, with fixture content. */}
+      {lifecycle.status !== 'closed' && (
+        <ArcadeGameShell
+          open
+          onClose={() => dispatch({ type: 'close' })}
+          title={machine.displayName}
+          machineId={machine.id}
+          gameId={lifecycle.gameId}
+          status={lifecycle.status}
+          surface="notice"
+          onPause={() => dispatch({ type: 'pause' })}
+          onResume={() => dispatch({ type: 'resume' })}
+        >
+          {lifecycle.status === 'results' ||
+          lifecycle.status === 'claiming' ||
+          lifecycle.status === 'rewarded' ? (
+            <ResultsFixture award={award} />
+          ) : lifecycle.status === 'aborted' ? (
+            <p className="text-center">
+              Run aborted ({lifecycle.abortReason}). No result, so no reward is possible.
+            </p>
+          ) : (
+            <ArcadeMachinePanel
+              displayName={machine.displayName}
+              blurb={`Lifecycle fixture for ${fixtureEntry.title}. Nothing here is a real run.`}
+              badge="Dev fixture"
+            />
+          )}
+        </ArcadeGameShell>
+      )}
       </BlobbiAppShell>
 
       {/* The control panel deliberately sits OUTSIDE the world, like the shell. */}
@@ -652,6 +946,92 @@ export function DevArcade() {
           ))}
         </Section>
 
+        <Section title="Room dialogs (contained cards)">
+          {(
+            [
+              ['pass', 'Arcade Pass'],
+              ['elevator', 'Elevator'],
+              ['no-pass', 'No Pass'],
+            ] as const
+          ).map(([id, label]) => (
+            <Chip
+              key={id}
+              active={roomModal === id}
+              onClick={() => setRoomModal((v) => (v === id ? null : id))}
+            >
+              {label}
+            </Chip>
+          ))}
+          <span className="ml-2 font-mono">
+            open on ARRIVAL in the room · shown here because a walk needs rAF
+          </span>
+        </Section>
+
+        <Section title="Dedicated machines">
+          {/*
+            These three are NOT cabinets. Each opens its own experience and
+            never the shared catalogue — the correction this section exists to
+            make visible.
+          */}
+          <Chip active={danceOpen} onClick={openDance}>
+            Blobbi Dance (direct)
+          </Chip>
+          {arcadeMachines
+            .filter((m) => m.activation.type === 'dedicated-preview')
+            .map((m) => (
+              <Chip
+                key={m.id}
+                active={dedicatedPreview === m.id}
+                onClick={() => setDedicatedPreview((v) => (v === m.id ? null : m.id))}
+              >
+                {m.displayName}
+              </Chip>
+            ))}
+          <span className="ml-2 font-mono">
+            dedicated={arcadeMachines.filter((m) => m.activation.type !== 'shared-catalogue').length}{' '}
+            · generic={genericCabinets.length}
+          </span>
+        </Section>
+
+        <Section title="Catalogue cabinet (generic only)">
+          {genericCabinets.map((m) => (
+            <Chip
+              key={m.id}
+              active={m.id === catalogueMachineId}
+              onClick={() => setCatalogueMachineId(m.id)}
+            >
+              {m.displayName}
+            </Chip>
+          ))}
+        </Section>
+
+        <Section title="Catalogue">
+          <Chip
+            active={catalogueOpen}
+            onClick={() => {
+              setCatalogueError(null);
+              setCatalogueOpen((v) => !v);
+            }}
+          >
+            {catalogueOpen ? 'close catalogue' : 'open catalogue'}
+          </Chip>
+          {CATALOGUE_FIXTURES.map((fixture) => (
+            <Chip
+              key={fixture}
+              active={catalogueFixture === fixture}
+              onClick={() => {
+                setCatalogueFixture(fixture);
+                setCatalogueError(null);
+              }}
+            >
+              {fixture}
+            </Chip>
+          ))}
+          <span className="ml-2 font-mono">
+            cabinet={catalogueMachineId} · shared games={sharedCabinetCatalogue(catalogueEntries).length}
+          </span>
+        </Section>
+
         <Section title="Lifecycle fixture">
           {(
             [
@@ -676,6 +1056,19 @@ export function DevArcade() {
           </span>
         </Section>
 
+        <Section title="Lifecycle game">
+          {ARCADE_CATALOGUE.map((entry) => (
+            <Chip
+              key={entry.id}
+              active={entry.id === fixtureGameId}
+              onClick={() => setFixtureGameId(entry.id)}
+            >
+              {entry.title}
+              {entry.availability === 'playable' ? '' : ' (not playable)'}
+            </Chip>
+          ))}
+        </Section>
+
         <Section title="Blobbi Dance (real game, fake writer)">
           <Chip active={danceOpen} onClick={openDance}>
             open dance machine
@@ -698,7 +1091,8 @@ export function DevArcade() {
             reduced motion: {forceReducedMotion ? 'on' : 'off'}
           </Chip>
           <span className="ml-2 font-mono">
-            status={danceLifecycle.status} run={danceLifecycle.runId ?? '—'}
+            status={danceLifecycle.status} run={danceLifecycle.runId ?? '—'} machine=
+            {danceLifecycle.machineId ?? '—'}
           </span>
         </Section>
 
@@ -790,52 +1184,6 @@ export function DevArcade() {
         claim boundary — with a fake writer. It publishes nothing: `rewardWriter`
         replaces the only component that could.
       */}
-      {danceOpen && danceLifecycle.status !== 'closed' && (
-        <DanceMachine
-          key={remountKey}
-          machine={danceMachine}
-          lifecycle={danceLifecycle}
-          dispatch={danceDispatch}
-          onClose={() => {
-            danceDispatch({ type: 'close' });
-            setDanceOpen(false);
-          }}
-          chart={danceChart === 'valid' ? DEFAULT_DANCE_CHART : BROKEN_CHART}
-          rewardWriter={devWriter}
-          showDebugDetails
-        />
-      )}
-
-      {/* The real shell, driven by the real reducer, with fixture content. */}
-      {lifecycle.status !== 'closed' && (
-        <ArcadeGameShell
-          open
-          onClose={() => dispatch({ type: 'close' })}
-          title={machine.displayName}
-          machineId={machine.id}
-          gameId={machine.gameId}
-          status={lifecycle.status}
-          onPause={() => dispatch({ type: 'pause' })}
-          onResume={() => dispatch({ type: 'resume' })}
-        >
-          {lifecycle.status === 'results' ||
-          lifecycle.status === 'claiming' ||
-          lifecycle.status === 'rewarded' ? (
-            <ResultsFixture award={award} />
-          ) : lifecycle.status === 'aborted' ? (
-            <p className="text-center">
-              Run aborted ({lifecycle.abortReason}). No result, so no reward is possible.
-            </p>
-          ) : (
-            <ArcadeMachinePanel
-              displayName={machine.displayName}
-              availability={machine.availability}
-              blurb={machine.blurb}
-              showControls={machine.availability === 'preview'}
-            />
-          )}
-        </ArcadeGameShell>
-      )}
     </LocationProvider>
   );
 }

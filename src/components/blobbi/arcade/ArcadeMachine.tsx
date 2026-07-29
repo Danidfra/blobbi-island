@@ -126,7 +126,6 @@ export function ArcadeMachine({ config, requestInteraction, onActivate }: Arcade
     <div
       data-block-move
       data-arcade-machine-id={config.id}
-      data-arcade-availability={config.availability}
       role="button"
       tabIndex={0}
       aria-label={config.alt}

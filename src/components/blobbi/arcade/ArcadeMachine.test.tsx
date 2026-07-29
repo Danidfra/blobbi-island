@@ -288,15 +288,17 @@ describe('accessibility', () => {
     expect(h.activations).toEqual(['arcade-dance-machine']);
   });
 
-  it('reports availability so the room never has to guess', () => {
+  it('reports its own id and nothing about a game', () => {
+    // A machine used to publish `data-arcade-availability`, back when a
+    // nullable `gameId` plus a loose `availability` described what it did. One
+    // discriminated `activation` field replaced both, and it is read from the
+    // registry rather than from the DOM — so the only thing this element needs
+    // to carry is its own id.
     const h = renderMachines([dance(), pool()]);
-    expect(h.machineEl('arcade-dance-machine')).toHaveAttribute(
-      'data-arcade-availability',
-      'playable',
-    );
-    expect(h.machineEl('arcade-pool-table')).toHaveAttribute(
-      'data-arcade-availability',
-      'coming-soon',
-    );
+    for (const id of ['arcade-dance-machine', 'arcade-pool-table']) {
+      const el = h.machineEl(id);
+      expect(el).toHaveAttribute('data-arcade-machine-id', id);
+      expect(el.hasAttribute('data-arcade-availability'), id).toBe(false);
+    }
   });
 });

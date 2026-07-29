@@ -14,12 +14,13 @@ import {
   ARCADE_FLOORS,
   ARCADE_WORLD_HEIGHT,
   ARCADE_WORLD_WIDTH,
-  BLOBBI_DANCE_GAME_ID,
   arcadeBoundaryForFloor,
   arcadeFloorForBackground,
   arcadeMachines,
   arcadeMachinesForFloor,
+  dedicatedMachines,
   getArcadeMachine,
+  sharedCatalogueMachines,
   isArcadeBackground,
   machineAnchorPosition,
   machineHeightPercent,
@@ -37,7 +38,7 @@ import {
 import { ARCADE_ELEVATOR_ALCOVE } from './location-initial-position';
 import { backgroundZIndexConfigs } from './interactive-elements-config';
 import { constrainPosition } from './boundaries';
-import { arcadeRewardPolicies } from '@/arcade/reward-policy';
+import { BLOBBI_DANCE_GAME_ID, getCatalogueEntry } from '@/arcade/catalogue';
 
 const FLOORS: ArcadeFloorId[] = ['ground', 'floor-1', 'basement'];
 
@@ -96,43 +97,100 @@ describe('machine identity', () => {
   });
 });
 
-describe('game assignment', () => {
-  it('assigns the dance game to the basement dance machine and to nothing else', () => {
-    const withGames = arcadeMachines.filter((m) => m.gameId !== null);
-    expect(withGames.map((m) => m.id)).toEqual(['arcade-dance-machine']);
-    expect(withGames[0].gameId).toBe(BLOBBI_DANCE_GAME_ID);
-    expect(withGames[0].floor).toBe('basement');
+describe('machine classification', () => {
+  /**
+   * The corrective pass's central rule, as data.
+   *
+   * The arcade is not nine interchangeable boxes. Six generic cabinets open the
+   * shared catalogue; three dedicated machines are one physical game each. A
+   * previous pass made ALL nine open the catalogue, which turned a pool table
+   * into a menu and offered a rhythm game on it.
+   */
+  const GENERIC_CABINETS = [
+    'arcade-cabinet-pink',
+    'arcade-cabinet-black',
+    'arcade-cabinet-classic',
+    'arcade-cabinet-green',
+    'arcade-cabinet-purple',
+    'arcade-cabinet-red',
+  ];
+
+  it('gives exactly the six generic cabinets the shared catalogue', () => {
+    expect(sharedCatalogueMachines().map((m) => m.id).sort()).toEqual([...GENERIC_CABINETS].sort());
   });
 
-  it('marks every machine without a game as coming-soon, and only a machine WITH one as playable', () => {
-    for (const machine of arcadeMachines) {
-      if (machine.gameId === null) expect(machine.availability).toBe('coming-soon');
-      else expect(machine.availability).toBe('playable');
+  it('gives the dance machine Blobbi Dance, directly', () => {
+    const dance = getArcadeMachine('arcade-dance-machine')!;
+    expect(dance.activation).toEqual({ type: 'dedicated-game', gameId: BLOBBI_DANCE_GAME_ID });
+  });
+
+  it('gives the pool table pool, and the air hockey table air hockey', () => {
+    expect(getArcadeMachine('arcade-pool-table')!.activation).toEqual({
+      type: 'dedicated-preview',
+      experienceId: 'blobbi-pool',
+    });
+    expect(getArcadeMachine('arcade-air-hockey')!.activation).toEqual({
+      type: 'dedicated-preview',
+      experienceId: 'blobbi-air-hockey',
+    });
+  });
+
+  it('classifies exactly three machines as dedicated', () => {
+    expect(dedicatedMachines().map((m) => m.id).sort()).toEqual(
+      ['arcade-air-hockey', 'arcade-dance-machine', 'arcade-pool-table'].sort(),
+    );
+  });
+
+  it('classifies every machine, with no machine in both groups', () => {
+    expect(sharedCatalogueMachines().length + dedicatedMachines().length).toBe(
+      arcadeMachines.length,
+    );
+    const shared = new Set(sharedCatalogueMachines().map((m) => m.id));
+    for (const machine of dedicatedMachines()) expect(shared, machine.id).not.toContain(machine.id);
+  });
+
+  it('names every dedicated game and preview after a real registry entry', () => {
+    for (const machine of dedicatedMachines()) {
+      const id =
+        machine.activation.type === 'dedicated-game'
+          ? machine.activation.gameId
+          : machine.activation.type === 'dedicated-preview'
+            ? machine.activation.experienceId
+            : null;
+      expect(id, machine.id).not.toBeNull();
+      const entry = getCatalogueEntry(id);
+      expect(entry, `${machine.id} → ${id}`).not.toBeNull();
+      // And that entry must say it belongs HERE, so the two records agree.
+      expect(entry!.host, machine.id).toBe('dedicated-machine');
+      expect(entry!.machineIds, machine.id).toContain(machine.id);
     }
-    // The inverse is the load-bearing direction: a machine cannot be made
-    // playable by editing a presentation field.
+  });
+
+  it('records no per-machine game, availability or blurb', () => {
+    // The pre-Phase-4 fields. `activation` replaced all three with one
+    // discriminated value; leaving any of them behind would be a second source
+    // of truth about what a machine does.
     for (const machine of arcadeMachines) {
-      if (machine.availability === 'playable') expect(machine.gameId).not.toBeNull();
+      const record = machine as unknown as Record<string, unknown>;
+      expect(record.gameId, machine.id).toBeUndefined();
+      expect(record.availability, machine.id).toBeUndefined();
+      expect(record.blurb, machine.id).toBeUndefined();
     }
   });
 
-  it('uses a game id that is not a Nostr address or an item id', () => {
-    expect(BLOBBI_DANCE_GAME_ID).toBe('blobbi-dance');
-    expect(BLOBBI_DANCE_GAME_ID).not.toMatch(/^\d+:/); // not an naddr coordinate
-    expect(BLOBBI_DANCE_GAME_ID).not.toContain(':'); // not `blobbi:currency:...`
+  it('keeps the dance machine named for its game, not for a generic cabinet', () => {
+    // A corrective pass renamed it "Dance Pad Cabinet" to satisfy an
+    // architectural rule that turned out to be wrong. It is a dedicated machine
+    // and a player should be able to find the dance game by reading the room.
+    const dance = getArcadeMachine('arcade-dance-machine')!;
+    expect(dance.displayName).toMatch(/dance/i);
+    expect(dance.displayName).not.toMatch(/^(pink|black|classic|green|purple|red) /i);
+    expect(dance.alt).toMatch(/dance/i);
   });
 
-  it('has a reward policy registered for the one game that exists', () => {
-    expect(arcadeRewardPolicies.map((p) => p.gameId)).toContain(BLOBBI_DANCE_GAME_ID);
-  });
-
-  it('gives every machine an honest, non-empty blurb', () => {
-    for (const machine of arcadeMachines) {
-      expect(machine.blurb.trim().length).toBeGreaterThan(0);
-      // No coming-soon machine may imply something is playable now.
-      if (machine.availability === 'coming-soon') {
-        expect(machine.blurb.toLowerCase()).toMatch(/not|no game|yet/);
-      }
+  it('never names a generic cabinet after a game', () => {
+    for (const machine of sharedCatalogueMachines()) {
+      expect(machine.displayName, machine.id).not.toMatch(/dance|pool|hockey/i);
     }
   });
 });
