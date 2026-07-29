@@ -26,7 +26,7 @@ export function MultiplayerExample() {
     name: 'Demo Blobbi',
   };
   
-  const boundary = locationBoundaries['plaza-open.png'] || {
+  const boundary = locationBoundaries['plaza-open.webp'] || {
     shape: 'rectangle' as const,
     x: [5, 95] as [number, number],
     y: [56, 98] as [number, number],

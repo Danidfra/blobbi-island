@@ -13,20 +13,20 @@ export const locationBoundaries: Record<string, Boundary> = {
     bottom: 70,
     curvature: 4,
   },
-  'beach-open.png': {
+  'beach-open.webp': {
     shape: 'arch',
     top: 68,
     bottom: 70,
     curvature: 6,
   },
-  'mine-open.png': {
+  'mine-open.webp': {
     shape: 'composite',
     areas: [
       { type: 'rectangle', x: [42, 58], y: [68, 75] },
       { type: 'rectangle', x: [10, 90], y: [75, 98] },
     ]
   },
-  'nostr-station-open.png': {
+  'nostr-station-open.webp': {
     shape: 'composite',
     areas: [
       { type: 'rectangle', x: [5, 70], y: [65, 95] }, // Main area
@@ -68,7 +68,7 @@ export const locationBoundaries: Record<string, Boundary> = {
       {type: 'rectangle' , x: [2, 98], y: [74, 92] },
     ]
   },
-  'plaza-open.png': {
+  'plaza-open.webp': {
     shape: 'rectangle',
     x: [5, 95],
     y: [56, 98],
@@ -154,7 +154,7 @@ export const locationBoundaries: Record<string, Boundary> = {
 
     ],
   },
-  'back-yard-open.png': {
+  'back-yard-open.webp': {
     shape: 'rectangle',
     x: [10, 90],
     y: [75, 98],

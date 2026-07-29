@@ -12,6 +12,7 @@ import { usePendingInteraction } from '@/hooks/usePendingInteraction';
 import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOnWorldClick';
 import { BackArrow } from './BackArrow';
 import { InteractiveElement, type InteractiveElementProps } from './InteractiveElement';
+import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
@@ -166,7 +167,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
       </>)
   }
 
-  if (backgroundFile === 'back-yard-open.png') {
+  if (backgroundFile === 'back-yard-open.webp') {
     return (
       <InteractiveElement
         src="/assets/locations/back-yard/door.png"
@@ -629,7 +630,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   }
 
   // Town elements (when background is town-open.webp)
-if (backgroundFile === 'nostr-station-open.png') {
+if (backgroundFile === 'nostr-station-open.webp') {
   return (
     <>
       {/* Nostr Station */}
@@ -657,23 +658,24 @@ if (backgroundFile === 'nostr-station-open.png') {
   );
 }
 
-  // Mine elements (when background is mine-open.png)
-  if (backgroundFile === 'mine-open.png') {
+  // Mine elements (when background is mine-open.webp)
+  if (backgroundFile === 'mine-open.webp') {
+    /*
+      The cave used to be a single `/assets/locations/mine/cave.png` overlay
+      dropped on the spot where `mine-open.png` had the cave mouth painted into
+      it. The migrated `mine-open.webp` is a bare forest path, so that overlay
+      had nothing to sit on and its whole rectangle — transparent pixels
+      included — was clickable. It is replaced by a composed structure whose art
+      is inert and whose only hit target is the arch opening; the destination,
+      the walk-to-interact flow and this room's `requestInteraction` are
+      unchanged. See `MineCaveEntrance` / `mine-cave-config.ts`.
+    */
     return (
-      <>
-        {/* Cave - Center, transparent by default */}
-        <div className="absolute left-1/2 top-[40%] sm:top-[42%] transform -translate-x-1/2 z-15">
-          <InteractiveElement
-            src="/assets/locations/mine/cave.png"
-            alt="Cave"
-            animated={false}
-            onClick={() => setCurrentLocation('cave-open')}
-            requestInteraction={requestInteraction}
-            effect="opacity"
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:size-[214px]"
-          />
-        </div>
-      </>
+      <MineCaveEntrance
+        requestInteraction={requestInteraction}
+        onEnter={() => setCurrentLocation('cave-open')}
+        locationKey={currentLocation}
+      />
     );
   }
 
@@ -696,8 +698,8 @@ if (backgroundFile === 'nostr-station-open.png') {
     );
   }
 
-  // Beach elements (when background is beach.png or beach-open.png)
-  if (backgroundFile === 'beach-open.png' || backgroundFile === 'beach.png') {
+  // Beach elements (when background is beach.png or beach-open.webp)
+  if (backgroundFile === 'beach-open.webp' || backgroundFile === 'beach.png') {
     return (
       <>
         {/* Boat - Center */}
@@ -713,8 +715,8 @@ if (backgroundFile === 'nostr-station-open.png') {
       </>
     );
   }
-// Plaza elements (when background is plaza-open.png)
-if (backgroundFile === 'plaza-open.png') {
+// Plaza elements (when background is plaza-open.webp)
+if (backgroundFile === 'plaza-open.webp') {
   return (
     <>
       <div className="absolute inset-x-0 top-0 flex items-center justify-center z-10">

@@ -42,23 +42,23 @@ describe('Interactive Elements Configuration', () => {
       expect(higherUp).toBe(15);
     });
 
-    it('should calculate correct z-index for beach-open.png background', () => {
+    it('should calculate correct z-index for beach-open.webp background', () => {
       // Test position at 90% from top (10% from bottom) - should be z-index 25
-      const nearBottom = calculateBlobbiZIndex(90, 'beach-open.png');
+      const nearBottom = calculateBlobbiZIndex(90, 'beach-open.webp');
       expect(nearBottom).toBe(25);
 
       // Test position at 70% from top (30% from bottom) - should be z-index 15
-      const higherUp = calculateBlobbiZIndex(70, 'beach-open.png');
+      const higherUp = calculateBlobbiZIndex(70, 'beach-open.webp');
       expect(higherUp).toBe(15);
     });
 
-    it('should calculate correct z-index for mine-open.png background', () => {
+    it('should calculate correct z-index for mine-open.webp background', () => {
       // Test position at 90% from top (10% from bottom) - should be z-index 20
-      const nearBottom = calculateBlobbiZIndex(90, 'mine-open.png');
+      const nearBottom = calculateBlobbiZIndex(90, 'mine-open.webp');
       expect(nearBottom).toBe(20);
 
       // Test position at 70% from top (30% from bottom) - should be z-index 10
-      const higherUp = calculateBlobbiZIndex(70, 'mine-open.png');
+      const higherUp = calculateBlobbiZIndex(70, 'mine-open.webp');
       expect(higherUp).toBe(10);
     });
 
@@ -127,14 +127,14 @@ describe('Interactive Elements Configuration', () => {
       expect(elementIds).toContain('streetlight-right');
     });
 
-    it('should return correct elements for mine-open.png', () => {
-      const elements = getInteractiveElementsForBackground('mine-open.png');
+    it('should return correct elements for mine-open.webp', () => {
+      const elements = getInteractiveElementsForBackground('mine-open.webp');
       expect(elements).toHaveLength(1); // 1 element in mine
       expect(elements[0].id).toBe('cave');
     });
 
     it('should return correct elements for beach backgrounds', () => {
-      const beachOpenElements = getInteractiveElementsForBackground('beach-open.png');
+      const beachOpenElements = getInteractiveElementsForBackground('beach-open.webp');
       expect(beachOpenElements).toHaveLength(1);
       expect(beachOpenElements[0].id).toBe('boat');
     });
