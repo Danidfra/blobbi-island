@@ -660,6 +660,94 @@ Three consequences worth stating:
 3. **Nothing forces the sky through opaque pixels.** There is no per-location
    opacity fudge and no "make the top 30% translucent" trick.
 
+### The Mine's cave: a structure that moved out of the plate
+
+Cutting the sky out of a background does not only add sky. `mine-open.webp` came
+back from the migration as a bare forest path: the cave that used to be **painted
+into** it is gone, and ships instead as two sprites that the scene composes on
+top. This is the first location where a *structure* — not just weather — lives
+above the plate, so it is worth writing down what that costs.
+
+**The two assets.** `world/buildings/mine-open-cave.webp` (1271×642) is the
+exterior rock arch, and `world/buildings/mine-open-cave-entrance.webp` (959×526)
+is the lit tunnel seen through it. Everything positional lives in
+`src/lib/mine-cave-config.ts`; the composition is `MineCaveEntrance.tsx`.
+
+**Placement, and what may be retuned.** All of it. The starting values are
+hand-picked against the artwork at world scale, not derived from anything:
+
+| Value | Now | Measured against |
+| --- | --- | --- |
+| `wrapper.centerXPercent` / `bottomPercent` / `widthPercent` | 50 / 24 / 70 | the virtual world (1046×697) — the cave spans y ≈ 23%–76% |
+| `mouth.left/width/top/bottom` | 41 / 24 / 44 / 5 | the **wrapper**, so the opening rides along when the cave is resized |
+| `mouth.borderRadius` | `48% 48% 8% 8% / 34% 34% 4% 4%` | the arch's curve |
+| `entranceObjectPosition` | `50% 62%` | which slice of the tunnel photo the opening shows |
+| `approach` | `{ x: 50, y: 71 }` | the Mine's walk corridor (`x 42–58, y 68–75`) |
+
+The wrapper is centred by arithmetic (`left: centre − width / 2`) rather than by
+`translateX(-50%)`. That is not a style preference — see the depth note below.
+
+**Layer order**, back to front: black backing → entrance preview → arch →
+hotspot. The first two sit inside an `overflow-hidden` mouth element, because the
+tunnel photo is much wider than the arch and would otherwise spill either side of
+the rock. The clip is scoped to the opening precisely so it can never cut the
+arch.
+
+**Idle is black.** A plain black div behind the opening only — never a rectangle
+behind the whole sprite. It is a little larger than the visible hole, and that
+surplus hides behind the arch's own opaque rock, so it cannot leak. It is not an
+`<img>`, so the grade does not touch it: black is black at every hour.
+
+**One activation path.** Mouse, touch, Enter and Space all arrive as a single
+`click` on the button, and that is the only event the component listens to. The
+tempting extra `onTouchStart` + `preventDefault()` does not work here: React 18
+registers `touchstart` at the root as a *passive* listener, so the synthetic
+click survives and the tap activates twice — the second `requestInteraction`
+replaces the first, and the replacement's cancellation clears the lock the tap
+had just set, leaving the cave dark for the whole walk. The touch device still
+gets its more forgiving proximity threshold, read from the click's
+`pointerType`.
+
+**Preview and active.** Hover or keyboard focus fades the backing out and the
+tunnel in; neither enters the mine. A click, tap or Enter/Space *locks* it open
+and requests the room's existing walk-to-interact
+(`usePendingInteraction` → `blobbiRef.goTo`), which fires `setCurrentLocation('cave-open')`
+on arrival — the same destination and the same mechanism as before. The lock is
+released by that pending interaction and nothing else: it fires, or it is
+cancelled (a tap on other ground, the location changing, unmount). There is no
+timeout, so the cave stays lit for however long the walk takes.
+
+**The hotspot is a real `<button>`**, covering the opening only. An `<img>`
+receives pointer events across its whole rectangle including transparent pixels,
+so a door-overlay element here would have swallowed clicks on the entire
+hillside; instead every piece of art is `pointer-events: none`, the wrapper is
+too, and only the button opts back in. `MovableBlobbi`'s block-list already
+matches `button`, and `data-block-move` states the same contract explicitly. In
+dev, the shared **Debug overlays** switch outlines it — that is the only way to
+see it while tuning the numbers above, and `DebugOverlaysContext` hard-gates it
+out of production.
+
+**Depth is the interesting part.** The wrapper carries **no** `z-index` on
+purpose. A positioned element with one creates a stacking context, and the three
+layers would then be sorted against the Blobbi as a single opaque block. Left at
+`auto` they interleave with the Blobbi's Y-derived z-index instead:
+
+| Layer | z | Reading |
+| --- | --- | --- |
+| opening | 9 | *behind* a Blobbi at the entrance (z-10), so it stands **in** the mouth |
+| arch | 15 | in front of it — rock and posts occlude it where they are opaque. Same depth as Town's shopfronts, and the depth `interactive-elements-config.ts` already records for `cave` |
+| hotspot | 16 | above the art, invisible |
+
+A Blobbi further down the path resolves to z-20 and clears the whole structure,
+which is correct — it is nearer the camera. Remote players read their depth from
+the same `resolveBlobbiZIndex`, so they layer identically.
+
+**Grading reaches both sprites for free.** They are ordinary `<img>` elements
+inside `[data-world-surface]`, and neither carries
+`data-island-world-grade="exclude"` — they are environment art and darken with
+the rest of the scene. Nothing here adds a `filter` to a wrapper, which is the
+one thing that would have broken the stacking above.
+
 ## 11. DEV controls
 
 Open from **account menu → Developer tools → "Sky controls"**, which is the same

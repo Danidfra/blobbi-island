@@ -234,7 +234,12 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
   // Mine elements (mine-open.webp)
   {
     id: 'cave',
-    yPosition: 40, // top-[40%] on mobile, top-[42%] on desktop - using mobile value
+    // Top edge of the composed cave structure: it is anchored by its BOTTOM
+    // (24% up from the world's floor) and its height follows the artwork's
+    // 1271×642 aspect at 70% world width, which puts its top at ≈23%. Placement
+    // itself lives in `mine-cave-config.ts`; this entry only records the depth
+    // contract.
+    yPosition: 23,
     zIndex: 15,
     backgroundFile: 'mine-open.webp'
   },
