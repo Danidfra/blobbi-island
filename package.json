@@ -14,8 +14,8 @@
     "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup"
   },
   "dependencies": {
-    "@blobbi-kit/core": "^0.1.0",
-    "@blobbi-kit/react": "^0.1.0",
+    "@blobbi-kit/core": "^0.3.0",
+    "@blobbi-kit/react": "^0.3.0",
     "@fontsource/comfortaa": "^5.2.6",
     "@hookform/resolvers": "^5.2.2",
     "@noble/hashes": "^1.3.1",

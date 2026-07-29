@@ -40,14 +40,18 @@ export interface OwnerProfileOptionalTags {
   client?: string;
 }
 
-/** Multi-value tags for kind 11125 Owner Profile events */
+/**
+ * Multi-value tags for kind 11125 Owner Profile events.
+ *
+ * NOTE: the legacy `storage` tag is intentionally absent. Consumable inventory
+ * lives in kind:31632/31633; any `storage` tag left on an old profile is an
+ * opaque extension tag this client neither models nor touches.
+ */
 export interface OwnerProfileMultiTags {
   /** List of owned pet IDs (multiple) */
   has?: string[];
   /** List of earned achievement IDs (multiple) */
   achievements?: string[];
-  /** Items in inventory in "item_id:quantity" format (multiple) */
-  storage?: string[];
 }
 
 /** Complete tag interface for kind 11125 Owner Profile events */
@@ -83,8 +87,6 @@ export interface OwnerProfile {
   ownedPets: string[];
   /** List of earned achievement IDs */
   achievements: string[];
-  /** Parsed inventory items */
-  inventory: InventoryItem[];
   /** Client that created the event */
   client?: string;
   /** Raw tags from the original event — preserved for republishing so we don't drop unknown tags */
@@ -121,18 +123,8 @@ export interface CreateOwnerProfileInput {
   ownedPets?: string[];
   /** List of earned achievement IDs */
   achievements?: string[];
-  /** Inventory items */
-  inventory?: InventoryItem[];
   /** Content for the event */
   content?: string;
-}
-
-/** Inventory item structure */
-export interface InventoryItem {
-  /** Item ID */
-  itemId: string;
-  /** Quantity owned */
-  quantity: number;
 }
 
 // ============================================================================

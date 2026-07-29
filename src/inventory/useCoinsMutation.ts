@@ -8,7 +8,8 @@
  *
  * It intentionally does NOT touch inventory: the clean inventory lives in
  * kind:31633. It still routes through `mergeOwnerProfileTags` so unknown Ditto
- * tags, coins, pets, achievements, and current companion are preserved.
+ * tags, coins, pets, achievements, and current companion are preserved — as is
+ * any legacy `storage` tag, which is carried through opaquely and never read.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';

@@ -1,7 +1,8 @@
 /**
  * Regression tests: coins writes (used by purchases) must preserve non-inventory
- * kind:11125 profile fields (coins/pets/achievements/companion/Ditto tags) AND
- * must not delete legacy `inv` accessory tags.
+ * kind:11125 profile fields (coins/pets/achievements/companion/Ditto tags), must
+ * not delete legacy `inv` accessory tags, and must carry any legacy `storage`
+ * tag through opaquely without reading or rewriting it.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -63,7 +64,7 @@ function profileEvent(coins: number): NostrEvent {
       ['has', 'blobbi-def'],
       ['achievements', 'first-egg'],
       ['inv', 'headwear-1', 'qty', '2', 'url', 'x', 'ver', '1'],
-      ['storage', 'food_apple:5'], // legacy consumable inventory (must be dropped)
+      ['storage', 'food_apple:5'], // legacy consumable inventory (opaque; must survive)
       ['xp', '42'], // Ditto unknown tag
     ],
     content: '{"custom":true}',
@@ -114,8 +115,11 @@ describe('useCoinsMutation regression', () => {
     expect(published.content).toBe('{"custom":true}');
     // Accessory inv tag NOT deleted (Phase 10 boundary).
     expect(published.tags.some((t) => t[0] === 'inv' && t[1] === 'headwear-1')).toBe(true);
-    // Legacy consumable `storage` inventory is NOT re-emitted (dropped).
-    expect(published.tags.some((t) => t[0] === 'storage')).toBe(false);
+    // Legacy consumable `storage` is opaque: never read, never rewritten, but
+    // carried through verbatim so a coins write cannot destroy old inventory.
+    expect(published.tags.filter((t) => t[0] === 'storage')).toEqual([
+      ['storage', 'food_apple:5'],
+    ]);
   });
 
   it('rejects a purchase that would make coins negative', async () => {
