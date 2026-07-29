@@ -25,16 +25,22 @@ import type { OwnerProfile } from './blobbi-types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function asProfileEvent(rawTags: string[][], content = ''): NostrEvent {
+/** A kind:11125 event whose tags are exactly `tags`, with nothing prepended. */
+function rawProfileEvent(tags: string[][], content = ''): NostrEvent {
   return {
     id: 'x'.repeat(64),
     pubkey: 'p'.repeat(64),
     created_at: 1_700_000_000,
     kind: KIND_BLOBBONAUT_PROFILE,
-    tags: [['d', 'profile'], ['name', 'Alice'], ...rawTags],
+    tags,
     content,
     sig: 's',
   };
+}
+
+/** The same, with the required `d`/`name` tags prepended for brevity. */
+function asProfileEvent(rawTags: string[][], content = ''): NostrEvent {
+  return rawProfileEvent([['d', 'profile'], ['name', 'Alice'], ...rawTags], content);
 }
 
 /** Parse a raw kind:11125 event into the profile the writers actually consume. */
@@ -130,14 +136,28 @@ describe('mergeOwnerProfileTags preserves legacy storage opaquely', () => {
     expect(tagsNamed(out, 'storage')).toEqual([['storage', 'food_apple:5']]);
   });
 
-  it('repeated republishes are idempotent — storage never accumulates', () => {
-    let tags = [['d', 'profile'], ['name', 'Alice'], ['storage', 'food_apple:5']];
+  it('repeated republishes are idempotent — the whole tag set reaches a fixed point', () => {
+    // Round 1 starts from a raw profile carrying legacy storage plus an
+    // unrelated host extension tag.
+    const first = mergeOwnerProfileTags(
+      profileFrom([['coins', '200'], ['storage', 'food_apple:5'], ['xp', '42']]),
+    );
 
-    for (let i = 0; i < 3; i++) {
-      tags = mergeOwnerProfileTags(profileFrom(tags.slice(2)));
+    // Each later round re-parses the PREVIOUS output as the source event, which
+    // is exactly what a republish does. No slicing, so this stays correct even
+    // if the emitted tag order ever changes.
+    let previous = first;
+    for (let round = 0; round < 3; round++) {
+      const next = mergeOwnerProfileTags(parseOwnerProfile(rawProfileEvent(previous))!);
+
+      // Full-tag-set equality: nothing added, removed, reordered or rewritten.
+      expect(next).toEqual(previous);
+      previous = next;
     }
 
-    expect(tagsNamed(tags, 'storage')).toEqual([['storage', 'food_apple:5']]);
+    // And the specific tags of interest survived every round exactly once.
+    expect(tagsNamed(previous, 'storage')).toEqual([['storage', 'food_apple:5']]);
+    expect(tagsNamed(previous, 'xp')).toEqual([['xp', '42']]);
   });
 });
 
