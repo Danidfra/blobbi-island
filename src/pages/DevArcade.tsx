@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { PlayingView } from '@/components/blobbi/PlayingView';
@@ -49,6 +49,17 @@ import { useArcadePass } from '@/hooks/useArcadePass';
 import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
 import { PoolMachine } from '@/components/blobbi/arcade/pool/PoolMachine';
 import { AirHockeyMachine } from '@/components/blobbi/arcade/hockey/AirHockeyMachine';
+import { PrizeCounter } from '@/components/blobbi/arcade/prizes/PrizeCounter';
+import {
+  ARCADE_PRIZE_CATALOGUE,
+  type ArcadePrize,
+} from '@/arcade/prizes/prize-catalogue';
+import type { ArcadePrizeRedemption } from '@/arcade/prizes/prize-redemption';
+import type { ArcadePrizeSpendWriter } from '@/inventory/arcade-prize-spend-writer';
+import { ArcadePrizeSpendError } from '@/inventory/arcade-prize-spend-writer';
+import type { ArcadePrizeOwnership } from '@/lib/arcade-prize-ownership';
+import { clearRedemptions } from '@/lib/arcade-redemption-ledger';
+import { ARCADE_PRIZE_COUNTER } from '@/lib/arcade-room-config';
 import { HOCKEY_STAT_KEYS } from '@/arcade/hockey/hockey-result';
 import { POOL_STAT_KEYS } from '@/arcade/pool/pool-result';
 import { POOL_SCENARIOS, poolScenario } from '@/arcade/pool/pool-scenarios';
@@ -320,6 +331,112 @@ function createDevWriter(
       const value = outcome === 'lagging-relay' && reads === 2 ? startingBalance : quantity;
       log(`read #${reads} → ${value}${value === quantity ? '' : ' (stale)'}`);
       return value;
+    },
+  };
+}
+
+/** Every way the prize SPEND writer can behave, without a relay or a signer. */
+type PrizeSpendOutcome = 'confirm' | 'sign-refused' | 'timeout' | 'verify-mismatch';
+
+const PRIZE_SPEND_OUTCOMES: readonly PrizeSpendOutcome[] = [
+  'confirm',
+  'sign-refused',
+  'timeout',
+  'verify-mismatch',
+];
+
+/**
+ * A fake `ArcadePrizeSpendWriter` — the spend-side twin of `createDevWriter`.
+ * The balance is REAL arithmetic on a starting number, so `timeout` reproduces
+ * the dangerous case faithfully: the spend lands and only the answer is lost.
+ */
+function createDevPrizeSpendWriter(
+  outcome: PrizeSpendOutcome,
+  startingBalance: number,
+  log: (line: string) => void,
+): ArcadePrizeSpendWriter {
+  let balance = startingBalance;
+  let reads = 0;
+  return {
+    async spendTickets(redemption: ArcadePrizeRedemption) {
+      log(`prize spend −${redemption.price} → ${outcome}`);
+      if (outcome === 'sign-refused') {
+        throw new ArcadePrizeSpendError('DEV: the signer refused', 'sign-failed');
+      }
+      balance -= redemption.price;
+      if (outcome === 'timeout') {
+        throw Object.assign(new Error('DEV: publish timed out'), { name: 'TimeoutError' });
+      }
+      if (outcome === 'verify-mismatch') balance += 1; // the read-back cannot add up
+    },
+    async readTicketQuantity() {
+      reads += 1;
+      log(`prize read #${reads} → ${balance}`);
+      return balance;
+    },
+  };
+}
+
+/** An in-memory ownership store whose delivery can be told to fail. */
+function createDevPrizeOwnership(
+  shouldFailDelivery: () => boolean,
+  log: (line: string) => void,
+): ArcadePrizeOwnership & { seed: (prizeId: string) => void } {
+  /** owner → prizeId → delivered redemption ids. `*` seeds every owner. */
+  const owned = new Map<string, Map<string, Set<string>>>();
+  const prizesFor = (pubkey: string) => {
+    const map = owned.get(pubkey) ?? new Map<string, Set<string>>();
+    owned.set(pubkey, map);
+    return map;
+  };
+  const deliveriesFor = (pubkey: string, prizeId: string) => {
+    const map = prizesFor(pubkey);
+    const set = map.get(prizeId) ?? new Set<string>();
+    map.set(prizeId, set);
+    return set;
+  };
+  return {
+    seed(prizeId: string) {
+      // Seeded for EVERY owner, so "one owned prize" reviews regardless of key.
+      deliveriesFor('*', prizeId).add('dev-seed');
+    },
+    async hasPrize(pubkey: string, prizeId: string) {
+      return prizesFor(pubkey).has(prizeId) || prizesFor('*').has(prizeId);
+    },
+    async hasDelivery(pubkey: string, prizeId: string, redemptionId: string) {
+      return (
+        deliveriesFor(pubkey, prizeId).has(redemptionId) ||
+        deliveriesFor('*', prizeId).has(redemptionId)
+      );
+    },
+    async grantPrize(pubkey: string, prize: ArcadePrize, redemptionId: string) {
+      const deliveries = deliveriesFor(pubkey, prize.id);
+      if (deliveries.has(redemptionId)) {
+        log(`prize delivery ${prize.id} (${redemptionId}) → already recorded`);
+        return;
+      }
+      if (shouldFailDelivery()) {
+        log(`prize delivery ${prize.id} → REFUSED (dev toggle)`);
+        throw new Error('DEV: delivery refused');
+      }
+      log(`prize delivery ${prize.id} (${redemptionId}) → ok`);
+      deliveries.add(redemptionId);
+    },
+    async listOwnedPrizes(pubkey: string) {
+      const merged = new Map<string, Set<string>>();
+      for (const source of [prizesFor('*'), prizesFor(pubkey)]) {
+        for (const [prizeId, ids] of source) {
+          const set = merged.get(prizeId) ?? new Set<string>();
+          for (const id of ids) set.add(id);
+          merged.set(prizeId, set);
+        }
+      }
+      return [...merged.entries()].map(([prizeId, ids]) => ({
+        prizeId,
+        count: ids.size,
+        firstGrantedAt: 1_700_000_000_000,
+        deliveredRedemptionIds: [...ids],
+      }));
     },
   };
 }
@@ -695,6 +812,46 @@ export function DevArcade() {
     setHockeyOpen(true);
   }, [hockeyEntry.id, hockeyMachineId]);
 
+  // ── Prize Counter harness state ─────────────────────────────────────────
+  // (`startingBalance` doubles as the fake spend writer's opening balance —
+  // declared up here so the prize memos below may read it.)
+  const [startingBalance, setStartingBalance] = useState(10);
+  const [prizeOpen, setPrizeOpen] = useState(false);
+  const [prizeSpendOutcome, setPrizeSpendOutcome] = useState<PrizeSpendOutcome>('confirm');
+  const [prizeDeliveryFail, setPrizeDeliveryFail] = useState(false);
+  const [prizeFixture, setPrizeFixture] = useState<'real' | 'broken-image' | 'empty'>('real');
+  /** Bumped to rebuild the fakes and remount the counter with clean state. */
+  const [prizeResetKey, setPrizeResetKey] = useState(0);
+  const prizeDeliveryFailRef = useRef(prizeDeliveryFail);
+  prizeDeliveryFailRef.current = prizeDeliveryFail;
+
+  const prizeWriter = useMemo(() => {
+    // The reset key deliberately rebuilds the writer, restoring its balance.
+    void prizeResetKey;
+    return createDevPrizeSpendWriter(prizeSpendOutcome, startingBalance, (line) =>
+      setWriterLog((l) => [...l.slice(-8), line]),
+    );
+  }, [prizeSpendOutcome, startingBalance, prizeResetKey]);
+  const prizeOwnership = useMemo(() => {
+    void prizeResetKey;
+    return createDevPrizeOwnership(
+      () => prizeDeliveryFailRef.current,
+      (line) => setWriterLog((l) => [...l.slice(-8), line]),
+    );
+  }, [prizeResetKey]);
+
+  const prizeCatalogue = useMemo(() => {
+    if (prizeFixture === 'empty') return [] as const;
+    if (prizeFixture === 'broken-image') {
+      return ARCADE_PRIZE_CATALOGUE.map((prize) =>
+        prize.id === 'neon-star-glasses'
+          ? { ...prize, image: '/assets/__does-not-exist__.png' }
+          : prize,
+      );
+    }
+    return undefined; // the real temporary catalogue
+  }, [prizeFixture]);
+
   // ── Catalogue harness state ─────────────────────────────────────────────
   /** Only a GENERIC cabinet can open the shared catalogue, so only those are offered. */
   const genericCabinets = useMemo(
@@ -737,8 +894,6 @@ export function DevArcade() {
   /** The catalogue entry the lifecycle-fixture panel drives. */
   const [fixtureGameId, setFixtureGameId] = useState<string>(BLOBBI_DANCE_GAME_ID);
   const fixtureEntry = getCatalogueEntry(fixtureGameId) ?? danceEntry;
-
-  const [startingBalance, setStartingBalance] = useState(10);
 
   const devWriter = useMemo(
     () =>
@@ -1055,6 +1210,31 @@ export function DevArcade() {
           exitAriaLabel="Back to the arcade room"
           showDebugDetails
         />
+      )}
+
+      {/*
+        The Prize Counter, in the REAL notice shell with the REAL counter
+        surface — and the FAKE spend writer and FAKE ownership store, so no
+        harness redemption can publish or persist a real spend.
+      */}
+      {prizeOpen && (
+        <ArcadeGameShell
+          key={`prize-${prizeResetKey}`}
+          open
+          onClose={() => setPrizeOpen(false)}
+          title={ARCADE_PRIZE_COUNTER.displayName}
+          description={ARCADE_PRIZE_COUNTER.blurb}
+          machineId={ARCADE_PRIZE_COUNTER.id}
+          surface="notice"
+          closeLabel="Close"
+          closeAriaLabel="Close and go back to the arcade"
+          contentClassName="overflow-y-auto p-0"
+        >
+          <PrizeCounter
+            catalogue={prizeCatalogue}
+            redemptionOptions={{ writer: prizeWriter, ownership: prizeOwnership }}
+          />
+        </ArcadeGameShell>
       )}
 
       {/* Air Hockey, exactly as above: real controller, fake writer. */}
@@ -1488,6 +1668,46 @@ export function DevArcade() {
             {writerLog.join('\n')}
           </pre>
         )}
+
+        <Section title="Prize Counter (fake spend, fake ownership)">
+          <Chip active={prizeOpen} onClick={() => setPrizeOpen((v) => !v)}>
+            {prizeOpen ? 'close counter' : 'open counter'}
+          </Chip>
+          {PRIZE_SPEND_OUTCOMES.map((outcome) => (
+            <Chip
+              key={outcome}
+              active={prizeSpendOutcome === outcome}
+              onClick={() => setPrizeSpendOutcome(outcome)}
+            >
+              spend: {outcome}
+            </Chip>
+          ))}
+          <Chip active={prizeDeliveryFail} onClick={() => setPrizeDeliveryFail((v) => !v)}>
+            delivery fails: {prizeDeliveryFail ? 'on' : 'off'}
+          </Chip>
+          {(['real', 'broken-image', 'empty'] as const).map((fixture) => (
+            <Chip
+              key={fixture}
+              active={prizeFixture === fixture}
+              onClick={() => setPrizeFixture(fixture)}
+            >
+              catalogue: {fixture}
+            </Chip>
+          ))}
+          <Chip onClick={() => prizeOwnership.seed('neon-star-glasses')}>seed owned prize</Chip>
+          <Chip
+            onClick={() => {
+              clearRedemptions();
+              setPrizeResetKey((k) => k + 1);
+            }}
+          >
+            reset prize state
+          </Chip>
+          <span className="ml-2 font-mono">
+            displayed balance = the seeded cache below · spend balance = start balance chip ·
+            signed-out browser shows the logged-out state
+          </span>
+        </Section>
 
         <Section title="Inventory / catalog (cache only)">
           <Chip onClick={() => seedTickets(0)}>tickets: 0</Chip>

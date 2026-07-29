@@ -124,6 +124,90 @@ describe('game simulation stays reward-free', () => {
   );
 });
 
+describe('the Prize Counter keeps its boundaries', () => {
+  // The catalogue and the redemption machine live under `src/arcade/prizes/`,
+  // so the pure-arcade scan above already proves they import no React, no
+  // Nostr client and no inventory writer. What is asserted here is the rest of
+  // the seam.
+
+  it('keeps game simulation and reward policies out of the prize shop', () => {
+    // The games earn tickets; the counter spends them. Neither may know the
+    // other exists: a policy that priced itself off a prize, or a simulation
+    // that read the shop, would couple play to the economy's contents.
+    const files = sourceFiles(ARCADE_DIR).filter(
+      (f) => !f.endsWith('.test.ts') && !f.includes('/prizes/'),
+    );
+    for (const file of files) {
+      for (const specifier of importsOf(file)) {
+        expect(
+          /prizes\//.test(specifier),
+          `${file.replace(`${process.cwd()}/`, '')} imports prize code (${specifier})`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('routes ticket SPENDING through one approved boundary, and nowhere else', () => {
+    // Mirror of the reward rule: the redemption hook is the only module that
+    // holds the spend writer, and the counter components reach spending only
+    // through that hook (the detail panel imports its state TYPE only).
+    const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
+      (f) => !/\.test\.tsx?$|\/test-/.test(f),
+    );
+    const spendUsers = componentFiles
+      .filter((file) => importsOf(file).some((s) => /arcade-prize-spend-writer/.test(s)))
+      .map((f) => f.replace(`${process.cwd()}/`, ''));
+    expect(spendUsers).toEqual([]);
+
+    const hookUsers = componentFiles
+      .filter((file) => importsOf(file).some((s) => /useArcadePrizeRedemption/.test(s)))
+      .map((f) => f.replace(`${process.cwd()}/`, ''))
+      .sort();
+    expect(hookUsers).toEqual([
+      'src/components/blobbi/arcade/prizes/PrizeCounter.tsx',
+      'src/components/blobbi/arcade/prizes/PrizeDetail.tsx',
+    ]);
+    expect(
+      readFileSync(
+        join(process.cwd(), 'src/components/blobbi/arcade/prizes/PrizeDetail.tsx'),
+        'utf8',
+      ),
+    ).toContain('import type { PrizeRedemptionUiState }');
+
+    const hook = importsOf(join(process.cwd(), 'src/hooks/useArcadePrizeRedemption.ts'));
+    expect(hook.some((s) => /arcade-prize-spend-writer/.test(s))).toBe(true);
+  });
+
+  it('keeps the TEMPORARY ownership store behind the hook, out of the components', () => {
+    const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
+      (f) => !/\.test\.tsx?$|\/test-/.test(f),
+    );
+    for (const file of componentFiles) {
+      for (const specifier of importsOf(file)) {
+        expect(
+          /arcade-prize-ownership/.test(specifier),
+          `${file.replace(`${process.cwd()}/`, '')} imports the ownership store (${specifier})`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('keeps the Mini Arcade Cabinet out of Home — the future is not imported yet', () => {
+    // No module whose path mentions Home may import prize code until the
+    // furniture delivery actually exists.
+    const allSrc = sourceFiles(join(process.cwd(), 'src'));
+    const homeFiles = allSrc.filter((f) => /home/i.test(f.replace(process.cwd(), '')));
+    for (const file of homeFiles) {
+      for (const specifier of importsOf(file)) {
+        expect(
+          /prizes\/|prize-catalogue|arcade-prize/.test(specifier),
+          `${file.replace(`${process.cwd()}/`, '')} imports prize code (${specifier})`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
 describe('the arcade does not depend on the theater', () => {
   const files = [...sourceFiles(ARCADE_DIR), ...sourceFiles(ARCADE_COMPONENTS_DIR)];
 

@@ -13,7 +13,7 @@ import { ElevatorModal } from '../ElevatorModal';
 import { NoPassModal } from '../NoPassModal';
 import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
-import { ArcadeMachinePanel } from './ArcadeMachinePanel';
+import { PrizeCounter } from './prizes/PrizeCounter';
 import { ArcadeCatalogueShell } from './ArcadeCatalogue';
 import { ArcadeDedicatedPreview } from './ArcadeDedicatedPreview';
 import { resolveNativeArcadeGame } from './native-games';
@@ -521,15 +521,20 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
           open
           onClose={closeShell}
           title={ARCADE_PRIZE_COUNTER.displayName}
+          description={ARCADE_PRIZE_COUNTER.blurb}
           machineId={ARCADE_PRIZE_COUNTER.id}
           surface="notice"
           closeLabel="Close"
           closeAriaLabel="Close and go back to the arcade"
+          /*
+            The counter owns its own scrolling (shelf and detail scroll
+            independently) and fills the box, so the shell's padding is off and
+            its scroll engages ONLY below the counter's minimum height (a squat
+            desktop window) — never as a second scrollbar in normal use.
+          */
+          contentClassName="overflow-y-auto p-0"
         >
-          <ArcadeMachinePanel
-            displayName={ARCADE_PRIZE_COUNTER.displayName}
-            blurb={ARCADE_PRIZE_COUNTER.blurb}
-          />
+          <PrizeCounter />
         </ArcadeGameShell>
       )}
 

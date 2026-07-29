@@ -413,7 +413,9 @@ describe('counters and elevator', () => {
   it('names both ground-floor counters for what they do', () => {
     expect(ARCADE_TICKET_COUNTER.alt.toLowerCase()).toContain('arcade pass');
     expect(ARCADE_PRIZE_COUNTER.alt.toLowerCase()).toContain('prize');
-    expect(ARCADE_PRIZE_COUNTER.blurb.toLowerCase()).toMatch(/not open yet/);
+    // The counter is OPEN now: the blurb must invite spending, not promise it.
+    expect(ARCADE_PRIZE_COUNTER.blurb.toLowerCase()).toMatch(/spend/);
+    expect(ARCADE_PRIZE_COUNTER.blurb.toLowerCase()).not.toMatch(/not open yet/);
   });
 
   it('stands the player on open floor for every configured interaction point', () => {

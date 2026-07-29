@@ -224,10 +224,9 @@ export const ARCADE_TICKET_COUNTER = {
 /**
  * The PRIZES counter.
  *
- * Its only previous effect was a `console.log`; it did not even walk the Blobbi
- * over. It is a real future feature — the prize shop is where Arcade Tickets get
- * spent — so it keeps its affordance and gets an honest coming-soon state rather
- * than being stripped out.
+ * Once a `console.log`, then an honest coming-soon notice — and now the real
+ * thing: walking up opens the Prize Counter, where Arcade Tickets are spent.
+ * The `blurb` is the one-line description under the shell's title.
  */
 export const ARCADE_PRIZE_COUNTER = {
   id: 'arcade-prize-counter',
@@ -235,7 +234,7 @@ export const ARCADE_PRIZE_COUNTER = {
   containerClassName: 'absolute right-[7%] top-[33%]',
   alt: 'Prize counter',
   displayName: 'Prize Counter',
-  blurb: 'The prize shop is not open yet. Arcade Tickets cannot be spent here.',
+  blurb: 'Spend your Arcade Tickets on prizes.',
   /** Roughly under the counter (its sprite spans x ≈ 68–93 %). */
   interactionPoint: { x: 80, y: ARCADE_COUNTER_STAND_Y },
 } as const;

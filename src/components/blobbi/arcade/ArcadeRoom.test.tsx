@@ -73,6 +73,16 @@ vi.mock('@/hooks/useArcadeReward', () => ({
   }),
 }));
 
+/*
+  The Prize Counter needs a query client, a relay pool and a login context for
+  its balance and its redemption boundary. This file tests the ROOM — that the
+  counter OPENS it — so the surface is stubbed; it is exercised for real in
+  `prizes/PrizeCounter.test.tsx` against fake writers.
+*/
+vi.mock('./prizes/PrizeCounter', () => ({
+  PrizeCounter: () => <div data-prize-counter data-testid="prize-counter-surface" />,
+}));
+
 vi.mock('../ArcadePassModal', () => ({
   ArcadePassModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="pass-modal" /> : null,
@@ -141,8 +151,6 @@ function clickAndArrive(element: HTMLElement) {
 }
 
 const shell = () => document.querySelector('[data-arcade-shell]') as HTMLElement | null;
-/** The panel inside the shell — the shell's own title bar repeats the name. */
-const panel = () => document.querySelector('[data-arcade-panel]') as HTMLElement | null;
 const catalogue = () => document.querySelector('[data-arcade-catalogue]') as HTMLElement | null;
 
 beforeEach(() => {
@@ -428,7 +436,7 @@ describe('nothing opens before the Blobbi arrives', () => {
 });
 
 describe('dead affordances are gone', () => {
-  it('walks to the prize counter and tells the truth about it', () => {
+  it('walks to the prize counter and opens the Prize Counter', () => {
     renderRoom('ground');
 
     const counter = screen.getByAltText('Prize counter');
@@ -436,7 +444,9 @@ describe('dead affordances are gone', () => {
 
     expect(screen.getByRole('dialog', { name: 'Prize Counter' })).toBeInTheDocument();
     expect(shell()).toHaveAttribute('data-arcade-surface', 'notice');
-    expect(within(panel()!).getByText(/not open yet/i)).toBeInTheDocument();
+    // The REAL counter surface mounts inside the shell (stubbed here; tested
+    // for real in prizes/PrizeCounter.test.tsx).
+    expect(screen.getByTestId('prize-counter-surface')).toBeInTheDocument();
     // A counter is not a cabinet: it opens no catalogue and lists no games.
     expect(catalogue()).toBeNull();
   });

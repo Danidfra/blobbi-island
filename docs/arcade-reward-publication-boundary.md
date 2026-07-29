@@ -330,5 +330,6 @@ the obvious farm.
 (`PlayingView`, arcade locations only, with `showZero`: a genuine zero, a
 loading read and an unavailable read each render distinctly), and the shared
 `ArcadeRewardPanel` repeats it on every results screen, where it updates after a
-confirmed claim. The **Prize Counter** — the thing tickets will eventually be
-spent at — remains deferred; nothing redeems a ticket yet.
+confirmed claim. The **Prize Counter** (V1) now spends tickets through the
+mirror-image spend boundary — see
+[`arcade-prize-counter.md`](./arcade-prize-counter.md).
