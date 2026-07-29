@@ -14,7 +14,7 @@ vi.mock('@/lib/interactive-elements-config', () => ({
   calculateBlobbiZIndex: () => 20,
 }));
 
-function TestWrapper({ scaleByYPosition = false, backgroundFile = 'nostr-station-open.png' }) {
+function TestWrapper({ scaleByYPosition = false, backgroundFile = 'nostr-station-open.webp' }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -60,7 +60,7 @@ describe('MovableBlobbi', () => {
     const { container: nostrStationContainer } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="nostr-station-open.png"
+        backgroundFile="nostr-station-open.webp"
       />
     );
     const nostrStationBlobbi = await waitFor(() => {
@@ -86,7 +86,7 @@ describe('MovableBlobbi', () => {
     const { container: plazaContainer } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="plaza-open.png"
+        backgroundFile="plaza-open.webp"
       />
     );
     const plazaBlobbi = await waitFor(() => {
@@ -101,7 +101,7 @@ describe('MovableBlobbi', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="nostr-station-open.png"
+        backgroundFile="nostr-station-open.webp"
       />
     );
 
@@ -143,7 +143,7 @@ describe('MovableBlobbi', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="plaza-open.png"
+        backgroundFile="plaza-open.webp"
       />
     );
 
@@ -164,7 +164,7 @@ describe('MovableBlobbi', () => {
     const { container } = render(
       <TestWrapper
         scaleByYPosition={true}
-        backgroundFile="nostr-station-open.png"
+        backgroundFile="nostr-station-open.webp"
       />
     );
 

@@ -166,7 +166,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
       </>)
   }
 
-  if (backgroundFile === 'back-yard-open.png') {
+  if (backgroundFile === 'back-yard-open.webp') {
     return (
       <InteractiveElement
         src="/assets/locations/back-yard/door.png"
@@ -629,7 +629,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   }
 
   // Town elements (when background is town-open.webp)
-if (backgroundFile === 'nostr-station-open.png') {
+if (backgroundFile === 'nostr-station-open.webp') {
   return (
     <>
       {/* Nostr Station */}
@@ -657,8 +657,8 @@ if (backgroundFile === 'nostr-station-open.png') {
   );
 }
 
-  // Mine elements (when background is mine-open.png)
-  if (backgroundFile === 'mine-open.png') {
+  // Mine elements (when background is mine-open.webp)
+  if (backgroundFile === 'mine-open.webp') {
     return (
       <>
         {/* Cave - Center, transparent by default */}
@@ -696,8 +696,8 @@ if (backgroundFile === 'nostr-station-open.png') {
     );
   }
 
-  // Beach elements (when background is beach.png or beach-open.png)
-  if (backgroundFile === 'beach-open.png' || backgroundFile === 'beach.png') {
+  // Beach elements (when background is beach.png or beach-open.webp)
+  if (backgroundFile === 'beach-open.webp' || backgroundFile === 'beach.png') {
     return (
       <>
         {/* Boat - Center */}
@@ -713,8 +713,8 @@ if (backgroundFile === 'nostr-station-open.png') {
       </>
     );
   }
-// Plaza elements (when background is plaza-open.png)
-if (backgroundFile === 'plaza-open.png') {
+// Plaza elements (when background is plaza-open.webp)
+if (backgroundFile === 'plaza-open.webp') {
   return (
     <>
       <div className="absolute inset-x-0 top-0 flex items-center justify-center z-10">

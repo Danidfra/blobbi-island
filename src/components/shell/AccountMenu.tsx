@@ -27,6 +27,7 @@ import { useBlobbis } from "@/hooks/useBlobbis";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
+import { setIslandSkyDev, useIslandSkyDev } from "@/lib/island-sky-dev";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { genUserName } from "@/lib/genUserName";
 
@@ -207,6 +208,7 @@ function AccountMenuBody({
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
   const { isDevMode, showDebugOverlays, setShowDebugOverlays } = useDebugOverlays();
+  const skyDev = useIslandSkyDev();
   const currentCompanionId = profile?.currentCompanion;
   const currentBlobbi = currentCompanionId
     ? blobbis?.find((b) => b.id === currentCompanionId)
@@ -335,7 +337,12 @@ function AccountMenuBody({
       </div>
 
       {/* Developer tools — dev/local builds only; never rendered in production. */}
-      {isDevMode && (
+      {/* `import.meta.env.DEV` is a literal `false` in a build, so the whole
+          branch is dropped from the bundle rather than merely rendering nothing.
+          `isDevMode` is the same value re-exported from a module, which Rollup
+          cannot fold across the boundary — keeping both means the runtime gate is
+          unchanged AND the markup stops shipping. */}
+      {import.meta.env.DEV && isDevMode && (
         <>
           <Divider />
           <SectionLabel>
@@ -357,6 +364,22 @@ function AccountMenuBody({
               checked={showDebugOverlays}
               onCheckedChange={setShowDebugOverlays}
               aria-label="Toggle debug overlays"
+            />
+          </label>
+          {/* Opens the day/night sky harness inside the live world, so the sky is
+              judged against the real Blobbi and real remote players rather than a
+              replica scene. See src/components/sky/IslandSkyDevPanel.tsx. */}
+          <label className="flex w-full items-center gap-2 rounded-md p-2 text-left cursor-pointer hover:bg-island-cream-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-island-ink">Sky controls</p>
+              <p className="truncate text-xs text-island-ink-soft">
+                Scrub the island day &amp; night
+              </p>
+            </div>
+            <Switch
+              checked={skyDev.panelOpen}
+              onCheckedChange={(open) => setIslandSkyDev({ panelOpen: open })}
+              aria-label="Toggle sky dev controls"
             />
           </label>
         </>

@@ -1467,18 +1467,18 @@ export function MultiplayerLayer({
     const locationToFile: Record<string, string> = {
       'town': 'town-open.webp',
       'home': 'home-inside.png',
-      'beach': 'beach-open.png',
-      'mine': 'mine-open.png',
-      'nostr-station': 'nostr-station-open.png',
+      'beach': 'beach-open.webp',
+      'mine': 'mine-open.webp',
+      'nostr-station': 'nostr-station-open.webp',
       'nostr-station-inside': 'nostr-station-inside.png',
-      'plaza': 'plaza-open.png',
+      'plaza': 'plaza-open.webp',
       'plaza-inside': 'plaza-inside.png',
       'arcade': 'arcade-inside.png',
       'arcade-1': 'arcade-1.png',
       'arcade-minus1': 'arcade-minus1.png',
       'stage': 'stage-inside.png',
       'shop': 'shopping-mall-inside.png',
-      'back-yard': 'back-yard-open.png',
+      'back-yard': 'back-yard-open.webp',
       'cave-open': 'cave-inside.png',
       'clothing-store-inside': 'clothing-store-inside.png',
     };
@@ -1614,6 +1614,10 @@ export function MultiplayerLayer({
               isHiddenInSpot ? "pointer-events-none" : "pointer-events-auto",
             )}
             data-player-key={`${player.pubkey}:${player.sessionId}`}
+            // Remote players are characters, not scenery: the day/night world grade
+            // must not dim them or their accessory <img> overlays. Same contract the
+            // local Blobbi uses — see src/index.css.
+            data-island-world-grade="exclude"
             data-hidden-in={player.hiddenIn}
             data-seated-in={seated?.seat.id}
             style={{

@@ -112,28 +112,28 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'beach-open.png',
+    backgroundFile: 'beach-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 20, zIndex: 25 },  // Sand/shore area
       { minPosition: 20, maxPosition: 100, zIndex: 15 } // Water/background area
     ]
   },
   {
-    backgroundFile: 'mine-open.png',
+    backgroundFile: 'mine-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 15, zIndex: 20 },  // Ground level
       { minPosition: 15, maxPosition: 100, zIndex: 10 } // Cave entrance area
     ]
   },
   {
-    backgroundFile: 'nostr-station-open.png',
+    backgroundFile: 'nostr-station-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Ground level
       { minPosition: 10, maxPosition: 100, zIndex: 15 } // Upper area
     ]
   },
   {
-    backgroundFile: 'plaza-open.png',
+    backgroundFile: 'plaza-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 15, zIndex: 25 },  // Ground level
       { minPosition: 15, maxPosition: 100, zIndex: 15 } // Upper area
@@ -148,7 +148,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'back-yard-open.png',
+    backgroundFile: 'back-yard-open.webp',
     thresholds: [
       { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Ground level
       { minPosition: 10, maxPosition: 100, zIndex: 15 } // Upper area
@@ -231,20 +231,20 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
     backgroundFile: 'town-open.webp'
   },
 
-  // Mine elements (mine-open.png)
+  // Mine elements (mine-open.webp)
   {
     id: 'cave',
     yPosition: 40, // top-[40%] on mobile, top-[42%] on desktop - using mobile value
     zIndex: 15,
-    backgroundFile: 'mine-open.png'
+    backgroundFile: 'mine-open.webp'
   },
 
-  // Beach elements (beach-open.png and beach.png)
+  // Beach elements (beach-open.webp and beach.png)
   {
     id: 'boat',
     yPosition: 34, // top-[34%] on mobile, top-[39%] on desktop - using mobile value
     zIndex: 15,
-    backgroundFile: 'beach-open.png'
+    backgroundFile: 'beach-open.webp'
   },
 
   // Home elements (home-inside.png)

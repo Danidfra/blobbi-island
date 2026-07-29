@@ -568,6 +568,12 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           id={anchorId}
           data-visual-hidden={visualHidden ? 'true' : undefined}
           data-seated-in={seated?.seat.id}
+          // The day/night world grade darkens environment sprites at night. The
+          // Blobbi is not scenery: its body is inline SVG (so the grade's `img`
+          // rule never reaches it anyway) but its accessory overlays ARE <img>
+          // elements, and a hat that dims while the head stays lit looks broken.
+          // See the opt-out contract in src/index.css.
+          data-island-world-grade="exclude"
           className={cn(
             "absolute transition-all duration-200 ease-out blobbi-character",
             onBlobbiClick && !visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",

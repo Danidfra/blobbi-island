@@ -731,3 +731,166 @@ img {
     filter: none !important;
   }
 }
+/* ==========================================================================
+   Island day/night sky — decorative motion only
+   ==========================================================================
+
+   The sky's *state* (gradient, sun and moon position, star and cloud opacity)
+   is driven from React via inline styles and CSS transitions, so it is not
+   here. What lives here is the only genuinely looping motion in the system:
+   the cloud drift and a very slow star breathe.
+
+   Both are decoration. Time of day is communicated by colour, by where the sun
+   and moon are, and by whether stars are out — never by motion alone — so
+   stopping these animations removes no information whatsoever.
+   ========================================================================== */
+
+/*
+  One cloud actor crossing the sky.
+
+  The endpoints are per-element custom properties rather than fixed values, so a
+  single pair of keyframes serves all three actors and both travel directions —
+  `--island-cloud-from` and `--island-cloud-to` are simply swapped for the
+  reverse-travelling one. Each is constant on its element, so the animation
+  interpolates between two already-resolved transforms and needs no `@property`
+  registration.
+
+  Both endpoints lie outside the world box (see `islandCloudTravel`), which is
+  what makes the loop reset invisible: there is no tiling and therefore no seam,
+  and the jump from `to` back to `from` happens while the cloud is offscreen.
+
+  Duration and delay are set inline per actor.
+*/
+@keyframes island-sky-cloud-travel {
+  from { transform: translate3d(var(--island-cloud-from, 0px), 0, 0); }
+  to   { transform: translate3d(var(--island-cloud-to, 0px), 0, 0); }
+}
+
+.island-sky-cloud {
+  animation-name: island-sky-cloud-travel;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-duration: 300s;
+}
+
+/* ==========================================================================
+   Island day/night sky — world sprite grading
+   ==========================================================================
+
+   The location background plate is graded by an inline `filter` in
+   PlaceBackground. Every OTHER piece of world art — building shells, doors,
+   props, bushes, streetlights, floors, furniture — is a separate <img> inside the
+   world-content layer, and those were left ungraded: at night the plate dropped
+   to brightness 0.70 while the sprites standing on it stayed at 1.0. The Town
+   bushes made it obvious, because `bush-1..3.png` are highly saturated greens
+   sitting directly on grass that IS graded.
+
+   This is one rule, fed by one custom property that PlaceBackground publishes
+   from the same centralized sky state the plate uses, so there is exactly one
+   source of truth and no per-component phase checks anywhere.
+
+   Why a rule on the images rather than a `filter` on their container: a filtered
+   container becomes a stacking context, which would flatten the world-content
+   layer's z-indexes. The Blobbi's z-index is derived from its Y position so it can
+   walk behind a bush or a building, and that occlusion would break. A filter on a
+   leaf <img> has no descendants to reorder, so it is free.
+
+   The `none` fallback matters: locations without sky support never set the
+   property, so their sprites resolve to `filter: none` and render exactly as they
+   did before this feature existed.
+
+   ## Why there is deliberately NO `transition` here
+
+   Adding one would be an obvious refinement and a real regression. The `transition`
+   shorthand resets every transition longhand, and this selector
+   (`[attr] img`, specificity 0-1-1) outranks the class selectors that world sprites
+   already rely on — `.bush-sway-target` declares `transition: transform 0.3s` on the
+   bush image itself, so a transition here would silently kill the bush hover sway.
+   Tailwind's `transition-*` utilities on any future sprite image would lose the same
+   way.
+
+   Nothing is lost by leaving it out. The grade is recomputed on the sky's ten-second
+   tick, and its fastest ramp moves `artworkBrightness` by about 0.003 per tick, so
+   the sprites step by an imperceptible amount while the plate — which keeps its own
+   inline transition — eases between the same values. The two can never diverge by
+   more than a single tick's worth.
+   ========================================================================== */
+[data-island-world-graded] img {
+  filter: var(--island-world-grade, none);
+}
+
+/*
+  ── The opt-out contract ─────────────────────────────────────────────────────
+
+  `data-island-world-grade="exclude"` means "this image is not environment art;
+  leave its own rendering alone." Put it on the image, or on any wrapper — both
+  forms below are matched, because the two things that need it today are wrappers
+  and a future sprite may want it on the image itself.
+
+    <img data-island-world-grade="exclude" ... />        one sprite
+    <div data-island-world-grade="exclude">…imgs…</div>   a whole group
+
+  Who uses it, and why it is an attribute rather than a class list:
+
+  - **The local Blobbi** (`MovableBlobbi`, on the `.blobbi-character` wrapper) and
+    **remote players** (`MultiplayerLayer`, on the `[data-player-key]` wrapper).
+    Their bodies are inline `<svg>` from `dangerouslySetInnerHTML`, which an `img`
+    rule cannot reach — but their **accessory overlays are real `<img>` elements**.
+    Without this, a hat would darken at night while the head it sits on did not.
+  - **Future emissive or UI-like world sprites.** A lamp glow, a screen, a marker
+    that must stay at full brightness can opt out at its own call site instead of
+    someone widening the global rule or adding a second selector list.
+
+  Streetlights are deliberately NOT excluded: their current artwork has no
+  separate emissive layer, so grading them is correct. Exclusion is for art that
+  demonstrably needs it, not for anything that depicts a light.
+
+  The attribute carries no phase logic and no colour — it only says "skip me", so
+  there is still exactly one source of truth for what night looks like.
+*/
+[data-island-world-graded] img[data-island-world-grade='exclude'],
+[data-island-world-graded] [data-island-world-grade='exclude'] img {
+  filter: none;
+}
+
+@keyframes island-sky-star-breathe {
+  0%, 100% { opacity: 0.8; }
+  50%      { opacity: 1; }
+}
+
+/* Deliberately slow and shallow: a 12s 20% swell on the whole near-star layer,
+   not per-star twinkling. It reads as air, not as flicker. */
+.island-sky-star-breathe {
+  animation: island-sky-star-breathe 12s ease-in-out infinite;
+}
+
+/*
+  Reduced motion, from two independent directions.
+
+  1. The OS preference, honoured in CSS so it needs no JavaScript, no re-render
+     and no hook — it applies even before React hydrates.
+  2. The DEV harness's `data-island-sky-reduced-motion` attribute, which lets a
+     developer check the reduced-motion presentation without changing their
+     system settings.
+
+  The media query wins over the attribute (`!important`), so the harness can
+  simulate reduced motion but never simulate it *away* for someone who has
+  actually asked for it.
+
+  Turning the cloud animation off leaves each actor on its own inline
+  `transform`, which IslandSkyLayer sets to that actor's resting offset — three
+  clouds at three different widths and three different heights. The static
+  composition is deliberately sparse rather than a stack, and nothing about the
+  time of day was being communicated by the movement in the first place.
+*/
+[data-island-sky-reduced-motion='true'] .island-sky-cloud,
+[data-island-sky-reduced-motion='true'] .island-sky-star-breathe {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-sky-cloud,
+  .island-sky-star-breathe {
+    animation: none !important;
+  }
+}
