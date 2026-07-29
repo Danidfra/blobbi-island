@@ -124,14 +124,20 @@ describe('machine classification', () => {
     expect(dance.activation).toEqual({ type: 'dedicated-game', gameId: BLOBBI_DANCE_GAME_ID });
   });
 
-  it('gives the pool table pool, and the air hockey table air hockey', () => {
+  it('gives the air hockey table Air Hockey, directly', () => {
+    expect(getArcadeMachine('arcade-air-hockey')!.activation).toEqual({
+      type: 'dedicated-game',
+      gameId: 'blobbi-air-hockey',
+    });
+  });
+
+  it('still gives the pool table pool’s own coming-soon screen', () => {
+    // The rule is unchanged by air hockey shipping: a dedicated machine whose
+    // game is not built shows THAT game's screen, never a menu and never
+    // another game's.
     expect(getArcadeMachine('arcade-pool-table')!.activation).toEqual({
       type: 'dedicated-preview',
       experienceId: 'blobbi-pool',
-    });
-    expect(getArcadeMachine('arcade-air-hockey')!.activation).toEqual({
-      type: 'dedicated-preview',
-      experienceId: 'blobbi-air-hockey',
     });
   });
 
@@ -274,6 +280,66 @@ describe('placement', () => {
       expect(constrained.x).toBeCloseTo(anchor.x, 6);
       expect(constrained.y).toBeCloseTo(anchor.y, 6);
     }
+  });
+
+  /**
+   * The reachability guards.
+   *
+   * A report that walking to the air hockey table sometimes ended in a room
+   * corner without opening anything turned out to be an environment artifact —
+   * `requestAnimationFrame` was stalled in an occluded automation window, and
+   * the walk animation, the arrival watcher and the stall detector all run on
+   * it. The target itself was measured in a live browser as
+   * (61.2497, 89.4004), exactly what the configuration computes, inside the
+   * walkable band, and untouched by `constrainPosition`.
+   *
+   * These two tests pin the properties that WOULD have made the report a real
+   * bug, so that if one of them is ever broken it fails here rather than as a
+   * machine that mysteriously cannot be reached.
+   */
+  it('places every anchor clear of the walk boundary’s edge, not on it', () => {
+    // An anchor exactly on an edge is reachable in arithmetic and fragile in
+    // practice: the Blobbi's per-step clamp can leave it a hair short, and the
+    // arrival threshold is measured from where it actually stopped.
+    const MARGIN = 1.5;
+    for (const machine of arcadeMachines) {
+      const boundary = arcadeBoundaryForFloor(machine.floor)!;
+      const anchor = machineAnchorPosition(machine);
+
+      for (const [dx, dy] of [
+        [MARGIN, 0],
+        [-MARGIN, 0],
+        [0, MARGIN],
+        [0, -MARGIN],
+      ]) {
+        const nearby = { x: anchor.x + dx, y: anchor.y + dy };
+        const constrained = constrainPosition(nearby, boundary);
+        expect(
+          Math.hypot(constrained.x - nearby.x, constrained.y - nearby.y),
+          `${machine.id} anchor is within ${MARGIN} of the boundary edge`,
+        ).toBeLessThan(0.001);
+      }
+    }
+  });
+
+  it('computes an anchor that cannot depend on the viewport', () => {
+    // Everything the anchor is made of is a percentage of the world box, so the
+    // same point comes out at every surface size — which is why the runtime
+    // rect-based target and this DOM-free one agreed exactly in a live browser.
+    // A pixel creeping into the arithmetic would break that silently.
+    for (const machine of arcadeMachines) {
+      const anchor = machineAnchorPosition(machine);
+      expect(Number.isFinite(anchor.x) && Number.isFinite(anchor.y)).toBe(true);
+      expect(anchor.x).toBeGreaterThanOrEqual(0);
+      expect(anchor.x).toBeLessThanOrEqual(100);
+      expect(anchor.y).toBeGreaterThanOrEqual(0);
+      expect(anchor.y).toBeLessThanOrEqual(100);
+    }
+
+    // The air hockey table specifically, as the live browser measured it.
+    const airHockey = machineAnchorPosition(getArcadeMachine('arcade-air-hockey')!);
+    expect(airHockey.x).toBeCloseTo(61.25, 2);
+    expect(airHockey.y).toBeCloseTo(89.4, 2);
   });
 
   it('gives no two machines on a floor the same anchor point', () => {

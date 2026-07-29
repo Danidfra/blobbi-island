@@ -56,8 +56,20 @@ const FORBIDDEN_IN_PURE_ARCADE = [
   { pattern: /^@\/components\//, why: 'a component' },
 ];
 
-/** `src/arcade/` modules that are deliberately React hooks. */
-const REACT_ALLOWED = new Set(['useArcadeInput.ts', 'useArcadeInterruption.ts']);
+/**
+ * `src/arcade/` modules that are deliberately React hooks.
+ *
+ * The list is explicit rather than a `use*.ts` glob so that adding one is a
+ * decision recorded here. Every entry is a hook that owns a BROWSER concern no
+ * pure module can (key events, visibility, animation frames) and still touches
+ * no relay, no inventory and no component — the rest of the rules below apply to
+ * them unchanged.
+ */
+const REACT_ALLOWED = new Set([
+  'useArcadeInput.ts',
+  'useArcadeInterruption.ts',
+  'useFixedStepLoop.ts',
+]);
 
 describe('src/arcade cannot write to a relay or an inventory', () => {
   const files = sourceFiles(ARCADE_DIR).filter((f) => !f.endsWith('.test.ts'));

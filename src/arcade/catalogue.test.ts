@@ -108,14 +108,17 @@ describe('Blobbi Dance', () => {
     expect(getProductionRewardPolicy(dance.id)?.gameId).toBe(BLOBBI_DANCE_GAME_ID);
   });
 
-  it('is the one playable island game', () => {
+  it('is a playable island game', () => {
     expect(dance.category).toBe('island');
     expect(dance.availability).toBe('playable');
     expect(dance.launchMode).toBe('native');
     expect(isNativeLaunchable(dance)).toBe(true);
 
+    // Two playable games now, both belonging to dedicated machines. The list is
+    // asserted whole rather than by length, so adding one is a decision that
+    // has to be written down here.
     const launchable = ARCADE_CATALOGUE.filter(isNativeLaunchable).map((e) => e.id);
-    expect(launchable).toEqual([BLOBBI_DANCE_GAME_ID]);
+    expect(launchable).toEqual([BLOBBI_DANCE_GAME_ID, 'blobbi-air-hockey']);
   });
 
   it('belongs to the dance machine and to nothing else', () => {
@@ -350,9 +353,9 @@ describe('the shared cabinet catalogue', () => {
 });
 
 describe('coming-soon dedicated games', () => {
-  it('are Pool and Air Hockey, each on its own table', () => {
+  it('are just Pool now that Air Hockey is built', () => {
     const comingSoon = ARCADE_CATALOGUE.filter((e) => e.availability === 'coming-soon');
-    expect(comingSoon.map((e) => e.id)).toEqual(['blobbi-pool', 'blobbi-air-hockey']);
+    expect(comingSoon.map((e) => e.id)).toEqual(['blobbi-pool']);
     for (const entry of comingSoon) {
       expect(entry.host, entry.id).toBe('dedicated-machine');
       expect(canLaunchArcadeGame({
@@ -372,6 +375,19 @@ describe('coming-soon dedicated games', () => {
     for (const entry of [pool, airHockey]) {
       expect(entry.shortDescription.toLowerCase(), entry.id).not.toMatch(/dance|arrow|rhythm/);
     }
+  });
+
+  it('no longer says Air Hockey is unbuilt, because it is built', () => {
+    // The failure this whole registry exists to prevent, in the other
+    // direction: the arcade must not tell a player a game is missing when it
+    // is right there.
+    const airHockey = getCatalogueEntry('blobbi-air-hockey')!;
+    expect(airHockey.availability).toBe('playable');
+    expect(airHockey.shortDescription.toLowerCase()).not.toMatch(/still being built/);
+    expect(airHockey.controls.length).toBeGreaterThan(0);
+    expect(airHockey.estimatedDurationMs).toBeGreaterThan(0);
+    // Playable and paying tickets are independent: no policy has been approved.
+    expect(airHockey.grantsTickets).toBe(false);
   });
 
   it('says plainly that it is not built, without promising a date', () => {

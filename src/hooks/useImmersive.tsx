@@ -17,11 +17,33 @@ import * as React from "react";
  *   landscape, or width in portrait). Desktops/laptops have a fine pointer
  *   and/or hover capability, so they stay framed even in small windows.
  */
+/**
+ * Ask a media query, and treat any answer that is not a real `MediaQueryList`
+ * as "no".
+ *
+ * `useReducedMotion` has always done this; this hook did not, and the
+ * difference was load-bearing. `window.matchMedia` is missing in some
+ * environments and can be replaced by something non-conforming in others (a
+ * mock whose implementation has been reset, most obviously) — and reading
+ * `.matches` off `undefined` throws during render, which unmounts whatever tree
+ * asked. Here that tree is the whole arcade room, over a question whose safe
+ * answer is simply `false`: a device we cannot interrogate is treated as a
+ * desktop and gets the framed presentation.
+ */
+function prefers(query: string): boolean {
+  try {
+    if (typeof window.matchMedia !== "function") return false;
+    return window.matchMedia(query)?.matches === true;
+  } catch {
+    return false;
+  }
+}
+
 function computeImmersive(): boolean {
   if (typeof window === "undefined") return false;
 
-  const coarse = window.matchMedia("(pointer: coarse)").matches;
-  const noHover = window.matchMedia("(hover: none)").matches;
+  const coarse = prefers("(pointer: coarse)");
+  const noHover = prefers("(hover: none)");
   const touchFirst = coarse && noHover;
 
   // The "short side" of the viewport — height in landscape, width in portrait.
@@ -40,11 +62,25 @@ export function useImmersive(): boolean {
   React.useEffect(() => {
     const update = () => setImmersive(computeImmersive());
 
+    // Same defensiveness as `prefers`: a missing or non-conforming `matchMedia`
+    // must cost the change subscription, not the component. `resize` and
+    // `orientationchange` still cover every case that matters in a browser.
     const queries = [
-      window.matchMedia("(pointer: coarse)"),
-      window.matchMedia("(hover: none)"),
-      window.matchMedia("(orientation: landscape)"),
-    ];
+      "(pointer: coarse)",
+      "(hover: none)",
+      "(orientation: landscape)",
+    ]
+      .map((query) => {
+        try {
+          return typeof window.matchMedia === "function" ? window.matchMedia(query) : null;
+        } catch {
+          return null;
+        }
+      })
+      .filter(
+        (mql): mql is MediaQueryList =>
+          Boolean(mql) && typeof mql?.addEventListener === "function",
+      );
 
     queries.forEach((mql) => mql.addEventListener("change", update));
     window.addEventListener("resize", update);

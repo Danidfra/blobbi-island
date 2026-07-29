@@ -51,6 +51,7 @@
  */
 
 import { NEON_HOP_TRACK } from './dance/track';
+import { TYPICAL_AIR_HOCKEY_MATCH_MS } from './hockey/table';
 
 /**
  * Where a game comes from, and therefore what it is allowed to touch.
@@ -175,6 +176,13 @@ export interface ArcadeCatalogueEntry {
 export const BLOBBI_DANCE_GAME_ID = 'blobbi-dance';
 
 /**
+ * Air Hockey's stable id, declared here for the same reason the dance game's is:
+ * the machine registry, the launch resolver and the result all key off one
+ * string, and a second spelling would split a game's identity in half.
+ */
+export const BLOBBI_AIR_HOCKEY_GAME_ID = 'blobbi-air-hockey';
+
+/**
  * The machine ids the dedicated games belong to.
  *
  * Declared here rather than imported from `@/lib/arcade-machines-config`, in
@@ -237,15 +245,32 @@ export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
     machineIds: Object.freeze([ARCADE_POOL_MACHINE_ID]),
   }),
   Object.freeze({
-    id: 'blobbi-air-hockey',
+    id: BLOBBI_AIR_HOCKEY_GAME_ID,
     title: 'Air Hockey',
     shortDescription:
-      'Slide the puck past the other player before they slide it past you. The table is here — the game is still being built.',
+      'Slide the puck past your rival before they slide it past you. First to seven goals wins.',
     category: 'island',
-    availability: 'coming-soon',
+    availability: 'playable',
     launchMode: 'native',
+    /*
+      Playable, and still paying nothing.
+
+      Those two facts are independent, and this entry is where the arcade proves
+      it: `grantsTickets` is a statement about whether an ACTIVE REWARD POLICY
+      exists, not about whether a game is finished. No policy for
+      `blobbi-air-hockey` has been approved, so this stays false, the results
+      screen shows no claim, and `catalogue.test.ts` checks the two agree in
+      both directions.
+    */
     grantsTickets: false,
-    controls: Object.freeze([]),
+    controls: Object.freeze([
+      Object.freeze({ scheme: 'pointer', label: 'Move the mouse over the table' }),
+      Object.freeze({ scheme: 'touch', label: 'Press and drag inside the table' }),
+      Object.freeze({ scheme: 'keyboard', label: 'Arrow keys or WASD' }),
+    ]),
+    // Read from the match rules rather than written out again, so the screen
+    // cannot drift away from the match it describes.
+    estimatedDurationMs: TYPICAL_AIR_HOCKEY_MATCH_MS,
     thumbnail: '/assets/locations/arcade/level-1/air-hockey.png',
     source: 'blobbi-internal',
     host: 'dedicated-machine',

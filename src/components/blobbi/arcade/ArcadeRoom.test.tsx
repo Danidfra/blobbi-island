@@ -286,56 +286,84 @@ describe('the dance machine is dedicated', () => {
   });
 });
 
-describe('pool and air hockey are dedicated too', () => {
-  const TABLES = [
-    {
-      machineId: 'arcade-pool-table',
-      alt: /pool table/i,
-      title: 'Pool',
-      own: /cue|balls/i,
-      other: /puck|dance|arrow/i,
-    },
-    {
-      machineId: 'arcade-air-hockey',
-      alt: /air hockey table/i,
-      title: 'Air Hockey',
-      own: /puck/i,
-      other: /cue|dance|arrow/i,
-    },
-  ];
-
-  it.each(TABLES)('$title opens its own coming-soon screen', (table) => {
+describe('the air hockey table is dedicated too', () => {
+  const openTable = () => {
     renderRoom('floor-1');
-    expect(clickAndArrive(screen.getByRole('button', { name: table.alt }))).toBe(true);
+    return clickAndArrive(screen.getByRole('button', { name: /air hockey table/i }));
+  };
+
+  it('opens Air Hockey directly, with no catalogue in between', () => {
+    expect(openTable()).toBe(true);
+
+    expect(catalogue()).toBeNull();
+    expect(shell()).toHaveAttribute('data-arcade-surface', 'game');
+    expect(shell()).toHaveAttribute('data-arcade-game', 'blobbi-air-hockey');
+    expect(shell()).toHaveAttribute('data-arcade-status', 'preview');
+    expect(screen.getByRole('dialog', { name: 'Air Hockey' })).toBeInTheDocument();
+    expect(document.querySelector('[data-hockey-preview]')).not.toBeNull();
+    expect(within(shell()!).getByRole('button', { name: /^start$/i })).toBeInTheDocument();
+  });
+
+  it('always runs on arcade-air-hockey', () => {
+    openTable();
+    expect(shell()).toHaveAttribute('data-arcade-machine', 'arcade-air-hockey');
+  });
+
+  it('talks about air hockey and never about another machine’s game', () => {
+    openTable();
+    const dialog = screen.getByRole('dialog', { name: 'Air Hockey' });
+    expect(dialog.textContent).toMatch(/puck/i);
+    expect(dialog.textContent).not.toMatch(/cue|arrow keys or wasd lane|rhythm/i);
+    expect(document.querySelector('[data-dance-preview]')).toBeNull();
+  });
+
+  it('leaves to the arcade room, not to a game list', () => {
+    openTable();
+    fireEvent.click(screen.getByRole('button', { name: /back to the arcade room/i }));
+
+    expect(shell()).toBeNull();
+    expect(catalogue()).toBeNull();
+    expect(document.querySelector('[data-hockey-preview]')).toBeNull();
+    expect(document.querySelector('[data-hockey-table]')).toBeNull();
+  });
+});
+
+describe('the pool table is dedicated, and still being built', () => {
+  const openTable = () => {
+    renderRoom('floor-1');
+    return clickAndArrive(screen.getByRole('button', { name: /pool table/i }));
+  };
+
+  it('opens its own coming-soon screen', () => {
+    expect(openTable()).toBe(true);
 
     // Not the shared catalogue, and not another game's screen.
     expect(catalogue()).toBeNull();
-    expect(shell()).toHaveAttribute('data-arcade-machine', table.machineId);
-    expect(screen.getByRole('dialog', { name: table.title })).toBeInTheDocument();
+    expect(shell()).toHaveAttribute('data-arcade-machine', 'arcade-pool-table');
+    expect(screen.getByRole('dialog', { name: 'Pool' })).toBeInTheDocument();
 
     const panel_ = panel()!;
-    expect(within(panel_).getByText(table.title)).toBeInTheDocument();
-    expect(panel_.textContent).toMatch(table.own);
-    expect(panel_.textContent).not.toMatch(table.other);
+    expect(within(panel_).getByText('Pool')).toBeInTheDocument();
+    expect(panel_.textContent).toMatch(/cue|balls/i);
+    expect(panel_.textContent).not.toMatch(/puck|dance|arrow/i);
     expect(within(panel_).getByText(/coming soon/i)).toBeInTheDocument();
   });
 
-  it.each(TABLES)('$title offers no way to start anything', (table) => {
-    renderRoom('floor-1');
-    clickAndArrive(screen.getByRole('button', { name: table.alt }));
+  it('offers no way to start anything', () => {
+    openTable();
 
     expect(within(shell()!).queryByRole('button', { name: /^start$/i })).toBeNull();
     expect(within(shell()!).queryByRole('button', { name: /^play/i })).toBeNull();
     expect(document.querySelector('[data-dance-preview]')).toBeNull();
+    expect(document.querySelector('[data-hockey-preview]')).toBeNull();
     // One way out, and it says where it goes.
     const buttons = within(shell()!).getAllByRole('button');
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveAccessibleName(/close and go back to the arcade/i);
   });
 
-  it.each(TABLES)('$title closes back to the arcade room', (table) => {
-    renderRoom('floor-1');
-    clickAndArrive(screen.getByRole('button', { name: table.alt }));
+  it('closes back to the arcade room', () => {
+    openTable();
 
     fireEvent.click(screen.getByRole('button', { name: /close and go back to the arcade/i }));
     expect(shell()).toBeNull();

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { ArcadeEvent, ArcadeMachineState } from '@/arcade/arcade-machine-state';
 import {
+  BLOBBI_AIR_HOCKEY_GAME_ID,
   BLOBBI_DANCE_GAME_ID,
   canLaunchArcadeGame,
   type ArcadeCatalogueEntry,
@@ -9,6 +10,7 @@ import {
 } from '@/arcade/catalogue';
 
 import { DanceMachine } from './dance/DanceMachine';
+import { AirHockeyMachine } from './hockey/AirHockeyMachine';
 
 /**
  * The launch resolver — the one place a game id becomes a React component.
@@ -84,12 +86,31 @@ export type NativeArcadeGameRenderer = (props: NativeArcadeGameProps) => ReactNo
 /**
  * Every natively implemented game, by id.
  *
- * One entry. That is not a placeholder for a bigger table — it is the honest
- * size of the arcade, and the catalogue says the same thing to the player.
+ * Two entries, both dedicated machines' games. That is the honest size of the
+ * arcade, and the catalogue says the same thing to the player: the six generic
+ * cabinets still have nothing, and their catalogue still says so rather than
+ * borrowing one of these.
+ *
+ * Every renderer takes the same {@link NativeArcadeGameProps} and forwards it to
+ * a controller with the same shape. That is not an accident of two games looking
+ * alike — it is the dedicated-machine pattern, and Pool's entry should be the
+ * third one that looks exactly like this.
  */
 const NATIVE_ARCADE_GAMES: Readonly<Record<string, NativeArcadeGameRenderer>> = Object.freeze({
   [BLOBBI_DANCE_GAME_ID]: (props: NativeArcadeGameProps) => (
     <DanceMachine
+      machineId={props.machineId}
+      gameId={props.entry.id}
+      title={props.entry.title}
+      lifecycle={props.lifecycle}
+      dispatch={props.dispatch}
+      onExit={props.onExit}
+      exitLabel={props.exitLabel}
+      exitAriaLabel={props.exitAriaLabel}
+    />
+  ),
+  [BLOBBI_AIR_HOCKEY_GAME_ID]: (props: NativeArcadeGameProps) => (
+    <AirHockeyMachine
       machineId={props.machineId}
       gameId={props.entry.id}
       title={props.entry.title}

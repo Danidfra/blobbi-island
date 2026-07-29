@@ -52,6 +52,7 @@ import { locationBoundaries } from '@/lib/location-boundaries';
 import {
   ARCADE_AIR_HOCKEY_MACHINE_ID,
   ARCADE_POOL_MACHINE_ID,
+  BLOBBI_AIR_HOCKEY_GAME_ID,
   BLOBBI_DANCE_GAME_ID,
   BLOBBI_DANCE_MACHINE_ID,
 } from '@/arcade/catalogue';
@@ -193,7 +194,8 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
   //
   // The six cabinets are interchangeable furniture and open the shared
   // catalogue. The pool table and the air hockey table are not: each is one
-  // physical game, and each shows its own coming-soon screen.
+  // physical game. Air hockey now launches that game directly; pool still shows
+  // its own coming-soon screen, and never another game's.
   {
     id: 'arcade-cabinet-pink',
     floor: 'floor-1',
@@ -270,7 +272,10 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 350, height: 160 },
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
-    activation: { type: 'dedicated-preview', experienceId: 'blobbi-air-hockey' },
+    // The second machine in the arcade with a real game behind it. Walking up to
+    // it starts a match directly — no menu, because the physical object IS the
+    // game — and `canLaunchArcadeGame` refuses Air Hockey from anywhere else.
+    activation: { type: 'dedicated-game', gameId: BLOBBI_AIR_HOCKEY_GAME_ID },
   },
   {
     id: 'arcade-cabinet-green',

@@ -4,6 +4,12 @@
 > catalogue; the dance machine, the pool table and the air hockey table stay
 > dedicated to their own game, and every arcade surface renders inside the game
 > window rather than over the browser page.
+>
+> **Since then:** the air hockey table's game shipped, so its activation is now
+> `dedicated-game` rather than `dedicated-preview`. The rule this document
+> establishes is unchanged — a dedicated machine is one game and can never be
+> another — and the tables below are updated. See
+> [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).
 
 Phase 2 built the arcade's foundation (`docs/arcade-foundation.md`) and Phase 3
 built its first game (`docs/blobbi-dance.md`). Both were shaped by a rule that
@@ -89,7 +95,7 @@ a property of the data rather than a convention a component happens to follow.
 | --- | --- | --- | --- |
 | `arcade-dance-machine` | basement | Blobbi Dance Machine | `dedicated-game` → `blobbi-dance` |
 | `arcade-pool-table` | floor-1 | Pool Table | `dedicated-preview` → `blobbi-pool` |
-| `arcade-air-hockey` | floor-1 | Air Hockey Table | `dedicated-preview` → `blobbi-air-hockey` |
+| `arcade-air-hockey` | floor-1 | Air Hockey Table | `dedicated-game` → `blobbi-air-hockey` |
 | `arcade-cabinet-pink` | floor-1 | Pink Cabinet | `shared-catalogue` |
 | `arcade-cabinet-black` | floor-1 | Black Cabinet | `shared-catalogue` |
 | `arcade-cabinet-classic` | floor-1 | Classic Cabinet | `shared-catalogue` |
@@ -161,7 +167,7 @@ now different functions with different names, and a test asserts
 | --- | --- | --- | --- | --- | --- | --- |
 | `blobbi-dance` | Blobbi Dance | island | playable | dedicated | `arcade-dance-machine` | yes |
 | `blobbi-pool` | Pool | island | coming-soon | dedicated | `arcade-pool-table` | no |
-| `blobbi-air-hockey` | Air Hockey | island | coming-soon | dedicated | `arcade-air-hockey` | no |
+| `blobbi-air-hockey` | Air Hockey | island | playable | dedicated | `arcade-air-hockey` | no |
 
 **`sharedCabinetCatalogue()` is empty.** That is the honest product state, and
 the catalogue screen is designed around it (§7). It is not padded out.
@@ -304,8 +310,8 @@ stays `closed` and the shell renders no `data-arcade-status`.
 | Screen | Control | Destination |
 | --- | --- | --- |
 | Shared catalogue | **Close** ("Close and go back to the arcade") | Arcade Room |
-| Dedicated coming-soon (pool, air hockey) | **Close** ("Close and go back to the arcade") | Arcade Room |
-| Blobbi Dance preview / results / aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
+| Dedicated coming-soon (pool) | **Close** ("Close and go back to the arcade") | Arcade Room |
+| Blobbi Dance / Air Hockey preview, results, aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
 | A catalogue-launched game, not mid-run | **Back to games** ("Back to the game list") | Catalogue |
 | Any live run (`countdown`, `playing`) | **Leave** ("Leave *game* and end this run") | Aborts, then as above |
 | Prize counter | **Close** | Arcade Room |
@@ -401,8 +407,13 @@ Dance claim records the right machine:
   and calls `onSelect(gameId)`. `catalogue.test.ts` asserts the registry's source
   contains no reference to `reward-policy`, `calculateTicketAward` or
   `calculateArcadeReward`.
-- **Pool and air hockey previews have no reward path at all** — no Start, no
-  lifecycle, no result, nothing to claim.
+- **The pool preview has no reward path at all** — no Start, no lifecycle, no
+  result, nothing to claim.
+- **Air Hockey is playable and still pays nothing.** `grantsTickets: false`
+  with no active policy, which the registry test enforces in both directions:
+  playable and paying are independent facts. See
+  [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) §7 for the prepared
+  join point.
 - **A Guest Game reaches neither the native resolver nor the reward system.**
   Refused on category, before launch mode.
 - **Returning to the room cannot reset an unresolved claim.** Leaving goes
@@ -446,7 +457,7 @@ Dance borrowed from another machine to fill the space.
 without being redesigned. Controls and duration are shown **only** for a game
 that can actually be started; metadata for a game you cannot play is noise.
 
-### Dedicated coming-soon (pool table, air hockey table)
+### Dedicated coming-soon (the pool table)
 
 `ArcadeDedicatedPreview` — one component, used by the room and by the DEV
 harness, so what is reviewed is what ships. Its whole job is to be about the
@@ -454,6 +465,11 @@ RIGHT game: the title, the sentence and the artwork come from the machine and
 from that machine's own registry entry, so a pool table can only ever talk about
 pool. No Start control, no catalogue, one Close to the room. A test asserts the
 pool panel mentions cues and never mentions a puck or dancing, and vice versa.
+
+The air hockey table used this screen until its game shipped, which is the
+transition this design was built for: a machine moves from `dedicated-preview` to
+`dedicated-game` and nothing else about it changes. See
+[`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).
 
 ### The prize counter
 
@@ -620,6 +636,8 @@ Exactly what this phase deferred, and nothing else:
 5. **Revocation and review** — how a package is withdrawn (`availability:
    'disabled'` already exists for it) and what "curated" means operationally.
 
-Explicitly **not** Phase 5: a second Island Game, the first shared-cabinet game,
-Pool or Air Hockey gameplay, the Prize Shop, leaderboards, latency calibration,
-or opening the publisher set beyond the official issuer.
+Explicitly **not** Phase 5: the first shared-cabinet game, Pool gameplay, the
+Prize Shop, leaderboards, latency calibration, or opening the publisher set
+beyond the official issuer. (Air Hockey, listed here as out of scope when this
+was written, has since shipped as the arcade's second Island Game —
+[`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).)

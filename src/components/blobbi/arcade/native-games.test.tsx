@@ -46,7 +46,44 @@ const onTheDanceMachine = {
 describe('what resolves', () => {
   it('resolves Blobbi Dance on the dance machine, and only there', () => {
     expect(resolveNativeArcadeGame(onTheDanceMachine)).toBeTypeOf('function');
-    expect(NATIVE_ARCADE_GAME_IDS).toEqual([BLOBBI_DANCE_GAME_ID]);
+  });
+
+  it('implements exactly the two dedicated games that are built', () => {
+    // Asserted whole rather than by length: adding a third is a decision that
+    // has to be written down here, next to the registry entry that advertises
+    // it.
+    expect(NATIVE_ARCADE_GAME_IDS).toEqual([BLOBBI_DANCE_GAME_ID, 'blobbi-air-hockey']);
+  });
+
+  it('resolves Air Hockey on the air hockey table, and only there', () => {
+    const entry = getCatalogueEntry('blobbi-air-hockey');
+    expect(
+      resolveNativeArcadeGame({
+        game: entry,
+        machineId: ARCADE_AIR_HOCKEY_MACHINE_ID,
+        surface: 'dedicated-machine',
+      }),
+    ).toBeTypeOf('function');
+
+    for (const machine of arcadeMachines.filter((m) => m.id !== ARCADE_AIR_HOCKEY_MACHINE_ID)) {
+      expect(
+        resolveNativeArcadeGame({
+          game: entry,
+          machineId: machine.id,
+          surface: 'dedicated-machine',
+        }),
+        machine.id,
+      ).toBeNull();
+    }
+
+    // And never from the shared catalogue, whatever a cabinet asks for.
+    expect(
+      resolveNativeArcadeGame({
+        game: entry,
+        machineId: ARCADE_AIR_HOCKEY_MACHINE_ID,
+        surface: 'shared-catalogue',
+      }),
+    ).toBeNull();
   });
 
   it('gives every playable registry entry an implementation on its own machine', () => {
@@ -131,18 +168,12 @@ describe('what is refused outright', () => {
         ).toBeNull();
       }
     }
-    // Named explicitly, because these two are the ones a player can walk to.
+    // Named explicitly, because the pool table is the one a player can still
+    // walk to and find nothing behind.
     expect(
       resolveNativeArcadeGame({
         game: getCatalogueEntry('blobbi-pool'),
         machineId: ARCADE_POOL_MACHINE_ID,
-        surface: 'dedicated-machine',
-      }),
-    ).toBeNull();
-    expect(
-      resolveNativeArcadeGame({
-        game: getCatalogueEntry('blobbi-air-hockey'),
-        machineId: ARCADE_AIR_HOCKEY_MACHINE_ID,
         surface: 'dedicated-machine',
       }),
     ).toBeNull();

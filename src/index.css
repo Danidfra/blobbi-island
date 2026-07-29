@@ -880,7 +880,43 @@ img {
   user-select: none;
 }
 
+
+/* ── Air Hockey — table overlays ───────────────────────────────────────────
+   The playfield itself is a canvas, so there is almost nothing to style: the
+   puck, the mallets, the trail and the impact rings are drawn in
+   `hockey-draw.ts` and suppressed there under reduced motion.
+
+   What is left is the two DOM overlays that sit ON the table — the countdown
+   and the goal banner — and both use the same single entrance. It is named
+   `arcade-*` rather than `hockey-*` because a countdown popping in is not a
+   fact about air hockey, and Pool will want the identical thing.
+
+   Only `transform` and `opacity` animate, so nothing here can force layout
+   while a rally is in flight. */
+
+@keyframes arcade-pop-in {
+  0%   { opacity: 0; transform: scale(0.72); }
+  60%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.arcade-pop-in {
+  animation: arcade-pop-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The table swallows drags: no page scroll, no iOS tap flash, no text
+   selection, no double-tap zoom. Scoped to the table, so the rest of the
+   dialog still scrolls normally on a short viewport. */
+[data-hockey-table] {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: contain;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .arcade-pop-in,
   .dance-bulb,
   .dance-judgment-pop,
   .dance-receptor-pulse,
