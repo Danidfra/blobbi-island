@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
+import { flushProviderInit } from '@/test/flushProviderInit';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 
 describe('BlobbiInfoModal', () => {
@@ -17,12 +18,13 @@ describe('BlobbiInfoModal', () => {
     expect(await screen.findByText('No Blobbi selected')).toBeInTheDocument();
   });
 
-  it('does not render when closed', () => {
+  it('does not render when closed', async () => {
     render(
       <TestApp>
         <BlobbiInfoModal isOpen={false} onClose={() => {}} />
       </TestApp>
     );
+    await flushProviderInit();
 
     expect(screen.queryByText('Blobbi Info')).not.toBeInTheDocument();
   });

@@ -161,25 +161,43 @@ export function InteractiveElement({
 
   const finalIsHovered = isHovered !== undefined ? isHovered : isSelfHovered || isTouchActive;
 
+  const clearTouchFeedbackTimer = () => {
+    if (touchFeedbackTimer.current !== null) {
+      window.clearTimeout(touchFeedbackTimer.current);
+      touchFeedbackTimer.current = null;
+    }
+  };
+
+  /**
+   * Reveal the "open"/"on" art from a tap and let it fade back on its own.
+   *
+   * Touch devices never get `:hover`, so the tap itself has to drive the
+   * reveal. It is armed for *every* tap on a visibility effect — whether or not
+   * an action is attached and whether or not a walk was requested — because the
+   * feedback is about the tap, not about what the tap goes on to do. When a
+   * walk-to-interact IS started below, that walk takes ownership of the reveal
+   * (it must stay lit for however long the Blobbi takes) and disarms the timer.
+   */
+  const showTouchFeedback = () => {
+    setIsTouchActive(true);
+    clearTouchFeedbackTimer();
+    touchFeedbackTimer.current = window.setTimeout(() => {
+      touchFeedbackTimer.current = null;
+      setIsTouchActive(false);
+    }, TOUCH_FEEDBACK_MS);
+  };
+
   const handleInteraction = (event: React.MouseEvent<HTMLDivElement>, isTouch = false) => {
     event.stopPropagation();
 
+    if (isTouch && isVisibilityEffect) {
+      showTouchFeedback();
+    }
+
     if (!onClick) {
-      // Visibility-only overlay (no action attached), e.g. the Plaza inside
-      // door or the furniture-store door. There is nothing to run, but a tap
-      // must still reveal the "open" art so touch devices get feedback
-      // equivalent to the desktop hover. Auto-clears so the overlay doesn't
-      // stay stuck open.
-      if (isTouch && isVisibilityEffect) {
-        setIsTouchActive(true);
-        if (touchFeedbackTimer.current !== null) {
-          window.clearTimeout(touchFeedbackTimer.current);
-        }
-        touchFeedbackTimer.current = window.setTimeout(() => {
-          touchFeedbackTimer.current = null;
-          setIsTouchActive(false);
-        }, TOUCH_FEEDBACK_MS);
-      }
+      // Visibility-only overlay (no action attached), e.g. the furniture-store
+      // door. There is nothing to run — the tap feedback above is the whole
+      // behaviour.
       return;
     }
 
@@ -201,7 +219,10 @@ export function InteractiveElement({
     if (requestInteraction) {
       const target = walkTarget ?? computeBaseCenterTarget(event.currentTarget, walkBoundary);
       if (target) {
-        // Show active/touched feedback immediately (mobile parity with hover).
+        // Show active/touched feedback immediately (mobile parity with hover)
+        // and hold it for the whole walk: the pending interaction, not a timer,
+        // decides when the door closes again.
+        clearTouchFeedbackTimer();
         setIsTouchActive(true);
         requestInteraction({
           target,
@@ -282,10 +303,16 @@ export function InteractiveElement({
       className={cn(
         'cursor-pointer select-none',
         effect === 'scale' && animated && 'transition-all duration-300 ease-out hover:scale-110',
-        effect === 'door' && 'opacity-0 hover:opacity-100',
-        // Mobile parity: a tap keeps doors visible while the Blobbi walks over.
-        // Visibility only — no scale/transform, so large doors don't jump.
-        effect === 'door' && isTouchActive && 'opacity-100',
+        /*
+         * Mobile parity: a tap keeps the door visible while the Blobbi walks
+         * over. Visibility only — no scale/transform, so large doors don't jump.
+         *
+         * The two states are composed as alternatives rather than stacked, so
+         * `opacity-0` and `opacity-100` are never emitted together: which of two
+         * conflicting utilities wins would otherwise be left to class ordering
+         * (and to `twMerge` still recognising the pair).
+         */
+        effect === 'door' && (isTouchActive ? 'opacity-100' : 'opacity-0 hover:opacity-100'),
         isAnimating && effect === 'scale' && 'animate-tap',
         className,
       )}
@@ -322,9 +349,11 @@ export function InteractiveElement({
          */
         className={cn(
           'w-full h-full object-contain',
-          effect === 'opacity' && 'opacity-0 hover:opacity-100 active:opacity-100',
-          // Mobile parity: keep "on" overlay visible while walking after a tap.
-          effect === 'opacity' && isTouchActive && 'opacity-100',
+          // Same alternative-composition rule as the wrapper above: keep the
+          // "on" overlay visible while walking after a tap, without ever
+          // emitting both opacity utilities at once.
+          effect === 'opacity' &&
+            (isTouchActive ? 'opacity-100' : 'opacity-0 hover:opacity-100 active:opacity-100'),
         )}
       />
     </div>

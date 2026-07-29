@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
+import { flushProviderInit } from '@/test/flushProviderInit';
 import { ShareModal } from './ShareModal';
 
 // Mock the Web Share API
@@ -79,7 +80,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
     expect(screen.getByText('Post to Relay')).toBeInTheDocument();
   });
 
-  it('does not render when closed', () => {
+  it('does not render when closed', async () => {
     render(
       <TestApp>
         <ShareModal
@@ -90,6 +91,7 @@ const mockCapturedPolaroidSrc = 'data:image/png;base64,test-polaroid-image-data'
         />
       </TestApp>
     );
+    await flushProviderInit();
 
     expect(screen.queryByText('Share Your Photo 📸')).not.toBeInTheDocument();
   });

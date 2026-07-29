@@ -137,6 +137,17 @@ export function MineCaveEntrance({
       return true;
     };
 
+    /*
+      Lock the tunnel open now, synchronously from the activation event, so the
+      cave lights up the moment it is clicked/tapped rather than when the walk
+      finishes. It has to happen BEFORE `requestInteraction`, because an
+      interaction that is already satisfied (the Blobbi is standing on the
+      approach anchor) fires its `action` synchronously from inside that call —
+      and that action releases the lock. Setting it afterwards would leave the
+      entrance lit while the room changes underneath it.
+    */
+    setIsActive(true);
+
     requestInteraction({
       target: mineCaveStructure.approach,
       touch: isTouch,

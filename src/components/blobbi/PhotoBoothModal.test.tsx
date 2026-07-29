@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PhotoBoothModal } from './PhotoBoothModal';
 import { TestApp } from '@/test/TestApp';
+import { flushProviderInit } from '@/test/flushProviderInit';
 import type { Blobbi } from '@/hooks/useBlobbis';
 
 // Mock blobbi data for testing
@@ -45,7 +46,7 @@ describe('PhotoBoothModal', () => {
     expect(screen.getByText(/move blobbi/i)).toBeInTheDocument();
   });
 
-  it('does not render when closed', () => {
+  it('does not render when closed', async () => {
     render(
       <TestApp>
         <PhotoBoothModal
@@ -55,6 +56,7 @@ describe('PhotoBoothModal', () => {
         />
       </TestApp>
     );
+    await flushProviderInit();
 
     // Modal should not be in document when closed
     expect(screen.queryByRole('button', { name: /close photo booth/i })).not.toBeInTheDocument();
@@ -224,7 +226,7 @@ describe('PhotoBoothModal', () => {
     expect(allInstructions[1]).toBeInTheDocument();
   });
 
-  it('calls onOpenShareModal when Share button is clicked in polaroid preview', () => {
+  it('calls onOpenShareModal when Share button is clicked in polaroid preview', async () => {
     const mockOnOpenShareModal = vi.fn();
 
     render(
@@ -237,6 +239,7 @@ describe('PhotoBoothModal', () => {
         />
       </TestApp>
     );
+    await flushProviderInit();
 
     // Mock the captured photo state by directly setting it
     // This is a simplified test - in reality, the photo capture process is more complex
