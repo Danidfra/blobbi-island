@@ -96,6 +96,34 @@ describe('src/arcade cannot write to a relay or an inventory', () => {
   );
 });
 
+describe('game simulation stays reward-free', () => {
+  // The dependency arrow points ONE way: a reward policy reads a result; the
+  // physics, match reducers, rules and result builders know nothing about
+  // rewards. A simulation that imported the economy could start shaping play
+  // around it — and a policy bug could then break a game.
+  // The reward layer itself — the per-game policies, the shared calculator and
+  // the claim boundary — is exempt: it is the thing being isolated FROM.
+  const files = sourceFiles(ARCADE_DIR).filter(
+    (f) =>
+      !f.endsWith('.test.ts') &&
+      !/-reward\.ts$/.test(f) &&
+      !f.endsWith('reward-policy.ts') &&
+      !f.endsWith('arcade-reward-boundary.ts'),
+  );
+
+  it.each(files.map((f) => [f.replace(`${process.cwd()}/`, ''), f]))(
+    '%s imports no reward module',
+    (_label, file) => {
+      for (const specifier of importsOf(file)) {
+        expect(
+          /-reward$|reward-policy|arcade-reward-boundary/.test(specifier),
+          `${_label} imports reward code (${specifier})`,
+        ).toBe(false);
+      }
+    },
+  );
+});
+
 describe('the arcade does not depend on the theater', () => {
   const files = [...sourceFiles(ARCADE_DIR), ...sourceFiles(ARCADE_COMPONENTS_DIR)];
 
@@ -132,26 +160,59 @@ describe('no arcade component performs an inventory or coin write except the pas
   );
 
   it('routes the ONE inventory write through useArcadeReward, and nowhere else', () => {
-    // Phase 3 gave the arcade a reward. The rule above still holds — no arcade
-    // component imports a raw write hook — because the grant goes through one
-    // named boundary, `useArcadeReward`, which is the only module allowed to
-    // hold an `ArcadeRewardWriter`. This asserts BOTH halves: exactly one arcade
-    // component reaches for the boundary, and the boundary is what actually
-    // owns the writer.
+    // Phase 3 gave the arcade a reward; Arcade V1 extended it to all three
+    // dedicated games. The rule above still holds — no arcade component imports
+    // a raw write hook — because every grant goes through one named boundary:
+    // machine controllers use the shared `useArcadeRewardController` wiring,
+    // which is the only module that calls `useArcadeReward`, which is the only
+    // module allowed to hold an `ArcadeRewardWriter`. This asserts the exact
+    // population of that boundary's users, so a fourth caller is a deliberate
+    // edit here rather than an accident.
     const users = files
       .filter((file) => importsOf(file).some((s) => /useArcadeReward/.test(s)))
       .map((f) => f.replace(`${process.cwd()}/`, ''))
       .sort();
-    expect(users).toEqual([
-      // The controller — the one component that can start a claim.
+    const machines = [
       'src/components/blobbi/arcade/dance/DanceMachine.tsx',
-      // The results screen, which imports the hook's STATE TYPE only, so that
-      // its copy cannot drift away from the phases it has to distinguish.
+      'src/components/blobbi/arcade/hockey/AirHockeyMachine.tsx',
+      'src/components/blobbi/arcade/pool/PoolMachine.tsx',
+    ];
+    const resultsScreens = [
       'src/components/blobbi/arcade/dance/DanceResults.tsx',
-    ]);
-    expect(readFileSync(join(process.cwd(), users[1]), 'utf8')).toContain(
-      "import type { ArcadeRewardState }",
+      'src/components/blobbi/arcade/hockey/AirHockeyResults.tsx',
+      'src/components/blobbi/arcade/pool/PoolResults.tsx',
+    ];
+    expect(users).toEqual(
+      [
+        // The shared claim panel, which imports the hook's STATE TYPE only.
+        'src/components/blobbi/arcade/ArcadeRewardPanel.tsx',
+        // The three machine controllers — the components that can start a claim
+        // — reach the boundary ONLY through the shared controller wiring.
+        ...machines,
+        // The results screens import the STATE TYPE only, so their props cannot
+        // drift away from the phases the panel has to distinguish.
+        ...resultsScreens,
+      ].sort(),
     );
+    for (const machine of machines) {
+      const specifiers = importsOf(join(process.cwd(), machine));
+      expect(
+        specifiers.some((s) => s === '@/hooks/useArcadeRewardController'),
+        `${machine} must use the shared controller`,
+      ).toBe(true);
+      expect(
+        specifiers.some((s) => s === '@/hooks/useArcadeReward'),
+        `${machine} must not bypass the shared controller`,
+      ).toBe(false);
+    }
+    for (const screen of [...resultsScreens, 'src/components/blobbi/arcade/ArcadeRewardPanel.tsx']) {
+      expect(readFileSync(join(process.cwd(), screen), 'utf8')).toContain(
+        'import type { ArcadeRewardState }',
+      );
+    }
+
+    const controller = importsOf(join(process.cwd(), 'src/hooks/useArcadeRewardController.ts'));
+    expect(controller.some((s) => s === '@/hooks/useArcadeReward')).toBe(true);
 
     const hook = importsOf(join(process.cwd(), 'src/hooks/useArcadeReward.ts'));
     expect(hook.some((s) => /arcade-reward-writer/.test(s))).toBe(true);

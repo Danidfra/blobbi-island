@@ -18,8 +18,10 @@ import { ElevatorModal } from '@/components/blobbi/ElevatorModal';
 import { NoPassModal } from '@/components/blobbi/NoPassModal';
 import { resolveNativeArcadeGame } from '@/components/blobbi/arcade/native-games';
 import {
+  ARCADE_AIR_HOCKEY_MACHINE_ID,
   ARCADE_CATALOGUE,
   ARCADE_POOL_MACHINE_ID,
+  BLOBBI_AIR_HOCKEY_GAME_ID,
   BLOBBI_DANCE_GAME_ID,
   BLOBBI_DANCE_MACHINE_ID,
   BLOBBI_POOL_GAME_ID,
@@ -34,7 +36,7 @@ import {
   type ArcadeStatus,
 } from '@/arcade/arcade-machine-state';
 import type { ArcadeGameResult } from '@/arcade/types';
-import { calculateTicketAward, DANCE_REWARD_POLICY } from '@/arcade/reward-policy';
+import { calculateTicketAward, getRewardPolicy } from '@/arcade/reward-policy';
 import {
   ARCADE_FLOORS,
   arcadeMachines,
@@ -46,6 +48,9 @@ import { useArcadePass } from '@/hooks/useArcadePass';
 
 import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
 import { PoolMachine } from '@/components/blobbi/arcade/pool/PoolMachine';
+import { AirHockeyMachine } from '@/components/blobbi/arcade/hockey/AirHockeyMachine';
+import { HOCKEY_STAT_KEYS } from '@/arcade/hockey/hockey-result';
+import { POOL_STAT_KEYS } from '@/arcade/pool/pool-result';
 import { POOL_SCENARIOS, poolScenario } from '@/arcade/pool/pool-scenarios';
 import { createPoolMatch, type PoolMatchState } from '@/arcade/pool/match';
 import { DEFAULT_DANCE_CHART, type DanceChart } from '@/arcade/dance/chart';
@@ -118,17 +123,16 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  *    Game (which must get no Play button), and one listing a game with no
  *    implementation (which must fail safely and say so). Only the first exists
  *    in the shipped registry;
- *  - **dedicated machines** — Blobbi Dance and Pool opening DIRECTLY, in their
- *    real controllers on their real machine ids. Neither ever shows the shared
- *    catalogue, which is the thing to check here. (Air Hockey is reached through
- *    the room, like any player would.);
+ *  - **dedicated machines** — Blobbi Dance, Pool and Air Hockey opening
+ *    DIRECTLY, in their real controllers on their real machine ids. None ever
+ *    shows the shared catalogue, which is the thing to check here;
  *  - **overlay containment** — every surface above is portaled into the frame's
  *    stage overlay host, so what a reviewer sees is a panel inside the game
  *    window rather than one covering the browser page;
  *  - **anchors** — draws each machine's configured walk-to point on the floor;
- *  - **Blobbi Dance** — the REAL machine (real chart, real judgement, real
- *    lifecycle, real claim boundary) with a FAKE `ArcadeRewardWriter` whose
- *    balance is ADDITIVE, like the real kind:31633 grant. Every claim outcome is
+ *  - **claims** — every dedicated machine (dance, hockey, pool) runs the REAL
+ *    claim boundary with a FAKE `ArcadeRewardWriter` whose balance is ADDITIVE,
+ *    like the real kind:31633 grant. Every claim outcome is
  *    reachable — confirmed, signer-refused, timed out, verified against the
  *    wrong quantity, unverifiable, and **`lagging-relay`, which reproduces the
  *    duplicate-grant defect exactly**: the publish lands and the verification
@@ -386,6 +390,97 @@ function danceFixtureResult(
 }
 
 /**
+ * Air Hockey result fixtures — representative awards, no match needed.
+ *
+ * Same idea as the dance fixtures: a REAL `finish` through the REAL reducer
+ * with a hand-built result, so the reward panel that renders is the production
+ * one, priced by the production `HOCKEY_REWARD_POLICY`.
+ */
+type HockeyResultFixture = 'shutout' | 'close-win' | 'loss';
+
+const HOCKEY_RESULT_FIXTURES: readonly HockeyResultFixture[] = ['shutout', 'close-win', 'loss'];
+
+function hockeyFixtureResult(
+  runId: string,
+  machineId: string,
+  gameId: string,
+  fixture: HockeyResultFixture,
+): ArcadeGameResult {
+  const [player, opponent] = { shutout: [7, 0], 'close-win': [7, 5], loss: [3, 7] }[fixture];
+  return {
+    runId,
+    gameId,
+    machineId,
+    difficulty: 'normal',
+    cleared: player > opponent,
+    score: player,
+    startedAt: 1_700_000_000_000,
+    endedAt: 1_700_000_150_000,
+    stats: {
+      [HOCKEY_STAT_KEYS.playerGoals]: player,
+      [HOCKEY_STAT_KEYS.opponentGoals]: opponent,
+      [HOCKEY_STAT_KEYS.goalDifference]: player - opponent,
+      [HOCKEY_STAT_KEYS.targetGoals]: 7,
+      [HOCKEY_STAT_KEYS.won]: player > opponent ? 1 : 0,
+      [HOCKEY_STAT_KEYS.completedNaturally]: 1,
+      [HOCKEY_STAT_KEYS.durationMs]: 150_000,
+      [HOCKEY_STAT_KEYS.playerHits]: 24,
+      [HOCKEY_STAT_KEYS.opponentHits]: 21,
+      [HOCKEY_STAT_KEYS.wallBounces]: 40,
+      [HOCKEY_STAT_KEYS.topPuckSpeed]: 640,
+    },
+  };
+}
+
+/**
+ * Pool result fixtures — representative awards, no frame needed.
+ *
+ * `clean-win` is the 8-ticket maximum; `scrappy-win` shows the clean-frame and
+ * legal-8 bonuses withheld; `loss` is the participation floor.
+ */
+type PoolResultFixture = 'clean-win' | 'scrappy-win' | 'loss';
+
+const POOL_RESULT_FIXTURES: readonly PoolResultFixture[] = ['clean-win', 'scrappy-win', 'loss'];
+
+function poolFixtureResult(
+  runId: string,
+  machineId: string,
+  gameId: string,
+  fixture: PoolResultFixture,
+): ArcadeGameResult {
+  const won = fixture !== 'loss';
+  const clean = fixture === 'clean-win';
+  return {
+    runId,
+    gameId,
+    machineId,
+    difficulty: 'normal',
+    cleared: won,
+    score: won ? 7 : 3,
+    startedAt: 1_700_000_000_000,
+    endedAt: 1_700_000_240_000,
+    stats: {
+      [POOL_STAT_KEYS.won]: won ? 1 : 0,
+      [POOL_STAT_KEYS.completedNaturally]: 1,
+      [POOL_STAT_KEYS.durationMs]: 240_000,
+      [POOL_STAT_KEYS.playerBalls]: won ? 7 : 3,
+      [POOL_STAT_KEYS.opponentBalls]: won ? 4 : 7,
+      [POOL_STAT_KEYS.remainingOpponentBalls]: won ? 3 : 0,
+      [POOL_STAT_KEYS.ballDifference]: won ? 3 : -4,
+      [POOL_STAT_KEYS.playerShots]: 19,
+      [POOL_STAT_KEYS.playerSuccessfulShots]: won ? 9 : 4,
+      [POOL_STAT_KEYS.playerScratches]: clean ? 0 : 2,
+      [POOL_STAT_KEYS.opponentScratches]: 1,
+      [POOL_STAT_KEYS.playerFouls]: clean ? 0 : 1,
+      [POOL_STAT_KEYS.longestPlayerRun]: won ? 4 : 2,
+      [POOL_STAT_KEYS.earlyEightLoss]: 0,
+      [POOL_STAT_KEYS.legalEightFinish]: clean ? 1 : 0,
+      [POOL_STAT_KEYS.playerGroup]: 0,
+    },
+  };
+}
+
+/**
  * Shell-box presets for the viewport audit.
  *
  * These constrain the shell's BOX, not the viewport: CSS media queries still
@@ -429,7 +524,14 @@ function fixtureResult(
     // deterministic precisely so it never reads a clock.
     startedAt: 1_700_000_000_000,
     endedAt: 1_700_000_090_000,
-    stats: { accuracy: cleared ? 94 : 51, maxCombo: cleared ? 212 : 33 },
+    // `completedNaturally` and `won` are the two generic eligibility stats the
+    // policies read; the game-specific extras degrade gracefully when absent.
+    stats: {
+      accuracy: cleared ? 94 : 51,
+      maxCombo: cleared ? 212 : 33,
+      completedNaturally: 1,
+      won: cleared ? 1 : 0,
+    },
   };
 }
 
@@ -573,6 +675,26 @@ export function DevArcade() {
     });
   }, [poolScenarioId]);
 
+  // ── Air Hockey harness state ────────────────────────────────────────────
+  //
+  // Its own lifecycle, for the same reason Pool has one: the reducer holds a
+  // single run. The room reaches this table by walking a Blobbi to it; the
+  // harness opens the real controller on the real machine id directly.
+  const [hockeyOpen, setHockeyOpen] = useState(false);
+  const [hockeyLifecycle, hockeyDispatch] = useReducer(
+    arcadeMachineReducer,
+    INITIAL_ARCADE_MACHINE_STATE,
+  );
+  const hockeyEntry = getCatalogueEntry(BLOBBI_AIR_HOCKEY_GAME_ID)!;
+  /** Like the others, not a choice: `canLaunchArcadeGame` refuses it anywhere else. */
+  const hockeyMachineId = ARCADE_AIR_HOCKEY_MACHINE_ID;
+
+  const openHockey = useCallback(() => {
+    hockeyDispatch({ type: 'close' });
+    hockeyDispatch({ type: 'open', machineId: hockeyMachineId, gameId: hockeyEntry.id });
+    setHockeyOpen(true);
+  }, [hockeyEntry.id, hockeyMachineId]);
+
   // ── Catalogue harness state ─────────────────────────────────────────────
   /** Only a GENERIC cabinet can open the shared catalogue, so only those are offered. */
   const genericCabinets = useMemo(
@@ -691,6 +813,45 @@ export function DevArcade() {
       setDanceOpen(true);
     },
     [danceEntry.id, danceMachineId, pubkey],
+  );
+
+  /**
+   * Drop the air-hockey machine straight onto its results screen — the same
+   * pattern as {@link showDanceResult}, priced by the production hockey policy,
+   * with the fake writer standing between the claim and any relay.
+   */
+  const showHockeyResult = useCallback(
+    (fixture: HockeyResultFixture) => {
+      fixtureRunCounter += 1;
+      const runId = `dev-hockey-${fixture}-${fixtureRunCounter}`;
+      const result = hockeyFixtureResult(runId, hockeyMachineId, hockeyEntry.id, fixture);
+      setWriterLog([]);
+      hockeyDispatch({ type: 'close' });
+      hockeyDispatch({ type: 'open', machineId: hockeyMachineId, gameId: hockeyEntry.id });
+      hockeyDispatch({ type: 'start', runId, difficulty: 'normal' });
+      hockeyDispatch({ type: 'countdown-complete' });
+      hockeyDispatch({ type: 'finish', result });
+      setHockeyOpen(true);
+    },
+    [hockeyEntry.id, hockeyMachineId],
+  );
+
+  /** Pool's counterpart to {@link showHockeyResult}. */
+  const showPoolResult = useCallback(
+    (fixture: PoolResultFixture) => {
+      fixtureRunCounter += 1;
+      const runId = `dev-pool-${fixture}-${fixtureRunCounter}`;
+      const result = poolFixtureResult(runId, poolMachineId, poolEntry.id, fixture);
+      setWriterLog([]);
+      setPoolScenarioId(null);
+      poolDispatch({ type: 'close' });
+      poolDispatch({ type: 'open', machineId: poolMachineId, gameId: poolEntry.id });
+      poolDispatch({ type: 'start', runId, difficulty: 'normal' });
+      poolDispatch({ type: 'countdown-complete' });
+      poolDispatch({ type: 'finish', result });
+      setPoolOpen(true);
+    },
+    [poolEntry.id, poolMachineId],
   );
 
   /**
@@ -826,7 +987,11 @@ export function DevArcade() {
 
   const award = useMemo(() => {
     if (!lifecycle.result) return null;
-    return calculateTicketAward(DANCE_REWARD_POLICY, lifecycle.result);
+    // The fixture entry decides which game's policy prices the result — all
+    // three dedicated games have one now.
+    const policy = getRewardPolicy(lifecycle.result.gameId);
+    if (!policy) return null;
+    return calculateTicketAward(policy, lifecycle.result);
   }, [lifecycle.result]);
 
   return (
@@ -867,9 +1032,9 @@ export function DevArcade() {
       )}
 
       {/*
-        Pool, in the real controller with the real lifecycle. No reward writer,
-        because Pool has no reward path at all — it grants no tickets, and the
-        controller imports nothing that could.
+        Pool, in the real controller with the real lifecycle and the real claim
+        boundary — and the FAKE writer, because Pool pays tickets now and a
+        harness claim must never publish.
       */}
       {poolOpen && poolLifecycle.status !== 'closed' && (
         <PoolMachine
@@ -880,10 +1045,31 @@ export function DevArcade() {
           lifecycle={poolLifecycle}
           dispatch={poolDispatch}
           createMatchState={poolMatchFactory}
+          rewardWriter={devWriter}
           onExit={() => {
             poolDispatch({ type: 'close' });
             setPoolOpen(false);
             setPoolScenarioId(null);
+          }}
+          exitLabel="Back to the arcade"
+          exitAriaLabel="Back to the arcade room"
+          showDebugDetails
+        />
+      )}
+
+      {/* Air Hockey, exactly as above: real controller, fake writer. */}
+      {hockeyOpen && hockeyLifecycle.status !== 'closed' && (
+        <AirHockeyMachine
+          key={`hockey-${remountKey}`}
+          machineId={hockeyMachineId}
+          gameId={hockeyEntry.id}
+          title={hockeyEntry.title}
+          lifecycle={hockeyLifecycle}
+          dispatch={hockeyDispatch}
+          rewardWriter={devWriter}
+          onExit={() => {
+            hockeyDispatch({ type: 'close' });
+            setHockeyOpen(false);
           }}
           exitLabel="Back to the arcade"
           exitAriaLabel="Back to the arcade room"
@@ -1077,6 +1263,9 @@ export function DevArcade() {
           <Chip active={poolOpen && poolScenarioId === null} onClick={() => openPool(null)}>
             Pool (direct)
           </Chip>
+          <Chip active={hockeyOpen} onClick={openHockey}>
+            Air Hockey (direct)
+          </Chip>
           {arcadeMachines
             .filter((m) => m.activation.type === 'dedicated-preview')
             .map((m) => (
@@ -1233,6 +1422,30 @@ export function DevArcade() {
           </span>
         </Section>
 
+        <Section title="Hockey results (no run needed)">
+          {HOCKEY_RESULT_FIXTURES.map((fixture) => (
+            <Chip key={fixture} onClick={() => showHockeyResult(fixture)}>
+              {fixture}
+              {fixture === 'loss' ? ' (floor)' : fixture === 'shutout' ? ' (max)' : ''}
+            </Chip>
+          ))}
+          <span className="ml-2 font-mono">
+            priced by the production hockey policy · claims go to the fake writer
+          </span>
+        </Section>
+
+        <Section title="Pool results (no run needed)">
+          {POOL_RESULT_FIXTURES.map((fixture) => (
+            <Chip key={fixture} onClick={() => showPoolResult(fixture)}>
+              {fixture}
+              {fixture === 'loss' ? ' (floor)' : fixture === 'clean-win' ? ' (max)' : ''}
+            </Chip>
+          ))}
+          <span className="ml-2 font-mono">
+            priced by the production pool policy · claims go to the fake writer
+          </span>
+        </Section>
+
         <Section title="Shell box (not the viewport)">
           {VIEWPORT_PRESETS.map((preset) => (
             <Chip
@@ -1332,7 +1545,8 @@ function ResultsFixture({ award }: { award: ReturnType<typeof calculateTicketAwa
         Total: {award.total} tickets{award.capped ? ' (capped)' : ''}
       </p>
       <p className="text-xs opacity-70">
-        Phase 2 grants nothing: no inventory mutation and no publish exists.
+        Calculated only — granting happens on the dedicated machines&rsquo; own results screens,
+        through the real claim boundary and the fake writer.
       </p>
     </div>
   );

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useImmersive } from '@/hooks/useImmersive';
+import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
+import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
 import type {
   ArcadeAbortReason,
   ArcadeEvent,
@@ -52,18 +54,15 @@ import { AirHockeyResults } from './AirHockeyResults';
  *  - **Replay is a new run.** New id, new seed, cleared result.
  *  - **The controller built the engine, so the controller disposes it.**
  *
- * ## What is deliberately absent: rewards
+ * ## Rewards
  *
- * No `useArcadeReward`, no reward policy lookup, no claim button, no ledger, no
- * publish. Air Hockey's catalogue entry says `grantsTickets: false` and there is
- * no active policy for `blobbi-air-hockey`, so a claim path here would be a
- * promise the arcade cannot keep.
- *
- * The join point exists and is one object: the {@link ArcadeGameResult} handed
- * to `dispatch({ type: 'finish' })` already carries the outcome, both scores,
- * the margin, the duration and the difficulty (see `hockey-result.ts`). Wiring a
- * future reward is registering a policy and adding the two hook calls
- * `DanceMachine` has — no change to the simulation or to the result shape.
+ * `HOCKEY_REWARD_POLICY` is active and the catalogue says `grantsTickets:
+ * true`, so this controller carries the same claim wiring as `DanceMachine` —
+ * the shared `useArcadeRewardController`, which prices the finished
+ * {@link ArcadeGameResult} and drives the exactly-once claim through
+ * `useArcadeReward`. Nothing about the simulation or the result shape changed
+ * to enable it; the result built in `hockey-result.ts` was the join point all
+ * along.
  */
 
 export interface AirHockeyMachineProps {
@@ -81,6 +80,8 @@ export interface AirHockeyMachineProps {
   readonly exitAriaLabel: string;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: HockeyAudioFactory;
+  /** Substitute reward writer. Production passes nothing. */
+  readonly rewardWriter?: ArcadeRewardWriter;
   /** Goals needed to win. Injectable so a test need not play a whole match. */
   readonly targetGoals?: number;
   /** Build the match. Injectable for tests; production seeds it from the run id. */
@@ -127,6 +128,7 @@ export function AirHockeyMachine({
   exitLabel,
   exitAriaLabel,
   audioFactory = createHockeyAudio,
+  rewardWriter,
   targetGoals = MATCH_GOAL_TARGET,
   createMatchState,
   mintRunId = defaultMintRunId,
@@ -136,6 +138,7 @@ export function AirHockeyMachine({
 }: AirHockeyMachineProps) {
   const reducedMotion = useReducedMotion();
   const immersive = useImmersive();
+  const reward = useArcadeRewardController({ lifecycle, dispatch, writer: rewardWriter });
 
   const [difficulty, setDifficulty] = useState<HockeyDifficulty>(DEFAULT_HOCKEY_DIFFICULTY);
   const [abortNotice, setAbortNotice] = useState<string | null>(null);
@@ -286,6 +289,13 @@ export function AirHockeyMachine({
       <AirHockeyResults
         summary={summary}
         result={result}
+        calculation={reward.calculation}
+        reward={reward.rewardState}
+        claiming={status === 'claiming'}
+        canClaim={reward.canClaim}
+        onClaim={reward.handleClaim}
+        onCheckStatus={reward.handleCheckStatus}
+        isLoggedIn={reward.isLoggedIn}
         showDebugDetails={showDebugDetails}
       />
     );

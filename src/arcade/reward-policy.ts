@@ -36,8 +36,10 @@
 import type { ArcadeDifficulty, ArcadeGameResult } from './types';
 import { validateArcadeGameResult } from './types';
 import { DANCE_REWARD_POLICY } from './dance/dance-reward';
+import { HOCKEY_REWARD_POLICY } from './hockey/hockey-reward';
+import { POOL_REWARD_POLICY } from './pool/pool-reward';
 
-export { DANCE_REWARD_POLICY };
+export { DANCE_REWARD_POLICY, HOCKEY_REWARD_POLICY, POOL_REWARD_POLICY };
 
 /**
  * Economy levers. Starting values from `docs/arcade-audit.md` §12.2; every one
@@ -117,6 +119,20 @@ export interface ArcadeRewardPolicy {
   readonly shape: ArcadeRewardShape;
   /** Tickets for a CLEARED run, before floor, multiplier, bonuses and caps. */
   readonly base: (result: ArcadeGameResult) => number;
+  /**
+   * Optional player-facing decomposition of `base` for a cleared run.
+   *
+   * Purely presentational: the shared layer uses these lines in the breakdown
+   * ONLY when every line has a non-empty label (after trimming) that is unique
+   * within the breakdown and a non-negative integer ticket value, and the lines
+   * sum to exactly what `base` returned. Anything else falls back to the single
+   * `Clear` line — a policy cannot pay a different number, hide a deduction, or
+   * double-render a line by describing itself creatively. Games with several
+   * visible reasons (victory, difficulty, margin) use this so the results
+   * screen can say why; a policy without one gets the single line, as the dance
+   * policy always has.
+   */
+  readonly baseBreakdown?: (result: ArcadeGameResult) => readonly TicketAwardLine[];
   /** This game's own ceiling. Must not exceed the shared hard cap. */
   readonly maxTicketsPerRun: number;
   /**
@@ -277,7 +293,36 @@ export function calculateTicketAward(
   const safeBase = Number.isFinite(rawBase) ? Math.max(0, Math.floor(rawBase)) : 0;
   const participationFloorApplied = safeBase < tuning.participationFloor;
   const base = participationFloorApplied ? tuning.participationFloor : safeBase;
-  breakdown.push({ label: 'Clear', tickets: base });
+
+  // A policy may decompose its base into the lines a player is shown, but the
+  // lines are presentation only and must not be able to MISREPRESENT the paid
+  // reward. They are used exactly when every line carries a non-empty label
+  // (after trimming) that is unique within the breakdown and a non-negative
+  // integer ticket value, and the lines add up to the base actually paid; the
+  // single `Clear` line remains the truth otherwise. Whatever the lines say,
+  // `base` — and therefore the quantity granted — is computed above from
+  // `policy.base` alone.
+  const baseLines = participationFloorApplied ? undefined : policy.baseBreakdown?.(result);
+  const seenLabels = new Set<string>();
+  const baseLinesValid =
+    baseLines !== undefined &&
+    baseLines.length > 0 &&
+    baseLines.every((line) => {
+      const label = typeof line.label === 'string' ? line.label.trim() : '';
+      if (
+        label.length === 0 ||
+        seenLabels.has(label) ||
+        !Number.isInteger(line.tickets) ||
+        line.tickets < 0
+      ) {
+        return false;
+      }
+      seenLabels.add(label);
+      return true;
+    }) &&
+    baseLines.reduce((sum, line) => sum + line.tickets, 0) === base;
+  if (baseLinesValid) breakdown.push(...baseLines);
+  else breakdown.push({ label: 'Clear', tickets: base });
 
   // A flat policy declines the multiplier and the history bonuses; it does NOT
   // decline the floor above or the caps below.
@@ -426,7 +471,11 @@ export function calculateArcadeReward(input: CalculateArcadeRewardInput): Arcade
 
 // ── Policy registry ────────────────────────────────────────────────────────
 
-const POLICIES: readonly ArcadeRewardPolicy[] = [DANCE_REWARD_POLICY];
+const POLICIES: readonly ArcadeRewardPolicy[] = [
+  DANCE_REWARD_POLICY,
+  HOCKEY_REWARD_POLICY,
+  POOL_REWARD_POLICY,
+];
 
 /** Every registered policy, draft ones included. Tests iterate this. */
 export const arcadeRewardPolicies = POLICIES;
@@ -439,9 +488,10 @@ export function getRewardPolicy(gameId: string): ArcadeRewardPolicy | undefined 
 /**
  * Look up a policy that is cleared for production.
  *
- * Returns `undefined` for a draft policy, which is what keeps this phase honest:
- * there is currently NO production policy, so a caller that reaches for one and
- * gets nothing back cannot accidentally pay out.
+ * Returns `undefined` for a draft policy, so a game whose policy has not been
+ * deliberately promoted cannot pay out. All three dedicated games — dance,
+ * air hockey and pool — now carry an `active` policy; a fourth game starts as
+ * `draft` and gets nothing back from here until promoted.
  */
 export function getProductionRewardPolicy(gameId: string): ArcadeRewardPolicy | undefined {
   const policy = getRewardPolicy(gameId);

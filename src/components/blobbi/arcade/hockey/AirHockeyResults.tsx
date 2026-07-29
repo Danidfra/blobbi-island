@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { ArcadeGameResult } from '@/arcade/types';
+import type { ArcadeRewardCalculation } from '@/arcade/reward-policy';
+import type { ArcadeRewardState } from '@/hooks/useArcadeReward';
 import { HOCKEY_AI_PROFILES, type HockeyDifficulty } from '@/arcade/hockey/ai';
 import {
   HOCKEY_STAT_KEYS,
@@ -7,21 +9,18 @@ import {
   type AirHockeyMatchResult,
 } from '@/arcade/hockey/hockey-result';
 
+import { ArcadeRewardPanel } from '../ArcadeRewardPanel';
+
 /**
  * The result of one match.
  *
- * ## Why there is no ticket panel
- *
- * Blobbi Dance's results screen is mostly a reward: a breakdown, a claim button
- * and a publish state. Air Hockey has none of that, on purpose — it grants no
- * Arcade Tickets in this phase, so a screen that showed a reward section, even
- * an empty or a disabled one, would be advertising something that does not
- * exist.
- *
- * What it shows instead is the match: who won, by how much, how long it took,
- * and a handful of numbers worth being pleased about. When a reward policy is
- * approved, it slots in beside this rather than replacing it — the result object
- * it would read is already the one being rendered here.
+ * The match half — who won, by how much, how long it took, and a handful of
+ * numbers worth being pleased about — is this component's own. The ticket half
+ * is the shared {@link ArcadeRewardPanel}, exactly as on the dance and pool
+ * results screens: `HOCKEY_REWARD_POLICY` is active, so a finished match shows
+ * its award, its breakdown, and the claim. The panel's honesty rules (an
+ * unresolved claim is never retryable, a balance is never invented) are
+ * documented on the panel itself.
  *
  * ## Non-colour signalling
  *
@@ -34,12 +33,29 @@ interface AirHockeyResultsProps {
   readonly summary: AirHockeyMatchResult;
   /** The arcade-contract result. Rendered only for the DEV harness. */
   readonly result: ArcadeGameResult;
+  /** Null when no production policy could be resolved at all. */
+  readonly calculation: ArcadeRewardCalculation | null;
+  readonly reward: ArcadeRewardState;
+  /** True while the shared lifecycle is in `claiming`. */
+  readonly claiming: boolean;
+  readonly canClaim: boolean;
+  readonly onClaim: () => void;
+  /** Read-only status check for an unresolved claim. Never publishes. */
+  readonly onCheckStatus: () => void;
+  readonly isLoggedIn: boolean;
   readonly showDebugDetails?: boolean;
 }
 
 export function AirHockeyResults({
   summary,
   result,
+  calculation,
+  reward,
+  claiming,
+  canClaim,
+  onClaim,
+  onCheckStatus,
+  isLoggedIn,
   showDebugDetails = false,
 }: AirHockeyResultsProps) {
   const won = summary.outcome === 'win';
@@ -100,6 +116,19 @@ export function AirHockeyResults({
         <Stat label="Rebounds" value={String(summary.stats.wallBounces)} />
         <Stat label="Top speed" value={String(Math.round(summary.stats.topPuckSpeed))} />
       </dl>
+
+      <ArcadeRewardPanel
+        calculation={calculation}
+        reward={reward}
+        claiming={claiming}
+        canClaim={canClaim}
+        onClaim={onClaim}
+        onCheckStatus={onCheckStatus}
+        isLoggedIn={isLoggedIn}
+        showDebugDetails={showDebugDetails}
+        dataPrefix="hockey"
+        ineligibleHint="Play the match to the final goal and the tickets are yours — win or lose."
+      />
 
       <p className="rounded-2xl border-2 border-island-wood/25 p-3 text-xs blobbi-text-muted">
         {won

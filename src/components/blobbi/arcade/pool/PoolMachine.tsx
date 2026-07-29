@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useImmersive } from '@/hooks/useImmersive';
+import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
+import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
 import type {
   ArcadeAbortReason,
   ArcadeEvent,
@@ -53,19 +55,15 @@ import { PoolResults } from './PoolResults';
  *  - **Replay is a new run.** New id, new seed, new rack, cleared result.
  *  - **The controller built the engine, so the controller disposes it.**
  *
- * ## What is deliberately absent: rewards
+ * ## Rewards
  *
- * No `useArcadeReward`, no reward policy lookup, no claim button, no ledger, no
- * publish. Pool's catalogue entry says `grantsTickets: false` and there is no
- * active policy for `blobbi-pool`, so a claim path here would be a promise the
- * arcade cannot keep.
- *
- * The join point exists and is one object: the {@link ArcadeGameResult} handed
- * to `dispatch({ type: 'finish' })` already carries the outcome, the group, both
- * ball counts, the shot count, the scratches, the best run and how the 8-ball
- * went down (see `pool-result.ts`). Wiring a future reward is registering a
- * policy and adding the two hook calls `DanceMachine` has — no change to the
- * simulation or to the result shape.
+ * `POOL_REWARD_POLICY` is active and the catalogue says `grantsTickets: true`,
+ * so this controller carries the same claim wiring as `DanceMachine` and
+ * `AirHockeyMachine` — the shared `useArcadeRewardController`, which prices the
+ * finished {@link ArcadeGameResult} and drives the exactly-once claim through
+ * `useArcadeReward`. Nothing about the simulation or the result shape changed
+ * to enable it; the result built in `pool-result.ts` was the join point all
+ * along.
  */
 
 export interface PoolMachineProps {
@@ -83,6 +81,8 @@ export interface PoolMachineProps {
   readonly exitAriaLabel: string;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: PoolAudioFactory;
+  /** Substitute reward writer. Production passes nothing. */
+  readonly rewardWriter?: ArcadeRewardWriter;
   /** Build the match. Injectable for tests; production seeds it from the run id. */
   readonly createMatchState?: () => PoolMatchState;
   readonly mintRunId?: () => string;
@@ -127,6 +127,7 @@ export function PoolMachine({
   exitLabel,
   exitAriaLabel,
   audioFactory = createPoolAudio,
+  rewardWriter,
   createMatchState,
   mintRunId = defaultMintRunId,
   now = Date.now,
@@ -135,6 +136,7 @@ export function PoolMachine({
 }: PoolMachineProps) {
   const reducedMotion = useReducedMotion();
   const immersive = useImmersive();
+  const reward = useArcadeRewardController({ lifecycle, dispatch, writer: rewardWriter });
 
   const [difficulty, setDifficulty] = useState<PoolDifficulty>(DEFAULT_POOL_DIFFICULTY);
   const [abortNotice, setAbortNotice] = useState<string | null>(null);
@@ -268,7 +270,18 @@ export function PoolMachine({
     );
   } else if (showResults && result && summary) {
     content = (
-      <PoolResults summary={summary} result={result} showDebugDetails={showDebugDetails} />
+      <PoolResults
+        summary={summary}
+        result={result}
+        calculation={reward.calculation}
+        reward={reward.rewardState}
+        claiming={status === 'claiming'}
+        canClaim={reward.canClaim}
+        onClaim={reward.handleClaim}
+        onCheckStatus={reward.handleCheckStatus}
+        isLoggedIn={reward.isLoggedIn}
+        showDebugDetails={showDebugDetails}
+      />
     );
   } else {
     content = (

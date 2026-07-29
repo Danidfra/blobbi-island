@@ -412,11 +412,12 @@ Dance claim records the right machine:
   `calculateArcadeReward`.
 - **The pool preview has no reward path at all** — no Start, no lifecycle, no
   result, nothing to claim.
-- **Air Hockey is playable and still pays nothing.** `grantsTickets: false`
-  with no active policy, which the registry test enforces in both directions:
-  playable and paying are independent facts. See
-  [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) §7 for the prepared
-  join point.
+- **All three dedicated games now pay tickets** (Arcade V1, client-trusted):
+  each has an `active` policy and `grantsTickets: true`, which the registry test
+  still enforces in both directions — playable and paying remain independent
+  facts, and a fourth game starts at `false` until a policy is deliberately
+  promoted. See [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) §7 and
+  [`docs/blobbi-pool.md`](./blobbi-pool.md) §8.
 - **A Guest Game reaches neither the native resolver nor the reward system.**
   Refused on category, before launch mode.
 - **Returning to the room cannot reset an unresolved claim.** Leaving goes
@@ -425,7 +426,9 @@ Dance claim records the right machine:
   view change.
 - `src/arcade/boundaries.test.ts` still enforces, against the real import graph,
   that `src/arcade/` reaches neither the inventory layer nor a Nostr client, and
-  that exactly one arcade component reaches the reward boundary.
+  pins the exact set of arcade components allowed to reach the reward boundary
+  (the three machine controllers through `useArcadeRewardController`, plus the
+  shared panel and results screens importing the state type).
 - Dance's reward, claim-ledger and idempotency tests are unchanged and passing.
 
 Ticket copy stays conditional: **"Play well to earn tickets"**, never "Earn

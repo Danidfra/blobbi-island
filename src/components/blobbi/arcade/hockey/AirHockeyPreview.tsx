@@ -19,7 +19,8 @@ import { HockeySoundToggle } from './HockeySoundToggle';
  *     rather than during it.
  *  2. **Say when it ends.** "First to seven" is the whole rule, and knowing it
  *     up front is what makes 5–6 exciting rather than confusing.
- *  3. **Be honest about tickets.** Air Hockey grants none yet. Saying so is
+ *  3. **Be honest about tickets.** Air Hockey pays them now: finishing earns
+ *     some, winning earns more, and leaving earns nothing. Saying so is
  *     better than an absence a player has to notice.
  *
  * Difficulty is chosen here and nowhere else: it is part of the run REQUEST,
@@ -160,7 +161,8 @@ export function AirHockeyPreview({
           <strong className="text-island-ink">
             <span aria-hidden>🎟️ </span>Arcade Tickets.
           </strong>{' '}
-          Air Hockey does not pay out tickets yet. Play it for the match.
+          Finishing a match earns tickets and winning earns more. Leaving mid-match earns
+          nothing.
         </p>
         <p>
           <strong className="text-island-ink">Sound.</strong> Press Start to let the browser play

@@ -678,7 +678,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           currency, the pass is temporary sessionStorage floor access. Both are
           arcade-scoped, so neither clutters the rest of the island.
         */}
-        {currentLocation.startsWith('arcade') && <ArcadeTicketBalance />}
+        {/*
+          `showZero`: inside the arcade the counter is the point — the games
+          award tickets, so a genuine zero, a loading read and an unavailable
+          read each render distinctly instead of the chip silently hiding.
+        */}
+        {currentLocation.startsWith('arcade') && <ArcadeTicketBalance showZero />}
         <ArcadePassIcon />
       </div>
 

@@ -360,10 +360,10 @@ describe('the pool table is dedicated too', () => {
     expect(document.querySelector('[data-hockey-preview]')).toBeNull();
   });
 
-  it('promises no tickets, because there is no policy for it', () => {
+  it('says how tickets are earned, and offers no claim before a frame exists', () => {
     openTable();
     const notice = document.querySelector('[data-pool-ticket-notice]');
-    expect(notice?.textContent).toMatch(/does not pay out tickets yet/i);
+    expect(notice?.textContent).toMatch(/finishing a frame earns tickets/i);
     expect(within(shell()!).queryByRole('button', { name: /claim/i })).toBeNull();
   });
 

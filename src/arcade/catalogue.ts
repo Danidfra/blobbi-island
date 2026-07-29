@@ -211,9 +211,9 @@ export const ARCADE_AIR_HOCKEY_MACHINE_ID = 'arcade-air-hockey';
  * the product: the six generic cabinets have no game yet, and the catalogue says
  * so rather than borrowing the dance machine's.
  *
- * All three are now `playable`, and all three still grant nothing. Those are
+ * All three are `playable` and all three now grant Arcade Tickets. Those are
  * separate facts and this registry is where the difference is kept honest — see
- * `grantsTickets`.
+ * `grantsTickets`, which may only be true where an ACTIVE reward policy exists.
  */
 export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
   Object.freeze({
@@ -246,15 +246,12 @@ export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
     availability: 'playable',
     launchMode: 'native',
     /*
-      Playable, and still paying nothing.
-
-      The same independence Air Hockey's entry demonstrates: `grantsTickets` is a
-      statement about whether an ACTIVE REWARD POLICY exists, not about whether a
-      game is finished. No policy for `blobbi-pool` has been approved, so this
-      stays false, the results screen shows no claim, and `catalogue.test.ts`
-      checks the two agree in both directions.
+      `grantsTickets` is a statement about whether an ACTIVE REWARD POLICY
+      exists, not about whether a game is finished. `POOL_REWARD_POLICY` in
+      `pool/pool-reward.ts` is active, so this is true, the results screen shows
+      the claim, and `catalogue.test.ts` checks the two agree in both directions.
     */
-    grantsTickets: false,
+    grantsTickets: true,
     controls: Object.freeze([
       Object.freeze({ scheme: 'pointer', label: 'Drag back from the cue ball, then let go' }),
       Object.freeze({ scheme: 'touch', label: 'Drag back from the cue ball, then let go' }),
@@ -277,16 +274,13 @@ export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
     availability: 'playable',
     launchMode: 'native',
     /*
-      Playable, and still paying nothing.
-
-      Those two facts are independent, and this entry is where the arcade proves
-      it: `grantsTickets` is a statement about whether an ACTIVE REWARD POLICY
-      exists, not about whether a game is finished. No policy for
-      `blobbi-air-hockey` has been approved, so this stays false, the results
-      screen shows no claim, and `catalogue.test.ts` checks the two agree in
-      both directions.
+      `grantsTickets` is a statement about whether an ACTIVE REWARD POLICY
+      exists, not about whether a game is finished. `HOCKEY_REWARD_POLICY` in
+      `hockey/hockey-reward.ts` is active, so this is true, the results screen
+      shows the claim, and `catalogue.test.ts` checks the two agree in both
+      directions.
     */
-    grantsTickets: false,
+    grantsTickets: true,
     controls: Object.freeze([
       Object.freeze({ scheme: 'pointer', label: 'Move the mouse over the table' }),
       Object.freeze({ scheme: 'touch', label: 'Press and drag inside the table' }),

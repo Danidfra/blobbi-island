@@ -13,12 +13,17 @@ import {
   ARCADE_REWARD_TUNING,
   DANCE_REWARD_POLICY,
   EMPTY_REWARD_CONTEXT,
+  HOCKEY_REWARD_POLICY,
+  POOL_REWARD_POLICY,
   arcadeRewardPolicies,
   calculateTicketAward,
   getProductionRewardPolicy,
   getRewardPolicy,
   type ArcadeRewardPolicy,
+  type TicketAwardLine,
 } from './reward-policy';
+import { HOCKEY_STAT_KEYS } from './hockey/hockey-result';
+import { POOL_STAT_KEYS } from './pool/pool-result';
 import type { ArcadeGameResult } from './types';
 
 function result(overrides: Partial<ArcadeGameResult> = {}): ArcadeGameResult {
@@ -303,6 +308,161 @@ describe('flat policies', () => {
     );
     expect(calculateTicketAward(fixed(40, 8, 'flat'), flatResult()).total).toBe(8);
     expect(calculateTicketAward(fixed(40, 8, 'flat'), flatResult()).capped).toBe(true);
+  });
+});
+
+describe('baseBreakdown validation — presentation can never misrepresent the reward', () => {
+  /** A flat policy paying a fixed base, with a breakdown the test scripts. */
+  const withBreakdown = (
+    base: number,
+    lines: readonly TicketAwardLine[],
+  ): ArcadeRewardPolicy => ({
+    ...fixed(base, 25, 'flat'),
+    baseBreakdown: () => lines,
+  });
+
+  const FALLBACK = (base: number) => [{ label: 'Clear', tickets: base }];
+
+  it('uses a valid multi-line breakdown verbatim', () => {
+    const lines: TicketAwardLine[] = [
+      { label: 'Completed', tickets: 2 },
+      { label: 'Victory', tickets: 3 },
+      { label: 'Margin', tickets: 1, detail: 'won by 4' },
+    ];
+    const award = calculateTicketAward(withBreakdown(6, lines), result());
+    expect(award.breakdown).toEqual(lines);
+    expect(award.total).toBe(6);
+  });
+
+  it('falls back to the single Clear line for a negative ticket line', () => {
+    const award = calculateTicketAward(
+      withBreakdown(6, [
+        { label: 'Generous', tickets: 8 },
+        { label: 'Deduction', tickets: -2 },
+      ]),
+      result(),
+    );
+    expect(award.breakdown).toEqual(FALLBACK(6));
+  });
+
+  it('falls back for an empty or whitespace-only label', () => {
+    expect(
+      calculateTicketAward(withBreakdown(6, [{ label: '', tickets: 6 }]), result()).breakdown,
+    ).toEqual(FALLBACK(6));
+    expect(
+      calculateTicketAward(withBreakdown(6, [{ label: '   ', tickets: 6 }]), result()).breakdown,
+    ).toEqual(FALLBACK(6));
+  });
+
+  it('falls back for duplicate labels, including whitespace-disguised duplicates', () => {
+    expect(
+      calculateTicketAward(
+        withBreakdown(6, [
+          { label: 'Victory', tickets: 3 },
+          { label: 'Victory', tickets: 3 },
+        ]),
+        result(),
+      ).breakdown,
+    ).toEqual(FALLBACK(6));
+    expect(
+      calculateTicketAward(
+        withBreakdown(6, [
+          { label: 'Victory', tickets: 3 },
+          { label: ' Victory ', tickets: 3 },
+        ]),
+        result(),
+      ).breakdown,
+    ).toEqual(FALLBACK(6));
+  });
+
+  it('falls back for a non-integer ticket line', () => {
+    const award = calculateTicketAward(
+      withBreakdown(6, [
+        { label: 'Half', tickets: 3.5 },
+        { label: 'Other half', tickets: 2.5 },
+      ]),
+      result(),
+    );
+    expect(award.breakdown).toEqual(FALLBACK(6));
+  });
+
+  it('falls back when the lines do not sum to the base', () => {
+    expect(
+      calculateTicketAward(withBreakdown(6, [{ label: 'Modest', tickets: 1 }]), result()).breakdown,
+    ).toEqual(FALLBACK(6));
+    expect(
+      calculateTicketAward(withBreakdown(6, [{ label: 'Inflated', tickets: 100 }]), result())
+        .breakdown,
+    ).toEqual(FALLBACK(6));
+  });
+
+  it('never lets an invalid breakdown change the quantity actually paid', () => {
+    const invalid: readonly (readonly TicketAwardLine[])[] = [
+      [{ label: 'Inflated', tickets: 100 }],
+      [{ label: '', tickets: 6 }],
+      [
+        { label: 'A', tickets: 8 },
+        { label: 'B', tickets: -2 },
+      ],
+      [
+        { label: 'X', tickets: 3 },
+        { label: 'X', tickets: 3 },
+      ],
+      [{ label: 'Half', tickets: 6.5 }],
+      [],
+    ];
+    for (const lines of invalid) {
+      const award = calculateTicketAward(withBreakdown(6, lines), result());
+      expect(award.total, JSON.stringify(lines)).toBe(6);
+      expect(award.base, JSON.stringify(lines)).toBe(6);
+    }
+    // And a VALID one pays exactly the same number — the lines are words only.
+    expect(
+      calculateTicketAward(
+        withBreakdown(6, [
+          { label: 'A', tickets: 2 },
+          { label: 'B', tickets: 4 },
+        ]),
+        result(),
+      ).total,
+    ).toBe(6);
+  });
+
+  it('accepts the shipped Hockey breakdown unchanged', () => {
+    const award = calculateTicketAward(HOCKEY_REWARD_POLICY, {
+      ...result({ gameId: 'blobbi-air-hockey' }),
+      stats: {
+        [HOCKEY_STAT_KEYS.goalDifference]: 7,
+        [HOCKEY_STAT_KEYS.completedNaturally]: 1,
+      },
+    });
+    expect(award.breakdown.map((l) => l.label)).toEqual([
+      'Completed match',
+      'Victory',
+      'Normal opponent',
+      'Shutout',
+    ]);
+    expect(award.breakdown.reduce((sum, l) => sum + l.tickets, 0)).toBe(award.total);
+  });
+
+  it('accepts the shipped Pool breakdown unchanged', () => {
+    const award = calculateTicketAward(POOL_REWARD_POLICY, {
+      ...result({ gameId: 'blobbi-pool' }),
+      stats: {
+        [POOL_STAT_KEYS.completedNaturally]: 1,
+        [POOL_STAT_KEYS.legalEightFinish]: 1,
+        [POOL_STAT_KEYS.playerScratches]: 0,
+        [POOL_STAT_KEYS.playerFouls]: 0,
+      },
+    });
+    expect(award.breakdown.map((l) => l.label)).toEqual([
+      'Completed frame',
+      'Victory',
+      'Normal rival',
+      'Legal 8-ball finish',
+      'Clean frame',
+    ]);
+    expect(award.breakdown.reduce((sum, l) => sum + l.tickets, 0)).toBe(award.total);
   });
 });
 

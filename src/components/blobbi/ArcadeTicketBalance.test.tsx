@@ -83,6 +83,18 @@ describe('ArcadeTicketBalance', () => {
     expect(chip()).toBeNull();
   });
 
+  it('renders nothing while loading, by default — no false zero', async () => {
+    mockUseIslandInventory.mockReturnValue({ data: undefined, isLoading: true });
+    render(
+      <TestApp>
+        <div data-testid="render-probe" />
+        <ArcadeTicketBalance />
+      </TestApp>,
+    );
+    await screen.findByTestId('render-probe');
+    expect(chip()).toBeNull();
+  });
+
   it('ignores other items in the inventory', async () => {
     let inv = buildEmptyInventory('owner');
     inv = addInventoryItemQuantity(inv, itemIdToAddress('food_apple')!, 9);
@@ -131,6 +143,48 @@ describe('ArcadeTicketBalance', () => {
     expect(chip()!.querySelector('img')).toBeNull();
     expect(chip()!.textContent).toContain('🎟️');
     expect(screen.getByText('4')).toBeInTheDocument();
+  });
+
+  describe('the arcade HUD variant (showZero)', () => {
+    async function renderShowZero(hook: Record<string, unknown>) {
+      mockUseIslandInventory.mockReturnValue(hook);
+      render(
+        <TestApp>
+          <div data-testid="render-probe" />
+          <ArcadeTicketBalance showZero />
+        </TestApp>,
+      );
+      await screen.findByTestId('render-probe');
+    }
+
+    it('shows a genuine zero once the inventory has loaded', async () => {
+      await renderShowZero({ data: buildEmptyInventory('owner'), isLoading: false });
+      expect(chip()).toHaveAttribute('data-arcade-ticket-balance', 'ready');
+      expect(chip()!.textContent).toContain('0');
+      expect(chip()!.getAttribute('aria-label')).toBe('0 Arcade Tickets');
+    });
+
+    it('shows a loading state, never a false zero, while the first read is in flight', async () => {
+      await renderShowZero({ data: undefined, isLoading: true });
+      expect(chip()).toHaveAttribute('data-arcade-ticket-balance', 'loading');
+      expect(chip()!.textContent).not.toContain('0');
+      expect(chip()!.getAttribute('aria-label')).toMatch(/loading/i);
+    });
+
+    it('distinguishes an unavailable inventory from a zero balance', async () => {
+      await renderShowZero({ data: undefined, isLoading: false, isError: true });
+      expect(chip()).toHaveAttribute('data-arcade-ticket-balance', 'unavailable');
+      expect(chip()!.textContent).not.toContain('0');
+      expect(chip()!.getAttribute('aria-label')).toMatch(/unavailable/i);
+    });
+
+    it('shows the real quantity exactly as the default variant does', async () => {
+      let inv = buildEmptyInventory('owner');
+      inv = addInventoryItemQuantity(inv, TICKET, 7);
+      await renderShowZero({ data: inv, isLoading: false });
+      expect(chip()).toHaveAttribute('data-arcade-ticket-balance', 'ready');
+      expect(screen.getByText('7')).toBeInTheDocument();
+    });
   });
 
   it('prefers a published image over the emoji once one exists', async () => {

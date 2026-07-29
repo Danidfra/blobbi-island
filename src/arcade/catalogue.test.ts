@@ -407,12 +407,19 @@ describe('dedicated games and what they say about themselves', () => {
   });
 
   it('keeps "playable" and "pays tickets" independent', () => {
-    // Both facts are true of Pool and Air Hockey at once, and that is the
-    // point: finishing a game does not approve a reward policy for it.
-    for (const id of ['blobbi-pool', 'blobbi-air-hockey']) {
+    // Finishing a game does not approve a reward policy for it: the ticket flag
+    // must track the POLICY REGISTRY, not the availability column. All three
+    // dedicated games now carry an active policy, so all three grant — and the
+    // cross-check in "ticket eligibility is a fact, not a policy" is what stops
+    // this from ever being flipped without one.
+    for (const id of ['blobbi-dance', 'blobbi-pool', 'blobbi-air-hockey']) {
       const entry = getCatalogueEntry(id)!;
       expect(entry.availability, id).toBe('playable');
-      expect(entry.grantsTickets, id).toBe(false);
+      expect(entry.grantsTickets, id).toBe(true);
+      expect(
+        arcadeRewardPolicies.some((p) => p.gameId === id && p.status === 'active'),
+        id,
+      ).toBe(true);
     }
   });
 

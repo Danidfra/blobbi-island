@@ -1,5 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { ArcadeGameResult } from '@/arcade/types';
+import type { ArcadeRewardCalculation } from '@/arcade/reward-policy';
+import type { ArcadeRewardState } from '@/hooks/useArcadeReward';
 import { POOL_AI_PROFILES, type PoolDifficulty } from '@/arcade/pool/ai';
 import {
   POOL_STAT_KEYS,
@@ -8,23 +10,21 @@ import {
 } from '@/arcade/pool/pool-result';
 import { groupLabel } from '@/arcade/pool/rules';
 
+import { ArcadeRewardPanel } from '../ArcadeRewardPanel';
+
 /**
  * The result of one frame.
  *
- * ## Why there is no ticket panel
+ * The frame half — who won and HOW, which is the part pool has more to say
+ * about than air hockey does — is this component's own. "You win 7–3" and "you
+ * win 7–3 by potting the 8-ball off a four-ball run" are different frames, and
+ * the second one is worth telling somebody about.
  *
- * Blobbi Dance's results screen is mostly a reward: a breakdown, a claim button
- * and a publish state. Pool has none of that, on purpose — it grants no Arcade
- * Tickets, so a screen that showed a reward section, even an empty or a disabled
- * one, would be advertising something that does not exist.
- *
- * What it shows instead is the frame: who won and HOW, which is the part pool
- * has more to say about than air hockey does. "You win 7–3" and "you win 7–3 by
- * potting the 8-ball off a four-ball run" are different frames, and the second
- * one is worth telling somebody about.
- *
- * When a reward policy is approved it slots in beside this rather than replacing
- * it — the result object it would read is already the one being rendered here.
+ * The ticket half is the shared {@link ArcadeRewardPanel}, exactly as on the
+ * dance and hockey results screens: `POOL_REWARD_POLICY` is active, so a
+ * finished frame shows its award, its breakdown, and the claim. The panel's
+ * honesty rules (an unresolved claim is never retryable, a balance is never
+ * invented) are documented on the panel itself.
  *
  * ## Non-colour signalling
  *
@@ -38,6 +38,16 @@ interface PoolResultsProps {
   readonly summary: PoolMatchResult;
   /** The arcade-contract result. Rendered only for the DEV harness. */
   readonly result: ArcadeGameResult;
+  /** Null when no production policy could be resolved at all. */
+  readonly calculation: ArcadeRewardCalculation | null;
+  readonly reward: ArcadeRewardState;
+  /** True while the shared lifecycle is in `claiming`. */
+  readonly claiming: boolean;
+  readonly canClaim: boolean;
+  readonly onClaim: () => void;
+  /** Read-only status check for an unresolved claim. Never publishes. */
+  readonly onCheckStatus: () => void;
+  readonly isLoggedIn: boolean;
   readonly showDebugDetails?: boolean;
 }
 
@@ -54,7 +64,18 @@ function endingLine(summary: PoolMatchResult): string {
   return 'Your rival cleared up and took the 8-ball.';
 }
 
-export function PoolResults({ summary, result, showDebugDetails = false }: PoolResultsProps) {
+export function PoolResults({
+  summary,
+  result,
+  calculation,
+  reward,
+  claiming,
+  canClaim,
+  onClaim,
+  onCheckStatus,
+  isLoggedIn,
+  showDebugDetails = false,
+}: PoolResultsProps) {
   const won = summary.outcome === 'win';
   const profile = POOL_AI_PROFILES[summary.difficulty as PoolDifficulty];
   const accuracy =
@@ -118,6 +139,19 @@ export function PoolResults({ summary, result, showDebugDetails = false }: PoolR
         <Stat label="Best run" value={String(summary.longestPlayerRun)} />
         <Stat label="Scratches" value={String(summary.playerScratches)} />
       </dl>
+
+      <ArcadeRewardPanel
+        calculation={calculation}
+        reward={reward}
+        claiming={claiming}
+        canClaim={canClaim}
+        onClaim={onClaim}
+        onCheckStatus={onCheckStatus}
+        isLoggedIn={isLoggedIn}
+        showDebugDetails={showDebugDetails}
+        dataPrefix="pool"
+        ineligibleHint="Play the frame through to the 8-ball and the tickets are yours — win or lose."
+      />
 
       <p
         data-pool-ending

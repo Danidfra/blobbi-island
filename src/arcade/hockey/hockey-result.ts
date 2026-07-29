@@ -15,17 +15,12 @@
  * exist in exactly one place and cannot be misspelled into existence somewhere
  * else. That is the same rule `dance-result.ts` follows, for the same reason.
  *
- * ## Rewards are deliberately not here
+ * ## Rewards are still not computed here
  *
- * Air Hockey grants no Arcade Tickets in this phase: the catalogue says
- * `grantsTickets: false`, there is no reward policy for `blobbi-air-hockey`, and
- * nothing in this module or its callers publishes, persists or awards anything.
- *
- * What exists is the JOIN POINT. When a policy is approved, it will be written
- * against {@link AirHockeyMatchResult}'s fields (or the identical `stats` keys
- * below) and registered in `reward-policy.ts` — no change to this file, to the
- * simulation, or to the result shape is needed to enable it. Wiring the claim UI
- * is then the same two lines `DanceMachine` already has.
+ * `HOCKEY_REWARD_POLICY` (in `hockey-reward.ts`) is now active and reads the
+ * `stats` keys below — exactly the join point this file promised. The division
+ * of labour is unchanged: this module SUMMARISES a match; the policy prices it;
+ * and nothing in this module publishes, persists or awards anything.
  */
 
 import type { ArcadeGameResult } from '../types';

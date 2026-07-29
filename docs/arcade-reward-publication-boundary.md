@@ -266,3 +266,69 @@ Read-after-write is not guaranteed by Nostr; kind:31633 is replaceable so two
 tabs can still clobber one another; a client-authored score cannot be verified
 client-side. Exact scope of what the fix does and does not protect:
 `docs/blobbi-dance.md` §8.
+
+## 7. Arcade V1: all three dedicated games pay, and the client is trusted
+
+Blobbi Dance, Air Hockey and Pool each carry an `active` reward policy
+(`dance/dance-reward.ts`, `hockey/hockey-reward.ts`, `pool/pool-reward.ts`), the
+catalogue says `grantsTickets: true` for all three, and every results screen
+offers the same claim through the same machinery.
+
+### The trust model, stated plainly
+
+**This is a deliberately client-trusted economy, and it must be treated as
+one.** The client computes the game result, the client prices it with a local
+policy, and the client writes the tickets directly into the player's own
+kind:31633 inventory. A modified client can therefore mint tickets at will.
+That is accepted for Arcade V1 so the reward loop could ship as a player
+experience first; it means **no leaderboard, scarce economy, payment or
+real-world value may trust an Arcade Ticket balance yet**.
+
+The exactly-once machinery documented above (§5–§6) is protection against
+APPLICATION BUGS — double-clicks, Strict Mode, remounts, ambiguous publishes —
+not against a determined attacker. It keeps an honest client from paying a run
+twice; it cannot keep a dishonest one from paying itself.
+
+### The seam a trusted flow replaces
+
+The pipeline is arranged so the future grant-backed flow swaps ONE piece:
+
+```
+ArcadeGameResult → reward policy → ArcadeRewardCalculation
+      → useArcadeRewardController → useArcadeReward → ArcadeRewardWriter → kind:31633
+```
+
+`ArcadeRewardWriter` is an interface. Today its one production implementation
+(`createArcadeTicketWriter`) publishes the inventory event itself; a
+grant-backed writer — result submitted to a reward authority, a signed grant
+coming back, the balance derived from grants — replaces that implementation
+behind the same interface. Game physics, match reducers, result contracts,
+policies and the claim lifecycle do not change.
+
+### The shared economy (policies v1)
+
+All three policies are `flat`, capped at **8 tickets per run**, pay the shared
+participation floor of **2** for a completed loss, and pay **0** for an
+abandoned run (an aborted run produces no result at all). Pinned by
+`reward-economy.test.ts`:
+
+| scenario | Dance (~68 s) | Air Hockey (~3 min) | Pool (~4 min) |
+| --- | --- | --- | --- |
+| weak completion / loss | 2 | 2 | 2 |
+| average clear / Normal win | 4 (80%) | 6 (7–5) | 7 (legal 8, one foul) |
+| strong Normal win | 6 (96%) | 7 (7–3) | 7 (clean, rival's early 8) |
+| best realistic run | 8 (96% + full combo) | 8 (7–0 shutout) | 8 (clean legal 8) |
+
+Not parity — dance is shorter and pays a little more per minute, pool takes
+longer and pays a little less — but the same test asserts no game's typical
+tickets-per-minute exceeds another's by more than 2.5×, so no single machine is
+the obvious farm.
+
+### The visible balance
+
+`ArcadeTicketBalance` shows the kind:31633 balance in the arcade HUD
+(`PlayingView`, arcade locations only, with `showZero`: a genuine zero, a
+loading read and an unavailable read each render distinctly), and the shared
+`ArcadeRewardPanel` repeats it on every results screen, where it updates after a
+confirmed claim. The **Prize Counter** — the thing tickets will eventually be
+spent at — remains deferred; nothing redeems a ticket yet.

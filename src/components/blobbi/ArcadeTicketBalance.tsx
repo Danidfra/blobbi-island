@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
+  bundledFallbackDefinition,
+  unknownItemDefinition,
   useIslandInventory,
   useItemCatalog,
   toIslandEntries,
@@ -35,9 +37,18 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  *
  * ## Zero-quantity behaviour
  *
- * Hidden at zero, matching the Item Bag convention (`quantity > 0`). Until the
- * arcade actually awards tickets nobody has any, so the chip is correctly
- * invisible rather than nagging every player with a permanent "0".
+ * By default the chip is hidden at zero, matching the Item Bag convention
+ * (`quantity > 0`) — outside the arcade a permanent "0" would be a nag.
+ *
+ * Inside the arcade the games now award tickets, so the arcade HUD passes
+ * `showZero` and the chip becomes a persistent counter with three DISTINCT
+ * states, never a false zero:
+ *
+ *  - a number, including a genuine `0` — an empty inventory is an answer;
+ *  - `…` while the first inventory read is still in flight;
+ *  - `–` when the inventory could not be read at all, labelled "unavailable"
+ *    for assistive tech, because "you have zero" and "we could not check" are
+ *    different sentences.
  */
 
 /** Canonical address of the Arcade Ticket, derived from issuer + `d`. */
@@ -45,10 +56,16 @@ const ARCADE_TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
 interface ArcadeTicketBalanceProps {
   className?: string;
+  /**
+   * Keep the chip visible at a zero balance, with distinct loading and
+   * unavailable states. The arcade HUD sets this; everywhere else keeps the
+   * hide-at-zero bag convention.
+   */
+  showZero?: boolean;
 }
 
-export function ArcadeTicketBalance({ className }: ArcadeTicketBalanceProps) {
-  const { data: inventory } = useIslandInventory();
+export function ArcadeTicketBalance({ className, showZero = false }: ArcadeTicketBalanceProps) {
+  const { data: inventory, isError } = useIslandInventory();
   const { data: catalog } = useItemCatalog();
 
   const ticket = useMemo(
@@ -60,28 +77,54 @@ export function ArcadeTicketBalance({ className }: ArcadeTicketBalanceProps) {
   );
 
   /**
+   * A zero balance owns no inventory entry (`toIslandEntries` lists owned
+   * items), so the persistent chip resolves the ticket's artwork the same way
+   * the catalog would: published definition, bundled fallback, last-resort
+   * placeholder.
+   */
+  const definition =
+    ticket?.definition ??
+    catalog?.byAddress.get(ARCADE_TICKET_ADDRESS) ??
+    bundledFallbackDefinition(ARCADE_TICKET_ADDRESS) ??
+    unknownItemDefinition(ARCADE_TICKET_ADDRESS);
+
+  /**
    * The artwork is a REMOTE asset, so unlike the emoji it can fail to load
    * (asset host down, offline, blocked). The catalog's whole design is
    * "always degrade to something renderable", so a failed image degrades to the
    * emoji rather than leaving a broken-image glyph in the HUD.
    */
-  const imageUrl = ticket?.definition.image ?? null;
+  const imageUrl = definition.image ?? null;
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => {
     // A different URL deserves a fresh attempt.
     setImageFailed(false);
   }, [imageUrl]);
 
-  if (!ticket || ticket.quantity <= 0) return null;
+  const loaded = Boolean(inventory);
+  const quantity = ticket?.quantity ?? 0;
 
-  const { definition, quantity } = ticket;
+  if (!showZero && (!loaded || quantity <= 0)) return null;
+
+  const state: 'ready' | 'loading' | 'unavailable' = loaded
+    ? 'ready'
+    : isError
+      ? 'unavailable'
+      : 'loading';
+  const display = state === 'ready' ? String(quantity) : state === 'loading' ? '…' : '–';
+  const label =
+    state === 'ready'
+      ? `${quantity} ${definition.name}${quantity === 1 ? '' : 's'}`
+      : state === 'loading'
+        ? `Loading your ${definition.name} balance`
+        : `${definition.name} balance unavailable`;
   const showImage = Boolean(imageUrl) && !imageFailed;
 
   return (
     <div
-      data-arcade-ticket-balance
-      title={`${quantity} ${definition.name}${quantity === 1 ? '' : 's'}`}
-      aria-label={`${quantity} ${definition.name}${quantity === 1 ? '' : 's'}`}
+      data-arcade-ticket-balance={state}
+      title={label}
+      aria-label={label}
       className={cn(
         'flex items-center gap-1 rounded-full bg-white/80 px-2 h-9 shadow select-none',
         className,
@@ -108,7 +151,7 @@ export function ArcadeTicketBalance({ className }: ArcadeTicketBalanceProps) {
         </span>
       )}
       <span className="text-sm font-bold tabular-nums text-island-ink">
-        {quantity}
+        {display}
       </span>
     </div>
   );

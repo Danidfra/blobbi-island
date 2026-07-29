@@ -12,8 +12,8 @@ untouched.
 > change to this game or to the shared pieces it established. See
 > [`docs/blobbi-pool.md`](./blobbi-pool.md).
 
-**It grants no Arcade Tickets.** See §7 — that is a product decision with a
-prepared join point, not an oversight.
+**It grants Arcade Tickets** (Arcade V1, client-trusted). See §7 — the join
+point that section describes was exercised exactly as written.
 
 Read alongside: [the arcade foundation](./arcade-foundation.md) for the shared
 lifecycle, [the catalogue](./arcade-catalogue.md) for how a machine decides what
@@ -271,19 +271,37 @@ that did not happen.
 
 ---
 
-## 7. Rewards: none, and where they would go
+## 7. Rewards (Arcade V1, client-trusted)
 
-Air Hockey grants **no Arcade Tickets**. The catalogue says
-`grantsTickets: false`, no reward policy exists for `blobbi-air-hockey`, and
-nothing in the game imports `useArcadeReward`, the reward boundary, the claim
-ledger or the inventory layer. The start screen says so in words rather than
-leaving a player to notice an absence, and the results screen has no claim
-panel — an empty or disabled one would advertise something that does not exist.
+Air Hockey grants **Arcade Tickets**. `HOCKEY_REWARD_POLICY` in
+`src/arcade/hockey/hockey-reward.ts` is `active`, the catalogue says
+`grantsTickets: true`, and the controller carries the same claim wiring as
+`DanceMachine` — the shared `useArcadeRewardController` hook driving the shared
+`ArcadeRewardPanel` on the results screen. The trust model, the shared economy
+table and the exactly-once claim rules live in
+[`arcade-reward-publication-boundary.md`](./arcade-reward-publication-boundary.md)
+§7; the short version is that the CLIENT calculates and writes the reward, which
+is accepted for Arcade V1 and must not be trusted by anything scarce.
 
-`catalogue.test.ts` already enforces both directions of the rule: an entry may
+The policy's numbers (v1, flat shape — same reasons as the dance policy):
+
+| line | tickets |
+| --- | --- |
+| completed match (natural end) | 2 |
+| victory | +3 |
+| Normal opponent (on a victory) | +1 |
+| margin: win by ≥ 7 (shutout) +2, win by ≥ 3 +1 (one tier) | +1…+2 |
+| **maximum** | **8** |
+| completed loss (shared participation floor) | 2 |
+| abandoned match (no result exists) | 0 |
+
+Match duration is deliberately not an input — paying for it in either direction
+is an incentive to stall or to throw. The numbers are pinned by
+`hockey-reward.test.ts` and cross-checked against the other games by
+`reward-economy.test.ts`.
+
+`catalogue.test.ts` still enforces both directions of the rule: an entry may
 only claim `grantsTickets` if an *active* policy exists, and must not otherwise.
-**Playable and paying are independent facts**, and this game is the arcade's
-proof of it.
 
 ### The join point
 
@@ -299,9 +317,10 @@ validates, carrying everything a policy would need:
 | `stats.playerGoals` / `opponentGoals` / `targetGoals` / `durationMs` | the match |
 | `stats.playerHits` / `opponentHits` / `wallBounces` / `topPuckSpeed` | the flavour |
 
-Enabling rewards later is: write a policy, register it in `reward-policy.ts`,
-flip `grantsTickets`, and add the two hook calls `DanceMachine` already has. **No
-change to the simulation, the result shape or this file is required.**
+Enabling rewards was exactly this: a policy written against the stats above,
+registered in `reward-policy.ts`, `grantsTickets` flipped, and the shared claim
+wiring added to the controller. **No change to the simulation or the result
+shape was required** — which was the promise this section existed to keep.
 
 `summaryFromResult` is the exact inverse of `buildAirHockeyResult`, tested as a
 round trip. That is why the results panel keeps no state: it derives its display

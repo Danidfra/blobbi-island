@@ -16,8 +16,9 @@ import { PoolSoundToggle } from './PoolSoundToggle';
  *     for being complicated is entirely about the rules nobody explains, and the
  *     simplified set (documented in full in `rules.ts`) fits on this card.
  *  3. **Let the player pick a rival.**
- *  4. **Be honest about tickets.** Pool grants none. Saying so is better than an
- *     absence a player has to notice.
+ *  4. **Be honest about tickets.** Pool pays them now: finishing a frame earns
+ *     some, winning earns more, and leaving earns nothing. Saying so is better
+ *     than an absence a player has to notice.
  *
  * Difficulty is chosen here and nowhere else: it is part of the run REQUEST, it
  * is echoed into the result, and changing it mid-frame would make the result
@@ -181,7 +182,8 @@ export function PoolPreview({
           <strong className="text-island-ink">
             <span aria-hidden>🎟️ </span>Arcade Tickets.
           </strong>{' '}
-          Pool does not pay out tickets yet. Play it for the frame.
+          Finishing a frame earns tickets and winning earns more. Leaving mid-frame earns
+          nothing.
         </p>
         <p>
           <strong className="text-island-ink">Sound.</strong> Press Start to let the browser play

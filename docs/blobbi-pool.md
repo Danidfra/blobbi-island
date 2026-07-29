@@ -15,8 +15,8 @@ catalogue that is still honestly empty, Blobbi Dance and Air Hockey are
 untouched, and the shared lifecycle, loop, shell and launch rules were reused
 without modification.
 
-**It grants no Arcade Tickets.** See §8 — that is a product decision with a
-prepared join point, not an oversight.
+**It grants Arcade Tickets** (Arcade V1, client-trusted). See §8 — the join
+point that section describes was exercised exactly as written.
 
 Read alongside: [the arcade foundation](./arcade-foundation.md) for the shared
 lifecycle, [the catalogue](./arcade-catalogue.md) for how a machine decides what
@@ -531,21 +531,45 @@ does. A break therefore sounds like a break.
 
 ---
 
-## 8. Rewards: the join point, and why it is not wired
+## 8. Rewards (Arcade V1, client-trusted)
 
-Pool grants no Arcade Tickets. The catalogue entry says `grantsTickets: false`,
-there is no reward policy for `blobbi-pool`, the results screen shows no claim,
-and `PoolMachine` imports no reward, grant, ticket, inventory, relay or Nostr
-module. `boundaries.test.ts` checks that against the real import graph.
+Pool grants **Arcade Tickets**. `POOL_REWARD_POLICY` in
+`src/arcade/pool/pool-reward.ts` is `active`, the catalogue says
+`grantsTickets: true`, and `PoolMachine` carries the same claim wiring as the
+other two dedicated machines — the shared `useArcadeRewardController` hook
+driving the shared `ArcadeRewardPanel` on the results screen. The simulation in
+`src/arcade/pool/` still imports no inventory, relay or Nostr module;
+`boundaries.test.ts` checks that against the real import graph. The trust model,
+the shared economy table and the exactly-once claim rules live in
+[`arcade-reward-publication-boundary.md`](./arcade-reward-publication-boundary.md)
+§7.
+
+The policy's numbers (v1, flat shape — same reasons as the dance policy):
+
+| line | tickets |
+| --- | --- |
+| completed frame (natural end) | 2 |
+| victory | +3 |
+| Normal rival (on a victory) | +1 |
+| legal 8-ball finish (you potted it properly) | +1 |
+| clean frame (no scratches, no fouls; on a victory) | +1 |
+| **maximum** | **8** |
+| completed loss — outdrawn, or your own early 8 (shared floor) | 2 |
+| abandoned frame (no result exists) | 0 |
+
+Balls pocketed, shots taken, duration and the longest run are deliberately not
+inputs — every one of them grows with time at the table, and paying for any of
+them makes the dominant strategy a long frame of harmless safety shots. Fouls
+cost the clean-frame bonus and nothing more; no award is ever negative. The
+numbers are pinned by `pool-reward.test.ts` and cross-checked against the other
+games by `reward-economy.test.ts`.
 
 **Playable and paying tickets are independent facts.** `grantsTickets` is a
 statement about whether an active reward policy exists, not about whether a game
-is finished — the same position Air Hockey ships in, and `catalogue.test.ts`
-asserts the two agree in both directions.
+is finished, and `catalogue.test.ts` asserts the two agree in both directions.
 
-What exists is the join point, and it is one object. The `ArcadeGameResult`
-handed to `dispatch({ type: 'finish' })` already carries everything a policy
-could want:
+The join point the policy reads is one object. The `ArcadeGameResult` handed to
+`dispatch({ type: 'finish' })` carries everything it wants:
 
 | stat | meaning |
 | --- | --- |
@@ -562,10 +586,10 @@ could want:
 `score` is the player's own balls potted (0–7) and `cleared` is a **win**, not a
 completion — losing 7–0 is a completed frame and an uncleared one.
 
-Enabling a reward is: register a policy in `reward-policy.ts`, flip
-`grantsTickets`, and add the two hook calls `DanceMachine` already has. **No
-change to the simulation, to this game's result shape, or to any file in
-`src/arcade/pool/`.**
+Enabling the reward was exactly the promised move: a policy registered in
+`reward-policy.ts`, `grantsTickets` flipped, and the shared claim wiring added
+to the controller. **No change to the simulation or to this game's result
+shape** — the one new file in `src/arcade/pool/` is the pure policy itself.
 
 ---
 

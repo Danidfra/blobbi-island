@@ -2,16 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { useArcadeReward, ARCADE_TICKET_ADDRESS } from '@/hooks/useArcadeReward';
+import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
 import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
 import type {
   ArcadeAbortReason,
   ArcadeEvent,
   ArcadeMachineState,
 } from '@/arcade/arcade-machine-state';
-import { canClaim as canClaimReward } from '@/arcade/arcade-machine-state';
 import type { ArcadeGameResult } from '@/arcade/types';
-import { calculateArcadeReward, getProductionRewardPolicy } from '@/arcade/reward-policy';
 import type { DanceChart } from '@/arcade/dance/chart';
 import { DEFAULT_DANCE_CHART, validateDanceChart } from '@/arcade/dance/chart';
 import type { DanceTrack } from '@/arcade/dance/track';
@@ -29,9 +27,10 @@ import { DanceResults } from './DanceResults';
  * Blobbi Dance — the controller that joins the game to the shared arcade.
  *
  * It owns nothing that the pieces around it already own. The lifecycle lives in
- * `ArcadeRoom`'s reducer, the rules live in `src/arcade/dance/`, the write lives
- * in `useArcadeReward`, and the frame is `ArcadeGameShell`. What is left here is
- * the wiring — and the wiring is where the interesting rules are:
+ * `ArcadeRoom`'s reducer, the rules live in `src/arcade/dance/`, the claim
+ * wiring lives in `useArcadeRewardController` (shared with Air Hockey and
+ * Pool), and the frame is `ArcadeGameShell`. What is left here is the wiring —
+ * and the wiring is where the interesting rules are:
  *
  *  - **A run id is minted exactly once, by the caller of `start`.** The reducer
  *    is pure and refuses to overwrite one; this is the only place one is made.
@@ -122,7 +121,7 @@ export function DanceMachine({
   showDebugDetails = false,
 }: DanceMachineProps) {
   const reducedMotion = useReducedMotion();
-  const reward = useArcadeReward({ writer: rewardWriter });
+  const reward = useArcadeRewardController({ lifecycle, dispatch, writer: rewardWriter });
   const [abortNotice, setAbortNotice] = useState<string | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   /**
@@ -190,36 +189,11 @@ export function DanceMachine({
   const status = lifecycle.status;
   const result = lifecycle.result;
 
-  /**
-   * Adopt whatever durable claim state exists for this run.
-   *
-   * Not a reset: a reset is what let an unresolved claim come back as a fresh
-   * "Claim" button after the shell was closed and reopened. `hydrate` reads the
-   * ledger, so a claim that may already have been published stays represented as
-   * unresolved, and a confirmed one stays confirmed across a refresh. A run with
-   * no record hydrates to idle, which is the reset behaviour where it is correct.
-   */
-  const hydrateReward = reward.hydrate;
-  useEffect(() => {
-    hydrateReward(lifecycle.runId);
-  }, [lifecycle.runId, hydrateReward]);
-
   useEffect(() => {
     if (status === 'aborted' && lifecycle.abortReason) {
       setAbortNotice(ABORT_COPY[lifecycle.abortReason] ?? ABORT_COPY.quit);
     }
   }, [status, lifecycle.abortReason]);
-
-  const calculation = useMemo(() => {
-    if (!result) return null;
-    const policy = getProductionRewardPolicy(result.gameId);
-    if (!policy) return null;
-    return calculateArcadeReward({
-      policy,
-      result,
-      itemAddress: ARCADE_TICKET_ADDRESS,
-    });
-  }, [result]);
 
   /** The controller built the engine, so the controller releases it. */
   useEffect(() => {
@@ -287,40 +261,6 @@ export function DanceMachine({
     [dispatch],
   );
 
-  const { claimReward, reconcileClaim } = reward;
-  const rewardPhase = reward.state.phase;
-
-  const handleClaim = useCallback(async () => {
-    if (!result || !calculation || !calculation.eligible) return;
-    if (!canClaimReward(lifecycle)) return;
-    // An unresolved claim must never reach `claimReward`, even if some future
-    // control wires itself to this handler. The hook refuses it too — this is
-    // the outer half of the same rule.
-    if (rewardPhase === 'unresolved' || rewardPhase === 'checking') return;
-    // Into `claiming` FIRST, so the reducer's own one-reward-per-run guard is
-    // engaged before any await — the disabled button is a courtesy, this is the
-    // guarantee (together with the hook's synchronous lock).
-    dispatch({ type: 'claim' });
-    const attempt = await claimReward(result, calculation);
-    dispatch({ type: attempt.ok ? 'claim-succeeded' : 'claim-failed' });
-  }, [result, calculation, lifecycle, dispatch, claimReward, rewardPhase]);
-
-  /**
-   * Read-only reconciliation. Publishes nothing, ever.
-   *
-   * It can only move the claim to `confirmed` (when the balance proves the grant
-   * landed) or leave it unresolved. The lifecycle follows: a confirmation here is
-   * a real reward, so the reducer records it exactly as a successful claim does.
-   */
-  const handleCheckStatus = useCallback(async () => {
-    if (!result || !calculation) return;
-    const phase = await reconcileClaim(result.runId, calculation.itemAddress);
-    if (phase === 'confirmed' && lifecycle.status === 'results') {
-      dispatch({ type: 'claim' });
-      dispatch({ type: 'claim-succeeded' });
-    }
-  }, [result, calculation, reconcileClaim, dispatch, lifecycle.status]);
-
   const playing = status === 'countdown' || status === 'playing' || status === 'paused';
   const showResults = status === 'results' || status === 'claiming' || status === 'rewarded';
 
@@ -359,12 +299,12 @@ export function DanceMachine({
     content = (
       <DanceResults
         result={result}
-        calculation={calculation}
-        reward={reward.state}
+        calculation={reward.calculation}
+        reward={reward.rewardState}
         claiming={status === 'claiming'}
-        canClaim={canClaimReward(lifecycle)}
-        onClaim={handleClaim}
-        onCheckStatus={handleCheckStatus}
+        canClaim={reward.canClaim}
+        onClaim={reward.handleClaim}
+        onCheckStatus={reward.handleCheckStatus}
         isLoggedIn={reward.isLoggedIn}
         showDebugDetails={showDebugDetails}
       />

@@ -16,22 +16,16 @@
  * exist in exactly one place and cannot be misspelled into existence somewhere
  * else.
  *
- * ## Rewards are deliberately not here
+ * ## Rewards are still not computed here
  *
- * Pool grants no Arcade Tickets. The catalogue says `grantsTickets: false`,
- * there is no reward policy for `blobbi-pool`, and nothing in this module or its
- * callers publishes, persists or awards anything. This file imports no reward,
- * grant, ticket, inventory, relay or Nostr module, and `boundaries.test.ts`
- * checks that against the real import graph rather than taking this paragraph's
- * word for it.
- *
- * What exists is the JOIN POINT, and it is deliberately richer than Air
- * Hockey's because pool has more to say about *how* a match was won. A policy
- * could reward the win, the margin in balls, a clean 8-ball finish, a run of
- * pots, or a foul-free frame — every one of those is already a number below, and
- * enabling any of them needs a policy registered in `reward-policy.ts` and the
- * two hook calls `DanceMachine` already has. No change to this file, to the
- * simulation, or to the result shape.
+ * `POOL_REWARD_POLICY` (in `pool-reward.ts`) is now active and reads the
+ * `stats` keys below — exactly the join point this file promised, enabled with
+ * no change to this file, to the simulation, or to the result shape. The
+ * division of labour is unchanged: this module SUMMARISES a frame; the policy
+ * prices it; and nothing here publishes, persists or awards anything. This file
+ * still imports no reward, grant, ticket, inventory, relay or Nostr module, and
+ * `boundaries.test.ts` checks that against the real import graph rather than
+ * taking this paragraph's word for it.
  */
 
 import type { ArcadeGameResult } from '../types';

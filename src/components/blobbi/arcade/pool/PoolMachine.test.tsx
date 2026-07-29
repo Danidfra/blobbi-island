@@ -20,7 +20,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useReducer, useState } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import {
   INITIAL_ARCADE_MACHINE_STATE,
@@ -36,8 +36,39 @@ import { CUE_BALL, EIGHT_BALL, type PoolBall } from '@/arcade/pool/physics';
 import { POCKETS, TABLE_LENGTH, TABLE_WIDTH } from '@/arcade/pool/table';
 import type { PoolAudioEngine } from '@/arcade/pool/pool-audio';
 
+import { resetClaimLocks } from '@/lib/arcade-claim-ledger';
+
+import { QueryProviders } from '../test-providers';
+import { createFakeWriter, fakeUser } from '../test-doubles';
 import { RAIL_WIDTH, tableOuterSize } from './pool-draw';
 import { PoolMachine } from './PoolMachine';
+
+// ── Reward-path mocks, mirroring `DanceMachine.test.tsx` ────────────────────
+// The machine now carries the shared claim wiring, whose hook needs a user and
+// a Nostr pool. Both are faked at the module level; the writer is injected, so
+// nothing in this file can reach a relay.
+
+const PUBKEY = 'f'.repeat(64);
+let currentUser: ReturnType<typeof fakeUser> | undefined = fakeUser(PUBKEY);
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({ user: currentUser, users: currentUser ? [currentUser] : [] }),
+}));
+
+vi.mock('@nostrify/react', async () => {
+  const actual = await vi.importActual<typeof import('@nostrify/react')>('@nostrify/react');
+  return {
+    ...actual,
+    useNostr: () => ({
+      nostr: {
+        query: async () => [],
+        event: async () => {
+          throw new Error('The test pool refuses to publish');
+        },
+      },
+    }),
+  };
+});
 
 const MACHINE_ID = ARCADE_POOL_MACHINE_ID;
 const ENTRY = getCatalogueEntry(BLOBBI_POOL_GAME_ID)!;
@@ -156,9 +187,24 @@ interface HarnessProps {
   /** Force the whole-screen presentation, as a handheld would get. */
   expanded?: boolean;
   createMatchState?: () => PoolMatchState;
+  /** Fake reward writer, for the claim tests. Unset means the claim is never pressed. */
+  writer?: ReturnType<typeof createFakeWriter>;
 }
 
-function Harness({ audio, onClosed, expanded, createMatchState }: HarnessProps) {
+/**
+ * The query client lives OUTSIDE the stateful harness: `QueryProviders` builds
+ * a fresh client per render, and the inner component is the one that re-renders
+ * on every dispatch.
+ */
+function Harness(props: HarnessProps) {
+  return (
+    <QueryProviders>
+      <HarnessInner {...props} />
+    </QueryProviders>
+  );
+}
+
+function HarnessInner({ audio, onClosed, expanded, createMatchState, writer }: HarnessProps) {
   const [lifecycle, dispatch] = useReducer(
     arcadeMachineReducer,
     INITIAL_ARCADE_MACHINE_STATE,
@@ -182,6 +228,7 @@ function Harness({ audio, onClosed, expanded, createMatchState }: HarnessProps) 
       exitAriaLabel="Back to the arcade room"
       lifecycle={lifecycle}
       dispatch={dispatch}
+      rewardWriter={writer}
       audioFactory={() => audio ?? fakeAudio()}
       createMatchState={createMatchState ?? onTheEightTable}
       now={() => 1_700_000_000_000 + clock}
@@ -291,6 +338,9 @@ let getContextSpy: ReturnType<typeof vi.spyOn>;
 let nowSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+  localStorage.clear();
+  resetClaimLocks();
+  currentUser = fakeUser(PUBKEY);
   installFrameDriver();
   // The loop's clock. Stubbing `requestAnimationFrame` alone is not enough: the
   // loop measures elapsed time with `performance.now()`, so without this every
@@ -303,6 +353,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
+  resetClaimLocks();
   getContextSpy.mockRestore();
   nowSpy.mockRestore();
   vi.unstubAllGlobals();
@@ -343,14 +395,97 @@ describe('before the frame', () => {
     expect(rules.textContent).toMatch(/foul/i);
   });
 
-  it('says plainly that it pays no tickets yet', () => {
-    // Playable and paying nothing are independent facts, and the screen must
-    // not let a player infer one from the other.
+  it('says how tickets are earned, and offers no claim before a frame exists', () => {
     render(<Harness />);
     expect(document.querySelector('[data-pool-ticket-notice]')?.textContent).toMatch(
-      /does not pay out tickets yet/i,
+      /finishing a frame earns tickets/i,
     );
     expect(within(shell()!).queryByRole('button', { name: /claim/i })).toBeNull();
+  });
+});
+
+describe('claiming tickets', () => {
+  /** Sink the 8-ball on the rigged table so a real result reaches the screen. */
+  function playToClaimableResults(writer: ReturnType<typeof createFakeWriter>) {
+    render(<Harness writer={writer} />);
+    startMatch();
+    advanceUntil(() => status() === 'playing');
+    stubTableRect();
+    pullAndRelease(PULL_START, PULL_END);
+    expect(advanceUntil(() => results() !== null, 4000)).toBe(true);
+  }
+
+  it('offers the calculated reward, and confirms a successful claim', async () => {
+    const writer = createFakeWriter();
+    playToClaimableResults(writer);
+
+    expect(document.querySelector('[data-pool-reward]')).toHaveAttribute(
+      'data-pool-reward',
+      'idle',
+    );
+    await act(async () => {
+      fireEvent.click(within(results()!).getByRole('button', { name: /claim \d+ tickets/i }));
+    });
+
+    await waitFor(() =>
+      expect(document.querySelector('[data-pool-reward]')).toHaveAttribute(
+        'data-pool-reward',
+        'confirmed',
+      ),
+    );
+    expect(screen.getByText(/added to your inventory/i)).toBeInTheDocument();
+    expect(within(results()!).queryByRole('button', { name: /claim \d+ tickets/i })).toBeNull();
+    expect(status()).toBe('rewarded');
+    expect(writer.publishCount()).toBe(1);
+  });
+
+  it('publishes once for repeated clicks in the same tick', async () => {
+    const writer = createFakeWriter();
+    playToClaimableResults(writer);
+    const button = within(results()!).getByRole('button', { name: /claim \d+ tickets/i });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    await waitFor(() => expect(writer.publishCount()).toBe(1));
+  });
+
+  it('keeps Play again available after a confirmed claim, and the new run claims afresh', async () => {
+    const writer = createFakeWriter();
+    playToClaimableResults(writer);
+
+    await act(async () => {
+      fireEvent.click(within(results()!).getByRole('button', { name: /claim \d+ tickets/i }));
+    });
+    await waitFor(() => expect(status()).toBe('rewarded'));
+
+    fireEvent.click(screen.getByRole('button', { name: /play again/i }));
+    advanceUntil(() => status() === 'playing');
+    stubTableRect();
+    pullAndRelease(PULL_START, PULL_END);
+    expect(advanceUntil(() => results() !== null, 4000)).toBe(true);
+
+    // A replay is a NEW run with a new id: a fresh claim is on offer.
+    expect(document.querySelector('[data-pool-reward]')).toHaveAttribute(
+      'data-pool-reward',
+      'idle',
+    );
+    await act(async () => {
+      fireEvent.click(within(results()!).getByRole('button', { name: /claim \d+ tickets/i }));
+    });
+    await waitFor(() => expect(writer.publishCount()).toBe(2));
+  });
+
+  it('asks a logged-out player to log in rather than failing silently', () => {
+    currentUser = undefined;
+    playToClaimableResults(createFakeWriter());
+    const button = within(results()!).getByRole('button', {
+      name: /log in to keep these tickets/i,
+    });
+    expect(button).toBeDisabled();
   });
 });
 
