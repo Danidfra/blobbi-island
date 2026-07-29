@@ -27,6 +27,10 @@ export default defineConfig(() => ({
           nostr: ['@nostrify/nostrify', '@nostrify/react', 'nostr-tools'],
           radix: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast', '@radix-ui/react-tooltip'],
           icons: ['lucide-react', '@tabler/icons-react'],
+          // Planck (Box2D) is only used by the arcade's Pool table. Split out so
+          // its ~49 kB gzipped is a separately cacheable chunk rather than
+          // inflating the main gameplay bundle on every deploy.
+          physics: ['planck'],
           forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
           utils: ['clsx', 'tailwind-merge', 'date-fns'],
         },

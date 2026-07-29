@@ -1,4 +1,7 @@
-image: node:22
+# Keep this tag in step with .nvmrc — GitLab cannot read a version file for the
+# job image. Node 24 LTS is required: planck (the Pool physics engine) declares
+# engines.node ">=24.0".
+image: node:24.18.0
 
 default:
   interruptible: true

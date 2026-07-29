@@ -55,6 +55,7 @@ import {
   BLOBBI_AIR_HOCKEY_GAME_ID,
   BLOBBI_DANCE_GAME_ID,
   BLOBBI_DANCE_MACHINE_ID,
+  BLOBBI_POOL_GAME_ID,
 } from '@/arcade/catalogue';
 
 /** The virtual world is a fixed 1046 × 697 box, uniformly scaled to the viewport. */
@@ -111,6 +112,11 @@ export type ArcadeMachineActivation =
   /**
    * A dedicated machine whose game is not built yet. Shows THAT game's own
    * coming-soon screen: a pool table talks about pool.
+   *
+   * No machine uses this today — all three dedicated machines now have games —
+   * and it is kept because it is the state every future machine passes through,
+   * and because deleting it would mean the next one has to reinvent the rule
+   * that a coming-soon machine still talks about its OWN game.
    */
   | { readonly type: 'dedicated-preview'; readonly experienceId: string };
 
@@ -194,8 +200,8 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
   //
   // The six cabinets are interchangeable furniture and open the shared
   // catalogue. The pool table and the air hockey table are not: each is one
-  // physical game. Air hockey now launches that game directly; pool still shows
-  // its own coming-soon screen, and never another game's.
+  // physical game, and each now launches that game directly — no menu, and never
+  // another machine's game.
   {
     id: 'arcade-cabinet-pink',
     floor: 'floor-1',
@@ -257,7 +263,10 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     sprite: { width: 353, height: 175 },
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
-    activation: { type: 'dedicated-preview', experienceId: 'blobbi-pool' },
+    // The third machine in the arcade with a real game behind it. Walking up to
+    // it racks a frame directly — no menu, because the physical object IS the
+    // game — and `canLaunchArcadeGame` refuses Pool from anywhere else.
+    activation: { type: 'dedicated-game', gameId: BLOBBI_POOL_GAME_ID },
   },
   {
     id: ARCADE_AIR_HOCKEY_MACHINE_ID,

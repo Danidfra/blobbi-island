@@ -4,9 +4,13 @@ Status: **implemented and playable.** The arcade's second real game, and the
 first one with **physics**.
 
 It runs on exactly one machine — `arcade-air-hockey`, game id
-`blobbi-air-hockey` — and nothing else in the arcade changed. The pool table is
-still a coming-soon screen, the six generic cabinets still open a catalogue that
-is still honestly empty, and Blobbi Dance is untouched.
+`blobbi-air-hockey` — and nothing else in the arcade changed. The six generic
+cabinets still open a catalogue that is still honestly empty, and Blobbi Dance is
+untouched.
+
+> **Since then:** Pool shipped, following the pattern §2 sets out, and needed no
+> change to this game or to the shared pieces it established. See
+> [`docs/blobbi-pool.md`](./blobbi-pool.md).
 
 **It grants no Arcade Tickets.** See §7 — that is a product decision with a
 prepared join point, not an oversight.
@@ -46,10 +50,10 @@ second renderer.
 
 ---
 
-## 2. The dedicated-machine pattern (what Pool should copy)
+## 2. The dedicated-machine pattern (which Pool then copied)
 
 Air Hockey is the second machine to follow this shape, which is the point of
-writing it down. The arcade already owned every piece; a dedicated game supplies
+writing it down — and Pool is the third, unchanged. The arcade already owned every piece; a dedicated game supplies
 five files and wires them together.
 
 ```

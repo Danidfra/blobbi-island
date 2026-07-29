@@ -5,11 +5,14 @@
 > dedicated to their own game, and every arcade surface renders inside the game
 > window rather than over the browser page.
 >
-> **Since then:** the air hockey table's game shipped, so its activation is now
-> `dedicated-game` rather than `dedicated-preview`. The rule this document
-> establishes is unchanged — a dedicated machine is one game and can never be
-> another — and the tables below are updated. See
-> [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).
+> **Since then:** the air hockey table's game shipped, and then the pool
+> table's. Both activations are now `dedicated-game` rather than
+> `dedicated-preview`, so **no machine ships on `dedicated-preview` today**. The
+> rule this document establishes is unchanged — a dedicated machine is one game
+> and can never be another — and the tables below are updated. The
+> `dedicated-preview` branch is kept for the next machine that needs it. See
+> [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
+> [`docs/blobbi-pool.md`](./blobbi-pool.md).
 
 Phase 2 built the arcade's foundation (`docs/arcade-foundation.md`) and Phase 3
 built its first game (`docs/blobbi-dance.md`). Both were shaped by a rule that
@@ -94,7 +97,7 @@ a property of the data rather than a convention a component happens to follow.
 | machine | floor | display name | activation |
 | --- | --- | --- | --- |
 | `arcade-dance-machine` | basement | Blobbi Dance Machine | `dedicated-game` → `blobbi-dance` |
-| `arcade-pool-table` | floor-1 | Pool Table | `dedicated-preview` → `blobbi-pool` |
+| `arcade-pool-table` | floor-1 | Pool Table | `dedicated-game` → `blobbi-pool` |
 | `arcade-air-hockey` | floor-1 | Air Hockey Table | `dedicated-game` → `blobbi-air-hockey` |
 | `arcade-cabinet-pink` | floor-1 | Pink Cabinet | `shared-catalogue` |
 | `arcade-cabinet-black` | floor-1 | Black Cabinet | `shared-catalogue` |
@@ -166,7 +169,7 @@ now different functions with different names, and a test asserts
 | id | title | category | availability | host | machines | tickets |
 | --- | --- | --- | --- | --- | --- | --- |
 | `blobbi-dance` | Blobbi Dance | island | playable | dedicated | `arcade-dance-machine` | yes |
-| `blobbi-pool` | Pool | island | coming-soon | dedicated | `arcade-pool-table` | no |
+| `blobbi-pool` | Pool | island | playable | dedicated | `arcade-pool-table` | no |
 | `blobbi-air-hockey` | Air Hockey | island | playable | dedicated | `arcade-air-hockey` | no |
 
 **`sharedCabinetCatalogue()` is empty.** That is the honest product state, and
@@ -310,8 +313,8 @@ stays `closed` and the shell renders no `data-arcade-status`.
 | Screen | Control | Destination |
 | --- | --- | --- |
 | Shared catalogue | **Close** ("Close and go back to the arcade") | Arcade Room |
-| Dedicated coming-soon (pool) | **Close** ("Close and go back to the arcade") | Arcade Room |
-| Blobbi Dance / Air Hockey preview, results, aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
+| Dedicated coming-soon (no machine today) | **Close** ("Close and go back to the arcade") | Arcade Room |
+| Dedicated playable games — preview, results, aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
 | A catalogue-launched game, not mid-run | **Back to games** ("Back to the game list") | Catalogue |
 | Any live run (`countdown`, `playing`) | **Leave** ("Leave *game* and end this run") | Aborts, then as above |
 | Prize counter | **Close** | Arcade Room |
@@ -457,19 +460,23 @@ Dance borrowed from another machine to fill the space.
 without being redesigned. Controls and duration are shown **only** for a game
 that can actually be started; metadata for a game you cannot play is noise.
 
-### Dedicated coming-soon (the pool table)
+### Dedicated coming-soon (no machine uses this today)
 
 `ArcadeDedicatedPreview` — one component, used by the room and by the DEV
 harness, so what is reviewed is what ships. Its whole job is to be about the
 RIGHT game: the title, the sentence and the artwork come from the machine and
-from that machine's own registry entry, so a pool table can only ever talk about
-pool. No Start control, no catalogue, one Close to the room. A test asserts the
-pool panel mentions cues and never mentions a puck or dancing, and vice versa.
+from that machine's own registry entry, so a pool table could only ever talk
+about pool. No Start control, no catalogue, one Close to the room.
 
-The air hockey table used this screen until its game shipped, which is the
-transition this design was built for: a machine moves from `dedicated-preview` to
-`dedicated-game` and nothing else about it changes. See
-[`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).
+The air hockey table used this screen until its game shipped, and the pool table
+used it until its own did. That is exactly the transition this design was built
+for: a machine moves from `dedicated-preview` to `dedicated-game` and nothing
+else about it changes — no new component, no new route, no change to the room's
+`switch`. Both moves cost one line in the machine registry.
+
+The branch and the component are kept for the machine that needs them next. See
+[`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
+[`docs/blobbi-pool.md`](./blobbi-pool.md).
 
 ### The prize counter
 
@@ -517,8 +524,9 @@ rendered catalogue contains none of `webxdc`, `nostr`, `npub`, `kind:`,
   screen reader still announces as a button and a mouse user still tries to
   click. Same for a Guest Game card.
 - The dedicated coming-soon panel announces itself with `role="status"`, so a
-  screen-reader user learns "Pool — coming soon" at the moment a sighted one
-  does.
+  screen-reader user learns "*machine* — coming soon" at the moment a sighted one
+  does. No machine is on that branch today (§1), so this is the contract the next
+  `dedicated-preview` machine inherits rather than something on screen now.
 - Every interactive control in the dialog declares `min-h-[44px]`, including the
   shell's header Pause / Resume / dismiss controls.
 - Close and back labels describe their destination (§4).
@@ -638,6 +646,7 @@ Exactly what this phase deferred, and nothing else:
 
 Explicitly **not** Phase 5: the first shared-cabinet game, Pool gameplay, the
 Prize Shop, leaderboards, latency calibration, or opening the publisher set
-beyond the official issuer. (Air Hockey, listed here as out of scope when this
-was written, has since shipped as the arcade's second Island Game —
-[`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md).)
+beyond the official issuer. (Air Hockey and Pool, both listed here as out of
+scope when this was written, have since shipped as the arcade's second and third
+Island Games — [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
+[`docs/blobbi-pool.md`](./blobbi-pool.md).)

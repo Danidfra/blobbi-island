@@ -19,8 +19,10 @@ import { NoPassModal } from '@/components/blobbi/NoPassModal';
 import { resolveNativeArcadeGame } from '@/components/blobbi/arcade/native-games';
 import {
   ARCADE_CATALOGUE,
+  ARCADE_POOL_MACHINE_ID,
   BLOBBI_DANCE_GAME_ID,
   BLOBBI_DANCE_MACHINE_ID,
+  BLOBBI_POOL_GAME_ID,
   canLaunchArcadeGame,
   getCatalogueEntry,
   sharedCabinetCatalogue,
@@ -43,6 +45,9 @@ import { clearArcadePass, grantArcadePass } from '@/lib/arcade-pass';
 import { useArcadePass } from '@/hooks/useArcadePass';
 
 import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
+import { PoolMachine } from '@/components/blobbi/arcade/pool/PoolMachine';
+import { POOL_SCENARIOS, poolScenario } from '@/arcade/pool/pool-scenarios';
+import { createPoolMatch, type PoolMatchState } from '@/arcade/pool/match';
 import { DEFAULT_DANCE_CHART, type DanceChart } from '@/arcade/dance/chart';
 import { NEON_HOP_TRACK } from '@/arcade/dance/track';
 import { DANCE_REWARD_TUNING } from '@/arcade/dance/dance-reward';
@@ -113,9 +118,10 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  *    Game (which must get no Play button), and one listing a game with no
  *    implementation (which must fail safely and say so). Only the first exists
  *    in the shipped registry;
- *  - **dedicated machines** — Blobbi Dance opening DIRECTLY, and the pool and
- *    air hockey tables opening their own coming-soon screens. None of them ever
- *    shows the shared catalogue, which is the thing to check here;
+ *  - **dedicated machines** — Blobbi Dance and Pool opening DIRECTLY, in their
+ *    real controllers on their real machine ids. Neither ever shows the shared
+ *    catalogue, which is the thing to check here. (Air Hockey is reached through
+ *    the room, like any player would.);
  *  - **overlay containment** — every surface above is portaled into the frame's
  *    stage overlay host, so what a reviewer sees is a panel inside the game
  *    window rather than one covering the browser page;
@@ -505,6 +511,68 @@ export function DevArcade() {
    */
   const danceMachineId = BLOBBI_DANCE_MACHINE_ID;
 
+  // ── Pool harness state ──────────────────────────────────────────────────
+  //
+  // Pool needs its own lifecycle rather than sharing the dance one: the reducer
+  // holds a single run, and two machines driving one reducer would let closing
+  // either of them abort the other's run.
+  //
+  // Reaching Pool through the ROOM means walking a Blobbi to the table, which
+  // needs a signed-in pet and several seconds of animation. That is the right
+  // path for a player and the wrong one for a reviewer checking a rebound angle,
+  // so — exactly as with Blobbi Dance — the harness opens the real controller,
+  // with the real lifecycle, on the real machine id, directly.
+  const [poolOpen, setPoolOpen] = useState(false);
+  const [poolLifecycle, poolDispatch] = useReducer(
+    arcadeMachineReducer,
+    INITIAL_ARCADE_MACHINE_STATE,
+  );
+  const poolEntry = getCatalogueEntry(BLOBBI_POOL_GAME_ID)!;
+  /** Like the dance machine's, not a choice: `canLaunchArcadeGame` refuses it anywhere else. */
+  const poolMachineId = ARCADE_POOL_MACHINE_ID;
+
+  /**
+   * The physics review scenario to open Pool with, or `null` for a real frame.
+   *
+   * A scenario replaces the RACK, not the game: the same controller, the same
+   * lifecycle, the same rules and the same physics world — just a table laid out
+   * to put one behaviour in front of a reviewer. See `pool-scenarios.ts`.
+   */
+  const [poolScenarioId, setPoolScenarioId] = useState<string | null>(null);
+
+  const openPool = useCallback(
+    (scenarioId: string | null = null) => {
+      setPoolScenarioId(scenarioId);
+      poolDispatch({ type: 'close' });
+      poolDispatch({ type: 'open', machineId: poolMachineId, gameId: poolEntry.id });
+      setPoolOpen(true);
+    },
+    [poolEntry.id, poolMachineId],
+  );
+
+  /**
+   * Build the scenario's table, or `undefined` to let the game rack up normally.
+   *
+   * The scenario's suggested shot is deliberately NOT played automatically: the
+   * point is to take it yourself and watch, and several of the fifteen are about
+   * how a rebound looks rather than where a ball ends up.
+   */
+  const poolMatchFactory = useMemo(() => {
+    if (poolScenarioId === null) return undefined;
+    const scenario = poolScenario(poolScenarioId);
+    if (!scenario) return undefined;
+    return (): PoolMatchState => ({
+      ...createPoolMatch({ difficulty: 'normal', seed: 1 }),
+      balls: scenario.balls.map((b) => ({ ...b })),
+      // Straight to the player's shot: a scenario is not a frame, and the
+      // break-setup beat would only be in the way.
+      phase: 'aiming',
+      timerMs: 0,
+      broken: true,
+      banner: scenario.expected,
+    });
+  }, [poolScenarioId]);
+
   // ── Catalogue harness state ─────────────────────────────────────────────
   /** Only a GENERIC cabinet can open the shared catalogue, so only those are offered. */
   const genericCabinets = useMemo(
@@ -799,6 +867,31 @@ export function DevArcade() {
       )}
 
       {/*
+        Pool, in the real controller with the real lifecycle. No reward writer,
+        because Pool has no reward path at all — it grants no tickets, and the
+        controller imports nothing that could.
+      */}
+      {poolOpen && poolLifecycle.status !== 'closed' && (
+        <PoolMachine
+          key={`pool-${remountKey}`}
+          machineId={poolMachineId}
+          gameId={poolEntry.id}
+          title={poolEntry.title}
+          lifecycle={poolLifecycle}
+          dispatch={poolDispatch}
+          createMatchState={poolMatchFactory}
+          onExit={() => {
+            poolDispatch({ type: 'close' });
+            setPoolOpen(false);
+            setPoolScenarioId(null);
+          }}
+          exitLabel="Back to the arcade"
+          exitAriaLabel="Back to the arcade room"
+          showDebugDetails
+        />
+      )}
+
+      {/*
         The REAL shared catalogue, in the REAL shell, for whichever cabinet is
         selected. Selecting Blobbi Dance here goes through the same resolver the
         room uses, with the same machine id — which is what makes "the same game
@@ -969,12 +1062,20 @@ export function DevArcade() {
 
         <Section title="Dedicated machines">
           {/*
-            These three are NOT cabinets. Each opens its own experience and
-            never the shared catalogue — the correction this section exists to
-            make visible.
+            These are NOT cabinets. Each opens its own experience and never the
+            shared catalogue — the correction this section exists to make
+            visible.
+
+            The `dedicated-preview` loop below is now empty, because every
+            dedicated machine has a built game. It stays because that state is
+            the one the next machine will pass through, and a harness that
+            cannot show it would have to be rebuilt to review it.
           */}
           <Chip active={danceOpen} onClick={openDance}>
             Blobbi Dance (direct)
+          </Chip>
+          <Chip active={poolOpen && poolScenarioId === null} onClick={() => openPool(null)}>
+            Pool (direct)
           </Chip>
           {arcadeMachines
             .filter((m) => m.activation.type === 'dedicated-preview')
@@ -990,6 +1091,29 @@ export function DevArcade() {
           <span className="ml-2 font-mono">
             dedicated={arcadeMachines.filter((m) => m.activation.type !== 'shared-catalogue').length}{' '}
             · generic={genericCabinets.length}
+          </span>
+        </Section>
+
+        <Section title="Pool physics review">
+          {/*
+            The fifteen manual acceptance scenarios from the Planck migration.
+            Each one lays the table out for one behaviour — a jaw graze, a rail
+            run past a side pocket, a full break — in the REAL game, so what a
+            reviewer judges is what a player gets.
+          */}
+          {POOL_SCENARIOS.map((scenario) => (
+            <Chip
+              key={scenario.id}
+              active={poolOpen && poolScenarioId === scenario.id}
+              onClick={() => openPool(scenario.id)}
+            >
+              {scenario.label}
+            </Chip>
+          ))}
+          <span className="ml-2 font-mono">
+            {poolScenarioId
+              ? (poolScenario(poolScenarioId)?.expected ?? '')
+              : 'sets the table up in the real game · take the shot yourself and watch'}
           </span>
         </Section>
 

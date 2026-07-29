@@ -6,8 +6,11 @@ A Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, and Nos
 
 ### Prerequisites
 
-- Node.js (v18 or higher)
-- npm or yarn
+- **Node.js 24 LTS** — the exact version is pinned in [`.nvmrc`](./.nvmrc), so
+  `nvm use` (or any version manager that reads it) selects it for you.
+  `package.json` declares `engines.node: ">=24 <25"`; the arcade's Pool physics
+  engine, [planck](https://www.npmjs.com/package/planck), requires Node 24.
+- npm 11 or later (bundled with Node 24)
 
 ### Development
 

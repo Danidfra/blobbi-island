@@ -131,14 +131,21 @@ describe('machine classification', () => {
     });
   });
 
-  it('still gives the pool table pool’s own coming-soon screen', () => {
-    // The rule is unchanged by air hockey shipping: a dedicated machine whose
-    // game is not built shows THAT game's screen, never a menu and never
-    // another game's.
+  it('gives the pool table Pool, directly', () => {
     expect(getArcadeMachine('arcade-pool-table')!.activation).toEqual({
-      type: 'dedicated-preview',
-      experienceId: 'blobbi-pool',
+      type: 'dedicated-game',
+      gameId: 'blobbi-pool',
     });
+  });
+
+  it('leaves no dedicated machine on a coming-soon screen', () => {
+    // All three dedicated machines now have a game. The `dedicated-preview`
+    // branch is kept for the next machine that needs it — the rule it encodes
+    // (a machine with no game still talks about ITS OWN game, never a menu and
+    // never another game's) is unchanged — but nothing ships on it today.
+    for (const machine of dedicatedMachines()) {
+      expect(machine.activation.type, machine.id).toBe('dedicated-game');
+    }
   });
 
   it('classifies exactly three machines as dedicated', () => {

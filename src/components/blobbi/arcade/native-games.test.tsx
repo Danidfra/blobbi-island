@@ -48,11 +48,15 @@ describe('what resolves', () => {
     expect(resolveNativeArcadeGame(onTheDanceMachine)).toBeTypeOf('function');
   });
 
-  it('implements exactly the two dedicated games that are built', () => {
-    // Asserted whole rather than by length: adding a third is a decision that
+  it('implements exactly the three dedicated games that are built', () => {
+    // Asserted whole rather than by length: adding a fourth is a decision that
     // has to be written down here, next to the registry entry that advertises
     // it.
-    expect(NATIVE_ARCADE_GAME_IDS).toEqual([BLOBBI_DANCE_GAME_ID, 'blobbi-air-hockey']);
+    expect(NATIVE_ARCADE_GAME_IDS).toEqual([
+      BLOBBI_DANCE_GAME_ID,
+      'blobbi-air-hockey',
+      'blobbi-pool',
+    ]);
   });
 
   it('resolves Air Hockey on the air hockey table, and only there', () => {
@@ -157,10 +161,39 @@ describe('what is refused outright', () => {
     }
   });
 
-  it('refuses every coming-soon entry, on its own machine', () => {
-    const comingSoon = ARCADE_CATALOGUE.filter((e) => e.availability === 'coming-soon');
-    expect(comingSoon.length).toBeGreaterThan(0);
-    for (const entry of comingSoon) {
+  it('refuses a coming-soon entry even on its own machine, with a component behind it', () => {
+    /*
+      Every dedicated machine now has a built game, so there is no shipped
+      `coming-soon` entry left to iterate over. The rule still has to hold, and
+      this is the harder version of it: take Pool — which DOES have a component
+      registered — mark it coming-soon, and check the resolver refuses anyway.
+
+      That is stronger than the old loop was. It proves the refusal comes from
+      `availability`, not from the lookup happening to miss.
+    */
+    const pool = getCatalogueEntry('blobbi-pool')!;
+    expect(NATIVE_ARCADE_GAME_IDS).toContain(pool.id);
+
+    const unbuilt: ArcadeCatalogueEntry = { ...pool, availability: 'coming-soon' };
+    expect(
+      resolveNativeArcadeGame({
+        game: unbuilt,
+        machineId: ARCADE_POOL_MACHINE_ID,
+        surface: 'dedicated-machine',
+      }),
+    ).toBeNull();
+
+    // And `disabled` is refused for the same reason.
+    expect(
+      resolveNativeArcadeGame({
+        game: { ...pool, availability: 'disabled' },
+        machineId: ARCADE_POOL_MACHINE_ID,
+        surface: 'dedicated-machine',
+      }),
+    ).toBeNull();
+
+    // Whatever coming-soon entries the registry gains later are covered too.
+    for (const entry of ARCADE_CATALOGUE.filter((e) => e.availability === 'coming-soon')) {
       for (const machineId of entry.machineIds ?? []) {
         expect(
           resolveNativeArcadeGame({ game: entry, machineId, surface: 'dedicated-machine' }),
@@ -168,13 +201,34 @@ describe('what is refused outright', () => {
         ).toBeNull();
       }
     }
-    // Named explicitly, because the pool table is the one a player can still
-    // walk to and find nothing behind.
+  });
+
+  it('resolves Pool on the pool table, and only there', () => {
+    const entry = getCatalogueEntry('blobbi-pool');
     expect(
       resolveNativeArcadeGame({
-        game: getCatalogueEntry('blobbi-pool'),
+        game: entry,
         machineId: ARCADE_POOL_MACHINE_ID,
         surface: 'dedicated-machine',
+      }),
+    ).toBeTypeOf('function');
+
+    // Not from another machine, and not from the shared catalogue.
+    for (const machineId of [
+      BLOBBI_DANCE_MACHINE_ID,
+      ARCADE_AIR_HOCKEY_MACHINE_ID,
+      'arcade-cabinet-pink',
+    ]) {
+      expect(
+        resolveNativeArcadeGame({ game: entry, machineId, surface: 'dedicated-machine' }),
+        machineId,
+      ).toBeNull();
+    }
+    expect(
+      resolveNativeArcadeGame({
+        game: entry,
+        machineId: ARCADE_POOL_MACHINE_ID,
+        surface: 'shared-catalogue',
       }),
     ).toBeNull();
   });

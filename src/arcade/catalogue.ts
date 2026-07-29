@@ -21,8 +21,8 @@
  * start here?".
  *
  * The player-facing consequence: walking to the dance machine starts Blobbi
- * Dance, not a menu. Walking to the pool table shows Pool's own coming-soon
- * screen, not a menu with a rhythm game in it.
+ * Dance, not a menu. Walking to the pool table starts Pool, not a menu with a
+ * rhythm game in it.
  *
  * ## Two categories, and the difference is not cosmetic
  *
@@ -52,6 +52,7 @@
 
 import { NEON_HOP_TRACK } from './dance/track';
 import { TYPICAL_AIR_HOCKEY_MATCH_MS } from './hockey/table';
+import { TYPICAL_POOL_MATCH_MS } from './pool/table';
 
 /**
  * Where a game comes from, and therefore what it is allowed to touch.
@@ -182,6 +183,9 @@ export const BLOBBI_DANCE_GAME_ID = 'blobbi-dance';
  */
 export const BLOBBI_AIR_HOCKEY_GAME_ID = 'blobbi-air-hockey';
 
+/** Pool's stable id, declared here for the same reason the other two are. */
+export const BLOBBI_POOL_GAME_ID = 'blobbi-pool';
+
 /**
  * The machine ids the dedicated games belong to.
  *
@@ -206,6 +210,10 @@ export const ARCADE_AIR_HOCKEY_MACHINE_ID = 'arcade-air-hockey';
  * {@link sharedCabinetCatalogue} is empty. That emptiness is the honest state of
  * the product: the six generic cabinets have no game yet, and the catalogue says
  * so rather than borrowing the dance machine's.
+ *
+ * All three are now `playable`, and all three still grant nothing. Those are
+ * separate facts and this registry is where the difference is kept honest — see
+ * `grantsTickets`.
  */
 export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
   Object.freeze({
@@ -230,15 +238,31 @@ export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
     machineIds: Object.freeze([BLOBBI_DANCE_MACHINE_ID]),
   }),
   Object.freeze({
-    id: 'blobbi-pool',
+    id: BLOBBI_POOL_GAME_ID,
     title: 'Pool',
     shortDescription:
-      'Line up your cue, sink the balls and clear the table. The table is here — the game is still being built.',
+      'Pull the cue back and let go. Sink your seven balls, then the 8-ball, before your rival does.',
     category: 'island',
-    availability: 'coming-soon',
+    availability: 'playable',
     launchMode: 'native',
+    /*
+      Playable, and still paying nothing.
+
+      The same independence Air Hockey's entry demonstrates: `grantsTickets` is a
+      statement about whether an ACTIVE REWARD POLICY exists, not about whether a
+      game is finished. No policy for `blobbi-pool` has been approved, so this
+      stays false, the results screen shows no claim, and `catalogue.test.ts`
+      checks the two agree in both directions.
+    */
     grantsTickets: false,
-    controls: Object.freeze([]),
+    controls: Object.freeze([
+      Object.freeze({ scheme: 'pointer', label: 'Drag back from the cue ball, then let go' }),
+      Object.freeze({ scheme: 'touch', label: 'Drag back from the cue ball, then let go' }),
+      Object.freeze({ scheme: 'keyboard', label: 'Arrow keys aim, space shoots' }),
+    ]),
+    // Read from the table's own tuning rather than written out again, so the
+    // estimate on the machine's card cannot drift away from the game.
+    estimatedDurationMs: TYPICAL_POOL_MATCH_MS,
     thumbnail: '/assets/locations/arcade/level-1/snooker.png',
     source: 'blobbi-internal',
     host: 'dedicated-machine',

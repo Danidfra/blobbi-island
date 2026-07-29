@@ -72,14 +72,14 @@ pending-interaction instance behaves identically to every other room).
 > which says whether a machine opens the shared cabinet catalogue, launches one
 > specific game, or shows one specific game's coming-soon screen. Six generic
 > cabinets take the first; the dance machine, the pool table and the air hockey
-> table are dedicated machines and take the other two. See
+> table are dedicated machines and now all three take `dedicated-game`. See
 > `docs/arcade-catalogue.md` §2.
 
 | id | floor | display name | activation |
 | --- | --- | --- | --- |
 | `arcade-dance-machine` | basement | Blobbi Dance Machine | dedicated-game → `blobbi-dance` |
-| `arcade-pool-table` | floor-1 | Pool Table | dedicated-preview → `blobbi-pool` |
-| `arcade-air-hockey` | floor-1 | Air Hockey Table | dedicated-preview → `blobbi-air-hockey` |
+| `arcade-pool-table` | floor-1 | Pool Table | dedicated-game → `blobbi-pool` |
+| `arcade-air-hockey` | floor-1 | Air Hockey Table | dedicated-game → `blobbi-air-hockey` |
 | `arcade-cabinet-pink` | floor-1 | Pink Cabinet | shared-catalogue |
 | `arcade-cabinet-black` | floor-1 | Black Cabinet | shared-catalogue |
 | `arcade-cabinet-classic` | floor-1 | Classic Cabinet | shared-catalogue |

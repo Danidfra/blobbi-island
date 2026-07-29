@@ -114,11 +114,11 @@ describe('Blobbi Dance', () => {
     expect(dance.launchMode).toBe('native');
     expect(isNativeLaunchable(dance)).toBe(true);
 
-    // Two playable games now, both belonging to dedicated machines. The list is
-    // asserted whole rather than by length, so adding one is a decision that
-    // has to be written down here.
+    // Three playable games now, all three belonging to dedicated machines. The
+    // list is asserted whole rather than by length, so adding one is a decision
+    // that has to be written down here.
     const launchable = ARCADE_CATALOGUE.filter(isNativeLaunchable).map((e) => e.id);
-    expect(launchable).toEqual([BLOBBI_DANCE_GAME_ID, 'blobbi-air-hockey']);
+    expect(launchable).toEqual([BLOBBI_DANCE_GAME_ID, 'blobbi-pool', 'blobbi-air-hockey']);
   });
 
   it('belongs to the dance machine and to nothing else', () => {
@@ -352,42 +352,68 @@ describe('the shared cabinet catalogue', () => {
   });
 });
 
-describe('coming-soon dedicated games', () => {
-  it('are just Pool now that Air Hockey is built', () => {
+describe('dedicated games and what they say about themselves', () => {
+  it('has no coming-soon entry left, now that Pool is built', () => {
+    // Every dedicated machine now has a real game behind it. The rule the
+    // `coming-soon` state exists for is unchanged and still enforced below for
+    // whatever entry next needs it — there simply is not one today.
     const comingSoon = ARCADE_CATALOGUE.filter((e) => e.availability === 'coming-soon');
-    expect(comingSoon.map((e) => e.id)).toEqual(['blobbi-pool']);
-    for (const entry of comingSoon) {
-      expect(entry.host, entry.id).toBe('dedicated-machine');
-      expect(canLaunchArcadeGame({
-        game: entry,
-        machineId: entry.machineIds![0],
+    expect(comingSoon).toEqual([]);
+  });
+
+  it('would still refuse a coming-soon entry on its own machine', () => {
+    // The invariant, checked against a hypothetical rather than a shipped
+    // entry: `coming-soon` must never be launchable, and losing the last real
+    // one must not quietly lose the rule with it.
+    const pool = getCatalogueEntry('blobbi-pool')!;
+    const unbuilt: ArcadeCatalogueEntry = { ...pool, availability: 'coming-soon' };
+    expect(isNativeLaunchable(unbuilt)).toBe(false);
+    expect(
+      canLaunchArcadeGame({
+        game: unbuilt,
+        machineId: ARCADE_POOL_MACHINE_ID,
         surface: 'dedicated-machine',
-      }), entry.id).toBe(false);
-    }
+      }),
+    ).toBe(false);
   });
 
   it('describes its OWN game, never another', () => {
     const pool = getCatalogueEntry('blobbi-pool')!;
     const airHockey = getCatalogueEntry('blobbi-air-hockey')!;
 
-    expect(pool.shortDescription.toLowerCase()).toMatch(/cue|balls|table/);
+    expect(pool.shortDescription.toLowerCase()).toMatch(/cue|balls|8-ball/);
     expect(airHockey.shortDescription.toLowerCase()).toMatch(/puck/);
     for (const entry of [pool, airHockey]) {
       expect(entry.shortDescription.toLowerCase(), entry.id).not.toMatch(/dance|arrow|rhythm/);
     }
+    // And neither borrows the other's vocabulary.
+    expect(pool.shortDescription.toLowerCase()).not.toMatch(/puck|goal/);
+    expect(airHockey.shortDescription.toLowerCase()).not.toMatch(/\bcue\b|8-ball/);
   });
 
-  it('no longer says Air Hockey is unbuilt, because it is built', () => {
+  it('no longer says any built game is unbuilt', () => {
     // The failure this whole registry exists to prevent, in the other
-    // direction: the arcade must not tell a player a game is missing when it
-    // is right there.
-    const airHockey = getCatalogueEntry('blobbi-air-hockey')!;
-    expect(airHockey.availability).toBe('playable');
-    expect(airHockey.shortDescription.toLowerCase()).not.toMatch(/still being built/);
-    expect(airHockey.controls.length).toBeGreaterThan(0);
-    expect(airHockey.estimatedDurationMs).toBeGreaterThan(0);
-    // Playable and paying tickets are independent: no policy has been approved.
-    expect(airHockey.grantsTickets).toBe(false);
+    // direction: the arcade must not tell a player a game is missing when it is
+    // right there. Air Hockey needed this when it shipped; Pool needs it now,
+    // and it is asserted over every playable entry so the third one cannot be
+    // forgotten.
+    for (const entry of ARCADE_CATALOGUE.filter((e) => e.availability === 'playable')) {
+      expect(entry.shortDescription.toLowerCase(), entry.id).not.toMatch(
+        /still being built|coming soon|not ready/,
+      );
+      expect(entry.controls.length, entry.id).toBeGreaterThan(0);
+      expect(entry.estimatedDurationMs, entry.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps "playable" and "pays tickets" independent', () => {
+    // Both facts are true of Pool and Air Hockey at once, and that is the
+    // point: finishing a game does not approve a reward policy for it.
+    for (const id of ['blobbi-pool', 'blobbi-air-hockey']) {
+      const entry = getCatalogueEntry(id)!;
+      expect(entry.availability, id).toBe('playable');
+      expect(entry.grantsTickets, id).toBe(false);
+    }
   });
 
   it('says plainly that it is not built, without promising a date', () => {
