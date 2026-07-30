@@ -16,8 +16,18 @@ canonical movement & interaction APIs
         ▼
 BlobbiActor            (shared ground-anchor actor primitive)
         ▼
-BlobbiRendererView     (pure visual renderer)
+─────────────── package boundary ───────────────
+        ▼
+BlobbiRendererView     (@blobbi/react — pure visual renderer)
 ```
+
+Everything above the line is Blobbi Island: it knows where it is, whose it is,
+and what it is doing. Everything below is `@blobbi/react`, a local workspace
+package (`packages/blobbi-react/`) that knows only what it was handed. The line
+is enforced from both sides — `packages/blobbi-react/src/package-purity.test.ts`
+proves the package cannot reach a relay, a user, a world or an asset path;
+`src/components/blobbi/renderer-boundary.test.ts` proves Island holds no second
+copy of the renderer and imports it only through the package entry point.
 
 ## 1. World coordinate systems
 
@@ -83,17 +93,35 @@ primitive for local AND remote players. Owns the ground-anchor DOM geometry
 markers) and nothing else: no input, no movement, no presence, no pose logic.
 Same props in → same geometry out, whoever mounts it.
 
-## 5. BlobbiRendererView
+## 5. BlobbiRendererView — the package boundary
 
-`src/components/blobbi/BlobbiRendererView.tsx` — the pure visual renderer
+`packages/blobbi-react/src/BlobbiRendererView.tsx` — the pure visual renderer
 (body SVG + accessory overlays inside the canonical square renderer box, see
 `docs/blobbi-renderer-contract.md`). Unchanged by Phase 3.
 
 Phase 4 made its purity enforceable rather than conventional: all defaulting
-moved into one pure `normalizeBlobbiRenderModel`, accessory image sources are
-resolved by an injectable adapter instead of an Island asset path baked into the
-renderer, and the whole transitive import graph is asserted by
-`src/components/blobbi/renderer-boundary.test.ts`. See
+moved into one pure `normalizeBlobbiRenderModel`, and accessory image sources
+became an injectable adapter instead of an Island asset path baked into the
+renderer. **Phase 5 turned that boundary into a package boundary**: the
+renderer, the render model, the accessory normalizer, the canonical size table,
+the SVG transforms and all Blobbi artwork now live in `@blobbi/react`, and
+Island imports them by package name.
+
+Island consumes it, and the package cannot see Island:
+
+| Island module | what it adds on top of the package |
+| --- | --- |
+| `BlobbiActor` | ground anchor, depth scale rig, ground shadow, z-index, float |
+| `MovableBlobbi` | local input, movement controller, pose selection |
+| `MultiplayerLayer` / `RemoteBlobbiSprite` | presence, relay subscriptions, seat occupancy |
+| `CurrentBlobbiDisplay` | local companion resolution + local equipment |
+| `CurrentBlobbiPreview` | the editor's coordinate box |
+| `AccessoryOverlay` | drag/wheel accessory editing |
+| `island-accessory-sources` + `asset-paths` | the accessory `AccessorySourceResolver` this repo's `public/` tree needs |
+| `BlobbiCard`, `MascotBlobbi` | reduced/decorative renderings built on `loadBlobbiSvg` |
+
+The package's public API, asset strategy, CSS contract and publication blockers
+are documented in `packages/blobbi-react/README.md`; the extraction record is in
 `docs/blobbi-package-readiness.md`.
 
 ## 6. Approach targets

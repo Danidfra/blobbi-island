@@ -45,11 +45,11 @@
  * These are simplifications of the project's own artwork, not invented characters.
  * References inspected:
  *
- * - **Baby** — `src/blobbi/baby-blobbi/lib/baby-svg-data.ts`, body path
+ * - **Baby** — `packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts`, body path
  *   `M 50 15 Q 72 25 75 55 Q 75 80 50 88 Q 25 80 25 55 Q 28 25 50 15` in a 100×100
  *   viewBox: a narrow apex at (50, 15) widening to its full width around y≈55 and
  *   closing on a broad round base at y≈88. Squat, round, widest low.
- * - **Adult** — `src/blobbi/adult-blobbi/lib/adult-svg-data.ts`, body path
+ * - **Adult** — `packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts`, body path
  *   `M 100 40 Q 70 60 60 90 Q 55 120 70 140 Q 85 155 100 160 Q 115 155 130 140
  *   Q 145 120 140 90 Q 130 60 100 40` in a 200×200 viewBox: a rounded apex at
  *   (100, 40), flanks bulging outward to x≈55/145 by y≈90–120, then a wide rounded
@@ -155,7 +155,7 @@ const BLOBBI_EGG: IslandCloudShapeGeometry = {
 /**
  * Baby — the **real** body path, verbatim.
  *
- * `src/blobbi/baby-blobbi/lib/baby-svg-data.ts`, the shape carrying
+ * `packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts`, the shape carrying
  * `data-blobbi-body="true"` in `BABY_BASE_SVG`, in its own 100×100 viewBox. The
  * odd `Q 50 10 50 15` is in the production artwork and is kept: it is the pinch at
  * the crown that makes a baby Blobbi a baby Blobbi rather than an egg.
@@ -176,7 +176,7 @@ const BLOBBI_BABY: IslandCloudShapeGeometry = {
 /**
  * Adult — the **real** body of the default adult form, verbatim.
  *
- * `src/blobbi/adult-blobbi/lib/adult-svg-data.ts`, the `data-blobbi-body="true"`
+ * `packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts`, the `data-blobbi-body="true"`
  * shape in `CATTI_BASE`: `ellipse cx="100" cy="120" rx="45" ry="60"` in a 200×200
  * viewBox. A broad upright oval.
  *

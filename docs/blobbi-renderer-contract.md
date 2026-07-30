@@ -3,6 +3,13 @@
 > **See also (Phase 3):** [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md)
 > for how the renderer sits inside the consolidated actor/movement/interaction
 > architecture. This contract itself is unchanged and remains authoritative.
+>
+> **Phase 5 (extraction):** the renderer now lives in the local workspace
+> package **`@blobbi/react`** (`packages/blobbi-react/`). Every rule below is
+> unchanged — only the file paths moved. Path references in this document are
+> updated in place; see [`blobbi-package-readiness.md`](./blobbi-package-readiness.md)
+> for the boundary and `packages/blobbi-react/README.md` for the consumer-facing
+> contract.
 
 _Established 2026-07-29. Companions: `docs/blobbi-actor-ui-audit.md` (why),
 `docs/blobbi-actor-position-migration-notes.md` (what comes next)._
@@ -13,7 +20,7 @@ The renderer box is a **square, fixed-pixel box** that is the single local
 coordinate space for everything the Blobbi renderer paints. There is exactly
 one box: the body fills it, accessories position and size against it, and the
 editor edits against it. Implemented in
-`src/components/blobbi/lib/blobbi-render-size.ts`.
+`packages/blobbi-react/src/blobbi-render-size.ts`.
 
 ## 2. Size tokens and dimensions
 
@@ -107,7 +114,7 @@ runtime conversion.** The Nostr event schema is unchanged.
 
 ## 8. Purity split
 
-- **`BlobbiRendererView`** (`src/components/blobbi/BlobbiRendererView.tsx`) is
+- **`BlobbiRendererView`** (`packages/blobbi-react/src/BlobbiRendererView.tsx`) is
   **pure**: renders exclusively from props (visual identity, size token,
   sleep/facing/gaze, pre-normalized accessory placements, instance id). It
   calls no Nostr, profile, or equipment hooks — its test suite renders it with
@@ -116,7 +123,9 @@ runtime conversion.** The Nostr event schema is unchanged.
   current companion (`useBlobbis` + `useBlobbonautProfile`), fetches equipment
   (`useAccessoryManagement`), normalizes placements
   (`normalizeAccessoryPlacements`), and passes props down. `visualOverride`
-  remains for the info modal's read-only remote preview.
+  remains for the info modal's read-only remote preview — and since Phase 5 an
+  override draws ONLY the accessories the caller supplies via
+  `accessoryOverride`, never the local player's (see §9).
 - **Remote players** (`RemoteBlobbiSprite` in `MultiplayerLayer.tsx`) use
   `BlobbiRendererView` directly with explicit visual props — rendering someone
   else's Blobbi no longer subscribes to the local player's data. Remote
@@ -135,6 +144,22 @@ presence, chat anchors, room sizing choices (`location-blobbi-sizes.ts`), and
 both actor wrappers (`MovableBlobbi`, `RemoteBlobbiSprite`). `MascotBlobbi`
 (decorative, own explicit 80–240 px ladder, no accessories) and `BlobbiCard`
 keep their own visual identity deliberately — they are not actor renderers.
+
+Also Island-specific: **equipment ownership**. The renderer draws exactly the
+accessories it is handed. `CurrentBlobbiDisplay` decides which those are, and
+since Phase 5 the rule is that accessories follow the *visual*, not the
+component:
+
+| props | drawn |
+| --- | --- |
+| no `visualOverride` | local companion + its own equipment |
+| `visualOverride`, no `accessoryOverride` | that visual, wearing nothing |
+| `visualOverride` + `accessoryOverride` | that visual, wearing exactly those |
+
+Before this, the local player's equipment was drawn on top of *any* visual, so
+the info modal's read-only preview of another player's Blobbi rendered it in
+your hats. Fetching another player's equipment remains out of scope — the
+honest render of unknown equipment is none.
 
 ## 10. What Phase 1 intentionally did NOT solve (since implemented in Phase 2)
 
@@ -162,3 +187,32 @@ keep their own visual identity deliberately — they are not actor renderers.
 4. Accessories at non-`xl` sizes are a few px larger (one canonical ratio
    instead of four divergent multiplier tables); `xl` — the editor and the
    most common accessory context — is pixel-identical.
+
+## 12. Phase 5 — extraction (no contract change)
+
+The renderer moved to `@blobbi/react` without any change to the rules above.
+Verified by re-running the Phase 4 fingerprint comparison: **17 renderer
+outputs — every stage, size token, facing, eye state, gaze case, framed mode,
+accessory set and degenerate input — hash byte-identically before and after
+extraction.**
+
+File relocations (contents unchanged unless noted):
+
+| was | is now |
+| --- | --- |
+| `src/components/blobbi/BlobbiRendererView.tsx` | `packages/blobbi-react/src/BlobbiRendererView.tsx` |
+| `src/components/blobbi/lib/blobbi-render-model.ts` | `packages/blobbi-react/src/blobbi-render-model.ts` |
+| `src/components/blobbi/lib/blobbi-render-size.ts` | `packages/blobbi-react/src/blobbi-render-size.ts` |
+| `src/components/blobbi/lib/accessory-normalize.ts` | `packages/blobbi-react/src/accessory-normalize.ts` |
+| `src/lib/loadBlobbiSvg.ts` | `packages/blobbi-react/src/artwork/load-blobbi-svg.ts` |
+| `src/blobbi/ui/lib/svg/**` | `packages/blobbi-react/src/svg/**` |
+| `src/blobbi/{baby,adult}-blobbi/**`, `src/blobbi/core/types/blobbi.ts` | `packages/blobbi-react/src/artwork/**` |
+
+Two behavioral notes, both intentional:
+
+- `normalizeAccessoryPlacements` no longer defaults to Blobbi Island's asset
+  resolver. Its default is now `DEFAULT_ACCESSORY_SOURCES` ("use the URL you
+  were given"); Island passes `islandAccessorySources` explicitly, so the
+  resolved fallback chain is unchanged on every Island path.
+- The accessory-ownership fix in §8 / §9 is the one deliberate on-screen change
+  in the phase.

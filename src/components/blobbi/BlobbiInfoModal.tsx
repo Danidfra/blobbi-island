@@ -436,6 +436,11 @@ export function BlobbiInfoModal({
                     isStaticPreview={true}
                     showAccessories={selectedTab !== 'inventory'}
                     className="transform-gpu"
+                    /* Read-only = someone else's Blobbi. No `accessoryOverride`
+                       is passed because this modal has not fetched their
+                       equipment, so the honest render is a bare Blobbi. It used
+                       to inherit the LOCAL player's accessories here, drawing a
+                       stranger in your hats (fixed in Phase 5). */
                     visualOverride={readOnly ? externalVisual : undefined}
                     idSuffix={`preview:${previewKey}`}
                   />

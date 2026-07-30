@@ -11,7 +11,7 @@ import {
   actorVisualFocusPoint,
   worldDistancePx,
 } from './blobbi-ground';
-import { BLOBBI_RENDER_SIZE_PX } from '@/components/blobbi/lib/blobbi-render-size';
+import { BLOBBI_RENDER_SIZE_PX } from '@blobbi/react';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
 
 const SIZES = ['sm', 'lg', 'xl'] as const;

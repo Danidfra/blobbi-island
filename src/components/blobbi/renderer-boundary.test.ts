@@ -1,34 +1,34 @@
 /**
- * PACKAGE-BOUNDARY enforcement for the pure Blobbi renderer (Phase 4).
+ * ISLAND-SIDE package boundary (Phase 5).
  *
- * `BlobbiRendererView` is the component a future `@blobbi/react` package would
- * export. Everything that makes that possible is a property of its TRANSITIVE
- * import graph, and every one of those properties is cheap to break by adding a
- * single convenient import — so they are asserted against the real graph rather
- * than described in a comment.
+ * The renderer now lives in `@blobbi/react`. That package proves its own purity
+ * (`packages/blobbi-react/src/package-purity.test.ts` — it cannot reach a relay,
+ * a user, a world or an asset path). What THIS file proves is the half that
+ * lives on the Island side of the line, and that no amount of package hygiene
+ * can guarantee:
  *
- * The claims:
- *
- *  1. The renderer's subtree cannot reach a relay, a query client, the local
- *     user, the Island world, movement, presence, or a router. A module that
- *     cannot import `useBlobbis` cannot subscribe to it, however a future
- *     refactor is shaped.
- *  2. The subtree lives in a small, known set of directories — the ones a later
- *     extraction phase would physically move.
- *  3. The dependency arrow between the actor and the renderer points ONE way:
- *     `BlobbiActor` may wrap the renderer; the renderer may not know it exists.
- *  4. Remote rendering never routes through the local-player wrapper.
+ *  1. There is exactly ONE renderer implementation, and it is the package's.
+ *     A local re-implementation would compile, pass every behavioral test, and
+ *     silently fork the drawing — so its absence is asserted directly.
+ *  2. Island talks to the package through its public entry point, not through
+ *     its file layout.
+ *  3. The dependency arrow between the actor and the renderer points ONE way.
+ *  4. Remote rendering never routes through the local-player wrapper, and the
+ *     local wrapper is the only place local-companion data enters.
+ *  5. The editor overlay shares the package's coordinate space instead of
+ *     restating it.
  *
  * Import statements are matched, not free text, so the prose in these modules —
  * which discusses `useAccessoryManagement` and `BlobbiActor` at length — does
  * not trip the check.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, statSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const ROOT = process.cwd();
-const RENDERER = join(ROOT, 'src/components/blobbi/BlobbiRendererView.tsx');
+const ISLAND = join(ROOT, 'src');
+const PACKAGE = 'packages/blobbi-react';
 
 /** Every module specifier actually imported (static, dynamic, or re-exported). */
 function importsOf(file: string): string[] {
@@ -47,217 +47,138 @@ function importsOf(file: string): string[] {
   return [...specifiers];
 }
 
-/** Resolve a specifier to a source file, or null when it is an external package. */
-function resolveSpecifier(specifier: string, fromFile: string): string | null {
-  let base: string;
-  if (specifier.startsWith('@/')) base = join(ROOT, 'src', specifier.slice(2));
-  else if (specifier.startsWith('.')) base = resolve(dirname(fromFile), specifier);
-  else return null;
-
-  for (const ext of ['.ts', '.tsx', '']) {
-    const candidate = base + ext;
-    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
-  }
-  for (const index of ['/index.ts', '/index.tsx']) {
-    const candidate = base + index;
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
-}
-
-interface Subtree {
-  /** Every internal source file reachable from the entry, including it. */
-  files: string[];
-  /** Every external package specifier reachable from the entry. */
-  externals: string[];
-  /** importer -> specifier pairs, for error messages that name the culprit. */
-  edges: Array<{ file: string; specifier: string }>;
-}
-
-/** The complete transitive closure of a module's imports. */
-function subtreeOf(entry: string): Subtree {
-  const files = new Set<string>();
-  const externals = new Set<string>();
-  const edges: Array<{ file: string; specifier: string }> = [];
-
-  const walk = (file: string) => {
-    if (files.has(file)) return;
-    files.add(file);
-    for (const specifier of importsOf(file)) {
-      edges.push({ file: file.replace(`${ROOT}/`, ''), specifier });
-      const resolved = resolveSpecifier(specifier, file);
-      if (resolved) walk(resolved);
-      else externals.add(specifier);
-    }
-  };
-
-  walk(entry);
-  return { files: [...files].map((f) => f.replace(`${ROOT}/`, '')).sort(), externals: [...externals].sort(), edges };
-}
-
-const renderer = subtreeOf(RENDERER);
-
-/**
- * What the pure renderer must never be able to reach.
- *
- * Each entry is a CATEGORY, not a module: the point is that no member of the
- * category can enter, so a newly added sibling is caught too.
- */
-const FORBIDDEN: Array<{ pattern: RegExp; why: string }> = [
-  // ── Data ────────────────────────────────────────────────────────────────
-  { pattern: /^@nostrify\//, why: 'a Nostr client' },
-  { pattern: /^nostr-tools/, why: 'a Nostr library' },
-  { pattern: /^@tanstack\//, why: 'a query client' },
-  { pattern: /^@\/hooks\/useNostr/, why: 'a Nostr hook' },
-  { pattern: /useBlobbis$|useBlobbiEvents|useBlobbonautProfile|useOptimizedStatus/, why: 'a local-companion data hook' },
-  { pattern: /useCurrentUser|useLoggedInAccounts|useLoginActions/, why: 'a current-user hook' },
-  { pattern: /useAccessoryManagement/, why: 'the accessory editor hook' },
-  { pattern: /^@\/inventory/, why: 'the inventory layer' },
-  // ── Island world ────────────────────────────────────────────────────────
-  { pattern: /^@\/lib\/location-/, why: 'an Island location module' },
-  { pattern: /^@\/lib\/world-|world-coordinates/, why: 'world coordinates' },
-  { pattern: /^@\/lib\/boundaries|location-boundaries/, why: 'room boundaries' },
-  { pattern: /blobbi-ground|blobbi-pose|blobbi-world-render|spatial-intent/, why: 'Island world/pose geometry' },
-  { pattern: /^@\/lib\/multiplayer|useIslandPresence|theater-occupancy/, why: 'presence/multiplayer' },
-  { pattern: /^@\/lib\/theater|theater-/, why: 'theater configuration' },
-  { pattern: /useLocation|useMovement|MovementBlocker|useBlobbiMovementController|pending-interaction|usePendingInteraction/, why: 'movement or location state' },
-  { pattern: /^@\/lib\/gaze/, why: 'the Island attention/gaze resolver' },
-  // ── App shell ───────────────────────────────────────────────────────────
-  { pattern: /^react-router/, why: 'a router' },
-  { pattern: /^@\/contexts\//, why: 'an app context' },
-  { pattern: /^@\/hooks\/useLocalStorage|useAppContext|useTheme|useToast/, why: 'app-shell state' },
-  // ── Components ──────────────────────────────────────────────────────────
-  // The renderer is the LEAF of the component graph. `@/components/blobbi/lib/`
-  // is exempt: it is pure, React-free data code that merely happens to live
-  // under the components tree today (extraction moves it to core).
-  { pattern: /^@\/components\/(?!blobbi\/lib\/)/, why: 'another component' },
-  { pattern: /BlobbiActor|MovableBlobbi|CurrentBlobbiDisplay|CurrentBlobbiPreview|AccessoryOverlay|Modal$/, why: 'an Island actor/wrapper/modal component' },
-];
-
-describe('the pure renderer subtree reaches nothing it must not', () => {
-  it('has a subtree to check, and it is small', () => {
-    expect(renderer.files.length).toBeGreaterThan(10);
-    // A guardrail, not a target: if the renderer's graph doubles, the boundary
-    // needs a human look rather than a silently passing test.
-    expect(renderer.files.length).toBeLessThan(45);
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(full);
+    return /\.tsx?$/.test(entry.name) ? [full] : [];
   });
+}
 
-  it.each(FORBIDDEN.map((f) => [f.why, f.pattern] as const))(
-    'never imports %s',
-    (why, pattern) => {
-      const offenders = renderer.edges
-        .filter(({ file, specifier }) => renderer.files.includes(file) && pattern.test(specifier))
-        .map(({ file, specifier }) => `${file} -> ${specifier}`);
-      expect(offenders, `pure renderer subtree imports ${why}`).toEqual([]);
-    },
-  );
+const ISLAND_FILES = sourceFiles(ISLAND);
+const rel = (file: string) => file.replace(`${ROOT}/`, '');
 
-  it('depends on a tiny, deliberate set of external packages', () => {
-    // React plus className utilities plus the already-extracted core package.
-    // Anything else arriving here is a new peer dependency for the future
-    // package, which is a decision — so it is recorded in this list.
-    expect(renderer.externals).toEqual([
-      '@blobbi-kit/core/color-guardrails',
-      'clsx',
-      'react',
-      'tailwind-merge',
-    ]);
-  });
-
-  it('lives in the directories a later extraction would move, and nowhere else', () => {
-    const ALLOWED_PREFIXES = [
-      'src/blobbi/',                    // SVG artwork + pure SVG transforms
-      'src/components/blobbi/lib/',     // pure render/accessory model
-      'src/components/blobbi/BlobbiRendererView.tsx',
-      'src/lib/loadBlobbiSvg.ts',       // pure SVG assembly
-      'src/lib/asset-paths.ts',         // Island asset adapter (see below)
-      'src/lib/utils.ts',               // cn()
+describe('exactly one renderer implementation exists, and Island consumes it', () => {
+  it('keeps no second copy of the renderer, the model, or the artwork in src/', () => {
+    // The failure mode this guards against is not "somebody deletes the
+    // package"; it is "somebody copies a file back into src/ to avoid an
+    // import, and the two drift". Names, not contents, because a fork always
+    // starts as an exact copy.
+    const forbiddenBasenames = [
+      'BlobbiRendererView.tsx',
+      'blobbi-render-model.ts',
+      'blobbi-render-size.ts',
+      'accessory-normalize.ts',
+      'loadBlobbiSvg.ts',
+      'load-blobbi-svg.ts',
     ];
-    const strays = renderer.files.filter(
-      (file) => !ALLOWED_PREFIXES.some((prefix) => file.startsWith(prefix)),
+    const strays = ISLAND_FILES.filter((file) =>
+      forbiddenBasenames.some((name) => file.endsWith(`/${name}`)),
+    ).map(rel);
+    expect(strays, 'these belong to @blobbi/react').toEqual([]);
+  });
+
+  it('draws no Blobbi body of its own: the SVG pipeline is the package\'s alone', () => {
+    // `loadBlobbiSvg`, `customizeAdultSvg`, `customizeBabySvg` and the artwork
+    // data modules are all package-internal. Any Island file referencing them
+    // by import is building a second pipeline.
+    const offenders = ISLAND_FILES.flatMap((file) =>
+      importsOf(file)
+        .filter((s) => /svg-customizer|svg-resolver|svg-data|@\/blobbi\//.test(s))
+        .map((s) => `${rel(file)} -> ${s}`),
     );
-    expect(strays).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 
-  it('confines Island asset-path knowledge to ONE adapter module', () => {
-    // `asset-paths.ts` is the only Island-layout-aware module in the subtree,
-    // and exactly one file may reach it: the accessory source adapter. That is
-    // what a consumer replaces instead of mirroring this repo's public/ tree.
-    const importers = renderer.edges
-      .filter(({ file, specifier }) => renderer.files.includes(file) && /asset-paths/.test(specifier))
-      .map(({ file }) => file)
-      .sort();
-    expect([...new Set(importers)]).toEqual([
-      'src/components/blobbi/lib/accessory-utils.ts',
-      'src/components/blobbi/lib/island-accessory-sources.ts',
-    ]);
-
-    // And the renderer component itself builds no path at all.
-    expect(importsOf(RENDERER).some((s) => /asset-paths/.test(s))).toBe(false);
+  it('imports the renderer only through the package public entry point', () => {
+    // Deep imports (`@blobbi/react/src/...`) would couple Island to the
+    // package's file layout, which is exactly what the entry point exists to
+    // hide.
+    const deep = ISLAND_FILES.flatMap((file) =>
+      importsOf(file)
+        .filter((s) => s.startsWith('@blobbi/react/') || s.includes(PACKAGE))
+        .filter((s) => !s.endsWith('.tsx') && !s.endsWith('.ts'))
+        .map((s) => `${rel(file)} -> ${s}`),
+    );
+    expect(deep).toEqual([]);
   });
 
-  it('contains exactly one React component file — the renderer', () => {
-    const components = renderer.files.filter((f) => f.endsWith('.tsx'));
-    expect(components).toEqual(['src/components/blobbi/BlobbiRendererView.tsx']);
+  it('actually uses the package in production code, not only in tests', () => {
+    const productionImporters = ISLAND_FILES.filter(
+      (file) => !/\.test\.tsx?$/.test(file) && importsOf(file).includes('@blobbi/react'),
+    ).map(rel);
+    expect(productionImporters.length).toBeGreaterThan(5);
+    // The three paths that matter: the local wrapper, the remote layer, and a
+    // plain card. If any of them stopped consuming the package it would mean a
+    // fork had appeared somewhere.
+    for (const required of [
+      'src/components/blobbi/CurrentBlobbiDisplay.tsx',
+      'src/components/blobbi/MultiplayerLayer.tsx',
+      'src/components/blobbi/BlobbiCard.tsx',
+    ]) {
+      expect(productionImporters).toContain(required);
+    }
   });
 });
 
 describe('the renderer/actor arrow points one way', () => {
-  it('the renderer does not know BlobbiActor exists', () => {
-    expect(renderer.files).not.toContain('src/components/blobbi/BlobbiActor.tsx');
-  });
-
-  it('BlobbiActor owns the world transforms the renderer must not', () => {
-    // The complement of the rule above: world scale, z-index, ground shadow and
-    // the position anchor live in the actor. If these ever moved INTO the
-    // renderer, it would stop being portable — so assert they are still here.
+  it('BlobbiActor owns the world transforms the package must not', () => {
+    // The complement of the package's own purity test: world scale, z-index,
+    // ground shadow and the position anchor live in the actor. If these ever
+    // moved INTO the renderer, it would stop being portable.
     const actor = readFileSync(join(ROOT, 'src/components/blobbi/BlobbiActor.tsx'), 'utf8');
     expect(actor).toContain('data-blobbi-shadow');
     expect(actor).toContain('data-blobbi-scale-rig');
     expect(actor).toContain('translate(-50%, -100%)');
+  });
 
-    const rendererSource = readFileSync(RENDERER, 'utf8');
-    for (const worldConcern of ['data-blobbi-shadow', 'zIndex', 'animate-float', 'scale-rig']) {
-      expect(rendererSource, `renderer must not own ${worldConcern}`).not.toContain(worldConcern);
-    }
+  it('the package has no idea BlobbiActor exists', () => {
+    const packageFiles = sourceFiles(join(ROOT, PACKAGE, 'src')).filter(
+      (f) => !/\.test\.tsx?$/.test(f),
+    );
+    const offenders = packageFiles.flatMap((file) =>
+      importsOf(file)
+        .filter((s) => /BlobbiActor|MovableBlobbi/.test(s))
+        .map((s) => `${rel(file)} -> ${s}`),
+    );
+    expect(offenders).toEqual([]);
   });
 });
 
-describe('the accessory EDITOR shares the renderer contract instead of restating it', () => {
+describe('the accessory EDITOR shares the package contract instead of restating it', () => {
   const OVERLAY = join(ROOT, 'src/components/blobbi/AccessoryOverlay.tsx');
 
-  it('the editor overlay is Island-only and never enters the static renderer', () => {
+  it('the editor overlay is Island-only and never enters the package', () => {
     // Drag/wheel editing, the equipment hook and DOM listeners belong to the
-    // editor. The static renderer proved above that it cannot reach them.
+    // editor. The package proved separately that it cannot reach them.
     const specifiers = importsOf(OVERLAY);
     expect(specifiers.some((s) => /useAccessoryManagement/.test(s))).toBe(true);
-    expect(renderer.files).not.toContain('src/components/blobbi/AccessoryOverlay.tsx');
   });
 
   it('uses the SAME box-relative sizing and ordering as the static renderer', () => {
     // Editor placements are authored in this coordinate space and replayed in
     // the world. If the two ever used different size bases or different layer
-    // ordering, every saved accessory would shift on save.
+    // ordering, every saved accessory would shift on save — so both read the
+    // constants from one module, which is now the package.
     const specifiers = importsOf(OVERLAY);
-    expect(specifiers).toContain('./lib/blobbi-render-size');
-    expect(specifiers).toContain('./lib/accessory-normalize');
+    expect(specifiers).toContain('@blobbi/react');
 
     const overlay = readFileSync(OVERLAY, 'utf8');
-    const rendererSource = readFileSync(RENDERER, 'utf8');
+    const renderer = readFileSync(join(ROOT, PACKAGE, 'src/BlobbiRendererView.tsx'), 'utf8');
     for (const shared of [
       'ACCESSORY_BASE_PERCENT',                 // one size base
       "transformOrigin: 'center'",              // one transform origin
     ]) {
       expect(overlay, `editor must share ${shared}`).toContain(shared);
-      expect(rendererSource, `renderer must share ${shared}`).toContain(shared);
+      expect(renderer, `renderer must share ${shared}`).toContain(shared);
     }
 
     // Ordering comes from the same module on both paths — but only the editor
     // CALLS it. The renderer consumes placements that are already normalized,
     // which is exactly why it stays free of equipment parsing.
     expect(overlay).toContain('normalizeAccessoryPlacements');
-    expect(rendererSource).toContain('NormalizedAccessoryPlacement');
-    expect(rendererSource).not.toContain('normalizeAccessoryPlacements(');
+    expect(renderer).toContain('NormalizedAccessoryPlacement');
+    expect(renderer).not.toContain('normalizeAccessoryPlacements(');
   });
 
   it('mounts the editor on the canonical renderer box, at the canonical size', () => {
@@ -277,7 +198,7 @@ describe('the accessory EDITOR shares the renderer contract instead of restating
     // No preview-only multiplier table and no responsive override may come
     // back: `2xl`/`3xl` are real renderer boxes, not scaled-up `lg`s.
     const preview = readFileSync(join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx'), 'utf8');
-    expect(preview).toContain('blobbi-render-size');
+    expect(importsOf(join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx'))).toContain('@blobbi/react');
     expect(preview).not.toMatch(/\b(sm|md|lg|xl):[a-z-]/);
   });
 });
@@ -285,9 +206,9 @@ describe('the accessory EDITOR shares the renderer contract instead of restating
 describe('remote rendering never subscribes to local-player data', () => {
   const MULTIPLAYER = join(ROOT, 'src/components/blobbi/MultiplayerLayer.tsx');
 
-  it('the multiplayer layer renders remotes through the pure renderer, not the local wrapper', () => {
+  it('the multiplayer layer renders remotes through the package, not the local wrapper', () => {
     const specifiers = importsOf(MULTIPLAYER);
-    expect(specifiers).toContain('./BlobbiRendererView');
+    expect(specifiers).toContain('@blobbi/react');
     for (const localOnly of [
       /CurrentBlobbiDisplay/,
       /CurrentBlobbiPreview/,
@@ -304,10 +225,33 @@ describe('remote rendering never subscribes to local-player data', () => {
 
   it('the local-player wrapper is the ONLY component holding the companion hooks', () => {
     // Not a ban — a census. `CurrentBlobbiDisplay` exists precisely to own this
-    // data, and the renderer beneath it must stay ignorant of it.
+    // data, and the package beneath it stays ignorant of it.
     const wrapper = importsOf(join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx'));
     expect(wrapper.some((s) => /useBlobbis/.test(s))).toBe(true);
     expect(wrapper.some((s) => /useBlobbonautProfile/.test(s))).toBe(true);
     expect(wrapper.some((s) => /useAccessoryManagement/.test(s))).toBe(true);
+  });
+});
+
+describe('Island keeps the asset adapter the package refuses to have', () => {
+  it('confines Island asset-path knowledge to the accessory adapter and tag utils', () => {
+    const importers = ISLAND_FILES.filter(
+      (file) =>
+        /components\/blobbi\/lib\//.test(file) &&
+        importsOf(file).some((s) => /asset-paths/.test(s)),
+    ).map(rel).sort();
+    expect(importers).toEqual([
+      'src/components/blobbi/lib/accessory-utils.ts',
+      'src/components/blobbi/lib/island-accessory-sources.ts',
+    ]);
+  });
+
+  it('passes that adapter explicitly — the package has no Island default', () => {
+    const display = readFileSync(join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx'), 'utf8');
+    expect(display).toContain('resolveSources: islandAccessorySources');
+
+    const normalizer = readFileSync(join(ROOT, PACKAGE, 'src/accessory-normalize.ts'), 'utf8');
+    expect(normalizer).toContain('DEFAULT_ACCESSORY_SOURCES');
+    expect(normalizer).not.toContain('island');
   });
 });

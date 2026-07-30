@@ -1,0 +1,13 @@
+{
+  "name": "@blobbi/react-consumer-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Test-only external consumer of @blobbi/react. Proves the package renders with no host application around it.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@blobbi/react": "*"
+  }
+}

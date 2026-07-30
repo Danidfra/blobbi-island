@@ -39,7 +39,7 @@ import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { BlobbiActor } from './BlobbiActor';
-import type { BlobbiRenderVisual } from './BlobbiRendererView';
+import type { BlobbiRenderVisual } from '@blobbi/react';
 
 export interface MovableBlobbiRef {
   /** Walk to a ground target through the movement system. */

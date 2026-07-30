@@ -31,3 +31,7 @@ docs/audits
 .env.*
 !.env.example
 .ai/
+
+# Build output of local workspace packages (packages/*). Source is what the app
+# consumes; dist is only produced to verify the publishable artifact.
+packages/*/dist

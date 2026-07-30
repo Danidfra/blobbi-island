@@ -1,0 +1,30 @@
+{
+  "name": "@blobbi/react",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Portable, plain-data React renderer for Blobbi characters.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@blobbi-kit/core": "^0.3.0",
+    "clsx": "^2.1.1",
+    "react": "^18.0.0 || ^19.0.0",
+    "tailwind-merge": "^2.5.2"
+  }
+}

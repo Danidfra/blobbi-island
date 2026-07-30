@@ -48,10 +48,19 @@ export default defineConfig(() => ({
       DEBUG_PRINT_LIMIT: '0', // Suppress DOM output that exceeds AI context windows
     },
   },
+  // `@blobbi/react` is a LOCAL, unpublished workspace package (packages/*), so it
+  // is consumed from TypeScript source through the npm workspace symlink rather
+  // than from a build artifact: no build ordering, and no stale `dist` shadowing
+  // an edit. Excluding it from dep pre-bundling keeps that source path honest in
+  // dev. `npm run build:package` produces the publishable ESM + .d.ts output.
+  optimizeDeps: {
+    exclude: ['@blobbi/react'],
+  },
   resolve: {
     alias: [
       // @blobbi-kit/core and @blobbi-kit/react resolve from their published
-      // npm packages in node_modules — no source aliases.
+      // npm packages in node_modules — no source aliases. @blobbi/react
+      // resolves through its workspace symlink, also without a source alias.
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },
       { find: "react-dom", replacement: path.resolve(__dirname, "node_modules/react-dom") },

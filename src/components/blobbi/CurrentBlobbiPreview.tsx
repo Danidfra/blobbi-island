@@ -12,7 +12,7 @@
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
 import { cn } from "@/lib/utils";
-import type { BlobbiRenderSize } from "./lib/blobbi-render-size";
+import type { BlobbiRenderSize } from "@blobbi/react";
 
 interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "size"> {
   size?: BlobbiRenderSize;

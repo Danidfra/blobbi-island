@@ -30,7 +30,7 @@ import { WORLD_HEIGHT } from '@/lib/world-coordinates';
 import {
   BLOBBI_RENDER_SIZE_PX,
   type BlobbiRenderSize,
-} from '@/components/blobbi/lib/blobbi-render-size';
+} from '@blobbi/react';
 
 /**
  * World-percent position of a Blobbi's ground-contact point. Defined with the

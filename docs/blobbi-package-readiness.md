@@ -1,58 +1,67 @@
-# Blobbi renderer — package extraction readiness
+# Blobbi renderer — package extraction
 
-**Status:** Phase 4 complete. No package was created, moved, or published.
+**Status: Phase 5 complete. The renderer was extracted into the local workspace
+package `@blobbi/react` (`packages/blobbi-react/`). It was NOT published.**
 
-This document records the **extraction boundary** for the Blobbi rendering
-layer: what is already portable, what is deliberately Island-only, what the
-future public API should be, and what still blocks a clean lift-out.
+This document was the Phase-4 *readiness* analysis; it is now the record of the
+extraction that analysis called for. Sections 1–13 describe the boundary and are
+kept because they are still the reasoning behind it, with paths updated to
+where the code actually lives. Section 14 records what was done.
 
-It is not another audit of the renderer's behavior — the behavior contract lives
-in [`blobbi-renderer-contract.md`](./blobbi-renderer-contract.md) and the actor
-model in [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md). Read
-those first; this document only answers *"what would it take to ship the
-renderer as a package?"*
+The behavior contract lives in [`blobbi-renderer-contract.md`](./blobbi-renderer-contract.md),
+the actor model in [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md),
+and the package's consumer-facing documentation in
+[`packages/blobbi-react/README.md`](../packages/blobbi-react/README.md).
 
 The boundaries described here are **enforced by tests**, not by convention:
 
 | Test | Enforces |
 | --- | --- |
-| `src/components/blobbi/renderer-boundary.test.ts` | The renderer's transitive import graph: forbidden categories, allowed directories, allowed external packages, the actor→renderer arrow, editor/preview parity, remote-vs-local hooks |
-| `src/components/blobbi/BlobbiRendererView.plain-data.test.tsx` | Renders from plain JSON with **no providers at all**, across every stage/pose/accessory case |
-| `src/components/blobbi/lib/blobbi-render-model.test.ts` | Normalization: defaults, clamping, id sanitization, CSS-safe accessory numbers |
-| `src/components/blobbi/ActorRendererBoundary.test.tsx` | Renderer output is identical inside and outside `BlobbiActor`; local/remote pose parity |
+| `packages/blobbi-react/src/package-purity.test.ts` | The package's import graph: forbidden categories, no `@/` aliases anywhere, the exact peer-dependency set, private-not-published, no runtime fetch, clean `dist/` |
+| `packages/blobbi-react/src/package-api.test.ts` | The public export surface, exactly; internals stay internal; no `export *`; resolution by package name |
+| `packages/blobbi-react/src/package-css.test.ts` | The Tailwind class contract, the px↔class agreement, and that the app scans the package |
+| `packages/blobbi-react/src/BlobbiRendererView.plain-data.test.tsx` | Renders from plain JSON with **no providers at all** |
+| `packages/blobbi-react-consumer/src/consumer.test.tsx` | An external consumer, importing only `@blobbi/react`, with no host application around it |
+| `src/components/blobbi/renderer-boundary.test.ts` | Island holds no second renderer; imports go through the package entry point; the actor→renderer arrow; editor parity; remote-vs-local hooks |
+| `src/components/blobbi/CurrentBlobbiDisplay.accessory-policy.test.tsx` | Accessory ownership: local vs. override vs. supplied |
+| `src/components/blobbi/ActorRendererBoundary.test.tsx` | Renderer output is identical inside and outside `BlobbiActor` |
 
 ---
 
-## 1. Current dependency map
+## 1. Dependency map — and where each module ended up
 
-The complete **transitive** closure of `BlobbiRendererView` is 27 internal
+The complete **transitive** closure of `BlobbiRendererView` was 27 internal
 modules and 4 external packages. Every entry below was resolved from real import
-statements, not from inspection.
+statements. Paths are post-extraction; the `Island?` column is why each one
+landed where it did.
 
 ### Internal subtree (all of it)
 
 | Module group | Files | React? | DOM? | Nostr? | Island? | Verdict |
 | --- | --- | --- | --- | --- | --- | --- |
-| `src/blobbi/adult-blobbi/**` | 5 | no | no | no | no | **Reusable as-is** — SVG strings + pure customizer |
-| `src/blobbi/baby-blobbi/**` | 4 | no | no | no | no | **Reusable as-is** |
-| `src/blobbi/core/types/blobbi.ts` | 1 | no | no | no | no | **Reusable as-is** — visual/domain types |
-| `src/blobbi/ui/lib/svg/**` (`colors`, `container`, `gaze`, `ids`, `rear-view`) | 6 | no | no | no | no | **Reusable as-is** — pure string→string SVG transforms |
-| `src/lib/loadBlobbiSvg.ts` | 1 | no | no | no | no | **Reusable as-is** — synchronous SVG assembly |
-| `src/components/blobbi/lib/blobbi-render-size.ts` | 1 | no | no | no | Tailwind | **Reusable after a small adapter** (see §9) |
-| `src/components/blobbi/lib/blobbi-render-model.ts` | 1 | no | no | no | no | **Reusable as-is** |
-| `src/components/blobbi/lib/accessory-types.ts` | 1 | no | no | protocol | no | **Reusable as-is** (protocol/domain types) |
-| `src/components/blobbi/lib/accessory-normalize.ts` | 1 | no | no | no | no | **Reusable as-is** |
-| `src/components/blobbi/lib/accessory-utils.ts` | 1 | no | no | protocol | asset URLs | **Reusable after split** (see §8) |
-| `src/components/blobbi/lib/island-accessory-sources.ts` | 1 | no | no | no | **yes** | **Island adapter — replaced on extraction** |
-| `src/lib/asset-paths.ts` | 1 | no | no | no | **yes** | **Island-only** — reached by the adapter alone |
-| `src/lib/utils.ts` (`cn`) | 1 | no | no | no | no | Trivially reusable / replaceable |
-| `src/components/blobbi/BlobbiRendererView.tsx` | 1 | **yes** | yes | no | no | **The component to extract** |
+| `packages/blobbi-react/src/artwork/adult-blobbi/**` | 5 | no | no | no | no | **Reusable as-is** — SVG strings + pure customizer |
+| `packages/blobbi-react/src/artwork/baby-blobbi/**` | 4 | no | no | no | no | **Reusable as-is** |
+| `packages/blobbi-react/src/artwork/core/blobbi-domain-types.ts` | 1 | no | no | no | no | **Reusable as-is** — visual/domain types |
+| `packages/blobbi-react/src/svg/**` (`colors`, `container`, `gaze`, `ids`, `rear-view`) | 6 | no | no | no | no | **Reusable as-is** — pure string→string SVG transforms |
+| `packages/blobbi-react/src/artwork/load-blobbi-svg.ts` | 1 | no | no | no | no | **Reusable as-is** — synchronous SVG assembly |
+| `packages/blobbi-react/src/blobbi-render-size.ts` | 1 | no | no | no | Tailwind | **Moved** — px table + class map both ship; see §7, §11 blocker 2 |
+| `packages/blobbi-react/src/blobbi-render-model.ts` | 1 | no | no | no | no | **Reusable as-is** |
+| `packages/blobbi-react/src/accessory-types.ts` (rendering half) | 1 | no | no | no | no | **Moved** — slots, rear-view rules, placement input, resolver types |
+| `src/components/blobbi/lib/accessory-types.ts` (protocol half) | 1 | no | no | protocol | yes | **Stayed** — equip/inv tags, forms, errors; re-exports the package's slot vocabulary |
+| `packages/blobbi-react/src/accessory-normalize.ts` | 1 | no | no | no | no | **Reusable as-is** |
+| `src/components/blobbi/lib/accessory-utils.ts` | 1 | no | no | protocol | asset URLs | **Stayed** — tag parsing + Island URL conventions |
+| `src/components/blobbi/lib/island-accessory-sources.ts` | 1 | no | no | no | **yes** | **Stayed** — the Island `AccessorySourceResolver` |
+| `src/lib/asset-paths.ts` | 1 | no | no | no | **yes** | **Stayed** — Island-only, reached by the adapter alone |
+| `src/lib/utils.ts` (`cn`) | 1 | no | no | no | no | **Reimplemented** as `packages/blobbi-react/src/internal/cn.ts` |
+| `packages/blobbi-react/src/BlobbiRendererView.tsx` | 1 | **yes** | yes | no | no | **Moved** — the component |
 
 ### External packages
 
 `react`, `clsx`, `tailwind-merge`, `@blobbi-kit/core/color-guardrails`. That is
-the entire peer-dependency surface — asserted exactly in the boundary test, so a
-new one is a recorded decision rather than an accident.
+the entire peer-dependency surface, and it is exactly what
+`packages/blobbi-react/package.json` declares — asserted from the import graph,
+from the manifest, and from the built `dist/`, so a new one is a recorded
+decision rather than an accident.
 
 ### What is **not** in the subtree (and must never be)
 
@@ -79,32 +88,60 @@ component (including `BlobbiActor` and all modals).
 
 ---
 
-## 2. Proposed future module layers
+## 2. Module layers, as built
 
-Two packages already exist and are consumed from npm: `@blobbi-kit/core`
-(framework-agnostic domain/protocol) and `@blobbi-kit/react` (hooks — currently
-**no** JSX components). The rendering layer should extend those rather than
-introduce a third package.
+Two packages were already consumed from npm before this phase and are published
+from a **different repository** (`github.com/Danidfra/blobbi-kit`, built with
+tsup): `@blobbi-kit/core` (framework-agnostic domain/protocol) and
+`@blobbi-kit/react` (hooks — no JSX components). Phase 4 proposed extending
+those. **That turned out to be impossible from here**: this repository has no
+access to them, and `@blobbi-kit/react` is an installed dependency the app
+already uses for hooks, so a local package could not claim that name without
+shadowing it.
+
+The renderer therefore became its own local workspace package, `@blobbi/react`,
+which is also the name Phase 5's brief preferred. The ecosystem split it
+implements:
 
 ```
-@blobbi-kit/core                    (exists — pure, framework-agnostic)
-└── render/
-    ├── blobbi-render-model         visual types + normalizeBlobbiRenderModel
-    ├── accessory-types             slots, rear-view rules, EquipmentConfig
-    ├── accessory-normalize         placements, deterministic order, sources
-    ├── accessory-tags              parse/serialize equip + inv tags
-    ├── svg/                        colors, ids, gaze, rear-view, container
-    ├── artwork/                    baby + adult SVG data and customizers
-    └── loadBlobbiSvg               synchronous SVG assembly
+@blobbi-kit/core     (external, npm)   framework-agnostic domain + protocol
+@blobbi-kit/react    (external, npm)   Blobbi React hooks (no components)
+@blobbi/react        (LOCAL, private)  React renderer primitives + artwork
+Blobbi Island        (this app)        actor / world / data / editor adapters
+```
 
-@blobbi-kit/react                   (exists — currently hooks only)
-└── render/
-    ├── BlobbiRendererView          the pure component
-    ├── AccessoryLayerView          one accessory layer group
-    └── render-size                 BLOBBI_RENDER_SIZE_PX + class map
+`@blobbi/react` depends on `@blobbi-kit/core` (one subpath:
+`color-guardrails`, used by the adult SVG customizer) as a peer. It does not
+depend on `@blobbi-kit/react`.
 
-Blobbi Island                       (stays here)
-├── CurrentBlobbiDisplay            local companion + equipment
+```
+packages/blobbi-react/
+├── package.json                    private, ESM, peer deps only
+├── tsconfig.json                   typecheck (noEmit)
+├── tsconfig.build.json             emit dist/ + .d.ts
+├── README.md                       the consumer-facing contract
+└── src/
+    ├── index.ts                    the entire public API, hand-written
+    ├── BlobbiRendererView.tsx      the component (+ AccessoryLayerView)
+    ├── blobbi-render-model.ts      visual types + normalizeBlobbiRenderModel
+    ├── blobbi-render-size.ts       canonical box: px table + Tailwind classes
+    ├── accessory-types.ts          slots, rear-view rules, placement input,
+    │                               source resolver + neutral default
+    ├── accessory-normalize.ts      placements, deterministic order, sources
+    ├── internal/cn.ts              package-local clsx + tailwind-merge
+    ├── svg/                        colors, ids, container, gaze, rear-view
+    └── artwork/
+        ├── load-blobbi-svg.ts      synchronous SVG assembly
+        ├── core/                   domain types the artwork shares
+        ├── baby-blobbi/            SVG data + resolver + customizer
+        └── adult-blobbi/           SVG data + resolver + customizer
+
+packages/blobbi-react-consumer/     test-only external consumer fixture
+├── fixtures/                       3 tiny SVGs + plain accessory data
+└── src/consumer.test.tsx           imports ONLY @blobbi/react
+
+Blobbi Island                       (stays in src/)
+├── CurrentBlobbiDisplay            local companion + equipment ownership
 ├── CurrentBlobbiPreview            editor coordinate box
 ├── BlobbiActor                     ground anchor, depth, shadow, z, float
 ├── MovableBlobbi                   local input + movement
@@ -112,18 +149,17 @@ Blobbi Island                       (stays here)
 ├── blobbi-pose / blobbi-ground     world pose + ground geometry
 ├── AccessoryOverlay                drag editor
 ├── BlobbiInfoModal                 editor host + persistence
-├── island-accessory-sources        asset resolver (the adapter)
-└── asset-paths                     public/ layout
+├── lib/accessory-types             equip/inv protocol types (re-exports the
+│                                   package's slot vocabulary — no second copy)
+├── lib/accessory-utils             tag parsing + Island URL conventions
+├── lib/island-accessory-sources    the AccessorySourceResolver
+└── lib/asset-paths                 public/ layout
 ```
 
 **Rationale.** The split follows the one line that actually matters: *does the
-module need to know where it is?* Everything above `BlobbiRendererView` in the
-diagram answers "no" — it is fed. Everything below `Blobbi Island` answers
-"yes" — it owns a position, a relay, a user, or an input device. The React/core
-line is the second, easier cut: JSX on one side, strings and objects on the
-other.
-
----
+module need to know where it is?* Everything in `@blobbi/react` answers "no" —
+it is fed. Everything in Blobbi Island answers "yes" — it owns a position, a
+relay, a user, or an input device.
 
 ## 3. Renderer public props contract
 
@@ -212,7 +248,7 @@ copy.
 
 Three concerns, now cleanly separated:
 
-1. **Pure transformation** — `src/blobbi/ui/lib/svg/*` and the per-stage
+1. **Pure transformation** — `packages/blobbi-react/src/svg/*` and the per-stage
    customizers. All `string -> string`, all testable with SVG literals, no DOM.
 2. **Asset "loading"** — `loadBlobbiSvg` is *synchronous string selection* from
    inlined SVG data. There is no fetch, no network, and no filesystem, so **no
@@ -230,10 +266,15 @@ type AccessorySourceResolver = (req: { code, slot, url? }) => readonly string[];
 `normalizeAccessoryPlacements(equipment, { facing, resolveSources })` resolves
 each placement's ordered `sources` up front. The renderer walks that list on
 load failure and knows nothing about `.webp`, `.png`, or `/assets/...`. The
-boundary test asserts that exactly two modules may reach `asset-paths`, and that
-the renderer component is not one of them.
+Island boundary test asserts that exactly two modules may reach `asset-paths`
+(the tag utils and the adapter), and the package cannot reach it at all.
 
-**Net effect:** a future consumer supplies its own resolver (or just plain URLs)
+Since extraction the package's **default** resolver is
+`DEFAULT_ACCESSORY_SOURCES` — "use the URL you were given". Island passes
+`islandAccessorySources` explicitly at every call site, so its fallback chain
+(stored/derived URL → local `.webp` → local `.png`) is unchanged.
+
+**Net effect:** a consumer supplies its own resolver (or just plain URLs)
 without mirroring this repository's `public/` tree.
 
 ---
@@ -334,127 +375,190 @@ previously-random fallback, which no consumer could have depended on.
 
 ---
 
-## 10. Proposed future public API
+## 10. Public API, as shipped
 
-### `@blobbi-kit/core` (pure)
+Exported from `@blobbi/react` and asserted exactly by `package-api.test.ts`.
+There is no `export *` in the package, and no deep imports are supported.
 
-| Export | Why consumers need it | Stable? | React? |
-| --- | --- | --- | --- |
-| `BlobbiRenderVisual` | The input type they must construct | yes | no |
-| `normalizeBlobbiRenderModel` | Resolve partial data before rendering / for non-DOM consumers | yes | no |
-| `BlobbiRenderModel` | Output of the above | yes | no |
-| `AccessorySlot`, `EquipmentConfig` | Describe equipped items | yes | no |
-| `NormalizedAccessoryPlacement` | The renderer's accessory input type | yes | no |
-| `normalizeAccessoryPlacements` | Turn equipment into placements | yes | no |
-| `AccessorySourceResolver` | Point accessories at their own assets | yes | no |
-| `REAR_VIEW_HIDDEN_SLOTS`, `ACCESSORY_SLOT_RANK` | Reproduce ordering/visibility in custom UI | yes | no |
-| `parseEquipTags`, `createEquipTag` | Protocol logic — read/write kind 31124 equipment | yes | no |
-| `loadBlobbiSvg` | Render a Blobbi without React at all | yes | no |
-| `applyGazeMarkup`, `applyRearView`, `uniquifySvgIds` | Compose custom SVG pipelines | **provisional** | no |
-
-### `@blobbi-kit/react`
-
-| Export | Why consumers need it | Stable? |
+| Export | Why a consumer needs it | Stable? |
 | --- | --- | --- |
 | `BlobbiRendererView` | The component; the whole point | yes |
 | `BlobbiRendererViewProps` | Typed wrapping | yes |
-| `BlobbiRenderSize` | Pick a size | yes |
-| `BLOBBI_RENDER_SIZE_PX` | Lay out around the box without Tailwind | yes |
-| `AccessoryLayerView` | **provisional** — only for consumers building their own composition | provisional |
-| `ACCESSORY_BASE_PERCENT`, `ACCESSORY_BASE_RATIO` | Build an editor on the same coordinate space | yes |
+| `AccessoryLayerView` | Building a custom composition | **provisional** |
+| `normalizeBlobbiRenderModel` | Resolve partial data before rendering | yes |
+| `normalizeInstanceId` | Reproduce id sanitization outside the renderer | yes |
+| `BlobbiRenderVisual`, `BlobbiRenderModel`, `BlobbiRenderModelInput`, `BlobbiRenderView` | The input/output types | yes |
+| `DEFAULT_STAGE`, `DEFAULT_ADULT_TYPE`, `FALLBACK_INSTANCE_ID` | Agree with the drawing in tooltip/label copy | yes |
+| `BLOBBI_RENDER_SIZE_PX`, `BlobbiRenderSize` | Lay out around the box without Tailwind | yes |
+| `BLOBBI_RENDER_SIZE_CLASSES` | The Tailwind projection — needed by any consumer that overrides the box | yes |
+| `ACCESSORY_BASE_RATIO`, `ACCESSORY_BASE_PERCENT`, `blobbiRenderSizePx`, `accessoryBasePx` | Build an editor on the same coordinate space | yes |
+| `normalizeAccessoryPlacements` | Turn placement data into render order | yes |
+| `ACCESSORY_SLOT_RANK`, `REAR_VIEW_HIDDEN_SLOTS` | Reproduce ordering/visibility in custom UI | yes |
+| `DEFAULT_ACCESSORY_SOURCES` | The neutral resolver, and a base to wrap | yes |
+| `AccessorySlot`, `AccessoryPlacementInput`, `NormalizedAccessoryPlacement`, `AccessoryLayer`, `NormalizeAccessoryOptions`, `AccessorySourceRequest`, `AccessorySourceResolver` | Types | yes |
+| `loadBlobbiSvg`, `BlobbiView` | Render a Blobbi without React at all | yes |
+| `applyGazeMarkup`, `applyRearView`, `uniquifySvgIds` | Compose custom SVG pipelines | **provisional** |
+
+**Deviations from the Phase-4 proposal**, and why:
+
+- `BLOBBI_RENDER_SIZE_CLASSES` was proposed as a non-export. It is exported:
+  the renderer's box IS those classes, Island's fallback tile and its actor need
+  the same box, and hiding the map would only force consumers to re-derive it.
+  The px table remains the framework-neutral form.
+- `parseEquipTags` / `createEquipTag` were proposed for `@blobbi-kit/core`. They
+  are protocol code, and this package is a renderer, so they stayed in Island
+  (`lib/accessory-utils.ts`) rather than moving into a React package.
+- `EquipmentConfig` did not move. The package's input type is
+  `AccessoryPlacementInput`, a structural subset of it — Island passes its
+  parsed equipment through unchanged, with no adapter object.
 
 ### Explicit non-exports
 
 `BlobbiActor`, `MovableBlobbi`, `useBlobbiMovementController`,
 `CurrentBlobbiDisplay`, `CurrentBlobbiPreview`, `AccessoryOverlay`,
-`BlobbiInfoModal`, `resolveActorRender` / `BlobbiActorPose`,
-`blobbi-ground`, room boundaries, location background maps,
-`location-blobbi-sizes`, presence adapters, `theater-seats-config`,
-seat/furniture configs, pending interactions, `useAccessoryManagement`,
-`asset-paths`, `island-accessory-sources`, every dev-room harness.
+`BlobbiInfoModal`, `resolveActorRender` / `BlobbiActorPose`, `blobbi-ground`,
+room boundaries, location background maps, `location-blobbi-sizes`, presence
+adapters, `theater-seats-config`, seat/furniture configs, pending interactions,
+`useAccessoryManagement`, `asset-paths`, `island-accessory-sources`, every
+dev-room harness — none of which is in the package at all.
 
-Also non-exported: `BLOBBI_RENDER_SIZE_CLASSES` (Tailwind-specific — the px
-table is the public form), and `accessoryBasePx` / `blobbiRenderSizePx` unless a
-consumer actually asks.
-
----
-
-## 11. Remaining extraction blockers
-
-None are behavioral; all are mechanical.
-
-| # | Blocker | Effort | Notes |
-| --- | --- | --- | --- |
-| 1 | `accessory-utils.ts` mixes protocol tag parsing with `generateAccessoryUrl` (a GitHub URL convention) and `resolveAccessoryImageUrl` | S | Split into `accessory-tags` (core) + the Island source adapter |
-| 2 | `blobbi-render-size.ts` exports both the px table and the Tailwind class map | S | Ship px from core; keep the class map in the React package or Island |
-| 3 | `cn()` from `src/lib/utils` | XS | Inline `clsx` + `tailwind-merge` in the package |
-| 4 | `@/` path alias throughout | S | Mechanical rewrite to relative paths at move time |
-| 5 | `@blobbi-kit/core/color-guardrails` is imported by the SVG customizers | XS | Already the target package — becomes an internal import |
-| 6 | Artwork lives as inlined TS string modules under `src/blobbi/*-blobbi/lib/*-svg-data.ts` | M | Large but purely mechanical; decide package size budget vs. external assets |
-| 7 | Renderer has no test for the framed (`transparent={false}`) theme classes outside Island CSS | XS | Document as consumer-supplied, or ship a minimal stylesheet |
-
-### Known issue found during this audit (not fixed — behavior preservation)
-
-`CurrentBlobbiDisplay` renders the **local player's** accessories even when a
-`visualOverride` is supplied. In `BlobbiInfoModal`'s read-only remote preview
-(`readOnly`, `selectedTab !== 'inventory'`, so `showAccessories` is true) that
-means another player's Blobbi is drawn wearing *your* hats.
-
-This is pre-existing behavior, not a Phase-4 regression, and fixing it changes
-what is on screen — which §18 of this phase's brief explicitly forbids. It is
-recorded here as a **product decision for a later phase**, and it is the one
-reason `CurrentBlobbiDisplay` cannot be described as cleanly separated. The
-renderer itself is unaffected: it draws exactly the accessories it is handed.
+Internal to the package but not exported: `cn`, every artwork module and
+customizer (`customizeAdultSvg`, `getBabyBaseSvg`, `ADULT_SVG_MAP`, …), the
+colour helpers, `ensureSvgFillsContainer`, `findRearViewRemovals` and the
+rear-view block lists. `package-api.test.ts` asserts each one is absent from the
+entry point.
 
 ---
 
-## 12. Recommended extraction sequence
+## 11. Extraction blockers — how each was resolved
 
-1. **Split `accessory-utils`** into protocol tag code and Island URL conventions
-   (blocker 1). Nothing else can move cleanly first.
-2. **Move the pure core**: `svg/*`, artwork + customizers, `loadBlobbiSvg`,
-   `blobbi-render-model`, `accessory-types`, `accessory-normalize`,
-   `accessory-tags` into `@blobbi-kit/core/render`. Island keeps importing them
-   from the package; the boundary test's allowed-directory list becomes the
-   package's file list.
-3. **Move the component**: `BlobbiRendererView` + `AccessoryLayerView` + the px
-   size table into `@blobbi-kit/react/render`, inlining `cn()`.
-4. **Leave the adapter behind**: `island-accessory-sources` and `asset-paths`
-   stay in Island and are passed in via `resolveSources`.
-5. **Flip the imports** in Island and delete the local copies. The four test
-   files in this phase move with the code (the boundary test becomes the
-   package's own lint) except the Island-specific parity assertions, which stay.
+Phase 4 listed seven mechanical blockers. All are closed.
 
-Compatibility for existing consumers is free at every step: Island imports the
-same symbols from a different specifier, and the props contract does not change.
+| # | Blocker | Resolution |
+| --- | --- | --- |
+| 1 | `accessory-utils.ts` mixed protocol tag parsing with Island URL conventions | Split by *ownership* rather than by file: the package defines only the rendering vocabulary (`AccessorySlot`, `REAR_VIEW_HIDDEN_SLOTS`, `AccessoryPlacementInput`, the resolver types). `accessory-utils.ts` kept every tag parser and Island URL convention and did not move. Island's `accessory-types.ts` re-exports the package's slot vocabulary so there is exactly one definition. |
+| 2 | `blobbi-render-size.ts` mixed the px table and the Tailwind class map | Both ship, both exported, both asserted to agree (`package-css.test.ts` derives px from each class name and compares). Keeping the classes is what preserves the `className`-override contract — and the visual output — exactly. |
+| 3 | `cn()` from `src/lib/utils` | Reimplemented in `src/internal/cn.ts` as four lines over `clsx` + `tailwind-merge` (already the renderer's only className dependencies). Island's `utils.ts` also exports button themes, so importing it would have dragged Island styling vocabulary in. |
+| 4 | `@/` path aliases throughout | Rewritten to relative paths. The package tsconfig defines no `baseUrl` and no `paths`, and `package-purity.test.ts` sweeps **every** file on disk — tests included — for `@/` specifiers. |
+| 5 | `@blobbi-kit/core/color-guardrails` imported by the SVG customizers | Declared a peer dependency. `package-purity.test.ts` asserts the external set is exactly `{@blobbi-kit/core/color-guardrails, clsx, react, tailwind-merge}` and that each is declared as a peer. |
+| 6 | Artwork as inlined TS string modules; size budget undecided | Moved wholesale and kept bundled. Measured, not guessed: **616 kB of `dist/` total; 233 kB of JS, of which 138 kB is `adult-svg-data.js`; 48 kB of `.d.ts`.** Decision and its cost are recorded in the README (§6): synchronous, zero-setup rendering was the requirement, and every adult form is reachable through one lookup table, so a subset cannot currently be tree-shaken. |
+| 7 | No test for the framed (`transparent={false}`) theme classes | `package-css.test.ts` names the three decoration classes, asserts they are gated behind `!transparent` / `interactive`, asserts the size class is applied unconditionally, and asserts no Island card/gradient/world class is present. They are documented as consumer-supplied. |
 
-## 13. Testing strategy for the future package
+### The known issue from the Phase-4 audit — fixed
 
-The four Phase-4 test files are written to survive the move:
+`CurrentBlobbiDisplay` rendered the local player's accessories even when a
+`visualOverride` was supplied, so `BlobbiInfoModal`'s read-only remote preview
+drew another player's Blobbi wearing *your* hats. Phase 4 recorded it and left
+it alone (behavior preservation); Phase 5 fixed it, as the single intentional
+visual change of this phase.
 
-- `blobbi-render-model.test.ts` and the accessory tests are pure — they run in
-  the package with no changes.
-- `BlobbiRendererView.plain-data.test.tsx` uses no providers and no mocks, so it
-  is already a package-shaped test.
-- `renderer-boundary.test.ts` becomes the package's structural lint (its
-  forbidden list mostly evaporates, since the forbidden modules will not exist).
-- `ActorRendererBoundary.test.tsx` **stays in Island** — it asserts an Island
-  integration property.
+The API is an explicit `accessoryOverride?: readonly AccessoryPlacementInput[]`
+rather than another ambiguous boolean, with the precedence stated in the
+component's own doc comment and asserted by
+`CurrentBlobbiDisplay.accessory-policy.test.tsx`:
 
-Island keeps an integration test proving it still renders through the package.
+| props | drawn |
+| --- | --- |
+| no `visualOverride` | local companion + its own equipment |
+| `visualOverride`, no `accessoryOverride` | that visual, wearing nothing |
+| `visualOverride` + `accessoryOverride` | that visual, wearing exactly those |
+
+`accessoryOverride` is ignored on the local path, so it cannot be used to dress
+the local Blobbi in items it does not own. Fetching another player's equipment
+remains out of scope.
 
 ---
 
-## 14. Readiness verdict
+## 12. Extraction sequence, as executed
 
-> **Ready after listed blockers** (§11, items 1–6).
+1. **Moved the subtree with `git mv`** so history follows the files: `src/blobbi/**`
+   (all artwork + SVG transforms), `src/lib/loadBlobbiSvg.ts`, the renderer, the
+   render model, the size table, the accessory normalizer, and their tests.
+2. **Rewrote imports** inside the package to relative paths; added
+   `src/internal/cn.ts`; split the reusable accessory vocabulary out of Island's
+   protocol types.
+3. **Wired the workspace**: `"workspaces": ["packages/*"]` at the root,
+   `@blobbi/react` as a dependency, `optimizeDeps.exclude` in `vite.config.ts`,
+   `packages/*/src` added to `tailwind.config.ts` content, `packages/*/dist`
+   added to `.gitignore` and the eslint ignore list.
+4. **Left the adapter behind**: `island-accessory-sources.ts` and
+   `asset-paths.ts` stayed in Island; the package's default resolver became
+   `DEFAULT_ACCESSORY_SOURCES`, and Island now passes its resolver explicitly.
+5. **Migrated Island imports** in small groups (pure consumers → the local
+   wrapper → the actor → the remote layer → preview/editor → tests), running
+   focused tests after each.
+6. **Replaced the boundary test** with two: package purity inside the package,
+   and a "no second implementation" check on the Island side.
 
-The renderer is architecturally portable **today**: it renders from plain JSON
-with no providers, reaches no relay/user/world/router/movement/presence module,
-builds no asset path, hides no data fetching behind a prop, and produces
-byte-identical output inside and outside the world actor. The remaining work is
-file movement and two small module splits — no redesign, no behavior change, and
-no open API questions.
+**No compatibility layer was created.** The churn was 16 files, which is
+cheaper than a shim that would have to be removed later. The one re-export that
+exists — Island's `accessory-types.ts` re-exporting `AccessorySlot` and
+`REAR_VIEW_HIDDEN_SLOTS` — is not a compatibility shim: it is the protocol
+module naming the shared vocabulary it uses, holds no implementation, and is
+permanent.
 
-The one open **product** question is the read-only-preview accessory leak
-(§11), which is independent of extraction.
+---
+
+## 13. Testing, as built
+
+- `blobbi-render-model.test.ts`, `accessory-normalize.test.ts` and
+  `rear-view.test.ts` moved with the code and run inside the package.
+- `BlobbiRendererView.plain-data.test.tsx` and `BlobbiRendererView.test.tsx`
+  moved and now import the package's **public entry point**, not its files.
+- `package-purity.test.ts`, `package-api.test.ts` and `package-css.test.ts` are
+  new, and are the package's structural lint.
+- `packages/blobbi-react-consumer/` is a test-only workspace package that
+  imports only `@blobbi/react` — no providers, no host application — covering
+  egg/baby/adult, front/rear, sleeping, gaze, every size token, two accessories
+  from local SVG fixtures, rear-view filtering, source fallback, the empty
+  source list, two simultaneous instances, and headless `loadBlobbiSvg`.
+- `ActorRendererBoundary.test.tsx` and `renderer-boundary.test.ts` stayed in
+  Island — they assert Island integration properties.
+- `CurrentBlobbiDisplay.accessory-policy.test.tsx` is new and covers the
+  ownership fix.
+
+### Development accessory fixtures
+
+`packages/blobbi-react-consumer/fixtures/` holds three tiny local SVGs
+(`cape.svg`, `goggles.svg`, `star-badge.svg`, 632 bytes total) and the plain
+placement data that positions them. They are image files rather than emoji
+deliberately: the renderer paints accessories through `<img src>`, so image
+fixtures exercise the production path (candidate list, `onError` walk, transform
+stack) where a text glyph would exercise none of it.
+
+They are never published to Nostr, never inserted into an inventory, never
+implicitly equipped, and touch no kind 31632/31633. They are passed explicitly,
+as plain data, and require no authentication or relay.
+
+---
+
+## 14. Outcome
+
+**The renderer is extracted. The package is local and private; nothing was
+published.**
+
+Verified:
+
+- **Renderer output is unchanged.** The Phase-4 fingerprint comparison was
+  re-run across 17 cases (every stage, size token, facing, eye state, gaze case
+  including clamping, framed mode, accessory set, and degenerate inputs):
+  all 17 hash byte-identically before and after extraction.
+- **One implementation exists.** `renderer-boundary.test.ts` fails if a second
+  copy of the renderer, render model, size table, accessory normalizer or SVG
+  loader reappears under `src/`.
+- **Island consumes the package** on every path — local companion, remote
+  players, actor, cards, mascot, hatching ceremony, editor, previews.
+- **The package contains no Island world or data dependency**, asserted from
+  both the import graph and the built `dist/`.
+- **Ground anchors, movement, boundaries, targets, presence and theater
+  calibration were not touched.** `SEAT_CONTACT_RATIO` is unchanged.
+
+The single intentional behavior difference is the accessory-ownership fix in
+§11.
+
+Publication blockers are listed in
+[`packages/blobbi-react/README.md`](../packages/blobbi-react/README.md#11-publication-status):
+extensionless relative specifiers in `dist/` (needs an extension-rewriting build
+step), `exports` pointing at source, artwork bundle size, the npm scope
+question, and the CSS contract being documentation rather than a shipped
+stylesheet.

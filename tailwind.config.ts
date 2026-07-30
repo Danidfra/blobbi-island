@@ -8,6 +8,13 @@ export default {
 		"./components/**/*.{ts,tsx}",
 		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
+		// The @blobbi/react renderer implements its canonical square box with
+		// literal Tailwind classes (BLOBBI_RENDER_SIZE_CLASSES) so callers can
+		// still override it through `className` via tailwind-merge. Those classes
+		// live in the workspace package, so the JIT scanner must see it or every
+		// Blobbi renders in a zero-sized box.
+		// Asserted by packages/blobbi-react/src/package-css.test.ts.
+		"./packages/*/src/**/*.{ts,tsx}",
 	],
 	prefix: "",
 	theme: {

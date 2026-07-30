@@ -1,38 +1,28 @@
 /**
- * TypeScript types for Blobbi accessory management
+ * Blobbi Island's accessory PROTOCOL types.
  *
- * This system handles:
+ * This module owns everything about how an accessory is stored, owned, equipped
+ * and edited on this Island:
  * - Kind 11125: Owner Profile with inventory tags (inv)
  * - Kind 31124: Pet State with equipment tags (equip)
+ *
+ * What it deliberately does NOT own is how an accessory is *drawn*. The slot
+ * vocabulary and the rear-view visibility rule are rendering concerns, so they
+ * live in `@blobbi/react` and are re-exported here — one definition, imported
+ * by both the renderer and this Island's editor/inventory code. There is no
+ * implementation in the re-export; adding one would fork the vocabulary.
  */
+import type { AccessorySlot } from '@blobbi/react';
+
+export type { AccessorySlot };
+export { REAR_VIEW_HIDDEN_SLOTS } from '@blobbi/react';
 
 // ============================================================================
 // Accessory Types
 // ============================================================================
 
-/** Accessory slot type inferred from code prefix */
-export type AccessorySlot = 'headwear' | 'eyewear' | 'back' | 'neckwear' | 'handheld' | 'face-mark' | 'aura' | 'color-overlay' | 'unknown';
-
 /** Accessory form type */
 export type AccessoryForm = 'default' | 'baby' | 'teen' | 'adult';
-
-/**
- * Accessory slots that are not drawn when a Blobbi faces away from the camera.
- *
- * The rule is "would you still see it from behind?":
- *  - `eyewear` / `face-mark` sit on the face — gone.
- *  - `handheld` is held in front of the body; a mirrored placement would need
- *    per-accessory art, so it is hidden rather than misplaced.
- *
- * Everything else stays: `headwear` (hats read fine from behind), `back`
- * (wings/capes are back-mounted and MORE visible), `neckwear` (wraps the neck),
- * `aura` (radial, view-independent) and `color-overlay` (a tint).
- */
-export const REAR_VIEW_HIDDEN_SLOTS: ReadonlySet<AccessorySlot> = new Set<AccessorySlot>([
-  'eyewear',
-  'face-mark',
-  'handheld',
-]);
 
 /** Equipment tag interface for kind 31124 */
 export interface EquipTag {

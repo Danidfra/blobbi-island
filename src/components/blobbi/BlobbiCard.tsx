@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
-import { normalizeBlobbiRenderModel } from "./lib/blobbi-render-model";
+import { loadBlobbiSvg, normalizeBlobbiRenderModel } from "@blobbi/react";
 import { cn } from "@/lib/utils";
 import { Check, Sparkles } from "lucide-react";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";

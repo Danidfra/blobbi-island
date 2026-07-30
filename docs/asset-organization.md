@@ -20,7 +20,7 @@ Two things deliberately live *outside* `public/assets/`:
 | Path | Why |
 | --- | --- |
 | `public/icons/` | PWA / browser integration icons referenced by `manifest.webmanifest` and `index.html`. These are platform metadata, not game content, and their URLs must stay stable because installed PWAs cache them. |
-| `src/blobbi/**/lib/*-svg-data.ts` | Blobbi character art is *generated, inlined SVG* in TypeScript, not files. It is versioned with the code that draws it. Do not add PNGs for Blobbi bodies here. |
+| `packages/blobbi-react/src/artwork/**/lib/*-svg-data.ts` | Blobbi character art is *generated, inlined SVG* in TypeScript, not files. It is versioned with the code that draws it. Do not add PNGs for Blobbi bodies here. |
 
 ---
 

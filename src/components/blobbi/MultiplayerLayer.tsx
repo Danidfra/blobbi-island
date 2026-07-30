@@ -30,8 +30,7 @@ import {
 } from '@/lib/gaze';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
-import { BlobbiRendererView } from './BlobbiRendererView';
-import { DEFAULT_STAGE } from './lib/blobbi-render-model';
+import { BlobbiRendererView, DEFAULT_STAGE } from '@blobbi/react';
 import { BlobbiActor } from './BlobbiActor';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { useIdleGaze } from '@/hooks/useIdleGaze';

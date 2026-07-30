@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+    /* Resolution stays `bundler` (inherited). That is what lets the package
+       import `@blobbi-kit/core/color-guardrails` — an `exports`-map subpath
+       that classic `node` resolution cannot see.
+       CONSEQUENCE, and a recorded publication blocker: the emitted JS keeps
+       extensionless relative specifiers (`from './svg'`), which every bundler
+       resolves and bare Node ESM does not. Publishing to npm for Node
+       consumers needs an extension-rewriting step (tsup/rollup) added here
+       first — see the package README, "Publication status". */
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+}

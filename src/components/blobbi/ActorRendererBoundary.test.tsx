@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { BlobbiActor } from './BlobbiActor';
-import { BlobbiRendererView } from './BlobbiRendererView';
+import { BlobbiRendererView } from '@blobbi/react';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
 
 const VISUAL = {

@@ -20,7 +20,8 @@ self-expiring, and authoritative over nothing.
 
 ## 1. Rear-facing Blobbi renderer
 
-**Files** — `src/blobbi/ui/lib/svg/rear-view.ts`, `src/lib/loadBlobbiSvg.ts`,
+**Files** — `packages/blobbi-react/src/svg/rear-view.ts`,
+`packages/blobbi-react/src/artwork/load-blobbi-svg.ts`,
 `src/components/blobbi/CurrentBlobbiDisplay.tsx`,
 `src/components/blobbi/lib/accessory-types.ts`,
 `src/components/blobbi/AccessoryOverlay.tsx`.
@@ -115,7 +116,7 @@ created** in this correction pass.
 
 ### Tests
 
-`src/blobbi/ui/lib/svg/rear-view.test.ts` — table-driven over all 34 drawings (319 assertions):
+`packages/blobbi-react/src/svg/rear-view.test.ts` — table-driven over all 34 drawings (319 assertions):
 no face block survives, every non-face block does, `<defs>` survives, output is balanced, the
 transform is idempotent, gaze is a no-op, and the front view is untouched.
 

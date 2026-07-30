@@ -22,8 +22,7 @@ import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
 import { accessoryImagePath } from '@/lib/asset-paths';
-import { ACCESSORY_BASE_PERCENT } from './lib/blobbi-render-size';
-import { normalizeAccessoryPlacements } from './lib/accessory-normalize';
+import { ACCESSORY_BASE_PERCENT, normalizeAccessoryPlacements } from '@blobbi/react';
 import { type EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryOverlayProps {

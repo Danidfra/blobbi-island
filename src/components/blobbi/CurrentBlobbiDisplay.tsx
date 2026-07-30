@@ -12,6 +12,20 @@
  * preview (a single modal instance, where the extra local hooks are the
  * pre-existing behavior).
  *
+ * ACCESSORY OWNERSHIP. Accessories follow the visual, never the component:
+ *
+ *   no `visualOverride`                    → local companion + local equipment
+ *   `visualOverride`, no `accessoryOverride` → that visual, wearing nothing
+ *   `visualOverride` + `accessoryOverride` → that visual, wearing exactly those
+ *
+ * The middle row is a deliberate behavior change (Phase 5). Previously the
+ * local player's equipment was drawn on top of ANY visual, so the info modal's
+ * read-only preview of another player's Blobbi rendered it wearing *your* hats.
+ * Accessories are not a property of "the local user"; they are a property of
+ * the Blobbi being drawn, and a caller that does not supply them does not have
+ * them. Fetching another player's equipment is out of scope — the honest render
+ * of "unknown equipment" is none.
+ *
  * Geometry lives entirely in the pure renderer: one square fixed-px box per
  * size token, shared by body and accessories (see lib/blobbi-render-size.ts
  * and docs/blobbi-renderer-contract.md).
@@ -21,11 +35,17 @@ import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { cn } from "@/lib/utils";
-import { BlobbiRendererView, type BlobbiRenderVisual } from "./BlobbiRendererView";
-import { DEFAULT_STAGE } from "./lib/blobbi-render-model";
-import { normalizeAccessoryPlacements } from "./lib/accessory-normalize";
+import {
+  BlobbiRendererView,
+  BLOBBI_RENDER_SIZE_CLASSES,
+  DEFAULT_STAGE,
+  normalizeAccessoryPlacements,
+  type AccessoryPlacementInput,
+  type BlobbiRenderSize,
+  type BlobbiRenderVisual,
+} from "@blobbi/react";
+import { islandAccessorySources } from "./lib/island-accessory-sources";
 import { useAccessoryManagement } from "./hooks/useAccessoryManagement";
-import { BLOBBI_RENDER_SIZE_CLASSES, type BlobbiRenderSize } from "./lib/blobbi-render-size";
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
@@ -60,6 +80,17 @@ export interface CurrentBlobbiDisplayProps {
     pattern?: string;
     specialMark?: string;
   };
+  /**
+   * Accessories to draw on a {@link visualOverride}. Plain, serializable data —
+   * the caller states what that Blobbi is wearing.
+   *
+   * Meaningful ONLY alongside `visualOverride`: without an override the local
+   * companion's own equipment is authoritative and this prop is ignored, so it
+   * can never be used to dress the local Blobbi in something it does not own.
+   * With an override and no value here, the Blobbi wears nothing (see the
+   * ownership table in the module doc).
+   */
+  accessoryOverride?: readonly AccessoryPlacementInput[];
 }
 
 export function CurrentBlobbiDisplay({
@@ -74,6 +105,7 @@ export function CurrentBlobbiDisplay({
   showAccessories = true,
   idSuffix,
   visualOverride,
+  accessoryOverride,
   eyeOffset,
   facing = "front",
 }: CurrentBlobbiDisplayProps) {
@@ -123,8 +155,15 @@ export function CurrentBlobbiDisplay({
     // The renderer resolves its own stage; this is only the tooltip's copy of
     // the same answer, so it reads the shared default instead of restating it.
     const stage = visual.stage || DEFAULT_STAGE;
+    // Accessories follow the VISUAL. An override draws only what the caller
+    // explicitly handed over; the local player's equipment is reachable solely
+    // on the local-companion path. See the ownership table in the module doc.
+    const wornAccessories = visualOverride ? accessoryOverride : equipment;
     const accessories = showAccessories
-      ? normalizeAccessoryPlacements(equipment ?? [], { facing })
+      ? normalizeAccessoryPlacements(wornAccessories ?? [], {
+          facing,
+          resolveSources: islandAccessorySources,
+        })
       : [];
 
     return (

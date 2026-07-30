@@ -107,7 +107,7 @@ describe('the local Blobbi', () => {
       it would reach the body.
     */
     const rendererView = readFileSync(
-      join(process.cwd(), 'src/components/blobbi/BlobbiRendererView.tsx'),
+      join(process.cwd(), 'packages/blobbi-react/src/BlobbiRendererView.tsx'),
       'utf8',
     );
     expect(rendererView).toContain('dangerouslySetInnerHTML');

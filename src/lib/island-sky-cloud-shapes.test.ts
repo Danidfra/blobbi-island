@@ -204,7 +204,7 @@ describe('the Blobbi contours come from the production artwork', () => {
     // `data-blobbi-body="true"` in BABY_BASE_SVG. Read from the source so a change
     // to the artwork shows up here rather than drifting silently.
     const source = readFileSync(
-      join(process.cwd(), 'src/blobbi/baby-blobbi/lib/baby-svg-data.ts'),
+      join(process.cwd(), 'packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts'),
       'utf8',
     );
     const body = pathOf('blobbi-baby').replace(/ Z$/, '');
@@ -216,13 +216,13 @@ describe('the Blobbi contours come from the production artwork', () => {
     // `ellipse cx=100 cy=120 rx=45 ry=60`. Read from the source so an artwork change
     // surfaces here instead of drifting.
     const types = readFileSync(
-      join(process.cwd(), 'src/blobbi/adult-blobbi/types/adult.types.ts'),
+      join(process.cwd(), 'packages/blobbi-react/src/artwork/adult-blobbi/types/adult.types.ts'),
       'utf8',
     );
     expect(types).toMatch(/getDefaultAdultForm[\s\S]{0,80}return 'catti'/);
 
     const source = readFileSync(
-      join(process.cwd(), 'src/blobbi/adult-blobbi/lib/adult-svg-data.ts'),
+      join(process.cwd(), 'packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts'),
       'utf8',
     );
     const part = ISLAND_CLOUD_SHAPE_GEOMETRY['blobbi-adult'].parts[0];
@@ -243,7 +243,7 @@ describe('the Blobbi contours come from the production artwork', () => {
   it('derives the egg rather than claiming a source it does not have', () => {
     // There is no egg artwork anywhere: `loadBlobbiSvg` falls back to the baby
     // drawing for the egg stage. Asserting the absence keeps the docs honest.
-    const loader = readFileSync(join(process.cwd(), 'src/lib/loadBlobbiSvg.ts'), 'utf8');
+    const loader = readFileSync(join(process.cwd(), 'packages/blobbi-react/src/artwork/load-blobbi-svg.ts'), 'utf8');
     expect(loader).toContain('Baby stage (also used as fallback for egg/unknown)');
   });
 
