@@ -16,6 +16,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, fireEvent } from '@testing-library/react';
 import { TownBush } from './TownBush';
 import { townBushes, type TownBushConfig } from '@/lib/town-bushes-config';
+import { constrainPosition } from '@/lib/boundaries';
+import { locationBoundaries } from '@/lib/location-boundaries';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 
 // ---------------------------------------------------------------------------
@@ -140,6 +142,19 @@ describe('Town bush hiding', () => {
     expect(target.y).toBeLessThan(baseEdgeY);
   });
 
+  it('aims every bush target at the base half of the sprite (ground semantics)', () => {
+    // The stored point is the FEET. A fraction above ~0.7 keeps the body
+    // visibly walking INTO the bush; a smaller fraction plants the feet on the
+    // bush's upper half, which reads as standing ON the bush (the regression
+    // reported when center-era fractions were carried over unchanged).
+    for (const bush of townBushes) {
+      expect(
+        bush.interactionTarget.y,
+        `${bush.id} must aim at the base half`,
+      ).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+
   it('honours a per-bush target override instead of hard-coded coordinates', () => {
     const offCenter: TownBushConfig = {
       ...bush1,
@@ -150,7 +165,9 @@ describe('Town bush hiding', () => {
 
     fireEvent.click(h.bush);
 
-    const expected = expectedTarget(offCenter);
+    // The raw fraction point is clamped into the town walk boundary (the
+    // override aims above the arch's floor line under ground semantics).
+    const expected = constrainPosition(expectedTarget(offCenter), locationBoundaries['town-open.webp']);
     expect(h.requests[0].target.x).toBeCloseTo(expected.x, 5);
     expect(h.requests[0].target.y).toBeCloseTo(expected.y, 5);
   });

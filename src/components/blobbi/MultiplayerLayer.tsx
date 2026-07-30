@@ -30,7 +30,9 @@ import {
 } from '@/lib/gaze';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
-import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
+import { BlobbiRendererView } from './BlobbiRendererView';
+import { BlobbiActor } from './BlobbiActor';
+import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
@@ -98,6 +100,8 @@ function RemoteBlobbiSprite({
   idSuffix,
   facing = 'front',
   size,
+  scale = 1,
+  scaleAt = () => 1,
 }: {
   visual?: BlobbiVisual;
   isMoving: boolean;
@@ -129,6 +133,10 @@ function RemoteBlobbiSprite({
    * every screen but the sitter's own.
    */
   size: 'sm' | 'md' | 'lg' | 'xl';
+  /** This actor's current combined visual scale (for gaze focus points). */
+  scale?: number;
+  /** Depth scale at an arbitrary ground point (for the gaze target's focus). */
+  scaleAt?: (pos: Position) => number;
 }) {
   // Idle gaze is active whenever the Blobbi is standing still. While idle it
   // drives ~60fps re-renders of *this* sprite only, and each render re-reads
@@ -157,28 +165,45 @@ function RemoteBlobbiSprite({
       ? attentionTargetPosition(attention, livePositionsRef.current, LOCAL_ATTENTION_KEY)
       : null;
     if (attentionTarget) {
-      const tx = attentionTarget.x - position.x;
-      const ty = attentionTarget.y - position.y;
+      // Ground anchors → visual body centers before deriving the vector, so
+      // eyes meet bodies rather than feet (identical rule to MovableBlobbi).
+      const myFocus = actorVisualFocusPoint(position, size, scale);
+      const targetFocus = actorVisualFocusPoint(attentionTarget, size, scaleAt(attentionTarget));
+      const tx = targetFocus.x - myFocus.x;
+      const ty = targetFocus.y - myFocus.y;
       const len = Math.sqrt(tx * tx + ty * ty) || 1;
       eyeOffset = { x: tx / len, y: ty / len };
     }
   }
 
+  // Remote players render through the PURE renderer with explicit visual
+  // props: no local-player hooks (useBlobbis / useBlobbonautProfile /
+  // useAccessoryManagement) run for someone else's Blobbi. Accessories stay
+  // off for remotes (`accessories` defaults to none), matching the previous
+  // showAccessories={false} behavior.
+  const remoteVisual = visual || {
+    name: undefined,
+    baseColor: '#4F46E5',
+    secondaryColor: '#7C3AED',
+    eyeColor: '#1F2937',
+    stage: 'baby' as const,
+  };
+
+  // Legacy behavior preserved: a known visual that has no colors yet (presence
+  // arrived before the 31124 refinement) renders nothing rather than a
+  // default-colored impostor.
+  if (!remoteVisual.baseColor && !remoteVisual.secondaryColor) return null;
+
   return (
-    <CurrentBlobbiDisplay
+    <BlobbiRendererView
+      visual={remoteVisual}
+      instanceId={idSuffix}
       size={size}
-      visualOverride={visual || {
-        baseColor: '#4F46E5',
-        secondaryColor: '#7C3AED',
-        eyeColor: '#1F2937',
-        stage: 'baby',
-      }}
       transparent
-      showAccessories={false}
       className={cn(isMoving && "scale-105")}
-      idSuffix={idSuffix}
       eyeOffset={eyeOffset}
       facing={facing}
+      title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || 'baby'} stage`}
     />
   );
 }
@@ -1576,8 +1601,9 @@ export function MultiplayerLayer({
         // stacks exactly like the seated local Blobbi does.
         const renderPos = seated ? seated.position : player.position;
 
-        // Calculate dynamic z-index and scale (same as MovableBlobbi)
-        const dynamicZIndex = getDynamicZIndex(renderPos);
+        // Calculate dynamic z-index and scale (same as MovableBlobbi). While
+        // seated, z comes from the SEAT ROW, not the standing y-bands.
+        const dynamicZIndex = seated ? seated.zIndex : getDynamicZIndex(renderPos);
         const dynamicScale = getDynamicScale(renderPos) * (seated?.scale ?? 1);
 
         // Determine heading from last position to drive eye gaze, and store it
@@ -1607,30 +1633,46 @@ export function MultiplayerLayer({
         const isHiddenInSpot = !!player.hiddenIn;
 
         return (
-          <div
+          <BlobbiActor
             key={`${player.pubkey}:${player.sessionId}`}
+            playerKey={`${player.pubkey}:${player.sessionId}`}
+            position={renderPos}
+            size={blobbiSize}
+            scale={dynamicScale}
+            zIndex={dynamicZIndex}
+            seatedIn={seated?.seat.id ?? null}
+            hiddenIn={player.hiddenIn ?? null}
+            visualHidden={isHiddenInSpot}
+            hideShadow={!!seated?.hideShadow}
+            disableFloat={player.isMoving || !!seated?.disableFloat}
+            // Remote positions are integrated per-frame by the presence rAF —
+            // the anchor itself never eases.
+            positionTransition={false}
             className={cn(
-              "absolute group",
+              "group",
               isHiddenInSpot ? "pointer-events-none" : "pointer-events-auto",
             )}
-            data-player-key={`${player.pubkey}:${player.sessionId}`}
-            // Remote players are characters, not scenery: the day/night world grade
-            // must not dim them or their accessory <img> overlays. Same contract the
-            // local Blobbi uses — see src/index.css.
-            data-island-world-grade="exclude"
-            data-hidden-in={player.hiddenIn}
-            data-seated-in={seated?.seat.id}
-            style={{
-              left: `${renderPos.x}%`,
-              top: `${renderPos.y}%`,
-              transform: `translate(-50%, -50%)`,  // ⬅️ no scale/flip here
-              zIndex: dynamicZIndex,
-              filter: isHiddenInSpot ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
-            }}
+            labelSlot={
+              !isHiddenInSpot && player.visual?.name ? (
+                // Above the RENDERED body: the box is unscaled, so the visual
+                // top sits at scale×100% of the box above the ground anchor.
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+                  style={{ bottom: `calc(${dynamicScale * 100}% + 8px)` }}
+                >
+                  <div
+                    className="bg-black/75 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap
+                               opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                    aria-label={player.visual.name}
+                    title={player.visual.name}
+                  >
+                    {player.visual.name}
+                  </div>
+                </div>
+              ) : null
+            }
           >
-            {!isHiddenInSpot && (
-            <>
-            {/* SPRITE – hover target (peer) */}
+            {/* SPRITE – hover/click target */}
             <div
               className="peer pointer-events-auto select-none cursor-pointer"
               data-block-move="true"
@@ -1664,69 +1706,23 @@ export function MultiplayerLayer({
                   }
                 })();
               }}
-              style={{
-                transform: `scale(${dynamicScale})`,
-                transformOrigin: 'center center',
-              }}
             >
-          <div className={cn(
-            // A bobbing seated Blobbi fights the chair it is sitting in — the
-            // same rule the local seated renderer applies.
-            !player.isMoving && !seated?.disableFloat && "animate-float",
-            "transition-transform duration-1000 ease-in-out"
-          )}>
-            <RemoteBlobbiSprite
-              visual={player.visual}
-              isMoving={player.isMoving}
-              position={renderPos}
-              playerKey={keyId}
-              nearbyGazeRef={nearbyGazeRef}
-              livePositionsRef={livePositionsRef}
-              headingRef={headingRef}
-              idSuffix={`${player.pubkey}-${player.sessionId}`}
-              facing={seated?.facing ?? 'front'}
-              size={blobbiSize}
-            />
-          </div>
-        </div>
-
-          {/* Drop shadow/ellipse below Blobbi (same as MovableBlobbi) —
-              suppressed while seated: a Blobbi in a chair is not standing on
-              the floor. */}
-          {!seated?.hideShadow && (
-          <div
-            className={cn(
-              // Widths track the sprite size, matching MovableBlobbi's shadow.
-              "absolute top-full left-1/2 h-1.5 rounded-full",
-              blobbiSize === "xl" && "w-8 md:w-10",
-              blobbiSize === "lg" && "w-6 md:w-8",
-              blobbiSize === "md" && "w-4 md:w-6",
-              blobbiSize === "sm" && "w-3 md:w-4",
-            )}
-            style={{
-              background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-              transform: `translateX(-50%) scale(${dynamicScale})`,
-              transformOrigin: 'center center',
-            }}
-          />
-          )}
-
-          {/* Player name label (hidden until hover) */}
-          {player.visual?.name && (
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 pointer-events-none">
-              <div
-                className="bg-black/75 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap
-                           opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-                aria-label={player.visual.name}
-                title={player.visual.name}
-              >
-                {player.visual.name}
-              </div>
+              <RemoteBlobbiSprite
+                visual={player.visual}
+                isMoving={player.isMoving}
+                position={renderPos}
+                playerKey={keyId}
+                nearbyGazeRef={nearbyGazeRef}
+                livePositionsRef={livePositionsRef}
+                headingRef={headingRef}
+                idSuffix={`${player.pubkey}-${player.sessionId}`}
+                facing={seated?.facing ?? 'front'}
+                size={blobbiSize}
+                scale={dynamicScale}
+                scaleAt={getDynamicScale}
+              />
             </div>
-          )}
-            </>
-            )}
-        </div>
+          </BlobbiActor>
         );
       })}
 

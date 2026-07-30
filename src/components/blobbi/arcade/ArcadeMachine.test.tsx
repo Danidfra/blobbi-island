@@ -14,6 +14,7 @@ import { ArcadeMachine } from './ArcadeMachine';
 import {
   getArcadeMachine,
   machineAnchorPosition,
+  arcadeMachineGroundOffsetPercent,
   type ArcadeMachineConfig,
 } from '@/lib/arcade-machines-config';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
@@ -183,21 +184,25 @@ describe('walk-to-interact', () => {
     expect(h.activations).toEqual(['arcade-pool-table']);
   });
 
-  it('aims at the configured anchor, not at the sprite centre', () => {
+  it('aims the FEET at the floor in front of the machine (anchor + ground offset, applied once)', () => {
     const h = renderMachines([pool()]);
     fireEvent.click(h.machineEl('arcade-pool-table'));
 
     const { target } = h.system.requests[0];
     const config = pool();
-    const expectedY =
+    const fractionY =
       ((MACHINE_RECT.top + MACHINE_RECT.height * config.interactionAnchor.y) /
         SURFACE_RECT.height) *
       100;
-
+    // GROUND semantics: the runtime target is the anchor fraction plus the
+    // depth-scaled half body (shared arcadeMachineGroundOffsetPercent) —
+    // applied exactly ONCE, so it matches the DOM-free machineAnchorPosition.
+    const expectedY = fractionY + arcadeMachineGroundOffsetPercent(config.floor, fractionY);
     expect(target.y).toBeCloseTo(expectedY, 5);
-    // ...clearly below the sprite's vertical middle.
-    const middleY = ((MACHINE_RECT.top + MACHINE_RECT.height / 2) / SURFACE_RECT.height) * 100;
-    expect(target.y).toBeGreaterThan(middleY);
+    // ...and clearly BELOW the sprite's bottom edge: outside the table body,
+    // on the open floor where a player would stand.
+    const bottomY = ((MACHINE_RECT.top + MACHINE_RECT.height) / SURFACE_RECT.height) * 100;
+    expect(target.y).toBeGreaterThan(bottomY);
   });
 
   it('agrees with the DOM-free anchor the configuration test checks', () => {

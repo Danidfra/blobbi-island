@@ -56,7 +56,12 @@ vi.mock('@/hooks/useBlobbis', () => ({ useBlobbis: () => STABLE_BLOBBIS_RESULT }
 vi.mock('@/hooks/useBlobbonautProfile', () => ({
   useBlobbonautProfile: () => STABLE_PROFILE_RESULT,
 }));
-vi.mock('./AccessoryOverlay', () => ({ AccessoryOverlay: () => null }));
+// The local-player wrapper fetches equipment; give it a stable empty result so
+// the real renderer runs without a QueryClient (accessories are not under test).
+const STABLE_ACCESSORIES_RESULT = { equipment: [] };
+vi.mock('./hooks/useAccessoryManagement', () => ({
+  useAccessoryManagement: () => STABLE_ACCESSORIES_RESULT,
+}));
 
 // Fake Nostr: capture subscriptions, let the test push events.
 type Pusher = (event: NostrEvent) => void;

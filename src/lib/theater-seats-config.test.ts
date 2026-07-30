@@ -17,6 +17,8 @@ import {
   isOccupiableSeat,
   occupiableTheaterSeats,
   seatAnchorPosition,
+  seatApproachPosition,
+  SEAT_CONTACT_RATIO,
   theaterSeats,
 } from './theater-seats-config';
 import { locationBoundaries } from './location-boundaries';
@@ -111,23 +113,39 @@ describe('theater seat configuration', () => {
   });
 
   describe('seat anchors', () => {
-    it('match the measured seat lines (87.6 / 82.7 / 77.6 %)', () => {
-      const byRow = { a: 87.6, b: 82.7, c: 77.6 };
+    it('rest the seated body ON the cushion: pose = cushion line + contact ratio × scaled body', () => {
+      // Explicit VISUAL POSE ANCHOR, calibrated to the cushion (measured lines
+      // 87.6 / 82.7 / 77.6) plus SEAT_CONTACT_RATIO of the row-scaled body.
+      // The ratio (0.5) is derived from the legacy center-anchor renderer's
+      // visible body bottom — see ground-target-hardening.test.ts.
+      const cushionByRow = { a: 87.6, b: 82.7, c: 77.6 };
       for (const seat of theaterSeats) {
-        expect(Math.abs(seatAnchorPosition(seat).y - byRow[seat.row])).toBeLessThan(0.1);
+        const scaledBody = (128 * seat.seatedScale * 100) / 697;
+        const expected = cushionByRow[seat.row] + SEAT_CONTACT_RATIO * scaledBody;
+        expect(Math.abs(seatAnchorPosition(seat).y - expected)).toBeLessThan(0.1);
       }
     });
 
-    it('are all inside the theater walk boundary, so arrival can actually fire', () => {
-      // Row C sits only ~2.6 points inside the boundary; if a future change
-      // pushed it above y=75 the walk would stop short and nobody could sit.
+    it('every APPROACH point lies inside the theater walk boundary, so arrival can fire', () => {
+      // Arrival is measured against the walk APPROACH (floor at the seat's
+      // front base), not the pose: the pose is a boundary-bypassing snap and
+      // may legitimately sit off the walkable floor (rows B/C cushions do).
       const boundary = locationBoundaries['stage-inside.png'];
       expect(boundary).toBeDefined();
       for (const seat of occupiableTheaterSeats) {
-        const anchor = seatAnchorPosition(seat);
-        const clamped = constrainPosition(anchor, boundary);
-        expect(clamped.x).toBeCloseTo(anchor.x, 6);
-        expect(clamped.y).toBeCloseTo(anchor.y, 6);
+        const approach = seatApproachPosition(seat);
+        const clamped = constrainPosition(approach, boundary);
+        expect(clamped.x).toBeCloseTo(approach.x, 6);
+        expect(clamped.y).toBeCloseTo(approach.y, 6);
+      }
+    });
+
+    it('separates the approach (floor) from the pose (cushion) for every row', () => {
+      for (const seat of occupiableTheaterSeats) {
+        const approach = seatApproachPosition(seat);
+        const pose = seatAnchorPosition(seat);
+        // Feet stop BELOW the cushion line, on the floor in front of the seat.
+        expect(approach.y).toBeGreaterThan(pose.y);
       }
     });
 

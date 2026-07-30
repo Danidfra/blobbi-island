@@ -1,15 +1,34 @@
-import { useState, useEffect, useRef, type CSSProperties } from "react";
-import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
-import { applyGazeMarkup } from "@/blobbi/ui/lib/svg";
-import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
+/**
+ * CurrentBlobbiDisplay — the LOCAL-PLAYER wrapper around the pure renderer.
+ *
+ * This component owns the data side: it resolves the current companion via
+ * Nostr-backed hooks (`useBlobbis`, `useBlobbonautProfile`), fetches the local
+ * player's equipped accessories, normalizes them, and hands everything to the
+ * pure `BlobbiRendererView` as explicit props. Remote players do NOT go
+ * through here — `RemoteBlobbiSprite` uses `BlobbiRendererView` directly, so
+ * rendering someone else's Blobbi never subscribes to the local player's data.
+ *
+ * `visualOverride` remains supported for the info modal's read-only remote
+ * preview (a single modal instance, where the extra local hooks are the
+ * pre-existing behavior).
+ *
+ * Geometry lives entirely in the pure renderer: one square fixed-px box per
+ * size token, shared by body and accessories (see lib/blobbi-render-size.ts
+ * and docs/blobbi-renderer-contract.md).
+ */
+import { useRef } from "react";
+import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
-import { AccessoryOverlay } from "./AccessoryOverlay";
 import { cn } from "@/lib/utils";
+import { BlobbiRendererView, type BlobbiRenderVisual } from "./BlobbiRendererView";
+import { normalizeAccessoryPlacements } from "./lib/accessory-normalize";
+import { useAccessoryManagement } from "./hooks/useAccessoryManagement";
+import { BLOBBI_RENDER_SIZE_CLASSES, type BlobbiRenderSize } from "./lib/blobbi-render-size";
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: BlobbiRenderSize;
   showFallback?: boolean;
   onClick?: () => void;
   interactive?: boolean;
@@ -17,7 +36,6 @@ export interface CurrentBlobbiDisplayProps {
   isSleeping?: boolean;
   eyesClosed?: boolean;
   showAccessories?: boolean;
-  accessorySizeMultiplier?: number; // Add prop to pass custom size multiplier
   idSuffix?: string;
   /**
    * Normalized gaze direction (each axis roughly -1..1). When provided, the
@@ -36,25 +54,12 @@ export interface CurrentBlobbiDisplayProps {
    * (see `REAR_VIEW_HIDDEN_SLOTS`).
    */
   facing?: "front" | "back";
-  /** New: if provided, component renders THIS visual instead of fetching local hooks */
-  visualOverride?: {
-    name?: string;
-    baseColor?: string;
-    secondaryColor?: string;
-    eyeColor?: string;
+  /** If provided, component renders THIS visual instead of the local companion. */
+  visualOverride?: BlobbiRenderVisual & {
     pattern?: string;
     specialMark?: string;
-    stage?: "egg" | "baby" | "adult";
-    adultType?: string;
   };
 }
-
-const sizeClasses = {
-  sm: "h-8 w-8 md:h-10 md:w-10",
-  md: "h-12 w-12 md:h-16 md:w-16",
-  lg: "h-16 w-16 md:h-20 md:w-20",
-  xl: "h-24 w-24 md:h-32 md:w-32"
-};
 
 export function CurrentBlobbiDisplay({
   className,
@@ -66,7 +71,6 @@ export function CurrentBlobbiDisplay({
   isSleeping = false,
   eyesClosed = false,
   showAccessories = true,
-  accessorySizeMultiplier,
   idSuffix,
   visualOverride,
   eyeOffset,
@@ -74,236 +78,81 @@ export function CurrentBlobbiDisplay({
 }: CurrentBlobbiDisplayProps) {
   const scopeIdRef = useRef<string>(
     idSuffix ??
-    `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2,8)}`
+    `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2, 8)}`
   );
-  const isRearFacing = facing === "back";
-  // Whether this instance participates in eye-gaze. Stable boolean so the SVG
-  // is only re-generated when gaze is toggled on/off, never per gaze update.
-  // A rear-facing Blobbi has no pupils in its markup at all, so gaze is skipped
-  // outright rather than relying on `applyGazeMarkup` finding nothing.
-  const gazeEnabled = eyeOffset !== undefined && !isRearFacing;
-  // Always run hooks, but only use data when needed (for local player)
+
+  // Local-player data. These hooks are the reason this wrapper exists — the
+  // pure renderer below must never call them.
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
-  const currentCompanionId = profile?.currentCompanion;
-  const [svgContent, setSvgContent] = useState<string>("");
-  const [currentBlobbi, setCurrentBlobbi] = useState<Blobbi | null>(null);
+  const { equipment } = useAccessoryManagement();
 
-  // Only use local data for local player (when visualOverride is not provided)
-  useEffect(() => {
-    if (visualOverride) {
-      // For remote players, don't use local data
-      setCurrentBlobbi(null);
-      return;
-    }
+  const currentBlobbi = visualOverride
+    ? null
+    : (profile?.currentCompanion && blobbis
+        ? blobbis.find((b) => b.id === profile.currentCompanion) ?? null
+        : null);
 
-    // For local player, find the current Blobbi
-    if (currentCompanionId && blobbis) {
-      const blobbi = blobbis.find(b => b.id === currentCompanionId);
-      setCurrentBlobbi(blobbi || null);
-    } else {
-      setCurrentBlobbi(null);
-    }
-  }, [currentCompanionId, blobbis, visualOverride]);
+  // A visualOverride without any colors renders nothing (legacy remote-preview
+  // behavior: the caller refines the visual once relay data arrives).
+  const overrideHasColors = !!(visualOverride?.baseColor || visualOverride?.secondaryColor);
+  const visual: BlobbiRenderVisual | null = visualOverride
+    ? (overrideHasColors ? visualOverride : null)
+    : currentBlobbi
+      ? {
+          stage: currentBlobbi.stage,
+          adultType: currentBlobbi.adultType,
+          baseColor: currentBlobbi.baseColor,
+          secondaryColor: currentBlobbi.secondaryColor,
+          eyeColor: currentBlobbi.eyeColor,
+          name: getBlobbiDisplayName(currentBlobbi),
+        }
+      : null;
 
-  // Load the SVG for the current Blobbi or visual override
-  useEffect(() => {
-    let blobbiData: typeof currentBlobbi | typeof visualOverride;
-
-    if (visualOverride) {
-      // Use visualOverride data for remote players
-      if (!visualOverride.baseColor && !visualOverride.secondaryColor) {
-        setSvgContent("");
-        return;
-      }
-      blobbiData = visualOverride;
-    } else {
-      // Use local data for local player only
-      if (!currentBlobbi) {
-        setSvgContent("");
-        return;
-      }
-      blobbiData = currentBlobbi;
-    }
-
-    try {
-      const stage = blobbiData.stage || 'baby';
-      const adultType = stage === 'adult' ?
-        blobbiData.adultType || 'bloomi' :
-        undefined;
-
-      const customizedSvg = loadBlobbiSvg(
-        stage,
-        adultType,
-        blobbiData.baseColor,
-        blobbiData.secondaryColor,
-        blobbiData.eyeColor,
-        isSleeping || eyesClosed, // Close eyes when either sleeping or seated with eyesClosed
-        scopeIdRef.current,
-        isRearFacing ? 'rear' : 'front',
-      );
-
-      // When gaze is enabled, mark the pupils/highlights once so they can be
-      // moved via CSS variables. Static contexts (no eyeOffset) keep the SVG
-      // untouched, so previews/modals/cards render exactly as before.
-      setSvgContent(gazeEnabled ? applyGazeMarkup(customizedSvg) : customizedSvg);
-    } catch (err) {
-      console.error('Failed to load Blobbi SVG:', err);
-      setSvgContent("");
-    }
-  }, [currentBlobbi, visualOverride, isSleeping, eyesClosed, gazeEnabled, isRearFacing]);
-
-  // Calculate accessory size multiplier based on blobbi size or use custom multiplier
-  const getAccessorySizeMultiplier = () => {
-    if (accessorySizeMultiplier !== undefined) {
-      return accessorySizeMultiplier;
-    }
-    switch (size) {
-      case "sm": return 0.3;
-      case "md": return 0.5;
-      case "lg": return 0.7;
-      case "xl": return 1.0;
-      default: return 1.0;
-    }
-  };
-
-  // Build the gaze CSS variables for the wrapper. These only set
-  // `--blobbi-eye-x/y` (consumed by the injected `.blobbi-pupil` style), so
-  // only the pupils/highlights move — not the whole SVG. Undefined eyeOffset
-  // renders statically (no variables, no transition) so previews/modals/cards
-  // are unaffected.
-  const clampGaze = (v: number): number => Math.max(-1, Math.min(1, v));
-  const gazeStyle: CSSProperties | undefined = eyeOffset
-    ? ({
-        ["--blobbi-eye-x" as string]: `${clampGaze(eyeOffset.x)}`,
-        ["--blobbi-eye-y" as string]: `${clampGaze(eyeOffset.y)}`,
-      } as CSSProperties)
-    : undefined;
-
-  // Show Blobbi SVG
-  if (svgContent && (currentBlobbi || visualOverride)) {
-    const blobbiData = (currentBlobbi || visualOverride)!;
-    // For a local Blobbi, resolve the friendly user-facing name (never the raw
-    // id/d-tag). For a remote visualOverride, the caller already resolved the
-    // name, so use it as-is with a friendly fallback.
+  if (visual) {
     const displayName = currentBlobbi
       ? getBlobbiDisplayName(currentBlobbi)
       : (visualOverride?.name || 'Remote Blobbi');
-    const stage = blobbiData.stage || 'baby';
+    const stage = visual.stage || 'baby';
+    const accessories = showAccessories
+      ? normalizeAccessoryPlacements(equipment ?? [], { facing })
+      : [];
 
-    // Transparent mode - show only the SVG without background
-    if (transparent) {
-      return (
-        <div
-          className={cn(
-            "flex items-center justify-center relative",
-            interactive && "cursor-pointer hover:scale-105 transition-all duration-200",
-            sizeClasses[size],
-            className
-          )}
-          title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
-          onClick={onClick}
-        >
-          <div
-            className={cn(
-              "flex items-center justify-center",
-              size === "sm" && "h-6 w-6 md:h-8 md:w-8",
-              size === "md" && "h-10 w-10 md:h-14 md:w-14",
-              size === "lg" && "size-20 md:size-24",
-              size === "xl" && "size-28 md:size-32"
-            )}
-            style={gazeStyle}
-            dangerouslySetInnerHTML={{ __html: svgContent }}
-          />
-
-          {/* Accessory Overlay for transparent mode */}
-          {showAccessories && (
-            <AccessoryOverlay
-              isStatic={true}
-              facing={facing}
-              sizeMultiplier={getAccessorySizeMultiplier()}
-              className="absolute inset-0"
-            />
-          )}
-        </div>
-      );
-    }
-
-    // Default mode - show with background circle
     return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-full blobbi-gradient-frame shadow-lg theme-transition relative",
-          interactive && "cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-200 blobbi-hover",
-          sizeClasses[size],
-          className
-        )}
-        title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
+      <BlobbiRendererView
+        visual={visual}
+        instanceId={scopeIdRef.current}
+        size={size}
+        isSleeping={isSleeping}
+        eyesClosed={eyesClosed}
+        facing={facing}
+        eyeOffset={eyeOffset}
+        accessories={accessories}
+        transparent={transparent}
+        interactive={interactive}
         onClick={onClick}
-      >
-        <div
-          className={cn(
-            "flex items-center justify-center",
-            size === "sm" && "h-6 w-6 md:h-8 md:w-8",
-            size === "md" && "h-10 w-10 md:h-14 md:w-14",
-            size === "lg" && "h-14 w-14 md:h-18 md:w-18",
-            size === "xl" && "h-20 w-20 md:h-28 md:w-28"
-          )}
-          style={gazeStyle}
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
-
-        {/* Accessory Overlay for default mode */}
-        {showAccessories && (
-          <AccessoryOverlay
-            isStatic={true}
-            facing={facing}
-            sizeMultiplier={getAccessorySizeMultiplier()}
-            className="absolute inset-0"
-          />
-        )}
-      </div>
+        className={className}
+        title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
+      />
     );
   }
 
-  // Show fallback if enabled and no Blobbi/visual is selected
+  // Fallback if enabled and no Blobbi/visual is available.
   if (showFallback && !currentBlobbi && !visualOverride) {
-    const titleText = visualOverride ? 'Remote Blobbi' : 'No Blobbi selected';
-    const clickText = interactive ? (visualOverride ? '' : ' (click to select)') : '';
+    const titleText = 'No Blobbi selected';
+    const clickText = interactive ? ' (click to select)' : '';
 
-    // Transparent mode fallback - show only the emoji without background
-    if (transparent) {
-      return (
-        <div
-          className={cn(
-            "flex items-center justify-center",
-            interactive && "cursor-pointer hover:scale-105 transition-all duration-200",
-            sizeClasses[size],
-            className
-          )}
-          title={`${titleText}${clickText}`}
-          onClick={onClick}
-        >
-          <span className={cn(
-            "text-muted-foreground",
-            size === "sm" && "text-lg md:text-xl",
-            size === "md" && "text-2xl md:text-3xl",
-            size === "lg" && "text-3xl md:text-4xl",
-            size === "xl" && "text-4xl md:text-5xl"
-          )}>
-            🥚
-          </span>
-        </div>
-      );
-    }
-
-    // Default mode fallback - show with background circle
     return (
       <div
         className={cn(
-          "flex items-center justify-center rounded-full blobbi-card border-2 border-dashed border-purple-300 dark:border-purple-600 theme-transition",
-          interactive && "cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200",
-          sizeClasses[size],
+          "flex items-center justify-center",
+          transparent
+            ? interactive && "cursor-pointer hover:scale-105 transition-all duration-200"
+            : cn(
+                "rounded-full blobbi-card border-2 border-dashed border-purple-300 dark:border-purple-600 theme-transition",
+                interactive && "cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200",
+              ),
+          BLOBBI_RENDER_SIZE_CLASSES[size],
           className
         )}
         title={`${titleText}${clickText}`}
@@ -311,10 +160,11 @@ export function CurrentBlobbiDisplay({
       >
         <span className={cn(
           "text-muted-foreground",
-          size === "sm" && "text-lg md:text-xl",
-          size === "md" && "text-2xl md:text-3xl",
-          size === "lg" && "text-3xl md:text-4xl",
-          size === "xl" && "text-4xl md:text-5xl"
+          size === "sm" && "text-lg",
+          size === "md" && "text-2xl",
+          size === "lg" && "text-3xl",
+          size === "xl" && "text-4xl",
+          (size === "2xl" || size === "3xl") && "text-5xl"
         )}>
           🥚
         </span>
@@ -322,6 +172,6 @@ export function CurrentBlobbiDisplay({
     );
   }
 
-  // Show nothing if no fallback and no Blobbi
+  // No fallback and no Blobbi (or an override waiting for colors).
   return null;
 }

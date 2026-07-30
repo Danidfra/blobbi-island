@@ -46,6 +46,9 @@
  * (later) multiplayer presence — never configuration.
  */
 
+import { constrainPosition } from '@/lib/boundaries';
+import { locationBoundaries } from '@/lib/location-boundaries';
+
 /** The three seating rows, front (a) to back (c). */
 export type SeatRow = 'a' | 'b' | 'c';
 
@@ -234,20 +237,81 @@ export function isOccupiableSeat(seatId: string | null | undefined): boolean {
   return getTheaterSeat(seatId)?.occupiable === true;
 }
 
-/**
- * The world-percent point a Blobbi occupies while seated here.
- *
- * Derived from the configuration rather than from the rendered rect, so every
- * client (and every test) computes the same point without a live DOM — the same
- * reason remote seated Blobbis will later be snapped to the seat instead of
- * trusting a published coordinate.
- */
-export function seatAnchorPosition(seat: TheaterSeatConfig): { x: number; y: number } {
+/** The configured cushion-surface point of a seat (the `interactionTarget` fraction). */
+export function seatCushionPoint(seat: TheaterSeatConfig): { x: number; y: number } {
   const spriteTop = 100 - seat.bottomPercent - SEAT_SPRITE_HEIGHT_PERCENT;
   return {
-    x: seat.leftPercent + seat.widthPercent * seat.interactionTarget.x + (seat.seatedOffset?.xPercent ?? 0),
-    y: spriteTop + SEAT_SPRITE_HEIGHT_PERCENT * seat.interactionTarget.y + (seat.seatedOffset?.yPercent ?? 0),
+    x: seat.leftPercent + seat.widthPercent * seat.interactionTarget.x,
+    y: spriteTop + SEAT_SPRITE_HEIGHT_PERCENT * seat.interactionTarget.y,
   };
+}
+
+/** The theater renders the room-size token 'xl' (128 world px box). */
+const SEATED_BLOBBI_BOX_PX = 128;
+const WORLD_HEIGHT_PX = 697;
+
+/**
+ * How much of the SCALED seated body sinks below the cushion line.
+ *
+ * The seated pose is an explicit VISUAL POSE ANCHOR, not a standing ground
+ * point: under BlobbiActor's bottom-center geometry the anchor is where the
+ * body's bottom lands, and the ratio is applied to the row-SCALED body height
+ * so front/middle/back rows sink proportionally and changing a row's
+ * seatedScale keeps the same visual cushion contact.
+ *
+ * CALIBRATION — 0.5 is DERIVED, not eyeballed: the last known-good
+ * (pre-ground-anchor) renderer placed the seated body's CENTER on the cushion
+ * line with center-origin scaling, so its visible bottom sat at
+ * `cushion + scaledBody/2`. Solving `ratio = (desiredPose − cushion) /
+ * scaledBody` against that legacy bottom gives exactly 0.5 for every row —
+ * one global ratio reproduces the legacy seated look (head and shoulders over
+ * the own backrest, lower body tucked into the chair). An interim 0.3 sat the
+ * body visibly too high in the chair.
+ */
+export const SEAT_CONTACT_RATIO = 0.5;
+
+/**
+ * Resolve the seated POSE ANCHOR for a seat (calibrated to the cushion):
+ *
+ *   pose = cushion line + SEAT_CONTACT_RATIO × (seated-scaled body height)
+ *
+ * Reached via `goTo(..., immediate)`, deliberately bypassing the walk boundary
+ * — a chair cushion is not walkable floor. DOM-free, so every client and test
+ * computes the same point; local and remote both consume it through
+ * `resolveSeatedRender`.
+ */
+export function seatAnchorPosition(seat: TheaterSeatConfig): { x: number; y: number } {
+  const cushion = seatCushionPoint(seat);
+  const seatedBodyPercent = (SEATED_BLOBBI_BOX_PX * seat.seatedScale * 100) / WORLD_HEIGHT_PX;
+  return {
+    x: cushion.x + (seat.seatedOffset?.xPercent ?? 0),
+    y: cushion.y + SEAT_CONTACT_RATIO * seatedBodyPercent + (seat.seatedOffset?.yPercent ?? 0),
+  };
+}
+
+/**
+ * The walk APPROACH fraction for a seat: the floor at the seat sprite's front
+ * base (just below the sprite, clamped into the walk boundary by
+ * `computeSeatTarget`). Distinct from `interactionTarget`, which is the
+ * CUSHION fraction used by the seated pose — walking must aim at the floor in
+ * front of the chair, never at the cushion itself.
+ */
+export const SEAT_APPROACH_TARGET = { x: 0.5, y: 1.05 } as const;
+
+/**
+ * DOM-free mirror of the runtime approach target (`TheaterSeat`'s
+ * `computeSeatTarget` with {@link SEAT_APPROACH_TARGET}), clamped into the
+ * theater walk boundary — the GROUND point the feet stop on before the seated
+ * snap. Used by tests and dev diagnostics.
+ */
+export function seatApproachPosition(seat: TheaterSeatConfig): { x: number; y: number } {
+  const spriteTop = 100 - seat.bottomPercent - SEAT_SPRITE_HEIGHT_PERCENT;
+  const raw = {
+    x: seat.leftPercent + seat.widthPercent * SEAT_APPROACH_TARGET.x,
+    y: spriteTop + SEAT_SPRITE_HEIGHT_PERCENT * SEAT_APPROACH_TARGET.y,
+  };
+  const boundary = locationBoundaries['stage-inside.png'];
+  return boundary ? constrainPosition(raw, boundary) : raw;
 }
 
 /** Background file whose walk boundary seat targets are clamped into. */

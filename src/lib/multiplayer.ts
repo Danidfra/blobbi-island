@@ -10,6 +10,8 @@ import type { Position } from '@/lib/types';
 import type { NostrEvent } from '@nostrify/nostrify';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
+import { worldDistancePx } from '@/lib/blobbi-ground';
+import { groundToWireCenter } from '@/lib/presence-ground';
 
 // ============================================================================
 // Constants and Configuration
@@ -355,10 +357,10 @@ export function posAt(goal: MovementGoal, tSec: number): Position {
     return { x: goal.from.x, y: goal.from.y };
   }
 
-  const distance = Math.sqrt(
-    Math.pow(goal.to.x - goal.from.x, 2) +
-    Math.pow(goal.to.y - goal.from.y, 2)
-  );
+  // `goal.v` is world-design px/s, so measure the path in the same unit
+  // (the legacy version divided a percent-space distance by px/s, producing
+  // near-instant durations).
+  const distance = worldDistancePx(goal.from, goal.to);
 
   const duration = distance / goal.v;
 
@@ -493,8 +495,26 @@ export function buildPresence31950(params: {
   content: string;
   tags: string[][];
 } {
-  const { sessionId, islandId, location, blobbiAddr, content } = params;
+  const { sessionId, islandId, location, blobbiAddr, content: groundContent } = params;
   const expiration = (nowSec() + EXP_SECONDS).toString();
+
+  // GROUND→WIRE boundary (Phase 2): every publish helper funnels through this
+  // builder with INTERNAL ground-point positions; the kind 31950 wire format
+  // keeps the legacy CENTER-point semantics for compatibility with clients
+  // that predate the ground-anchor migration. See src/lib/presence-ground.ts.
+  const content: PresenceContent = {
+    ...groundContent,
+    anchor: { ...groundContent.anchor, ...groundToWireCenter(groundContent.anchor, location) },
+    ...(groundContent.goal
+      ? {
+          goal: {
+            ...groundContent.goal,
+            from: groundToWireCenter(groundContent.goal.from, location),
+            to: groundToWireCenter(groundContent.goal.to, location),
+          },
+        }
+      : {}),
+  };
 
   return {
     kind: 31950,

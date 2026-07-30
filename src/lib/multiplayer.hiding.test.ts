@@ -6,6 +6,7 @@
  * guessing. These tests pin when it is published, when it is absent, and that
  * clients which know nothing about it stay valid.
  */
+import { groundToWireCenter } from '@/lib/presence-ground';
 import { describe, it, expect, vi } from 'vitest';
 import {
   publishHide,
@@ -67,9 +68,12 @@ describe('presence hiding state', () => {
     const content = c.lastContent();
     expect(content.hiddenIn).toBe('town-bush-3');
     expect(content.state).toBe('idle');
-    // Position stays truthful — hiding does not move the player out of the world.
-    expect(content.anchor.x).toBe(8);
-    expect(content.anchor.y).toBe(91);
+    // Position stays truthful — hiding does not move the player out of the
+    // world. Phase 2: the WIRE keeps legacy CENTER semantics, so the published
+    // anchor is the internal ground point converted at the build boundary.
+    const wire = groundToWireCenter({ x: 8, y: 91 }, PARAMS.location);
+    expect(content.anchor.x).toBe(wire.x);
+    expect(content.anchor.y).toBe(wire.y);
     expect(content.goal).toBeUndefined();
     // Reuses the existing presence kind; no new kind was introduced.
     expect(c.events[0].kind).toBe(31950);

@@ -1,25 +1,42 @@
+/**
+ * AccessoryOverlay — the INTERACTIVE accessory editing surface.
+ *
+ * Static (in-world / preview) accessory rendering now lives in the pure
+ * `AccessoryLayerView` inside `BlobbiRendererView`; this component is only
+ * mounted by the accessory editor (BlobbiInfoModal's inventory tab), layered
+ * over the preview's renderer box.
+ *
+ * Coordinate contract (docs/blobbi-renderer-contract.md): `containerRef` must
+ * wrap exactly the canonical renderer box, so the drag math's percentages are
+ * percentages OF THAT BOX — the same space the world renderer uses. Accessory
+ * size is the same box-relative fraction the static renderer uses
+ * (`ACCESSORY_BASE_PERCENT` × the accessory's own scale), so a placement looks
+ * materially the same while editing and in the world.
+ *
+ * Editing inputs remain mouse-based (drag / wheel / shift+wheel). Converting
+ * to pointer events for touch is deliberately out of Phase 1 scope — see the
+ * contract doc's "not solved in Phase 1" list.
+ */
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
 import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
 import { accessoryImagePath } from '@/lib/asset-paths';
-import { REAR_VIEW_HIDDEN_SLOTS, type EquipmentConfig } from './lib/accessory-types';
+import { ACCESSORY_BASE_PERCENT } from './lib/blobbi-render-size';
+import { normalizeAccessoryPlacements } from './lib/accessory-normalize';
+import { type EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryOverlayProps {
   className?: string;
-  /** Whether this is a static display (non-interactive) */
-  isStatic?: boolean;
   /**
    * Which way the character is turned. `"back"` drops the face-only accessory
-   * slots (see {@link REAR_VIEW_HIDDEN_SLOTS}) so a rear-facing Blobbi does not
-   * wear its sunglasses on the back of its head.
+   * slots so a rear-facing Blobbi does not wear its sunglasses on the back of
+   * its head.
    */
   facing?: 'front' | 'back';
-  /** Size multiplier for accessories relative to the blobbi */
-  sizeMultiplier?: number;
   /** Pending updates to apply to accessories (for position syncing during editing) */
   pendingUpdates?: Record<string, Partial<EquipmentConfig>>;
-  /** Container ref for drag calculations */
+  /** Ref to the element that IS the canonical renderer box (drag coordinate space). */
   containerRef?: React.RefObject<HTMLDivElement>;
   /** Selected accessory for editing */
   selectedAccessory?: EquipmentConfig | null;
@@ -32,28 +49,22 @@ interface AccessoryOverlayProps {
 interface AccessoryItemProps {
   config: EquipmentConfig;
   containerRef?: React.RefObject<HTMLDivElement>;
-  isStatic: boolean;
   isSelected: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<EquipmentConfig>) => void;
-  sizeMultiplier: number;
 }
 
 function AccessoryItem({
   config,
   containerRef,
-  isStatic,
   isSelected,
   onSelect,
   onUpdate,
-  sizeMultiplier
 }: AccessoryItemProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (isStatic) return;
-    
     e.preventDefault();
     e.stopPropagation();
 
@@ -72,28 +83,29 @@ function AccessoryItem({
     });
 
     setIsDragging(true);
-  }, [config.x, config.y, containerRef, onSelect, isStatic]);
+  }, [config.x, config.y, containerRef, onSelect]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !containerRef?.current || isStatic) return;
+    if (!isDragging || !containerRef?.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const newX = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
     const newY = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
 
-    // Constrain to container bounds
+    // Constrain to container bounds. Decimal precision is preserved end-to-end
+    // (parse/serialize keep decimals — see accessory-utils).
     const constrainedX = Math.max(5, Math.min(95, newX));
     const constrainedY = Math.max(5, Math.min(95, newY));
 
     onUpdate({ x: constrainedX, y: constrainedY });
-  }, [isDragging, dragOffset, containerRef, onUpdate, isStatic]);
+  }, [isDragging, dragOffset, containerRef, onUpdate]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (isStatic || !isSelected) return;
+    if (!isSelected) return;
 
     e.preventDefault();
 
@@ -108,11 +120,11 @@ function AccessoryItem({
       const newScale = Math.max(0.25, Math.min(2.0, config.scale + delta));
       onUpdate({ scale: newScale });
     }
-  }, [isSelected, config.rot, config.scale, onUpdate, isStatic]);
+  }, [isSelected, config.rot, config.scale, onUpdate]);
 
   // Global mouse event listeners
   useEffect(() => {
-    if (isDragging && !isStatic) {
+    if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
 
@@ -121,40 +133,35 @@ function AccessoryItem({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp, isStatic]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const imageUrl = config.url || generateAccessoryUrl(config.code) || '';
-
-  // Calculate the size based on the multiplier
-  const baseSize = 60 * sizeMultiplier;
 
   return (
     <div
       className={cn(
-        "absolute select-none transition-all duration-200",
-        !isStatic && "z-20 cursor-move pointer-events-auto", // Enable pointer events for interactive mode
-        isDragging && !isStatic && "opacity-80 scale-105",
-        isSelected && !isStatic && "ring-2 ring-blue-500 ring-offset-2"
+        "absolute select-none transition-all duration-200 z-20 cursor-move pointer-events-auto",
+        isDragging && "opacity-80 scale-105",
+        isSelected && "ring-2 ring-blue-500 ring-offset-2"
       )}
       style={{
         left: `${config.x}%`,
         top: `${config.y}%`,
+        // Same box-relative sizing as the static renderer (the container IS
+        // the renderer box, and it is square, so width==height stays square).
+        width: ACCESSORY_BASE_PERCENT,
+        height: ACCESSORY_BASE_PERCENT,
         transform: `translate(-50%, -50%) scale(${config.scale}) rotate(${config.rot}deg) ${config.flipX ? 'scaleX(-1)' : ''}`,
         transformOrigin: 'center',
       }}
       onMouseDown={handleMouseDown}
       onWheel={handleWheel}
-      title={isStatic ? config.code : `${config.code} - Click to select, drag to move, scroll to scale, shift+scroll to rotate`}
+      title={`${config.code} - Click to select, drag to move, scroll to scale, shift+scroll to rotate`}
     >
       <img
         src={imageUrl}
         alt={config.code}
-        className="max-w-none" // Remove pointer-events-none for interactivity
-        style={{
-          width: `${baseSize}px`,
-          height: `${baseSize}px`,
-          objectFit: 'contain',
-        }}
+        className="h-full w-full max-w-none object-contain"
         draggable={false}
         onError={(e) => {
           const target = e.target as HTMLImageElement;
@@ -180,9 +187,7 @@ function AccessoryItem({
 
 export function AccessoryOverlay({
   className,
-  isStatic = true,
   facing = 'front',
-  sizeMultiplier = 1,
   pendingUpdates = {},
   containerRef,
   selectedAccessory,
@@ -191,30 +196,30 @@ export function AccessoryOverlay({
 }: AccessoryOverlayProps) {
   const { equipment } = useAccessoryManagement();
 
-  // Always define useCallbacks to avoid conditional hook calls
   const handleAccessoryUpdate = useCallback((accessoryCode: string, updates: Partial<EquipmentConfig>) => {
-    if (!isStatic) {
-      onAccessoryUpdate?.(accessoryCode, updates);
-    }
-  }, [onAccessoryUpdate, isStatic]);
+    onAccessoryUpdate?.(accessoryCode, updates);
+  }, [onAccessoryUpdate]);
 
   const handleAccessorySelect = useCallback((accessory: EquipmentConfig) => {
-    if (!isStatic) {
-      onAccessorySelect?.(accessory);
-    }
-  }, [onAccessorySelect, isStatic]);
+    onAccessorySelect?.(accessory);
+  }, [onAccessorySelect]);
 
-  const visibleEquipment = (equipment ?? []).filter(
-    (accessory) => facing !== 'back' || !REAR_VIEW_HIDDEN_SLOTS.has(accessory.slot),
-  );
+  // Reuse the normalizer for its deterministic (layerRank, code) ordering and
+  // rear-view filtering, so the editor stacks accessories in the same order as
+  // the world. The editor manipulates raw EquipmentConfig values, so map the
+  // normalized order back onto the raw configs.
+  const configByCode = new Map((equipment ?? []).map((item) => [item.code, item] as const));
+  const orderedEquipment = normalizeAccessoryPlacements(equipment ?? [], { facing })
+    .map((placement) => configByCode.get(placement.code))
+    .filter((item): item is EquipmentConfig => item !== undefined);
 
-  if (visibleEquipment.length === 0) {
+  if (orderedEquipment.length === 0) {
     return null;
   }
 
   return (
     <div className={cn("absolute inset-0", className)}>
-      {visibleEquipment.map((accessory) => {
+      {orderedEquipment.map((accessory) => {
         // Apply pending updates to sync positions during editing
         const updates = pendingUpdates[accessory.code] || {};
         const currentConfig = { ...accessory, ...updates };
@@ -224,11 +229,9 @@ export function AccessoryOverlay({
             key={accessory.code}
             config={currentConfig}
             containerRef={containerRef}
-            isStatic={isStatic}
             isSelected={selectedAccessory?.code === accessory.code}
             onSelect={() => handleAccessorySelect(accessory)}
             onUpdate={(updates) => handleAccessoryUpdate(accessory.code, updates)}
-            sizeMultiplier={sizeMultiplier}
           />
         );
       })}

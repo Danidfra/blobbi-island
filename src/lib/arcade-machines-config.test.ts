@@ -343,10 +343,12 @@ describe('placement', () => {
       expect(anchor.y).toBeLessThanOrEqual(100);
     }
 
-    // The air hockey table specifically, as the live browser measured it.
+    // The air hockey table specifically: the center-era browser measurement
+    // (61.25, 89.40) plus the Phase 2 ground offset (half a 1.2-scaled lg body,
+    // 8.263…) — same on-screen stop point, now named by the feet.
     const airHockey = machineAnchorPosition(getArcadeMachine('arcade-air-hockey')!);
     expect(airHockey.x).toBeCloseTo(61.25, 2);
-    expect(airHockey.y).toBeCloseTo(89.4, 2);
+    expect(airHockey.y).toBeCloseTo(97.66, 2);
   });
 
   it('gives no two machines on a floor the same anchor point', () => {

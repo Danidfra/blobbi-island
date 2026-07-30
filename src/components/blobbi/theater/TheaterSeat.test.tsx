@@ -7,6 +7,8 @@
  * that replaces it — unique ids, arrival-gated sitting, a fixed z-index, and
  * decoration-only off-world seats.
  */
+import { constrainPosition } from '@/lib/boundaries';
+import { locationBoundaries } from '@/lib/location-boundaries';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, act, fireEvent } from '@testing-library/react';
 import { TheaterSeat } from './TheaterSeat';
@@ -15,6 +17,7 @@ import {
   getTheaterSeat,
   occupiableTheaterSeats,
   type TheaterSeatConfig,
+  SEAT_APPROACH_TARGET,
 } from '@/lib/theater-seats-config';
 import { resolveSeatedRender } from '@/lib/blobbi-world-render';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
@@ -79,16 +82,23 @@ const seatA1 = getTheaterSeat('theater-seat-a1')!;
 const decorativeChair = getTheaterSeat('theater-seat-b1')!;
 
 describe('TheaterSeat', () => {
-  it('walks to the seat\'s configured cushion point, not its base', () => {
+  it('walks to the floor at the seat\'s front base — the APPROACH, never the cushion', () => {
+    // GROUND semantics: the feet stop on the floor in front of the chair
+    // (SEAT_APPROACH_TARGET, just below the sprite base, boundary-clamped);
+    // the cushion fraction belongs to the seated POSE (seatAnchorPosition).
     const h = renderSeat(seatA1);
     fireEvent.click(h.seat!);
 
     expect(h.requests).toHaveLength(1);
     const { target } = h.requests[0];
-    const expectedX = ((SEAT_RECT.left + SEAT_RECT.width * seatA1.interactionTarget.x) / SURFACE_RECT.width) * 100;
-    const expectedY = ((SEAT_RECT.top + SEAT_RECT.height * seatA1.interactionTarget.y) / SURFACE_RECT.height) * 100;
-    expect(target.x).toBeCloseTo(expectedX, 5);
-    expect(target.y).toBeCloseTo(expectedY, 5);
+    const rawX = ((SEAT_RECT.left + SEAT_RECT.width * SEAT_APPROACH_TARGET.x) / SURFACE_RECT.width) * 100;
+    const rawY = ((SEAT_RECT.top + SEAT_RECT.height * SEAT_APPROACH_TARGET.y) / SURFACE_RECT.height) * 100;
+    const expected = constrainPosition({ x: rawX, y: rawY }, locationBoundaries['stage-inside.png']);
+    expect(target.x).toBeCloseTo(expected.x, 5);
+    expect(target.y).toBeCloseTo(expected.y, 5);
+    // And explicitly: NOT the cushion point.
+    const cushionY = ((SEAT_RECT.top + SEAT_RECT.height * seatA1.interactionTarget.y) / SURFACE_RECT.height) * 100;
+    expect(target.y).toBeGreaterThan(cushionY);
   });
 
   it('clamps the walk target into the theater boundary', () => {

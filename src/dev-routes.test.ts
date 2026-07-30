@@ -71,7 +71,7 @@ describe('production build excludes the DEV harnesses', () => {
   it.runIf(distExists && buildIsFresh)('emits no DevArcade or DevTheater chunk', () => {
     expect(distChunks.length).toBeGreaterThan(0);
 
-    const named = distChunks.filter((f) => /DevArcade|DevTheater/i.test(f));
+    const named = distChunks.filter((f) => /DevArcade|DevTheater|DevRooms/i.test(f));
     expect(named, `unexpected dev chunks: ${named.join(', ')}`).toEqual([]);
   });
 
@@ -85,8 +85,10 @@ describe('production build excludes the DEV harnesses', () => {
           return (
             source.includes('/dev/arcade') ||
             source.includes('/dev/theater') ||
+            source.includes('/dev/rooms') ||
             source.includes('DevArcade') ||
-            source.includes('DevTheater')
+            source.includes('DevTheater') ||
+            source.includes('DevRooms')
           );
         });
 
@@ -94,32 +96,32 @@ describe('production build excludes the DEV harnesses', () => {
     },
   );
 
-  it('registers both harnesses behind import.meta.env.DEV in the router source', () => {
+  it('registers every harness behind import.meta.env.DEV in the router source', () => {
     // Source-level guard, always run: the routes must never be registered
     // unconditionally, whatever state `dist/` happens to be in.
     const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
-    for (const name of ['DevArcade', 'DevTheater']) {
+    for (const name of ['DevArcade', 'DevTheater', 'DevRooms']) {
       expect(router).toContain(`const ${name} = import.meta.env.DEV`);
       expect(router).toContain(`{${name} && (`);
     }
   });
 
-  it('exposes exactly two dev routes, and imports neither harness eagerly', () => {
+  it('exposes exactly three dev routes, and imports no harness eagerly', () => {
     const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
     const devRoutes = [...router.matchAll(/path="(\/dev\/[^"]*)"/g)].map((m) => m[1]);
-    expect(devRoutes.sort()).toEqual(['/dev/arcade', '/dev/theater']);
+    expect(devRoutes.sort()).toEqual(['/dev/arcade', '/dev/rooms', '/dev/theater']);
     // A static import would pull the harness into the main chunk regardless of
     // the route gate.
-    expect(router).not.toMatch(/^import\s+.*Dev(Arcade|Theater)/m);
+    expect(router).not.toMatch(/^import\s+.*Dev(Arcade|Theater|Rooms)/m);
   });
 
   it('is reachable from no production module', () => {
     // Nothing outside the harness files themselves may reference them.
     const referrers = allFiles(join(ROOT, 'src'))
       .filter((f) => /\.tsx?$/.test(f))
-      .filter((f) => !/pages\/Dev(Arcade|Theater)\.tsx$/.test(f))
+      .filter((f) => !/pages\/Dev(Arcade|Theater|Rooms)\.tsx$/.test(f))
       .filter((f) => !f.endsWith('dev-routes.test.ts'))
-      .filter((f) => /\bDev(Arcade|Theater)\b/.test(readFileSync(f, 'utf8')));
+      .filter((f) => /\bDev(Arcade|Theater|Rooms)\b/.test(readFileSync(f, 'utf8')));
 
     expect(referrers.map((f) => f.replace(`${ROOT}/`, ''))).toEqual(['src/AppRouter.tsx']);
   });

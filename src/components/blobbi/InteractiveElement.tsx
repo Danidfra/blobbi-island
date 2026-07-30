@@ -31,6 +31,8 @@ export function computeBaseCenterTarget(el: Element, walkBoundary?: Boundary): P
   const centerX = rect.left + rect.width / 2;
   // Aim slightly above the very bottom so the point sits on the floor in front
   // of the object rather than clipped by its lowest pixels.
+  // GROUND semantics: this is where the FEET stop — just above the sprite's
+  // base line, i.e. standing at the doorway/object base.
   const baseY = rect.bottom - rect.height * 0.1;
 
   const raw: Position = {

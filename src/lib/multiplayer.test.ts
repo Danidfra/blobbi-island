@@ -43,13 +43,15 @@ describe('Multiplayer Smooth Movement', () => {
       const goal: MovementGoal = {
         from: { x: 10, y: 20 },
         to: { x: 50, y: 60 },
-        v: 100, // 100 pixels per second
+        v: 100, // 100 WORLD-DESIGN pixels per second
         ts: 1000000,
       };
 
-      // Distance = sqrt((50-10)^2 + (60-20)^2) = sqrt(1600 + 1600) = sqrt(3200) ≈ 56.57
-      // Duration = 56.57 / 100 ≈ 0.5657 seconds
-      const position = posAt(goal, 1000000 + 1); // 1 second later (more than duration)
+      // Phase 2: distance is measured in world-design px (1046×697), matching
+      // the px/s velocity unit (the legacy version divided percent by px/s).
+      // dx = 40% of 1046 = 418.4px, dy = 40% of 697 = 278.8px → dist ≈ 502.7px
+      // Duration ≈ 5.03s.
+      const position = posAt(goal, 1000000 + 6); // past the duration
       expect(position).toEqual({ x: 50, y: 60 });
     });
 
@@ -57,16 +59,15 @@ describe('Multiplayer Smooth Movement', () => {
       const goal: MovementGoal = {
         from: { x: 0, y: 0 },
         to: { x: 100, y: 100 },
-        v: 100, // 100 pixels per second
+        v: 100, // 100 world px per second
         ts: 1000000,
       };
 
-      // Distance = sqrt(100^2 + 100^2) = sqrt(20000) ≈ 141.42
-      // Duration = 141.42 / 100 ≈ 1.4142 seconds
-      // At 0.5 seconds, progress = 0.5 / 1.4142 ≈ 0.3536
-      const position = posAt(goal, 1000000 + 0.5);
-      expect(position.x).toBeCloseTo(35.36, 1);
-      expect(position.y).toBeCloseTo(35.36, 1);
+      // Distance = hypot(1046, 697) ≈ 1256.9 world px → duration ≈ 12.569s.
+      // At 6.2845s, progress = 0.5.
+      const position = posAt(goal, 1000000 + 6.2845);
+      expect(position.x).toBeCloseTo(50, 1);
+      expect(position.y).toBeCloseTo(50, 1);
     });
   });
 

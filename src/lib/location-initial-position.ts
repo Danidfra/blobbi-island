@@ -6,32 +6,38 @@ export interface InitialPosition {
   y: number;
 }
 
+/**
+ * GROUND-ANCHOR semantics (Phase 2): every position is the point where the
+ * Blobbi's FEET land on room entry. Values are the center-era spawns shifted
+ * down by the depth-scaled half body height at that point, preserving each
+ * room's previous on-screen entry spot exactly.
+ */
 export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
-  'town': { x: 50, y: 75 },
-  'home': { x: 50, y: 75 },
-  'beach': { x: 50, y: 75 },
-  'mine': { x: 50, y: 75 },
-  'nostr-station': { x: 50, y: 75 },
-  'nostr-station-inside': { x: 50, y: 85 },
-  'plaza': { x: 50, y: 75 },
-  'plaza-inside': { x: 50, y: 43 },
-  'arcade': { x: 50, y: 75 },
-  'arcade-1': { x: 50, y: 63 },
-  'arcade-minus1': { x: 50, y: 55 },
-  'stage': { x: 50, y: 75 },
-  'shop': { x: 50, y: 90 },
-  'back-yard': { x: 50, y: 75 },
-  'cave-open': { x: 50, y: 75 },
-  'clothing-store-inside': { x: 50, y: 80 },
+  'town': { x: 50, y: 83.3 },
+  'home': { x: 50, y: 84.2 },
+  'beach': { x: 50, y: 81.9 },
+  'mine': { x: 50, y: 86.9 },
+  'nostr-station': { x: 50, y: 82 },
+  'nostr-station-inside': { x: 50, y: 94.5 },
+  'plaza': { x: 50, y: 81.8 },
+  'plaza-inside': { x: 50, y: 47.5 },
+  'arcade': { x: 50, y: 84.2 },
+  'arcade-1': { x: 50, y: 71.3 },
+  'arcade-minus1': { x: 50, y: 60.9 },
+  'stage': { x: 50, y: 84.2 },
+  'shop': { x: 50, y: 96.7 },
+  'back-yard': { x: 50, y: 84.2 },
+  'cave-open': { x: 50, y: 84.2 },
+  'clothing-store-inside': { x: 50, y: 90.1 },
 };
 
 /**
  * The arcade ground floor's walk boundary is the full-width rectangle
- * `y ∈ [48, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [36, 48]` — the
+ * `y ∈ [57.2, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [45.2, 57.2]` — the
  * space in front of the elevator doors.
  *
- * These two constants exist because the pass-holder spawn used to be `{50, 48}`,
- * on the alcove's own boundary line. From there the Blobbi could not reach the
+ * These two constants exist because the pass-holder spawn used to sit on the
+ * alcove's own boundary line. From there the Blobbi could not reach the
  * ticket counter: the walk stalled far from its target and `usePendingInteraction`
  * correctly cancelled itself (`STALL_MAX_DISTANCE_FACTOR`), so clicking the
  * counter produced no movement and no modal at all. Reproduced in a browser
@@ -41,13 +47,13 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
  * clear of the alcove, and a straight line from it to each ground-floor
  * destination stays on walkable floor the whole way.
  */
-export const ARCADE_ELEVATOR_ALCOVE = { x: [45, 55], y: [36, 48] } as const;
+export const ARCADE_ELEVATOR_ALCOVE = { x: [45, 55], y: [45.2, 57.2] } as const;
 
 /** Where a pass holder arrives: on the open floor, below the alcove mouth. */
-export const ARCADE_PASS_HOLDER_SPAWN: InitialPosition = { x: 50, y: 58 };
+export const ARCADE_PASS_HOLDER_SPAWN: InitialPosition = { x: 50, y: 67.2 };
 
 /** Where everyone else arrives: mid-floor, within easy reach of the counter. */
-export const ARCADE_DEFAULT_SPAWN: InitialPosition = { x: 50, y: 75 };
+export const ARCADE_DEFAULT_SPAWN: InitialPosition = { x: 50, y: 84.2 };
 
 /**
  * Maps a child location to the position near its door on the parent location.
@@ -55,26 +61,35 @@ export const ARCADE_DEFAULT_SPAWN: InitialPosition = { x: 50, y: 75 };
  * Used when exiting a room so the blobbi appears near the door they just came out of,
  * instead of the default center position.
  */
-const EXIT_POSITIONS: Record<string, InitialPosition> = {
+export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // Exiting to town from various rooms
-  'town:arcade': { x: 32, y: 68 },
-  'town:stage': { x: 58, y: 65 },
-  'town:shop': { x: 68, y: 68 },
+  'town:arcade': { x: 32, y: 75.8 },
+  'town:stage': { x: 58, y: 72.1 },
+  'town:shop': { x: 68, y: 75.8 },
 
   // Exiting to nostr-station area from nostr-station-inside
-  'nostr-station:nostr-station-inside': { x: 80, y: 40 },
+  'nostr-station:nostr-station-inside': { x: 80, y: 44.8 },
 
   // Exiting to plaza from plaza-inside
-  'plaza:plaza-inside': { x: 50, y: 60 },
+  'plaza:plaza-inside': { x: 50, y: 65.8 },
 
-  // Exiting to shop (mall) from clothing-store-inside
-  'shop:clothing-store-inside': { x: 55, y: 40 },
+  // Exiting to shop (mall) from clothing-store-inside.
+  //
+  // The clothing store sits on the mall's MIDDLE level: its sprite group spans
+  // x ≈ 50–74.5% and its door x ≈ 51–64% (InteractiveElements, shopping-mall
+  // branch). The walkable floor on that level is the strip y ∈ [62.1, 63.1] of
+  // `shopping-mall-inside.png` (locationBoundaries) — the same strip players
+  // stand on when they walk INTO the store. The pre-Phase-0 value {55, 40} was
+  // outside every walkable area (mid-air between floors), so the Blobbi
+  // spawned off-floor and snapped away on the first movement frame.
+  // GROUND-anchor semantics (Phase 2): the feet land on the walkway strip.
+  'shop:clothing-store-inside': { x: 58, y: 62.6 },
 
   // Exiting to mine from cave-open
-  'mine:cave-open': { x: 50, y: 70 },
+  'mine:cave-open': { x: 50, y: 81.3 },
 
   // Exiting to home from back-yard
-  'home:back-yard': { x: 78, y: 75 },
+  'home:back-yard': { x: 78, y: 84.2 },
 };
 
 export function getBlobbiInitialPosition(location: string, previousLocation?: string | null): InitialPosition {
@@ -95,8 +110,8 @@ export function getBlobbiInitialPosition(location: string, previousLocation?: st
 
   // Handle modal backgrounds (like photo-booth-inside.png)
   if (location === 'photo-booth-inside.png') {
-    // Place Blobbi at bottom-center of the booth walkable area
-    return { x: 45, y: 60 };
+    // Place Blobbi at bottom-center of the booth walkable area (ground point)
+    return { x: 45, y: 73.8 };
   }
 
   return defaultPosition;

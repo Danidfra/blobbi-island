@@ -63,6 +63,66 @@ export function generateAccessoryUrl(code: string): string | null {
 // Tag Parsing
 // ============================================================================
 
+/**
+ * Parse a numeric tag value preserving decimals.
+ *
+ * The legacy parsers used `parseInt` for x/y/rot, silently truncating the
+ * decimal positions produced by drag editing on every save/load round-trip.
+ * This parser keeps valid decimals and falls back for anything non-finite
+ * (absent, empty, NaN, Infinity) — it never returns a non-finite number.
+ */
+export function parseFiniteNumber(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === '') return fallback;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Shared defaults for absent/invalid equip-tag fields.
+ *
+ * The two legacy parsers disagreed (`parseEquipTag` defaulted x to 50,
+ * `parseEquipTags` to 5); 50/50 — the box center — is the sensible single
+ * default and matches the documented tag example in `blobbi-types.ts`.
+ * refw/refh default to 100: the reference space of the 0-100 percentage
+ * coordinates (see `accessory-normalize.ts` — parsed and preserved, no
+ * runtime conversion).
+ */
+export const EQUIP_TAG_DEFAULTS = {
+  x: 50,
+  y: 50,
+  scale: 1.0,
+  rot: 0,
+  refw: 100,
+  refh: 100,
+} as const;
+
+/** Parse one raw equip tag array into an EquipmentConfig (shared by both parsers). */
+function parseEquipTagEntries(equipTag: string[]): EquipmentConfig {
+  const code = equipTag[1];
+
+  // Parse key-value pairs from the tag
+  const tagEntries: Record<string, string> = {};
+  for (let i = 2; i < equipTag.length; i += 2) {
+    const key = equipTag[i];
+    const val = equipTag[i + 1] || '';
+    tagEntries[key] = val;
+  }
+
+  return {
+    code,
+    x: parseFiniteNumber(tagEntries.x, EQUIP_TAG_DEFAULTS.x),
+    y: parseFiniteNumber(tagEntries.y, EQUIP_TAG_DEFAULTS.y),
+    scale: parseFiniteNumber(tagEntries.scale, EQUIP_TAG_DEFAULTS.scale),
+    rot: parseFiniteNumber(tagEntries.rot, EQUIP_TAG_DEFAULTS.rot),
+    flipX: tagEntries.flipX === '1',
+    refw: parseFiniteNumber(tagEntries.refw, EQUIP_TAG_DEFAULTS.refw),
+    refh: parseFiniteNumber(tagEntries.refh, EQUIP_TAG_DEFAULTS.refh),
+    form: (tagEntries.form || 'default') as AccessoryForm,
+    url: tagEntries.url || generateAccessoryUrl(code) || '',
+    slot: inferSlotFromCode(code),
+  };
+}
+
 /** Parse an equip tag from event tags */
 export function parseEquipTag(tags: string[][], code: string): EquipmentConfig | null {
   const equipTag = tags.find(([name, tagCode]) => name === 'equip' && tagCode === code);
@@ -70,30 +130,7 @@ export function parseEquipTag(tags: string[][], code: string): EquipmentConfig |
   if (!equipTag) return null;
 
   try {
-    // Equip tag format: ["equip", "<code>", "x", "<int>", "y", "<int>", "scale", "<float>", "rot", "<int>", "flipX", "0|1", "refw", "<int>", "refh", "<int>", "form", "<string>", "url", "<string>"]
-    const tagCode = equipTag[1];
-    
-    // Parse key-value pairs from the tag
-    const tagEntries: Record<string, string> = {};
-    for (let i = 2; i < equipTag.length; i += 2) {
-      const key = equipTag[i];
-      const val = equipTag[i + 1] || '';
-      tagEntries[key] = val;
-    }
-
-    return {
-      code: tagCode,
-      x: parseInt(tagEntries.x || '50', 10),
-      y: parseInt(tagEntries.y || '50', 10),
-      scale: parseFloat(tagEntries.scale || '1.0'),
-      rot: parseInt(tagEntries.rot || '0', 10),
-      flipX: tagEntries.flipX === '1',
-      refw: parseInt(tagEntries.refw || '100', 10),
-      refh: parseInt(tagEntries.refh || '100', 10),
-      form: (tagEntries.form || 'default') as AccessoryForm,
-      url: tagEntries.url || generateAccessoryUrl(tagCode) || '',
-      slot: inferSlotFromCode(tagCode),
-    };
+    return parseEquipTagEntries(equipTag);
   } catch (error) {
     console.warn(`Failed to parse equip tag for ${code}:`, error);
     return null;
@@ -147,35 +184,7 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
     .filter(([name]) => name === 'equip')
     .map((equipTag) => {
       try {
-        const code = equipTag[1];
-        
-        // Parse key-value pairs from tag
-        const tagEntries: Record<string, string> = {};
-        for (let i = 2; i < equipTag.length; i += 2) {
-          const key = equipTag[i];
-          const val = equipTag[i + 1] || '';
-          tagEntries[key] = val;
-        }
-
-        // Generate URL safely
-        const url = tagEntries.url || generateAccessoryUrl(code) || '';
-
-        // Infer slot safely
-        const slot = inferSlotFromCode(code);
-
-        return {
-          code,
-          x: parseInt(tagEntries.x || '5', 10),
-          y: parseInt(tagEntries.y || '50', 10),
-          scale: parseFloat(tagEntries.scale || '1.0'),
-          rot: parseInt(tagEntries.rot || '0', 10),
-          flipX: tagEntries.flipX === '1',
-          refw: parseInt(tagEntries.refw || '100', 10),
-          refh: parseInt(tagEntries.refh || '100', 10),
-          form: (tagEntries.form || 'default') as AccessoryForm,
-          url,
-          slot,
-        };
+        return parseEquipTagEntries(equipTag);
       } catch (error) {
         console.warn(`Failed to parse equip tag:`, equipTag, error);
         return null;
@@ -188,18 +197,28 @@ export function parseEquipTags(tags: string[][]): EquipmentConfig[] {
 // Tag Creation
 // ============================================================================
 
+/**
+ * Serialize a numeric field: decimals are preserved (never truncated to int),
+ * limited to 2 decimal places so float noise from dragging (55.00000000001)
+ * doesn't accumulate across save/load round-trips. Integers stay integers
+ * ("55", not "55.00").
+ */
+function serializeNumber(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}
+
 /** Create an equip tag from equipment config */
 export function createEquipTag(config: EquipmentConfig): string[] {
   const tag: string[] = ['equip', config.code];
 
   // Add all properties
-  tag.push('x', config.x.toString());
-  tag.push('y', config.y.toString());
-  tag.push('scale', config.scale.toString());
-  tag.push('rot', config.rot.toString());
+  tag.push('x', serializeNumber(config.x));
+  tag.push('y', serializeNumber(config.y));
+  tag.push('scale', serializeNumber(config.scale));
+  tag.push('rot', serializeNumber(config.rot));
   tag.push('flipX', config.flipX ? '1' : '0');
-  tag.push('refw', config.refw.toString());
-  tag.push('refh', config.refh.toString());
+  tag.push('refw', serializeNumber(config.refw));
+  tag.push('refh', serializeNumber(config.refh));
   tag.push('form', config.form);
   tag.push('url', config.url);
   tag.push('ver', '1');

@@ -440,7 +440,10 @@ export function BlobbiInfoModal({
                     idSuffix={`preview:${previewKey}`}
                   />
 
-                  {/* Accessory Overlay for inventory editing - positioned relative to blobbi bounds */}
+                  {/* Accessory Overlay for inventory editing. `stageRef` wraps
+                      exactly the preview's renderer box (its only child), so
+                      the overlay's inset-0 percentage space IS the canonical
+                      renderer box — the same space the world renderer uses. */}
                   {!readOnly && selectedTab === 'inventory' && (
                     <AccessoryOverlay
                       className="absolute inset-0 z-20"
@@ -448,8 +451,6 @@ export function BlobbiInfoModal({
                       selectedAccessory={selectedAccessory}
                       onAccessorySelect={setSelectedAccessory}
                       onAccessoryUpdate={(code, updates) => handleAccessoryUpdate(code, updates)}
-                      isStatic={false}
-                      sizeMultiplier={1.0}
                       pendingUpdates={{ ...committedUpdates, ...pendingUpdates }}
                     />
                   )}

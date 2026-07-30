@@ -98,12 +98,20 @@ export function resolveBlobbiZIndex(
 /** Everything that changes visually about a Blobbi because it is seated. */
 export interface SeatedRender {
   seat: TheaterSeatConfig;
-  /** World-percent point the Blobbi is pinned to. */
+  /** World-percent POSE anchor the Blobbi is pinned to (body bottom = cushion). */
   position: Position;
   /** Which way it is turned — theater seats all face the screen. */
   facing: 'front' | 'back';
   /** Multiplier for the sprite wrapper ONLY (never the anchor). */
   scale: number;
+  /**
+   * Stacking order while seated: just behind the OWN chair's backrest and in
+   * front of every farther row. Derived from the seat row rather than the
+   * standing y-bands — the bands map GROUND y for standing actors, and a
+   * seated pose y would land in the wrong band (the sitter's head would hide
+   * behind the next row's chairs).
+   */
+  zIndex: number;
   /** A Blobbi in a chair is not standing on the floor. */
   hideShadow: true;
   /** A bobbing seated Blobbi fights the chair it is sitting in. */
@@ -129,6 +137,9 @@ export function resolveSeatedRender(seatId: string | null | undefined): SeatedRe
     position: seatAnchorPosition(seat),
     facing: seat.facing,
     scale: seat.seatedScale,
+    // Behind the own chair's backrest (chair z − 5), in front of farther rows;
+    // floor of 9 keeps every sitter within the Blobbi z range.
+    zIndex: Math.max(seat.zIndex - 5, 9),
     hideShadow: true,
     disableFloat: true,
   };

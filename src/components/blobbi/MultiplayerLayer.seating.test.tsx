@@ -24,6 +24,7 @@ import {
   getTheaterSeat,
   seatAnchorPosition,
 } from '@/lib/theater-seats-config';
+import { wireCenterToGround } from '@/lib/presence-ground';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 // ---------------------------------------------------------------------------
@@ -79,9 +80,17 @@ vi.mock('@/hooks/useBlobbonautProfile', () => ({
 }));
 vi.mock('./AccessoryOverlay', () => ({ AccessoryOverlay: () => null }));
 
-/** Records the `facing` every remote sprite is rendered with. */
+/** Records the `facing` every remote sprite is rendered with. Remote players
+ * render through the pure `BlobbiRendererView` (local goes through the
+ * `CurrentBlobbiDisplay` wrapper); stub both with the same marker so the
+ * assertions below see every rendered Blobbi. */
 vi.mock('./CurrentBlobbiDisplay', () => ({
   CurrentBlobbiDisplay: ({ facing }: { facing?: string }) => (
+    <div data-testid="blobbi-display" data-facing={facing ?? 'front'}>Blobbi</div>
+  ),
+}));
+vi.mock('./BlobbiRendererView', () => ({
+  BlobbiRendererView: ({ facing }: { facing?: string }) => (
     <div data-testid="blobbi-display" data-facing={facing ?? 'front'}>Blobbi</div>
   ),
 }));
@@ -293,8 +302,11 @@ describe('remote players seated in a theater seat', () => {
     expect(el.hasAttribute('data-seated-in')).toBe(false);
     expect(facingOf(el)).toBe('front');
     expect(shadowOf(el)).not.toBeNull();
-    expect(pct(el.style.left)).toBeCloseTo(FLOOR.x, 5);
-    expect(pct(el.style.top)).toBeCloseTo(FLOOR.y, 5);
+    // The WIRE carries legacy CENTER points; the renderer draws the ingested
+    // GROUND point (Phase 2).
+    const ground = wireCenterToGround(FLOOR, 'stage');
+    expect(pct(el.style.left)).toBeCloseTo(ground.x, 5);
+    expect(pct(el.style.top)).toBeCloseTo(ground.y, 5);
   });
 
   it('snaps a seated remote to the CANONICAL seat anchor, ignoring its coordinates', async () => {
@@ -337,7 +349,7 @@ describe('remote players seated in a theater seat', () => {
 
     const el = h.player()!;
     const seat = getTheaterSeat(SEAT)!;
-    const sprite = el.querySelector('[data-block-move]') as HTMLElement;
+    const sprite = el.querySelector('[data-blobbi-scale-rig]') as HTMLElement;
     expect(sprite.style.transform).toBe(`scale(${seat.seatedScale})`);
     // A Blobbi in a chair is not standing on the floor, and must not bob.
     expect(shadowOf(el)).toBeNull();
@@ -349,7 +361,7 @@ describe('remote players seated in a theater seat', () => {
     await h.push(
       presenceEvent({ ts: TS, seq: 1, state: 'idle', at: FLOOR, seatId: SEAT }),
     );
-    expect(h.player()!.style.transform).toBe('translate(-50%, -50%)');
+    expect(h.player()!.style.transform).toBe('translate(-50%, -100%)'); // ground anchor
   });
 
   it('renders exactly ONE Blobbi for a seated remote — no floating copy', async () => {
@@ -368,10 +380,10 @@ describe('remote players seated in a theater seat', () => {
     const h = await setup();
 
     await h.push(presenceEvent({ ts: TS, seq: 1, state: 'idle', at: FLOOR, seatId: SEAT }));
-    const rowA = (h.player()!.querySelector('[data-block-move]') as HTMLElement).style.transform;
+    const rowA = (h.player()!.querySelector('[data-blobbi-scale-rig]') as HTMLElement).style.transform;
 
     await h.push(presenceEvent({ ts: TS + 1, seq: 2, state: 'idle', at: FLOOR, seatId: OTHER_SEAT }));
-    const rowC = (h.player()!.querySelector('[data-block-move]') as HTMLElement).style.transform;
+    const rowC = (h.player()!.querySelector('[data-blobbi-scale-rig]') as HTMLElement).style.transform;
 
     expect(rowA).toBe(`scale(${getTheaterSeat(SEAT)!.seatedScale})`);
     expect(rowC).toBe(`scale(${getTheaterSeat(OTHER_SEAT)!.seatedScale})`);
@@ -423,8 +435,9 @@ describe('remote players seated in a theater seat', () => {
       const el = h.player()!;
       expect(el.hasAttribute('data-seated-in')).toBe(false);
       expect(facingOf(el)).toBe('front');
-      expect(pct(el.style.left)).toBeCloseTo(FLOOR.x, 5);
-      expect(pct(el.style.top)).toBeCloseTo(FLOOR.y, 5);
+      const ground = wireCenterToGround(FLOOR, 'stage');
+      expect(pct(el.style.left)).toBeCloseTo(ground.x, 5);
+      expect(pct(el.style.top)).toBeCloseTo(ground.y, 5);
     });
 
     it('ignores an unknown seat id without crashing', async () => {
@@ -439,8 +452,9 @@ describe('remote players seated in a theater seat', () => {
       const el = h.player()!;
       expect(el).toBeTruthy();
       expect(el.hasAttribute('data-seated-in')).toBe(false);
-      expect(pct(el.style.left)).toBeCloseTo(FLOOR.x, 5);
-      expect(pct(el.style.top)).toBeCloseTo(FLOOR.y, 5);
+      const ground = wireCenterToGround(FLOOR, 'stage');
+      expect(pct(el.style.left)).toBeCloseTo(ground.x, 5);
+      expect(pct(el.style.top)).toBeCloseTo(ground.y, 5);
     });
 
     it('ignores non-string junk in the field', async () => {

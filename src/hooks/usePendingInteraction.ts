@@ -2,17 +2,27 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { Position } from '@/lib/types';
 import type { MovableBlobbiRef } from '@/components/blobbi/MovableBlobbi';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
+import {
+  worldDistancePx,
+  ARRIVAL_THRESHOLD_PX,
+  ARRIVAL_THRESHOLD_TOUCH_PX,
+  WORLD_PX_PER_PERCENT_Y,
+} from '@/lib/blobbi-ground';
 
 /**
- * Tunable distance (in world percent units) within which the local Blobbi is
- * considered "close enough" to a pending interaction target to trigger it.
+ * Tunable distance (in ISOTROPIC world-design pixels, 1046×697) within which
+ * the local Blobbi's GROUND point is considered "close enough" to a pending
+ * interaction target to trigger it. Shared with the rest of the arrival model
+ * (see blobbi-ground.ts) so the same physical distance behaves identically on
+ * both axes and never depends on the viewport. The default sits below the
+ * theater seat half-pitch (48 px), so clicking an adjacent seat walks instead
+ * of teleport-snapping.
  *
  * Touch devices get a more forgiving threshold so a tap reliably resolves even
- * if the walk path is constrained by boundaries/blockers. Kept here as the
- * single tuning point for walk-to-interact proximity.
+ * if the walk path is constrained by boundaries/blockers.
  */
-export const PENDING_INTERACTION_THRESHOLD = 5;
-export const PENDING_INTERACTION_THRESHOLD_TOUCH = 8;
+export const PENDING_INTERACTION_THRESHOLD = ARRIVAL_THRESHOLD_PX;
+export const PENDING_INTERACTION_THRESHOLD_TOUCH = ARRIVAL_THRESHOLD_TOUCH_PX;
 
 interface PendingInteraction {
   /**
@@ -40,7 +50,7 @@ interface PendingInteraction {
 export interface RequestInteractionOptions {
   target: Position;
   action: () => void;
-  /** Override the proximity threshold (world percent units). */
+  /** Override the proximity threshold (world-design pixels). */
   threshold?: number;
   /** Treat as a touch interaction (more forgiving threshold). */
   touch?: boolean;
@@ -71,11 +81,8 @@ interface UsePendingInteractionArgs {
   cancelKey?: string;
 }
 
-const distance = (a: Position, b: Position): number => {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.sqrt(dx * dx + dy * dy);
-};
+/** Isotropic world-design-px distance between two world-percent points. */
+const distance = worldDistancePx;
 
 /**
  * How many consecutive near-stationary frames count as "movement settled".
@@ -84,7 +91,8 @@ const distance = (a: Position, b: Position): number => {
  * slightly larger settle-distance keeps this from firing mid-walk.
  */
 const STALL_FRAMES = 12;
-const STALL_EPSILON = 0.15;
+/** Near-stationary per-frame movement, in world-design px (was 0.15 percent-y). */
+const STALL_EPSILON = 0.15 * WORLD_PX_PER_PERCENT_Y;
 
 /**
  * Stall-firing only counts if the Blobbi settled within this multiple of the

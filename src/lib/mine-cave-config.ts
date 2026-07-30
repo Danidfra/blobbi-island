@@ -96,7 +96,7 @@ export const mineCaveStructure = {
    * the corridor, which the movement system can only approach and never reach,
    * leaving the entry to be rescued by stall detection.
    */
-  approach: { x: 50, y: 71 } as Position,
+  approach: { x: 50, y: 82.4 } as Position,
 
   /**
    * Depth, in the world surface's own stacking context.

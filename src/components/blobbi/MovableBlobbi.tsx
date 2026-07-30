@@ -15,12 +15,15 @@ import { Position } from '@/lib/types';
 import type { LocalActiveState, AttentionState } from '@/lib/gaze';
 import { attentionTargetPosition, LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
-import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
 import {
   resolveBlobbiScale,
   resolveBlobbiZIndex,
   resolveSeatedRender,
 } from '@/lib/blobbi-world-render';
+import { MOVEMENT_SNAP_PX, actorVisualFocusPoint } from '@/lib/blobbi-ground';
+import { BlobbiActor } from './BlobbiActor';
+import type { BlobbiRenderVisual } from './BlobbiRendererView';
 
 interface MovementDirection {
   x: number;
@@ -76,6 +79,11 @@ export interface MovableBlobbiProps {
   disableFloating?: boolean;
   anchorId?: string;
   /**
+   * Explicit visual for the body renderer instead of the local companion.
+   * Used by dev harnesses; production mounts leave it undefined.
+   */
+  visualOverride?: BlobbiRenderVisual;
+  /**
    * Shared ref holding the local Blobbi's attention *decision* (which Blobbi to
    * look at). Combined with {@link livePositionsRef} the eyes resolve the
    * target's CURRENT position each frame, so gaze follows a moving target
@@ -121,6 +129,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       scaleByYPosition = false,
       disableFloating = false,
       anchorId,
+      visualOverride,
       localAttentionRef,
       livePositionsRef,
       localActiveRef,
@@ -221,21 +230,31 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       };
     }, [localActiveRef, livePositionsRef]);
 
-    const getPixelPosition = useCallback((percentPos: Position): Position => {
-      if (!containerRef.current) return { x: 0, y: 0 };
-      const rect = containerRef.current.getBoundingClientRect();
-      return {
-        x: (percentPos.x / 100) * rect.width,
-        y: (percentPos.y / 100) * rect.height,
-      };
-    }, [containerRef]);
+    // Movement math runs in FIXED world-design pixels (1046×697): percent
+    // positions convert through the design space, never the rendered rect, so
+    // speed and arrival are identical at every viewport scale.
+    const toWorldPx = useCallback((percentPos: Position): Position => ({
+      x: (percentPos.x / 100) * WORLD_WIDTH,
+      y: (percentPos.y / 100) * WORLD_HEIGHT,
+    }), []);
 
-    const getPercentPosition = useCallback((pixelPos: Position): Position => {
+    const toPercent = useCallback((worldPx: Position): Position => {
+      const percentPos = {
+        x: (worldPx.x / WORLD_WIDTH) * 100,
+        y: (worldPx.y / WORLD_HEIGHT) * 100,
+      };
+      return constrainPosition(percentPos, boundary);
+    }, [boundary]);
+
+    // Pointer events arrive in viewport px; the rendered rect converts them to
+    // world percent (invariant under the uniform world scale). The clamped
+    // result is the GROUND point the user asked the feet to reach.
+    const clientToPercent = useCallback((clientX: number, clientY: number): Position => {
       if (!containerRef.current) return { x: 50, y: 75 };
       const rect = containerRef.current.getBoundingClientRect();
       const percentPos = {
-        x: (pixelPos.x / rect.width) * 100,
-        y: (pixelPos.y / rect.height) * 100,
+        x: ((clientX - rect.left) / rect.width) * 100,
+        y: ((clientY - rect.top) / rect.height) * 100,
       };
       return constrainPosition(percentPos, boundary);
     }, [containerRef, boundary]);
@@ -264,35 +283,25 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         }
         const deltaTime = (timestamp - lastTimeRef.current) / 1000;
         lastTimeRef.current = timestamp;
-        { const w = window as unknown as Record<string, number[]>; (w.__diagDeltas ||= []).push(deltaTime); }
 
         let reached = false;
         setPosition(currentPos => {
-          const currentPixelPos = getPixelPosition(currentPos);
+          const currentPixelPos = toWorldPx(currentPos);
           const target = targetRef.current;
-          const targetPixelPos = getPixelPosition(target);
+          const targetPixelPos = toWorldPx(target);
           const distance = getDistance(currentPixelPos, targetPixelPos);
 
-          if (distance < 2) {
+          if (distance < MOVEMENT_SNAP_PX) {
             reached = true;
             return target;
           }
 
           const dx = targetPixelPos.x - currentPixelPos.x;
           const dy = targetPixelPos.y - currentPixelPos.y;
-          // `movementSpeed` is expressed in FIXED virtual-world units (px/s
-          // against the 1046×697 world), not rendered screen pixels. The world
-          // is rendered at WORLD_WIDTH then scaled uniformly by VirtualWorld, so
-          // getBoundingClientRect() returns post-transform pixels where
-          // rect.width === WORLD_WIDTH * worldScale. Multiplying by that scale
-          // converts the per-frame step into the SAME on-screen visual pixels
-          // that correspond to a constant world distance — so the same
-          // world-distance takes the same time on desktop and mobile, instead
-          // of being faster on smaller (more-scaled-down) screens.
-          const worldScale = containerRef.current
-            ? containerRef.current.getBoundingClientRect().width / WORLD_WIDTH
-            : 1;
-          const moveDistance = movementSpeed * worldScale * deltaTime;
+          // `movementSpeed` is world-design px/s and this loop integrates in
+          // world-design px, so no viewport correction is needed: the same
+          // world distance takes the same time at every screen size.
+          const moveDistance = movementSpeed * deltaTime;
           const directionLength = Math.sqrt(dx * dx + dy * dy);
           const normalizedDx = dx / directionLength;
           const normalizedDy = dy / directionLength;
@@ -310,7 +319,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             x: currentPixelPos.x + normalizedDx * moveDistance,
             y: currentPixelPos.y + normalizedDy * moveDistance,
           };
-          const newPercentPos = getPercentPosition(newPixelPos);
+          const newPercentPos = toPercent(newPixelPos);
 
           if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
             reached = true;
@@ -344,16 +353,34 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       },
       [
         movementSpeed,
-        getPixelPosition,
-        getPercentPosition,
+        toWorldPx,
+        toPercent,
         onMoveComplete,
         showTrail,
         isPositionBlocked,
       ]
     );
 
+    /**
+     * Start (or restart) the movement rAF loop.
+     *
+     * Historically the loop was only (re)started by the effect below, which
+     * fires when `animateMovement`'s identity changes — which in PlayingView
+     * happened to occur on every parent re-render triggered by `onMoveStart`.
+     * A host with stable callbacks got no re-render and the walk silently
+     * never started. Movement start is now explicit and self-contained.
+     */
+    const startAnimation = useCallback(() => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      lastTimeRef.current = undefined;
+      animationRef.current = requestAnimationFrame(animateMovement);
+    }, [animateMovement]);
+
     useEffect(() => {
-      { const w = window as unknown as Record<string, number>; w.__diagEffectRuns = (w.__diagEffectRuns || 0) + 1; }
+      // Keep an in-flight walk running across `animateMovement` identity
+      // changes (boundary/callback prop updates mid-walk).
       if (isMovingRef.current) {
         lastTimeRef.current = undefined;
         animationRef.current = requestAnimationFrame(animateMovement);
@@ -432,7 +459,6 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           onWakeUp?.();
         }
 
-        const rect = container.getBoundingClientRect();
         let clientX: number, clientY: number;
         if (event instanceof MouseEvent) {
           clientX = event.clientX;
@@ -443,15 +469,14 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           clientY = touch.clientY;
         }
 
-        const clickX = clientX - rect.left;
-        const clickY = clientY - rect.top;
-        const newTarget = getPercentPosition({ x: clickX, y: clickY });
+        const newTarget = clientToPercent(clientX, clientY);
 
         if (isPositionBlocked(newTarget.x, newTarget.y)) return;
 
         targetRef.current = newTarget;
         setIsMoving(true);
         isMovingRef.current = true;
+        startAnimation();
         onMoveStart?.(newTarget);
       };
 
@@ -465,7 +490,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     }, [
       containerRef,
       isVisible,
-      getPercentPosition,
+      clientToPercent,
+      startAnimation,
       onMoveStart,
       onWakeUp,
       onBlobbiClick,
@@ -490,6 +516,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         } else {
           setIsMoving(true);
           isMovingRef.current = true;
+          startAnimation();
           onMoveStart?.(newTarget);
         }
       },
@@ -499,9 +526,13 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     if (!isVisible) return null;
 
     // Everything the seat changes about how this Blobbi is drawn, resolved from
-    // the seat id alone (shared with the remote renderer).
+    // the seat id alone (shared with the remote renderer). A seated Blobbi is
+    // DRAWN at the seat's pose anchor (same rule as remotes), regardless of the
+    // stored walking position — PlayingView still snaps the stored position for
+    // presence, but rendering no longer depends on that side effect.
     const seated = resolveSeatedRender(seatedIn);
-    const dynamicScale = getDynamicScale(position) * (seated?.scale ?? 1);
+    const renderPos = seated ? seated.position : position;
+    const dynamicScale = getDynamicScale(renderPos) * (seated?.scale ?? 1);
     // Gaze priority (self-intent first):
     //   1. own movement  → look where it is walking
     //   2. attention      → look at the selected active target (identity from
@@ -524,8 +555,17 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             )
           : null;
       if (attentionTarget) {
-        const tx = attentionTarget.x - position.x;
-        const ty = attentionTarget.y - position.y;
+        // Ground → visual body centers: eyes meet bodies, not feet. Both
+        // endpoints convert with the room's size token and each point's own
+        // depth scale, so the vector never mixes center and ground semantics.
+        const myFocus = actorVisualFocusPoint(position, size, dynamicScale);
+        const targetFocus = actorVisualFocusPoint(
+          attentionTarget,
+          size,
+          getDynamicScale(attentionTarget),
+        );
+        const tx = targetFocus.x - myFocus.x;
+        const ty = targetFocus.y - myFocus.y;
         const len = Math.sqrt(tx * tx + ty * ty) || 1;
         eyeOffset = { x: tx / len, y: ty / len };
       } else {
@@ -537,6 +577,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       <>
         {showTrail && !visualHidden &&
           trail.map((trailPos, index) => (
+            // Trail dots mark the HISTORICAL GROUND PATH: each dot is centered
+            // on a past ground point (a floor marker, not a body marker).
             <div
               key={index}
               className="absolute z-10 pointer-events-none"
@@ -551,91 +593,45 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
               <div
                 className={cn(
                   "rounded-full bg-primary/20",
-                  size === "xl" && "w-4 h-4 md:w-5 md:h-5",
-                  size === "lg" && "w-3 h-3 md:w-4 md:h-4",
-                  size === "md" && "w-2 h-2 md:w-3 md:h-3",
-                  size === "sm" && "w-1.5 h-1.5 md:w-2 md:h-2"
+                  size === "xl" && "w-4 h-4",
+                  size === "lg" && "w-3 h-3",
+                  size === "md" && "w-2 h-2",
+                  size === "sm" && "w-1.5 h-1.5"
                 )}
               />
             </div>
           ))}
-        {/* Positioned anchor. While `visualHidden` it stays mounted (and empty,
-            so it has no size and paints nothing) because it is the portal anchor
-            for this Blobbi's chat bubbles and keeps the logical world position
-            addressable. Everything *visible* lives inside the guard below. */}
-        <div
+        {/* Shared ground-anchor actor. While `visualHidden` the anchor stays
+            mounted (chat-bubble portal + logical world position); everything
+            visible is suppressed inside BlobbiActor. */}
+        <BlobbiActor
           ref={blobbiRef}
-          id={anchorId}
-          data-visual-hidden={visualHidden ? 'true' : undefined}
-          data-seated-in={seated?.seat.id}
-          // The day/night world grade darkens environment sprites at night. The
-          // Blobbi is not scenery: its body is inline SVG (so the grade's `img`
-          // rule never reaches it anyway) but its accessory overlays ARE <img>
-          // elements, and a hat that dims while the head stays lit looks broken.
-          // See the opt-out contract in src/index.css.
-          data-island-world-grade="exclude"
+          anchorId={anchorId}
+          position={renderPos}
+          size={size}
+          scale={dynamicScale}
+          zIndex={seated ? seated.zIndex : getDynamicZIndex(renderPos)}
+          seatedIn={seated?.seat.id ?? null}
+          visualHidden={visualHidden}
+          hideShadow={!!seated?.hideShadow}
+          disableFloat={isSleeping || disableFloating || !!seated?.disableFloat}
+          isMoving={isMoving}
           className={cn(
-            "absolute transition-all duration-200 ease-out blobbi-character",
             onBlobbiClick && !visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
-            isMoving && "transition-none",
             className
           )}
-          style={{
-            left: `${position.x}%`,
-            top: `${position.y}%`,
-            // ⬇️ wrapper externo SEM scale/flip — serve de âncora p/ a bolha
-            transform: `translate(-50%, -50%)`,
-            filter: visualHidden ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
-            zIndex: getDynamicZIndex(position),
-          }}
         >
-          {!visualHidden && (
-            <>
-              {/* ⬇️ wrapper interno recebe scale (orientação fixa; direção via gaze) */}
-              <div
-                className="relative"
-                style={{
-                  transform: `scale(${dynamicScale})`,
-                  transformOrigin: 'center center',
-                }}
-              >
-                <div
-                  className={cn(
-                    !isSleeping && !disableFloating && !seated?.disableFloat && "animate-float",
-                    "transition-transform duration-1000 ease-in-out"
-                  )}
-                >
-                  <CurrentBlobbiDisplay
-                    size={size}
-                    showFallback={true}
-                    transparent={true}
-                    isSleeping={isSleeping}
-                    facing={seated?.facing ?? 'front'}
-                    eyeOffset={eyeOffset}
-                    className={cn(isMoving && "scale-105")}
-                  />
-                </div>
-              </div>
-              {/* Ground shadow — a seated Blobbi is on a chair, not the floor. */}
-              {!seated?.hideShadow && (
-                <div
-                  className={cn(
-                    "absolute top-full left-1/2 h-1.5 rounded-full",
-                    size === "xl" && "w-8 md:w-10",
-                    size === "lg" && "w-6 md:w-8",
-                    size === "md" && "w-4 md:w-6",
-                    size === "sm" && "w-3 md:w-4"
-                  )}
-                  style={{
-                    background: "radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)",
-                    transform: `translateX(-50%) scale(${dynamicScale})`,
-                    transformOrigin: 'center center',
-                  }}
-                />
-              )}
-            </>
-          )}
-        </div>
+          <CurrentBlobbiDisplay
+            size={size}
+            showFallback={true}
+            transparent={true}
+            isSleeping={isSleeping}
+            facing={seated?.facing ?? 'front'}
+            eyeOffset={eyeOffset}
+            visualOverride={visualOverride}
+            className={cn(isMoving && "scale-105")}
+          />
+        </BlobbiActor>
       </>
     );
   }

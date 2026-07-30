@@ -21,6 +21,7 @@ import { ItemBagModal } from './ItemBagModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { SocialShareModal } from './SocialShareModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
+import { getBedSleepPose, getBedWalkTarget, isBedArrival } from '@/lib/bed-arrival';
 import { resolveSeatedRender } from '@/lib/blobbi-world-render';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
@@ -105,10 +106,11 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [externalVisual, setExternalVisual] = useState<BlobbiVisual | null>(null);
   const [remotePreviewKey, setRemotePreviewKey] = useState<string | null>(null);
 
-  // Adjusted position for sleeping Blobbi (slightly higher on the bed)
-  const sleepingPosition = { x: bedPosition.x, y: bedPosition.y - 5 };
   const [isSleeping, setIsSleeping] = useState(false);
   const [isAttachedToBed, setIsAttachedToBed] = useState(false);
+  // Synchronous re-entry guard for bed arrival: the snap to the sleep pose
+  // fires onMoveComplete again in the same tick, before state commits.
+  const bedLockRef = useRef(false);
 
   // ── Theater seating ────────────────────────────────────────────────────
   // The id of the theater seat the local player currently occupies, or null.
@@ -175,21 +177,27 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
   const handleBedClick = () => {
     if (blobbiRef.current) {
-      // Move to the sleeping position (slightly higher on the bed)
-      blobbiRef.current.goTo(sleepingPosition);
+      // Walk to the GROUND point beside/below the bed (the sleep pose clamped
+      // into the walk boundary); the snap onto the bed happens on arrival.
+      blobbiRef.current.goTo(getBedWalkTarget(bedPosition, boundary));
     }
   };
 
   const handleMoveComplete = (position: Position) => {
     setMyPosition(position);
 
-    // Check if Blobbi reached the sleeping position with tighter tolerance
+    // Bed arrival: gated to the room that actually contains the bed, measured
+    // against the reachable WALK target with the shared world-px model. On
+    // arrival the Blobbi snaps to the bed's sleep POSE anchor — an explicit
+    // exception that bypasses the walk boundary (the bed is not floor).
     if (
-      Math.abs(position.x - sleepingPosition.x) < 2 &&
-      Math.abs(position.y - sleepingPosition.y) < 2
+      !bedLockRef.current &&
+      isBedArrival(position, getBedWalkTarget(bedPosition, boundary), background)
     ) {
+      bedLockRef.current = true;
       setIsSleeping(true);
       setIsAttachedToBed(true);
+      blobbiRef.current?.goTo(getBedSleepPose(bedPosition), true);
     }
 
     // Check if Blobbi is going to a chair (this will be handled by handleChairArrival)
@@ -197,6 +205,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   };
 
   const handleWakeUp = () => {
+    bedLockRef.current = false;
     setIsSleeping(false);
     setIsAttachedToBed(false);
   };
@@ -231,6 +240,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     setSittingIn(null);
 
     // If starting to move while sleeping, wake up and detach from bed
+    bedLockRef.current = false;
     if (isSleeping || isAttachedToBed) {
       setIsSleeping(false);
       setIsAttachedToBed(false);
@@ -242,8 +252,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     // If Blobbi is attached to bed, move it with the bed immediately (no animation)
     // Use the adjusted sleeping position (slightly higher)
     if (isAttachedToBed && blobbiRef.current) {
-      const newSleepingPosition = { x: newPosition.x, y: newPosition.y - 5 };
-      blobbiRef.current.goTo(newSleepingPosition, true);
+      blobbiRef.current.goTo(getBedSleepPose(newPosition), true);
     }
   };
 

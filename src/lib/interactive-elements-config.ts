@@ -53,62 +53,62 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     backgroundFile: 'stage-inside.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 15, zIndex: 25 },
-      { minPosition: 15.01, maxPosition: 20, zIndex: 15 },
-      { minPosition: 20.01, maxPosition: 100, zIndex: 9 }
+      { minPosition: 0, maxPosition: 5.8, zIndex: 25 },
+      { minPosition: 5.81, maxPosition: 10.8, zIndex: 15 },
+      { minPosition: 10.81, maxPosition: 100, zIndex: 9 }
     ]
   },
   {
     backgroundFile: 'shopping-mall-inside.png',
     thresholds: [
-      { minPosition: 71.01, maxPosition: 100, zIndex: 9 },
-      { minPosition: 42.01, maxPosition: 71, zIndex: 19 },
-      { minPosition: 14.01, maxPosition: 42, zIndex: 25},
-      { minPosition: 0, maxPosition: 14, zIndex: 30},
+      { minPosition: 65.51, maxPosition: 100, zIndex: 9 },
+      { minPosition: 35.91, maxPosition: 65.5, zIndex: 19 },
+      { minPosition: 7.41, maxPosition: 35.9, zIndex: 25},
+      { minPosition: 0, maxPosition: 7.4, zIndex: 30},
     ]
   },
   {
     backgroundFile: 'arcade-inside.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 52, zIndex: 10 },
-      { minPosition: 52.01, maxPosition: 100, zIndex: 9 },
+      { minPosition: 0, maxPosition: 42.8, zIndex: 10 },
+      { minPosition: 42.81, maxPosition: 100, zIndex: 9 },
     ]
   },
   {
     backgroundFile: 'arcade-minus1.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 22, zIndex: 31 },
-      { minPosition: 22.01, maxPosition: 30, zIndex: 27 },
-      { minPosition: 30.01, maxPosition: 48, zIndex: 24 },
-      { minPosition: 48.01, maxPosition: 100, zIndex: 9 },
+      { minPosition: 0, maxPosition: 14.7, zIndex: 31 },
+      { minPosition: 14.71, maxPosition: 23.2, zIndex: 27 },
+      { minPosition: 23.21, maxPosition: 42.3, zIndex: 24 },
+      { minPosition: 42.31, maxPosition: 100, zIndex: 9 },
     ]
   },
   {
     backgroundFile: 'arcade-1.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 16, zIndex: 31 },
-      { minPosition: 16.01, maxPosition: 22, zIndex: 26 },
-      { minPosition: 22.01, maxPosition: 28, zIndex: 21 },
-      { minPosition: 28.01, maxPosition: 34, zIndex: 16 },
-      { minPosition: 34.01, maxPosition: 46, zIndex: 11 },
-      { minPosition: 46.01, maxPosition: 100, zIndex: 9 },
+      { minPosition: 0, maxPosition: 7.7, zIndex: 31 },
+      { minPosition: 7.71, maxPosition: 13.7, zIndex: 26 },
+      { minPosition: 13.71, maxPosition: 19.7, zIndex: 21 },
+      { minPosition: 19.71, maxPosition: 25.7, zIndex: 16 },
+      { minPosition: 25.71, maxPosition: 37.7, zIndex: 11 },
+      { minPosition: 37.71, maxPosition: 100, zIndex: 9 },
     ]
   },
   // Add more background configurations as needed
   {
     backgroundFile: 'town-open.webp',
     thresholds: [
-      { minPosition: 0, maxPosition: 10, zIndex: 25 },  // Bottom area
-      { minPosition: 10.01, maxPosition: 14.99, zIndex: 19 },  // Lower middle area
-      { minPosition: 15, maxPosition: 20, zIndex: 15 }, // Upper middle area
-      { minPosition: 20.01, maxPosition: 100, zIndex: 9 } // Upper area (in front of buildings)
+      { minPosition: 0, maxPosition: 1.7, zIndex: 25 },  // Bottom area
+      { minPosition: 1.71, maxPosition: 6.69, zIndex: 19 },  // Lower middle area
+      { minPosition: 6.7, maxPosition: 11.7, zIndex: 15 }, // Upper middle area
+      { minPosition: 11.71, maxPosition: 100, zIndex: 9 } // Upper area (in front of buildings)
     ]
   },
   {
     backgroundFile: 'home-inside.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 10, zIndex: 20 },  // Floor level
-      { minPosition: 15, maxPosition: 100, zIndex: 10 } // Upper area
+      { minPosition: 0, maxPosition: 0.8, zIndex: 20 },  // Floor level
+      { minPosition: 5.8, maxPosition: 100, zIndex: 10 } // Upper area
     ]
   },
   {

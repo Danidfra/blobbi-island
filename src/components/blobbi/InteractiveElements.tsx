@@ -100,15 +100,19 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
     if (!blobbiRef.current) return;
 
     const chairElement = event.currentTarget;
-    const container = chairElement.closest('.w-full.h-full.relative');
+    // The canonical world-surface container — never a fragile class-string
+    // ancestor lookup.
+    const container = chairElement.closest('[data-world-surface]');
 
     if (!container) return;
 
     const containerRect = container.getBoundingClientRect();
     const chairRect = chairElement.getBoundingClientRect();
 
-    // Get seat anchor configuration with defaults
-    const seatAnchor = chairConfig?.seatAnchor || { xPercent: 50, yPercent: 20 };
+    // GROUND semantics: the anchor fraction names where the FEET stop.
+    // Chairs have no seated state — the ~85% default rests the body on the
+    // cushion (a pseudo-sit) while the modal/action runs.
+    const seatAnchor = chairConfig?.seatAnchor || { xPercent: 50, yPercent: 85 };
 
     // Calculate seat position from chair rect and anchor percentages
     const seatX = chairRect.left + (chairRect.width * seatAnchor.xPercent!) / 100;
@@ -469,7 +473,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shop left chair"
               type="chair"
               chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 25 }
+                seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -480,7 +484,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shop right chair"
               type="chair"
               chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 25 }
+                seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -496,7 +500,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shop left chair"
               type="chair"
               chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 25 }
+                seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -507,7 +511,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shop right chair"
               type="chair"
               chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 25 }
+                seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
               onClick={handleChairClick}
               effect='scale'
@@ -876,7 +880,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 1"
         type="chair"
         chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 38 }
+          seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -887,7 +891,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 2"
         type="chair"
         chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 38 }
+          seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -898,7 +902,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 3"
         type="chair"
         chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 38 }
+          seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
         onClick={handleChairClick}
         effect="scale"
@@ -909,7 +913,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
         alt="Nostr Station Chair 4"
         type="chair"
         chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 38 }
+          seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
         onClick={handleChairClick}
         effect="scale"

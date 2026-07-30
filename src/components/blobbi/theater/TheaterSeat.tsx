@@ -6,6 +6,7 @@ import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import {
   THEATER_BACKGROUND_FILE,
+  SEAT_APPROACH_TARGET,
   type TheaterSeatConfig,
 } from '@/lib/theater-seats-config';
 
@@ -108,7 +109,9 @@ export function TheaterSeat({
       // Already sitting HERE: no second walk, no re-fired arrival.
       if (isSittingHereRef.current) return;
 
-      const target = computeSeatTarget(event.currentTarget, config.interactionTarget);
+      // APPROACH target: the floor at the seat's front base — never the
+      // cushion (that fraction belongs to the seated POSE, seatAnchorPosition).
+      const target = computeSeatTarget(event.currentTarget, SEAT_APPROACH_TARGET);
       if (!target) return;
 
       requestInteraction({
@@ -120,7 +123,7 @@ export function TheaterSeat({
         },
       });
     },
-    [requestInteraction, onArrive, config.interactionTarget],
+    [requestInteraction, onArrive],
   );
 
   const positionStyle: React.CSSProperties = {

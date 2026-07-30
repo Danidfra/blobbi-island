@@ -19,11 +19,12 @@ describe('Interactive Elements Configuration', () => {
       const nearBottom = calculateBlobbiZIndex(95, 'stage-inside.png');
       expect(nearBottom).toBe(25);
 
-      // Test position at 82% from top (18% from bottom) - should be z-index 15
-      const midBottom = calculateBlobbiZIndex(82, 'stage-inside.png');
+      // Ground-anchor bands (Phase 2): the center-era 18%-from-bottom sample
+      // corresponds to a GROUND point ~9.2% lower — 8.8% from bottom → z 15.
+      const midBottom = calculateBlobbiZIndex(91.2, 'stage-inside.png');
       expect(midBottom).toBe(15);
 
-      // Test position at 75% from top (25% from bottom) - should be z-index 9
+      // Ground point 25% from bottom is well above the band ramp - z-index 9
       const higherUp = calculateBlobbiZIndex(75, 'stage-inside.png');
       expect(higherUp).toBe(9);
 
@@ -33,12 +34,13 @@ describe('Interactive Elements Configuration', () => {
     });
 
     it('should calculate correct z-index for town-open.webp background', () => {
-      // Test position at 95% from top (5% from bottom) - should be z-index 25
-      const nearBottom = calculateBlobbiZIndex(95, 'town-open.webp');
+      // Ground band 0-1.7% from bottom is the front-most row - z-index 25
+      const nearBottom = calculateBlobbiZIndex(99, 'town-open.webp');
       expect(nearBottom).toBe(25);
 
-      // Test position at 85% from top (15% from bottom) - should be z-index 15
-      const higherUp = calculateBlobbiZIndex(85, 'town-open.webp');
+      // Ground-anchor bands (Phase 2): the center-era 15%-from-bottom line sits
+      // ~8.3% lower for a ground point — 8.3% from bottom → z 15.
+      const higherUp = calculateBlobbiZIndex(91.7, 'town-open.webp');
       expect(higherUp).toBe(15);
     });
 
@@ -95,8 +97,8 @@ describe('Interactive Elements Configuration', () => {
       const threshold1 = getZIndexThresholdForPosition(3, 'stage-inside.png');
       expect(threshold1?.zIndex).toBe(25);
 
-      // 17% from bottom should match second threshold (15.01-20%)
-      const threshold2 = getZIndexThresholdForPosition(17, 'stage-inside.png');
+      // 8% from bottom matches the second GROUND band (5.81-10.8%)
+      const threshold2 = getZIndexThresholdForPosition(8, 'stage-inside.png');
       expect(threshold2?.zIndex).toBe(15);
 
       // 25% from bottom should match third threshold (20.01-100%)

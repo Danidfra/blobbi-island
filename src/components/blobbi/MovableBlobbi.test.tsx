@@ -177,7 +177,7 @@ describe('MovableBlobbi', () => {
 
     // Shadow should be centered (translateX) and scaled with the Blobbi
     const shadowStyle = shadowElement?.getAttribute('style');
-    expect(shadowStyle).toContain('translateX(-50%)');
+    expect(shadowStyle).toContain('translate(-50%, -50%)'); // centered ON the ground point (Phase 2)
     expect(shadowStyle).toMatch(/scale\([\d.]+\)/);
 
     // Shadow should have transform-origin set to center

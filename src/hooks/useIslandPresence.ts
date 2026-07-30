@@ -45,6 +45,8 @@ import {
   EXP_SECONDS,
 } from '@/lib/multiplayer';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
+import { wireCenterToGround } from '@/lib/presence-ground';
+import { LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { isOccupiableSeat } from '@/lib/theater-seats-config';
 
 // ============================================================================
@@ -186,6 +188,19 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
 
   // Refs
   const myPosRef = useRef<Position>(startPos);
+  /**
+   * The local Blobbi's CURRENT ground position for publish purposes.
+   *
+   * `myPosRef` holds the walk DESTINATION from move start (PlayingView updates
+   * it in `onMoveStart`), so a heartbeat/sit/hide fired mid-walk used to
+   * publish where the Blobbi was GOING, snapping remote copies to the endpoint
+   * early. MovableBlobbi writes its live per-frame position into the shared
+   * live-positions map under LOCAL_GAZE_KEY — prefer that when available.
+   * Held on a ref (read at call time), like the file's other publish inputs.
+   */
+  const currentLocalPosRef = useRef<() => Position>(() => myPosRef.current);
+  currentLocalPosRef.current = () =>
+    opts.livePositionsRef?.current?.get(LOCAL_GAZE_KEY) ?? myPosRef.current;
   // The local player's current hiding-spot id (e.g. a Town bush id) or null.
   // Kept in a ref so heartbeats can preserve it without re-subscribing timers,
   // and so moveTo can clear it synchronously before publishing a move.
@@ -561,14 +576,27 @@ const animatePlayers = useCallback(() => {
         visual = await fetchBlobbiVisual(aTag);
       }
 
+      // WIRE→GROUND boundary (Phase 2): the kind 31950 payload carries legacy
+      // CENTER points; everything below operates on internal GROUND points
+      // (walkability, clamping, animation — all calibrated to feet on floor).
+      // See src/lib/presence-ground.ts.
+      const groundAnchor = wireCenterToGround(content.anchor, location);
+      const groundGoal = content.goal
+        ? {
+            ...content.goal,
+            from: wireCenterToGround(content.goal.from, location),
+            to: wireCenterToGround(content.goal.to, location),
+          }
+        : undefined;
+
       // Determine target position with walkable validation
-      const rawTarget = content.goal ? content.goal.to : { x: content.anchor.x, y: content.anchor.y };
+      const rawTarget = groundGoal ? groundGoal.to : { x: groundAnchor.x, y: groundAnchor.y };
 
       // Check if target is walkable, if not find closest walkable point
       let targetPos = rawTarget;
       if (!navApi.isWalkable(rawTarget.x, rawTarget.y) || isPositionBlocked(rawTarget.x, rawTarget.y)) {
         // Find closest walkable point along the path
-        const origin = content.goal ? content.goal.from : content.anchor;
+        const origin = groundGoal ? groundGoal.from : groundAnchor;
         const dx = rawTarget.x - origin.x;
         const dy = rawTarget.y - origin.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -601,17 +629,17 @@ const animatePlayers = useCallback(() => {
       // Final clamp to bounds
       targetPos = navApi.clampToBounds(targetPos.x, targetPos.y);
 
-      let posNow = content.goal
+      let posNow = groundGoal
         ? posAt(
             {
-              from: content.goal.from,
-              to: content.goal.to,
-              v: content.goal.v,
-              ts: content.goal.ts,
+              from: groundGoal.from,
+              to: groundGoal.to,
+              v: groundGoal.v,
+              ts: groundGoal.ts,
             },
             nowSec()
           )
-        : { x: content.anchor.x, y: content.anchor.y };
+        : { x: groundAnchor.x, y: groundAnchor.y };
       posNow = navApi.clampToBounds(posNow.x, posNow.y);
 
       const spawn = getBlobbiInitialPosition(location);
@@ -807,11 +835,11 @@ const animatePlayers = useCallback(() => {
       // newest simply replaces the previous one — a repeated arrival can never
       // leave observers with a half-applied state.
       myHiddenInRef.current = hidingSpotId;
-      if (DEBUG_MP) console.debug('[blobbi][mp] hideAt', { pos: myPosRef.current, hidingSpotId });
+      if (DEBUG_MP) console.debug('[blobbi][mp] hideAt', { pos: currentLocalPosRef.current(), hidingSpotId });
       await publishHide(
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-        myPosRef.current,
+        currentLocalPosRef.current(),
         hidingSpotId
       );
     } catch (error) {
@@ -846,11 +874,11 @@ const animatePlayers = useCallback(() => {
       // re-publishing the same seat simply replaces the previous event. A
       // repeated arrival can never leave observers half-seated.
       mySeatIdRef.current = seatId;
-      if (DEBUG_MP) console.debug('[blobbi][mp] sitAt', { pos: myPosRef.current, seatId });
+      if (DEBUG_MP) console.debug('[blobbi][mp] sitAt', { pos: currentLocalPosRef.current(), seatId });
       await publishSit(
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-        myPosRef.current,
+        currentLocalPosRef.current(),
         seatId,
         myActivityRef.current ?? undefined
       );
@@ -894,7 +922,7 @@ const animatePlayers = useCallback(() => {
         await publishActivity(
           publish,
           { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-          myPosRef.current,
+          currentLocalPosRef.current(),
           next,
           mySeatIdRef.current ?? undefined,
         );
@@ -931,7 +959,7 @@ const animatePlayers = useCallback(() => {
 
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
-          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, myPosRef.current, myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined, myActivityRef.current ?? undefined)
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, currentLocalPosRef.current(), myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined, myActivityRef.current ?? undefined)
             .catch(err => {
               console.warn('Heartbeat publish failed but continuing:', err);
               // Don't treat heartbeat failures as fatal
@@ -1024,7 +1052,7 @@ const animatePlayers = useCallback(() => {
       return publishSit(
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-        myPosRef.current,
+        currentLocalPosRef.current(),
         seatId,
       );
     }).catch(err => {
@@ -1036,7 +1064,7 @@ const animatePlayers = useCallback(() => {
       publishHeartbeat(
         publish,
         { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-        myPosRef.current,
+        currentLocalPosRef.current(),
         myHiddenInRef.current ?? undefined,
         mySeatIdRef.current ?? undefined,
         myActivityRef.current ?? undefined
@@ -1101,7 +1129,7 @@ const animatePlayers = useCallback(() => {
     publishHeartbeat(
       publish,
       { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
-      myPosRef.current,
+      currentLocalPosRef.current(),
       myHiddenInRef.current ?? undefined,
       // Read at CALL time, not capture time. This interval is REBUILT on every
       // location change, and entering the theater IS a location change — so a

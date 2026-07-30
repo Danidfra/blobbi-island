@@ -385,11 +385,44 @@ export function machineLeftPercent(machine: ArcadeMachineConfig): number {
  * config test prove every anchor lands on walkable floor before anyone clicks
  * anything.
  */
+/**
+ * Ground-anchor offset (Phase 2): the anchor FRACTIONS were authored against
+ * center semantics ("body center stops at 90% of the cabinet"), which put the
+ * FEET half a scaled body lower — on the floor in front of the machine. The
+ * stored position now IS the feet, so the same on-screen stop point is the
+ * fraction point plus the depth-scaled half body height (arcade floors render
+ * the lg 96 px box; scale from each floor's ramp at the anchor's y).
+ */
+const ARCADE_BLOBBI_BOX_PX = 96;
+const WORLD_HEIGHT_PX = 697;
+const ARCADE_FLOOR_SCALES: Record<ArcadeFloorId, { front: number; back: number; minY: number; maxY: number }> = {
+  // arcade-inside has no depth ramp (xl room, scale 1) but hosts no machines.
+  ground: { front: 1, back: 1, minY: 0, maxY: 100 },
+  'floor-1': { front: 1.2, back: 1.2, minY: 59.3, maxY: 100 },
+  basement: { front: 1.2, back: 0.8, minY: 54.5, maxY: 100 },
+};
+
+/**
+ * Depth-scaled half body height at `y` on an arcade floor, in world percent —
+ * the actor-target ground offset. Shared by the DOM-free `machineAnchorPosition`
+ * AND the runtime live-rect target (`ArcadeMachine.computeMachineTarget`), so
+ * the two can never disagree about where the feet stop. Applied EXACTLY ONCE,
+ * always by the target computation, never by config data.
+ */
+export function arcadeMachineGroundOffsetPercent(floor: ArcadeFloorId, y: number): number {
+  const ramp = ARCADE_FLOOR_SCALES[floor];
+  const f = ramp.maxY > ramp.minY ? Math.max(0, Math.min(1, (y - ramp.minY) / (ramp.maxY - ramp.minY))) : 1;
+  const scale = ramp.back + (ramp.front - ramp.back) * f;
+  const box = floor === 'ground' ? 128 : ARCADE_BLOBBI_BOX_PX;
+  return ((box / 2) * scale * 100) / WORLD_HEIGHT_PX;
+}
+
 export function machineAnchorPosition(machine: ArcadeMachineConfig): { x: number; y: number } {
   const heightPercent = machineHeightPercent(machine);
   const spriteTopPercent = 100 - machine.bottomPercent - heightPercent;
+  const centerY = spriteTopPercent + heightPercent * machine.interactionAnchor.y;
   return {
     x: machineLeftPercent(machine) + machine.widthPercent * machine.interactionAnchor.x,
-    y: spriteTopPercent + heightPercent * machine.interactionAnchor.y,
+    y: centerY + arcadeMachineGroundOffsetPercent(machine.floor, centerY),
   };
 }

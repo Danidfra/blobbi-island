@@ -209,7 +209,7 @@ export const ARCADE_ELEVATOR_DOOR_SRC = `${B1}/elevator-door.png`;
  * horizontally centred on the counter and clear of the alcove — removes the
  * whole class of problem. `arcade-machines-config.test.ts` checks both.
  */
-export const ARCADE_COUNTER_STAND_Y = 60;
+export const ARCADE_COUNTER_STAND_Y = 69.2;
 
 export const ARCADE_TICKET_COUNTER = {
   baseSrc: `${GROUND}/ticket.png`,
@@ -248,7 +248,7 @@ export const ARCADE_PRIZE_COUNTER = {
  * walk along, so the stand point is stated instead.
  */
 export const arcadeElevatorStandPoint: Record<ArcadeFloorId, { x: number; y: number }> = {
-  ground: { x: 50, y: 58 },
-  'floor-1': { x: 50, y: 66 },
-  basement: { x: 50, y: 60 },
+  ground: { x: 50, y: 67.2 },
+  'floor-1': { x: 50, y: 74.3 },
+  basement: { x: 50, y: 66.2 },
 };

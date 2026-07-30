@@ -5,6 +5,7 @@ import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { constrainPosition } from '@/lib/boundaries';
 import {
   ARCADE_FLOORS,
+  arcadeMachineGroundOffsetPercent,
   machineHeightPercent,
   machineLeftPercent,
   type ArcadeMachineConfig,
@@ -66,9 +67,14 @@ function computeMachineTarget(el: Element, config: ArcadeMachineConfig): Positio
   const aimX = rect.left + rect.width * config.interactionAnchor.x;
   const aimY = rect.top + rect.height * config.interactionAnchor.y;
 
+  const fractionY = ((aimY - surfaceRect.top) / surfaceRect.height) * 100;
   const raw: Position = {
     x: ((aimX - surfaceRect.left) / surfaceRect.width) * 100,
-    y: ((aimY - surfaceRect.top) / surfaceRect.height) * 100,
+    // GROUND semantics (Phase 2 hardening): the anchor fraction was authored
+    // for the body CENTER; the feet stop half a depth-scaled body lower — on
+    // the open floor in FRONT of the machine, not inside its artwork. Shared
+    // with the DOM-free machineAnchorPosition, applied exactly once, here.
+    y: fractionY + arcadeMachineGroundOffsetPercent(config.floor, fractionY),
   };
 
   const boundary = locationBoundaries[ARCADE_FLOORS[config.floor]];

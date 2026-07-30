@@ -55,7 +55,17 @@ export interface TownBushConfig {
  * Default interaction target: the bush's visual center. Individual bushes
  * override it when their art needs a different aim point.
  */
-export const BUSH_CENTER_TARGET = { x: 0.5, y: 0.5 } as const;
+/**
+ * GROUND-anchor semantics (Phase 2): the fraction names where the Blobbi's
+ * FEET stop. Default aim: the bush's BASE half (y 0.85) — feet land at the
+ * foliage base so the body visibly walks INTO the bush and covers it, which is
+ * what the center-era 0.5 produced on screen when the stored point still meant
+ * the body center. The two bottom bushes override this with hand-fitted
+ * fractions that steer their approach lines around the streetlight foot
+ * plates (x 17.4–21.1 / 77.0–80.7, y 88.2–89.6) from every Town entry point —
+ * pinned by InteractiveElements.town-blockers.test.tsx.
+ */
+export const BUSH_CENTER_TARGET = { x: 0.5, y: 0.85 } as const;
 
 export const townBushes: TownBushConfig[] = [
   {
@@ -64,8 +74,8 @@ export const townBushes: TownBushConfig[] = [
     alt: 'Bush',
     positionClass: 'left-[0%] top-[64%] w-[16%]',
     zIndex: 10,
-    // Center lands around (8%, 73%) — inside the walkable arch, clear of the
-    // streetlight blockers (which cover y 86–90).
+    // Feet land at the foliage base (~8%, 80%) — inside the walkable arch,
+    // far above the streetlight foot plates.
     interactionTarget: { ...BUSH_CENTER_TARGET },
   },
   {
@@ -74,7 +84,7 @@ export const townBushes: TownBushConfig[] = [
     alt: 'Bush',
     positionClass: 'right-0 top-[69%] w-[15%]',
     zIndex: 10,
-    // Center lands around (92%, 78%).
+    // Feet land at the foliage base (~92.5%, 84%).
     interactionTarget: { ...BUSH_CENTER_TARGET },
   },
   {
@@ -83,10 +93,11 @@ export const townBushes: TownBushConfig[] = [
     alt: 'Bush',
     positionClass: '-left-[2%] -bottom-[2%] w-[20%]',
     zIndex: 20,
-    // Center lands around (8%, 91%), just below the left streetlight blocker
-    // (x 8–12.5, y 86–90). Aiming higher into this bush would land *inside* that
-    // blocker, and MovableBlobbi.goTo refuses a blocked target outright.
-    interactionTarget: { ...BUSH_CENTER_TARGET },
+    // Base-aimed with a leftward bias (~6%, 97.6%): dead-center base would
+    // drag the stage-exit approach line through the left streetlight's foot
+    // plate; aiming at the base's left portion clears it from all four Town
+    // entries while the body still ends up covering the bush.
+    interactionTarget: { x: 0.4, y: 0.8 },
   },
   {
     id: 'town-bush-4',
@@ -94,9 +105,10 @@ export const townBushes: TownBushConfig[] = [
     alt: 'Bush',
     positionClass: '-right-[2%] -bottom-[2%] w-[20%]',
     zIndex: 20,
-    // Center lands around (92%, 92%), below the right streetlight blocker
-    // (x 82.5–87, y 86–90) for the same reason as town-bush-3.
-    interactionTarget: { ...BUSH_CENTER_TARGET },
+    // Base-aimed with a rightward bias (~94%, 95%): clears the right
+    // streetlight's foot plate from all four Town entries (the map-spawn and
+    // arcade-exit lines duck under it; stage/shop lines pass above it).
+    interactionTarget: { x: 0.6, y: 0.72 },
   },
 ];
 

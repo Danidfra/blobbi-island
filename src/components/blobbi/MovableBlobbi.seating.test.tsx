@@ -113,7 +113,8 @@ describe('seated Blobbi rendering', () => {
 
   it('never scales the anchor — chat bubbles portal into it', () => {
     const h = setup('theater-seat-a1');
-    expect(h.anchor().style.transform).toBe('translate(-50%, -50%)');
+    // Ground anchor (Phase 2): translation only, never scale.
+    expect(h.anchor().style.transform).toBe('translate(-50%, -100%)');
   });
 
   it('hides the ground shadow while seated', () => {
@@ -155,13 +156,18 @@ describe('seated Blobbi rendering', () => {
     expect(h.anchor().dataset.seatedIn).toBeUndefined();
   });
 
-  it('keeps the row depth band unchanged by sitting', () => {
-    // Blobbi z-index comes from its y-position band and must not be nudged by
-    // sitting: the chair rows already interleave correctly with those bands.
+  it('renders at the seat POSE with the row-derived seated z (parity with remotes)', () => {
+    // A seated Blobbi is DRAWN at the seat's pose anchor with the row's
+    // seated z — identical inputs for local and remote seated stacking.
     const h = setup();
-    const standingZ = h.anchor().style.zIndex;
     h.sit('a1');
-    expect(h.anchor().style.zIndex).toBe(standingZ);
+    const seat = getTheaterSeat('theater-seat-a1')!;
+    const pose = seatAnchorPosition(seat);
+    expect(h.anchor().style.left).toBe(`${pose.x}%`);
+    expect(h.anchor().style.top).toBe(`${pose.y}%`);
+    // Seated z comes from the SEAT ROW (just behind the own chair's backrest),
+    // never from the standing y-bands.
+    expect(h.anchor().style.zIndex).toBe(String(seat.zIndex - 5));
   });
 });
 

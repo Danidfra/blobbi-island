@@ -196,7 +196,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
               min="0"
               max="100"
               value={formData.x}
-              onChange={(e) => handleInputChange('x', parseInt(e.target.value) || 0)}
+              onChange={(e) => handleInputChange('x', parseFloat(e.target.value) || 0)}
               className={errors.x ? 'border-red-500' : ''}
             />
             {errors.x && <p className="text-xs text-red-500">{errors.x}</p>}
@@ -210,7 +210,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
               min="0"
               max="100"
               value={formData.y}
-              onChange={(e) => handleInputChange('y', parseInt(e.target.value) || 0)}
+              onChange={(e) => handleInputChange('y', parseFloat(e.target.value) || 0)}
               className={errors.y ? 'border-red-500' : ''}
             />
             {errors.y && <p className="text-xs text-red-500">{errors.y}</p>}
@@ -242,7 +242,7 @@ export function AccessoryEditPanel({ accessory, onClose }: AccessoryEditPanelPro
               min="-45"
               max="45"
               value={formData.rot}
-              onChange={(e) => handleInputChange('rot', parseInt(e.target.value) || 0)}
+              onChange={(e) => handleInputChange('rot', parseFloat(e.target.value) || 0)}
               className={errors.rot ? 'border-red-500' : ''}
             />
             {errors.rot && <p className="text-xs text-red-500">{errors.rot}</p>}

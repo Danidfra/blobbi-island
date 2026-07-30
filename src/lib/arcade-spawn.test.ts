@@ -130,6 +130,6 @@ describe('getBlobbiInitialPosition for the arcade', () => {
     // No arcade exit mapping exists, so the pass branch still applies…
     expect(getBlobbiInitialPosition('arcade', 'town')).toEqual(ARCADE_PASS_HOLDER_SPAWN);
     // …while an existing mapping (town ← arcade) is untouched.
-    expect(getBlobbiInitialPosition('town', 'arcade')).toEqual({ x: 32, y: 68 });
+    expect(getBlobbiInitialPosition('town', 'arcade')).toEqual({ x: 32, y: 75.8 });
   });
 });

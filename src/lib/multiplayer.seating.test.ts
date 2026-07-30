@@ -13,6 +13,7 @@
  *  - heartbeats preserve it, so a long film does not eject you from your chair;
  *  - the parser treats anything that is not a non-empty string as "not seated".
  */
+import { groundToWireCenter } from '@/lib/presence-ground';
 import { describe, it, expect } from 'vitest';
 import {
   publishSit,
@@ -91,8 +92,11 @@ describe('presence seating state', () => {
     expect(content.goal).toBeUndefined();
     // Position stays truthful — the remote render ignores it, but presence must
     // not start lying about where the player is.
-    expect(content.anchor.x).toBe(52.4);
-    expect(content.anchor.y).toBe(87.6);
+    // Phase 2: the WIRE keeps legacy CENTER semantics — the published anchor
+    // is the internal ground point converted at the build boundary.
+    const wire = groundToWireCenter({ x: 52.4, y: 87.6 }, PARAMS.location);
+    expect(content.anchor.x).toBe(wire.x);
+    expect(content.anchor.y).toBe(wire.y);
     // Reuses the existing presence kind; no new kind was introduced.
     expect(c.events[0].kind).toBe(31950);
     expect(c.events[0].tags).toEqual(

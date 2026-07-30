@@ -25,6 +25,11 @@ const DevArcade = import.meta.env.DEV
   ? lazy(() => import("./pages/DevArcade").then(m => ({ default: m.DevArcade })))
   : null;
 
+// Ground-anchor room verification harness (Phase 2 diagnostics).
+const DevRooms = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevRooms").then(m => ({ default: m.DevRooms })))
+  : null;
+
 // Loading component for lazy-loaded routes
 const PageLoading = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -61,6 +66,13 @@ export function AppRouter() {
           <Route path="/dev/arcade" element={
             <Suspense fallback={<PageLoading />}>
               <DevArcade />
+            </Suspense>
+          } />
+        )}
+        {DevRooms && (
+          <Route path="/dev/rooms" element={
+            <Suspense fallback={<PageLoading />}>
+              <DevRooms />
             </Suspense>
           } />
         )}
