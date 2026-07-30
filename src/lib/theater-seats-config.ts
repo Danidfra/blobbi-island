@@ -48,6 +48,8 @@
 
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
+import { blobbiHalfHeightPercent } from '@/lib/blobbi-ground';
 
 /** The three seating rows, front (a) to back (c). */
 export type SeatRow = 'a' | 'b' | 'c';
@@ -114,8 +116,8 @@ export interface TheaterSeatConfig {
 
 // ── Measured constants (virtual world is 1046 × 697) ────────────────────────
 
-const WORLD_W = 1046;
-const WORLD_H = 697;
+const WORLD_W = WORLD_WIDTH;
+const WORLD_H = WORLD_HEIGHT;
 /** `w-28` = 112 px. */
 const CHAIR_W = 112;
 /** 112 px at the sprite's intrinsic 128 × 123 ratio. */
@@ -247,8 +249,7 @@ export function seatCushionPoint(seat: TheaterSeatConfig): { x: number; y: numbe
 }
 
 /** The theater renders the room-size token 'xl' (128 world px box). */
-const SEATED_BLOBBI_BOX_PX = 128;
-const WORLD_HEIGHT_PX = 697;
+const SEATED_BLOBBI_SIZE = 'xl' as const;
 
 /**
  * How much of the SCALED seated body sinks below the cushion line.
@@ -282,7 +283,9 @@ export const SEAT_CONTACT_RATIO = 0.5;
  */
 export function seatAnchorPosition(seat: TheaterSeatConfig): { x: number; y: number } {
   const cushion = seatCushionPoint(seat);
-  const seatedBodyPercent = (SEATED_BLOBBI_BOX_PX * seat.seatedScale * 100) / WORLD_HEIGHT_PX;
+  // Full seated-scaled body height in world percent, via the canonical
+  // center↔ground offset source (2 × half height — no private re-derivation).
+  const seatedBodyPercent = 2 * blobbiHalfHeightPercent(SEATED_BLOBBI_SIZE, seat.seatedScale);
   return {
     x: cushion.x + (seat.seatedOffset?.xPercent ?? 0),
     y: cushion.y + SEAT_CONTACT_RATIO * seatedBodyPercent + (seat.seatedOffset?.yPercent ?? 0),

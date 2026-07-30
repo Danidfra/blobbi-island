@@ -30,7 +30,7 @@ import {
   streetlightArtBox,
   streetlightBaseBlocker,
 } from '@/lib/town-streetlights-config';
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import type { Position } from '@/lib/types';
 
@@ -103,7 +103,7 @@ function Probe({ onReady }: { onReady: (isBlocked: BlockedFn) => void }) {
 /** Render the real Town scene and hand back its live blocker predicate. */
 function renderTown(): { isBlocked: BlockedFn; container: HTMLElement } {
   const blobbiRef: React.RefObject<MovableBlobbiRef> = {
-    current: { goTo: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 75 }) },
+    current: { goTo: vi.fn(), snapTo: vi.fn(), stop: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 75 }) },
   };
 
   let isBlocked: BlockedFn = () => false;

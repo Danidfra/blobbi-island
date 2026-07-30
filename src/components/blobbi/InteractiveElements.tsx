@@ -5,13 +5,14 @@ import { NostrHubModal } from '@/components/NostrHubModal';
 import React, { useState, useRef } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
+import { locationBoundaries } from '@/lib/location-boundaries';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { usePendingInteraction } from '@/hooks/usePendingInteraction';
 import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOnWorldClick';
 import { BackArrow } from './BackArrow';
-import { InteractiveElement, type InteractiveElementProps } from './InteractiveElement';
+import { InteractiveElement } from './InteractiveElement';
 import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
@@ -88,49 +89,18 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   const { requestInteraction } = pendingInteraction;
   useCancelInteractionOnWorldClick(pendingInteraction, currentLocation);
 
-  /**
-   * Legacy chair behaviour for the Nostr Station / shop: walk the Blobbi to a
-   * point derived from the chair's rect. There is no arrival callback and no
-   * seated state — those rooms have never had one. The theater uses
-   * <TheaterSeat> instead, and the arcade's chairs now go through the shared
-   * walk-to-interact system (see `arcade/ArcadeRoom.tsx`).
+  /*
+   * Chairs (Nostr Station / shop) route through the SAME canonical
+   * walk-to-interact path as every door and kiosk: `InteractiveElement`
+   * resolves the chair's configured seat-anchor fraction (the accepted
+   * `{50, 85}` pseudo-sit) through `resolveElementApproachTarget`, walks the
+   * Blobbi there, and fires the chair's `onClick` — the Nostr Hub modal —
+   * only on CONFIRMED ARRIVAL. The shop chairs attach no action: walking to
+   * the cushion is the whole interaction. The legacy inline flow (its own
+   * rect math, action fired immediately on click while still far away) is
+   * gone; there is still no seated state in these rooms, by design.
    */
-  const handleChairClick = (event: React.MouseEvent<HTMLDivElement>, _chairId: string, chairConfig?: InteractiveElementProps['chairConfig']) => {
-
-    if (!blobbiRef.current) return;
-
-    const chairElement = event.currentTarget;
-    // The canonical world-surface container — never a fragile class-string
-    // ancestor lookup.
-    const container = chairElement.closest('[data-world-surface]');
-
-    if (!container) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const chairRect = chairElement.getBoundingClientRect();
-
-    // GROUND semantics: the anchor fraction names where the FEET stop.
-    // Chairs have no seated state — the ~85% default rests the body on the
-    // cushion (a pseudo-sit) while the modal/action runs.
-    const seatAnchor = chairConfig?.seatAnchor || { xPercent: 50, yPercent: 85 };
-
-    // Calculate seat position from chair rect and anchor percentages
-    const seatX = chairRect.left + (chairRect.width * seatAnchor.xPercent!) / 100;
-    const seatY = chairRect.top + (chairRect.height * seatAnchor.yPercent!) / 100;
-
-    // Convert to percentage relative to container
-    const targetX = ((seatX - containerRect.left) / containerRect.width) * 100;
-    const targetY = ((seatY - containerRect.top) / containerRect.height) * 100;
-
-    // Move Blobbi to the seat position
-    blobbiRef.current.goTo({ x: targetX, y: targetY });
-
-        // Special handling for Nostr Station chairs - open Nostr Hub modal
-    if (backgroundFile === 'nostr-station-inside.png') {
-      setIsNostrHubModalOpen(true);
-      return;
-    }
-  };
+  const roomBoundary = locationBoundaries[backgroundFile];
 
   /**
    * Placeholder for elements that still have no behaviour (currently only the
@@ -475,7 +445,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               chairConfig={{
                 seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
-              onClick={handleChairClick}
+              requestInteraction={requestInteraction}
+              walkBoundary={roomBoundary}
               effect='scale'
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -486,7 +457,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               chairConfig={{
                 seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
-              onClick={handleChairClick}
+              requestInteraction={requestInteraction}
+              walkBoundary={roomBoundary}
               effect='scale'
               className='left-[30%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -502,7 +474,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               chairConfig={{
                 seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
-              onClick={handleChairClick}
+              requestInteraction={requestInteraction}
+              walkBoundary={roomBoundary}
               effect='scale'
               className='left-[18%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -513,7 +486,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               chairConfig={{
                 seatAnchor: { xPercent: 50, yPercent: 85 }
               }}
-              onClick={handleChairClick}
+              requestInteraction={requestInteraction}
+              walkBoundary={roomBoundary}
               effect='scale'
               className='left-[30%] bottom-[36%] w-[40%] z-[27]'
             />
@@ -882,7 +856,9 @@ if (backgroundFile === 'nostr-station-inside.png') {
         chairConfig={{
           seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
-        onClick={handleChairClick}
+        onClick={() => setIsNostrHubModalOpen(true)}
+        requestInteraction={requestInteraction}
+        walkBoundary={roomBoundary}
         effect="scale"
         className="absolute left-[17%] bottom-[25%] w-[12%] z-[15]"
       />
@@ -893,7 +869,9 @@ if (backgroundFile === 'nostr-station-inside.png') {
         chairConfig={{
           seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
-        onClick={handleChairClick}
+        onClick={() => setIsNostrHubModalOpen(true)}
+        requestInteraction={requestInteraction}
+        walkBoundary={roomBoundary}
         effect="scale"
         className="absolute left-[30%] bottom-[25%] w-[12%] z-[15]"
       />
@@ -904,7 +882,9 @@ if (backgroundFile === 'nostr-station-inside.png') {
         chairConfig={{
           seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
-        onClick={handleChairClick}
+        onClick={() => setIsNostrHubModalOpen(true)}
+        requestInteraction={requestInteraction}
+        walkBoundary={roomBoundary}
         effect="scale"
         className="absolute right-[17%] bottom-[25%] w-[12%] z-[15]"
       />
@@ -915,7 +895,9 @@ if (backgroundFile === 'nostr-station-inside.png') {
         chairConfig={{
           seatAnchor: { xPercent: 50, yPercent: 85 }
         }}
-        onClick={handleChairClick}
+        onClick={() => setIsNostrHubModalOpen(true)}
+        requestInteraction={requestInteraction}
+        walkBoundary={roomBoundary}
         effect="scale"
         className="absolute right-[30%] bottom-[25%] w-[12%] z-[15]"
       />

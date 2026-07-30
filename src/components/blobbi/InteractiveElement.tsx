@@ -2,7 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { Position } from '@/lib/types';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
-import { constrainPosition, type Boundary } from '@/lib/boundaries';
+import type { Boundary } from '@/lib/boundaries';
+import {
+  ELEMENT_BASE_FRACTION,
+  resolveElementApproachTarget,
+} from '@/lib/approach-target';
 
 /**
  * The generic room sprite: an image with a click affordance, an optional hover
@@ -11,64 +15,26 @@ import { constrainPosition, type Boundary } from '@/lib/boundaries';
  * Extracted verbatim from `InteractiveElements.tsx` (apart from the slide-branch
  * fix noted below) so rooms can be split into their own files without importing
  * from the very component that dispatches to them.
+ *
+ * Walk-to targets resolve through the canonical
+ * {@link resolveElementApproachTarget} with {@link ELEMENT_BASE_FRACTION}: the
+ * element's horizontal center, slightly above its base line, so the feet stop
+ * on the floor at the doorway/object base rather than inside its artwork.
+ *
+ * Why `walkBoundary` matters: `MovableBlobbi.goTo` does NOT clamp its target —
+ * it clamps each animation STEP. A target above the walkable floor is never
+ * reached (the walk slides along the floor's top edge forever), so
+ * `usePendingInteraction` never fires and the element appears dead. The
+ * arcade's wall-mounted counters are exactly this shape; rooms that know their
+ * boundary pass it so the target is clamped up front.
  */
-
-/**
- * Compute a walk-to target (world-surface percent) from an interactive
- * element's rect. Uses the element's horizontal center and a point near its
- * base (feet/doorway level) so the Blobbi walks to the floor in front of the
- * object rather than into its visual center. The result is relative to the
- * `[data-world-surface]` container; MovableBlobbi.goTo will clamp it into the
- * movement boundary.
- */
-export function computeBaseCenterTarget(el: Element, walkBoundary?: Boundary): Position | null {
-  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
-  if (!surface) return null;
-  const surfaceRect = surface.getBoundingClientRect();
-  const rect = el.getBoundingClientRect();
-  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
-
-  const centerX = rect.left + rect.width / 2;
-  // Aim slightly above the very bottom so the point sits on the floor in front
-  // of the object rather than clipped by its lowest pixels.
-  // GROUND semantics: this is where the FEET stop — just above the sprite's
-  // base line, i.e. standing at the doorway/object base.
-  const baseY = rect.bottom - rect.height * 0.1;
-
-  const raw: Position = {
-    x: ((centerX - surfaceRect.left) / surfaceRect.width) * 100,
-    y: ((baseY - surfaceRect.top) / surfaceRect.height) * 100,
-  };
-
-  /*
-   * Clamp into the room's walk boundary when the caller knows it.
-   *
-   * `MovableBlobbi.goTo` does NOT clamp its target — it clamps each animation
-   * STEP instead. So a target above the walkable floor is never reached: every
-   * step aims at it, gets pushed back onto the floor's top edge, and the Blobbi
-   * slides sideways along that edge until it runs into a wall. The distance to
-   * the target never closes, so `usePendingInteraction` never fires and the
-   * element appears dead.
-   *
-   * The arcade's ticket and prize counters are exactly this shape — they are
-   * mounted high on the back wall, well above `y = 48`. `TheaterSeat`,
-   * `TownBush` and `ArcadeMachine` all clamp for the same reason; this makes the
-   * generic element able to as well, without changing any room that does not
-   * pass a boundary.
-   */
-  return walkBoundary ? constrainPosition(raw, walkBoundary) : raw;
-}
 
 export interface InteractiveElementProps {
   src: string;
   alt: string;
   className?: string;
   animated?: boolean;
-  onClick?: (
-    event: React.MouseEvent<HTMLDivElement>,
-    chairId?: string,
-    chairConfig?: InteractiveElementProps['chairConfig'],
-  ) => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
   effect?: 'scale' | 'opacity' | 'door' | 'slide';
   slideDirection?: 'right' | 'left' | 'up' | 'down';
   isHovered?: boolean;
@@ -98,15 +64,15 @@ export interface InteractiveElementProps {
    */
   walkTarget?: Position;
   /**
-   * Legacy chair support for the Nostr Station / shop chairs, which still use
-   * the "click walks the Blobbi to a computed seat point" model.
+   * Chair configuration for the Nostr Station / shop chairs: `seatAnchor`
+   * names the fraction of the chair rect the FEET stop on (the accepted
+   * `{50, 85}` pseudo-sit — the body rests on the cushion while any action
+   * runs; these rooms have no real seated state).
    *
-   * Neither the theater nor the arcade uses this: the theater's seats are
-   * data-driven `<TheaterSeat>` components with stable ids and a real arrival
-   * callback, and the arcade's chairs walk through the shared
-   * `requestInteraction` path. Only `seatAnchor` remains here — `sleepOnSeat`
-   * and `sitZIndexOffset` were read exclusively by a chair-arrival handler that
-   * was never called, so they configured nothing.
+   * Chairs route through the SAME walk-to-interact path as doors — the click
+   * starts a walk, `onClick` (if any) fires only on confirmed arrival — the
+   * only differences being the aim fraction and that a chair walks even with
+   * no action attached (walking to a chair IS the interaction).
    */
   chairConfig?: {
     seatAnchor?: {
@@ -115,6 +81,9 @@ export interface InteractiveElementProps {
     };
   };
 }
+
+/** Default chair pseudo-sit fraction (the accepted `{50, 85}` placement). */
+const DEFAULT_CHAIR_SEAT_ANCHOR = { xPercent: 50, yPercent: 85 };
 
 /**
  * How long a tap keeps a visibility-only overlay visible on touch devices.
@@ -196,10 +165,13 @@ export function InteractiveElement({
       showTouchFeedback();
     }
 
-    if (!onClick) {
+    const isChair = type === 'chair';
+
+    if (!onClick && !isChair) {
       // Visibility-only overlay (no action attached), e.g. the furniture-store
       // door. There is nothing to run — the tap feedback above is the whole
-      // behaviour.
+      // behaviour. Chairs are the exception: walking to a chair IS the
+      // interaction, action or not (the shop's pseudo-sit).
       return;
     }
 
@@ -210,16 +182,23 @@ export function InteractiveElement({
       setTimeout(() => setIsAnimating(false), 300);
     }
 
-    // Chairs keep their existing immediate walk-to-sit behavior.
-    if (type === 'chair') {
-      const chairId = alt.replace(/\s+/g, '-').toLowerCase();
-      onClick(event, chairId, chairConfig);
-      return;
-    }
-
     // Walk-to-interact: defer the action until the Blobbi reaches the target.
+    // Chairs aim at their configured seat-anchor fraction (the pseudo-sit
+    // point); everything else aims at the element base.
     if (requestInteraction) {
-      const target = walkTarget ?? computeBaseCenterTarget(event.currentTarget, walkBoundary);
+      const seatAnchor = isChair
+        ? { ...DEFAULT_CHAIR_SEAT_ANCHOR, ...chairConfig?.seatAnchor }
+        : null;
+      const fraction = seatAnchor
+        ? { x: seatAnchor.xPercent / 100, y: seatAnchor.yPercent / 100 }
+        : ELEMENT_BASE_FRACTION;
+      const target =
+        walkTarget ??
+        resolveElementApproachTarget({
+          element: event.currentTarget,
+          fraction,
+          boundary: walkBoundary,
+        })?.target;
       if (target) {
         // Show active/touched feedback immediately (mobile parity with hover)
         // and hold it for the whole walk: the pending interaction, not a timer,
@@ -231,7 +210,7 @@ export function InteractiveElement({
           touch: isTouch,
           action: () => {
             setIsTouchActive(false);
-            onClick(event);
+            onClick?.(event);
           },
           onCancel: () => setIsTouchActive(false),
         });
@@ -239,7 +218,7 @@ export function InteractiveElement({
       }
     }
 
-    onClick(event);
+    onClick?.(event);
   };
 
   const getSlideTransform = () => {

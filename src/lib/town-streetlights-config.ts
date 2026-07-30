@@ -18,7 +18,7 @@
  * stays aligned with the artwork on desktop and mobile alike.
  */
 
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
 
 /** Streetlight sprite path. */
 export const STREETLIGHT_SRC = '/assets/world/props/streetlight.png';

@@ -49,6 +49,8 @@
 
 import type { Boundary } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
+import { blobbiHalfHeightPercent } from '@/lib/blobbi-ground';
 import {
   ARCADE_AIR_HOCKEY_MACHINE_ID,
   ARCADE_POOL_MACHINE_ID,
@@ -59,8 +61,8 @@ import {
 } from '@/arcade/catalogue';
 
 /** The virtual world is a fixed 1046 × 697 box, uniformly scaled to the viewport. */
-export const ARCADE_WORLD_WIDTH = 1046;
-export const ARCADE_WORLD_HEIGHT = 697;
+export const ARCADE_WORLD_WIDTH = WORLD_WIDTH;
+export const ARCADE_WORLD_HEIGHT = WORLD_HEIGHT;
 
 /** The three arcade floors, keyed by the background file each one renders. */
 export const ARCADE_FLOORS = {
@@ -393,8 +395,6 @@ export function machineLeftPercent(machine: ArcadeMachineConfig): number {
  * fraction point plus the depth-scaled half body height (arcade floors render
  * the lg 96 px box; scale from each floor's ramp at the anchor's y).
  */
-const ARCADE_BLOBBI_BOX_PX = 96;
-const WORLD_HEIGHT_PX = 697;
 const ARCADE_FLOOR_SCALES: Record<ArcadeFloorId, { front: number; back: number; minY: number; maxY: number }> = {
   // arcade-inside has no depth ramp (xl room, scale 1) but hosts no machines.
   ground: { front: 1, back: 1, minY: 0, maxY: 100 },
@@ -413,8 +413,9 @@ export function arcadeMachineGroundOffsetPercent(floor: ArcadeFloorId, y: number
   const ramp = ARCADE_FLOOR_SCALES[floor];
   const f = ramp.maxY > ramp.minY ? Math.max(0, Math.min(1, (y - ramp.minY) / (ramp.maxY - ramp.minY))) : 1;
   const scale = ramp.back + (ramp.front - ramp.back) * f;
-  const box = floor === 'ground' ? 128 : ARCADE_BLOBBI_BOX_PX;
-  return ((box / 2) * scale * 100) / WORLD_HEIGHT_PX;
+  // Ground floor renders the 'xl' (128 px) room token, the other floors 'lg'
+  // (96 px). The offset is the canonical center↔ground half height.
+  return blobbiHalfHeightPercent(floor === 'ground' ? 'xl' : 'lg', scale);
 }
 
 export function machineAnchorPosition(machine: ArcadeMachineConfig): { x: number; y: number } {

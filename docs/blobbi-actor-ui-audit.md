@@ -1,5 +1,10 @@
 # Blobbi Actor UI Audit — Movement, Positioning, Depth, Shadow, and Rendering
 
+> **Status (Phase 3, 2026-07):** superseded as the current contract by
+> [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md), which documents
+> the consolidated post-Phase-3 architecture. This document remains as the
+> historical record/derivation it describes.
+
 _Audit date: 2026-07-29. Branch: `production` (clean, HEAD `a38620a`). No production behavior was changed for this audit._
 
 > **Phase 0 status:** the safety baseline described in §20 has been implemented — see

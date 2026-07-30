@@ -53,7 +53,7 @@ function Harness({ initialSeat = null as string | null }) {
             initialPosition={{ x: 50, y: 87 }}
             boundary={{ shape: 'rectangle', x: [0, 100], y: [75, 98] }}
             backgroundFile="stage-inside.png"
-            seatedIn={sittingIn}
+            pose={sittingIn ? { kind: 'seated', seatId: sittingIn } : { kind: 'standing' }}
             onMoveStart={(destination) => {
               moveStarts.push(destination);
               setSittingIn(null);

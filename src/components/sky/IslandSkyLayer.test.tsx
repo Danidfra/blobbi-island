@@ -30,7 +30,7 @@ import {
   ISLAND_CLOUD_SHAPE_GEOMETRY,
   ISLAND_CLOUD_SIZES,
 } from '@/lib/island-sky-cloud-shapes';
-import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH } from '@/lib/world-coordinates';
 import { IslandSkyLayer } from './IslandSkyLayer';
 import { IslandWorldLight } from './IslandWorldLight';
 

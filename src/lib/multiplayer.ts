@@ -12,6 +12,7 @@ import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
 import { worldDistancePx } from '@/lib/blobbi-ground';
 import { groundToWireCenter } from '@/lib/presence-ground';
+import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 
 // ============================================================================
 // Constants and Configuration
@@ -432,7 +433,7 @@ export function clampToWalkable(
  * Create a WalkableApi implementation for a given location
  */
 export function createWalkableApi(location: LocationId): WalkableApi {
-  const backgroundFile = getBackgroundFileForLocation(location);
+  const backgroundFile = getBackgroundForLocation(location);
   const boundary = backgroundFile ? locationBoundaries[backgroundFile] : undefined;
 
   return {
@@ -449,32 +450,6 @@ export function createWalkableApi(location: LocationId): WalkableApi {
       return constrainPosition({ x, y }, boundary);
     }
   };
-}
-
-/**
- * Get background file name for a location (simplified mapping)
- */
-function getBackgroundFileForLocation(location: LocationId): string | undefined {
-  const locationToFile: Record<LocationId, string> = {
-    'town': 'town-open.webp',
-    'home': 'home-inside.png',
-    'beach': 'beach-open.webp',
-    'mine': 'mine-open.webp',
-    'nostr-station': 'nostr-station-open.webp',
-    'nostr-station-inside': 'nostr-station-inside.png',
-    'plaza': 'plaza-open.webp',
-    'plaza-inside': 'plaza-inside.png',
-    'arcade': 'arcade-inside.png',
-    'arcade-1': 'arcade-1.png',
-    'arcade-minus1': 'arcade-minus1.png',
-    'stage': 'stage-inside.png',
-    'shop': 'shopping-mall-inside.png',
-    'back-yard': 'back-yard-open.webp',
-    'cave-open': 'cave-inside.png',
-    'clothing-store-inside': 'clothing-store-inside.png',
-  };
-
-  return locationToFile[location];
 }
 
 // ============================================================================

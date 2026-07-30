@@ -1,22 +1,26 @@
 /**
- * End-to-end coverage for the bed flow under GROUND-ANCHOR semantics, driven
- * through the real MovableBlobbi `onMoveComplete` path.
+ * End-to-end coverage for the bed flow (Phase 3), driven through the REAL
+ * production wiring: `useBlobbiPoseController.requestBedSleep` → the canonical
+ * pending-interaction walk → confirmed arrival → sleeping pose + `snapTo` onto
+ * the sleep anchor.
  *
- * The harness mirrors PlayingView's wiring exactly: walk to the bed's ground
- * WALK target → on gated arrival, snap (`goTo(pose, true)`) to the SLEEP POSE
- * anchor, with the synchronous re-entry lock.
+ * The old flow inferred bed arrival from movement-completion coordinates,
+ * which meant ANY walk that happened to end near the bed put the Blobbi to
+ * sleep. These tests pin the new contract: only a bed request sleeps, world
+ * taps cancel a pending bed walk, movement wakes, and dragging the bed drags
+ * the sleeper.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, act, screen } from '@testing-library/react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import { MovableBlobbi, type MovableBlobbiRef } from './MovableBlobbi';
-import { getBedSleepPose, getBedWalkTarget, isBedArrival } from '@/lib/bed-arrival';
+import { useBlobbiPoseController } from '@/hooks/useBlobbiPoseController';
+import { getBedSleepPose, getBedWalkTarget } from '@/lib/bed-arrival';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { locationBoundaries } from '@/lib/location-boundaries';
-import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
 
 vi.mock('./CurrentBlobbiDisplay', () => ({
@@ -28,66 +32,83 @@ const CONTAINER_RECT = {
   toJSON: () => ({}),
 } as DOMRect;
 
-const DEFAULT_BED_POSITION: Position = { x: 75, y: 70 }; // PlayingView's default
+const DEFAULT_BED_POSITION: Position = { x: 75, y: 70 }; // pose controller default
+const BACKGROUND = getBackgroundForLocation('home');
+const BOUNDARY = locationBoundaries[BACKGROUND];
+const WALK_TARGET = getBedWalkTarget(DEFAULT_BED_POSITION, BOUNDARY);
+const SLEEP_POSE = getBedSleepPose(DEFAULT_BED_POSITION);
 
 const completions: Position[] = [];
 
-/** Mirrors PlayingView's bed wiring under ground semantics. */
-function Harness({ location }: { location: LocationId }) {
+/** Mirrors PlayingView's bed wiring exactly (pose controller + MovableBlobbi). */
+function Harness({ initialPosition }: { initialPosition: Position }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
-  const [isSleeping, setIsSleeping] = useState(false);
-  const [isAttachedToBed, setIsAttachedToBed] = useState(false);
-  const bedLockRef = useRef(false);
-  const background = getBackgroundForLocation(location);
-  const boundary = locationBoundaries[background];
 
-  const walkTarget = getBedWalkTarget(DEFAULT_BED_POSITION, boundary);
-
-  const handleMoveComplete = (position: Position) => {
-    completions.push(position);
-    if (!bedLockRef.current && isBedArrival(position, walkTarget, background)) {
-      bedLockRef.current = true;
-      setIsSleeping(true);
-      setIsAttachedToBed(true);
-      blobbiRef.current?.goTo(getBedSleepPose(DEFAULT_BED_POSITION), true);
-    }
-  };
+  const {
+    pose,
+    handleMoveStart,
+    handleMoveComplete,
+    handleWakeUp,
+    requestBedSleep,
+    handleBedPositionChange,
+  } = useBlobbiPoseController({
+    blobbiRef,
+    currentLocation: 'home',
+    boundary: BOUNDARY,
+    onMoveComplete: (position) => completions.push(position),
+  });
 
   return (
     <PhotoBoothProvider>
       <DebugOverlaysProvider>
       <MovementBlockerProvider>
         <div ref={containerRef} data-testid="world" data-world-surface>
-          <div
-            data-testid="sleep-state"
-            data-sleeping={isSleeping}
-            data-attached={isAttachedToBed}
-          />
+          <div data-testid="sleep-state" data-pose={pose.kind} />
           <MovableBlobbi
             ref={blobbiRef}
             containerRef={containerRef}
             anchorId="my-blobbi-anchor"
-            initialPosition={{ x: 50, y: 85 }}
-            boundary={boundary}
-            backgroundFile={background}
-            isSleeping={isSleeping}
-            isAttachedToBed={isAttachedToBed}
+            initialPosition={initialPosition}
+            boundary={BOUNDARY}
+            backgroundFile={BACKGROUND}
+            pose={pose}
+            onMoveStart={handleMoveStart}
             onMoveComplete={handleMoveComplete}
+            onWakeUp={handleWakeUp}
           />
           <button
             type="button"
-            data-testid="go-to-bed"
-            onClick={() => blobbiRef.current?.goTo(walkTarget, true)}
+            data-testid="bed"
+            data-block-move
+            onClick={(e) => {
+              e.stopPropagation();
+              requestBedSleep();
+            }}
           >
-            go
+            bed
           </button>
           <button
             type="button"
-            data-testid="go-elsewhere"
-            onClick={() => blobbiRef.current?.goTo({ x: 20, y: 95 }, true)}
+            data-testid="drag-bed"
+            data-block-move
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBedPositionChange({ x: 40, y: 68 });
+            }}
           >
-            go elsewhere
+            drag bed
+          </button>
+          <button
+            type="button"
+            data-testid="walk-near-bed"
+            data-block-move
+            onClick={(e) => {
+              e.stopPropagation();
+              blobbiRef.current?.snapTo(WALK_TARGET);
+            }}
+          >
+            walk near bed
           </button>
         </div>
       </MovementBlockerProvider>
@@ -96,63 +117,93 @@ function Harness({ location }: { location: LocationId }) {
   );
 }
 
-function setup(location: LocationId) {
+function setup(initialPosition: Position) {
   completions.length = 0;
-  const view = render(<Harness location={location} />);
+  const view = render(<Harness initialPosition={initialPosition} />);
   const world = screen.getByTestId('world');
   vi.spyOn(world, 'getBoundingClientRect').mockReturnValue(CONTAINER_RECT);
   const state = () => screen.getByTestId('sleep-state');
   const anchor = () => view.container.querySelector('#my-blobbi-anchor') as HTMLElement;
-  return { state, anchor };
+  return { state, anchor, world };
 }
 
-describe('bed arrival (ground semantics)', () => {
-  it('arriving at the bed walk target INSIDE the Home sleeps and snaps to the pose anchor', () => {
-    const { state, anchor } = setup('home');
-    const walkTarget = getBedWalkTarget(
-      DEFAULT_BED_POSITION,
-      locationBoundaries['home-inside.png'],
-    );
-    const pose = getBedSleepPose(DEFAULT_BED_POSITION);
+describe('bed flow (pending-interaction based)', () => {
+  it('requesting the bed beside it sleeps immediately and snaps to the pose anchor', () => {
+    // Standing exactly on the walk target: the pending interaction fires its
+    // underfoot path synchronously → sleep + snap.
+    const { state, anchor } = setup(WALK_TARGET);
 
     act(() => {
-      screen.getByTestId('go-to-bed').click();
+      screen.getByTestId('bed').click();
     });
 
-    // Arrival at the walk target fired, then the snap moved it to the pose.
-    expect(completions[0]).toEqual(walkTarget);
-    expect(completions[completions.length - 1]).toEqual(pose);
-    expect(state().dataset.sleeping).toBe('true');
-    expect(state().dataset.attached).toBe('true');
+    expect(state().dataset.pose).toBe('sleeping');
     // The actor is pinned at the POSE anchor (boundary-bypassing snap).
-    expect(anchor().style.left).toBe(`${pose.x}%`);
-    expect(anchor().style.top).toBe(`${pose.y}%`);
+    expect(anchor().style.left).toBe(`${SLEEP_POSE.x}%`);
+    expect(anchor().style.top).toBe(`${SLEEP_POSE.y}%`);
+    expect(completions[completions.length - 1]).toEqual(SLEEP_POSE);
   });
 
-  it('the same arrival OUTSIDE the Home does not trigger sleeping', () => {
-    const { state } = setup('plaza-inside');
+  it('a movement completion near the bed WITHOUT a bed request never sleeps', () => {
+    const { state } = setup({ x: 50, y: 85 });
 
     act(() => {
-      screen.getByTestId('go-to-bed').click();
+      screen.getByTestId('walk-near-bed').click();
     });
 
-    expect(completions.length).toBe(1); // no snap followed
-    expect(state().dataset.sleeping).toBe('false');
-    expect(state().dataset.attached).toBe('false');
+    expect(completions).toEqual([WALK_TARGET]);
+    expect(state().dataset.pose).toBe('standing');
   });
 
-  it.each(['home', 'plaza-inside'] as LocationId[])(
-    'ordinary move completions away from the bed are unaffected in "%s"',
-    (location) => {
-      const { state } = setup(location);
+  it('a world tap cancels a pending bed walk before arrival — no sleep fires later', () => {
+    // Far from the bed: the request starts a WALK (no immediate fire).
+    const { state, world } = setup({ x: 20, y: 95 });
 
-      act(() => {
-        screen.getByTestId('go-elsewhere').click();
-      });
+    act(() => {
+      screen.getByTestId('bed').click();
+    });
+    expect(state().dataset.pose).toBe('standing'); // walking, not asleep
 
-      expect(completions).toEqual([{ x: 20, y: 95 }]);
-      expect(state().dataset.sleeping).toBe('false');
-      expect(state().dataset.attached).toBe('false');
-    },
-  );
+    // Player taps empty ground: the pending interaction is abandoned.
+    act(() => {
+      world.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    });
+
+    expect(state().dataset.pose).toBe('standing');
+  });
+
+  it('starting to move wakes and detaches (world tap while asleep only wakes)', () => {
+    const { state, world, anchor } = setup(WALK_TARGET);
+
+    act(() => {
+      screen.getByTestId('bed').click();
+    });
+    expect(state().dataset.pose).toBe('sleeping');
+
+    // First world tap while asleep: wake only, no walk.
+    act(() => {
+      world.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    });
+    expect(state().dataset.pose).toBe('standing');
+    // Still lying where it woke (the pose anchor) until it walks somewhere.
+    expect(anchor().style.left).toBe(`${SLEEP_POSE.x}%`);
+  });
+
+  it('dragging the bed while asleep drags the sleeper (re-snap onto the moved pose)', () => {
+    const { state, anchor } = setup(WALK_TARGET);
+
+    act(() => {
+      screen.getByTestId('bed').click();
+    });
+    expect(state().dataset.pose).toBe('sleeping');
+
+    act(() => {
+      screen.getByTestId('drag-bed').click();
+    });
+
+    const movedPose = getBedSleepPose({ x: 40, y: 68 });
+    expect(state().dataset.pose).toBe('sleeping');
+    expect(anchor().style.left).toBe(`${movedPose.x}%`);
+    expect(anchor().style.top).toBe(`${movedPose.y}%`);
+  });
 });

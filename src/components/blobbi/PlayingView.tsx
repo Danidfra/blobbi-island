@@ -21,8 +21,7 @@ import { ItemBagModal } from './ItemBagModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { SocialShareModal } from './SocialShareModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
-import { getBedSleepPose, getBedWalkTarget, isBedArrival } from '@/lib/bed-arrival';
-import { resolveSeatedRender } from '@/lib/blobbi-world-render';
+import { useBlobbiPoseController } from '@/hooks/useBlobbiPoseController';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
@@ -79,7 +78,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       clearArcadePass();
     }
   }, [currentLocation]);
-  const [bedPosition, setBedPosition] = useState<Position>({ x: 75, y: 70 });
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
   const [isItemBagOpen, setIsItemBagOpen] = useState(false);
@@ -106,20 +104,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [externalVisual, setExternalVisual] = useState<BlobbiVisual | null>(null);
   const [remotePreviewKey, setRemotePreviewKey] = useState<string | null>(null);
 
-  const [isSleeping, setIsSleeping] = useState(false);
-  const [isAttachedToBed, setIsAttachedToBed] = useState(false);
-  // Synchronous re-entry guard for bed arrival: the snap to the sleep pose
-  // fires onMoveComplete again in the same tick, before state commits.
-  const bedLockRef = useRef(false);
-
-  // ── Theater seating ────────────────────────────────────────────────────
-  // The id of the theater seat the local player currently occupies, or null.
-  // Single source of truth for "seated", mirroring `hiddenIn` exactly: the seat
-  // sets it on CONFIRMED ARRIVAL, MovableBlobbi derives the whole seated
-  // presentation from it (rear-facing, per-row scale, no shadow, no float), and
-  // it is cleared the instant movement starts or the location changes.
-  const [sittingIn, setSittingIn] = useState<string | null>(null);
-
   // The shared watch session the local player is participating in, as the
   // session ADDRESS STRING and nothing else. Owned here for the same reason
   // `sittingIn` is: the theater reports it, presence publishes it, and both need
@@ -139,28 +123,15 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // nothing and never gates sitting down. See `src/lib/theater-occupancy.ts`.
   const [occupiedSeats, setOccupiedSeats] = useState<Set<string>>(() => new Set());
 
-  // ── Hiding spots (Town bushes) ──────────────────────────────────────────
-  // The id of the hiding spot the local player currently occupies, or null.
-  // This is the SINGLE source of truth for "hidden": the interactive element
-  // sets it on confirmed arrival, MovableBlobbi stops rendering the Blobbi
-  // visual while it is set, MultiplayerLayer publishes it as presence state,
-  // and it is cleared the instant movement starts (handleMoveStart below) —
-  // no timers, no polling, no coordinate guessing.
-  const [hiddenIn, setHiddenIn] = useState<string | null>(null);
-
-  // Leaving the location abandons any hiding spot AND any seat (the Blobbi
-  // respawns at the new location's entry point, and MovableBlobbi is remounted
-  // by `key`). Leaving the theater therefore always resets the seated state.
+  // Leaving the location ends participation in whatever was playing in the
+  // theater; presence must never point at a session the player has left.
+  //
+  // This is the ONLY implicit way out of a watch session. Standing up, walking
+  // around the theater and changing seats all keep it — the session belongs to
+  // being in the room, not to a chair. Leaving the room also forgets the
+  // session for good, so walking back in does not silently rejoin it.
+  // (Poses — seat, hiding spot, bed — reset inside useBlobbiPoseController.)
   useEffect(() => {
-    setHiddenIn(null);
-    setSittingIn(null);
-    // Walking out of the theater ends participation in whatever was playing
-    // there; presence must never point at a session the player has left.
-    //
-    // This is the ONLY implicit way out of a watch session. Standing up, walking
-    // around the theater and changing seats all keep it — the session belongs to
-    // being in the room, not to a chair. Leaving the room also forgets the
-    // session for good, so walking back in does not silently rejoin it.
     setActivitySession(null);
     forgetWatchSession(user?.pubkey);
   }, [currentLocation, user?.pubkey]);
@@ -175,86 +146,29 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     y: [60, 100],
   };
 
-  const handleBedClick = () => {
-    if (blobbiRef.current) {
-      // Walk to the GROUND point beside/below the bed (the sleep pose clamped
-      // into the walk boundary); the snap onto the bed happens on arrival.
-      blobbiRef.current.goTo(getBedWalkTarget(bedPosition, boundary));
-    }
-  };
-
-  const handleMoveComplete = (position: Position) => {
-    setMyPosition(position);
-
-    // Bed arrival: gated to the room that actually contains the bed, measured
-    // against the reachable WALK target with the shared world-px model. On
-    // arrival the Blobbi snaps to the bed's sleep POSE anchor — an explicit
-    // exception that bypasses the walk boundary (the bed is not floor).
-    if (
-      !bedLockRef.current &&
-      isBedArrival(position, getBedWalkTarget(bedPosition, boundary), background)
-    ) {
-      bedLockRef.current = true;
-      setIsSleeping(true);
-      setIsAttachedToBed(true);
-      blobbiRef.current?.goTo(getBedSleepPose(bedPosition), true);
-    }
-
-    // Check if Blobbi is going to a chair (this will be handled by handleChairArrival)
-    // Chair logic is handled separately in handleChairArrival
-  };
-
-  const handleWakeUp = () => {
-    bedLockRef.current = false;
-    setIsSleeping(false);
-    setIsAttachedToBed(false);
-  };
-
-  /**
-   * Fired by <TheaterSeat> on CONFIRMED ARRIVAL, never on click.
-   *
-   * The snap target comes from the seat CONFIGURATION rather than the rendered
-   * rect, so the Blobbi lands on exactly the point every other client will later
-   * draw it at — no sub-pixel divergence between who is sitting and where they
-   * appear to be sitting.
-   */
-  const handleSitInSeat = (seatId: string) => {
-    const seated = resolveSeatedRender(seatId);
-    if (!seated) return;
-    setSittingIn(seatId);
-    blobbiRef.current?.goTo(seated.position, true); // immediate = snap onto the seat
-  };
-
-  const handleMoveStart = (destination: Position) => {
-    setMyPosition(destination);
-
-    // Any movement — a ground click, a walk-to-interact, another bush — means
-    // the player is leaving their hiding spot: reveal the Blobbi immediately and
-    // let the walk continue from the hiding position. MultiplayerLayer clears
-    // the published state from the same transition.
-    setHiddenIn(null);
-
-    // ...and leaving their seat. Clicking a DIFFERENT seat also routes through
-    // here (the walk starts first), so seat-to-seat transitions stand up cleanly
-    // before the new arrival sets the new seat.
-    setSittingIn(null);
-
-    // If starting to move while sleeping, wake up and detach from bed
-    bedLockRef.current = false;
-    if (isSleeping || isAttachedToBed) {
-      setIsSleeping(false);
-      setIsAttachedToBed(false);
-    }
-  };
-
-  const handleBedPositionChange = (newPosition: Position) => {
-    setBedPosition(newPosition);
-    // If Blobbi is attached to bed, move it with the bed immediately (no animation)
-    // Use the adjusted sleeping position (slightly higher)
-    if (isAttachedToBed && blobbiRef.current) {
-      blobbiRef.current.goTo(getBedSleepPose(newPosition), true);
-    }
-  };
+  // ── Local pose orchestration ────────────────────────────────────────────
+  // Sleeping / seated / hidden state, every transition into and out of those
+  // poses, and the bed's pending-interaction walk all live in the pose
+  // controller; this component just wires its handlers to the world.
+  const {
+    pose,
+    sittingIn,
+    hiddenIn,
+    bedPosition,
+    handleMoveStart,
+    handleMoveComplete,
+    handleWakeUp,
+    sitInSeat,
+    hideInSpot,
+    requestBedSleep,
+    handleBedPositionChange,
+  } = useBlobbiPoseController({
+    blobbiRef,
+    currentLocation,
+    boundary,
+    onMoveStart: setMyPosition,
+    onMoveComplete: setMyPosition,
+  });
 
   const handleBlobbiClick = () => {
     dbg('[blobbi-debug][modal] Opening own Blobbi modal - clearing currentRemoteRef:', {
@@ -553,11 +467,11 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         selectedBlobbi={selectedBlobbi}
         sittingIn={sittingIn}
         occupiedSeats={occupiedSeats}
-        onSitInSeat={handleSitInSeat}
+        onSitInSeat={sitInSeat}
         sessionParticipants={sessionParticipants}
         onActivityChange={setActivitySession}
         hiddenIn={hiddenIn}
-        onHideInSpot={setHiddenIn}
+        onHideInSpot={hideInSpot}
       />
 
       {/* Furniture */}
@@ -594,7 +508,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
             imageUrl="/assets/locations/home/bed.png"
             size={{ width: 100, height: 100 }}
             backgroundFile={background}
-            onClick={handleBedClick}
+            onClick={requestBedSleep}
           />
           <RefrigeratorModal
             isOpen={isRefrigeratorOpen}
@@ -616,9 +530,10 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi}
-        // Hidden inside a bush: the Blobbi visual is not rendered at all, while
-        // movement, position and world input keep working.
-        visualHidden={hiddenIn !== null}
+        // One coherent presentation description (standing / sleeping / seated /
+        // hidden), owned by the pose controller and resolved through the same
+        // pure resolver remote actors use.
+        pose={pose}
         initialPosition={blobbiInitialPosition}
         backgroundFile={background}
         onMoveStart={handleMoveStart}
@@ -626,9 +541,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         onWakeUp={handleWakeUp}
         onBlobbiClick={handleBlobbiClick}
         anchorId="my-blobbi-anchor"
-        isSleeping={isSleeping}
-        isAttachedToBed={isAttachedToBed}
-        seatedIn={sittingIn}
         size={blobbiSize}
         scaleByYPosition={true}
         localAttentionRef={localAttentionRef}

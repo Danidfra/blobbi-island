@@ -25,14 +25,19 @@
  */
 
 import type { Position } from '@/lib/types';
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
+import type { GroundPosition } from '@/lib/spatial-intent';
+import { WORLD_HEIGHT } from '@/lib/world-coordinates';
 import {
   BLOBBI_RENDER_SIZE_PX,
   type BlobbiRenderSize,
 } from '@/components/blobbi/lib/blobbi-render-size';
 
-/** World-percent position of a Blobbi's ground-contact point. */
-export type GroundPosition = Position;
+/**
+ * World-percent position of a Blobbi's ground-contact point. Defined with the
+ * other spatial-intent aliases (src/lib/spatial-intent.ts) and re-exported
+ * here for the many existing geometry-side import sites.
+ */
+export type { GroundPosition } from '@/lib/spatial-intent';
 
 /**
  * Half the rendered body height, as a percentage of world height.
@@ -82,17 +87,16 @@ export function actorVisualFocusPoint(
 // 6.97 world px). Every arrival/threshold decision converts percent deltas
 // into fixed 1046×697 design pixels first, so the same physical distance
 // behaves identically on both axes and never depends on the viewport scale.
+//
+// The conversions themselves live in the canonical coordinate module
+// (src/lib/world-coordinates.ts); they are re-exported here for the existing
+// arrival-model import sites.
 
-/** Percent-space positions → distance in world-design pixels (isotropic). */
-export function worldDistancePx(a: Position, b: Position): number {
-  const dx = ((b.x - a.x) / 100) * WORLD_WIDTH;
-  const dy = ((b.y - a.y) / 100) * WORLD_HEIGHT;
-  return Math.hypot(dx, dy);
-}
-
-/** One world-percent step expressed in design px per axis. */
-export const WORLD_PX_PER_PERCENT_X = WORLD_WIDTH / 100;
-export const WORLD_PX_PER_PERCENT_Y = WORLD_HEIGHT / 100;
+export {
+  worldDistancePx,
+  WORLD_PX_PER_PERCENT_X,
+  WORLD_PX_PER_PERCENT_Y,
+} from '@/lib/world-coordinates';
 
 /**
  * Shared arrival thresholds, in world-design pixels.

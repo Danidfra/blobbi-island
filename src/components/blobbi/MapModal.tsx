@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
 import { IconX } from '@tabler/icons-react';
 
 // Location data with positioning coordinates (as percentages of the island image)
@@ -27,8 +28,8 @@ interface Location {
  * box that matches the rendered image rect. This keeps everything aligned and
  * proportional at any modal size.
  */
-const MAP_DESIGN_WIDTH = 1046;
-const MAP_DESIGN_HEIGHT = 697;
+const MAP_DESIGN_WIDTH = WORLD_WIDTH;
+const MAP_DESIGN_HEIGHT = WORLD_HEIGHT;
 const MAP_ASPECT = MAP_DESIGN_WIDTH / MAP_DESIGN_HEIGHT;
 
 const LOCATIONS: Location[] = [

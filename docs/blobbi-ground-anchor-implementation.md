@@ -1,5 +1,10 @@
 # Blobbi Ground-Anchor Implementation (Phase 2)
 
+> **Status (Phase 3, 2026-07):** superseded as the current contract by
+> [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md), which documents
+> the consolidated post-Phase-3 architecture. This document remains as the
+> historical record/derivation it describes.
+
 _Implemented 2026-07-29. Companions: `docs/blobbi-actor-ui-audit.md`,
 `docs/blobbi-actor-position-migration-notes.md`, `docs/blobbi-renderer-contract.md`._
 

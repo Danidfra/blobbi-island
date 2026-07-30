@@ -32,7 +32,7 @@ import { THEATER_Z } from '@/lib/theater-layout';
  */
 async function renderTheater(sittingIn: string | null = null) {
   const blobbiRef: React.RefObject<MovableBlobbiRef> = {
-    current: { goTo: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 80 }) },
+    current: { goTo: vi.fn(), snapTo: vi.fn(), stop: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 80 }) },
   };
 
   const view = render(

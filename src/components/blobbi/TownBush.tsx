@@ -1,48 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import type { Position } from '@/lib/types';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import type { TownBushConfig } from '@/lib/town-bushes-config';
 import { BUSH_RUSTLE_SFX, TOWN_BACKGROUND_FILE } from '@/lib/town-bushes-config';
 import { useSfx } from '@/hooks/useSfx';
-import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
-
-/**
- * Compute the walk-to target (world-surface percent) for a bush from its
- * rendered rect and the bush's configured fractional offsets.
- *
- * Unlike doors/kiosks — which aim at the *base* of the element so the Blobbi
- * stands in front of them — a bush is a hiding spot: the Blobbi walks INTO it,
- * so the aim point defaults to the sprite's visual center (configurable per
- * bush via `interactionTarget`, never hard-coded here).
- *
- * The result is clamped into the Town walk boundary with the existing
- * `constrainPosition`, so an aim point that falls outside walkable ground (large
- * artwork, corner placement) still resolves to a reachable point instead of a
- * target the Blobbi can never arrive at.
- */
-function computeBushTarget(
-  el: Element,
-  interactionTarget: { x: number; y: number },
-): Position | null {
-  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
-  if (!surface) return null;
-  const surfaceRect = surface.getBoundingClientRect();
-  const rect = el.getBoundingClientRect();
-  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
-
-  const aimX = rect.left + rect.width * interactionTarget.x;
-  const aimY = rect.top + rect.height * interactionTarget.y;
-
-  const raw: Position = {
-    x: ((aimX - surfaceRect.left) / surfaceRect.width) * 100,
-    y: ((aimY - surfaceRect.top) / surfaceRect.height) * 100,
-  };
-
-  const boundary = locationBoundaries[TOWN_BACKGROUND_FILE];
-  return boundary ? constrainPosition(raw, boundary) : raw;
-}
+import { resolveElementApproachTarget } from '@/lib/approach-target';
 
 /** A single leaf particle's randomized trajectory (set once per burst). */
 interface Leaf {
@@ -165,7 +128,16 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
       // rustle/shake/leaves, no re-published presence.
       if (isHiddenHereRef.current) return;
 
-      const target = computeBushTarget(event.currentTarget, config.interactionTarget);
+      // Unlike doors/kiosks — which aim at the *base* of the element so the
+      // Blobbi stands in front of them — a bush is a hiding spot: the Blobbi
+      // walks INTO it, so the aim point comes from the bush's configured
+      // fraction (default: the sprite's visual body), clamped into the Town
+      // walk boundary so a corner bush still resolves to reachable ground.
+      const target = resolveElementApproachTarget({
+        element: event.currentTarget,
+        fraction: config.interactionTarget,
+        boundary: locationBoundaries[TOWN_BACKGROUND_FILE],
+      })?.target;
       if (!target) return;
 
       requestInteraction({

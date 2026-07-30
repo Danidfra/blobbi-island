@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { isWithinMoveBlockingUi } from '@/lib/world-input';
 import type { PendingInteractionApi } from './usePendingInteraction';
 
 /**
@@ -32,10 +33,10 @@ export function useCancelInteractionOnWorldClick(
 
     const onWorldPointerDown = (ev: Event) => {
       if (!hasPending()) return;
-      const targetEl = ev.target as Element | null;
       // Ignore clicks that originate on UI / interactive elements; those manage
       // their own pending lifecycle (and remote Blobbi clicks must not cancel).
-      if (targetEl?.closest('[data-block-move]')) return;
+      // Shared predicate: src/lib/world-input.ts.
+      if (isWithinMoveBlockingUi(ev.target)) return;
       cancel();
     };
 

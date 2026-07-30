@@ -19,7 +19,7 @@ import type { LocationId } from '@/lib/location-types';
 
 function renderAt(currentLocation: LocationId) {
   const blobbiRef: React.RefObject<MovableBlobbiRef> = {
-    current: { goTo: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 80 }) },
+    current: { goTo: vi.fn(), snapTo: vi.fn(), stop: vi.fn(), getCurrentPosition: () => ({ x: 50, y: 80 }) },
   };
 
   return render(

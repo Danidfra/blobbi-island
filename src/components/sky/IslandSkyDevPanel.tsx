@@ -46,7 +46,7 @@ import {
   ISLAND_CLOUD_SIZES,
   type IslandCloudShape,
 } from '@/lib/island-sky-cloud-shapes';
-import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH } from '@/lib/world-coordinates';
 import { getLocationSkyConfig, skyEnabledLocations } from '@/lib/island-sky-locations';
 import {
   useIslandClockState,

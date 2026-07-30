@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { StageOverlayContext } from "@/contexts/StageOverlayContext";
-import { STAGE_ASPECT } from "./BlobbiStage";
+import { WORLD_ASPECT } from "@/lib/world-coordinates";
 
 interface BlobbiFrameProps {
   /** The game stage (world) goes here. */
@@ -88,7 +88,7 @@ export function BlobbiFrame({
           immersive
             ? undefined
             : {
-                aspectRatio: `${STAGE_ASPECT}`,
+                aspectRatio: `${WORLD_ASPECT}`,
                 maxHeight: "100%",
                 maxWidth: "min(100%, 1040px)",
               }

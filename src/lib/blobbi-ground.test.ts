@@ -12,7 +12,7 @@ import {
   worldDistancePx,
 } from './blobbi-ground';
 import { BLOBBI_RENDER_SIZE_PX } from '@/components/blobbi/lib/blobbi-render-size';
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
 
 const SIZES = ['sm', 'lg', 'xl'] as const;
 const SCALES = [0.6, 1, 1.6] as const;

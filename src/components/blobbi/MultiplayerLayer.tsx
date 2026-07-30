@@ -37,13 +37,16 @@ import { useIdleGaze } from '@/hooks/useIdleGaze';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
-import { resolveBlobbiScale, resolveBlobbiZIndex, resolveSeatedRender } from '@/lib/blobbi-world-render';
+import { getBackgroundForLocation } from '@/lib/location-backgrounds';
+import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
+import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { resolveRemoteSeatOccupancy, occupiedSeatIds, type RemoteSeatClaim } from '@/lib/theater-occupancy';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
-import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH } from '@/lib/world-coordinates';
+import { shouldTriggerWorldMove } from '@/lib/world-input';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
 import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
@@ -890,57 +893,16 @@ export function MultiplayerLayer({
     };
   }, [containerRef]);
 
-  const shouldTriggerWorldMove = useCallback((ev: MouseEvent | TouchEvent | PointerEvent): boolean => {
-    const container = containerRef.current;
-    if (!container) return false;
-
-    const isPrimaryPointer = (ev: MouseEvent | PointerEvent) =>
-      (!('button' in ev) || ev.button === 0) &&
-      !ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey;
-
-    const path = (ev as PointerEvent | MouseEvent).composedPath?.() as Element[] | undefined;
-    const chain: Element[] =
-      path?.filter((n) => n instanceof Element) as Element[] ??
-      (ev.target instanceof Element ? [ev.target] : []);
-
-    const BLOCK_UI_SELECTOR = [
-      '[data-block-move]',
-      '[data-overlay]',
-      '[role="dialog"]',
-      '[aria-modal="true"]',
-      '[role="menu"]',
-      '[role="button"]',
-      'button',
-      'a[href]',
-      'input, textarea, select',
-      '.modal',
-      '.drawer',
-      '.popover',
-      '.tooltip',
-      '.map-ui'
-    ].join(',');
-
-    for (const el of chain) {
-      if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
-      if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
-      // Check if click is on a player sprite (which has data-player-key attribute)
-      if (el.closest?.('[data-player-key]')) return false;
-    }
-
-    if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
-
-    if ((ev instanceof MouseEvent || (window.PointerEvent && ev instanceof PointerEvent)) && !isPrimaryPointer(ev)) return false;
-
-    return true;
-  }, [containerRef]);
-
   const handleContainerClick = useCallback(async (event: MouseEvent | TouchEvent | PointerEvent) => {
     if (disabled || !user || clickHandledRef.current) {
       return;
     }
 
-    // Check if this click should trigger world movement
-    if (!shouldTriggerWorldMove(event)) {
+    // Check if this click should trigger world movement — the SAME shared
+    // policy MovableBlobbi's input adapter uses (src/lib/world-input.ts), so
+    // the local walk and the presence publish can never disagree about what
+    // counts as a world tap.
+    if (!containerRef.current || !shouldTriggerWorldMove(event, containerRef.current)) {
       if (DEBUG_MP) console.debug('[blobbi][mp][ui] click blocked by UI element');
       return;
     }
@@ -1074,7 +1036,7 @@ export function MultiplayerLayer({
         }
       }
     }, 150); // Debounce delay - only last click in rapid succession will trigger
-  }, [disabled, user, containerRef, getPercentPosition, moveTo, onMyPositionChange, myPosRef, shouldTriggerWorldMove]);
+  }, [disabled, user, containerRef, getPercentPosition, moveTo, onMyPositionChange, myPosRef]);
 
   // ============================================================================
   // Event Listeners
@@ -1487,28 +1449,10 @@ export function MultiplayerLayer({
     return () => clearInterval(id);
   }, [computeNearbyGaze]);
 
-  // Get background file for current location
-  const backgroundFile = useMemo(() => {
-    const locationToFile: Record<string, string> = {
-      'town': 'town-open.webp',
-      'home': 'home-inside.png',
-      'beach': 'beach-open.webp',
-      'mine': 'mine-open.webp',
-      'nostr-station': 'nostr-station-open.webp',
-      'nostr-station-inside': 'nostr-station-inside.png',
-      'plaza': 'plaza-open.webp',
-      'plaza-inside': 'plaza-inside.png',
-      'arcade': 'arcade-inside.png',
-      'arcade-1': 'arcade-1.png',
-      'arcade-minus1': 'arcade-minus1.png',
-      'stage': 'stage-inside.png',
-      'shop': 'shopping-mall-inside.png',
-      'back-yard': 'back-yard-open.webp',
-      'cave-open': 'cave-inside.png',
-      'clothing-store-inside': 'clothing-store-inside.png',
-    };
-    return locationToFile[currentLocation] || 'town-open.webp';
-  }, [currentLocation]);
+  // Background file for the current location — the canonical resolver, the
+  // same one PlayingView renders with, so a remote Blobbi's depth/z math can
+  // never disagree with the room the local player is looking at.
+  const backgroundFile = useMemo(() => getBackgroundForLocation(currentLocation), [currentLocation]);
 
   // Get boundary for current location
   const boundary = useMemo(() => {
@@ -1519,14 +1463,11 @@ export function MultiplayerLayer({
   // player, so a remote Blobbi is drawn at the size its owner sees.
   const blobbiSize = useMemo(() => getBlobbiSizeForLocation(currentLocation), [currentLocation]);
 
-  // Dynamic z-index and scaling, shared with MovableBlobbi so a remote Blobbi
-  // is drawn exactly as its owner sees it (`src/lib/blobbi-world-render.ts`).
-  const getDynamicZIndex = useCallback(
-    (currentPos: Position, sitOffset = 0): number =>
-      resolveBlobbiZIndex(currentPos, backgroundFile, sitOffset),
-    [backgroundFile],
-  );
-
+  // Depth scale at an arbitrary point, shared with MovableBlobbi so a remote
+  // Blobbi is drawn exactly as its owner sees it. Pose-driven presentation
+  // (position/scale/z/facing/shadow/float) comes from `resolveActorRender`;
+  // this remains only for gaze endpoints, which need the scale at OTHER
+  // points than the actor's own.
   const getDynamicScale = useCallback(
     (currentPos: Position): number => resolveBlobbiScale(currentPos, backgroundFile, boundary),
     [backgroundFile, boundary],
@@ -1576,18 +1517,35 @@ export function MultiplayerLayer({
           });
         }
 
-        // Seated presentation, resolved from the published seat id ALONE through
-        // the same shared resolver the local Blobbi uses — never from the
-        // player's coordinates. Unknown, stale and decorative ids resolve to
-        // null, and a seat this player lost to another claimant is not theirs to
-        // sit in, so both cases fall straight back to normal presence-position
-        // rendering rather than snapping to some arbitrary chair.
+        // Remote pose, derived from EXPLICIT presence fields only (never from
+        // coordinates): a hiding spot id means hidden; a seat id means seated
+        // only if this player WON the seat (see theater-occupancy) — a seat
+        // lost to another claimant, and any unknown/stale/decorative id, falls
+        // back to standing at the presence position rather than snapping to
+        // some arbitrary chair.
         const seatWinner = player.seatId ? remoteSeatWinners.get(player.seatId) : undefined;
         const ownsSeat =
           seatWinner?.pubkey === player.pubkey && seatWinner?.sessionId === player.sessionId;
-        const seated = ownsSeat ? resolveSeatedRender(player.seatId) : null;
+        const remotePose: BlobbiActorPose = player.hiddenIn
+          ? { kind: 'hidden', spotId: player.hiddenIn }
+          : ownsSeat && player.seatId
+            ? { kind: 'seated', seatId: player.seatId }
+            : { kind: 'standing' };
 
-        if (DEBUG_MP && player.seatId && !seated) {
+        // The complete visual consequence of that pose, from the SAME pure
+        // resolver the local Blobbi renders through (src/lib/blobbi-pose.ts):
+        // seat pose anchor + row z + per-row scale while seated, depth ramp and
+        // y-band z otherwise, float suppressed while the presence rAF is
+        // integrating movement.
+        const render = resolveActorRender(remotePose, {
+          groundPosition: player.position,
+          backgroundFile,
+          boundary,
+          scaleByYPosition: true,
+          suppressFloat: player.isMoving,
+        });
+
+        if (DEBUG_MP && player.seatId && !render.seatedIn) {
           console.debug('[blobbi][mp][seat] ignoring unusable seat claim', {
             pubkey: player.pubkey,
             seatId: player.seatId,
@@ -1595,16 +1553,9 @@ export function MultiplayerLayer({
           });
         }
 
-        // The world point this Blobbi is DRAWN at: the seat's canonical anchor
-        // while seated, the animated presence position otherwise. Depth and
-        // perspective scale are read from the same point, so a seated remote
-        // stacks exactly like the seated local Blobbi does.
-        const renderPos = seated ? seated.position : player.position;
-
-        // Calculate dynamic z-index and scale (same as MovableBlobbi). While
-        // seated, z comes from the SEAT ROW, not the standing y-bands.
-        const dynamicZIndex = seated ? seated.zIndex : getDynamicZIndex(renderPos);
-        const dynamicScale = getDynamicScale(renderPos) * (seated?.scale ?? 1);
+        const renderPos = render.renderPosition;
+        const dynamicZIndex = render.zIndex;
+        const dynamicScale = render.scale;
 
         // Determine heading from last position to drive eye gaze, and store it
         // in headingRef so RemoteBlobbiSprite can read it on its own re-renders.
@@ -1640,11 +1591,11 @@ export function MultiplayerLayer({
             size={blobbiSize}
             scale={dynamicScale}
             zIndex={dynamicZIndex}
-            seatedIn={seated?.seat.id ?? null}
-            hiddenIn={player.hiddenIn ?? null}
+            seatedIn={render.seatedIn}
+            hiddenIn={render.hiddenIn}
             visualHidden={isHiddenInSpot}
-            hideShadow={!!seated?.hideShadow}
-            disableFloat={player.isMoving || !!seated?.disableFloat}
+            hideShadow={render.hideShadow}
+            disableFloat={render.disableFloat}
             // Remote positions are integrated per-frame by the presence rAF —
             // the anchor itself never eases.
             positionTransition={false}
@@ -1716,7 +1667,7 @@ export function MultiplayerLayer({
                 livePositionsRef={livePositionsRef}
                 headingRef={headingRef}
                 idSuffix={`${player.pubkey}-${player.sessionId}`}
-                facing={seated?.facing ?? 'front'}
+                facing={render.facing}
                 size={blobbiSize}
                 scale={dynamicScale}
                 scaleAt={getDynamicScale}

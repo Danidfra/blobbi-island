@@ -36,7 +36,7 @@ function renderRoom(currentLocation: LocationId, blobbiAt: Position = FAR) {
   const setCurrentLocation = vi.fn();
   const goTo = vi.fn();
   const blobbiRef: React.RefObject<MovableBlobbiRef> = {
-    current: { goTo, getCurrentPosition: () => blobbiAt },
+    current: { goTo, snapTo: vi.fn(), stop: vi.fn(), getCurrentPosition: () => blobbiAt },
   };
 
   const view = render(

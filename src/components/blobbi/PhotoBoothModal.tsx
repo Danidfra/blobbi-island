@@ -345,7 +345,7 @@ export function PhotoBoothModal({ isOpen, onClose, selectedBlobbi, onOpenShareMo
             x: Math.max(36, Math.min(58, currentPos.x + deltaX)), // Constrain to booth boundaries
             y: Math.max(59, Math.min(63, currentPos.y + deltaY)), // Constrain to booth boundaries
           };
-          internalBlobbiRef.current.goTo(newPos, true); // Immediate movement
+          internalBlobbiRef.current.snapTo(newPos); // Immediate placement (photo-booth stage)
         }
       }
     };

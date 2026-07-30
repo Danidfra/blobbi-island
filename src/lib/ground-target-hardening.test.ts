@@ -138,9 +138,24 @@ describe('chairs — live inline configs (shop / Nostr Station)', () => {
     'utf8',
   );
 
-  it('no fragile class-string container lookup remains; the canonical world surface is used', () => {
+  it('no private rect math remains: chairs resolve through the canonical walk-to-interact path', () => {
     expect(source).not.toContain(".closest('.w-full.h-full.relative')");
-    expect(source).toContain(".closest('[data-world-surface]')");
+    // The legacy inline chair flow (its own getBoundingClientRect conversion,
+    // action fired on click) is gone; InteractiveElement resolves chair
+    // targets via resolveElementApproachTarget and requestInteraction.
+    expect(source).not.toContain('handleChairClick');
+    expect(source).not.toContain('getBoundingClientRect');
+    // The canonical resolver owns the world-surface lookup now.
+    const elementSource = readFileSync(
+      join(process.cwd(), 'src/components/blobbi/InteractiveElement.tsx'),
+      'utf8',
+    );
+    expect(elementSource).toContain('resolveElementApproachTarget');
+    const resolverSource = readFileSync(
+      join(process.cwd(), 'src/lib/approach-target.ts'),
+      'utf8',
+    );
+    expect(resolverSource).toContain(".closest('[data-world-surface]')");
   });
 
   it('every chair anchor aims at the base half of the chair (ground semantics)', () => {

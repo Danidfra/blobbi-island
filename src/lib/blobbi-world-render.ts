@@ -26,9 +26,10 @@ import {
 
 /**
  * Vertical extent of a boundary, used to map a y-position onto a room's
- * perspective-scaling ramp.
+ * perspective-scaling ramp. Exported for the dev harness (`/dev/rooms`), which
+ * probes rooms at fixed depth fractions of the same extent.
  */
-function boundaryYRange(boundary: Boundary | undefined): { minY: number; maxY: number } {
+export function boundaryYRange(boundary: Boundary | undefined): { minY: number; maxY: number } {
   if (boundary?.shape === 'rectangle') {
     return { minY: boundary.y[0], maxY: boundary.y[1] };
   }

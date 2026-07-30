@@ -58,7 +58,7 @@ function Harness() {
           initialPosition={{ x: 50, y: 75 }}
           boundary={{ shape: 'rectangle', x: [0, 100], y: [60, 100] }}
           backgroundFile="town-open.webp"
-          visualHidden={hiddenIn !== null}
+          pose={hiddenIn ? { kind: 'hidden', spotId: hiddenIn } : { kind: 'standing' }}
           onMoveStart={(destination) => {
             moveStarts.push(destination);
             setHiddenIn(null);

@@ -1,45 +1,13 @@
 import React, { useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import type { Position } from '@/lib/types';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
-import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
+import { resolveElementApproachTarget } from '@/lib/approach-target';
 import {
   THEATER_BACKGROUND_FILE,
   SEAT_APPROACH_TARGET,
   type TheaterSeatConfig,
 } from '@/lib/theater-seats-config';
-
-/**
- * Compute the walk-to target for a seat from its rendered rect and configured
- * aim point, clamped into the theater's walk boundary.
- *
- * Reading the live rect (rather than trusting the config maths) keeps the target
- * correct no matter how the world is scaled or letterboxed, exactly as
- * `TownBush` does. The configuration's own `seatAnchorPosition()` is the
- * DOM-free equivalent used for rendering a seated Blobbi.
- */
-function computeSeatTarget(
-  el: Element,
-  interactionTarget: { x: number; y: number },
-): Position | null {
-  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
-  if (!surface) return null;
-  const surfaceRect = surface.getBoundingClientRect();
-  const rect = el.getBoundingClientRect();
-  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
-
-  const aimX = rect.left + rect.width * interactionTarget.x;
-  const aimY = rect.top + rect.height * interactionTarget.y;
-
-  const raw: Position = {
-    x: ((aimX - surfaceRect.left) / surfaceRect.width) * 100,
-    y: ((aimY - surfaceRect.top) / surfaceRect.height) * 100,
-  };
-
-  const boundary = locationBoundaries[THEATER_BACKGROUND_FILE];
-  return boundary ? constrainPosition(raw, boundary) : raw;
-}
 
 interface TheaterSeatProps {
   config: TheaterSeatConfig;
@@ -111,7 +79,14 @@ export function TheaterSeat({
 
       // APPROACH target: the floor at the seat's front base — never the
       // cushion (that fraction belongs to the seated POSE, seatAnchorPosition).
-      const target = computeSeatTarget(event.currentTarget, SEAT_APPROACH_TARGET);
+      // Reading the live rect keeps the target correct no matter how the world
+      // is scaled or letterboxed; `seatApproachPosition()` is the DOM-free
+      // config mirror of the same point (tests prove parity).
+      const target = resolveElementApproachTarget({
+        element: event.currentTarget,
+        fraction: SEAT_APPROACH_TARGET,
+        boundary: locationBoundaries[THEATER_BACKGROUND_FILE],
+      })?.target;
       if (!target) return;
 
       requestInteraction({

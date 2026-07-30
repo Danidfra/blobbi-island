@@ -27,6 +27,8 @@
  * paint video over the painted proscenium.
  */
 
+import { WORLD_ASPECT } from '@/lib/world-coordinates';
+
 /** The transparent rectangle in the background artwork, in world percent. */
 export const THEATER_SCREEN_HOLE = {
   leftPercent: 6.8,
@@ -50,7 +52,7 @@ export const THEATER_VIDEO_ASPECT = 16 / 9;
  * World units: 617 × 347 px of the 1046 × 697 world.
  */
 export const THEATER_PLAYER_RECT = (() => {
-  const worldAspect = 1046 / 697;
+  const worldAspect = WORLD_ASPECT;
   // A percentage-of-width and a percentage-of-height are different units; convert
   // the target aspect into "percent width per percent height" before fitting.
   const widthPercent = (THEATER_SCREEN_HOLE_SIZE.heightPercent * THEATER_VIDEO_ASPECT) / worldAspect;

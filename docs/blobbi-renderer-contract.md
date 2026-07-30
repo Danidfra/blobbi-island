@@ -1,5 +1,9 @@
 # Blobbi Renderer Contract (Phase 1)
 
+> **See also (Phase 3):** [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md)
+> for how the renderer sits inside the consolidated actor/movement/interaction
+> architecture. This contract itself is unchanged and remains authoritative.
+
 _Established 2026-07-29. Companions: `docs/blobbi-actor-ui-audit.md` (why),
 `docs/blobbi-actor-position-migration-notes.md` (what comes next)._
 

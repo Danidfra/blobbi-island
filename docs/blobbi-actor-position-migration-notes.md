@@ -1,5 +1,10 @@
 # Blobbi Actor Position — Migration Guard Notes
 
+> **Status (Phase 3, 2026-07):** superseded as the current contract by
+> [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.md), which documents
+> the consolidated post-Phase-3 architecture. This document remains as the
+> historical record/derivation it describes.
+
 _Companion to `docs/blobbi-actor-ui-audit.md`. Established during Phase 0; **the
 Phase 2 migration described here has been IMPLEMENTED** (2026-07-29) — see
 `docs/blobbi-ground-anchor-implementation.md` for the implemented architecture,

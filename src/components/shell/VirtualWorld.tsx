@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { WORLD_WIDTH, WORLD_HEIGHT } from "@/lib/world-coordinates";
 
 /**
  * The world's fixed virtual design resolution. All world art, object positions
@@ -7,10 +8,10 @@ import { cn } from "@/lib/utils";
  * rendering the world at this fixed size and scaling the whole layer uniformly
  * keeps every element — background, Blobbi, furniture, buildings, arcade items,
  * doors, hotspots, interactives — perfectly aligned at any viewport size.
+ *
+ * The values live in the pure coordinate module
+ * (`src/lib/world-coordinates.ts`, the single source of truth).
  */
-export const WORLD_WIDTH = 1046;
-export const WORLD_HEIGHT = 697;
-export const WORLD_ASPECT = WORLD_WIDTH / WORLD_HEIGHT; // ≈ 1.50
 
 interface VirtualWorldProps {
   children: React.ReactNode;

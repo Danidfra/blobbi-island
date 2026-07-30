@@ -55,7 +55,7 @@ function Harness({ scaleByYPosition = true }: { scaleByYPosition?: boolean }) {
           <button
             type="button"
             data-testid="snap-back"
-            onClick={() => blobbiRef.current?.goTo({ x: 30, y: 66 }, true)}
+            onClick={() => blobbiRef.current?.snapTo({ x: 30, y: 66 })}
           >
             snap
           </button>

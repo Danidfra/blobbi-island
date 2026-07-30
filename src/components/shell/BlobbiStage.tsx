@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { MovementBlockerProvider } from "@/contexts/MovementBlockerContext";
+import { WORLD_ASPECT } from "@/lib/world-coordinates";
 
 interface BlobbiStageProps {
   children: ReactNode;
@@ -24,7 +25,6 @@ interface BlobbiStageProps {
  * MovementBlockerProvider stays mounted here (as it was in the old container)
  * so furniture/blocker context is available to the world unchanged.
  */
-export const STAGE_ASPECT = 1046 / 697; // ≈ 1.50
 
 export function BlobbiStage({ children, className, fit = "framed" }: BlobbiStageProps) {
   return (
@@ -39,7 +39,7 @@ export function BlobbiStage({ children, className, fit = "framed" }: BlobbiStage
       )}
       style={
         fit === "framed"
-          ? { aspectRatio: `${STAGE_ASPECT}` }
+          ? { aspectRatio: `${WORLD_ASPECT}` }
           : undefined
       }
     >

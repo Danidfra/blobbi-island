@@ -57,7 +57,7 @@ import {
   useIslandSkyState,
   useIslandSkyTransitionMs,
 } from '@/hooks/useIslandSky';
-import { WORLD_WIDTH } from '@/components/shell/VirtualWorld';
+import { WORLD_WIDTH } from '@/lib/world-coordinates';
 import type { LocationId } from '@/lib/location-types';
 
 /**

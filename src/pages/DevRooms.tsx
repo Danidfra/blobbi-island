@@ -26,31 +26,16 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { getBlobbiInitialPosition, EXIT_POSITIONS } from '@/lib/location-initial-position';
 import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
-import { constrainPosition, type Boundary } from '@/lib/boundaries';
-import { resolveSeatedRender } from '@/lib/blobbi-world-render';
+import { constrainPosition } from '@/lib/boundaries';
+import { boundaryYRange, resolveSeatedRender } from '@/lib/blobbi-world-render';
 import {
   occupiableTheaterSeats,
   seatAnchorPosition,
   seatApproachPosition,
   seatCushionPoint,
+  THEATER_BACKGROUND_FILE,
 } from '@/lib/theater-seats-config';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
-
-/** Vertical extent of a boundary (mirrors blobbi-world-render's private helper). */
-function boundaryYExtent(boundary: Boundary): { minY: number; maxY: number } {
-  if (boundary.shape === 'rectangle') return { minY: boundary.y[0], maxY: boundary.y[1] };
-  if (boundary.shape === 'semicircle' || boundary.shape === 'arch')
-    return { minY: boundary.top, maxY: boundary.bottom };
-  if (boundary.shape === 'composite') {
-    const ys = boundary.areas.flatMap((a) =>
-      a.type === 'rectangle' ? a.y :
-      a.type === 'circle' ? [a.cy - a.r, a.cy + a.r] :
-      a.points.map((p) => p.y),
-    );
-    return { minY: Math.min(...ys), maxY: Math.max(...ys) };
-  }
-  return { minY: 0, maxY: 100 };
-}
 
 const DEV_VISUAL = {
   stage: 'baby' as const,
@@ -120,7 +105,7 @@ function RoomView() {
     const seated = resolveSeatedRender(seatId);
     if (!seated) return;
     setSittingIn(seatId);
-    blobbiRef.current?.goTo(seated.position, true);
+    blobbiRef.current?.snapTo(seated.position);
   };
 
   useEffect(() => {
@@ -133,8 +118,8 @@ function RoomView() {
     setHiddenIn(null);
   }, [currentLocation]);
 
-  // Dev-only escape hatches: let automation drive `goTo(..., immediate)` and
-  // the seated pose even where rAF is throttled (occluded windows).
+  // Dev-only escape hatches: let automation drive `snapTo` and the seated
+  // pose even where rAF is throttled (occluded windows).
   useEffect(() => {
     const w = window as unknown as Record<string, unknown>;
     w.__devBlobbi = blobbiRef;
@@ -169,8 +154,8 @@ function RoomView() {
         </select>
         <span>size: {getBlobbiSizeForLocation(currentLocation)}</span>
         <span>bg: {background}</span>
-        {/* rAF-free snap buttons (goTo immediate) so geometry can be verified
-            even in occluded automation windows where rAF is throttled. */}
+        {/* rAF-free snap buttons (snapTo) so geometry can be verified even in
+            occluded automation windows where rAF is throttled. */}
         {([['back', 0.02], ['mid', 0.5], ['front', 0.98]] as const).map(([label, t]) => (
           <button
             key={label}
@@ -178,12 +163,12 @@ function RoomView() {
             className="rounded bg-neutral-700 px-1.5 py-0.5 hover:bg-neutral-600"
             data-block-move
             onClick={() => {
-              const { minY, maxY } = boundaryYExtent(boundary);
+              const { minY, maxY } = boundaryYRange(boundary);
               const target = constrainPosition(
                 { x: 50, y: minY + (maxY - minY) * t },
                 boundary,
               );
-              blobbiRef.current?.goTo(target, true);
+              blobbiRef.current?.snapTo(target);
               setLastPos(target);
             }}
           >
@@ -218,7 +203,7 @@ function RoomView() {
             />
           )}
           {/* Theater: approach (floor) + pose (cushion) markers per seat. */}
-          {background === 'stage-inside.png' &&
+          {background === THEATER_BACKGROUND_FILE &&
             occupiableTheaterSeats
               .filter((seat) => ['theater-seat-a1', 'theater-seat-a4', 'theater-seat-b4', 'theater-seat-c2', 'theater-seat-c11'].includes(seat.id))
               .flatMap((seat) => [
@@ -239,7 +224,7 @@ function RoomView() {
             size={getBlobbiSizeForLocation(currentLocation)}
             scaleByYPosition={true}
             visualOverride={DEV_VISUAL}
-            seatedIn={sittingIn}
+            pose={sittingIn ? { kind: 'seated', seatId: sittingIn } : hiddenIn ? { kind: 'hidden', spotId: hiddenIn } : { kind: 'standing' }}
             onMoveStart={() => {
               setSittingIn(null);
               setHiddenIn(null);

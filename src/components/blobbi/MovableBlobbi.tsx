@@ -1,4 +1,20 @@
-import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
+/**
+ * MovableBlobbi — the LOCAL player's actor wrapper (Phase 3 shape).
+ *
+ * A thin composition of three consolidated pieces:
+ *
+ *  - `useBlobbiMovementController` — movement state, the rAF walk loop,
+ *    `goTo`/`snapTo`/`stop` (src/hooks/useBlobbiMovementController.ts);
+ *  - the shared world-input policy — which taps mean "walk there"
+ *    (src/lib/world-input.ts);
+ *  - the shared pose resolver — what the current {@link BlobbiActorPose}
+ *    means visually, identical for local and remote actors
+ *    (src/lib/blobbi-pose.ts);
+ *
+ * plus the LOCAL-only gaze adapter (own movement heading → attention target →
+ * idle gaze) and the `BlobbiActor` mount. This component owns no movement
+ * math, no coordinate conversion, no seat/bed/hiding specifics.
+ */
 import { usePhotoBooth } from '@/hooks/usePhotoBooth';
 import React, {
   useState,
@@ -11,70 +27,61 @@ import React, {
 import { cn } from '@/lib/utils';
 import { CurrentBlobbiDisplay } from './CurrentBlobbiDisplay';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
-import { Position } from '@/lib/types';
+import { useBlobbiMovementController } from '@/hooks/useBlobbiMovementController';
+import type { GroundPosition, PoseAnchor } from '@/lib/spatial-intent';
+import type { Position } from '@/lib/types';
 import type { LocalActiveState, AttentionState } from '@/lib/gaze';
 import { attentionTargetPosition, LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { Boundary, constrainPosition } from '@/lib/boundaries';
-import { WORLD_WIDTH, WORLD_HEIGHT } from '@/components/shell/VirtualWorld';
-import {
-  resolveBlobbiScale,
-  resolveBlobbiZIndex,
-  resolveSeatedRender,
-} from '@/lib/blobbi-world-render';
-import { MOVEMENT_SNAP_PX, actorVisualFocusPoint } from '@/lib/blobbi-ground';
+import { shouldTriggerWorldMove } from '@/lib/world-input';
+import { clientPointToWorldPercent } from '@/lib/world-coordinates';
+import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
+import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
+import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { BlobbiActor } from './BlobbiActor';
 import type { BlobbiRenderVisual } from './BlobbiRendererView';
 
-interface MovementDirection {
-  x: number;
-  y: number;
-}
-
 export interface MovableBlobbiRef {
-  goTo: (position: Position, immediate?: boolean) => void;
-  getCurrentPosition?: () => Position;
+  /** Walk to a ground target through the movement system. */
+  goTo: (target: GroundPosition) => void;
+  /**
+   * Snap immediately to an explicit pose anchor (seat cushion, bed sleep pose,
+   * dev spawn). Bypasses the walk boundary — the EXPLICIT special-pose entry
+   * point; never use it for ordinary movement.
+   */
+  snapTo: (pose: PoseAnchor) => void;
+  /** Cancel any active walk in place. */
+  stop: () => void;
+  getCurrentPosition: () => GroundPosition;
 }
 
 export interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
   isVisible?: boolean;
   /**
-   * Hide ONLY the Blobbi's visual representation (sprite, ground shadow and
-   * trail) while keeping everything else alive: the movement animation, the
-   * logical world position, the world-click listener, gameplay state and the
-   * presence/chat anchor element.
+   * What the actor is doing (standing / sleeping / seated / hidden) — ONE
+   * coherent presentation description, resolved through the same
+   * `resolveActorRender` the remote layer uses so local and remote actors
+   * cannot diverge. Owned by the room orchestrator (PlayingView); this
+   * component only renders it and adapts input to it:
    *
-   * This is how "hidden inside a hiding spot" (e.g. a Town bush) is rendered:
-   * nothing of the Blobbi is painted, so removing the bush art in DevTools
-   * reveals empty ground instead of a Blobbi sitting behind it. Distinct from
-   * `isVisible`, which unmounts the character *and* its input handling.
+   *  - `sleeping`: a world tap wakes (`onWakeUp`) instead of walking;
+   *  - `seated` / `hidden`: a world tap wakes/stands/reveals AND walks;
+   *  - `hidden` paints nothing while keeping the anchor (chat-bubble portal,
+   *    logical position, input) alive.
    */
-  visualHidden?: boolean;
-  initialPosition?: Position;
+  pose?: BlobbiActorPose;
+  initialPosition?: GroundPosition;
   movementSpeed?: number;
   boundary?: Boundary;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   showTrail?: boolean;
   backgroundFile?: string;
-  onMoveStart?: (destination: Position) => void;
-  onMoveComplete?: (position: Position) => void;
+  onMoveStart?: (destination: GroundPosition) => void;
+  onMoveComplete?: (position: GroundPosition) => void;
   onWakeUp?: () => void;
   onBlobbiClick?: () => void;
-  isSleeping?: boolean;
-  isAttachedToBed?: boolean;
-  /**
-   * Id of the theater seat the local player currently occupies, or null.
-   *
-   * This is the ONLY seating input the renderer takes: everything visual about
-   * sitting — the pinned position, the rear-facing view, the per-row scale, the
-   * suppressed ground shadow and float — is derived from it via
-   * `resolveSeatedRender`, so local and (later) remote seated Blobbis cannot
-   * diverge. It replaces the old `_isSeated` / `eyesClosed` / `isAttachedToChair`
-   * / `sitZIndexOffset` prop cluster, none of which was ever set to a non-default
-   * value because the arrival callback that fed them never fired.
-   */
-  seatedIn?: string | null;
   scaleByYPosition?: boolean;
   disableFloating?: boolean;
   anchorId?: string;
@@ -111,7 +118,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     {
       containerRef,
       isVisible = true,
-      visualHidden = false,
+      pose = STANDING_POSE,
       initialPosition = { x: 50, y: 75 },
       movementSpeed = 120,
       boundary = { shape: 'rectangle', x: [0, 100], y: [60, 100] },
@@ -123,9 +130,6 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       onMoveComplete,
       onWakeUp,
       onBlobbiClick,
-      isSleeping = false,
-      isAttachedToBed = false,
-      seatedIn = null,
       scaleByYPosition = false,
       disableFloating = false,
       anchorId,
@@ -136,21 +140,19 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     },
     ref
   ) => {
-    const [position, setPosition] = useState<Position>(initialPosition);
-    // 🔒 refs para evitar recriar animação e estourar hooks
-    const targetRef = useRef<Position>(initialPosition);
-    const [isMoving, setIsMoving] = useState(false);
-    const isMovingRef = useRef(false);
-    // garante que state e ref fiquem em sincronia
-    useEffect(() => { isMovingRef.current = isMoving; }, [isMoving]);
-    const [direction, setDirection] = useState<MovementDirection>({ x: 0, y: 0 });
-    const [trail, setTrail] = useState<Position[]>([]);
-    const animationRef = useRef<number>();
-    const lastTimeRef = useRef<number>();
-    const justCompletedRef = useRef(false);
     const blobbiRef = useRef<HTMLDivElement>(null);
-    const { isPositionBlocked } = useMovementBlocker();
     const { isPhotoBoothOpen } = usePhotoBooth();
+
+    const { position, isMoving, direction, trail, goTo, snapTo, stop, getCurrentPosition } =
+      useBlobbiMovementController({
+        initialPosition,
+        movementSpeed,
+        boundary,
+        showTrail,
+        onMoveStart,
+        onMoveComplete,
+      });
+
     // Subtle idle eye micro-movements (only active while standing still).
     const idleGaze = useIdleGaze(!isMoving);
 
@@ -230,214 +232,22 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       };
     }, [localActiveRef, livePositionsRef]);
 
-    // Movement math runs in FIXED world-design pixels (1046×697): percent
-    // positions convert through the design space, never the rendered rect, so
-    // speed and arrival are identical at every viewport scale.
-    const toWorldPx = useCallback((percentPos: Position): Position => ({
-      x: (percentPos.x / 100) * WORLD_WIDTH,
-      y: (percentPos.y / 100) * WORLD_HEIGHT,
-    }), []);
-
-    const toPercent = useCallback((worldPx: Position): Position => {
-      const percentPos = {
-        x: (worldPx.x / WORLD_WIDTH) * 100,
-        y: (worldPx.y / WORLD_HEIGHT) * 100,
-      };
-      return constrainPosition(percentPos, boundary);
-    }, [boundary]);
-
     // Pointer events arrive in viewport px; the rendered rect converts them to
     // world percent (invariant under the uniform world scale). The clamped
     // result is the GROUND point the user asked the feet to reach.
-    const clientToPercent = useCallback((clientX: number, clientY: number): Position => {
-      if (!containerRef.current) return { x: 50, y: 75 };
-      const rect = containerRef.current.getBoundingClientRect();
-      const percentPos = {
-        x: ((clientX - rect.left) / rect.width) * 100,
-        y: ((clientY - rect.top) / rect.height) * 100,
-      };
-      return constrainPosition(percentPos, boundary);
+    const clientToPercent = useCallback((clientX: number, clientY: number): GroundPosition => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const raw = rect ? clientPointToWorldPercent(clientX, clientY, rect) : null;
+      return constrainPosition(raw ?? { x: 50, y: 75 }, boundary);
     }, [containerRef, boundary]);
 
-    const getDistance = (pos1: Position, pos2: Position): number => {
-      const dx = pos2.x - pos1.x;
-      const dy = pos2.y - pos1.y;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const getDynamicZIndex = useCallback(
-      (currentPos: Position): number => resolveBlobbiZIndex(currentPos, backgroundFile),
-      [backgroundFile],
-    );
-
-    const getDynamicScale = useCallback(
-      (currentPos: Position): number =>
-        scaleByYPosition ? resolveBlobbiScale(currentPos, backgroundFile, boundary) : 1,
-      [scaleByYPosition, backgroundFile, boundary],
-    );
-
-    const animateMovement = useCallback(
-      (timestamp: number) => {
-        if (!lastTimeRef.current) {
-          lastTimeRef.current = timestamp;
-        }
-        const deltaTime = (timestamp - lastTimeRef.current) / 1000;
-        lastTimeRef.current = timestamp;
-
-        let reached = false;
-        setPosition(currentPos => {
-          const currentPixelPos = toWorldPx(currentPos);
-          const target = targetRef.current;
-          const targetPixelPos = toWorldPx(target);
-          const distance = getDistance(currentPixelPos, targetPixelPos);
-
-          if (distance < MOVEMENT_SNAP_PX) {
-            reached = true;
-            return target;
-          }
-
-          const dx = targetPixelPos.x - currentPixelPos.x;
-          const dy = targetPixelPos.y - currentPixelPos.y;
-          // `movementSpeed` is world-design px/s and this loop integrates in
-          // world-design px, so no viewport correction is needed: the same
-          // world distance takes the same time at every screen size.
-          const moveDistance = movementSpeed * deltaTime;
-          const directionLength = Math.sqrt(dx * dx + dy * dy);
-          const normalizedDx = dx / directionLength;
-          const normalizedDy = dy / directionLength;
-
-          // só atualiza direção se mudar o suficiente (evita rerenders)
-          setDirection(prev => {
-            const EPS = 0.001;
-            if (Math.abs(prev.x - normalizedDx) < EPS && Math.abs(prev.y - normalizedDy) < EPS) {
-              return prev;
-            }
-            return { x: normalizedDx, y: normalizedDy };
-          });
-
-          const newPixelPos = {
-            x: currentPixelPos.x + normalizedDx * moveDistance,
-            y: currentPixelPos.y + normalizedDy * moveDistance,
-          };
-          const newPercentPos = toPercent(newPixelPos);
-
-          if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
-            reached = true;
-            return currentPos;
-          }
-
-          if (showTrail) {
-            setTrail(prevTrail => {
-              if (prevTrail[0] && prevTrail[0].x === currentPos.x && prevTrail[0].y === currentPos.y) {
-                return prevTrail;
-              }
-              return [currentPos, ...prevTrail.slice(0, 4)];
-            });
-          }
-
-          return newPercentPos;
-        });
-
-        if (reached) {
-          if (!justCompletedRef.current) {
-            justCompletedRef.current = true;
-            setIsMoving(false);
-            onMoveComplete?.(targetRef.current);
-            setTimeout(() => { justCompletedRef.current = false; }, 0);
-          }
-          return;
-        }
-        if (isMovingRef.current) {
-          animationRef.current = requestAnimationFrame(animateMovement);
-        }
-      },
-      [
-        movementSpeed,
-        toWorldPx,
-        toPercent,
-        onMoveComplete,
-        showTrail,
-        isPositionBlocked,
-      ]
-    );
-
-    /**
-     * Start (or restart) the movement rAF loop.
-     *
-     * Historically the loop was only (re)started by the effect below, which
-     * fires when `animateMovement`'s identity changes — which in PlayingView
-     * happened to occur on every parent re-render triggered by `onMoveStart`.
-     * A host with stable callbacks got no re-render and the walk silently
-     * never started. Movement start is now explicit and self-contained.
-     */
-    const startAnimation = useCallback(() => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      lastTimeRef.current = undefined;
-      animationRef.current = requestAnimationFrame(animateMovement);
-    }, [animateMovement]);
-
-    useEffect(() => {
-      // Keep an in-flight walk running across `animateMovement` identity
-      // changes (boundary/callback prop updates mid-walk).
-      if (isMovingRef.current) {
-        lastTimeRef.current = undefined;
-        animationRef.current = requestAnimationFrame(animateMovement);
-      }
-      return () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-      };
-    }, [animateMovement]);
+    // Latest pose for the input handler without re-binding listeners.
+    const poseRef = useRef(pose);
+    poseRef.current = pose;
 
     useEffect(() => {
       const container = containerRef.current;
       if (!container || !isVisible) return;
-
-      const isPrimaryPointer = (ev: MouseEvent | PointerEvent) =>
-        (!('button' in ev) || ev.button === 0) &&
-        !ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey;
-
-      const shouldTriggerWorldMove = (ev: MouseEvent | TouchEvent): boolean => {
-        if (isPhotoBoothOpen) return false;
-
-        if (blobbiRef.current?.contains(ev.target as Node)) return false;
-
-        const path = (ev as MouseEvent & { composedPath?: () => Element[] }).composedPath?.();
-        const chain: Element[] =
-          path?.filter((n) => n instanceof Element) as Element[] ??
-          (ev.target instanceof Element ? [ev.target] : []);
-
-        const BLOCK_UI_SELECTOR = [
-          '[data-block-move]',
-          '[data-overlay]',
-          '[role="dialog"]',
-          '[aria-modal="true"]',
-          '[role="menu"]',
-          '[role="button"]',
-          'button',
-          'a[href]',
-          'input, textarea, select',
-          '.modal',
-          '.drawer',
-          '.popover',
-          '.tooltip',
-          '.map-ui'
-        ].join(',');
-
-        for (const el of chain) {
-          if (el.matches?.(BLOCK_UI_SELECTOR)) return false;
-          if (el !== container && el.hasAttribute?.('data-world-surface')) return false;
-        }
-
-        if (!(ev.target instanceof Node) || !container.contains(ev.target)) return false;
-
-        if (ev instanceof MouseEvent && !isPrimaryPointer(ev)) return false;
-
-        return true;
-      };
 
       const handlePointer = (event: MouseEvent | TouchEvent) => {
         if (blobbiRef.current?.contains(event.target as Node)) {
@@ -446,18 +256,16 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           return;
         }
 
-
-        if (!shouldTriggerWorldMove(event)) return;
+        // Caller-specific guard (photo-booth mode), then the shared world-move
+        // policy (src/lib/world-input.ts) MultiplayerLayer also consults.
+        if (isPhotoBoothOpen) return;
+        if (!shouldTriggerWorldMove(event, container)) return;
 
         onWakeUp?.();
 
-        if (isAttachedToBed) {
-          onWakeUp?.();
-          return;
-        }
-        if (seatedIn) {
-          onWakeUp?.();
-        }
+        // Asleep on the bed: a world tap wakes the Blobbi and nothing more —
+        // the pose transition is the orchestrator's job, not a walk.
+        if (poseRef.current.kind === 'sleeping') return;
 
         let clientX: number, clientY: number;
         if (event instanceof MouseEvent) {
@@ -469,15 +277,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
           clientY = touch.clientY;
         }
 
-        const newTarget = clientToPercent(clientX, clientY);
-
-        if (isPositionBlocked(newTarget.x, newTarget.y)) return;
-
-        targetRef.current = newTarget;
-        setIsMoving(true);
-        isMovingRef.current = true;
-        startAnimation();
-        onMoveStart?.(newTarget);
+        goTo(clientToPercent(clientX, clientY));
       };
 
       container.addEventListener('pointerdown', handlePointer as EventListener, { passive: true });
@@ -491,48 +291,36 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       containerRef,
       isVisible,
       clientToPercent,
-      startAnimation,
-      onMoveStart,
+      goTo,
       onWakeUp,
       onBlobbiClick,
-      isAttachedToBed,
-      seatedIn,
-      isPositionBlocked,
-      isPhotoBoothOpen
+      isPhotoBoothOpen,
     ]);
 
-    useImperativeHandle(ref, () => ({
-      goTo: (newTarget, immediate = false) => {
-        if (isPositionBlocked(newTarget.x, newTarget.y)) {
-          return;
-        }
-        targetRef.current = newTarget;
-        if (immediate) {
-          // Immediately snap to position without animation
-          setPosition(newTarget);
-          setIsMoving(false);
-          isMovingRef.current = false;
-          onMoveComplete?.(newTarget);
-        } else {
-          setIsMoving(true);
-          isMovingRef.current = true;
-          startAnimation();
-          onMoveStart?.(newTarget);
-        }
-      },
-      getCurrentPosition: () => position,
-    }));
+    useImperativeHandle(ref, () => ({ goTo, snapTo, stop, getCurrentPosition }), [
+      goTo,
+      snapTo,
+      stop,
+      getCurrentPosition,
+    ]);
 
     if (!isVisible) return null;
 
-    // Everything the seat changes about how this Blobbi is drawn, resolved from
-    // the seat id alone (shared with the remote renderer). A seated Blobbi is
-    // DRAWN at the seat's pose anchor (same rule as remotes), regardless of the
-    // stored walking position — PlayingView still snaps the stored position for
-    // presence, but rendering no longer depends on that side effect.
-    const seated = resolveSeatedRender(seatedIn);
-    const renderPos = seated ? seated.position : position;
-    const dynamicScale = getDynamicScale(renderPos) * (seated?.scale ?? 1);
+    // The complete visual consequence of the current pose, from the SAME pure
+    // resolver the remote layer uses (src/lib/blobbi-pose.ts).
+    const render = resolveActorRender(pose, {
+      groundPosition: position,
+      backgroundFile,
+      boundary,
+      scaleByYPosition,
+      suppressFloat: disableFloating,
+    });
+
+    // Depth scale at an arbitrary point (gaze endpoints convert ground → body
+    // center with each point's own depth scale).
+    const depthScaleAt = (pos: Position): number =>
+      scaleByYPosition ? resolveBlobbiScale(pos, backgroundFile, boundary) : 1;
+
     // Gaze priority (self-intent first):
     //   1. own movement  → look where it is walking
     //   2. attention      → look at the selected active target (identity from
@@ -558,15 +346,15 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
         // Ground → visual body centers: eyes meet bodies, not feet. Both
         // endpoints convert with the room's size token and each point's own
         // depth scale, so the vector never mixes center and ground semantics.
-        const myFocus = actorVisualFocusPoint(position, size, dynamicScale);
+        const myFocus = actorVisualFocusPoint(position, size, render.scale);
         const targetFocus = actorVisualFocusPoint(
           attentionTarget,
           size,
-          getDynamicScale(attentionTarget),
+          depthScaleAt(attentionTarget),
         );
         const tx = targetFocus.x - myFocus.x;
         const ty = targetFocus.y - myFocus.y;
-        const len = Math.sqrt(tx * tx + ty * ty) || 1;
+        const len = Math.hypot(tx, ty) || 1;
         eyeOffset = { x: tx / len, y: ty / len };
       } else {
         eyeOffset = idleGaze;
@@ -575,7 +363,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     return (
       <>
-        {showTrail && !visualHidden &&
+        {showTrail && !render.visualHidden &&
           trail.map((trailPos, index) => (
             // Trail dots mark the HISTORICAL GROUND PATH: each dot is centered
             // on a past ground point (a floor marker, not a body marker).
@@ -601,23 +389,24 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
               />
             </div>
           ))}
-        {/* Shared ground-anchor actor. While `visualHidden` the anchor stays
-            mounted (chat-bubble portal + logical world position); everything
-            visible is suppressed inside BlobbiActor. */}
+        {/* Shared ground-anchor actor. While hidden the anchor stays mounted
+            (chat-bubble portal + logical world position); everything visible
+            is suppressed inside BlobbiActor. */}
         <BlobbiActor
           ref={blobbiRef}
           anchorId={anchorId}
-          position={renderPos}
+          position={render.renderPosition}
           size={size}
-          scale={dynamicScale}
-          zIndex={seated ? seated.zIndex : getDynamicZIndex(renderPos)}
-          seatedIn={seated?.seat.id ?? null}
-          visualHidden={visualHidden}
-          hideShadow={!!seated?.hideShadow}
-          disableFloat={isSleeping || disableFloating || !!seated?.disableFloat}
+          scale={render.scale}
+          zIndex={render.zIndex}
+          seatedIn={render.seatedIn}
+          hiddenIn={render.hiddenIn}
+          visualHidden={render.visualHidden}
+          hideShadow={render.hideShadow}
+          disableFloat={render.disableFloat}
           isMoving={isMoving}
           className={cn(
-            onBlobbiClick && !visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
+            onBlobbiClick && !render.visualHidden ? "pointer-events-auto cursor-pointer" : "pointer-events-none",
             className
           )}
         >
@@ -625,8 +414,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             size={size}
             showFallback={true}
             transparent={true}
-            isSleeping={isSleeping}
-            facing={seated?.facing ?? 'front'}
+            isSleeping={render.sleeping}
+            facing={render.facing}
             eyeOffset={eyeOffset}
             visualOverride={visualOverride}
             className={cn(isMoving && "scale-105")}

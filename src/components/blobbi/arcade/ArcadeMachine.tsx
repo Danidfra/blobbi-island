@@ -1,8 +1,7 @@
 import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import type { Position } from '@/lib/types';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
-import { constrainPosition } from '@/lib/boundaries';
+import { resolveElementApproachTarget } from '@/lib/approach-target';
 import {
   ARCADE_FLOORS,
   arcadeMachineGroundOffsetPercent,
@@ -56,29 +55,20 @@ import { locationBoundaries } from '@/lib/location-boundaries';
  * The clamp matters: a cabinet's base can sit above walkable ground on floors
  * whose boundary is a composite of rectangles and triangles, and an unreachable
  * target means a machine that never opens.
+ *
+ * GROUND semantics (Phase 2 hardening): the anchor fraction was authored for
+ * the body CENTER; the feet stop half a depth-scaled body lower — on the open
+ * floor in FRONT of the machine, not inside its artwork. The offset is shared
+ * with the DOM-free `machineAnchorPosition` and applied exactly once, here,
+ * via the canonical resolver's `yOffsetPercent`.
  */
-function computeMachineTarget(el: Element, config: ArcadeMachineConfig): Position | null {
-  const surface = el.closest('[data-world-surface]') as HTMLElement | null;
-  if (!surface) return null;
-  const surfaceRect = surface.getBoundingClientRect();
-  const rect = el.getBoundingClientRect();
-  if (surfaceRect.width === 0 || surfaceRect.height === 0) return null;
-
-  const aimX = rect.left + rect.width * config.interactionAnchor.x;
-  const aimY = rect.top + rect.height * config.interactionAnchor.y;
-
-  const fractionY = ((aimY - surfaceRect.top) / surfaceRect.height) * 100;
-  const raw: Position = {
-    x: ((aimX - surfaceRect.left) / surfaceRect.width) * 100,
-    // GROUND semantics (Phase 2 hardening): the anchor fraction was authored
-    // for the body CENTER; the feet stop half a depth-scaled body lower — on
-    // the open floor in FRONT of the machine, not inside its artwork. Shared
-    // with the DOM-free machineAnchorPosition, applied exactly once, here.
-    y: fractionY + arcadeMachineGroundOffsetPercent(config.floor, fractionY),
-  };
-
-  const boundary = locationBoundaries[ARCADE_FLOORS[config.floor]];
-  return boundary ? constrainPosition(raw, boundary) : raw;
+function computeMachineTarget(el: Element, config: ArcadeMachineConfig) {
+  return resolveElementApproachTarget({
+    element: el,
+    fraction: config.interactionAnchor,
+    yOffsetPercent: (fractionY) => arcadeMachineGroundOffsetPercent(config.floor, fractionY),
+    boundary: locationBoundaries[ARCADE_FLOORS[config.floor]],
+  })?.target ?? null;
 }
 
 interface ArcadeMachineProps {
