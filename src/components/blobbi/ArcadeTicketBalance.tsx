@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
   bundledFallbackDefinition,
+  primaryItemImageUrl,
   unknownItemDefinition,
   useIslandInventory,
   useItemCatalog,
@@ -94,7 +95,7 @@ export function ArcadeTicketBalance({ className, showZero = false }: ArcadeTicke
    * "always degrade to something renderable", so a failed image degrades to the
    * emoji rather than leaving a broken-image glyph in the HUD.
    */
-  const imageUrl = definition.image ?? null;
+  const imageUrl = primaryItemImageUrl(definition) ?? null;
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => {
     // A different URL deserves a fresh attempt.

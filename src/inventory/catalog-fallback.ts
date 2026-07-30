@@ -30,6 +30,7 @@ import {
 } from '@/protocol/event-registry';
 
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from './constants';
+import type { GameItemImage } from './package';
 import { OFFICIAL_ITEM_REGISTRY } from './registry';
 
 /**
@@ -82,8 +83,27 @@ export interface ResolvedBlobbiItemDefinition {
   stages: ItemStage[];
   /** Emoji fallback (used when no image is present). */
   emoji: string;
-  /** Optional image URL (from a definition `image` tag). */
+  /**
+   * The item's primary/default image URL, or `undefined`.
+   *
+   * Retained as a flattened convenience field so every pre-existing consumer
+   * keeps compiling and rendering exactly what it rendered before. It is the
+   * SAME answer `@nostr-games/inventory` computes for `GameItemDefinition.image`
+   * (first unmarked `image` tag, falling back to the first valid one), never a
+   * second opinion. New code should call `primaryItemImageUrl()` instead, which
+   * reads {@link images} and treats this as its legacy fallback.
+   */
   image?: string;
+  /**
+   * EVERY valid `image` tag of the definition, in tag order, with markers.
+   *
+   * Kept as the package's own ordered collection rather than a marker→url map:
+   * a map would silently lose source order, duplicate markers, a second unmarked
+   * primary, and any marker a future spec version adds — all of which are things
+   * an issuer can legitimately publish and which the Island must be able to
+   * inspect. Empty for fallback/unknown items with no artwork.
+   */
+  images: readonly GameItemImage[];
   /** `t` topic tags. */
   topics: string[];
   /** Where this resolution came from. */
@@ -170,6 +190,11 @@ export function bundledFallbackDefinition(
     stages: meta.stages,
     emoji: meta.emoji,
     ...(meta.image ? { image: meta.image } : {}),
+    // The bundled catalog knows exactly one artwork URL per item and no view
+    // markers, so its collection is a single UNMARKED primary — the same thing
+    // a definition with one plain `["image", url]` tag parses to. Pose-specific
+    // views only ever come from a fetched definition.
+    images: meta.image ? [{ url: meta.image }] : [],
     topics: meta.topics,
     source: 'fallback',
   };
@@ -194,6 +219,7 @@ export function unknownItemDefinition(
     action: null,
     stages: ['egg', 'baby', 'adult'],
     emoji: GENERIC_ITEM_EMOJI,
+    images: [],
     topics: [],
     source: 'unknown',
   };

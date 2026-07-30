@@ -161,6 +161,15 @@ the info modal's read-only preview of another player's Blobbi rendered it in
 your hats. Fetching another player's equipment remains out of scope — the
 honest render of unknown equipment is none.
 
+Also Island-specific: **which picture an accessory uses**. The package's
+`AccessorySourceResolver` contract is unchanged (`{ code, slot, url }` in,
+`readonly string[]` out); Island builds one per `facing`, closed over the
+published kind:31632 image views, so the renderer receives plain URLs and never
+learns a view marker existed. See
+[docs/game-item-image-views.md](./game-item-image-views.md). This changes the
+picture only — `REAR_VIEW_HIDDEN_SLOTS` still decides *which* accessories a
+rear-facing Blobbi wears.
+
 ## 10. What Phase 1 intentionally did NOT solve (since implemented in Phase 2)
 
 - **Ground/foot anchoring** — IMPLEMENTED in Phase 2: the Island actor

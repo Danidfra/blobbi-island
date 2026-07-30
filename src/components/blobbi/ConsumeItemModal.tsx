@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Minus, Plus, Heart, Zap, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ResolvedBlobbiItemDefinition } from '@/inventory';
+import { primaryItemImageUrl, type ResolvedBlobbiItemDefinition } from '@/inventory';
 
 // Effect icons mapping
 const EFFECT_ICONS = {
@@ -36,6 +36,10 @@ export function ConsumeItemModal({
   loadingText = 'Using...',
 }: ConsumeItemModalProps) {
   const [quantity, setQuantity] = useState(1);
+
+  // An item-detail header is an unposed, compact context, so it shows the
+  // item's PRIMARY image and never a pose-specific view.
+  const imageUrl = primaryItemImageUrl(definition);
 
   // Calculate total effects based on quantity
   const totalEffects = useMemo(() => {
@@ -81,9 +85,9 @@ export function ConsumeItemModal({
             <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-600/30">
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-slate-700/50 rounded-xl flex items-center justify-center border border-slate-600/30">
-                  {definition.image ? (
+                  {imageUrl ? (
                     <img
-                      src={definition.image}
+                      src={imageUrl}
                       alt={definition.name}
                       className="w-12 h-12 object-contain"
                     />

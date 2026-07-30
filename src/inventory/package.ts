@@ -7,8 +7,10 @@
  * the same kinds.
  *
  * The package is the source of truth for parsing, validation, building,
- * addressing, quantities, duplicate handling, parse modes, and result/error
- * types.
+ * addressing, quantities, duplicate handling, parse modes, result/error types,
+ * and — since 0.2.0 — the repeatable `image` tag model with its view markers.
+ * Island never re-parses an `image` tag; it selects among already-parsed
+ * `GameItemImage` entries (see `item-image-resolution.ts`).
  */
 
 export {
@@ -35,6 +37,13 @@ export {
   parseGameInventoryResult,
   buildGameInventoryEvent,
   validateGameInventory,
+  // Item images / view markers (31632 `image` tags)
+  GAME_ITEM_IMAGE_MARKERS,
+  isGameItemImageMarker,
+  selectPrimaryGameItemImage,
+  getPrimaryItemImage,
+  getItemImageByMarker,
+  getItemImagesByMarker,
   // Quantity helpers
   parseInventoryQuantity,
   encodeInventoryQuantity,
@@ -49,6 +58,10 @@ export type {
   NostrEvent as PackageNostrEvent,
   UnsignedEventTemplate,
   GameItemDefinition,
+  GameItemImage,
+  GameItemImageMarker,
+  GameItemImageMarkerValue,
+  GameItemImageSource,
   GameInventory,
   GameInventoryItem,
   GameItemAddress,
@@ -59,6 +72,7 @@ export type {
   ParseMode,
   ParseResult,
   ParseWarning,
+  ParseWarningCode,
   KindGameItemDefinition,
   KindGameInventory,
 } from '@nostr-games/inventory';

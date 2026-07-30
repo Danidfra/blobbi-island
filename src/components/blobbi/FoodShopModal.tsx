@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, Minus, Plus } from 'lucide-react';
 import {
   SHOP_ENTRIES,
+  primaryItemImageUrl,
   useItemCatalog,
   useBatchPurchase,
 } from '@/inventory';
@@ -31,7 +32,15 @@ const CATEGORY_LABELS: Record<ItemCategoryName, string> = {
   currency: 'Currency',
 };
 
-/** Local image overrides for known food items. */
+/**
+ * Bundled artwork for the five food items, used when their definitions carry no
+ * `image` tag of their own — which is the case for all 20 published official
+ * definitions today.
+ *
+ * These are INFERRED local paths, not published facts, so a definition's own
+ * primary image outranks them (see `docs/game-item-image-views.md`). Every other
+ * category has no bundled artwork and renders its emoji.
+ */
 const FOOD_IMAGES: Record<string, string> = {
   food_apple: '/assets/items/food/apple.png',
   food_pizza: '/assets/items/food/pizza.png',
@@ -62,6 +71,11 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
   // General store: sell all official items, grouped by category. Kept minimal —
   // food keeps its images; other categories use their emoji.
+  //
+  // A shop card is a compact, unposed cell, so it asks for the definition's
+  // PRIMARY image and never a pose-specific view: a `back` marker exists to
+  // dress a Blobbi seen from behind, not to sell an item. Published artwork
+  // outranks the bundled local path below it.
   const shopItems = useMemo(() => {
     return SHOP_ENTRIES.map((entry) => {
       const def = catalog?.byAddress.get(entry.address);
@@ -71,7 +85,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
         name: def?.name ?? entry.itemId,
         emoji: def?.emoji ?? '📦',
         category: def?.category ?? 'unknown',
-        imageUrl: FOOD_IMAGES[entry.itemId],
+        imageUrl: primaryItemImageUrl(def) ?? FOOD_IMAGES[entry.itemId],
         price: entry.price,
       };
     });

@@ -235,9 +235,12 @@ describe('remote rendering never subscribes to local-player data', () => {
 
 describe('Island keeps the asset adapter the package refuses to have', () => {
   it('confines Island asset-path knowledge to the accessory adapter and tag utils', () => {
+    // Production modules only: a test that asserts what the adapter builds has
+    // to name the same paths the adapter does, and is not a second consumer.
     const importers = ISLAND_FILES.filter(
       (file) =>
         /components\/blobbi\/lib\//.test(file) &&
+        !/\.test\.tsx?$/.test(file) &&
         importsOf(file).some((s) => /asset-paths/.test(s)),
     ).map(rel).sort();
     expect(importers).toEqual([
@@ -247,11 +250,67 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
   });
 
   it('passes that adapter explicitly — the package has no Island default', () => {
-    const display = readFileSync(join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx'), 'utf8');
-    expect(display).toContain('resolveSources: islandAccessorySources');
+    const displayPath = join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx');
+    const display = readFileSync(displayPath, 'utf8');
+    // The resolver is now BUILT per render (it closes over `facing` and the item
+    // definitions), so what is asserted is that the wrapper still supplies an
+    // Island-made resolver rather than letting the package choose one.
+    expect(display).toContain('resolveSources: resolveAccessorySources');
+    expect(display).toContain('createIslandAccessorySourceResolver');
+    expect(importsOf(displayPath)).toContain('./lib/island-accessory-sources');
 
     const normalizer = readFileSync(join(ROOT, PACKAGE, 'src/accessory-normalize.ts'), 'utf8');
     expect(normalizer).toContain('DEFAULT_ACCESSORY_SOURCES');
     expect(normalizer).not.toContain('island');
+  });
+});
+
+describe('item-definition knowledge stops at the Island adapter', () => {
+  /**
+   * The renderer package must stay protocol-agnostic. It is not enough that it
+   * avoids importing the inventory library — it must not have grown its own
+   * copy of the vocabulary either, because a hand-rolled `marker === 'front'`
+   * inside the package would fork the policy this phase just centralized.
+   */
+  const PACKAGE_FILES = sourceFiles(join(ROOT, PACKAGE, 'src'));
+
+  it('the renderer package imports no inventory library', () => {
+    for (const file of PACKAGE_FILES) {
+      expect(
+        importsOf(file).filter((s) => /@nostr-games\/inventory|@\/inventory/.test(s)),
+        `${rel(file)} must not import inventory code`,
+      ).toEqual([]);
+    }
+  });
+
+  it('the renderer package speaks no kind, tag or view-marker vocabulary', () => {
+    // `package-purity.test.ts` proves the import graph; this proves the source
+    // text, which is where a re-implementation would hide.
+    const forbidden = [
+      /\b31632\b/,
+      /\b31633\b/,
+      /GameItemDefinition/,
+      /GameItemImage/,
+      /diagonal-front-(right|left)/,
+      /side-(right|left)/,
+    ];
+    for (const file of PACKAGE_FILES) {
+      const source = readFileSync(file, 'utf8');
+      for (const pattern of forbidden) {
+        expect(pattern.test(source), `${rel(file)} must not mention ${pattern}`).toBe(false);
+      }
+    }
+  });
+
+  it('only the accessory adapter turns item definitions into renderer sources', () => {
+    const importers = ISLAND_FILES.filter(
+      (file) =>
+        /components\/blobbi\//.test(file) &&
+        !/\.test\.tsx?$/.test(file) &&
+        importsOf(file).some((s) => /item-image-resolution/.test(s)),
+    ).map(rel).sort();
+    expect(importers).toEqual([
+      'src/components/blobbi/lib/island-accessory-sources.ts',
+    ]);
   });
 });

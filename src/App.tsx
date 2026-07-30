@@ -11,6 +11,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
+import { AccessoryItemDefinitionsProvider } from '@/components/AccessoryItemDefinitionsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
@@ -53,6 +54,7 @@ export function App() {
           <QueryClientProvider client={queryClient}>
             <NostrLoginProvider storageKey='nostr:login'>
               <NostrProvider>
+              <AccessoryItemDefinitionsProvider>
               <PhotoBoothProvider>
                 <DebugOverlaysProvider>
                   <TooltipProvider>
@@ -71,6 +73,7 @@ export function App() {
                   </TooltipProvider>
                 </DebugOverlaysProvider>
               </PhotoBoothProvider>
+              </AccessoryItemDefinitionsProvider>
               </NostrProvider>
             </NostrLoginProvider>
           </QueryClientProvider>

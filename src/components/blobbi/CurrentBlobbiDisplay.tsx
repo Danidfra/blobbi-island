@@ -29,8 +29,16 @@
  * Geometry lives entirely in the pure renderer: one square fixed-px box per
  * size token, shared by body and accessories (see lib/blobbi-render-size.ts
  * and docs/blobbi-renderer-contract.md).
+ *
+ * ACCESSORY ARTWORK follows `facing`: a Blobbi seen from behind asks for each
+ * accessory's `back` image view and a front-facing one asks for `front`, both
+ * resolved here and handed to the renderer as plain URLs (see
+ * lib/island-accessory-sources.ts and docs/game-item-image-views.md). Which
+ * accessories are drawn at all is a separate, unchanged question answered by
+ * the package's rear-view slot rules — a published `back` image never makes a
+ * face-only accessory visible from behind.
  */
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
@@ -44,7 +52,8 @@ import {
   type BlobbiRenderSize,
   type BlobbiRenderVisual,
 } from "@blobbi/react";
-import { islandAccessorySources } from "./lib/island-accessory-sources";
+import { createIslandAccessorySourceResolver } from "./lib/island-accessory-sources";
+import { useAccessoryItemDefinitionsContext } from "@/hooks/useAccessoryItemDefinitionsContext";
 import { useAccessoryManagement } from "./hooks/useAccessoryManagement";
 
 export interface CurrentBlobbiDisplayProps {
@@ -126,6 +135,26 @@ export function CurrentBlobbiDisplay({
   const { data: profile } = useBlobbonautProfile();
   const { equipment } = useAccessoryManagement();
 
+  // Accessory ARTWORK selection. Which picture an accessory uses depends on
+  // which way this Blobbi is turned, so the resolver is built per `facing`
+  // rather than being a module constant. Item definitions stay entirely on this
+  // side of the boundary: the package's resolver contract still receives only
+  // `{ code, slot, url }` and still returns plain URLs.
+  //
+  // Read from context, not fetched here: this component renders once per Blobbi
+  // on screen, and drawing a Blobbi must not require an app config or a query
+  // client. Outside the provider the map is empty and accessories fall back to
+  // their legacy artwork, which is exactly the behavior that predates this.
+  const accessoryDefinitions = useAccessoryItemDefinitionsContext();
+  const resolveAccessorySources = useMemo(
+    () =>
+      createIslandAccessorySourceResolver({
+        definitionsByCode: accessoryDefinitions,
+        facing,
+      }),
+    [accessoryDefinitions, facing],
+  );
+
   const currentBlobbi = visualOverride
     ? null
     : (profile?.currentCompanion && blobbis
@@ -162,7 +191,7 @@ export function CurrentBlobbiDisplay({
     const accessories = showAccessories
       ? normalizeAccessoryPlacements(wornAccessories ?? [], {
           facing,
-          resolveSources: islandAccessorySources,
+          resolveSources: resolveAccessorySources,
         })
       : [];
 

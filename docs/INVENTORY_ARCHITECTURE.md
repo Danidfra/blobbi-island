@@ -78,6 +78,13 @@ Resolution order per address (`resolveItemDefinition`):
 Visual resolution order: definition `image` tag → definition JSON `emoji` →
 bundled itemId→emoji fallback → generic `📦`.
 
+A definition may carry several `image` tags — an unmarked primary plus
+pose-specific views (`front`, `back`, `side-*`, `diagonal-*`). The resolved model
+keeps the whole ordered collection in `images`, and `image` remains the primary.
+Which one a given context shows — compact UI always takes the primary, a posed
+Blobbi takes its `front`/`back` view — is specified in
+[docs/game-item-image-views.md](./game-item-image-views.md).
+
 The bundled fallback keeps the game fully playable when relays are unavailable;
 the catalog query always resolves (never blocks on a fetch). No automatic
 republication is performed and no private key is bundled.

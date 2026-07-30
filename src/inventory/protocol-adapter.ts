@@ -152,10 +152,16 @@ function readEffectsFromContent(contentJson: unknown): {
  * on-Nostr definition does not carry.
  *
  * Visual resolution order for emoji/image:
- *   1. definition `image` tag (future) → set as `image`;
+ *   1. definition `image` tags → `images` (all of them) + `image` (the primary);
  *   2. definition JSON `emoji`;
  *   3. bundled itemId→emoji fallback;
  *   4. generic package emoji.
+ *
+ * Step 1 copies the package's parsed collection through UNCHANGED — same
+ * entries, same order, same markers, including markers this spec version does
+ * not define. Island narrows the collection per render context later
+ * (`item-image-resolution.ts`); it never narrows it here, because a lossy
+ * projection at the adapter would make every downstream policy impossible.
  */
 export function resolveFromDefinition(
   def: GameItemDefinition,
@@ -184,7 +190,10 @@ export function resolveFromDefinition(
     action: fromContent.action ?? bundled?.action ?? null,
     stages: fromContent.stages ?? bundled?.stages ?? ['egg', 'baby', 'adult'],
     emoji,
-    image: def.image, // step 1 of visual order (undefined today)
+    // `def.image` IS the package's primary selection over `def.images`, so the
+    // flattened field and the collection can never disagree.
+    image: def.image,
+    images: def.images,
     topics: def.topics.length > 0 ? def.topics : (bundled?.topics ?? []),
     source: 'definition',
   };

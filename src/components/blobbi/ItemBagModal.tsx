@@ -9,6 +9,7 @@ import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import {
   useIslandInventory,
   useItemCatalog,
+  primaryItemImageUrl,
   toIslandEntries,
   useUseItem,
   type IslandInventoryEntry,
@@ -22,7 +23,13 @@ interface ItemBagModalProps {
 
 /**
  * An item's visual, following the catalog's documented resolution order:
- * definition `image` → `emoji`.
+ * definition PRIMARY image → `emoji`.
+ *
+ * "Primary" is load-bearing now that a definition may publish several `image`
+ * tags: a bag row is a compact, unposed list cell, so it always wants the
+ * item's default picture and never a pose-specific view — a hat's `side-left`
+ * artwork in an inventory grid would misrepresent the item. See
+ * `docs/game-item-image-views.md`.
  *
  * Generic on purpose — it takes a resolved definition and knows nothing about
  * which item it is drawing, so every current and future item with artwork gets
@@ -35,7 +42,7 @@ interface ItemBagModalProps {
  */
 function ItemVisual({ definition }: { definition: IslandInventoryEntry['definition'] }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const url = definition.image;
+  const url = primaryItemImageUrl(definition);
 
   if (url && !imageFailed) {
     return (
