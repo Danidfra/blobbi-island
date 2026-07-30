@@ -17,6 +17,8 @@ export {
   // Kind constants
   KIND_GAME_ITEM_DEFINITION,
   KIND_GAME_INVENTORY,
+  // Derivation marker (`a` tag index 3) for `based_on` references
+  BASED_ON_MARKER,
   // Address helpers
   buildGameItemAddress,
   parseGameItemAddress,
@@ -57,6 +59,10 @@ export {
 export type {
   NostrEvent as PackageNostrEvent,
   UnsignedEventTemplate,
+  BuildGameItemDefinitionInput,
+  GameItemBasedOnReference,
+  ItemDefinitionValidationIssue,
+  ItemDefinitionValidationResult,
   GameItemDefinition,
   GameItemImage,
   GameItemImageMarker,

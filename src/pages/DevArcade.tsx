@@ -1066,6 +1066,9 @@ export function DevArcade() {
         byAddress: new Map([[TICKET_ADDRESS, definition]]),
         fetchedCount: mode === 'fallback' ? 0 : 1,
         totalCount: 1,
+        // This harness seeds the ticket alone; no cosmetic is under test here.
+        cosmeticsFetched: 0,
+        cosmeticsTotal: 0,
       };
       queryClient.setQueryData(ITEM_CATALOG_QUERY_KEY, catalog);
       setNote(`Catalog seeded as "${mode}". Nothing published.`);

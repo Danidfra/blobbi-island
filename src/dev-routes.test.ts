@@ -115,6 +115,25 @@ describe('production build excludes the DEV harnesses', () => {
     expect(router).not.toMatch(/^import\s+.*Dev(Arcade|Theater|Rooms)/m);
   });
 
+  it('does not accidentally gate the game item tools, which SHIP', () => {
+    // `/tools/game-items` is internal but deliberately NOT a dev harness: the
+    // official issuer publishes item definitions from the deployed site, and
+    // its real boundary is the signature it requires plus the catalog's own
+    // issuer check — not the absence of a chunk. This asserts the distinction
+    // stays intentional, so nobody "tidies" it into the DEV list and silently
+    // removes the ability to publish from production.
+    const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
+    expect(router).toContain('path="/tools/game-items"');
+    expect(router).not.toContain('const GameItemTools = import.meta.env.DEV');
+  });
+
+  it.runIf(distExists && buildIsFresh)('emits the game item tools as its own lazy chunk', () => {
+    // Present in the build (unlike the dev harnesses) but split out, so the
+    // authoring tool costs a player nothing until they navigate to it.
+    const named = distChunks.filter((f) => /GameItemTools/i.test(f));
+    expect(named.length, 'expected a GameItemTools chunk in dist/').toBeGreaterThan(0);
+  });
+
   it('is reachable from no production module', () => {
     // Nothing outside the harness files themselves may reference them.
     const referrers = allFiles(join(ROOT, 'src'))

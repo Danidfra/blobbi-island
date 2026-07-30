@@ -20,33 +20,48 @@
  * This module widens no trust; it only maps a code onto an address the registry
  * already vouches for.
  *
- * CURRENT STATE. The map below is EMPTY, and that is a fact about the protocol,
- * not an unfinished edit: the official issuer has published 20 item definitions
- * (19 consumables + the Arcade Ticket) and NOT ONE accessory. So today every
+ * CURRENT STATE. One accessory is mapped: the Block Builder Cap. Every other
  * accessory resolves purely through the legacy chain in
- * `island-accessory-sources.ts`, exactly as it did before this phase, and the
- * definition-aware branch is dormant but fully tested against fixtures.
+ * `island-accessory-sources.ts`, exactly as it did before, and continues to do
+ * so until its own definition is published and an entry is added below.
  *
  * The mapping is explicit rather than derived (e.g. `blobbi:accessory:<code>`)
  * on purpose: a derivation would silently start resolving the moment somebody
  * published an event at a guessable address, which is a decision that should be
- * made by editing this file. Publishing accessory definitions is out of scope
- * for this phase — see `docs/game-item-image-views.md`.
+ * made by editing this file.
+ *
+ * WHAT A MAPPING DOES AND DOES NOT MEAN. It says "when this code is worn, this
+ * official definition describes it". It is NOT ownership, NOT a grant, and NOT
+ * an equip: which accessory a player owns is still their kind:11125 `inv` tags,
+ * and which one is worn — and where — is still their kind:31124 `equip` tag.
+ * Publishing a definition changes what a hat LOOKS LIKE and what it is CALLED,
+ * and nothing else.
  */
 
 import type { ResolvedBlobbiItemDefinition } from './catalog-fallback';
-import { dTagToAddress } from './registry';
+import { ADDRESSED_OFFICIAL_COSMETICS } from '@/protocol/event-registry';
+import { cosmeticDTagToAddress } from './registry';
 
 /**
  * Legacy accessory `code` → the official definition's `d` tag.
  *
- * Add an entry ONLY when the official issuer has actually published that
- * definition; an entry pointing at an unpublished `d` resolves to nothing and
- * quietly costs a map lookup per accessory per render.
+ * DERIVED, not hand-written: the pairing already exists on each entry of
+ * `OFFICIAL_COSMETIC_DEFINITIONS` (as `legacyCode` + `d`), and writing it out a
+ * second time here would be two places to edit and one place to forget. The
+ * shape stays a plain record because that is what the tooling copies out as a
+ * snippet and what the tests assert against.
+ *
+ * To map a new accessory, add its entry to `OFFICIAL_COSMETIC_DEFINITIONS` —
+ * that is the single edit, and it is a source-code change reviewed by a human,
+ * never something the browser writes.
  */
 export const ACCESSORY_CODE_TO_OFFICIAL_ITEM_D: Readonly<
   Record<string, string>
-> = {};
+> = Object.freeze(
+  Object.fromEntries(
+    ADDRESSED_OFFICIAL_COSMETICS.map((c) => [c.legacyCode, c.d]),
+  ),
+);
 
 /** Whether any accessory code currently maps to an official item definition. */
 export const HAS_ACCESSORY_ITEM_DEFINITIONS =
@@ -62,7 +77,7 @@ export const HAS_ACCESSORY_ITEM_DEFINITIONS =
 export function accessoryItemAddress(code: string): string | null {
   const d = ACCESSORY_CODE_TO_OFFICIAL_ITEM_D[code];
   if (!d) return null;
-  return dTagToAddress(d);
+  return cosmeticDTagToAddress(d);
 }
 
 /**

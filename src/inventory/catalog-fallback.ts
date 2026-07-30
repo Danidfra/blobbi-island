@@ -22,6 +22,7 @@
  */
 
 import {
+  ADDRESSED_OFFICIAL_COSMETICS,
   ADDRESSED_OFFICIAL_ITEMS,
   type ItemActionName,
   type ItemCategoryName,
@@ -222,6 +223,48 @@ export function unknownItemDefinition(
     images: [],
     topics: [],
     source: 'unknown',
+  };
+}
+
+/**
+ * The bundled fallback for an official COSMETIC address, or `null`.
+ *
+ * DELIBERATELY THINNER than the consumable fallback, and the gaps are the point.
+ * A cosmetic's category, rarity, description, topics and pose-specific image
+ * views live in the published definition and nowhere else; if the catalog query
+ * failed, this client genuinely does not know them, and inventing values here
+ * would be the "second authoritative catalog" the migration exists to avoid.
+ *
+ * So this returns the little the registry legitimately records — name, symbol,
+ * primary artwork — and states the rest honestly: `category: 'unknown'`,
+ * `action: null`, no effects, no topics. `source: 'fallback'` marks it, and a
+ * fetched definition replaces it wholesale the moment one arrives.
+ *
+ * `action: null` is load-bearing rather than cosmetic: `useUseItem` rejects a
+ * null action, which is what stops a hat from entering a care flow.
+ */
+export function bundledCosmeticFallbackDefinition(
+  address: string,
+): ResolvedBlobbiItemDefinition | null {
+  const entry = ADDRESSED_OFFICIAL_COSMETICS.find((e) => e.address === address);
+  if (!entry) return null;
+  return {
+    address: entry.address,
+    itemId: entry.legacyCode,
+    d: entry.d,
+    name: entry.name,
+    type: 'cosmetic',
+    category: 'unknown',
+    effects: {},
+    action: null,
+    stages: [],
+    emoji: entry.symbol,
+    ...(entry.primaryImage ? { image: entry.primaryImage } : {}),
+    // One UNMARKED primary, exactly as a definition with a single plain
+    // `["image", url]` tag parses to. Marked views never come from here.
+    images: entry.primaryImage ? [{ url: entry.primaryImage }] : [],
+    topics: [],
+    source: 'fallback',
   };
 }
 

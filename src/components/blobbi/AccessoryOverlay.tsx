@@ -16,13 +16,32 @@
  * Editing inputs remain mouse-based (drag / wheel / shift+wheel). Converting
  * to pointer events for touch is deliberately out of Phase 1 scope — see the
  * contract doc's "not solved in Phase 1" list.
+ *
+ * ## Artwork is definition-aware; PLACEMENT is not
+ *
+ * The editor used to build its own image chain (`config.url` → generated URL,
+ * then `onError` → local `.webp` → local `.png`). That was a second opinion
+ * about what an accessory looks like, so once an item definition could supply
+ * official artwork the editor started showing a DIFFERENT hat from the world.
+ * It now asks the same resolver the world asks
+ * (`createIslandAccessorySourceResolver`), with the same `facing`, so a mapped
+ * accessory is edited against exactly the picture it will be worn as.
+ *
+ * What did NOT become definition-aware is placement. x/y/scale/rot/flipX remain
+ * the legacy equip representation, dragging still writes only those, and one
+ * shared transform still covers every view — a front and a back view of the
+ * same hat cannot be positioned independently. Per-view placement would need a
+ * Placement design that does not exist yet; see
+ * `docs/accessory-definition-migration.md`.
+ *
+ * Nothing here publishes: no kind:31632 update, no inventory mutation.
  */
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAccessoryManagement } from './hooks/useAccessoryManagement';
-import { generateAccessoryUrl } from './lib/accessory-utils';
 import { cn } from '@/lib/utils';
-import { accessoryImagePath } from '@/lib/asset-paths';
 import { ACCESSORY_BASE_PERCENT, normalizeAccessoryPlacements } from '@blobbi/react';
+import { createIslandAccessorySourceResolver } from './lib/island-accessory-sources';
+import { useAccessoryItemDefinitions } from '@/inventory/useAccessoryItemDefinitions';
 import { type EquipmentConfig } from './lib/accessory-types';
 
 interface AccessoryOverlayProps {
@@ -47,6 +66,11 @@ interface AccessoryOverlayProps {
 
 interface AccessoryItemProps {
   config: EquipmentConfig;
+  /**
+   * Ordered candidate URLs from the shared Island resolver, highest priority
+   * first. Walked on `<img onError>` exactly as the world renderer walks it.
+   */
+  sources: readonly string[];
   containerRef?: React.RefObject<HTMLDivElement>;
   isSelected: boolean;
   onSelect: () => void;
@@ -55,6 +79,7 @@ interface AccessoryItemProps {
 
 function AccessoryItem({
   config,
+  sources,
   containerRef,
   isSelected,
   onSelect,
@@ -134,7 +159,15 @@ function AccessoryItem({
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const imageUrl = config.url || generateAccessoryUrl(config.code) || '';
+  // Index into `sources`, advanced by onError. Reset whenever the candidate
+  // list itself changes (a definition arriving, or the Blobbi turning around),
+  // so a new best source is always tried from the top.
+  const [sourceIndex, setSourceIndex] = useState(0);
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [sources]);
+
+  const imageUrl = sources[sourceIndex] ?? '';
 
   return (
     <div
@@ -157,29 +190,18 @@ function AccessoryItem({
       onWheel={handleWheel}
       title={`${config.code} - Click to select, drag to move, scroll to scale, shift+scroll to rotate`}
     >
-      <img
-        src={imageUrl}
-        alt={config.code}
-        className="h-full w-full max-w-none object-contain"
-        draggable={false}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          const slot = config.slot;
-
-          // Fallback chain for missing images: .webp -> .png -> hide.
-          const webpPath = accessoryImagePath(slot, config.code, 'webp');
-          const pngPath = accessoryImagePath(slot, config.code, 'png');
-
-          if (!target.src.includes(webpPath)) {
-            target.src = webpPath;
-          } else if (!target.src.includes(pngPath)) {
-            target.src = pngPath;
-          } else {
-            // All fallbacks failed, hide the image
-            target.style.display = 'none';
-          }
-        }}
-      />
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={config.code}
+          className="h-full w-full max-w-none object-contain"
+          draggable={false}
+          // Advance to the next candidate. React swaps `src` on the re-render,
+          // rather than the old code's direct `target.src` mutation, so the
+          // element never disagrees with the state that chose its source.
+          onError={() => setSourceIndex((i) => i + 1)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -194,6 +216,15 @@ export function AccessoryOverlay({
   onAccessoryUpdate
 }: AccessoryOverlayProps) {
   const { equipment } = useAccessoryManagement();
+
+  // Reads the ONE app-level catalog query through its shared cache — mounting
+  // the editor adds a subscriber, not a fetch, and never one query per
+  // accessory. Empty for every accessory that has no published definition.
+  const definitionsByCode = useAccessoryItemDefinitions();
+  const resolveSources = useMemo(
+    () => createIslandAccessorySourceResolver({ definitionsByCode, facing }),
+    [definitionsByCode, facing],
+  );
 
   const handleAccessoryUpdate = useCallback((accessoryCode: string, updates: Partial<EquipmentConfig>) => {
     onAccessoryUpdate?.(accessoryCode, updates);
@@ -227,6 +258,11 @@ export function AccessoryOverlay({
           <AccessoryItem
             key={accessory.code}
             config={currentConfig}
+            sources={resolveSources({
+              code: currentConfig.code,
+              slot: currentConfig.slot,
+              url: currentConfig.url,
+            })}
             containerRef={containerRef}
             isSelected={selectedAccessory?.code === accessory.code}
             onSelect={() => handleAccessorySelect(accessory)}

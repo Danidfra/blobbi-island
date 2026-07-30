@@ -1092,6 +1092,135 @@ export function officialItemByAddress(
   return ADDRESSED_OFFICIAL_ITEMS.find((i) => i.address === address) ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Official COSMETICS (wearable accessories)
+//
+// A SECOND IDENTITY LIST, DELIBERATELY NOT A SECOND CATALOG.
+//
+// Cosmetics are official kind:31632 definitions signed by the same issuer, and
+// they resolve through the SAME catalog query and the SAME cache as consumables
+// (`useItemCatalog`). What they are not is CARE ITEMS, and that is why they are
+// not entries in `OFFICIAL_ITEM_DEFINITIONS`:
+//
+//   - `CONSUMABLE_ITEM_CATEGORIES` is derived from `ITEM_CATEGORIES` BY
+//     EXCLUSION (everything that is not `currency`). Adding a `headwear`
+//     category to make a hat expressible would therefore also declare hats
+//     consumable, and `shop-catalog.ts` would start treating them as sellable
+//     care items.
+//   - Every field that list requires — `action`, `stages`, `effects` — is
+//     meaningless for a hat, so each entry would carry three null/empty fields
+//     asserting something the item does not do.
+//
+// WHAT THIS LIST HOLDS is identity plus a minimal fallback projection, and
+// nothing else. The published definition remains authoritative for category,
+// rarity, description, topics, contexts and every image view; those fields are
+// deliberately ABSENT here so they cannot drift. `name`, `symbol` and
+// `primaryImage` exist for exactly one situation — the definition could not be
+// fetched — and a fetched definition always outranks them
+// (see `useItemCatalog`).
+//
+// The `slot` is NOT stored: it is inferred from `legacyCode`'s prefix, so the
+// mapping and the slot can never disagree with each other. Whether that inferred
+// slot matches the definition's own `visual.slot` is a real question, and it is
+// answered at runtime by the Item Studio's activation diagnostics rather than by
+// a third copy of the value here.
+// ---------------------------------------------------------------------------
+
+/**
+ * An official wearable cosmetic: its canonical `d`, the legacy accessory code it
+ * is equipped as, and the little that must survive a relay outage.
+ */
+export interface OfficialCosmeticDefinition {
+  /** The kind:31632 `d` tag. Canonical identity together with the issuer. */
+  d: string;
+  /**
+   * The legacy accessory `code` this cosmetic is worn as.
+   *
+   * Equipment is still expressed by the pre-existing `equip` tag vocabulary
+   * (see `src/components/blobbi/lib/accessory-types.ts`), which identifies an
+   * accessory by bare code and carries its placement. This field is the join
+   * between that vocabulary and the item protocol; it is NOT a claim that the
+   * player owns or has equipped the item.
+   */
+  legacyCode: string;
+  /** Display name — FALLBACK ONLY. The published `name` tag wins. */
+  name: string;
+  /** Emoji shown when no artwork loads — FALLBACK ONLY. */
+  symbol: string;
+  /**
+   * The published primary (unmarked) `image` URL — FALLBACK ONLY, and `null`
+   * until the definition is published.
+   *
+   * Recorded for the same reason `ARCADE_TICKET_IMAGE_URL` is: so a compact UI
+   * still draws the right picture when the catalog query fails. Pose-specific
+   * views (`front`/`back`/side) are never recorded here — they only ever come
+   * from a fetched definition.
+   */
+  primaryImage: string | null;
+  status: OfficialItemStatus;
+}
+
+/**
+ * Every official cosmetic this client recognises.
+ *
+ * An entry here does not grant, equip or price anything. It states that a `d` is
+ * an official cosmetic identity and which legacy code wears it.
+ */
+export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[] =
+  [
+    {
+      d: 'blobbi:cosmetic:block-builder-cap',
+      // TRANSITIONAL CODE. No pre-existing accessory code described this cap —
+      // the legacy series is numeric (`headwear-1` … `headwear-21`, each backed
+      // by a `public/assets/.../headwear/headwear-N.png`). A slug rather than
+      // `headwear-22` on purpose: the numeric series is the LOCAL ARTWORK
+      // series, and taking the next number would both imply a local file that
+      // does not exist and collide with the next hat that does ship one. The
+      // slug still matches `ACCESSORY_CODE_PATTERN` and still infers the
+      // `headwear` slot from its prefix, so every existing parser accepts it
+      // unchanged.
+      legacyCode: 'headwear-block-builder-cap',
+      name: 'Block Builder Cap',
+      symbol: '🧢',
+      // The unmarked `image` tag of the published definition, verified against
+      // wss://relay.ditto.pub. The `front` view happens to carry the same URL;
+      // the marked views are read from the definition, never from here.
+      primaryImage:
+        'https://blossom.primal.net/11ed179592981472e25b9a327d8c6bfd55b7a3bae0a8d805e071b8ba4e47d1dc.webp',
+      // ACTIVE: the issuer-signed kind:31632 event was fetched back from
+      // wss://relay.ditto.pub with a valid signature. NOTE it was NOT found on
+      // wss://relay.dreamith.to — see docs/accessory-definition-migration.md.
+      status: 'active',
+    },
+  ];
+
+/** An official cosmetic plus its derived canonical address. */
+export interface AddressedOfficialCosmetic extends OfficialCosmeticDefinition {
+  /** `31632:<issuer>:<d>`, derived — never hardcoded. */
+  address: string;
+}
+
+/** Every official cosmetic, with its address derived from issuer + `d`. */
+export const ADDRESSED_OFFICIAL_COSMETICS: readonly AddressedOfficialCosmetic[] =
+  OFFICIAL_COSMETIC_DEFINITIONS.map((item) => ({
+    ...item,
+    address: officialItemAddress(item.d),
+  }));
+
+/** Look up an official cosmetic by its `d` tag. */
+export function officialCosmeticByD(
+  d: string,
+): AddressedOfficialCosmetic | null {
+  return ADDRESSED_OFFICIAL_COSMETICS.find((i) => i.d === d) ?? null;
+}
+
+/** Look up an official cosmetic by its canonical address. */
+export function officialCosmeticByAddress(
+  address: string,
+): AddressedOfficialCosmetic | null {
+  return ADDRESSED_OFFICIAL_COSMETICS.find((i) => i.address === address) ?? null;
+}
+
 /**
  * The recovery boundary this registry guarantees — and the one it explicitly
  * does not. Rendered verbatim into the generated document so the two can never

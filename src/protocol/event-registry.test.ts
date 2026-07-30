@@ -343,8 +343,13 @@ describe('issuer material', () => {
   });
 
   it('contains no 64-hex string other than the issuer public key', () => {
+    // Blossom is content-addressed, so official artwork URLs legitimately carry
+    // a 64-hex sha256 AS A PATH SEGMENT (`https://…/<sha256>.webp`). That is the
+    // hash of a public image, not key material, so a hex immediately preceded by
+    // `/` is exempt. Every other 64-hex run must still be the issuer's PUBLIC
+    // key — which is what makes an accidentally-pasted nsec or event id fail.
     for (const source of [registrySource, generatedDoc]) {
-      const hexes = source.match(/\b[0-9a-f]{64}\b/g) ?? [];
+      const hexes = source.match(/(?<!\/)\b[0-9a-f]{64}\b/g) ?? [];
       for (const hex of hexes) {
         expect(hex).toBe(OFFICIAL_ITEM_ISSUER_PUBKEY);
       }

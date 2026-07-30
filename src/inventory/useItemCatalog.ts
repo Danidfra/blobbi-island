@@ -15,19 +15,26 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { NRelay1 } from '@nostrify/nostrify';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useAppContext } from '@/hooks/useAppContext';
+
+import { dedupeRelayUrls, queryRelays } from './relay-fan-out';
 
 import {
   KIND_GAME_ITEM_DEFINITION,
   OFFICIAL_ITEM_ISSUER_PUBKEY,
   OFFICIAL_ITEM_RELAYS,
 } from './package';
-import { OFFICIAL_ITEM_ADDRESSES, OFFICIAL_ITEM_D_TAGS } from './registry';
+import {
+  OFFICIAL_COSMETIC_ADDRESSES,
+  OFFICIAL_COSMETIC_D_TAGS,
+  OFFICIAL_ITEM_ADDRESSES,
+  OFFICIAL_ITEM_D_TAGS,
+} from './registry';
 import {
   type ResolvedBlobbiItemDefinition,
+  bundledCosmeticFallbackDefinition,
   bundledFallbackDefinition,
 } from './catalog-fallback';
 import {
@@ -47,6 +54,10 @@ export interface ItemCatalog {
   fetchedCount: number;
   /** Total official items. */
   totalCount: number;
+  /** How many official COSMETICS were resolved from a fetched 31632. */
+  cosmeticsFetched: number;
+  /** Total official cosmetics. */
+  cosmeticsTotal: number;
 }
 
 /**
@@ -57,37 +68,22 @@ async function fetchOfficialDefinitions(
   relayUrls: string[],
   signal: AbortSignal,
 ): Promise<Map<string, GameItemDefinition>> {
+  // ONE filter covering consumables AND cosmetics. They are separate identity
+  // lists but the same issuer, the same kind and the same cache, so splitting
+  // them would buy nothing and cost a second round trip per relay — and the
+  // accessory path explicitly must not add a query per Blobbi or per accessory.
   const filter = {
     kinds: [KIND_GAME_ITEM_DEFINITION],
     authors: [OFFICIAL_ITEM_ISSUER_PUBKEY],
-    '#d': [...OFFICIAL_ITEM_D_TAGS],
+    '#d': [...OFFICIAL_ITEM_D_TAGS, ...OFFICIAL_COSMETIC_D_TAGS],
   };
 
   // Query each relay in parallel with a bounded timeout; tolerate failures.
-  const perRelayEvents = await Promise.all(
-    relayUrls.map(async (url) => {
-      let relay: NRelay1 | undefined;
-      try {
-        relay = new NRelay1(url);
-        const relaySignal = AbortSignal.any([
-          signal,
-          AbortSignal.timeout(4000),
-        ]);
-        const events = await relay.query([filter], { signal: relaySignal });
-        return events;
-      } catch {
-        return [] as NostrEvent[];
-      } finally {
-        try {
-          await relay?.close();
-        } catch {
-          // ignore close errors
-        }
-      }
-    }),
-  );
+  // The fan-out itself lives in `relay-fan-out.ts`, shared with the game item
+  // tools so there is one multi-relay implementation rather than several.
+  const outcomes = await queryRelays(relayUrls, [filter], { signal });
 
-  return selectNewestValidDefinitions(perRelayEvents);
+  return selectNewestValidDefinitions(outcomes.map((o) => o.events));
 }
 
 /**
@@ -138,9 +134,10 @@ export function useItemCatalog() {
     queryFn: async (c): Promise<ItemCatalog> => {
       // Prefer official relays; also include the configured relay as an
       // additional source. De-duplicate while preserving order.
-      const relayUrls = Array.from(
-        new Set([...OFFICIAL_ITEM_RELAYS, config.relayUrl].filter(Boolean)),
-      );
+      const relayUrls = dedupeRelayUrls([
+        ...OFFICIAL_ITEM_RELAYS,
+        config.relayUrl,
+      ]);
 
       let fetched = new Map<string, GameItemDefinition>();
       try {
@@ -163,10 +160,28 @@ export function useItemCatalog() {
         }
       }
 
+      // Cosmetics resolve into the SAME map, so `useAccessoryItemDefinitions`
+      // and every consumable consumer read one catalog. They are counted
+      // separately because `fetchedCount`/`totalCount` are the CARE-item
+      // coverage figures the existing UI reports, and folding hats into them
+      // would silently change what those numbers mean.
+      let cosmeticsFetched = 0;
+      for (const address of OFFICIAL_COSMETIC_ADDRESSES) {
+        const def = fetched.get(address);
+        if (def) {
+          byAddress.set(address, resolveFromDefinition(def));
+          cosmeticsFetched += 1;
+        } else {
+          byAddress.set(address, bundledCosmeticFallbackDefinition(address)!);
+        }
+      }
+
       return {
         byAddress,
         fetchedCount,
         totalCount: OFFICIAL_ITEM_ADDRESSES.length,
+        cosmeticsFetched,
+        cosmeticsTotal: OFFICIAL_COSMETIC_ADDRESSES.length,
       };
     },
     // Definitions are effectively static; cache aggressively.

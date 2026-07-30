@@ -268,3 +268,34 @@ and there is no relay rollback after a partial success.
   generic **Item Bag** (`ItemBagModal`, opened from the 🎒 button in
   `PlayingView`), which lists all owned inventory grouped by category and uses
   the shared consume modal. The shop lists all five categories.
+
+## Authoring and inspection tooling
+
+Item definitions are authored, published and inspected through the internal
+Game Item Tools at `/tools/game-items`. See
+[`game-item-tools.md`](./game-item-tools.md) for the route's access policy, the
+publish flow, unknown-tag preservation, and the read-only inventory inspector.
+
+The "bunker / republication service" note above is unchanged: that page signs
+with the user's existing account and stores no key.
+
+## Official cosmetics
+
+Wearable accessories are official kind:31632 definitions from the same issuer,
+resolved through the **same** `useItemCatalog` query and cache as consumables —
+one query, one cache, no per-accessory or per-Blobbi fetch.
+
+They are a **separate identity list** (`OFFICIAL_COSMETIC_DEFINITIONS`) rather
+than entries in `OFFICIAL_ITEM_DEFINITIONS`, because `CONSUMABLE_ITEM_CATEGORIES`
+is derived from `ITEM_CATEGORIES` by exclusion: adding a `headwear` category
+would declare hats consumable and make them sellable in the coin shop. Cosmetics
+also have no meaningful `action`, `stages` or `effects` — `action: null` is what
+keeps them out of every care flow.
+
+Their bundled fallback (`bundledCosmeticFallbackDefinition`) is deliberately
+thinner than the consumable one: name, symbol and primary artwork only, with
+`category: 'unknown'`. Category, rarity, description, topics and pose-specific
+image views live in the published definition and nowhere else — inventing them
+offline would be the second authoritative catalog the migration exists to avoid.
+
+See [`accessory-definition-migration.md`](./accessory-definition-migration.md).

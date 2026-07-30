@@ -257,3 +257,31 @@ Explicitly **not** part of this work:
   theater;
 - redesigning the inventory or shop UI;
 - migrating legacy accessories.
+
+## 13. Authoring these images
+
+The `image` tags described here are authored and published through the internal
+Game Item Tools at `/tools/game-items` — see
+[`game-item-tools.md`](./game-item-tools.md) for the image manager, the
+primary/unmarked rule, marker suggestions from filenames, and the front/back
+preview that uses the same resolution helpers documented above.
+
+The non-goals in §12 that concern *publishing* are addressed by that tool; the
+rendering non-goals (side/diagonal poses, animation, spritesheets, 3D) still
+stand.
+
+## 14. First activated accessory
+
+The non-goal "migrating legacy accessories" in §12 is now partially addressed:
+one accessory — the **Block Builder Cap**
+(`31632:9efb8d30…63a9:blobbi:cosmetic:block-builder-cap`) — resolves its artwork
+through the `image` views documented above. Its `front` and `back` markers drive
+`itemImageSourcesForView`, and its `side-right` / `side-left` markers are parsed
+and reachable but never posed, exactly as §"why side/diagonal are not
+substituted" describes.
+
+Everything else in §12 still stands: no Grant, no Placement, no runtime fetch to
+build a source list, no side-facing Blobbi poses. The remaining 24 legacy
+accessories are unpublished and resolve through the legacy chain unchanged.
+
+See [`accessory-definition-migration.md`](./accessory-definition-migration.md).

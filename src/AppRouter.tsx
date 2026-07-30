@@ -8,6 +8,21 @@ const MultiplayerDemo = lazy(() => import("./pages/MultiplayerDemo").then(m => (
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /**
+ * Internal Game Item authoring tools (`/tools/game-items`).
+ *
+ * Unlike the `/dev/*` harnesses below, this route SHIPS in production builds.
+ * It is unlinked from the game's navigation, but that is discoverability rather
+ * than a boundary — publishing an item definition requires a signature from an
+ * account the user already controls, and the catalog rejects definitions from
+ * any issuer but the official one regardless of which client produced them.
+ * Gating the route on `import.meta.env.DEV` would only stop the issuer from
+ * publishing from the deployed site. See `docs/game-item-tools.md`.
+ */
+const GameItemTools = lazy(() =>
+  import("./pages/GameItemTools").then(m => ({ default: m.GameItemTools }))
+);
+
+/**
  * Development-only harnesses.
  *
  * `import.meta.env.DEV` is replaced by a literal `false` in a production build,
@@ -53,6 +68,11 @@ export function AppRouter() {
         <Route path="/multiplayer-demo" element={
           <Suspense fallback={<PageLoading />}>
             <MultiplayerDemo />
+          </Suspense>
+        } />
+        <Route path="/tools/game-items" element={
+          <Suspense fallback={<PageLoading />}>
+            <GameItemTools />
           </Suspense>
         } />
         {DevTheater && (

@@ -16,7 +16,11 @@
  * `@nostr-games/inventory`.
  */
 
-import { ADDRESSED_OFFICIAL_ITEMS } from '@/protocol/event-registry';
+import {
+  ADDRESSED_OFFICIAL_COSMETICS,
+  ADDRESSED_OFFICIAL_ITEMS,
+  type AddressedOfficialCosmetic,
+} from '@/protocol/event-registry';
 
 /** A fully-resolved registry entry. */
 export interface RegistryEntry {
@@ -94,4 +98,57 @@ export function getRegistryEntryByItemId(itemId: string): RegistryEntry | null {
 /** Is this address one of the official Blobbi item addresses? */
 export function isOfficialItemAddress(address: string): boolean {
   return byAddress.has(address);
+}
+
+// --- Official cosmetics ---------------------------------------------------
+//
+// Projected from the same canonical registry, kept in its own set of exports
+// because cosmetics are not care items and must never leak into the shop, the
+// care flows or the consumable counts. See the `OFFICIAL_COSMETIC_DEFINITIONS`
+// note in `src/protocol/event-registry.ts` for why they are a separate list.
+
+const COSMETIC_ENTRIES = ADDRESSED_OFFICIAL_COSMETICS;
+
+/** All official cosmetic addresses (canonical identities). */
+export const OFFICIAL_COSMETIC_ADDRESSES: readonly string[] =
+  COSMETIC_ENTRIES.map((e) => e.address);
+
+/** All official cosmetic `d` tags, for constructing relay filters. */
+export const OFFICIAL_COSMETIC_D_TAGS: readonly string[] = COSMETIC_ENTRIES.map(
+  (e) => e.d,
+);
+
+const cosmeticByDTag = new Map(COSMETIC_ENTRIES.map((e) => [e.d, e]));
+const cosmeticByLegacyCode = new Map(
+  COSMETIC_ENTRIES.map((e) => [e.legacyCode, e]),
+);
+
+/**
+ * Resolve a cosmetic `d` tag to its full canonical address, or `null`.
+ *
+ * `null` for any `d` this repository has not declared official. The address is
+ * always built from the official issuer, so this can never produce an address
+ * belonging to another author.
+ */
+export function cosmeticDTagToAddress(d: string): string | null {
+  return cosmeticByDTag.get(d)?.address ?? null;
+}
+
+/** The official cosmetic worn as `code`, or `null`. */
+export function cosmeticByCode(
+  code: string,
+): AddressedOfficialCosmetic | null {
+  return cosmeticByLegacyCode.get(code) ?? null;
+}
+
+const cosmeticAddresses = new Set(OFFICIAL_COSMETIC_ADDRESSES);
+
+/**
+ * Is this address one of the official Blobbi cosmetic addresses?
+ *
+ * Compares the WHOLE address, not the `d` tail: `31632:<stranger>:<same-d>` is
+ * a different item by a different author, and must answer `false`.
+ */
+export function isOfficialCosmeticAddress(address: string): boolean {
+  return cosmeticAddresses.has(address);
 }

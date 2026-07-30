@@ -77,13 +77,19 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {!inFrame && !hideDefaultClose && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <button
-            className="absolute top-0 right-1 text-white bg-black/50 rounded-full p-1.5 hover:bg-black/75 transition-colors"
-            aria-label="Close"
-          >
-            <X className="size-5" />
-          </button>
+        // ONE element, not two. `DialogPrimitive.Close` already renders a
+        // `<button>`; wrapping a second `<button>` inside it produced invalid
+        // DOM (`validateDOMNesting: <button> cannot appear as a descendant of
+        // <button>`), two overlapping hit targets and two accessible names.
+        //
+        // The merged geometry is the OLD geometry: the outer Close was a
+        // zero-width box pinned at `right-4 top-4` (both its children were out
+        // of flow), and the visible circle sat at `right-1` inside it — i.e.
+        // 1rem + 0.25rem = 1.25rem from the content edge. Hence `right-5`.
+        // `transition` replaces the pair `transition-opacity` (outer) and
+        // `transition-colors` (inner) now that one element owns both.
+        <DialogPrimitive.Close className="absolute right-5 top-4 rounded-full p-1.5 text-white bg-black/50 opacity-70 ring-offset-background transition hover:opacity-100 hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+          <X className="size-5" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       )}
