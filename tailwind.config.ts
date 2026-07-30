@@ -13,8 +13,14 @@ export default {
 		// still override it through `className` via tailwind-merge. Those classes
 		// live in the workspace package, so the JIT scanner must see it or every
 		// Blobbi renders in a zero-sized box.
+		//
+		// Named explicitly rather than globbed as `packages/*`: only packages the
+		// production bundle actually renders belong in the production CSS scan.
+		// `packages/blobbi-react-consumer` is a test-only fixture, and letting its
+		// class names reach the shipped stylesheet would be dead weight nobody
+		// notices. A new renderer package is a deliberate line here.
 		// Asserted by packages/blobbi-react/src/package-css.test.ts.
-		"./packages/*/src/**/*.{ts,tsx}",
+		"./packages/blobbi-react/src/**/*.{ts,tsx}",
 	],
 	prefix: "",
 	theme: {

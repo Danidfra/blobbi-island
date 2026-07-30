@@ -299,10 +299,33 @@ anchors and interaction affordances.
 
 ## 11. Publication status
 
-Local and private. `package.json` sets `"private": true`, and
-`package-purity.test.ts` asserts it.
+**This package is a LOCAL, PRIVATE workspace package and must not be published
+under its current identity.** `package.json` sets `"private": true`,
+`package-purity.test.ts` asserts it, and the CI pipeline builds the package but
+never publishes it. `@blobbi/react` is a placeholder identity chosen so the
+extraction could happen without shadowing the already-installed
+`@blobbi-kit/react`; the final scope is an open decision (blocker 4 below).
+Nothing may be released until that decision is made.
 
-Known blockers before this could be published to npm:
+### Dependency policy — decided vs. open
+
+The current manifest declares **everything** as a peer dependency. That is the
+right default for a workspace package consumed from source by exactly one
+application, and the wrong default for a published one. What each entry should
+become:
+
+| Dependency | Now | On publication | Why |
+| --- | --- | --- | --- |
+| `react` | peer | **stays a peer** — decided | React is a singleton. Bundling or hard-depending on it gives a consumer two copies, two dispatchers, and hooks that throw. This repository already dedupes React in `vite.config.ts` for the same reason. Not an open question. |
+| `clsx` | peer | **should likely become a dependency** | An implementation detail of `internal/cn.ts`, not part of the contract. A consumer has no reason to install it, and no reason to care which version resolves — nothing is shared across the boundary. ~0.5 kB. |
+| `tailwind-merge` | peer | **should likely become a dependency** | Same reasoning, with one caveat worth checking before flipping: `tailwind-merge` semantics *are* part of the public contract (callers override the canonical box through `className`, §7), and a consumer on a very different Tailwind major could want to pin it. Ship as a dependency unless that turns out to matter in practice. |
+| `@blobbi-kit/core` | peer | **undecided — not this repository's call** | Used for one subpath (`color-guardrails`, in the adult SVG customizer). Whether it is a peer or a dependency depends on how the `blobbi-kit` repository versions and releases its own packages, and on whether this package ends up living inside that repository. **That policy must be decided in the real `blobbi-kit` repository, not here.** |
+
+Neither `clsx` nor `tailwind-merge` is changed now: as peers they resolve from
+the application's own `node_modules`, which is correct while the package is
+workspace-local, and moving them early would add hoisting noise for no benefit.
+
+### Known blockers before this could be published to npm
 
 1. **Extensionless relative specifiers in `dist/`.** The build uses `tsc` with
    `moduleResolution: "bundler"` (required to resolve
@@ -314,10 +337,14 @@ Known blockers before this could be published to npm:
    a release must flip it to `./dist/index.js` + `./dist/index.d.ts` and add the
    build to a `prepublishOnly` hook.
 3. **Bundle size / tree-shaking.** All adult forms load together (§6).
-4. **Package name.** `@blobbi` is not a scope this project owns on npm, and the
-   adjacent published packages use `@blobbi-kit`. A release would need to settle
-   whether this becomes `@blobbi-kit/react`'s render entry point or claims its
-   own scope.
-5. **CSS contract is documentation, not code.** A published package would want
+4. **Package identity is not settled.** `@blobbi` is not a scope this project
+   owns on npm, and the adjacent published packages use `@blobbi-kit`. A release
+   must first settle whether this becomes `@blobbi-kit/react`'s render entry
+   point or claims its own scope. Until then the name is local-only and the
+   package stays `private`.
+5. **Dependency policy.** `clsx` and `tailwind-merge` should move from peer to
+   regular dependencies, and the `@blobbi-kit/core` peer-vs-dependency question
+   belongs to the `blobbi-kit` repository. See the table above.
+6. **CSS contract is documentation, not code.** A published package would want
    to ship an optional stylesheet for the three decoration classes rather than
    describing them in a README.

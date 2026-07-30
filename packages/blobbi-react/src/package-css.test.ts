@@ -27,6 +27,24 @@ const REPO_ROOT = resolve(PACKAGE_ROOT, '../..');
 /** Tailwind's spacing scale is 0.25rem per step at the default 16px root. */
 const TAILWIND_STEP_PX = 4;
 
+/**
+ * The consuming application's `content` globs — the actual scan list, with
+ * comments stripped, so an assertion about what Tailwind SEES is not fooled by
+ * a comment that merely mentions a path.
+ */
+function contentGlobs(): string[] {
+  const config = readFileSync(join(REPO_ROOT, 'tailwind.config.ts'), 'utf8');
+  const block = config.slice(config.indexOf('content:'));
+  const array = block.slice(block.indexOf('['), block.indexOf(']') + 1);
+  // Drop whole comment LINES only. A blanket comment-strip cannot be used here:
+  // `/**/` inside a glob like `./src/**/*.tsx` parses as an empty block comment
+  // and silently eats the path.
+  return array
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .flatMap((line) => [...line.matchAll(/["']([^"']+)["']/g)].map((match) => match[1]));
+}
+
 describe('the canonical box is delivered as scannable Tailwind classes', () => {
   it('states every class as a literal the JIT scanner can find', () => {
     const source = readFileSync(join(PACKAGE_ROOT, 'src/blobbi-render-size.ts'), 'utf8');
@@ -52,8 +70,26 @@ describe('the canonical box is delivered as scannable Tailwind classes', () => {
     const config = readFileSync(join(REPO_ROOT, 'tailwind.config.ts'), 'utf8');
     expect(
       config,
-      'tailwind.config.ts must include packages/*/src or the box collapses to 0×0',
-    ).toContain('./packages/*/src/**/*.{ts,tsx}');
+      'tailwind.config.ts must scan this package or the box collapses to 0×0',
+    ).toContain('./packages/blobbi-react/src/**/*.{ts,tsx}');
+  });
+
+  it('does not scan the test-only consumer fixture into production CSS', () => {
+    // The fixture package exists to prove this one is usable from outside; its
+    // class names are not shipped UI. A `packages/*` glob would sweep it (and
+    // every future test package) into the production stylesheet silently, so
+    // the config names the renderer package explicitly instead.
+    //
+    // Asserted over the GLOBS, not the file text: the config's comments discuss
+    // the fixture by name on purpose, and a comment scans nothing.
+    const globs = contentGlobs();
+    expect(globs, 'a packages/* glob would pull in test fixtures').not.toContain(
+      './packages/*/src/**/*.{ts,tsx}',
+    );
+    expect(
+      globs.filter((glob) => glob.includes('packages/')),
+      'only the renderer package may be scanned',
+    ).toEqual(['./packages/blobbi-react/src/**/*.{ts,tsx}']);
   });
 
   it('emits only the three optional decoration classes beyond Tailwind utilities', () => {

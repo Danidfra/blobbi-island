@@ -559,6 +559,13 @@ The single intentional behavior difference is the accessory-ownership fix in
 Publication blockers are listed in
 [`packages/blobbi-react/README.md`](../packages/blobbi-react/README.md#11-publication-status):
 extensionless relative specifiers in `dist/` (needs an extension-rewriting build
-step), `exports` pointing at source, artwork bundle size, the npm scope
-question, and the CSS contract being documentation rather than a shipped
-stylesheet.
+step), `exports` pointing at source, artwork bundle size, the unsettled package
+identity, dependency policy (`react` stays a peer; `clsx` and `tailwind-merge`
+should become dependencies; the `@blobbi-kit/core` question belongs to the
+`blobbi-kit` repository), and the CSS contract being documentation rather than a
+shipped stylesheet.
+
+CI validates the package the way a consumer would receive it — `npm ci` from the
+lockfile, standalone workspace typechecks, every suite including the external
+consumer fixture, and the publishable `dist/` build — on every branch. It never
+publishes.
