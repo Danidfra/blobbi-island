@@ -16,12 +16,13 @@
  * size token, shared by body and accessories (see lib/blobbi-render-size.ts
  * and docs/blobbi-renderer-contract.md).
  */
-import { useRef } from "react";
+import { useId } from "react";
 import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { cn } from "@/lib/utils";
 import { BlobbiRendererView, type BlobbiRenderVisual } from "./BlobbiRendererView";
+import { DEFAULT_STAGE } from "./lib/blobbi-render-model";
 import { normalizeAccessoryPlacements } from "./lib/accessory-normalize";
 import { useAccessoryManagement } from "./hooks/useAccessoryManagement";
 import { BLOBBI_RENDER_SIZE_CLASSES, type BlobbiRenderSize } from "./lib/blobbi-render-size";
@@ -76,10 +77,16 @@ export function CurrentBlobbiDisplay({
   eyeOffset,
   facing = "front",
 }: CurrentBlobbiDisplayProps) {
-  const scopeIdRef = useRef<string>(
-    idSuffix ??
-    `bb-${(visualOverride?.name ?? 'blobbi')}-${Math.random().toString(36).slice(2, 8)}`
-  );
+  // SVG id namespace for this instance. A caller-supplied `idSuffix` always
+  // wins — remote actors and tests depend on a stable, meaningful id.
+  //
+  // The fallback is `useId()` rather than `Math.random()`: React guarantees it
+  // is unique per component instance AND identical between a server render and
+  // its hydration, so multiple Blobbis on one page still cannot share gradient
+  // ids while the renderer stays safe to server-render later. (`useId` returns
+  // e.g. `:r3:`; the punctuation is normalized away by the render model.)
+  const generatedId = useId();
+  const scopeId = idSuffix ?? `bb${generatedId}`;
 
   // Local-player data. These hooks are the reason this wrapper exists — the
   // pure renderer below must never call them.
@@ -113,7 +120,9 @@ export function CurrentBlobbiDisplay({
     const displayName = currentBlobbi
       ? getBlobbiDisplayName(currentBlobbi)
       : (visualOverride?.name || 'Remote Blobbi');
-    const stage = visual.stage || 'baby';
+    // The renderer resolves its own stage; this is only the tooltip's copy of
+    // the same answer, so it reads the shared default instead of restating it.
+    const stage = visual.stage || DEFAULT_STAGE;
     const accessories = showAccessories
       ? normalizeAccessoryPlacements(equipment ?? [], { facing })
       : [];
@@ -121,7 +130,7 @@ export function CurrentBlobbiDisplay({
     return (
       <BlobbiRendererView
         visual={visual}
-        instanceId={scopeIdRef.current}
+        instanceId={scopeId}
         size={size}
         isSleeping={isSleeping}
         eyesClosed={eyesClosed}

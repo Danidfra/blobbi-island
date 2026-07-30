@@ -89,6 +89,13 @@ Same props in → same geometry out, whoever mounts it.
 (body SVG + accessory overlays inside the canonical square renderer box, see
 `docs/blobbi-renderer-contract.md`). Unchanged by Phase 3.
 
+Phase 4 made its purity enforceable rather than conventional: all defaulting
+moved into one pure `normalizeBlobbiRenderModel`, accessory image sources are
+resolved by an injectable adapter instead of an Island asset path baked into the
+renderer, and the whole transitive import graph is asserted by
+`src/components/blobbi/renderer-boundary.test.ts`. See
+`docs/blobbi-package-readiness.md`.
+
 ## 6. Approach targets
 
 `src/lib/approach-target.ts` — the ONE implementation of "resolve where the
@@ -230,12 +237,16 @@ converts wire coordinates.
 
 ## 14. What could later move into a shared library
 
-Pure, Island-agnostic modules with no React or room dependencies:
-`world-coordinates.ts`, `boundaries.ts`, `spatial-intent.ts`, the arrival
-model in `blobbi-ground.ts`, and (with the renderer contract)
-`blobbi-render-size.ts` / `BlobbiRendererView`. The pose union and
-`approach-target.ts` are near-portable but currently bind to Island config
-(`blobbi-world-render`, `[data-world-surface]`).
+For the **renderer**, this question is answered in full — with a dependency
+map, the proposed public API, and a readiness verdict — in
+`docs/blobbi-package-readiness.md` (Phase 4). Do not duplicate that analysis
+here.
+
+The remaining near-portable actor-side modules: `world-coordinates.ts`,
+`boundaries.ts`, `spatial-intent.ts`, and the arrival model in
+`blobbi-ground.ts`. The pose union and `approach-target.ts` are close but
+currently bind to Island config (`blobbi-world-render`,
+`[data-world-surface]`).
 
 ## 15. What must remain Blobbi Island-specific
 
@@ -247,6 +258,7 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 ## Related documents
 
 - `docs/blobbi-renderer-contract.md` — renderer box + accessory space (Phase 1)
+- `docs/blobbi-package-readiness.md` — renderer extraction boundary + future package API (Phase 4)
 - `docs/blobbi-ground-anchor-implementation.md` — ground-anchor derivation (Phase 2)
 - `docs/blobbi-actor-position-migration-notes.md` — center→ground migration
 - `docs/blobbi-actor-ui-audit.md` — the original audit that motivated Phases 0–3

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { loadBlobbiSvg } from "@/lib/loadBlobbiSvg";
+import { normalizeBlobbiRenderModel } from "./lib/blobbi-render-model";
 import { cn } from "@/lib/utils";
 import { Check, Sparkles } from "lucide-react";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
@@ -30,18 +31,20 @@ export function BlobbiCard({
   onConfirm,
 }: BlobbiCardProps) {
   const svgContent = useMemo(() => {
-    const adultType = blobbi.stage === "adult"
-      ? blobbi.adultType || "bloomi"
-      : undefined;
+    // Shares the ONE stage/adult-type/id rule with the pure renderer rather
+    // than restating it: this card builds its own SVG (it needs no accessory
+    // layers or gaze), but a card must never disagree with the world about
+    // which drawing a Blobbi has.
+    const model = normalizeBlobbiRenderModel({ visual: blobbi, instanceId: blobbi.id });
 
     return loadBlobbiSvg(
-      blobbi.stage,
-      adultType,
-      blobbi.baseColor,
-      blobbi.secondaryColor,
-      blobbi.eyeColor,
-      false,
-      blobbi.id,
+      model.stage,
+      model.adultType,
+      model.baseColor,
+      model.secondaryColor,
+      model.eyeColor,
+      model.eyesClosed,
+      model.instanceId,
     );
   }, [blobbi.stage, blobbi.adultType, blobbi.baseColor, blobbi.secondaryColor, blobbi.eyeColor, blobbi.id]);
 

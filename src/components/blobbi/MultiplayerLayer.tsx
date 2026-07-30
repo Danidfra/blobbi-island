@@ -31,6 +31,7 @@ import {
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 import { BlobbiRendererView } from './BlobbiRendererView';
+import { DEFAULT_STAGE } from './lib/blobbi-render-model';
 import { BlobbiActor } from './BlobbiActor';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
@@ -206,7 +207,7 @@ function RemoteBlobbiSprite({
       className={cn(isMoving && "scale-105")}
       eyeOffset={eyeOffset}
       facing={facing}
-      title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || 'baby'} stage`}
+      title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
     />
   );
 }
@@ -1581,7 +1582,14 @@ export function MultiplayerLayer({
         // sprite, no ground shadow, no name label — so nothing of their Blobbi
         // exists in the DOM while hidden. The anchor stays so their chat bubbles
         // still have somewhere to portal into.
-        const isHiddenInSpot = !!player.hiddenIn;
+        //
+        // Read from the RESOLVED presentation, not from `player.hiddenIn`
+        // directly: `resolveActorRender` is the single source of visual truth
+        // for both wrappers (the local `MovableBlobbi` already reads
+        // `render.visualHidden`), so the two paths cannot drift if the pose →
+        // visual mapping ever gains a case. Presence interpretation is
+        // unchanged — `hiddenIn` still, and only, produces the hidden pose above.
+        const isHiddenInSpot = render.visualHidden;
 
         return (
           <BlobbiActor
@@ -1593,7 +1601,7 @@ export function MultiplayerLayer({
             zIndex={dynamicZIndex}
             seatedIn={render.seatedIn}
             hiddenIn={render.hiddenIn}
-            visualHidden={isHiddenInSpot}
+            visualHidden={render.visualHidden}
             hideShadow={render.hideShadow}
             disableFloat={render.disableFloat}
             // Remote positions are integrated per-frame by the presence rAF —

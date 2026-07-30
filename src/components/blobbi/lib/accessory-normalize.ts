@@ -22,7 +22,10 @@
 
 import type { AccessorySlot, EquipmentConfig } from './accessory-types';
 import { REAR_VIEW_HIDDEN_SLOTS } from './accessory-types';
-import { generateAccessoryUrl } from './accessory-utils';
+import {
+  islandAccessorySources,
+  type AccessorySourceResolver,
+} from './island-accessory-sources';
 
 /** Which side of the body an accessory paints on. */
 export type AccessoryLayer = 'behind' | 'front';
@@ -75,11 +78,44 @@ export interface NormalizedAccessoryPlacement {
   scale: number;
   rotationDeg: number;
   flipX: boolean;
+  /** The URL painted first. Equal to `sources[0]` whenever a source exists. */
   imageUrl: string;
+  /**
+   * Ordered candidate image URLs (see {@link AccessorySourceResolver}): the
+   * renderer paints the first and advances on load failure. Pre-resolved here
+   * so the DOM renderer never builds an asset path itself.
+   */
+  sources: readonly string[];
 }
 
 function slotRank(slot: AccessorySlot): number {
   return ACCESSORY_SLOT_RANK[slot] ?? UNKNOWN_SLOT_RANK;
+}
+
+/**
+ * Guards for numbers that reach CSS. Stored equipment is external data (relay
+ * tags, and a drag editor that does its own arithmetic), so a missing, NaN or
+ * Infinite value must resolve to something renderable rather than emit
+ * `left: NaN%` / `scale(Infinity)` — which browsers drop, silently teleporting
+ * or erasing an accessory.
+ */
+function finiteOr(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/** Scale additionally rejects zero/negative: both make the accessory invisible. */
+function positiveScaleOr(value: number, fallback: number): number {
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+export interface NormalizeAccessoryOptions {
+  facing?: 'front' | 'back';
+  /**
+   * How an accessory maps to image URLs. Defaults to Blobbi Island's asset
+   * layout; a future package consumer injects its own (see
+   * `island-accessory-sources.ts`).
+   */
+  resolveSources?: AccessorySourceResolver;
 }
 
 /**
@@ -89,29 +125,37 @@ function slotRank(slot: AccessorySlot): number {
  * (layerRank, code), so the same equipment set always paints identically.
  * Rear view drops the face-only slots ({@link REAR_VIEW_HIDDEN_SLOTS}),
  * exactly as before.
+ *
+ * Numeric fields are guaranteed finite on the way out (see {@link finiteOr}),
+ * so a placement can never produce broken CSS.
  */
 export function normalizeAccessoryPlacements(
   equipment: readonly EquipmentConfig[] | undefined,
-  options: { facing?: 'front' | 'back' } = {},
+  options: NormalizeAccessoryOptions = {},
 ): NormalizedAccessoryPlacement[] {
   const facing = options.facing ?? 'front';
+  const resolveSources = options.resolveSources ?? islandAccessorySources;
 
   return (equipment ?? [])
     .filter((item) => facing !== 'back' || !REAR_VIEW_HIDDEN_SLOTS.has(item.slot))
     .map((item): NormalizedAccessoryPlacement => {
       const rank = slotRank(item.slot);
+      const sources = resolveSources({ code: item.code, slot: item.slot, url: item.url });
       return {
         id: item.code,
         code: item.code,
         slot: item.slot,
         layer: rank < 0 ? 'behind' : 'front',
         layerRank: rank,
-        xPercent: item.x,
-        yPercent: item.y,
-        scale: item.scale,
-        rotationDeg: item.rot,
-        flipX: item.flipX,
-        imageUrl: item.url || generateAccessoryUrl(item.code) || '',
+        // Centered in the box is the only neutral answer for a broken
+        // coordinate: visible, obviously wrong, and never off-screen.
+        xPercent: finiteOr(item.x, 50),
+        yPercent: finiteOr(item.y, 50),
+        scale: positiveScaleOr(item.scale, 1),
+        rotationDeg: finiteOr(item.rot, 0),
+        flipX: !!item.flipX,
+        imageUrl: sources[0] ?? '',
+        sources,
       };
     })
     .sort((a, b) => a.layerRank - b.layerRank || a.code.localeCompare(b.code));

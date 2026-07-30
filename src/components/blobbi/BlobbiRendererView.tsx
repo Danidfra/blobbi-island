@@ -19,25 +19,17 @@
 import { useMemo, type CSSProperties } from 'react';
 import { loadBlobbiSvg } from '@/lib/loadBlobbiSvg';
 import { applyGazeMarkup } from '@/blobbi/ui/lib/svg';
-import { accessoryImagePath } from '@/lib/asset-paths';
 import { cn } from '@/lib/utils';
 import {
   BLOBBI_RENDER_SIZE_CLASSES,
   ACCESSORY_BASE_PERCENT,
   type BlobbiRenderSize,
 } from './lib/blobbi-render-size';
+import { normalizeBlobbiRenderModel } from './lib/blobbi-render-model';
 import type { NormalizedAccessoryPlacement } from './lib/accessory-normalize';
 
-/** The visual identity of a Blobbi — everything the pure renderer needs. */
-export interface BlobbiRenderVisual {
-  stage?: 'egg' | 'baby' | 'adult';
-  adultType?: string;
-  baseColor?: string;
-  secondaryColor?: string;
-  eyeColor?: string;
-  /** Display name; used only for the title/tooltip. */
-  name?: string;
-}
+export type { BlobbiRenderVisual } from './lib/blobbi-render-model';
+import type { BlobbiRenderVisual } from './lib/blobbi-render-model';
 
 export interface BlobbiRendererViewProps {
   visual: BlobbiRenderVisual;
@@ -67,7 +59,14 @@ export interface BlobbiRendererViewProps {
   transparent?: boolean;
 }
 
-/** Static (non-editing) accessory image, sized as a fraction of the box. */
+/**
+ * Static (non-editing) accessory image, sized as a fraction of the box.
+ *
+ * Source selection is DATA, not policy: the placement arrives with an ordered
+ * `sources` list (resolved by the accessory normalizer's asset adapter) and
+ * this component only walks it. That is why the renderer imports no asset-path
+ * module and knows nothing about Island's `public/` layout.
+ */
 function AccessoryPlacementView({ placement }: { placement: NormalizedAccessoryPlacement }) {
   return (
     <div
@@ -90,15 +89,16 @@ function AccessoryPlacementView({ placement }: { placement: NormalizedAccessoryP
         alt={placement.code}
         className="h-full w-full max-w-none object-contain"
         draggable={false}
+        data-source-index="0"
         onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          // Fallback chain for missing images: .webp -> .png -> hide.
-          const webpPath = accessoryImagePath(placement.slot, placement.code, 'webp');
-          const pngPath = accessoryImagePath(placement.slot, placement.code, 'png');
-          if (!target.src.includes(webpPath)) {
-            target.src = webpPath;
-          } else if (!target.src.includes(pngPath)) {
-            target.src = pngPath;
+          // Advance through the candidate list, then give up and hide. The
+          // cursor lives on the element rather than in React state so a failing
+          // image costs no re-render of the Blobbi around it.
+          const target = e.currentTarget;
+          const next = Number(target.dataset.sourceIndex ?? '0') + 1;
+          target.dataset.sourceIndex = String(next);
+          if (next < placement.sources.length) {
+            target.src = placement.sources[next];
           } else {
             target.style.display = 'none';
           }
@@ -136,8 +136,6 @@ export function AccessoryLayerView({
   );
 }
 
-const clampGaze = (v: number): number => Math.max(-1, Math.min(1, v));
-
 export function BlobbiRendererView({
   visual,
   instanceId,
@@ -153,24 +151,42 @@ export function BlobbiRendererView({
   interactive = false,
   transparent = true,
 }: BlobbiRendererViewProps) {
-  const isRearFacing = facing === 'back';
-  // A rear-facing Blobbi has no pupils in its markup at all, so gaze markup is
-  // skipped outright rather than relying on `applyGazeMarkup` finding nothing.
-  const gazeEnabled = eyeOffset !== undefined && !isRearFacing;
+  // ALL defaulting, validation and clamping happens in one pure function
+  // (lib/blobbi-render-model.ts). Below this line there are no domain rules —
+  // only geometry and markup.
+  //
+  // Not memoized on purpose: it is plain object construction, and its inputs
+  // (`visual`, `accessories`, `eyeOffset`) are freshly built by callers on most
+  // renders, so a `useMemo` here would cost a dependency comparison and never
+  // hit. The EXPENSIVE work — building the SVG string — is memoized below on
+  // the resolved scalars instead.
+  const model = normalizeBlobbiRenderModel({
+    visual,
+    instanceId,
+    facing,
+    isSleeping,
+    eyesClosed,
+    eyeOffset,
+    accessories,
+  });
+
+  // Whether gaze markup must be injected. A BOOLEAN, deliberately: gaze
+  // direction changes every animation frame while a Blobbi walks or watches,
+  // and the SVG string must not be regenerated for a direction change — only
+  // the CSS variables below move.
+  const gazeEnabled = model.gaze !== null;
 
   const svgContent = useMemo(() => {
     try {
-      const stage = visual.stage || 'baby';
-      const adultType = stage === 'adult' ? visual.adultType || 'bloomi' : undefined;
       const customizedSvg = loadBlobbiSvg(
-        stage,
-        adultType,
-        visual.baseColor,
-        visual.secondaryColor,
-        visual.eyeColor,
-        isSleeping || eyesClosed,
-        instanceId,
-        isRearFacing ? 'rear' : 'front',
+        model.stage,
+        model.adultType,
+        model.baseColor,
+        model.secondaryColor,
+        model.eyeColor,
+        model.eyesClosed,
+        model.instanceId,
+        model.view,
       );
       // When gaze is enabled, mark the pupils/highlights once so they can be
       // moved via CSS variables. Static contexts (no eyeOffset) keep the SVG
@@ -181,15 +197,14 @@ export function BlobbiRendererView({
       return '';
     }
   }, [
-    visual.stage,
-    visual.adultType,
-    visual.baseColor,
-    visual.secondaryColor,
-    visual.eyeColor,
-    isSleeping,
-    eyesClosed,
-    instanceId,
-    isRearFacing,
+    model.stage,
+    model.adultType,
+    model.baseColor,
+    model.secondaryColor,
+    model.eyeColor,
+    model.eyesClosed,
+    model.instanceId,
+    model.view,
     gazeEnabled,
   ]);
 
@@ -197,10 +212,10 @@ export function BlobbiRendererView({
 
   // Gaze CSS variables on the body wrapper: only the pupils/highlights move
   // (via the injected `.blobbi-pupil` style), never the whole SVG.
-  const gazeStyle: CSSProperties | undefined = eyeOffset
+  const gazeStyle: CSSProperties | undefined = model.gaze
     ? ({
-        ['--blobbi-eye-x' as string]: `${clampGaze(eyeOffset.x)}`,
-        ['--blobbi-eye-y' as string]: `${clampGaze(eyeOffset.y)}`,
+        ['--blobbi-eye-x' as string]: `${model.gaze.x}`,
+        ['--blobbi-eye-y' as string]: `${model.gaze.y}`,
       } as CSSProperties)
     : undefined;
 
@@ -222,7 +237,7 @@ export function BlobbiRendererView({
       title={title}
       onClick={onClick}
     >
-      <AccessoryLayerView placements={accessories} layer="behind" />
+      <AccessoryLayerView placements={model.accessories} layer="behind" />
       {/* The body fills the renderer box exactly: the wrapper is inset-0 and
           the SVG carries width/height="100%" with its square viewBox
           (xMidYMid meet), so it neither distorts nor overflows. */}
@@ -232,7 +247,7 @@ export function BlobbiRendererView({
         style={gazeStyle}
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
-      <AccessoryLayerView placements={accessories} layer="front" />
+      <AccessoryLayerView placements={model.accessories} layer="front" />
     </div>
   );
 }
