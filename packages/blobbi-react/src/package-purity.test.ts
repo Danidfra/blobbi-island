@@ -191,9 +191,16 @@ describe('the package reaches nothing it must not', () => {
     expect(manifest.private, '@blobbi/react is a local workspace package').toBe(true);
   });
 
-  it('contains exactly one React component file — the renderer', () => {
+  it('contains exactly the React component files it means to', () => {
+    // A LIST, not a count. Phase 8 added the effect walker, which has to be a
+    // component because it renders between the body and the front accessories —
+    // and that widening is exactly the kind of decision this list exists to
+    // make visible in a diff rather than let happen quietly.
     const components = pkg.files.filter((f) => f.endsWith('.tsx'));
-    expect(components).toEqual(['src/BlobbiRendererView.tsx']);
+    expect(components).toEqual([
+      'src/BlobbiRendererView.tsx',
+      'src/effects/BlobbiEffectLayers.tsx',
+    ]);
   });
 
   it('owns none of the world concerns the host actor owns', () => {

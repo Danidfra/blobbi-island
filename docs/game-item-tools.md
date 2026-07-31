@@ -26,8 +26,10 @@ That is deliberate, and the reasoning matters:
   **rejects every definition not signed by `OFFICIAL_ITEM_ISSUER_PUBKEY`**
   (`parseOfficialItemDefinition`, unchanged by this phase);
 - gating the route on `import.meta.env.DEV` — the convention used by
-  `/dev/theater`, `/dev/arcade` and `/dev/rooms` — would only prevent the
-  official issuer from publishing from the deployed site.
+  `/dev/theater`, `/dev/arcade`, `/dev/rooms`, `/dev/equipment` and
+  `/dev/blobbi-effects` ([visual-effect preview](./blobbi-visual-effects.md#12-development-preview))
+  — would only prevent the official issuer from publishing from the deployed
+  site.
 
 `src/dev-routes.test.ts` asserts the distinction stays intentional: the dev
 harnesses must be absent from `dist/`, and `GameItemTools` must be present as
@@ -175,7 +177,7 @@ The recommended shape:
 
 **Structured mode** edits `description`, context-keyed `effects`
 (`effects["game:blobbi"].hunger`), typed `metadata` (string / number / boolean /
-JSON), and `visual` (`slot`, `forms`).
+JSON), and `visual` — which has **two shapes**, see §5.1.
 
 **JSON mode** edits the raw content, with inline parse errors, a Format action
 and a reset-to-recommended-shape action.
@@ -194,6 +196,57 @@ Keys the structured editor does not model are kept in `content.extra` (and
 
 `visual.slot` describes where a wearable **would** sit. It never asserts that
 anyone has equipped it — that is inventory data, and no Placement model exists.
+
+### 5.1 Two visual shapes: wearable and effect
+
+A `visual` answers one of two questions, and the editor shows only the fields
+for the one being asked. `visual.kind` is the discriminator, exactly as it is
+for a reader.
+
+| | Wearable accessory | Visual effect |
+| --- | --- | --- |
+| `kind` | absent | `"blobbi-effect"` |
+| `slot` | `headwear`, `eyewear`, … | — |
+| `effect` | — | an effect id, e.g. `golden-sparkles` |
+| `effectSlot` | — | `aura` · `ground-local` · `ambient-particles` · `body-overlay` |
+| `forms` | shared | shared |
+
+```json
+{
+  "description": "A cheerful constellation of golden stars…",
+  "visual": {
+    "kind": "blobbi-effect",
+    "effect": "golden-sparkles",
+    "effectSlot": "ambient-particles",
+    "forms": ["baby", "adult"]
+  }
+}
+```
+
+Choosing the `effect` **category** seeds `visual.kind` so the structured editor
+produces this shape instead of a `visual` containing only `forms`. It only ever
+SEEDS: once the author has typed a slot, a kind or any effect field, changing
+the category rewrites nothing. A Wearable/Visual-effect toggle in the `visual`
+block switches shapes explicitly; leaving effect mode clears the effect fields
+so a definition can never claim to be both.
+
+**`visual.slot` is not asked for on an effect item.** An effect surrounds the
+character rather than sitting on it, so the `cosmetic-no-slot` suggestion is
+suppressed and a leftover `slot` is flagged instead.
+
+**An `effect` is a NAME, never an implementation.** No animation, CSS or markup
+is carried in an event or read out of one. The effect code is local
+(`@blobbi/react`), and the game runs one only when a **trusted item address**
+resolves to it — a third party publishing `effect: "celestial-aura"` grants
+nothing. See [`blobbi-visual-effects.md`](./blobbi-visual-effects.md) §§1–3.
+
+Where the vocabulary lives is a boundary decision: the four effect SLOT names
+are item-format vocabulary and sit in the tools' pure domain layer
+(`item-form-model.ts`), while the twelve effect IDS come from the renderer and
+therefore sit in the UI layer (`components/tools/game-items/effect-vocabulary.ts`)
+— the domain layer must not import `@blobbi/react`, or React ends up in the
+middle of event building. A test asserts the four slot names have not drifted
+from the renderer's own list, and `boundaries.test.ts` asserts the arrow.
 
 ---
 
@@ -258,7 +311,8 @@ promised, and offers per-tag removal as a deliberate act.
 The same applies inside `content` (§5) and to unknown image markers (§3).
 
 `form-event-conversion.test.ts` round-trips events carrying unknown tags,
-unknown markers and unknown content keys.
+unknown markers and unknown content keys, and `import-event-json.test.ts`
+asserts the same guarantees for a pasted event (§10.1).
 
 ---
 
@@ -301,6 +355,48 @@ simply prefer the newest event for an address. The review dialog says which of
 Another issuer's definition is **read-only**: you cannot replace somebody else's
 addressable event. The tool offers **Use as template**, which clears provenance
 and optionally records a `based_on` reference to the original.
+
+### 10.1 Import event JSON
+
+**Import event JSON** (next to *Load published*) is loading with the network
+taken out: paste a whole kind:31632 event and the form populates from it. It is
+for the case where the event already exists as text — authoring a batch of
+official items, where every tag is decided and only the artwork is still in
+flux.
+
+It **reuses `eventToForm`**, the same function *Load published* uses, rather
+than adding a second parser. Everything that path guarantees holds identically:
+the package decides what a tag means, unknown tags land in **Preserved tags**,
+unknown content keys land in `content.extra` / `visual.extra`, image rows keep
+the unmarked primary and every marked view, and both `visual` shapes (§5.1)
+survive. What the importer adds is only what a pasted blob needs:
+
+- **Envelope validation.** Non-JSON, a non-object, a missing or non-31632
+  `kind`, a missing/malformed `tags` array, or a `content` that is neither a
+  string nor an object are all **rejected with a specific reason** — "this is a
+  kind:1 event" rather than "invalid". A malformed tag is an error, never a
+  silently dropped field. A `content` given as an object (an easy slip in a
+  hand-written draft) is serialized and reported rather than refused.
+- **Tolerance of an unsigned draft.** `id`, `pubkey`, `created_at` and `sig`
+  are all optional — pasting something not yet signed is the normal case.
+
+**Provenance is reported, never attached.** A paste may carry an `id`, a
+`pubkey` and a `sig`; those say where the JSON came from, not that this editor
+is now editing that published event. Attaching them would lock `d` and make the
+studio announce that publishing "replaces" an address belonging to whoever
+signed the paste — wrong whenever that is not the current signer. So an import
+produces a **fresh local draft** (`loaded: null`), the pasted identity is shown
+in the import summary, and publishing goes through the normal flow under the
+current signer.
+
+Importing **replaces the editor**, which autosaves into the same draft slot — so
+an editor holding real work gets a confirmation first, showing what was
+understood (identity, image count, preserved tags, provenance) *before* anything
+is replaced. With an empty or untouched editor it applies immediately.
+
+Import **publishes nothing and signs nothing**; artwork stays fully editable in
+the Images section afterwards, and an event with no `image` tag imports fine and
+raises the normal no-image warning.
 
 ---
 
@@ -420,7 +516,7 @@ Four modes, because "does this look right?" is four questions:
 | Card | What an inventory row / shop tile shows | `primaryItemImageUrl` |
 | Views | Every published `image` tag with its marker | — |
 | Compare | primary / front / back side by side, published vs resolved | `itemImageByMarker`, `itemImageSourcesForView` |
-| On a Blobbi | The real renderer | `itemImageSourcesForView` + `normalizeAccessoryPlacements` |
+| On a Blobbi | The real renderer — the accessory worn, or the **effect drawn** | `itemImageSourcesForView` + `normalizeAccessoryPlacements`, or `BlobbiRendererView effects` |
 
 These are the **production** helpers, not lookalikes — a preview with different
 fallback rules would show a hat the game will not show. Nothing is invented: a
@@ -447,6 +543,45 @@ render.
 `face-mark` and `handheld` are in `REAR_VIEW_HIDDEN_SLOTS`; publishing a `back`
 view does not change that. The panel says so in words rather than letting it
 read as broken.
+
+### Blobbi effect preview
+
+For an **effect** item the same tab draws the EFFECT instead. An effect item's
+artwork is a token — a star charm, a mist bottle, a prism — that represents the
+effect in an inventory row; pasting it onto a Blobbi's head would preview
+something the game never renders.
+
+It draws the effect id the author typed, on the same fixture Blobbi, with
+front/back, baby/adult and size toggles, and a declared `effectSlot` that
+disagrees with the effect's actual slot is called out. This is also where "can
+this client draw it?" is answered, rather than in the validation panel: that
+question is about the renderer, which the studio's domain layer cannot see
+(§5.1).
+
+**One resolver, every source.** `resolveEffectPreview(effect, effectSlot)` is
+the only thing that decides what gets drawn, and it takes two strings. An
+imported event, a *Load published* result, a restored autosave and live typing
+are therefore indistinguishable by the time anything renders — they are the same
+two strings. `EffectPreviewParity.test.tsx` builds the same item all four ways
+and asserts the rendered effect markup is **byte-identical**. Preview never
+requires a publish, a signer or a relay.
+
+`content.visual.effect` is the **canonical** id. Tags (`d`, `t`, `rarity`,
+`category`) are never consulted to identify the effect; `category: "effect"` is
+only a fallback signal for *routing* to this tab when `visual.kind` is absent.
+
+**An id this client cannot draw gets a labelled stand-in, not a blank box.** An
+unknown effect borrows a real one from its declared `effectSlot`
+(`ambient-particles` → sparkles, `ground-local` → fog, `body-overlay` → glitch,
+`aura` → halo), badged **Approximate preview** and captioned with the fact that
+Blobbi Island would draw nothing for that id. It shows *where* the effect would
+sit — which is what the slot is for — without pretending the stand-in is the
+item's artwork. A slot that is not one of the four falls back to
+`ambient-particles` and says so. An item naming neither an effect nor a slot
+draws nothing, because it is not an effect yet.
+
+Nothing is equipped, granted or published, and the item's address is never
+consulted — the author is asking what an id looks like, which needs no trust.
 
 ---
 

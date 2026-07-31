@@ -14,6 +14,7 @@ import {
   DRAFT_SCHEMA_VERSION,
   draftLabel,
   emptyDraftStore,
+  hydrateStoredForm,
   isMeaningfulDraft,
   parseDraftStore,
   removeDraft,
@@ -21,7 +22,14 @@ import {
   upsertDraft,
   type StoredDraft,
 } from './drafts';
-import { blankItemForm, nextRowId, type ItemFormState } from './item-form-model';
+import {
+  blankContent,
+  blankItemForm,
+  blankVisual,
+  isEffectItemForm,
+  nextRowId,
+  type ItemFormState,
+} from './item-form-model';
 
 function form(patch: Partial<ItemFormState> = {}): ItemFormState {
   return { ...blankItemForm(), ...patch };
@@ -213,5 +221,148 @@ describe('row ids survive a page reload without colliding', () => {
     const after = nextRowId('image');
     const afterN = Number.parseInt(after.slice(after.lastIndexOf('-') + 1), 10);
     expect(afterN).toBe(beforeN + 1);
+  });
+});
+
+/**
+ * A draft written by an OLDER build must not crash a newer one.
+ *
+ * The failure this pins down was real and user-reported: a draft saved before
+ * `visual` grew `kind` / `effect` / `effectSlot` came back without them, a
+ * newer build called `visual.kind.trim()`, and the entire Item Studio went to
+ * the error boundary — "Cannot read properties of undefined (reading 'trim')".
+ * The author's unpublished work was unreachable until localStorage was cleared.
+ *
+ * The fixture below is the exact previous shape, written out literally rather
+ * than generated, so it keeps describing yesterday's build even as
+ * `blankItemForm()` moves on.
+ */
+describe('drafts written by an older build', () => {
+  /** `visual` as it was before the effect fields existed. */
+  const LEGACY_VISUAL = { slot: 'headwear', forms: ['baby', 'adult'], extra: {} };
+
+  /**
+   * `visual` is passed EXPLICITLY, with no default: a default would swallow the
+   * `undefined` case below and quietly test the legacy visual instead of a
+   * missing one — which is the case most likely to crash.
+   */
+  const legacyStore = (visual: unknown) =>
+    JSON.stringify({
+      version: DRAFT_SCHEMA_VERSION,
+      activeId: 'draft-legacy',
+      drafts: [
+        {
+          id: 'draft-legacy',
+          name: 'Party Hat',
+          savedAt: 1_700_000_000_000,
+          form: {
+            ...blankItemForm(),
+            d: 'blobbi:accessory:party-hat',
+            name: 'Party Hat',
+            type: 'cosmetic',
+            content: {
+              mode: 'structured',
+              description: 'A jaunty paper hat.',
+              effects: [],
+              metadata: [],
+              visual,
+              raw: '',
+              extra: {},
+              rawOnly: false,
+            },
+          },
+        },
+      ],
+    });
+
+  it('restores the draft instead of discarding or crashing on it', () => {
+    const outcome = parseDraftStore(legacyStore(LEGACY_VISUAL));
+    expect(outcome.status).toBe('ok');
+    expect(outcome.store.drafts).toHaveLength(1);
+    expect(outcome.store.drafts[0].form.d).toBe('blobbi:accessory:party-hat');
+  });
+
+  it('fills the fields that did not exist yet, and keeps the ones that did', () => {
+    const { visual } = parseDraftStore(legacyStore(LEGACY_VISUAL)).store.drafts[0].form.content;
+    // Added by hydration…
+    expect(visual.kind).toBe('');
+    expect(visual.effect).toBe('');
+    expect(visual.effectSlot).toBe('');
+    // …without touching what the author actually typed.
+    expect(visual.slot).toBe('headwear');
+    expect(visual.forms).toEqual(['baby', 'adult']);
+  });
+
+  it('leaves the restored draft safe to read the way the editor reads it', () => {
+    // The exact expression that crashed. Every string field must be a string.
+    const { form } = parseDraftStore(legacyStore(LEGACY_VISUAL)).store.drafts[0];
+    expect(() => {
+      form.content.visual.kind.trim();
+      form.content.visual.effect.trim();
+      form.content.visual.effectSlot.trim();
+      form.content.visual.slot.trim();
+      form.category.trim();
+    }).not.toThrow();
+    expect(isEffectItemForm(form)).toBe(false);
+  });
+
+  it('survives a visual that is missing, null, or not an object at all', () => {
+    // `undefined` serializes as an ABSENT key, which is the pre-effect-fields
+    // draft's older cousin: a build that had no `visual` at all.
+    for (const broken of [undefined, null, 'headwear', 42, ['headwear']]) {
+      const { store } = parseDraftStore(legacyStore(broken));
+      const { visual } = store.drafts[0].form.content;
+      expect(visual, JSON.stringify(broken)).toEqual(blankVisual());
+    }
+  });
+
+  it('survives a draft whose content is missing entirely', () => {
+    const raw = JSON.stringify({
+      version: DRAFT_SCHEMA_VERSION,
+      activeId: null,
+      drafts: [
+        { id: 'd1', name: 'Bare', savedAt: 1, form: { d: 'blobbi:x:y' } },
+      ],
+    });
+    const { form } = parseDraftStore(raw).store.drafts[0];
+    expect(form.content).toEqual(blankContent());
+    expect(form.images).toEqual([]);
+    expect(form.d).toBe('blobbi:x:y');
+  });
+
+  it('re-serializes a hydrated draft to the current shape', () => {
+    // The next autosave writes the completed form, so the legacy shape is gone
+    // for good rather than being re-hydrated on every load forever.
+    const { store } = parseDraftStore(legacyStore(LEGACY_VISUAL));
+    const round = parseDraftStore(serializeDraftStore(store));
+    expect(round.status).toBe('ok');
+    expect(round.store.drafts[0].form.content.visual).toEqual({
+      ...blankVisual(),
+      slot: 'headwear',
+      forms: ['baby', 'adult'],
+    });
+  });
+});
+
+describe('hydrateStoredForm', () => {
+  it('returns a blank form for anything that is not an object', () => {
+    for (const junk of [null, undefined, 'form', 7, []]) {
+      expect(hydrateStoredForm(junk)).toEqual(blankItemForm());
+    }
+  });
+
+  it('never drops a field the stored form did have', () => {
+    const stored = { ...blankItemForm(), d: 'a:b:c', topics: ['equipable'] };
+    const hydrated = hydrateStoredForm(stored);
+    expect(hydrated.d).toBe('a:b:c');
+    expect(hydrated.topics).toEqual(['equipable']);
+  });
+
+  it('takes arrays whole rather than merging them element-wise', () => {
+    const stored = {
+      ...blankItemForm(),
+      images: [{ id: 'image-9', url: 'https://x/y.png', marker: '' }],
+    };
+    expect(hydrateStoredForm(stored).images).toHaveLength(1);
   });
 });

@@ -13,6 +13,15 @@ the actor model in [`blobbi-actor-architecture.md`](./blobbi-actor-architecture.
 and the package's consumer-facing documentation in
 [`packages/blobbi-react/README.md`](../packages/blobbi-react/README.md).
 
+> **Phase 8 additions.** The package gained a visual-effect system
+> (`src/effects/`, one new component and an `effects` prop). It changed no
+> boundary: the package still knows no kind, tag, issuer, owner or relay — an
+> effect is named by an id from a closed set of twelve, and Island alone maps a
+> trusted item address to one. The package's CSS delivery contract (§7) is also
+> unchanged, because the effect system owns its stylesheet as package-local text
+> rather than asking the consumer for keyframes. See
+> [`blobbi-visual-effects.md`](./blobbi-visual-effects.md).
+
 The boundaries described here are **enforced by tests**, not by convention:
 
 | Test | Enforces |
@@ -25,6 +34,9 @@ The boundaries described here are **enforced by tests**, not by convention:
 | `src/components/blobbi/renderer-boundary.test.ts` | Island holds no second renderer; imports go through the package entry point; the actor→renderer arrow; editor parity; remote-vs-local hooks |
 | `src/components/blobbi/CurrentBlobbiDisplay.accessory-policy.test.tsx` | Accessory ownership: local vs. override vs. supplied |
 | `src/components/blobbi/ActorRendererBoundary.test.tsx` | Renderer output is identical inside and outside `BlobbiActor` |
+| `packages/blobbi-react/src/effects/effect-catalog.test.ts` | Effect caps, timing floors, reduced-motion coverage, and that no effect module uses `Math.random`, a timer, a frame loop, React state or protocol vocabulary |
+| `packages/blobbi-react/src/BlobbiRendererView.effects.test.tsx` | Effects change what a Blobbi looks like and nothing else — box, body, accessories, hit-testing and the no-effect baseline |
+| `src/effects/official-visual-effect-items.test.ts` | Effect items resolve by full address only, and the registry is wired to nothing but the dev preview |
 
 ---
 
@@ -323,6 +335,15 @@ gradients live in the wrappers and never in the renderer.
 `BLOBBI_RENDER_SIZE_PX` is the framework-neutral source of truth; the class map
 is the Tailwind projection of it. A non-Tailwind consumer can use the px table
 directly. This is the one "reusable after a small adapter" item in §1.
+
+**Phase 8 does not extend this contract.** The visual-effect system needs ~30
+`@keyframes`, which no Tailwind utility can express — so it ships them itself, as
+namespaced (`blobbi-fx-*`) CSS text rendered into a `<style>` element beside the
+effect layers. A consumer configures nothing, and a Blobbi with no effects emits
+no stylesheet at all. `BLOBBI_EFFECT_STYLESHEET` is exported for consumers who
+would rather mount the rules once than carry one `<style>` per effect-bearing
+character. See [`blobbi-visual-effects-audit.md`](./blobbi-visual-effects-audit.md) §7
+for the two alternatives that were rejected.
 
 ---
 

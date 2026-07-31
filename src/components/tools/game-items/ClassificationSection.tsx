@@ -27,6 +27,7 @@ import {
   type ItemFormState,
   RARITY_OPTIONS,
   TOPIC_SUGGESTIONS,
+  contentPatchForCategory,
 } from '@/tools/game-items/item-form-model';
 
 import { Field, Section, SuggestionChips, TextField } from './EditorPrimitives';
@@ -45,6 +46,20 @@ export function ClassificationSection({
   patch,
   fieldErrors,
 }: ClassificationSectionProps) {
+  /**
+   * Set `category`, and seed the content shape it implies.
+   *
+   * Choosing `effect` fills in `visual.kind` so the structured editor starts
+   * producing an effect-shaped `visual` instead of one containing only `forms`.
+   * It SEEDS and never clears: `contentPatchForCategory` returns nothing at all
+   * once the author has claimed a visual, so picking a category can never
+   * rewrite typed content.
+   */
+  const setCategory = (category: string) => {
+    const content = contentPatchForCategory(form.content, category);
+    patch(content ? { category, content } : { category });
+  };
+
   return (
     <Section
       title="Classification"
@@ -57,13 +72,13 @@ export function ClassificationSection({
             label="category"
             value={form.category}
             placeholder="headwear"
-            onChange={(category) => patch({ category })}
+            onChange={setCategory}
           />
           <SuggestionChips
             values={CATEGORY_SUGGESTIONS}
             active={(value) => form.category === value}
             onPick={(category) =>
-              patch({ category: form.category === category ? '' : category })
+              setCategory(form.category === category ? '' : category)
             }
           />
         </div>

@@ -11,6 +11,15 @@
 > for the boundary and `packages/blobbi-react/README.md` for the consumer-facing
 > contract.
 
+> **Phase 8 (visual effects):** the renderer gained an `effects` prop and three
+> effect layers — `behind`, `mid` (between the body and the front accessories)
+> and `front`. **This contract is unchanged:** the canonical box, accessory
+> geometry, layer ranks and purity split all hold exactly as written below.
+> Effects are `position: absolute` + `pointer-events: none` decoration that
+> alters no measurement, no anchor and no hit-box, and a Blobbi with no effects
+> renders byte-identical markup to Phase 6. See
+> [`blobbi-visual-effects.md`](./blobbi-visual-effects.md) §6.
+
 _Established 2026-07-29. Companions: `docs/blobbi-actor-ui-audit.md` (why),
 `docs/blobbi-actor-position-migration-notes.md` (what comes next)._
 

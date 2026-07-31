@@ -47,16 +47,21 @@ import {
   contentStringToFormState,
 } from '@/tools/game-items/form-event-conversion';
 import {
+  BLOBBI_EFFECT_VISUAL_KIND,
   type ContentFormState,
+  EFFECT_CATEGORY,
   EFFECT_KEY_SUGGESTIONS,
+  EFFECT_SLOT_SUGGESTIONS,
   FORM_SUGGESTIONS,
   METADATA_KEY_SUGGESTIONS,
   SLOT_SUGGESTIONS,
   blankContent,
+  isEffectVisual,
   nextRowId,
 } from '@/tools/game-items/item-form-model';
 
 import { Field, Section, SuggestionChips } from './EditorPrimitives';
+import { EFFECT_ID_SUGGESTIONS, slotForEffectId } from './effect-vocabulary';
 import { TagListEditor } from './TagListEditor';
 
 const RECOMMENDED_SHAPE = `{
@@ -71,9 +76,23 @@ export interface ContentEditorProps {
   onChange: (content: ContentFormState) => void;
   /** Blocking content error from the validation pass, if any. */
   error?: string;
+  /**
+   * The item's `category` tag.
+   *
+   * Read for ONE purpose: choosing which `visual` shape to show first for an
+   * item whose visual is still blank. It is never written into content and
+   * never overrides a visual the author has already claimed — `visual.kind`
+   * decides that, exactly as it does for a reader.
+   */
+  category?: string;
 }
 
-export function ContentEditor({ content, onChange, error }: ContentEditorProps) {
+export function ContentEditor({
+  content,
+  onChange,
+  error,
+  category,
+}: ContentEditorProps) {
   const [switchError, setSwitchError] = useState<string | null>(null);
 
   const toJsonMode = () => {
@@ -150,7 +169,7 @@ export function ContentEditor({ content, onChange, error }: ContentEditorProps) 
       {content.mode === 'json' ? (
         <JsonMode content={content} onChange={onChange} />
       ) : (
-        <StructuredMode content={content} onChange={onChange} />
+        <StructuredMode content={content} onChange={onChange} category={category} />
       )}
 
       {Object.keys(content.extra).length > 0 && (
@@ -224,9 +243,11 @@ function JsonMode({
 function StructuredMode({
   content,
   onChange,
+  category,
 }: {
   content: ContentFormState;
   onChange: (content: ContentFormState) => void;
+  category?: string;
 }) {
   return (
     <div className="space-y-5">
@@ -501,63 +522,7 @@ function StructuredMode({
       </div>
 
       {/* --- Visual -------------------------------------------------------- */}
-      <div className="space-y-3 border-t pt-4">
-        <div>
-          <h4 className="text-xs font-semibold">visual</h4>
-          <p className="text-[11px] text-muted-foreground">
-            Describes where a wearable sits. It never says who is wearing it — that
-            is inventory data, not a definition.
-          </p>
-        </div>
-
-        <Field id="visual-slot" label="slot">
-          <Input
-            id="visual-slot"
-            value={content.visual.slot}
-            placeholder="headwear"
-            className="h-9 font-mono text-xs"
-            onChange={(event) =>
-              onChange({
-                ...content,
-                visual: { ...content.visual, slot: event.target.value },
-              })
-            }
-          />
-        </Field>
-        <SuggestionChips
-          values={SLOT_SUGGESTIONS}
-          active={(value) => content.visual.slot === value}
-          onPick={(slot) =>
-            onChange({
-              ...content,
-              visual: {
-                ...content.visual,
-                slot: content.visual.slot === slot ? '' : slot,
-              },
-            })
-          }
-        />
-
-        <TagListEditor
-          id="visual-forms"
-          label="forms"
-          values={content.visual.forms}
-          suggestions={FORM_SUGGESTIONS}
-          placeholder="adult"
-          onChange={(forms) =>
-            onChange({ ...content, visual: { ...content.visual, forms } })
-          }
-        />
-
-        {Object.keys(content.visual.extra).length > 0 && (
-          <p className="text-[11px] text-muted-foreground">
-            Preserved <code>visual</code> keys:{' '}
-            <span className="font-mono">
-              {Object.keys(content.visual.extra).join(', ')}
-            </span>
-          </p>
-        )}
-      </div>
+      <VisualFields content={content} onChange={onChange} category={category} />
 
       <div className="border-t pt-4">
         <Button
@@ -571,6 +536,191 @@ function StructuredMode({
           Clear content
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The `visual` block — TWO SHAPES behind one heading.
+ *
+ * A wearable answers "where on the body does this sit?" (`slot`); a visual
+ * effect answers "which locally-implemented effect does this grant?" (`kind`,
+ * `effect`, `effectSlot`). Asking both sets of questions at once would produce
+ * definitions carrying a body slot for something that has no body position, so
+ * the editor picks a shape and shows only its fields.
+ *
+ * Which shape is shown follows `visual.kind`, the same discriminator a reader
+ * uses. The `category` prop only decides the default for a visual nobody has
+ * claimed yet — it never overrides what the author actually typed.
+ */
+function VisualFields({
+  content,
+  onChange,
+  category,
+}: {
+  content: ContentFormState;
+  onChange: (content: ContentFormState) => void;
+  category?: string;
+}) {
+  const { visual } = content;
+  const isEffect =
+    isEffectVisual(visual) ||
+    (visual.slot.trim() === '' &&
+      visual.kind.trim() === '' &&
+      category?.trim().toLowerCase() === EFFECT_CATEGORY);
+
+  const patchVisual = (patch: Partial<typeof visual>) =>
+    onChange({ ...content, visual: { ...visual, ...patch } });
+
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h4 className="text-xs font-semibold">visual</h4>
+          <p className="text-[11px] text-muted-foreground">
+            {isEffect
+              ? 'Names the effect this item grants. The effect itself is implemented locally — an event never carries animation code.'
+              : 'Describes where a wearable sits. It never says who is wearing it — that is inventory data, not a definition.'}
+          </p>
+        </div>
+        <div className="flex gap-1 rounded-lg border p-0.5">
+          <Button
+            type="button"
+            variant={isEffect ? 'ghost' : 'secondary'}
+            size="sm"
+            className="h-7 text-xs"
+            aria-pressed={!isEffect}
+            onClick={() =>
+              // Leaving effect mode clears the effect fields, so the published
+              // content cannot claim to be an effect and a wearable at once.
+              patchVisual({ kind: '', effect: '', effectSlot: '' })
+            }
+          >
+            Wearable
+          </Button>
+          <Button
+            type="button"
+            variant={isEffect ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-7 text-xs"
+            aria-pressed={isEffect}
+            onClick={() =>
+              patchVisual({ kind: BLOBBI_EFFECT_VISUAL_KIND, slot: '' })
+            }
+          >
+            Visual effect
+          </Button>
+        </div>
+      </div>
+
+      {isEffect ? (
+        <>
+          <Field
+            id="visual-kind"
+            label="kind"
+            hint={`The discriminator a reader uses. "${BLOBBI_EFFECT_VISUAL_KIND}" for a Blobbi visual effect.`}
+          >
+            <Input
+              id="visual-kind"
+              value={visual.kind}
+              placeholder={BLOBBI_EFFECT_VISUAL_KIND}
+              className="h-9 font-mono text-xs"
+              onChange={(event) => patchVisual({ kind: event.target.value })}
+            />
+          </Field>
+
+          <Field
+            id="visual-effect"
+            label="effect"
+            hint="An effect NAME, never an implementation. Island only runs it for an item address it trusts."
+          >
+            <Input
+              id="visual-effect"
+              value={visual.effect}
+              placeholder="golden-sparkles"
+              className="h-9 font-mono text-xs"
+              onChange={(event) => patchVisual({ effect: event.target.value })}
+            />
+          </Field>
+          <SuggestionChips
+            values={EFFECT_ID_SUGGESTIONS}
+            active={(value) => visual.effect === value}
+            onPick={(effect) => {
+              if (visual.effect === effect) {
+                patchVisual({ effect: '' });
+                return;
+              }
+              // Picking a known effect fills the slot it actually occupies, so
+              // the two cannot silently disagree. An already-typed slot is left
+              // alone — the author may be publishing for a different client.
+              const slot = slotForEffectId(effect);
+              patchVisual({
+                effect,
+                effectSlot:
+                  visual.effectSlot.trim() === '' ? slot : visual.effectSlot,
+              });
+            }}
+          />
+
+          <Field
+            id="visual-effect-slot"
+            label="effectSlot"
+            hint="Which slot the effect competes for. One effect per slot."
+          >
+            <Input
+              id="visual-effect-slot"
+              value={visual.effectSlot}
+              placeholder="ambient-particles"
+              className="h-9 font-mono text-xs"
+              onChange={(event) => patchVisual({ effectSlot: event.target.value })}
+            />
+          </Field>
+          <SuggestionChips
+            values={EFFECT_SLOT_SUGGESTIONS}
+            active={(value) => visual.effectSlot === value}
+            onPick={(effectSlot) =>
+              patchVisual({
+                effectSlot: visual.effectSlot === effectSlot ? '' : effectSlot,
+              })
+            }
+          />
+        </>
+      ) : (
+        <>
+          <Field id="visual-slot" label="slot">
+            <Input
+              id="visual-slot"
+              value={visual.slot}
+              placeholder="headwear"
+              className="h-9 font-mono text-xs"
+              onChange={(event) => patchVisual({ slot: event.target.value })}
+            />
+          </Field>
+          <SuggestionChips
+            values={SLOT_SUGGESTIONS}
+            active={(value) => visual.slot === value}
+            onPick={(slot) =>
+              patchVisual({ slot: visual.slot === slot ? '' : slot })
+            }
+          />
+        </>
+      )}
+
+      <TagListEditor
+        id="visual-forms"
+        label="forms"
+        values={visual.forms}
+        suggestions={FORM_SUGGESTIONS}
+        placeholder="adult"
+        onChange={(forms) => patchVisual({ forms })}
+      />
+
+      {Object.keys(visual.extra).length > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          Preserved <code>visual</code> keys:{' '}
+          <span className="font-mono">{Object.keys(visual.extra).join(', ')}</span>
+        </p>
+      )}
     </div>
   );
 }

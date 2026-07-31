@@ -69,6 +69,7 @@ import {
   PRIMARY_MARKER,
   blankContent,
   blankItemForm,
+  blankVisual,
   nextRowId,
 } from './item-form-model';
 
@@ -231,8 +232,18 @@ export function buildContentString(
   }
   if (Object.keys(metadata).length > 0) out.metadata = metadata;
 
+  // `visual` key order is deliberate and stable: the discriminator first, then
+  // whichever shape it selects, then the stage list both shapes share. It costs
+  // nothing and makes a published effect definition read the way the document
+  // describes it. Every field is omitted when blank — a wearable never emits an
+  // empty `effect`, and an effect never emits an empty `slot`.
   const visual: Record<string, unknown> = {};
+  if (content.visual.kind.trim() !== '') visual.kind = content.visual.kind.trim();
   if (content.visual.slot.trim() !== '') visual.slot = content.visual.slot;
+  if (content.visual.effect.trim() !== '') visual.effect = content.visual.effect.trim();
+  if (content.visual.effectSlot.trim() !== '') {
+    visual.effectSlot = content.visual.effectSlot.trim();
+  }
   const forms = content.visual.forms.filter((f) => f.trim() !== '');
   if (forms.length > 0) visual.forms = forms;
   for (const [key, value] of Object.entries(content.visual.extra)) {
@@ -456,10 +467,22 @@ function contentToForm(rawContent: string, contentJson: unknown): ContentFormSta
     }
   }
 
-  const visual = { slot: '', forms: [] as string[], extra: {} as Record<string, unknown> };
+  // Managed `visual` keys are lifted into typed fields; anything else — an
+  // unknown key, or a managed key holding an unexpected TYPE (a numeric `slot`,
+  // an object `effect`) — falls through to `extra` and is republished verbatim.
+  // Coercing a wrong type into a string field would silently rewrite somebody
+  // else's definition, which is the one thing this editor must not do.
+  const visual = blankVisual();
+  const VISUAL_STRING_FIELDS = {
+    slot: 'slot',
+    kind: 'kind',
+    effect: 'effect',
+    effectSlot: 'effectSlot',
+  } as const;
   if (obj.visual && typeof obj.visual === 'object' && !Array.isArray(obj.visual)) {
     for (const [key, value] of Object.entries(obj.visual as Record<string, unknown>)) {
-      if (key === 'slot' && typeof value === 'string') visual.slot = value;
+      const field = VISUAL_STRING_FIELDS[key as keyof typeof VISUAL_STRING_FIELDS];
+      if (field && typeof value === 'string') visual[field] = value;
       else if (key === 'forms' && Array.isArray(value)) {
         visual.forms = value.filter((f): f is string => typeof f === 'string');
       } else visual.extra[key] = value;
@@ -583,6 +606,194 @@ export function eventToForm(
   };
 
   return { ok: true, form, warnings: result.warnings };
+}
+
+// --- Importing pasted event JSON -------------------------------------------
+
+/**
+ * IMPORTING A PASTED EVENT is loading, with the network taken out.
+ *
+ * An author writing a batch of official items usually has the whole event
+ * already — tags, content, the lot — and only the artwork is still in flux.
+ * Retyping fifteen tags into a form to get back to what they pasted is the kind
+ * of work a tool exists to remove.
+ *
+ * So this reuses {@link eventToForm} verbatim rather than growing a second
+ * parser. Everything the load path guarantees — the package decides what a tag
+ * means, unknown tags land in `extraTags`, unknown content keys land in
+ * `content.extra` / `visual.extra` — holds identically here, because it is
+ * literally the same code. What this function adds is only the two things a
+ * pasted blob needs that a fetched event does not:
+ *
+ *  1. **Validation of the envelope.** A fetched event came from a relay and is
+ *     already an event; a pasted one might be a shopping list.
+ *  2. **Tolerance of an UNSIGNED draft.** `id`, `pubkey`, `created_at` and
+ *     `sig` are all optional, because the whole point is to paste something
+ *     that has not been signed yet.
+ *
+ * ## Provenance is reported, never attached
+ *
+ * A pasted event may carry an `id`, a `pubkey` and a `sig`. Those describe
+ * where the JSON came from — they are NOT a claim that this editor is now
+ * editing that published event. Attaching them would lock the `d` tag and make
+ * the studio announce that publishing "replaces" an address that belongs to
+ * whoever signed the paste, which is wrong whenever that is not the current
+ * signer, and misleading even when it is.
+ *
+ * So the imported form has `loaded: null` — a fresh local draft — and the
+ * provenance is handed back separately for the UI to show. Publishing it goes
+ * through the normal flow: signed by the current signer, at the current
+ * signer's address.
+ */
+
+/**
+ * Stand-in author used only to satisfy the package's address builder.
+ *
+ * `parseGameItemDefinitionResult` derives `31632:<pubkey>:<d>` and throws on an
+ * empty pubkey — but an unsigned draft legitimately has no author yet. Since
+ * the imported form drops `loaded` entirely, the address this produces is
+ * discarded immediately and never reaches the UI, the form or an event.
+ */
+const IMPORT_UNSIGNED_PUBKEY = '0'.repeat(64);
+
+/** What the pasted JSON claimed about its own origin. Display only. */
+export interface ImportedEventProvenance {
+  id: string;
+  pubkey: string;
+  createdAt: number;
+  sig: string;
+  /** A signature was present — the paste came from a published event. */
+  isSigned: boolean;
+}
+
+export interface ImportedEvent {
+  /** A fresh local draft: fully populated, with NO loaded provenance. */
+  form: ItemFormState;
+  /** Parser warnings plus anything the envelope normalization had to say. */
+  warnings: string[];
+  /** `null` when the JSON carried no id, pubkey, created_at or sig at all. */
+  provenance: ImportedEventProvenance | null;
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Validate the pasted envelope down to something `eventToForm` can read.
+ *
+ * Rejections are specific on purpose: "this is a kind:1 note" is actionable and
+ * "invalid event" is not. Nothing is silently repaired — a malformed tag is an
+ * error rather than a dropped tag, because dropping one would mean importing an
+ * item that is quietly missing a field the author can see in their clipboard.
+ */
+export function importEventJson(raw: string): ConversionResult<ImportedEvent> {
+  if (raw.trim() === '') {
+    return { ok: false, error: 'Paste a kind:31632 event or unsigned draft.' };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return { ok: false, error: `That is not valid JSON: ${(error as Error).message}` };
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      ok: false,
+      error: 'Expected a JSON object describing one event, like { "kind": 31632, "tags": [...], "content": "..." }.',
+    };
+  }
+
+  const source = parsed as Record<string, unknown>;
+  const warnings: string[] = [];
+
+  if (source.kind === undefined) {
+    return {
+      ok: false,
+      error: `This JSON has no "kind". The Item Studio imports kind:${KIND_GAME_ITEM_DEFINITION} Game Item Definitions.`,
+    };
+  }
+  if (source.kind !== KIND_GAME_ITEM_DEFINITION) {
+    return {
+      ok: false,
+      error: `This is a kind:${String(source.kind)} event. The Item Studio edits kind:${KIND_GAME_ITEM_DEFINITION} Game Item Definitions only.`,
+    };
+  }
+
+  if (!Array.isArray(source.tags)) {
+    return {
+      ok: false,
+      error: 'The event has no "tags" array. A definition carries at least a `d`, a `name` and a `type` tag.',
+    };
+  }
+
+  const tags: string[][] = [];
+  for (const [index, tag] of source.tags.entries()) {
+    if (!Array.isArray(tag) || tag.some((part) => typeof part !== 'string')) {
+      return {
+        ok: false,
+        error: `Tag ${index} is not an array of strings: ${JSON.stringify(tag)}. Every tag must look like ["name", "value"].`,
+      };
+    }
+    tags.push([...(tag as string[])]);
+  }
+
+  // `content` is a STRING on the wire. An author who hand-wrote their draft may
+  // well have left it as a nested object, which is an obvious slip rather than
+  // a different document — so it is serialized and reported, not rejected.
+  let content: string;
+  if (source.content === undefined || source.content === null) {
+    content = '';
+  } else if (typeof source.content === 'string') {
+    content = source.content;
+  } else if (typeof source.content === 'object') {
+    content = JSON.stringify(source.content);
+    warnings.push(
+      'The "content" field was a JSON object rather than a string; it has been serialized, which is what a published event carries.',
+    );
+  } else {
+    return {
+      ok: false,
+      error: `The "content" field must be a JSON string, not ${typeof source.content}.`,
+    };
+  }
+
+  const pubkey = asString(source.pubkey).trim();
+  const id = asString(source.id).trim();
+  const sig = asString(source.sig).trim();
+  const createdAt =
+    typeof source.created_at === 'number' && Number.isFinite(source.created_at)
+      ? source.created_at
+      : 0;
+
+  const result = eventToForm({
+    id,
+    pubkey: pubkey === '' ? IMPORT_UNSIGNED_PUBKEY : pubkey,
+    created_at: createdAt,
+    kind: KIND_GAME_ITEM_DEFINITION,
+    tags,
+    content,
+    sig,
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const hasProvenance =
+    id !== '' || pubkey !== '' || sig !== '' || createdAt > 0;
+
+  return {
+    ok: true,
+    value: {
+      // `loaded: null` is the whole provenance decision — see the module note.
+      form: { ...result.form, loaded: null },
+      warnings: [...warnings, ...result.warnings.map((w) => w.message)],
+      provenance: hasProvenance
+        ? { id, pubkey, createdAt, sig, isSigned: sig !== '' }
+        : null,
+    },
+  };
 }
 
 /**

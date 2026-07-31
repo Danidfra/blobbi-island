@@ -17,6 +17,7 @@ import { formToUnsignedEvent, toPreviewEvent } from './form-event-conversion';
 import {
   PRIMARY_MARKER,
   blankItemForm,
+  blankVisual,
   nextRowId,
   type ItemFormState,
 } from './item-form-model';
@@ -292,7 +293,7 @@ describe('protocol layer', () => {
         images: [imageRow('https://a/p.png')],
         content: {
           ...blankItemForm().content,
-          visual: { slot: 'headwear', forms: [], extra: {} },
+          visual: { ...blankVisual(), slot: 'headwear' },
         },
       }),
     );
@@ -312,5 +313,52 @@ describe('preview event', () => {
     expect(event.id).toBe('');
     expect(event.sig).toBe('');
     expect(event.kind).toBe(KIND_GAME_ITEM_DEFINITION);
+  });
+});
+
+/**
+ * The studio works SIGNED OUT — the page says so in as many words.
+ *
+ * A signed-out preview event carries an empty pubkey, and an addressable event
+ * with no author has no address, so `parseGameItemDefinitionResult` throws
+ * instead of warning. That threw inside a `useMemo` and took the entire Item
+ * Studio down to the error boundary the moment a signed-out author had filled
+ * in `d`, `name` and `type` — which is the first thing anybody does.
+ */
+describe('validating without a signer', () => {
+  const signedOutForm = (): ItemFormState => ({
+    ...blankItemForm(),
+    d: 'blobbi:accessory:signed-out',
+    name: 'Signed Out Hat',
+    type: 'cosmetic',
+    images: [{ id: 'image-1', url: 'https://fixtures.invalid/hat.png', marker: PRIMARY_MARKER }],
+  });
+
+  const validateWith = (pubkey: string) => {
+    const built = formToUnsignedEvent(signedOutForm());
+    if (!built.ok) throw new Error(built.error);
+    return validateItemForm({
+      form: signedOutForm(),
+      previewEvent: toPreviewEvent(built.value, pubkey, 1_700_000_000),
+      buildError: null,
+      probes: new Map(),
+    });
+  };
+
+  it('does not throw when the preview event has no author yet', () => {
+    expect(() => validateWith('')).not.toThrow();
+  });
+
+  it('withholds the protocol layer rather than crashing, and blocks nothing', () => {
+    const result = validateWith('');
+    expect(result.protocol).toEqual([]);
+    expect(result.blocking).toEqual([]);
+    expect(result.isPublishable).toBe(true);
+  });
+
+  it('reports the protocol layer again as soon as there is a signer', () => {
+    // Same form, same event — the only difference is an author. Nothing about
+    // the withheld layer depended on who that author is.
+    expect(() => validateWith('a'.repeat(64))).not.toThrow();
   });
 });

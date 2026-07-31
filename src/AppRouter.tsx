@@ -51,6 +51,13 @@ const DevEquipment = import.meta.env.DEV
   ? lazy(() => import("./pages/DevEquipment").then(m => ({ default: m.DevEquipment })))
   : null;
 
+// Visual-effect preview (Phase 8). Drives the PURE renderer with literal effect
+// data — no signer, relay, inventory or equip state — so it also serves as the
+// standing proof that drawing an effect needs none of them.
+const DevBlobbiEffects = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevBlobbiEffects").then(m => ({ default: m.DevBlobbiEffects })))
+  : null;
+
 // Loading component for lazy-loaded routes
 const PageLoading = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -106,6 +113,13 @@ export function AppRouter() {
           <Route path="/dev/equipment" element={
             <Suspense fallback={<PageLoading />}>
               <DevEquipment />
+            </Suspense>
+          } />
+        )}
+        {DevBlobbiEffects && (
+          <Route path="/dev/blobbi-effects" element={
+            <Suspense fallback={<PageLoading />}>
+              <DevBlobbiEffects />
             </Suspense>
           } />
         )}

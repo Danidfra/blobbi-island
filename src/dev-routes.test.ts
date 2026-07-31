@@ -68,10 +68,12 @@ describe('production build excludes the DEV harnesses', () => {
     );
   });
 
-  it.runIf(distExists && buildIsFresh)('emits no DevArcade, DevTheater, DevRooms or DevEquipment chunk', () => {
+  it.runIf(distExists && buildIsFresh)('emits no dev-harness chunk of any kind', () => {
     expect(distChunks.length).toBeGreaterThan(0);
 
-    const named = distChunks.filter((f) => /DevArcade|DevTheater|DevRooms|DevEquipment/i.test(f));
+    const named = distChunks.filter((f) =>
+      /DevArcade|DevTheater|DevRooms|DevEquipment|DevBlobbiEffects/i.test(f),
+    );
     expect(named, `unexpected dev chunks: ${named.join(', ')}`).toEqual([]);
   });
 
@@ -86,10 +88,12 @@ describe('production build excludes the DEV harnesses', () => {
             source.includes('/dev/arcade') ||
             source.includes('/dev/theater') ||
             source.includes('/dev/rooms') ||
+            source.includes('/dev/blobbi-effects') ||
             source.includes('DevArcade') ||
             source.includes('DevEquipment') ||
             source.includes('DevTheater') ||
-            source.includes('DevRooms')
+            source.includes('DevRooms') ||
+            source.includes('DevBlobbiEffects')
           );
         });
 
@@ -101,24 +105,33 @@ describe('production build excludes the DEV harnesses', () => {
     // Source-level guard, always run: the routes must never be registered
     // unconditionally, whatever state `dist/` happens to be in.
     const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
-    for (const name of ['DevArcade', 'DevTheater', 'DevRooms', 'DevEquipment']) {
+    for (const name of [
+      'DevArcade',
+      'DevTheater',
+      'DevRooms',
+      'DevEquipment',
+      'DevBlobbiEffects',
+    ]) {
       expect(router).toContain(`const ${name} = import.meta.env.DEV`);
       expect(router).toContain(`{${name} && (`);
     }
   });
 
-  it('exposes exactly four dev routes, and imports no harness eagerly', () => {
+  it('exposes exactly five dev routes, and imports no harness eagerly', () => {
     const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
     const devRoutes = [...router.matchAll(/path="(\/dev\/[^"]*)"/g)].map((m) => m[1]);
     expect(devRoutes.sort()).toEqual([
       '/dev/arcade',
+      '/dev/blobbi-effects',
       '/dev/equipment',
       '/dev/rooms',
       '/dev/theater',
     ]);
     // A static import would pull the harness into the main chunk regardless of
     // the route gate.
-    expect(router).not.toMatch(/^import\s+.*Dev(Arcade|Theater|Rooms|Equipment)/m);
+    expect(router).not.toMatch(
+      /^import\s+.*Dev(Arcade|Theater|Rooms|Equipment|BlobbiEffects)/m,
+    );
   });
 
   it('does not accidentally gate the game item tools, which SHIP', () => {
@@ -144,9 +157,14 @@ describe('production build excludes the DEV harnesses', () => {
     // Nothing outside the harness files themselves may reference them.
     const referrers = allFiles(join(ROOT, 'src'))
       .filter((f) => /\.tsx?$/.test(f))
-      .filter((f) => !/pages\/Dev(Arcade|Theater|Rooms)\.tsx$/.test(f))
-      .filter((f) => !f.endsWith('dev-routes.test.ts'))
-      .filter((f) => /\bDev(Arcade|Theater|Rooms)\b/.test(readFileSync(f, 'utf8')));
+      .filter((f) => !/pages\/Dev(Arcade|Theater|Rooms|BlobbiEffects)\.tsx$/.test(f))
+      // Test files are not production modules. They name the harnesses on
+      // purpose — this one does, and so does the effect registry's own test,
+      // which asserts that the preview is its only importer.
+      .filter((f) => !/\.test\.tsx?$/.test(f))
+      .filter((f) =>
+        /\bDev(Arcade|Theater|Rooms|BlobbiEffects)\b/.test(readFileSync(f, 'utf8')),
+      );
 
     expect(referrers.map((f) => f.replace(`${ROOT}/`, ''))).toEqual(['src/AppRouter.tsx']);
   });

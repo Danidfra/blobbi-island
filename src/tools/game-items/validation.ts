@@ -29,9 +29,12 @@ import {
 } from '@/inventory/package';
 
 import {
+  BLOBBI_EFFECT_VISUAL_KIND,
+  EFFECT_SLOT_SUGGESTIONS,
   type ItemFormState,
   PRIMARY_MARKER,
   RECOMMENDED_IMAGE_SIZE,
+  isEffectItemForm,
   isHttpUrl,
   isPositiveIntegerText,
 } from './item-form-model';
@@ -192,6 +195,18 @@ function blockingIssues(input: ValidationInput): StudioIssue[] {
 
 function protocolIssues(previewEvent: NostrEvent | null): StudioIssue[] {
   if (!previewEvent) return [];
+  // A SIGNED-OUT preview event has an empty pubkey, and an addressable event
+  // with no author has no address: `parseGameItemDefinitionResult` THROWS
+  // ("Cannot build address with empty pubkey") rather than reporting a warning,
+  // which took the whole studio down as soon as a signed-out author filled in
+  // `d`, `name` and `type`. Signing out is not an error state here — the page
+  // says every part of it works signed out — so the parse is skipped until
+  // there is an author to parse for.
+  //
+  // Nothing is lost by waiting: these are the package's own warnings about a
+  // stored event, and no warning depends on the pubkey. They reappear intact
+  // the moment a signer is present.
+  if (previewEvent.pubkey.trim() === '') return [];
   const result = parseGameItemDefinitionResult(previewEvent, { mode: 'permissive' });
   return result.warnings.map((warning, index) =>
     issue(
@@ -374,6 +389,88 @@ function imageIssues(input: ValidationInput): StudioIssue[] {
 
 const COSMETIC_TYPES = new Set(['cosmetic']);
 
+/**
+ * Guidance specific to a VISUAL EFFECT item.
+ *
+ * All suggestions, never blocking, and all decidable from the ITEM FORMAT
+ * alone. Whether an effect id is one this client can actually draw is a
+ * question about the renderer, and this module is the studio's pure domain
+ * layer — it cannot import `@blobbi/react` without putting React in the middle
+ * of event building. That check lives in the preview panel
+ * (`BlobbiEffectPreview`), which is also where an author naturally looks to see
+ * whether anything is drawn.
+ *
+ * Nothing here implies that publishing an id makes it run: activation requires
+ * a TRUSTED item address, which is Island's decision and not this event's
+ * (docs/blobbi-visual-effects.md §3).
+ */
+function effectAuthoringIssues(form: ItemFormState): StudioIssue[] {
+  const out: StudioIssue[] = [];
+  const { visual } = form.content;
+  const effect = visual.effect.trim();
+  const effectSlot = visual.effectSlot.trim();
+
+  if (visual.kind.trim() === '') {
+    out.push(
+      issue(
+        'authoring',
+        'suggestion',
+        'effect-no-kind',
+        `No \`visual.kind\`. Without \`"${BLOBBI_EFFECT_VISUAL_KIND}"\` a reader has nothing telling it this is an effect rather than a wearable.`,
+        'visual.kind',
+      ),
+    );
+  }
+
+  if (effect === '') {
+    out.push(
+      issue(
+        'authoring',
+        'suggestion',
+        'effect-no-id',
+        'No `visual.effect`. Nothing names which effect this item grants.',
+        'visual.effect',
+      ),
+    );
+  }
+
+  if (effectSlot === '') {
+    out.push(
+      issue(
+        'authoring',
+        'suggestion',
+        'effect-no-slot',
+        'No `visual.effectSlot`. It states which slot the effect competes for, so two effects cannot silently stack.',
+        'visual.effectSlot',
+      ),
+    );
+  } else if (!EFFECT_SLOT_SUGGESTIONS.includes(effectSlot)) {
+    out.push(
+      issue(
+        'authoring',
+        'suggestion',
+        'effect-unknown-slot',
+        `\`${effectSlot}\` is not one of the effect slots: ${EFFECT_SLOT_SUGGESTIONS.join(', ')}.`,
+        'visual.effectSlot',
+      ),
+    );
+  }
+
+  if (visual.slot.trim() !== '') {
+    out.push(
+      issue(
+        'authoring',
+        'suggestion',
+        'effect-has-wearable-slot',
+        'This effect item also declares `visual.slot`, which is where a WEARABLE sits. An effect surrounds the character and needs no body slot.',
+        'visual.slot',
+      ),
+    );
+  }
+
+  return out;
+}
+
 function authoringIssues(form: ItemFormState): StudioIssue[] {
   const out: StudioIssue[] = [];
   const type = form.type.trim();
@@ -427,7 +524,17 @@ function authoringIssues(form: ItemFormState): StudioIssue[] {
     );
   }
 
-  if (COSMETIC_TYPES.has(type) && form.content.mode === 'structured' && form.content.visual.slot === '') {
+  // A VISUAL EFFECT is a cosmetic without a place on the body: it surrounds the
+  // character rather than sitting on it, so `visual.slot` is meaningless for one
+  // and asking for it would be advice that produces a wrong definition.
+  const isEffect = isEffectItemForm(form);
+
+  if (
+    COSMETIC_TYPES.has(type) &&
+    !isEffect &&
+    form.content.mode === 'structured' &&
+    form.content.visual.slot === ''
+  ) {
     out.push(
       issue(
         'authoring',
@@ -437,6 +544,10 @@ function authoringIssues(form: ItemFormState): StudioIssue[] {
         'visual.slot',
       ),
     );
+  }
+
+  if (isEffect && form.content.mode === 'structured') {
+    out.push(...effectAuthoringIssues(form));
   }
 
   const d = form.d.trim();

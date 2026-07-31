@@ -14,6 +14,7 @@
 import { useState } from 'react';
 import {
   CircleAlert,
+  ClipboardPaste,
   Copy,
   Download,
   FilePlus2,
@@ -34,6 +35,7 @@ import {
   useLoadItemDefinition,
   type PublishedDefinitionRecord,
 } from '@/tools/game-items/useItemDefinitions';
+import type { ImportedEvent } from '@/tools/game-items/form-event-conversion';
 import type { ItemStudioApi } from '@/tools/game-items/useItemStudio';
 import type { SignerIdentity } from '@/tools/game-items/signer-identity';
 
@@ -45,6 +47,7 @@ import { ImageManager } from './ImageManager';
 import { ItemIdentitySection } from './ItemIdentitySection';
 import { ItemPreviewPanel } from './ItemPreviewPanel';
 import { EventValidationPanel } from './EventValidationPanel';
+import { ImportEventDialog } from './ImportEventDialog';
 import { LoadItemDialog } from './LoadItemDialog';
 import { MediaSection } from './MediaSection';
 import { PublishReviewDialog } from './PublishReviewDialog';
@@ -63,6 +66,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
 
   const [reviewOpen, setReviewOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const uploads = useItemImageUpload();
   const publish = usePublishItemDefinition();
@@ -89,6 +93,24 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
         result.value.length > 0
           ? `${result.value.length} parser warning(s) — see the validation panel.`
           : 'All fields populated. Unknown tags are preserved.',
+    });
+  };
+
+  /**
+   * Apply a pasted event to the editor.
+   *
+   * `replaceForm` establishes a new baseline, and the studio's autosave effect
+   * writes it to the active draft slot on the next tick — so an import is a
+   * local draft immediately, with nothing published and nothing signed.
+   */
+  const handleImported = (imported: ImportedEvent) => {
+    replaceForm(imported.form);
+    toast({
+      title: `Imported ${imported.form.name || imported.form.d || 'item'}`,
+      description:
+        imported.form.images.length === 0
+          ? 'No image tag in the paste — add artwork in the Images section.'
+          : 'Saved as a local draft. Publishing still signs with your key.',
     });
   };
 
@@ -119,6 +141,16 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
           >
             <Download className="h-3.5 w-3.5" />
             Load published
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setImportOpen(true)}
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Import event JSON
           </Button>
           <Button
             type="button"
@@ -224,6 +256,9 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
             content={form.content}
             onChange={(content) => patch({ content })}
             error={validation.fieldErrors.content}
+            // Decides which `visual` shape opens first for a still-blank
+            // visual — wearable slot, or effect id. Nothing else.
+            category={form.category}
           />
 
           <MediaAndDerivation
@@ -318,6 +353,13 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
           }
           return result;
         }}
+      />
+
+      <ImportEventDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={handleImported}
+        hasUnsavedWork={studio.isDirty && drafts.hasMeaningfulDraft(form)}
       />
 
       <LoadItemDialog

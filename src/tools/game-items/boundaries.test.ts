@@ -182,7 +182,42 @@ describe('@blobbi/react stays protocol-agnostic', () => {
     const previewModel = stripComments(
       readFileSync(join(TOOLS_LOGIC, 'preview-model.ts'), 'utf8'),
     );
-    expect(previewModel).toMatch(/import type \{ AccessorySlot \} from '@blobbi\/react'/);
+    // TYPE-ONLY is the whole exemption: `import type` is erased at compile
+    // time, so nothing about the renderer reaches the emitted domain layer. The
+    // assertion is on the `import type` form rather than the exact symbol list,
+    // which grows as the preview model does.
+    expect(previewModel).toMatch(/import type \{[^}]*\} from '@blobbi\/react'/);
+    expect(previewModel).not.toMatch(/^import \{/m);
+  });
+
+  it('cannot reach the renderer through the UI layer either', () => {
+    // The rule above is written against import TEXT, so it would miss a domain
+    // module that imported a UI module which imports the renderer. The effect
+    // vocabulary (`components/tools/game-items/effect-vocabulary.ts`) is exactly
+    // such a module — it exists in the UI layer BECAUSE the domain layer may not
+    // have it — so the arrow it depends on is asserted here rather than assumed.
+    for (const file of sourceFiles(TOOLS_LOGIC).filter((f) => !/\.test\.tsx?$/.test(f))) {
+      const text = stripComments(readFileSync(file, 'utf8'));
+      expect(text, file).not.toMatch(/from '@\/components\//);
+    }
+  });
+
+  it('gives the effect vocabulary to the UI layer, and the slot names to both', () => {
+    // The split this phase chose: twelve effect IDS come from the renderer and
+    // therefore live in the UI layer; the four effect SLOT names are item-format
+    // vocabulary and are written out in the domain layer, guarded against drift
+    // by `effect-item-authoring.test.ts`.
+    const vocabulary = stripComments(
+      readFileSync(join(TOOLS_UI, 'effect-vocabulary.ts'), 'utf8'),
+    );
+    expect(vocabulary).toMatch(/from '@blobbi\/react'/);
+
+    const formModel = stripComments(readFileSync(join(TOOLS_LOGIC, 'item-form-model.ts'), 'utf8'));
+    expect(formModel).not.toMatch(/from '@blobbi\/react'/);
+    expect(formModel).toMatch(/EFFECT_SLOT_SUGGESTIONS/);
+
+    const validation = stripComments(readFileSync(join(TOOLS_LOGIC, 'validation.ts'), 'utf8'));
+    expect(validation).not.toMatch(/from '@blobbi\/react'/);
   });
 });
 

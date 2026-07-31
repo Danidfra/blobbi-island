@@ -107,6 +107,26 @@ describe('the canonical box is delivered as scannable Tailwind classes', () => {
     }
   });
 
+  it('keeps the effect system out of the Tailwind contract entirely', () => {
+    // Phase 8 could have asked the consumer for 30 keyframes in their config.
+    // It does not: the effect CSS is package-owned text, so the delivery
+    // contract above is unchanged and a consumer who adds effects has nothing
+    // new to configure. What must stay true is that the RENDERER file itself
+    // grew no new class names — the effect classes live behind the walker.
+    const renderer = readFileSync(join(PACKAGE_ROOT, 'src/BlobbiRendererView.tsx'), 'utf8');
+    expect(renderer).not.toContain('blobbi-fx-');
+
+    // And no effect class may be built by concatenation anywhere, which is what
+    // would make it invisible to any scanner — including a human's grep.
+    const effects = readFileSync(
+      join(PACKAGE_ROOT, 'src/effects/BlobbiEffectLayers.tsx'),
+      'utf8',
+    );
+    expect(effects).toMatch(/className="blobbi-fx-(layer|track|piece)"/);
+    expect(effects).not.toMatch(/className=\{`/);
+    expect(effects).not.toMatch(/'blobbi-fx-' \+|`blobbi-fx-\$\{/);
+  });
+
   it('the decoration classes are optional: geometry is identical without them', () => {
     const renderer = readFileSync(join(PACKAGE_ROOT, 'src/BlobbiRendererView.tsx'), 'utf8');
     // The size class is applied unconditionally; the decoration classes are

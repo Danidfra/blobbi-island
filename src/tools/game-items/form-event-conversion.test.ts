@@ -36,6 +36,7 @@ import {
 import {
   PRIMARY_MARKER,
   blankItemForm,
+  blankVisual,
   nextRowId,
   type ItemFormState,
 } from './item-form-model';
@@ -92,7 +93,7 @@ function completeForm(): ItemFormState {
       metadata: [
         { id: nextRowId('metadata'), key: 'stackable', value: 'false', valueType: 'boolean' },
       ],
-      visual: { slot: 'headwear', forms: ['baby', 'adult'], extra: {} },
+      visual: { ...blankVisual(), slot: 'headwear', forms: ['baby', 'adult'] },
       raw: '',
       extra: {},
       rawOnly: false,

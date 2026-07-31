@@ -9,7 +9,7 @@
  * fallback rather than inventing a third behavior.
  */
 
-import type { AccessorySlot } from '@blobbi/react';
+import type { AccessorySlot, BlobbiRenderVisual } from '@blobbi/react';
 
 /** The slots `@blobbi/react` knows how to place. */
 export const RENDERABLE_ACCESSORY_SLOTS: readonly AccessorySlot[] = [
@@ -34,3 +34,33 @@ export function toAccessorySlot(slot: string): AccessorySlot {
     ? (slot as AccessorySlot)
     : 'unknown';
 }
+
+/**
+ * The fixture Blobbi every preview tab stands on screen.
+ *
+ * Deliberately NOT the player's companion — a preview owns nothing and reads
+ * nothing. Shared so the accessory tab and the effect tab cannot disagree about
+ * what a Blobbi looks like, which would make it impossible to compare an item
+ * against one.
+ *
+ * Lives here rather than beside the components because a component file that
+ * also exports a constant loses fast refresh, and because this is plain data:
+ * `BlobbiRenderVisual` is a TYPE, so this module's `@blobbi/react` import stays
+ * type-only and the tools' domain layer stays free of the renderer.
+ */
+export const PREVIEW_VISUALS: Record<'baby' | 'adult', BlobbiRenderVisual> = {
+  baby: {
+    stage: 'baby',
+    baseColor: '#8E6BE8',
+    secondaryColor: '#B79CF2',
+    eyeColor: '#3A2A1A',
+    name: 'Preview Blobbi',
+  },
+  adult: {
+    stage: 'adult',
+    baseColor: '#F2A65A',
+    secondaryColor: '#F7C88B',
+    eyeColor: '#3A2A1A',
+    name: 'Preview Blobbi',
+  },
+};

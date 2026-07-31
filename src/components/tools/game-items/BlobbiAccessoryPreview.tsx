@@ -53,7 +53,6 @@ import {
   REAR_VIEW_HIDDEN_SLOTS,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
-  type BlobbiRenderVisual,
 } from '@blobbi/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,25 +63,7 @@ import {
   itemImageSourcesForView,
   type ItemImageCandidate,
 } from '@/inventory/item-image-resolution';
-import { toAccessorySlot } from '@/tools/game-items/preview-model';
-
-/** A fixture Blobbi. Deliberately not the player's — a preview owns nothing. */
-const PREVIEW_VISUALS: Record<'baby' | 'adult', BlobbiRenderVisual> = {
-  baby: {
-    stage: 'baby',
-    baseColor: '#8E6BE8',
-    secondaryColor: '#B79CF2',
-    eyeColor: '#3A2A1A',
-    name: 'Preview Blobbi',
-  },
-  adult: {
-    stage: 'adult',
-    baseColor: '#F2A65A',
-    secondaryColor: '#F7C88B',
-    eyeColor: '#3A2A1A',
-    name: 'Preview Blobbi',
-  },
-};
+import { PREVIEW_VISUALS, toAccessorySlot } from '@/tools/game-items/preview-model';
 
 const DEFAULT_PLACEMENT = { x: 50, y: 28, scale: 1, rot: 0, flipX: false };
 
@@ -243,7 +224,8 @@ export function BlobbiAccessoryPreview({
   );
 }
 
-function ToggleRow({
+/** The small segmented control both preview tabs use. */
+export function ToggleRow({
   label,
   value,
   options,

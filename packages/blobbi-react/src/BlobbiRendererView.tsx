@@ -15,6 +15,16 @@
  *  - accessories paint in normalized layer order: behind-body placements,
  *    then the body, then front placements (see `accessory-normalize.ts`);
  *  - accessories may overflow the box; the renderer clips nothing.
+ *
+ * Visual EFFECTS (Phase 8) interleave with that order without disturbing it:
+ *
+ *   [fx behind] → accessories behind → BODY → [fx mid] → accessories front
+ *   → [fx front]
+ *
+ * They are decoration only: every effect element is absolutely positioned and
+ * `pointer-events: none`, so nothing an effect does can change a measurement,
+ * move the ground anchor or intercept a click. See `effects/` and
+ * `docs/blobbi-visual-effects.md`.
  */
 import { useMemo, type CSSProperties } from 'react';
 import { loadBlobbiSvg } from './artwork/load-blobbi-svg';
@@ -27,6 +37,14 @@ import {
 } from './blobbi-render-size';
 import { normalizeBlobbiRenderModel } from './blobbi-render-model';
 import type { NormalizedAccessoryPlacement } from './accessory-normalize';
+import {
+  BlobbiEffectLayer,
+  BlobbiEffectStyles,
+} from './effects/BlobbiEffectLayers';
+import {
+  normalizeBlobbiVisualEffects,
+  type BlobbiVisualEffect,
+} from './effects/effect-model';
 
 export type { BlobbiRenderVisual } from './blobbi-render-model';
 import type { BlobbiRenderVisual } from './blobbi-render-model';
@@ -47,6 +65,19 @@ export interface BlobbiRendererViewProps {
   eyeOffset?: { x: number; y: number };
   /** Pre-normalized accessory placements (already sorted; see accessory-normalize). */
   accessories?: readonly NormalizedAccessoryPlacement[];
+  /**
+   * Visual effects to draw around this Blobbi — plain, serializable
+   * `{ id, intensity? }` data and nothing else. No component, class name, CSS
+   * or animation expression is accepted here, and an id this package does not
+   * implement is ignored rather than rendered as something arbitrary.
+   *
+   * Normalized INSIDE the renderer (unlike accessories, which arrive
+   * pre-normalized) because effect resolution contains no host policy at all:
+   * dropping unknown ids, clamping intensity and picking one winner per slot
+   * are decisions the package can make correctly on its own. See
+   * `effects/effect-model.ts`.
+   */
+  effects?: readonly BlobbiVisualEffect[];
   className?: string;
   title?: string;
   onClick?: () => void;
@@ -145,6 +176,7 @@ export function BlobbiRendererView({
   facing = 'front',
   eyeOffset,
   accessories = [],
+  effects,
   className,
   title,
   onClick,
@@ -169,6 +201,12 @@ export function BlobbiRendererView({
     eyeOffset,
     accessories,
   });
+
+  // Effect resolution: pure, total and cheap (at most four survivors from a
+  // handful of candidates), and it returns a shared frozen empty array when
+  // there is nothing to draw — so the common case, a Blobbi with no effects,
+  // allocates nothing and renders exactly the DOM it did before Phase 8.
+  const resolvedEffects = normalizeBlobbiVisualEffects(effects);
 
   // Whether gaze markup must be injected. A BOOLEAN, deliberately: gaze
   // direction changes every animation frame while a Blobbi walks or watches,
@@ -237,6 +275,12 @@ export function BlobbiRendererView({
       title={title}
       onClick={onClick}
     >
+      <BlobbiEffectStyles effects={resolvedEffects} />
+      <BlobbiEffectLayer
+        effects={resolvedEffects}
+        layer="behind"
+        instanceId={model.instanceId}
+      />
       <AccessoryLayerView placements={model.accessories} layer="behind" />
       {/* The body fills the renderer box exactly: the wrapper is inset-0 and
           the SVG carries width/height="100%" with its square viewBox
@@ -247,7 +291,20 @@ export function BlobbiRendererView({
         style={gazeStyle}
         dangerouslySetInnerHTML={{ __html: svgContent }}
       />
+      {/* Between the body and the front accessories: where a body-overlay
+          effect (Pixel Glitch, Electric Charge) belongs. It paints ON the
+          Blobbi without ever painting over its hat. */}
+      <BlobbiEffectLayer
+        effects={resolvedEffects}
+        layer="mid"
+        instanceId={model.instanceId}
+      />
       <AccessoryLayerView placements={model.accessories} layer="front" />
+      <BlobbiEffectLayer
+        effects={resolvedEffects}
+        layer="front"
+        instanceId={model.instanceId}
+      />
     </div>
   );
 }

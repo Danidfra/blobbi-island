@@ -119,9 +119,30 @@ export interface DerivationRow {
 
 export type ContentMode = 'structured' | 'json';
 
-/** The `content.visual` object, split into managed fields and the rest. */
+/**
+ * The `content.visual` object, split into managed fields and the rest.
+ *
+ * TWO SHAPES, ONE OBJECT. A `visual` describes either a **wearable accessory**
+ * (`slot` — where it sits on the body) or a **visual effect** (`kind`, `effect`,
+ * `effectSlot` — which locally-implemented effect it grants). They are modelled
+ * as sibling fields rather than a discriminated union because that is what the
+ * wire format is: one JSON object whose keys a reader picks from. A union here
+ * would force the editor to throw away one side's fields whenever the author
+ * changed their mind, and losing typed input to a mode switch is exactly the
+ * class of bug this form's `extra` machinery exists to avoid.
+ *
+ * `kind` is the discriminator a reader uses: {@link BLOBBI_EFFECT_VISUAL_KIND}
+ * means "this is a visual effect". Absent means "a wearable, read `slot`".
+ */
 export interface VisualFormState {
+  /** `visual.slot` — where a WEARABLE sits. Not used by effect items. */
   slot: string;
+  /** `visual.kind` — the discriminator; {@link BLOBBI_EFFECT_VISUAL_KIND}. */
+  kind: string;
+  /** `visual.effect` — the effect id this item grants. */
+  effect: string;
+  /** `visual.effectSlot` — which effect slot it competes for. */
+  effectSlot: string;
   forms: string[];
   /** `visual` keys the structured editor does not manage, preserved verbatim. */
   extra: Record<string, unknown>;
@@ -211,11 +232,16 @@ export function blankContent(): ContentFormState {
     description: '',
     effects: [],
     metadata: [],
-    visual: { slot: '', forms: [], extra: {} },
+    visual: blankVisual(),
     raw: '',
     extra: {},
     rawOnly: false,
   };
+}
+
+/** An empty `visual`, in neither shape until the author picks one. */
+export function blankVisual(): VisualFormState {
+  return { slot: '', kind: '', effect: '', effectSlot: '', forms: [], extra: {} };
 }
 
 /** A brand-new, empty item form. */
@@ -281,6 +307,10 @@ export const CATEGORY_SUGGESTIONS: readonly string[] = [
   'back',
   'neckwear',
   'handheld',
+  // Not a place on the body: an `effect` item grants a visual effect that
+  // surrounds the character. Picking it seeds the effect visual shape — see
+  // `contentPatchForCategory`.
+  'effect',
   'food',
   'toy',
   'medicine',
@@ -306,7 +336,7 @@ export const CONTEXT_SUGGESTIONS: readonly string[] = [
   'collection:nostr-games',
 ];
 
-/** Topic suggestions aimed at wearable accessories. */
+/** Topic suggestions aimed at wearable accessories and visual effects. */
 export const TOPIC_SUGGESTIONS: readonly string[] = [
   'equipable',
   'wearable',
@@ -318,6 +348,9 @@ export const TOPIC_SUGGESTIONS: readonly string[] = [
   'face-mark',
   'aura',
   'cosmetic',
+  'visual-effect',
+  'particles',
+  'arcade-prize',
 ];
 
 /**
@@ -340,6 +373,94 @@ export const SLOT_SUGGESTIONS: readonly string[] = [
 
 /** `visual.forms` suggestions — the Blobbi life stages. */
 export const FORM_SUGGESTIONS: readonly string[] = ['egg', 'baby', 'adult'];
+
+// --- Visual effects --------------------------------------------------------
+//
+// An effect item is an ordinary kind:31632 definition. What makes it an effect
+// is `content.visual.kind === 'blobbi-effect'` plus an `effect` id — and that
+// id is a NAME, never an implementation. No animation, CSS or markup is ever
+// carried in an event or read out of one; the effect code lives in
+// `@blobbi/react` and Island resolves a TRUSTED item address to a local effect
+// (`src/effects/official-visual-effect-items.ts`). Publishing an item with
+// `effect: "celestial-aura"` from another key therefore grants nothing.
+// See docs/blobbi-visual-effects.md §§1–3.
+
+/** The `visual.kind` value that marks a definition as a Blobbi visual effect. */
+export const BLOBBI_EFFECT_VISUAL_KIND = 'blobbi-effect';
+
+/** The `category` tag value that means "this item is a visual effect". */
+export const EFFECT_CATEGORY = 'effect';
+
+/**
+ * The four slots an effect may occupy.
+ *
+ * WRITTEN OUT rather than imported from `@blobbi/react`, because this module is
+ * the tools' pure domain layer and importing the renderer here would put React
+ * in the middle of event building — a boundary `boundaries.test.ts` enforces.
+ * Four short strings are a fair price for that; a twelve-entry EFFECT ID list
+ * would not be, which is why the ids live in the component layer instead
+ * (`effect-vocabulary.ts`).
+ *
+ * Drift is prevented by a test, not by hope: `effect-item-authoring.test.ts`
+ * imports the renderer's own `EFFECT_SLOT_ORDER` and asserts the two are equal.
+ * A test may import anything; production code here may not.
+ */
+export const EFFECT_SLOT_SUGGESTIONS: readonly string[] = [
+  'aura',
+  'ground-local',
+  'ambient-particles',
+  'body-overlay',
+];
+
+/** Is this visual authored as a Blobbi visual effect? */
+export function isEffectVisual(visual: VisualFormState): boolean {
+  return visual.kind.trim() === BLOBBI_EFFECT_VISUAL_KIND;
+}
+
+/**
+ * Is this form an effect item?
+ *
+ * Either signal counts, deliberately. `visual.kind` is the authoritative one a
+ * reader uses, but an author who has only set `category: "effect"` so far is
+ * clearly authoring an effect and should not be told their wearable is missing
+ * a slot.
+ */
+export function isEffectItemForm(form: ItemFormState): boolean {
+  return (
+    isEffectVisual(form.content.visual) ||
+    form.category.trim().toLowerCase() === EFFECT_CATEGORY
+  );
+}
+
+/**
+ * The content patch implied by choosing a `category`, or `null` for none.
+ *
+ * SEEDS, NEVER CLEARS. Choosing `effect` fills in the one field that makes the
+ * effect shape serialize at all (`visual.kind`) so the structured editor stops
+ * silently producing a `visual` with only `forms` in it — the exact failure
+ * this helper exists to fix. It does so ONLY when the visual is still
+ * unclaimed: an item that already declares a `slot`, a `kind`, or any effect
+ * field keeps whatever the author typed, because a category chip is not consent
+ * to rewrite the content.
+ */
+export function contentPatchForCategory(
+  content: ContentFormState,
+  category: string,
+): ContentFormState | null {
+  if (category.trim().toLowerCase() !== EFFECT_CATEGORY) return null;
+  if (content.mode !== 'structured' || content.rawOnly) return null;
+  const { visual } = content;
+  const claimed =
+    visual.slot.trim() !== '' ||
+    visual.kind.trim() !== '' ||
+    visual.effect.trim() !== '' ||
+    visual.effectSlot.trim() !== '';
+  if (claimed) return null;
+  return {
+    ...content,
+    visual: { ...visual, kind: BLOBBI_EFFECT_VISUAL_KIND },
+  };
+}
 
 /** Effect key suggestions. Blobbi's stats, offered but never enforced. */
 export const EFFECT_KEY_SUGGESTIONS: readonly string[] = [

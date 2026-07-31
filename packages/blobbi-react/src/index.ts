@@ -64,6 +64,38 @@ export type {
   AccessorySourceResolver,
 } from './accessory-types';
 
+// ── Visual effects ─────────────────────────────────────────────────────────
+// Effect INPUT is plain data (`{ id, intensity? }`) and effect IMPLEMENTATION
+// is entirely local to this package. Nothing here accepts a component, a class
+// name, a CSS string or an animation expression, and no id resolves to
+// anything this package did not write. See docs/blobbi-visual-effects.md.
+export {
+  BLOBBI_VISUAL_EFFECT_IDS,
+  EFFECT_SLOTS,
+  EFFECT_SLOT_ORDER,
+  DEFAULT_EFFECT_INTENSITY,
+  MIN_EFFECT_INTENSITY,
+  MAX_EFFECT_INTENSITY,
+  isBlobbiVisualEffectId,
+  normalizeBlobbiVisualEffects,
+} from './effects/effect-model';
+export type {
+  BlobbiVisualEffect,
+  BlobbiVisualEffectId,
+  BlobbiEffectSlot,
+  ResolvedBlobbiVisualEffect,
+} from './effects/effect-model';
+export {
+  getBlobbiVisualEffectInfo,
+  MAX_PIECES_PER_EFFECT,
+  MAX_PIECES_TOTAL,
+} from './effects/effect-catalog';
+export type { BlobbiVisualEffectInfo } from './effects/effect-catalog';
+// The full effect stylesheet, for a consumer that would rather mount the rules
+// once than carry a `<style>` element per effect-bearing character. Optional:
+// the renderer emits the subset it needs on its own.
+export { BLOBBI_EFFECT_STYLESHEET } from './effects/effect-styles';
+
 // ── Rendering without React ────────────────────────────────────────────────
 // The same SVG pipeline the component uses, for consumers that want a string:
 // server-side thumbnails, canvas compositing, a non-React card.

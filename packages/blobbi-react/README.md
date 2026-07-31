@@ -112,6 +112,20 @@ asserted exactly by `package-api.test.ts`.
 | `DEFAULT_ACCESSORY_SOURCES` | The neutral source resolver (§5). |
 | `AccessorySlot`, `AccessoryPlacementInput`, `NormalizedAccessoryPlacement`, `AccessoryLayer`, `NormalizeAccessoryOptions`, `AccessorySourceRequest`, `AccessorySourceResolver` | Types. |
 
+### Visual effects
+
+| Export | What it is |
+| --- | --- |
+| `BLOBBI_VISUAL_EFFECT_IDS` | The twelve effects this package can draw. |
+| `normalizeBlobbiVisualEffects` | Effect input → the deterministic, slot-resolved list the renderer draws. |
+| `EFFECT_SLOTS`, `EFFECT_SLOT_ORDER` | Which slot each effect occupies, and the canonical render order. |
+| `isBlobbiVisualEffectId` | Type guard for a string from outside. |
+| `getBlobbiVisualEffectInfo` | Id, slot, display name, description, piece count — enough to build a picker. |
+| `DEFAULT_EFFECT_INTENSITY`, `MIN_EFFECT_INTENSITY`, `MAX_EFFECT_INTENSITY` | The intensity contract. |
+| `MAX_PIECES_PER_EFFECT`, `MAX_PIECES_TOTAL` | The particle caps this package holds itself to. |
+| `BLOBBI_EFFECT_STYLESHEET` | The full effect CSS, for consumers who prefer to mount it once (§7). |
+| `BlobbiVisualEffect`, `BlobbiVisualEffectId`, `BlobbiEffectSlot`, `ResolvedBlobbiVisualEffect`, `BlobbiVisualEffectInfo` | Types. |
+
 ### Rendering without React
 
 | Export | What it is |
@@ -125,6 +139,10 @@ asserted exactly by `package-api.test.ts`.
 The artwork modules and their customizers, `cn`, the colour helpers, the SVG id
 internals, `findRearViewRemovals` and the removal/keep block lists. They are all
 used internally; none is a promise.
+
+The effect **presets** are likewise internal. An effect is named by its id; the
+particle geometry, timings and palettes behind that id are implementation, and
+exporting them would make somebody's hand-edited copy a supported input.
 
 ## 4. Rendering from plain data
 
@@ -154,6 +172,9 @@ const accessories = normalizeAccessoryPlacements([
   size="xl"
   accessories={accessories}
   eyeOffset={{ x: 0.4, y: -0.2 }}
+  // Visual effects are named, never described. `{ id, intensity? }` and nothing
+  // else — no component, class name, CSS or animation expression is accepted.
+  effects={[{ id: 'celestial-aura' }, { id: 'golden-sparkles', intensity: 0.8 }]}
 />;
 ```
 
@@ -173,6 +194,17 @@ Incomplete input is handled rather than rejected:
 | gaze with `facing: 'back'` | dropped (that drawing has no pupils) |
 | blank / punctuation-only `instanceId` | `'blobbi'` |
 | non-finite accessory `x`/`y`/`scale`/`rot` | `50` / `50` / `1` / `0` |
+| unknown effect id | ignored (never drawn as something else) |
+| duplicate effect id | first occurrence wins, with its intensity |
+| two effects in one slot | first in the supplied order wins; at most one per slot |
+| non-finite / out-of-range `intensity` | `1` / clamped to 0…1.5 |
+| `effects` absent, empty, or all-unknown | no effect markup and no stylesheet at all |
+
+Effects are decoration only: every element is `position: absolute` with
+`pointer-events: none`, so nothing they draw changes a measurement or takes a
+click, and the canonical box is byte-identical with and without them. Reduced
+motion is handled in CSS (`@media (prefers-reduced-motion: reduce)`) with no
+hook and no wiring; each effect falls back to a still, visible resting state.
 
 ## 5. Accessory source contract
 
@@ -252,6 +284,14 @@ gradient, room-grade or world vocabulary exists in this package.
 
 **Non-Tailwind consumers** can use `BLOBBI_RENDER_SIZE_PX` directly and pass
 their own `className`.
+
+**Visual effects need no configuration at all.** They emit no Tailwind class and
+require no keyframes from you: the effect system carries its own namespaced
+(`blobbi-fx-*`) CSS and renders the subset it needs into a `<style>` element
+beside the effect layers. A Blobbi with no effects emits nothing. If you render
+many effect-bearing Blobbis at once and would rather not carry one `<style>`
+each, mount `BLOBBI_EFFECT_STYLESHEET` yourself — it is additive, not a
+replacement.
 
 ## 8. Instance ids and multiple Blobbis
 

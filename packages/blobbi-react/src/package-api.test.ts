@@ -40,6 +40,19 @@ const PUBLIC_API = [
   'DEFAULT_ACCESSORY_SOURCES',
   'REAR_VIEW_HIDDEN_SLOTS',
   'normalizeAccessoryPlacements',
+  // Visual effects
+  'BLOBBI_EFFECT_STYLESHEET',
+  'BLOBBI_VISUAL_EFFECT_IDS',
+  'DEFAULT_EFFECT_INTENSITY',
+  'EFFECT_SLOTS',
+  'EFFECT_SLOT_ORDER',
+  'MAX_EFFECT_INTENSITY',
+  'MAX_PIECES_PER_EFFECT',
+  'MAX_PIECES_TOTAL',
+  'MIN_EFFECT_INTENSITY',
+  'getBlobbiVisualEffectInfo',
+  'isBlobbiVisualEffectId',
+  'normalizeBlobbiVisualEffects',
   // Rendering without React
   'loadBlobbiSvg',
   // SVG post-processing (provisional)
@@ -70,6 +83,19 @@ describe('the public API is exactly what it claims to be', () => {
       'darkenColor',
       'findRearViewRemovals',
       'REAR_VIEW_REMOVED_BLOCKS',
+      // Effect INTERNALS. The presets are particle geometry, timings and
+      // palettes — the implementation of an effect, not its interface. A
+      // consumer names an effect by id; if the preset were public, a
+      // hand-edited copy of one would become somebody's supported input.
+      'BLOBBI_VISUAL_EFFECT_PRESETS',
+      'BlobbiEffectLayer',
+      'BlobbiEffectStyles',
+      'pieceShapeStyle',
+      'effectStylesheetFor',
+      'unitFor',
+      'rangeFor',
+      'pickFor',
+      'hashString',
     ]) {
       expect(api, `${internal} must stay internal`).not.toHaveProperty(internal);
     }

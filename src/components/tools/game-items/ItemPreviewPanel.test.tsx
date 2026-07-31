@@ -16,7 +16,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 import { FIXTURE_IMAGE_URLS as U } from '@/inventory/item-image-fixtures';
-import { blankItemForm, nextRowId, type ItemFormState } from '@/tools/game-items/item-form-model';
+import {
+  blankItemForm,
+  blankVisual,
+  nextRowId,
+  type ItemFormState,
+} from '@/tools/game-items/item-form-model';
 import type { ImageProbe } from '@/tools/game-items/validation';
 
 const inventoryMutate = vi.fn();
@@ -158,7 +163,7 @@ describe('Blobbi accessory preview', () => {
           images: [imageRow(U.primary), imageRow(U.front, 'front'), imageRow(U.back, 'back')],
           content: {
             ...blankItemForm().content,
-            visual: { slot: 'headwear', forms: [], extra: {} },
+            visual: { ...blankVisual(), slot: 'headwear' },
           },
         })}
         probes={NO_PROBES}
@@ -176,7 +181,7 @@ describe('Blobbi accessory preview', () => {
           images: [imageRow(U.primary), imageRow(U.front, 'front'), imageRow(U.back, 'back')],
           content: {
             ...blankItemForm().content,
-            visual: { slot: 'headwear', forms: [], extra: {} },
+            visual: { ...blankVisual(), slot: 'headwear' },
           },
         })}
         probes={NO_PROBES}
@@ -195,7 +200,7 @@ describe('Blobbi accessory preview', () => {
           images: [imageRow(U.primary), imageRow(U.back, 'back')],
           content: {
             ...blankItemForm().content,
-            visual: { slot: 'eyewear', forms: [], extra: {} },
+            visual: { ...blankVisual(), slot: 'eyewear' },
           },
         })}
         probes={NO_PROBES}
@@ -215,7 +220,7 @@ describe('Blobbi accessory preview', () => {
           images: [imageRow(U.primary)],
           content: {
             ...blankItemForm().content,
-            visual: { slot: 'future-slot', forms: [], extra: {} },
+            visual: { ...blankVisual(), slot: 'future-slot' },
           },
         })}
         probes={NO_PROBES}
@@ -242,7 +247,7 @@ describe('previewing never writes', () => {
           images: [imageRow(U.primary), imageRow(U.front, 'front'), imageRow(U.back, 'back')],
           content: {
             ...blankItemForm().content,
-            visual: { slot: 'headwear', forms: [], extra: {} },
+            visual: { ...blankVisual(), slot: 'headwear' },
           },
         })}
         probes={NO_PROBES}

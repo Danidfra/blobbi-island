@@ -31,11 +31,16 @@ import {
   primaryItemImageUrl,
   type ItemImageCandidate,
 } from '@/inventory/item-image-resolution';
-import { type ItemFormState, urlHost } from '@/tools/game-items/item-form-model';
+import {
+  type ItemFormState,
+  isEffectItemForm,
+  urlHost,
+} from '@/tools/game-items/item-form-model';
 import { formImageCandidate } from '@/tools/game-items/form-event-conversion';
 import type { ImageProbe } from '@/tools/game-items/validation';
 
 import { BlobbiAccessoryPreview } from './BlobbiAccessoryPreview';
+import { BlobbiEffectPreview } from './BlobbiEffectPreview';
 
 const CHECKERBOARD =
   'repeating-conic-gradient(hsl(var(--muted)) 0% 25%, hsl(var(--background)) 0% 50%) 50% / 12px 12px';
@@ -47,6 +52,10 @@ export interface ItemPreviewPanelProps {
 
 export function ItemPreviewPanel({ form, probes }: ItemPreviewPanelProps) {
   const candidate = formImageCandidate(form);
+  // An effect item's image is a TOKEN representing the effect, not artwork to
+  // be worn. Drawing it as an accessory would preview something the game never
+  // renders, so the last tab previews the effect itself instead.
+  const isEffect = isEffectItemForm(form);
 
   return (
     <Tabs defaultValue="card" className="w-full">
@@ -78,11 +87,18 @@ export function ItemPreviewPanel({ form, probes }: ItemPreviewPanelProps) {
       </TabsContent>
 
       <TabsContent value="blobbi" className="pt-4">
-        <BlobbiAccessoryPreview
-          candidate={candidate}
-          slot={form.content.visual.slot}
-          code={form.d || 'preview-item'}
-        />
+        {isEffect ? (
+          <BlobbiEffectPreview
+            effect={form.content.visual.effect}
+            effectSlot={form.content.visual.effectSlot}
+          />
+        ) : (
+          <BlobbiAccessoryPreview
+            candidate={candidate}
+            slot={form.content.visual.slot}
+            code={form.d || 'preview-item'}
+          />
+        )}
       </TabsContent>
     </Tabs>
   );
