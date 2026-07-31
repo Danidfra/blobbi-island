@@ -2,10 +2,14 @@
  * The Item Studio's activation diagnostics.
  *
  * What is being protected here is not the pixels — it is the CLAIM the panel
- * makes. "Active in renderer" is a statement about this repository's trust
- * mapping, and it must be false for a third party's event even when that event
- * carries the exact `d` the mapping names. The rest of the findings are
- * work-remaining, and they must not overstate progress either.
+ * makes. "Wearable" is a statement about this repository's trusted identity
+ * registry AND about what the definition itself declares, and it must be false
+ * for a third party's event even when that event carries the exact `d` the
+ * registry names. The rest of the findings are work-remaining, and they must
+ * not overstate progress either.
+ *
+ * Since the kind:31634 migration there is no legacy code mapping: a cosmetic is
+ * wearable because its own `content.visual.slot` says where it goes.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -15,9 +19,8 @@ import {
   type ActivationSubject,
   activationStatus,
   activationSubject,
-  mappingSnippet,
+  registrySnippet,
   readVisualSlot,
-  suggestLegacyCode,
 } from './activation-status';
 
 const D = 'blobbi:cosmetic:block-builder-cap';
@@ -60,12 +63,15 @@ describe('applicability', () => {
 });
 
 describe('the Block Builder Cap, as published', () => {
-  it('reports it active in the renderer', () => {
+  it('reports it wearable once owned', () => {
     const status = activationStatus(subject());
     expect(status.isOfficialIssuer).toBe(true);
-    expect(status.mappedCode).toBe('headwear-block-builder-cap');
-    expect(status.activeInRenderer).toBe(true);
-    expect(labels(status)).toContain('Active in renderer');
+    expect(status.isRegistered).toBe(true);
+    expect(status.declaredSlot).toBe('headwear');
+    expect(status.wearable).toBe(true);
+    expect(labels(status)).toContain('Registered official cosmetic');
+    expect(labels(status)).toContain('Declares a supported slot');
+    expect(labels(status)).toContain('Wearable once owned');
   });
 
   it('reports no outstanding artwork work', () => {
@@ -75,17 +81,16 @@ describe('the Block Builder Cap, as published', () => {
     expect(labels(status)).not.toContain('Missing primary image');
   });
 
-  it('offers no registry snippet, because there is nothing to add', () => {
+  it('needs no registry edit, because it is already registered', () => {
     // The snippet is still derivable, but the panel only shows it when the item
-    // is NOT active — asserted here so the two never drift apart.
-    const status = activationStatus(subject());
-    expect(status.activeInRenderer).toBe(true);
+    // is NOT wearable — asserted here so the two never drift apart.
+    expect(activationStatus(subject()).wearable).toBe(true);
   });
 });
 
 describe('trust', () => {
-  it('is NOT active when the same d is published by a third party', () => {
-    // The mapping resolves the official address; a stranger's event lives at a
+  it('is NOT wearable when the same d is published by a third party', () => {
+    // The registry resolves the official address; a stranger's event lives at a
     // different address and can never be what the renderer draws.
     const status = activationStatus(
       subject({
@@ -95,61 +100,62 @@ describe('trust', () => {
     );
 
     expect(status.isOfficialIssuer).toBe(false);
-    expect(status.activeInRenderer).toBe(false);
+    expect(status.isRegistered).toBe(false);
+    expect(status.wearable).toBe(false);
     expect(labels(status)).toContain('Not the official issuer');
-    expect(labels(status)).toContain('Mapped, but to a different address');
+    expect(labels(status)).toContain('Not registered as an official cosmetic');
   });
 });
 
-describe('an unmapped cosmetic', () => {
-  const unmapped = () =>
+describe('an unregistered cosmetic', () => {
+  const unregistered = () =>
     subject({
       d: 'blobbi:cosmetic:sun-visor',
       address: `31632:${OFFICIAL_ITEM_ISSUER_PUBKEY}:blobbi:cosmetic:sun-visor`,
     });
 
-  it('is reported as not mapped and not active', () => {
-    const status = activationStatus(unmapped());
-    expect(status.mappedCode).toBeNull();
-    expect(status.activeInRenderer).toBe(false);
-    expect(labels(status)).toContain('Not mapped to a legacy accessory code');
+  it('is reported as unregistered and not wearable', () => {
+    const status = activationStatus(unregistered());
+    expect(status.isRegistered).toBe(false);
+    expect(status.wearable).toBe(false);
+    expect(labels(status)).toContain('Not registered as an official cosmetic');
   });
 
-  it('suggests a transitional code from the slot and the d slug', () => {
-    expect(suggestLegacyCode(unmapped())).toBe('headwear-sun-visor');
+  it('still reports the slot it declares', () => {
+    // Registration and declaration are independent facts, and conflating them
+    // would hide half the remaining work from whoever is publishing.
+    expect(activationStatus(unregistered()).declaredSlot).toBe('headwear');
   });
 
-  it('produces a pasteable registry entry, not a bare pair', () => {
-    const s = unmapped();
-    const snippet = mappingSnippet(s, activationStatus(s))!;
+  it('produces a pasteable registry entry with no legacy code in it', () => {
+    const snippet = registrySnippet(unregistered());
     expect(snippet).toContain("d: 'blobbi:cosmetic:sun-visor'");
-    expect(snippet).toContain("legacyCode: 'headwear-sun-visor'");
     expect(snippet).toContain(`primaryImage: '${PRIMARY}'`);
+    expect(snippet).not.toContain('legacyCode');
   });
-
-  it('suggests nothing when the definition declares no slot', () => {
-    expect(suggestLegacyCode(unmapped2())).toBeNull();
-  });
-
-  function unmapped2() {
-    return subject({ d: 'blobbi:cosmetic:mystery', visualSlot: undefined });
-  }
 });
 
-describe('slot agreement', () => {
-  it('flags a definition whose visual.slot contradicts the mapped code', () => {
-    // The mapped code is `headwear-…`, so a definition claiming `eyewear` means
-    // the item would be drawn in the wrong place on the body.
-    const status = activationStatus(subject({ visualSlot: 'eyewear' }));
-    expect(labels(status)).toContain(
-      'Slot mismatch between definition and mapping',
-    );
+describe('the declared slot is the activation switch', () => {
+  it('is not wearable with no declared slot, and says why', () => {
+    const status = activationStatus(subject({ visualSlot: undefined }));
+    expect(status.declaredSlot).toBeNull();
+    expect(status.wearable).toBe(false);
+    expect(labels(status)).toContain('No content.visual.slot');
   });
 
-  it('does not flag agreement', () => {
-    expect(labels(activationStatus(subject()))).not.toContain(
-      'Slot mismatch between definition and mapping',
-    );
+  it('is not wearable with a slot this renderer does not support', () => {
+    const status = activationStatus(subject({ visualSlot: 'tail' }));
+    expect(status.declaredSlot).toBeNull();
+    expect(status.wearable).toBe(false);
+    expect(labels(status)).toContain('Declares an unsupported slot');
+  });
+
+  it('accepts any supported slot, without consulting the item id', () => {
+    // `blobbi:cosmetic:block-builder-cap` reads like headwear; the definition
+    // says eyewear, and the definition wins. Nothing infers from the id.
+    const status = activationStatus(subject({ visualSlot: 'eyewear' }));
+    expect(status.declaredSlot).toBe('eyewear');
+    expect(status.wearable).toBe(true);
   });
 });
 
@@ -196,6 +202,6 @@ describe('reading the definition', () => {
 
     expect(s.d).toBe(D);
     expect(s.visualSlot).toBe('headwear');
-    expect(activationStatus(s).activeInRenderer).toBe(true);
+    expect(activationStatus(s).wearable).toBe(true);
   });
 });

@@ -32,8 +32,6 @@ import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
-import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergePetStateTags } from '@/lib/blobbi-parsers';
 import type { PetState } from '@/lib/blobbi-types';
@@ -199,13 +197,8 @@ export function useUseItem() {
           }
         : {};
 
-      // Preserve equipped accessories on the 31124 republish.
-      const currentEquipment =
-        (queryClient.getQueryData([
-          'accessory-equipment',
-          petId,
-        ]) as EquipmentConfig[]) || [];
-      const equipTags = currentEquipment.map((e) => createEquipTag(e));
+      // Equipment lives in kind:31634 and is untouched by feeding a Blobbi:
+      // there are no `equip` tags to preserve on the 31124 republish any more.
 
       // --- Step 1: publish Blobbi interaction (1124) + state (31124) ---
       const interactionTemplate = buildInteractionEventTemplate({
@@ -230,7 +223,6 @@ export function useUseItem() {
       // Pass the streak-metadata overrides so care_streak_last_at /
       // care_streak_last_day advance in lockstep with care_streak (never stale).
       const petStateTags = mergePetStateTags(updatedPet, streakOverrides);
-      equipTags.forEach((t) => petStateTags.push(t));
 
       await publish({
         kind: KIND_BLOBBI_STATE,

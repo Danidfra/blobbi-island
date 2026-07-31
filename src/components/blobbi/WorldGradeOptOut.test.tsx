@@ -113,9 +113,9 @@ describe('the local Blobbi', () => {
     expect(rendererView).toContain('dangerouslySetInnerHTML');
     expect(rendererView).toContain('<img');
 
-    // The interactive accessory editor also paints real <img> elements.
+    // The interactive placement editor also paints real <img> elements.
     const overlay = readFileSync(
-      join(process.cwd(), 'src/components/blobbi/AccessoryOverlay.tsx'),
+      join(process.cwd(), 'src/components/blobbi/PlacementOverlay.tsx'),
       'utf8',
     );
     expect(overlay).toContain('<img');

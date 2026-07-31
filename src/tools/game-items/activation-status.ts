@@ -3,34 +3,31 @@
  *
  * ## The gap this closes
  *
- * Publishing a kind:31632 definition and activating an accessory are two
- * different events separated by a source-code change. Between them the item is
- * real on relays and invisible in the game: nothing wears it, because no legacy
- * `equip` code maps to it. That gap is silent — the Published Items browser
- * shows a perfectly healthy row either way — and it is exactly where a person
- * publishing a batch of accessories loses track of which ones still need work.
+ * Publishing a kind:31632 definition and making it wearable are two different
+ * things. Since the kind:31634 migration the gap is no longer a source-code
+ * mapping — it is the DEFINITION'S OWN CONTENT. A cosmetic becomes wearable
+ * when it is registered as an official identity, signed by the official issuer,
+ * and declares a `content.visual.slot` this renderer supports. Nothing infers a
+ * slot from an id or a code prefix any more, so an issuer who omits it has
+ * published an item nothing can wear, and this module says so.
  *
- * This module answers the question as DATA. It is pure: no React, no Nostr, no
- * clipboard, no fetching. It compares a published record against this
- * repository's mapping tables and reports what it finds.
+ * It answers the question as DATA. Pure: no React, no Nostr, no clipboard, no
+ * fetching. It compares a published record against this repository's trusted
+ * identity registry and against what the definition itself declares.
  *
  * ## What it deliberately cannot do
  *
- * It cannot activate anything. The mapping lives in source code and is changed
- * by a human editing `OFFICIAL_COSMETIC_DEFINITIONS` and committing it; the
- * browser only ever COPIES a snippet for that person to paste. Letting a web UI
- * write the trust mapping would defeat the point of having one.
+ * It cannot activate anything. The official identity list lives in source code
+ * and is changed by a human editing `OFFICIAL_COSMETIC_DEFINITIONS` and
+ * committing it; the browser only ever COPIES a snippet for that person to
+ * paste. Letting a web UI write the trust list would defeat the point of it.
  *
- * It also never infers ownership. "Active in renderer" means "a worn accessory
- * with this code would be drawn from this definition" — not that anybody owns
- * or is wearing one.
+ * It never infers ownership. "Wearable" means "if a player owned this, Island
+ * could equip and draw it" — not that anybody owns or is wearing one.
  */
 
-import {
-  ACCESSORY_CODE_TO_OFFICIAL_ITEM_D,
-  accessoryItemAddress,
-} from '@/inventory/accessory-item-identity';
-import { inferSlotFromCode } from '@/components/blobbi/lib/accessory-utils';
+import { officialCosmeticByD } from '@/protocol/event-registry';
+import { EQUIPPABLE_SLOTS } from '@/placement/policy';
 import { itemImageByMarker, primaryItemImageUrl } from '@/inventory/item-image-resolution';
 import type { ItemImageCandidate } from '@/inventory/item-image-resolution';
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from '@/inventory/constants';
@@ -68,13 +65,22 @@ export interface ActivationStatus {
   applicable: boolean;
   /** Signed by the official issuer? */
   isOfficialIssuer: boolean;
-  /** The legacy accessory code mapped to this `d`, or `null`. */
-  mappedCode: string | null;
-  /** True when mapped AND the mapping resolves to THIS address. */
-  activeInRenderer: boolean;
+  /** Is this `d` in the official cosmetic identity registry? */
+  isRegistered: boolean;
+  /**
+   * The supported slot this definition declares, or `null`.
+   *
+   * `null` covers "declared nothing" and "declared something this renderer does
+   * not support" alike — both mean nothing can wear it.
+   */
+  declaredSlot: string | null;
+  /**
+   * True when the definition is registered, officially signed, and declares a
+   * supported slot: everything the client controls is in place, and only
+   * ownership (kind:31633) stands between a player and wearing it.
+   */
+  wearable: boolean;
   findings: readonly ActivationFinding[];
-  /** `'headwear-x': 'blobbi:cosmetic:y',` — for the mapping snippet. */
-  suggestedCode: string | null;
 }
 
 /**
@@ -120,21 +126,6 @@ function looksCosmetic(subject: ActivationSubject): boolean {
   return subject.type === 'cosmetic' || subject.d.startsWith('blobbi:cosmetic:');
 }
 
-/**
- * A transitional code proposal for an unmapped cosmetic.
- *
- * Derived from the definition's own `visual.slot` plus the `d`'s last segment,
- * which is what the Block Builder Cap's code was chosen as by hand. It is a
- * SUGGESTION printed into a snippet for a human to review — the tool never
- * writes it anywhere.
- */
-export function suggestLegacyCode(subject: ActivationSubject): string | null {
-  const slug = subject.d.split(':').pop();
-  if (!slug) return null;
-  const slot = subject.visualSlot?.trim();
-  if (!slot) return null;
-  return `${slot}-${slug}`;
-}
 
 /**
  * Everything the Item Studio can say about whether this definition is live.
@@ -150,10 +141,10 @@ export function activationStatus(subject: ActivationSubject): ActivationStatus {
     return {
       applicable: false,
       isOfficialIssuer,
-      mappedCode: null,
-      activeInRenderer: false,
+      isRegistered: false,
+      declaredSlot: null,
+      wearable: false,
       findings: [],
-      suggestedCode: null,
     };
   }
 
@@ -172,50 +163,58 @@ export function activationStatus(subject: ActivationSubject): ActivationStatus {
         },
   );
 
-  const mappedCode =
-    Object.entries(ACCESSORY_CODE_TO_OFFICIAL_ITEM_D).find(
-      ([, d]) => d === subject.d,
-    )?.[0] ?? null;
+  // Registered identity. Being signed by the official issuer is necessary but
+  // not sufficient: Island only resolves cosmetics whose `d` it has declared
+  // official, so an unregistered one is invisible no matter who signed it.
+  const registered = officialCosmeticByD(subject.d);
+  const isRegistered = registered !== null && registered.address === subject.address;
 
-  // Mapped by `d` is not the same as mapped to THIS event: a third party can
-  // publish the same `d`, and the mapping resolves only the official address.
-  const mappedAddress = mappedCode ? accessoryItemAddress(mappedCode) : null;
-  const activeInRenderer = Boolean(
-    mappedCode && mappedAddress === subject.address,
-  );
-
-  if (!mappedCode) {
+  if (!isRegistered) {
     findings.push({
       level: 'todo',
-      label: 'Not mapped to a legacy accessory code',
-      detail: 'Nothing can wear this item yet.',
+      label: 'Not registered as an official cosmetic',
+      detail: 'Add it to OFFICIAL_COSMETIC_DEFINITIONS; nothing resolves it yet.',
     });
-  } else if (!activeInRenderer) {
+  } else {
+    findings.push({ level: 'ok', label: 'Registered official cosmetic' });
+  }
+
+  // The declared slot IS the activation switch now. There is no fallback: a
+  // definition that does not say where it is worn cannot be worn, because
+  // Island refuses to guess placement from an id.
+  const declared = subject.visualSlot?.trim();
+  const declaredSlot =
+    declared && (EQUIPPABLE_SLOTS as readonly string[]).includes(declared)
+      ? declared
+      : null;
+
+  if (!declared) {
+    findings.push({
+      level: 'todo',
+      label: 'No content.visual.slot',
+      detail: 'Nothing can wear this: Island never infers a slot from the item id.',
+    });
+  } else if (declaredSlot === null) {
     findings.push({
       level: 'warn',
-      label: 'Mapped, but to a different address',
-      detail: `${mappedCode} → ${mappedAddress ?? 'unresolved'}`,
+      label: 'Declares an unsupported slot',
+      detail: `${declared} is not one of: ${EQUIPPABLE_SLOTS.join(', ')}`,
     });
   } else {
     findings.push({
       level: 'ok',
-      label: 'Mapped to legacy accessory code',
-      detail: mappedCode,
+      label: 'Declares a supported slot',
+      detail: declaredSlot,
     });
-    findings.push({ level: 'ok', label: 'Active in renderer' });
   }
 
-  // Slot agreement. The mapping stores no slot — the code's prefix IS the slot —
-  // so a mismatch means the item would be drawn in the wrong place on the body.
-  if (mappedCode && subject.visualSlot) {
-    const codeSlot = inferSlotFromCode(mappedCode);
-    if (codeSlot !== subject.visualSlot) {
-      findings.push({
-        level: 'warn',
-        label: 'Slot mismatch between definition and mapping',
-        detail: `definition says ${subject.visualSlot}, code implies ${codeSlot}`,
-      });
-    }
+  const wearable = isRegistered && isOfficialIssuer && declaredSlot !== null;
+  if (wearable) {
+    findings.push({
+      level: 'ok',
+      label: 'Wearable once owned',
+      detail: 'Only a kind:31633 quantity is missing.',
+    });
   }
 
   // Artwork. `primary` is what compact UI shows; `front`/`back` are what a posed
@@ -251,43 +250,31 @@ export function activationStatus(subject: ActivationSubject): ActivationStatus {
   return {
     applicable: true,
     isOfficialIssuer,
-    mappedCode,
-    activeInRenderer,
+    isRegistered,
+    declaredSlot,
+    wearable,
     findings,
-    suggestedCode: mappedCode ?? suggestLegacyCode(subject),
   };
 }
 
 /**
- * The line a developer pastes into `OFFICIAL_COSMETIC_DEFINITIONS`.
+ * The entry a developer pastes into `OFFICIAL_COSMETIC_DEFINITIONS`.
  *
- * Deliberately a REGISTRY ENTRY rather than a bare `code: d` pair: the mapping
- * is derived from that list, so the entry is the real edit and a lone pair would
- * point at a file nobody should be editing by hand.
+ * A REGISTRY ENTRY, not a code mapping: registration is what makes a `d`
+ * official, and the slot comes from the published definition rather than from
+ * anything written here.
  */
-export function mappingSnippet(
-  subject: ActivationSubject,
-  status: ActivationStatus,
-): string | null {
-  const code = status.suggestedCode;
-  if (!code) return null;
+export function registrySnippet(subject: ActivationSubject): string {
+  const primary = primaryItemImageUrl({
+    images: subject.images as ItemImageCandidate['images'],
+    image: subject.image,
+  });
   return [
     '{',
     `  d: '${subject.d}',`,
-    `  legacyCode: '${code}',`,
     '  name: ‹display name›,',
     '  symbol: ‹emoji›,',
-    `  primaryImage: ${
-      primaryItemImageUrl({
-        images: subject.images as ItemImageCandidate['images'],
-        image: subject.image,
-      })
-        ? `'${primaryItemImageUrl({
-            images: subject.images as ItemImageCandidate['images'],
-            image: subject.image,
-          })}'`
-        : 'null'
-    },`,
+    `  primaryImage: ${primary ? `'${primary}'` : 'null'},`,
     "  status: 'active',",
     '},',
   ].join('\n');

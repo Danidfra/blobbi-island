@@ -146,13 +146,18 @@ describe('the renderer/actor arrow points one way', () => {
 });
 
 describe('the accessory EDITOR shares the package contract instead of restating it', () => {
-  const OVERLAY = join(ROOT, 'src/components/blobbi/AccessoryOverlay.tsx');
+  const OVERLAY = join(ROOT, 'src/components/blobbi/PlacementOverlay.tsx');
 
   it('the editor overlay is Island-only and never enters the package', () => {
-    // Drag/wheel editing, the equipment hook and DOM listeners belong to the
-    // editor. The package proved separately that it cannot reach them.
+    // Drag/wheel editing, the placement vocabulary and DOM listeners belong to
+    // the editor. The package proved separately that it cannot reach them.
     const specifiers = importsOf(OVERLAY);
-    expect(specifiers.some((s) => /useAccessoryManagement/.test(s))).toBe(true);
+    expect(specifiers.some((s) => /placement\/accessory-sources/.test(s))).toBe(true);
+    expect(specifiers.some((s) => /useEquipmentMutation/.test(s))).toBe(true);
+    // The editor NEVER publishes: it reports patches upward and the modal
+    // batches them into one complete-replacement event.
+    const overlay = readFileSync(OVERLAY, 'utf8');
+    expect(overlay).not.toMatch(/mutateAsync|useNostrPublish/);
   });
 
   it('uses the SAME box-relative sizing and ordering as the static renderer', () => {
@@ -249,10 +254,10 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
         !/\.test\.tsx?$/.test(file) &&
         importsOf(file).some((s) => /asset-paths/.test(s)),
     ).map(rel).sort();
-    expect(importers).toEqual([
-      'src/components/blobbi/lib/accessory-utils.ts',
-      'src/components/blobbi/lib/island-accessory-sources.ts',
-    ]);
+    // NOTHING under components/blobbi/lib builds an asset path any more. The
+    // equipment path resolves artwork from published definitions, and the last
+    // filename-convention module went with the legacy accessory system.
+    expect(importers).toEqual([]);
   });
 
   it('passes that adapter explicitly — the package has no Island default', () => {
@@ -318,8 +323,23 @@ describe('item-definition knowledge stops at the Island adapter', () => {
         !/\.test\.tsx?$/.test(file) &&
         importsOf(file).some((s) => /item-image-resolution/.test(s)),
     ).map(rel).sort();
-    expect(importers).toEqual([
-      'src/components/blobbi/lib/island-accessory-sources.ts',
+    // `EquipmentPanel` reads `primaryItemImageUrl` for its inventory
+    // THUMBNAILS, which is a UI use and not a renderer source. What matters is
+    // that no component builds a renderer candidate list itself: that is
+    // `@/placement/accessory-sources` alone, asserted below.
+    expect(importers).toEqual(['src/components/blobbi/EquipmentPanel.tsx']);
+
+    const resolverBuilders = ISLAND_FILES.filter(
+      (file) =>
+        !/\.test\.tsx?$/.test(file) &&
+        /createPlacementAccessorySourceResolver/.test(readFileSync(file, 'utf8')) &&
+        !/placement\/accessory-sources\.ts$/.test(file),
+    ).map(rel).sort();
+    // Only the two render surfaces may CALL the builder; nobody else may
+    // reimplement one.
+    expect(resolverBuilders).toEqual([
+      'src/components/blobbi/CurrentBlobbiDisplay.tsx',
+      'src/components/blobbi/PlacementOverlay.tsx',
     ]);
   });
 });

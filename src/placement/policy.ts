@@ -21,9 +21,14 @@
  *      checked against the inventory, never inferred from the placement.
  *   3. ISSUER — only cosmetics whose kind:31632 definition is signed by the
  *      official issuer are offered or rendered in production.
- *   4. FORM — when the definition declares `visual.forms`, the Blobbi's current
- *      form must be among them.
- *   5. SLOT — the entry's slot must be a slot this renderer knows.
+ *   4. FORM — when the definition declares a non-empty `visual.forms`, the
+ *      Blobbi's current form must be among them. An ABSENT `forms` is no
+ *      restriction at all; a MALFORMED one (present but unusable, including
+ *      `[]`) makes the definition invalid for normal production equipping.
+ *   5. SLOT — the definition must declare a `visual.slot` this renderer
+ *      supports, and the entry must claim that same slot. A missing or
+ *      malformed slot is not equippable: Island cannot safely infer placement
+ *      from an item id or a code prefix.
  *
  * WHAT IS DELIBERATELY NOT POLICY: quantity is NOT consumed by equipping, and
  * unequipping does NOT return anything. Ownership changes are kind:31633's job
@@ -69,6 +74,7 @@ export type PlacementRejectionReason =
   | 'untrusted-issuer'
   | 'unknown-definition'
   | 'incompatible-form'
+  | 'malformed-forms'
   | 'unsupported-slot'
   | 'slot-mismatch'
   | 'unsupported-mode';
@@ -113,19 +119,52 @@ export function mayModifyCharacter(
 }
 
 /**
- * Whether the definition declares forms, and if so whether `form` is one.
+ * How a definition's `content.visual.forms` bears on equipping.
  *
- * A definition with no declared forms fits every form: silence means "no
- * restriction", not "no forms allowed".
+ * Three outcomes, deliberately not two:
+ *
+ * - `'no-restriction'` — the issuer did not use the optional field. An absent
+ *   field is silence, and silence is not a restriction: a plain cosmetic with
+ *   no `forms` key fits every Blobbi.
+ * - `'compatible'` / `'incompatible'` — the issuer declared a non-empty list,
+ *   so the current form must be in it.
+ * - `'malformed'` — the issuer published something unusable (`forms: []`, a
+ *   non-array, or an array with no usable strings). That is a broken
+ *   definition. Island refuses it for normal production equipping rather than
+ *   guessing whether they meant "all forms" or "no forms".
+ *
+ * The current form being unknown is treated as no restriction: a cosmetic must
+ * not disappear because the Blobbi list has not loaded yet.
+ */
+export type FormCompatibility =
+  | 'no-restriction'
+  | 'compatible'
+  | 'incompatible'
+  | 'malformed';
+
+export function formCompatibility(
+  definition: ResolvedBlobbiItemDefinition | undefined,
+  form: string | undefined,
+): FormCompatibility {
+  if (definition?.visualDiagnostics.forms === 'malformed') return 'malformed';
+  const declared = definitionForms(definition);
+  if (declared === null) return 'no-restriction';
+  if (form === undefined || form === '') return 'no-restriction';
+  return declared.includes(form) ? 'compatible' : 'incompatible';
+}
+
+/**
+ * Convenience predicate: may this item be worn on this form?
+ *
+ * A malformed `forms` declaration is NOT compatible — see
+ * {@link formCompatibility} for why absent and malformed differ.
  */
 export function formIsCompatible(
   definition: ResolvedBlobbiItemDefinition | undefined,
   form: string | undefined,
 ): boolean {
-  const declared = definitionForms(definition);
-  if (declared === null || declared.length === 0) return true;
-  if (form === undefined || form === '') return true;
-  return declared.includes(form);
+  const result = formCompatibility(definition, form);
+  return result === 'no-restriction' || result === 'compatible';
 }
 
 /**
@@ -145,9 +184,12 @@ export function definitionForms(
 /**
  * The slot a definition declares, when it is one this renderer can draw.
  *
- * Returns `null` for an undeclared slot and for a declared slot outside
- * {@link EQUIPPABLE_SLOTS} — an issuer naming a slot Island does not know is
- * not an error, it just is not something this client can place.
+ * Returns `null` for an undeclared or malformed slot and for a declared slot
+ * outside {@link EQUIPPABLE_SLOTS}. All three mean "not equippable in normal
+ * production UI": Island cannot infer placement from an item id or a code
+ * prefix, so an issuer who has not named a supported slot has not made the
+ * cosmetic wearable here. The reason is preserved in
+ * `definition.visualDiagnostics.slot` for diagnostics.
  */
 export function definitionSlot(
   definition: ResolvedBlobbiItemDefinition | undefined,
@@ -207,7 +249,11 @@ export function decidePlacementEntry(
     return refuse('not-owned');
   }
 
-  if (!formIsCompatible(definition, context.form)) {
+  const forms = formCompatibility(definition, context.form);
+  if (forms === 'malformed') {
+    return refuse('malformed-forms');
+  }
+  if (forms === 'incompatible') {
     return refuse('incompatible-form');
   }
 

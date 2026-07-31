@@ -331,9 +331,18 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
   'style', 'background', 'title',
   // Multi-value tags
   'has', 'achievements',
-  // Accessory/cosmetic tags — caller-managed via updateInvTags, never rewritten here.
-  'inv',
 ]);
+
+// NOTE the deliberate absence of `inv`.
+//
+// `inv` was the legacy kind:11125 accessory-ownership vocabulary. Island no
+// longer reads or writes it — ownership is kind:31633 — but it is still the
+// PLAYER'S DATA, and this client is not the only one that may hold it. Leaving
+// it out of the managed set means it falls through the unknown-tag passthrough
+// and survives a republish verbatim, exactly like `storage`.
+//
+// Stop reading, stop writing, do not delete. Migrating it would be a separate,
+// deliberate act; silently dropping it on the next profile save would not.
 
 /**
  * Merge owner profile tags for republishing.
@@ -419,9 +428,15 @@ const MANAGED_PET_STATE_TAG_NAMES = new Set([
   'adopted_by', 'adopted_from', 'current_location', 'in_party', 'visible_to_others',
   // Special
   'fees', 'penalty', 'value', 'care_points_deducted',
-  // Equipment (managed by accessory system)
-  'equip',
 ]);
+
+// NOTE the deliberate absence of the legacy equipment tag.
+//
+// Equipment moved to kind:31634. This client neither reads nor writes the old
+// kind:31124 equipment vocabulary, but a player's existing tags are their data:
+// keeping the name out of the managed set lets the unknown-tag passthrough
+// carry them across a republish untouched, instead of this client quietly
+// deleting a record it has stopped understanding.
 
 /** Convert Date to Unix timestamp string */
 function dateToTimestamp(date: Date): string {

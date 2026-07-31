@@ -45,6 +45,12 @@ const DevRooms = import.meta.env.DEV
   ? lazy(() => import("./pages/DevRooms").then(m => ({ default: m.DevRooms })))
   : null;
 
+// Item / inventory / placement inspector. Drives the REAL 31632, 31633 and
+// 31634 service boundaries — see the module doc for why it has no local state.
+const DevEquipment = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevEquipment").then(m => ({ default: m.DevEquipment })))
+  : null;
+
 // Loading component for lazy-loaded routes
 const PageLoading = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -93,6 +99,13 @@ export function AppRouter() {
           <Route path="/dev/rooms" element={
             <Suspense fallback={<PageLoading />}>
               <DevRooms />
+            </Suspense>
+          } />
+        )}
+        {DevEquipment && (
+          <Route path="/dev/equipment" element={
+            <Suspense fallback={<PageLoading />}>
+              <DevEquipment />
             </Suspense>
           } />
         )}

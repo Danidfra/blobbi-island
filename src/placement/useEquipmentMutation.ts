@@ -27,6 +27,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import {
   buildGameItemPlacementEvent,
   compareGameItemPlacementRevisions,
+  getLastEquippedPlacementBySlot,
   removeEquippedPlacementFromSlot,
   setEquippedPlacementForSlot,
   toBuildGameItemPlacementInput,
@@ -50,6 +51,7 @@ import {
   type PlacementState,
 } from './usePlacementState';
 import { isEquippableSlot } from './policy';
+import { buildEquipEntry, ISLAND_PLACEMENT_REFERENCE } from './render-model';
 
 // --- Per-document serialization -------------------------------------------
 //
@@ -74,9 +76,27 @@ function serialize<T>(key: string, task: () => Promise<T>): Promise<T> {
 
 // --- Pure transforms -------------------------------------------------------
 
+/** The 2D transform fields the Island editor can change. */
+export interface PlacementTransformPatch {
+  x?: number;
+  y?: number;
+  scale?: number;
+  rot?: number;
+  flipX?: boolean;
+}
+
 export type EquipmentMutation =
   | { type: 'equip'; slot: string; entry: GameItemPlacementEntry }
-  | { type: 'unequip'; slot: string };
+  | { type: 'unequip'; slot: string }
+  /**
+   * Apply transform edits to several equipped slots in ONE publish.
+   *
+   * The editor lets a player drag three accessories and then save. Publishing
+   * once per slot would emit three replaceable events for the same address,
+   * each superseding the last, so the first two would be pure noise and a
+   * mid-sequence failure would leave a partially-applied state.
+   */
+  | { type: 'set-transforms'; transforms: Record<string, PlacementTransformPatch> };
 
 /**
  * Apply an equipment mutation purely (no I/O).
@@ -88,19 +108,97 @@ export function applyEquipmentMutation(
   base: GameItemPlacement,
   mutation: EquipmentMutation,
 ): GameItemPlacement {
-  if (!isEquippableSlot(mutation.slot)) {
-    throw new Error(`Unknown equipment slot: ${mutation.slot}`);
-  }
   switch (mutation.type) {
     case 'equip':
+      assertEquippableSlot(mutation.slot);
       return setEquippedPlacementForSlot(base, mutation.slot, mutation.entry);
     case 'unequip':
+      assertEquippableSlot(mutation.slot);
       return removeEquippedPlacementFromSlot(base, mutation.slot);
+    case 'set-transforms': {
+      // Folded over one snapshot, so every edit lands in a single document.
+      // A slot with no equipped entry is skipped rather than invented: a
+      // transform is an edit to something worn, never a way to wear something.
+      let next = base;
+      for (const [slot, patch] of Object.entries(mutation.transforms)) {
+        assertEquippableSlot(slot);
+        const current = getLastEquippedPlacementBySlot(next, slot);
+        if (current === undefined) continue;
+        next = setEquippedPlacementForSlot(
+          next,
+          slot,
+          applyTransformPatch(current, patch),
+        );
+      }
+      return next;
+    }
     default: {
       const _exhaustive: never = mutation;
       throw new Error(`Unknown mutation ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+function assertEquippableSlot(slot: string): asserts slot is string {
+  if (!isEquippableSlot(slot)) {
+    throw new Error(`Unknown equipment slot: ${slot}`);
+  }
+}
+
+/**
+ * Merge a transform patch into an equipped entry.
+ *
+ * Rebuilt through `buildEquipEntry` so the "omit what equals the default" rule
+ * is applied once, in one place: an accessory dragged back to the centre stops
+ * carrying a `position` rather than carrying a redundant one forever.
+ *
+ * Unknown fields on the existing entry are carried across explicitly, because
+ * the rebuild only knows the fields Island understands and a newer client's
+ * data must survive an older client's drag.
+ */
+function applyTransformPatch(
+  entry: GameItemPlacementEntry,
+  patch: PlacementTransformPatch,
+): GameItemPlacementEntry {
+  const slot = entry.slot as string;
+  const known = new Set([
+    'id',
+    'item',
+    'mode',
+    'slot',
+    'position',
+    'rotation',
+    'scale',
+    'flip',
+    'layer',
+    'form',
+    'view',
+  ]);
+  const preserved: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entry)) {
+    if (!known.has(key)) preserved[key] = value;
+  }
+
+  const rebuilt = buildEquipEntry({
+    itemAddress: entry.item,
+    slot: slot as Parameters<typeof buildEquipEntry>[0]['slot'],
+    x: patch.x ?? entry.position?.x,
+    y: patch.y ?? entry.position?.y,
+    scale: patch.scale ?? entry.scale?.x,
+    rot:
+      patch.rot ??
+      (entry.rotation?.type === 'euler' && typeof entry.rotation.z === 'number'
+        ? entry.rotation.z
+        : undefined),
+    flipX: patch.flipX ?? entry.flip?.x,
+    ...(entry.form === undefined ? {} : { form: entry.form }),
+    ...(entry.view === undefined ? {} : { view: entry.view }),
+  });
+
+  // `layer` is not editable in this UI but must not be dropped by an edit.
+  if (entry.layer !== undefined) rebuilt.layer = entry.layer;
+
+  return { ...preserved, ...rebuilt };
 }
 
 /**
@@ -135,6 +233,11 @@ export function buildEquipmentTemplate(
     // the previous document: a document that arrived with a target pointing at
     // somebody else's Blobbi must not have that target carried forward.
     target: placementTargetForCharacter(options.ownerPubkey, options.characterId),
+    // Island always states its own coordinate system, for the same reason it
+    // re-asserts the target: an entry that carries a position and no reference
+    // is uninterpretable, and inheriting a reference written by another client
+    // would silently reinterpret Island's own percentages.
+    reference: ISLAND_PLACEMENT_REFERENCE,
     revision: (options.baseRevision ?? 0) + 1,
     contexts: dedupe([...(input.contexts ?? []), ISLAND_PLACEMENT_CONTEXT]),
     topics: dedupe([...(input.topics ?? []), ISLAND_PLACEMENT_TOPIC]),

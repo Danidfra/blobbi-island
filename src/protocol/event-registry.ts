@@ -1119,11 +1119,12 @@ export function officialItemByAddress(
 // fetched — and a fetched definition always outranks them
 // (see `useItemCatalog`).
 //
-// The `slot` is NOT stored: it is inferred from `legacyCode`'s prefix, so the
-// mapping and the slot can never disagree with each other. Whether that inferred
-// slot matches the definition's own `visual.slot` is a real question, and it is
-// answered at runtime by the Item Studio's activation diagnostics rather than by
-// a third copy of the value here.
+// The `slot` is NOT stored here either: since the kind:31634 migration the
+// PUBLISHED DEFINITION is the only authority on where a cosmetic is worn
+// (`content.visual.slot`). Recording a slot in this list would be a second
+// answer that can disagree with the issuer's own, and Island would then have to
+// pick one. The Item Studio's activation diagnostics report what the definition
+// declares; nothing infers a slot from an id or a code prefix any more.
 // ---------------------------------------------------------------------------
 
 /**
@@ -1133,16 +1134,6 @@ export function officialItemByAddress(
 export interface OfficialCosmeticDefinition {
   /** The kind:31632 `d` tag. Canonical identity together with the issuer. */
   d: string;
-  /**
-   * The legacy accessory `code` this cosmetic is worn as.
-   *
-   * Equipment is still expressed by the pre-existing `equip` tag vocabulary
-   * (see `src/components/blobbi/lib/accessory-types.ts`), which identifies an
-   * accessory by bare code and carries its placement. This field is the join
-   * between that vocabulary and the item protocol; it is NOT a claim that the
-   * player owns or has equipped the item.
-   */
-  legacyCode: string;
   /** Display name — FALLBACK ONLY. The published `name` tag wins. */
   name: string;
   /** Emoji shown when no artwork loads — FALLBACK ONLY. */
@@ -1170,16 +1161,6 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
   [
     {
       d: 'blobbi:cosmetic:block-builder-cap',
-      // TRANSITIONAL CODE. No pre-existing accessory code described this cap —
-      // the legacy series is numeric (`headwear-1` … `headwear-21`, each backed
-      // by a `public/assets/.../headwear/headwear-N.png`). A slug rather than
-      // `headwear-22` on purpose: the numeric series is the LOCAL ARTWORK
-      // series, and taking the next number would both imply a local file that
-      // does not exist and collide with the next hat that does ship one. The
-      // slug still matches `ACCESSORY_CODE_PATTERN` and still infers the
-      // `headwear` slot from its prefix, so every existing parser accepts it
-      // unchanged.
-      legacyCode: 'headwear-block-builder-cap',
       name: 'Block Builder Cap',
       symbol: '🧢',
       // The unmarked `image` tag of the published definition, verified against

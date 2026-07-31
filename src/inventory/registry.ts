@@ -19,7 +19,6 @@
 import {
   ADDRESSED_OFFICIAL_COSMETICS,
   ADDRESSED_OFFICIAL_ITEMS,
-  type AddressedOfficialCosmetic,
 } from '@/protocol/event-registry';
 
 /** A fully-resolved registry entry. */
@@ -119,10 +118,6 @@ export const OFFICIAL_COSMETIC_D_TAGS: readonly string[] = COSMETIC_ENTRIES.map(
 );
 
 const cosmeticByDTag = new Map(COSMETIC_ENTRIES.map((e) => [e.d, e]));
-const cosmeticByLegacyCode = new Map(
-  COSMETIC_ENTRIES.map((e) => [e.legacyCode, e]),
-);
-
 /**
  * Resolve a cosmetic `d` tag to its full canonical address, or `null`.
  *
@@ -132,13 +127,6 @@ const cosmeticByLegacyCode = new Map(
  */
 export function cosmeticDTagToAddress(d: string): string | null {
   return cosmeticByDTag.get(d)?.address ?? null;
-}
-
-/** The official cosmetic worn as `code`, or `null`. */
-export function cosmeticByCode(
-  code: string,
-): AddressedOfficialCosmetic | null {
-  return cosmeticByLegacyCode.get(code) ?? null;
 }
 
 const cosmeticAddresses = new Set(OFFICIAL_COSMETIC_ADDRESSES);

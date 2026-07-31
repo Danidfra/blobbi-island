@@ -260,33 +260,3 @@ describe('Load Item dialog', () => {
     await expectSoleUnnestedCloseButton();
   });
 });
-
-describe('AccessoryRemovalModal (non-tool consumer)', () => {
-  it('renders one un-nested close control', async () => {
-    const { AccessoryRemovalModal } = await import(
-      '@/components/blobbi/AccessoryRemovalModal'
-    );
-
-    render(
-      <AccessoryRemovalModal
-        isOpen
-        onClose={() => undefined}
-        accessory={{
-          code: 'headwear-1',
-          x: 50,
-          y: 50,
-          scale: 1,
-          rot: 0,
-          flipX: false,
-          refw: 100,
-          refh: 100,
-          form: 'default',
-          url: 'https://fixtures.invalid/hat.png',
-          slot: 'headwear',
-        }}
-      />,
-    );
-
-    await expectSoleUnnestedCloseButton();
-  });
-});

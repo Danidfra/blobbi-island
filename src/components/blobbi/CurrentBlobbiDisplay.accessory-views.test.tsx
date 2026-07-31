@@ -76,6 +76,7 @@ const HAT_DEFINITION = {
   topics: [],
   slot: 'headwear',
   forms: null,
+  visualDiagnostics: { slot: 'declared', forms: 'absent' },
   source: 'definition',
 } satisfies ResolvedBlobbiItemDefinition;
 

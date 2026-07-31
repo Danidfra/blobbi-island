@@ -25,6 +25,7 @@ import {
 } from '@/protocol/event-registry';
 
 import {
+  type DefinitionVisualDiagnostics,
   type ItemAction,
   type ItemCategory,
   type ItemStage,
@@ -179,26 +180,68 @@ function readEffectsFromContent(contentJson: unknown): {
 function readVisualFromContent(contentJson: unknown): {
   slot: string | null;
   forms: readonly string[] | null;
+  visualDiagnostics: DefinitionVisualDiagnostics;
 } {
-  if (!contentJson || typeof contentJson !== 'object') {
-    return { slot: null, forms: null };
+  const visual = readVisualObject(contentJson);
+  if (visual === null) {
+    return {
+      slot: null,
+      forms: null,
+      visualDiagnostics: { slot: 'missing', forms: 'absent' },
+    };
   }
+
+  // --- slot ---------------------------------------------------------------
+  // Missing and malformed both end in "not equippable", but they are reported
+  // differently: one is an issuer who has not said yet, the other is an issuer
+  // who said something unusable.
+  let slot: string | null = null;
+  let slotState: DefinitionVisualDiagnostics['slot'];
+  const rawSlot = visual.slot;
+  if (rawSlot === undefined) {
+    slotState = 'missing';
+  } else if (typeof rawSlot !== 'string' || rawSlot.trim() === '') {
+    slotState = 'malformed';
+  } else {
+    slot = rawSlot;
+    slotState = 'declared';
+  }
+
+  // --- forms --------------------------------------------------------------
+  // ABSENT IS NOT EMPTY. An issuer who says nothing about forms has placed no
+  // restriction, so a plain cosmetic with no `forms` key fits every Blobbi.
+  // An issuer who publishes `forms: []`, or a non-array, or an array with no
+  // usable strings, has said something that cannot be honoured — that is a
+  // broken definition, not a universal one, and Island refuses to guess which
+  // it meant.
+  let forms: readonly string[] | null = null;
+  let formsState: DefinitionVisualDiagnostics['forms'];
+  const rawForms = visual.forms;
+  if (rawForms === undefined) {
+    formsState = 'absent';
+  } else if (!Array.isArray(rawForms)) {
+    formsState = 'malformed';
+  } else {
+    const usable = rawForms.filter(
+      (f): f is string => typeof f === 'string' && f.trim() !== '',
+    );
+    if (usable.length === 0) {
+      formsState = 'malformed';
+    } else {
+      forms = usable;
+      formsState = 'declared';
+    }
+  }
+
+  return { slot, forms, visualDiagnostics: { slot: slotState, forms: formsState } };
+}
+
+/** The `content.visual` object, or `null` when there is not one. */
+function readVisualObject(contentJson: unknown): Record<string, unknown> | null {
+  if (!contentJson || typeof contentJson !== 'object') return null;
   const visual = (contentJson as Record<string, unknown>).visual;
-  if (!visual || typeof visual !== 'object') {
-    return { slot: null, forms: null };
-  }
-  const obj = visual as Record<string, unknown>;
-
-  const rawSlot = obj.slot;
-  const slot =
-    typeof rawSlot === 'string' && rawSlot.trim() !== '' ? rawSlot : null;
-
-  const rawForms = obj.forms;
-  const forms = Array.isArray(rawForms)
-    ? rawForms.filter((f): f is string => typeof f === 'string' && f !== '')
-    : [];
-
-  return { slot, forms: forms.length > 0 ? forms : null };
+  if (!visual || typeof visual !== 'object' || Array.isArray(visual)) return null;
+  return visual as Record<string, unknown>;
 }
 
 export function resolveFromDefinition(
@@ -239,6 +282,7 @@ export function resolveFromDefinition(
     // slot the issuer did not actually declare.
     slot: visual.slot,
     forms: visual.forms,
+    visualDiagnostics: visual.visualDiagnostics,
     source: 'definition',
   };
 }

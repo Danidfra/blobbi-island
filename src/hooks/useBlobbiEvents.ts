@@ -8,8 +8,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
-import { createEquipTag } from '@/components/blobbi/lib/accessory-utils';
-import type { EquipmentConfig } from '@/components/blobbi/lib/accessory-types';
 import type {
   OwnerProfile,
   PetState
@@ -404,8 +402,6 @@ export function useUpdatePetState() {
         throw new Error('User not logged in');
       }
 
-      // Get current equipment for this pet
-      const currentEquipment = (queryClient.getQueryData(['accessory-equipment', petId]) as EquipmentConfig[]) || [];
 
       // Get existing pet state data from cache
       const allPets = queryClient.getQueryData(['pet-states', user.pubkey]) as PetState[] | undefined;
@@ -482,11 +478,11 @@ export function useUpdatePetState() {
       // Use merge utility to preserve unknown tags from Ditto
       const tags = mergePetStateTags(mergedPet);
 
-      // Convert current equipment to equip tags and add them
-      const equipTags = currentEquipment.map(equipment => createEquipTag(equipment));
-      equipTags.forEach(equipTag => {
-        tags.push(equipTag);
-      });
+      // Equipment is NOT on kind:31124 any more — it lives in the character's
+      // kind:31634 placement document, which this republish does not touch.
+      // Re-attaching `equip` tags here used to be necessary so a care action
+      // did not wipe a player's hats; now it would write a second, stale copy
+      // of equipment state that nothing reads.
 
       // Preserve original content (which may contain evolution JSON from Ditto)
       const content = existingPet.rawContent;

@@ -59,7 +59,7 @@ function definition(
 ): ResolvedBlobbiItemDefinition {
   return {
     address: CAP_ADDRESS,
-    itemId: CAP.legacyCode,
+    itemId: null,
     d: CAP.d,
     name: CAP.name,
     type: 'cosmetic',
@@ -73,6 +73,7 @@ function definition(
     topics: [],
     slot: 'headwear',
     forms: null,
+    visualDiagnostics: { slot: 'declared', forms: 'absent' },
     source: 'definition',
     ...overrides,
   };

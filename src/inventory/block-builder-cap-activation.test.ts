@@ -1,14 +1,17 @@
 /**
- * The Block Builder Cap, end to end: published event → catalog → accessory code
- * → the URLs the renderer paints.
+ * The Block Builder Cap, end to end: published event → catalog → the URLs the
+ * renderer paints.
  *
- * This is the first accessory to be activated through the item protocol, so the
- * test is deliberately built on the REAL published tags (fetched from
- * wss://relay.ditto.pub, see `docs/accessory-definition-migration.md`) rather
- * than a convenient fixture. Every layer in between runs for real: the issuer
- * check, the package parser, the Island resolver and the pose policy. A fixture
- * would prove the plumbing works on invented data; this proves it works on the
- * event that actually exists.
+ * Built on the REAL published tags (fetched from wss://relay.ditto.pub, see
+ * `docs/accessory-definition-migration.md`) rather than a convenient fixture.
+ * Every layer in between runs for real: the issuer check, the package parser,
+ * the Island resolver and the pose policy. A fixture would prove the plumbing
+ * works on invented data; this proves it works on the event that exists.
+ *
+ * Since the kind:31634 migration the identity is the ADDRESS. There is no
+ * accessory code and no filename fallback left, so the cases that used to
+ * assert a legacy chain now assert its absence: an item with no published
+ * definition resolves to no artwork at all.
  *
  * Nothing here signs, publishes or reaches a relay.
  */
@@ -21,18 +24,14 @@ import {
   parseOfficialItemDefinition,
   resolveFromDefinition,
 } from './protocol-adapter';
-import {
-  accessoryDefinitionsByCode,
-  accessoryItemAddress,
-} from './accessory-item-identity';
 import { primaryItemImageUrl, itemImagesByMarker } from './item-image-resolution';
 import type { ResolvedBlobbiItemDefinition } from './catalog-fallback';
-import { createIslandAccessorySourceResolver } from '@/components/blobbi/lib/island-accessory-sources';
-import { accessoryImagePath } from '@/lib/asset-paths';
+import { createPlacementAccessorySourceResolver } from '@/placement/accessory-sources';
+import { officialItemAddress } from '@/protocol/event-registry';
 import type { NostrEvent } from '@nostrify/nostrify';
 
-const CODE = 'headwear-block-builder-cap';
 const D = 'blobbi:cosmetic:block-builder-cap';
+const ADDRESS = officialItemAddress(D);
 
 /** The four artwork URLs of the published definition. */
 const IMG = {
@@ -101,26 +100,35 @@ function loadedCatalog(
 }
 
 function capDefinition(): ResolvedBlobbiItemDefinition {
-  return accessoryDefinitionsByCode(loadedCatalog()).get(CODE)!;
+  return loadedCatalog().get(ADDRESS)!;
+}
+
+/** The renderer's candidate list for the cap, for a given pose. */
+function capSources(
+  facing: 'front' | 'back',
+  definitions = loadedCatalog(),
+): readonly string[] {
+  return createPlacementAccessorySourceResolver({
+    definitionsByAddress: definitions,
+    facing,
+  })({ code: ADDRESS, slot: 'headwear' });
 }
 
 describe('address and issuer', () => {
   it('builds the full official address from issuer + d', () => {
-    expect(accessoryItemAddress(CODE)).toBe(
-      `31632:${OFFICIAL_ITEM_ISSUER_PUBKEY}:${D}`,
-    );
+    expect(ADDRESS).toBe(`31632:${OFFICIAL_ITEM_ISSUER_PUBKEY}:${D}`);
   });
 
   it('parses the published event as an official definition', () => {
     const parsed = parseOfficialItemDefinition(capEvent());
-    expect(parsed?.address).toBe(accessoryItemAddress(CODE));
+    expect(parsed?.address).toBe(ADDRESS);
   });
 
   it('rejects the same d published by a third party', () => {
     const stranger = 'd'.repeat(64);
     expect(parseOfficialItemDefinition(capEvent(stranger))).toBeNull();
-    // …and therefore never reaches the accessory map.
-    expect(accessoryDefinitionsByCode(loadedCatalog(capEvent(stranger))).size).toBe(0);
+    // …and therefore never reaches the catalog.
+    expect(loadedCatalog(capEvent(stranger)).size).toBe(0);
   });
 });
 
@@ -150,77 +158,47 @@ describe('image views', () => {
 
     // …but never chosen for a front or back pose, because they are different
     // camera angles rather than better versions of the same one.
-    const resolve = (facing: 'front' | 'back') =>
-      createIslandAccessorySourceResolver({
-        definitionsByCode: accessoryDefinitionsByCode(loadedCatalog()),
-        facing,
-      })({ code: CODE, slot: 'headwear', url: '' });
-
-    expect(resolve('front')[0]).not.toBe(IMG.sideRight);
-    expect(resolve('back')[0]).not.toBe(IMG.sideLeft);
+    expect(capSources('front')[0]).not.toBe(IMG.sideRight);
+    expect(capSources('back')[0]).not.toBe(IMG.sideLeft);
   });
 
   it('paints the front image first for a front-facing Blobbi', () => {
-    const sources = createIslandAccessorySourceResolver({
-      definitionsByCode: accessoryDefinitionsByCode(loadedCatalog()),
-      facing: 'front',
-    })({ code: CODE, slot: 'headwear', url: '' });
-
-    expect(sources[0]).toBe(IMG.primary); // the `front` view, same URL as primary
+    // The `front` view happens to carry the same URL as the primary.
+    expect(capSources('front')[0]).toBe(IMG.primary);
   });
 
   it('paints the back image first for a back-facing Blobbi', () => {
-    const sources = createIslandAccessorySourceResolver({
-      definitionsByCode: accessoryDefinitionsByCode(loadedCatalog()),
-      facing: 'back',
-    })({ code: CODE, slot: 'headwear', url: '' });
-
+    const sources = capSources('back');
     expect(sources[0]).toBe(IMG.back);
     // The front/primary stays behind it as an onError fallback, so a dead
     // Blossom link degrades to a drawable hat rather than a hole.
     expect(sources).toContain(IMG.primary);
   });
 
-  it('outranks the inferred local path, but keeps it as a last resort', () => {
-    const sources = createIslandAccessorySourceResolver({
-      definitionsByCode: accessoryDefinitionsByCode(loadedCatalog()),
-      facing: 'front',
-    })({ code: CODE, slot: 'headwear', url: '' });
-
-    const png = accessoryImagePath('headwear', CODE, 'png');
-    expect(sources.indexOf(IMG.primary)).toBeLessThan(sources.indexOf(png));
-    expect(sources).toContain(png);
+  it('offers only published artwork — no inferred local path', () => {
+    // The legacy chain appended `/assets/.../headwear/<code>.{webp,png}` here.
+    // Nothing does any more: an address is not a filename.
+    const sources = capSources('front');
+    expect(sources.every((url) => url.startsWith('https://blossom.primal.net/'))).toBe(
+      true,
+    );
+    expect(sources.some((url) => url.includes('/assets/'))).toBe(false);
   });
 });
 
-describe('when the definition is temporarily unavailable', () => {
-  it('still renders through the legacy chain', () => {
-    // Relay outage / cold cache: no definitions at all. The accessory must not
-    // vanish — the stored equip URL and the local paths still answer.
-    const stored = 'https://stored.invalid/cap.png';
-    const sources = createIslandAccessorySourceResolver({
-      definitionsByCode: new Map(),
-      facing: 'front',
-    })({ code: CODE, slot: 'headwear', url: stored });
-
-    expect(sources[0]).toBe(stored);
-    expect(sources.length).toBeGreaterThan(1);
+describe('when the definition is unavailable', () => {
+  it('resolves to no artwork rather than guessing a path', () => {
+    // Relay outage / cold cache / never published: all the same answer. The
+    // item is not drawn, which is the honest outcome once identity is an
+    // address and there is no filename convention to fall back on.
+    expect(capSources('front', new Map())).toEqual([]);
   });
-});
 
-describe('unmapped accessories are untouched', () => {
-  it('resolves headwear-8 exactly as before, definition or not', () => {
-    const withCatalog = createIslandAccessorySourceResolver({
-      definitionsByCode: accessoryDefinitionsByCode(loadedCatalog()),
+  it('resolves nothing for an address that is not in the catalog', () => {
+    const sources = createPlacementAccessorySourceResolver({
+      definitionsByAddress: loadedCatalog(),
       facing: 'front',
-    })({ code: 'headwear-8', slot: 'headwear', url: '' });
-
-    const withoutCatalog = createIslandAccessorySourceResolver({
-      definitionsByCode: new Map(),
-      facing: 'front',
-    })({ code: 'headwear-8', slot: 'headwear', url: '' });
-
-    expect(withCatalog).toEqual(withoutCatalog);
-    expect(withCatalog).not.toContain(IMG.primary);
+    })({ code: '31632:stranger:blobbi:cosmetic:other', slot: 'headwear' });
+    expect(sources).toEqual([]);
   });
 });

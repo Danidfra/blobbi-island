@@ -240,12 +240,12 @@ describe('storage opacity does not disturb neighbouring extension tags', () => {
     ]);
   });
 
-  it('leaves inv on its own separate, caller-managed track', () => {
-    // `inv` (accessories/cosmetics) is deliberately NOT emitted by this merge —
-    // the accessory system owns it via updateInvTags, and callers such as
-    // useCoinsMutation re-append the raw inv tags verbatim. `storage` is
-    // handled differently on purpose: it is passed through here. This test pins
-    // that the two never get conflated in either direction.
+  it('passes inv through verbatim, exactly like storage', () => {
+    // `inv` (legacy accessory ownership) used to be excluded here because the
+    // accessory system re-appended it. Since ownership moved to kind:31633
+    // nothing re-appends it, so excluding it would delete a player's record on
+    // the next profile save. It now shares `storage`'s contract precisely: this
+    // client never creates or modifies one, and never destroys one either.
     const out = mergeOwnerProfileTags(
       profileFrom([
         ['inv', 'hat_01', 'qty', '3'],
@@ -253,7 +253,7 @@ describe('storage opacity does not disturb neighbouring extension tags', () => {
       ]),
     );
 
-    expect(tagsNamed(out, 'inv')).toEqual([]); // caller-managed, untouched here
+    expect(tagsNamed(out, 'inv')).toEqual([['inv', 'hat_01', 'qty', '3']]);
     expect(tagsNamed(out, 'storage')).toEqual([['storage', 'food_apple:5']]);
   });
 });

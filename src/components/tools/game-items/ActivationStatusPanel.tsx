@@ -18,7 +18,7 @@ import {
   type ActivationFinding,
   type ActivationStatus,
   type ActivationSubject,
-  mappingSnippet,
+  registrySnippet,
 } from '@/tools/game-items/activation-status';
 
 import { CopyButton } from './RawEventInspector';
@@ -48,7 +48,7 @@ export function ActivationStatusPanel({
 }: ActivationStatusPanelProps) {
   if (!status.applicable) return null;
 
-  const snippet = mappingSnippet(subject, status);
+  const snippet = registrySnippet(subject);
 
   return (
     <section
@@ -60,12 +60,12 @@ export function ActivationStatusPanel({
         <span
           className={cn(
             'rounded-full px-2 py-0.5 text-[11px] font-medium',
-            status.activeInRenderer
+            status.wearable
               ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
               : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
           )}
         >
-          {status.activeInRenderer ? 'Active' : 'Not active'}
+          {status.wearable ? 'Wearable' : 'Not wearable'}
         </span>
       </div>
 
@@ -93,15 +93,15 @@ export function ActivationStatusPanel({
 
       <div className="mt-3 flex flex-wrap gap-2">
         <CopyButton value={subject.address} label="Copy full address" />
-        {status.mappedCode ? (
-          <CopyButton value={status.mappedCode} label="Copy mapping code" />
+        {status.declaredSlot ? (
+          <CopyButton value={status.declaredSlot} label="Copy declared slot" />
         ) : null}
-        {snippet && !status.activeInRenderer ? (
+        {snippet && !status.wearable ? (
           <CopyButton value={snippet} label="Copy registry snippet" />
         ) : null}
       </div>
 
-      {!status.activeInRenderer ? (
+      {!status.wearable ? (
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
           Paste the snippet into{' '}
           <code className="break-all">OFFICIAL_COSMETIC_DEFINITIONS</code> in{' '}

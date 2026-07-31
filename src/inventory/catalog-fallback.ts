@@ -56,6 +56,27 @@ export type ItemStage = ItemStageName;
 export type ItemCategory = ItemCategoryName;
 
 /**
+ * What an item definition actually declared about its wearable fields.
+ *
+ * Kept separate from the salvaged values because ABSENT and MALFORMED must lead
+ * to different decisions:
+ *
+ * - `slot`: `declared` is the only state Island can equip. `missing` means the
+ *   issuer has not said where the cosmetic goes; `malformed` means they said
+ *   something unusable. Island never infers a slot from an item id or a code
+ *   prefix, so both are refused — but they are refused for different reasons
+ *   and the diagnostic says which.
+ * - `forms`: `absent` means NO RESTRICTION — an optional field the issuer did
+ *   not use. `declared` restricts the item to the listed forms. `malformed`
+ *   (present but not a usable non-empty string array, including `[]`) makes the
+ *   definition invalid for normal production equipping.
+ */
+export interface DefinitionVisualDiagnostics {
+  slot: 'declared' | 'missing' | 'malformed';
+  forms: 'declared' | 'absent' | 'malformed';
+}
+
+/**
  * Island view model for an item definition. `source` records where the
  * metadata came from so the UI/tests can reason about fallback behavior.
  */
@@ -118,18 +139,35 @@ export interface ResolvedBlobbiItemDefinition {
    * renderer knows (`EQUIPPABLE_SLOTS`).
    *
    * `null` for every non-cosmetic item and for a cosmetic whose issuer did not
-   * declare one — which is not equippable, rather than equippable somewhere
-   * guessed.
+   * declare one — which is NOT equippable in normal production UI, rather than
+   * equippable somewhere guessed. Island cannot safely infer placement from an
+   * item id, so a missing slot is a missing answer.
    */
   slot: string | null;
   /**
-   * Blobbi forms this item is valid for, from `content.visual.forms`, or `null`
-   * when the issuer declared none.
+   * Blobbi forms this item is valid for, from `content.visual.forms`.
    *
-   * `null` means NO RESTRICTION, not "no forms". An issuer that says nothing
-   * about forms is not saying the item fits nothing.
+   * `null` means the issuer DECLARED NONE, which is no restriction at all — an
+   * optional metadata field being absent must never mean "supports no form".
+   * A non-empty array restricts the item to exactly those forms.
+   *
+   * A `forms` key that is present but unusable (not an array, empty, or an
+   * array with no usable strings) also lands here as `null`, but is recorded
+   * separately in {@link ResolvedBlobbiItemDefinition.visualDiagnostics} as
+   * `malformed` — that case is a broken definition, not a universal one, and
+   * Island refuses it for normal production equipping.
    */
   forms: readonly string[] | null;
+  /**
+   * What the issuer actually said about the wearable fields, as opposed to what
+   * could be salvaged from it.
+   *
+   * Exists because "absent" and "present but unusable" must lead to different
+   * decisions, and a single nullable field cannot express both. The policy
+   * layer reads this; the UI and the dev inspector show it verbatim so an
+   * issuer can see why their cosmetic is not offered.
+   */
+  visualDiagnostics: DefinitionVisualDiagnostics;
   /** Where this resolution came from. */
   source: 'definition' | 'fallback' | 'unknown';
 }
@@ -224,6 +262,7 @@ export function bundledFallbackDefinition(
     // explicitly rather than leaving it to be inferred from a missing field.
     slot: null,
     forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
     source: 'fallback',
   };
 }
@@ -252,6 +291,7 @@ export function unknownItemDefinition(
     // An item nothing is known about is not equippable anywhere.
     slot: null,
     forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
     source: 'unknown',
   };
 }
@@ -280,7 +320,10 @@ export function bundledCosmeticFallbackDefinition(
   if (!entry) return null;
   return {
     address: entry.address,
-    itemId: entry.legacyCode,
+    // A cosmetic has no legacy UI id: it is identified by its address, and
+    // inventing one would resurrect the code-based identity this migration
+    // removed.
+    itemId: null,
     d: entry.d,
     name: entry.name,
     type: 'cosmetic',
@@ -301,6 +344,7 @@ export function bundledCosmeticFallbackDefinition(
     // answer, since Island cannot know where to draw it.
     slot: null,
     forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
     source: 'fallback',
   };
 }

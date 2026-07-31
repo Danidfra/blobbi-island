@@ -7,30 +7,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide-react';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
-import { AccessoryInventoryUI } from './AccessoryInventoryUI';
-import { DebugAccessoriesModal } from './DebugAccessoriesModal';
-import { AccessoryOverlay } from './AccessoryOverlay';
-import { useAccessoryManagement, ACCESSORY_QUERY_KEYS } from './hooks/useAccessoryManagement';
+import { EquipmentPanel } from './EquipmentPanel';
+import { PlacementOverlay } from './PlacementOverlay';
+import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
+import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
+import { buildEquipEntry } from '@/placement/render-model';
+import type { AccessorySlot } from '@blobbi/react';
 import { useToast } from '@/hooks/useToast';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostr } from '@/hooks/useNostr';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import type { EquipmentConfig } from './lib/accessory-types';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { dbg } from '@/lib/debug';
-import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
-import { updateEquipTags } from './lib/accessory-utils';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
-import { Settings } from 'lucide-react';
 import type { BlobbiVisual } from '@/lib/multiplayer';
-import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 
 interface BlobbiInfoModalProps {
   isOpen: boolean;
@@ -120,128 +113,109 @@ export function BlobbiInfoModal({
   // Use external data if in read-only mode, otherwise use current pet data
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
   const backgroundSrc = getBlobbiBackground(backgroundKey);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const [selectedAccessory, setSelectedAccessory] = useState<EquipmentConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [pendingUpdates, setPendingUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
-  const [committedUpdates, setCommittedUpdates] = useState<Record<string, Partial<EquipmentConfig>>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const { isUpdating, equipment } = useAccessoryManagement();
-  const { user } = useCurrentUser();
-  const { nostr } = useNostr();
-  const { mutateAsync: createEvent } = useNostrPublish();
+  // Equipment editing state is keyed by SLOT, because a kind:31634 document
+  // holds one equipped entry per slot. The legacy editor keyed everything by
+  // accessory code, which only worked while an accessory *was* its code.
+  const [selectedSlot, setSelectedSlot] = useState<AccessorySlot | null>(null);
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, PlacementTransformPatch>>({});
+  const [publishError, setPublishError] = useState<string | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { showDebugOverlays } = useDebugOverlays();
+  const equipmentMutation = useEquipmentMutation();
+  // The same policy-filtered accessories the world draws, so the editor and the
+  // world can never disagree about what is worn.
+  const { accessories, definitionsByAddress } = useCharacterEquipmentContext();
   const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
 
-  const handleAccessoryUpdate = (accessoryCode: string, updates: Partial<EquipmentConfig>) => {
-    setPendingUpdates(prev => ({
-      ...prev,
-      [accessoryCode]: { ...prev[accessoryCode], ...updates }
-    }));
+  const characterId = currentPet?.id;
+  const characterName = currentPet?.name;
+
+  const handleTransformChange = (slot: AccessorySlot, patch: PlacementTransformPatch) => {
+    setPendingUpdates((prev) => ({ ...prev, [slot]: { ...prev[slot], ...patch } }));
   };
 
-  const handleSaveChanges = async () => {
-    const accessoryCodes = Object.keys(pendingUpdates);
-    if (accessoryCodes.length === 0) return;
-
-    if (!user?.pubkey || !currentPet?.id) {
-      toast({
-        title: "Save Failed",
-        description: "User not logged in or no pet selected.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
+  /**
+   * Publish every pending transform edit as ONE complete kind:31634 document.
+   *
+   * There is no local "committed updates" buffer any more: the mutation updates
+   * the query cache optimistically and invalidates after settling, so the UI
+   * already shows the new positions and reconciles with the relay on its own.
+   * The legacy editor needed that buffer because its write path did neither.
+   */
+  const handleSaveTransforms = async () => {
+    if (!characterId || Object.keys(pendingUpdates).length === 0) return;
+    setPublishError(null);
     try {
-      // Get current pet event
-      const signal = AbortSignal.timeout(5000);
-      const petEvents = await nostr.query([{
-        kinds: [KIND_BLOBBI_STATE],
-        authors: [user.pubkey],
-        '#d': [currentPet.id],
-        limit: 1,
-      }], { signal });
-
-      if (petEvents.length === 0) {
-        throw new Error('Pet not found');
-      }
-
-      const petEvent = petEvents.sort((a, b) => b.created_at - a.created_at)[0];
-      const currentEquipment = equipment || [];
-
-      // Create updated equipment list with all pending updates applied
-      const updatedEquipment = currentEquipment.map(accessory => {
-        const updates = pendingUpdates[accessory.code];
-        if (!updates) return accessory;
-
-        return {
-          ...accessory,
-          x: updates.x ?? accessory.x,
-          y: updates.y ?? accessory.y,
-          scale: updates.scale ?? accessory.scale,
-          rot: updates.rot ?? accessory.rot,
-          flipX: updates.flipX ?? accessory.flipX,
-        };
+      await equipmentMutation.mutateAsync({
+        characterId,
+        ...(characterName === undefined ? {} : { characterName }),
+        mutation: { type: 'set-transforms', transforms: pendingUpdates },
       });
-
-      // Create new equipment event with all updated equipment
-      const equipmentTags = updateEquipTags(petEvent.tags, updatedEquipment);
-
-      // Publish the event
-      await createEvent({
-        kind: KIND_BLOBBI_STATE,
-        content: petEvent.content,
-        tags: equipmentTags,
-      });
-
-      // Move pending updates to committed updates - these are now the user's saved positions
-      setCommittedUpdates(prev => ({ ...prev, ...pendingUpdates }));
       setPendingUpdates({});
-
-      // Invalidate query in background to sync with relay (but don't await it)
-      queryClient.invalidateQueries({
-        queryKey: ACCESSORY_QUERY_KEYS.equipment(currentPet.id)
-      });
-
       toast({
-        title: "Accessories Updated",
-        description: `${accessoryCodes.length} accessory positions saved successfully.`,
+        title: 'Equipment saved',
+        description: 'Accessory positions published.',
       });
     } catch (error) {
-      console.error('Failed to save accessory changes:', error);
-      toast({
-        title: "Save Failed",
-        description: error instanceof Error ? error.message : "Failed to save accessory changes.",
-        variant: "destructive",
-      });
-      // On error, keep the pending updates so user doesn't lose their changes
-    } finally {
-      setIsSaving(false);
+      // Kept in `pendingUpdates` so the player does not lose their edits, and
+      // surfaced in the panel rather than only in a toast that scrolls away.
+      const message = error instanceof Error ? error.message : 'Publish failed.';
+      setPublishError(message);
+      toast({ title: 'Save failed', description: message, variant: 'destructive' });
     }
   };
 
-  const handleScaleChange = (value: number[]) => {
-    if (!selectedAccessory) return;
-    handleAccessoryUpdate(selectedAccessory.code, { scale: value[0] });
+  const handleEquip = async (address: string, slot: AccessorySlot) => {
+    if (!characterId) return;
+    setPublishError(null);
+    try {
+      await equipmentMutation.mutateAsync({
+        characterId,
+        ...(characterName === undefined ? {} : { characterName }),
+        mutation: {
+          type: 'equip',
+          slot,
+          entry: buildEquipEntry({ itemAddress: address, slot }),
+        },
+      });
+      setSelectedSlot(slot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Publish failed.';
+      setPublishError(message);
+      toast({ title: 'Could not equip', description: message, variant: 'destructive' });
+    }
   };
 
-  const handleRotationChange = (value: number[]) => {
-    if (!selectedAccessory) return;
-    handleAccessoryUpdate(selectedAccessory.code, { rot: value[0] });
+  /**
+   * Unequip a slot.
+   *
+   * This publishes a kind:31634 document without that entry and touches NO
+   * inventory: taking a hat off does not give it back, because wearing it never
+   * took it away.
+   */
+  const handleUnequip = async (slot: AccessorySlot) => {
+    if (!characterId) return;
+    setPublishError(null);
+    try {
+      await equipmentMutation.mutateAsync({
+        characterId,
+        ...(characterName === undefined ? {} : { characterName }),
+        mutation: { type: 'unequip', slot },
+      });
+      setPendingUpdates((prev) => {
+        const next = { ...prev };
+        delete next[slot];
+        return next;
+      });
+      setSelectedSlot((current) => (current === slot ? null : current));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Publish failed.';
+      setPublishError(message);
+      toast({ title: 'Could not remove', description: message, variant: 'destructive' });
+    }
   };
 
-  const currentAccessory = selectedAccessory ? {
-    ...selectedAccessory,
-    ...committedUpdates[selectedAccessory.code],
-    ...pendingUpdates[selectedAccessory.code]
-  } : null;
-
-  const hasUnsavedChanges = Object.keys(pendingUpdates).length > 0;
 
   useEffect(() => {
     setSelectedTab(readOnly ? 'primary' : defaultTab);
@@ -284,39 +258,6 @@ export function BlobbiInfoModal({
     });
   }, [isOpen, readOnly, previewKey]);
 
-  // Clean up committed updates when query data matches them
-  useEffect(() => {
-    if (!equipment || Object.keys(committedUpdates).length === 0) return;
-
-    const updatesToClear: string[] = [];
-
-    for (const [accessoryCode, updates] of Object.entries(committedUpdates)) {
-      const queryAccessory = equipment.find(eq => eq.code === accessoryCode);
-      if (!queryAccessory) continue;
-
-      // Check if query data matches our committed updates (within small tolerance)
-      const matches = (
-        (updates.x === undefined || Math.abs(queryAccessory.x - updates.x) < 0.1) &&
-        (updates.y === undefined || Math.abs(queryAccessory.y - updates.y) < 0.1) &&
-        (updates.scale === undefined || Math.abs(queryAccessory.scale - updates.scale) < 0.01) &&
-        (updates.rot === undefined || Math.abs(queryAccessory.rot - updates.rot) < 0.1) &&
-        (updates.flipX === undefined || queryAccessory.flipX === updates.flipX)
-      );
-
-      if (matches) {
-        updatesToClear.push(accessoryCode);
-      }
-    }
-
-    // Clear committed updates that now match the query data
-    if (updatesToClear.length > 0) {
-      setCommittedUpdates(prev => {
-        const updated = { ...prev };
-        updatesToClear.forEach(code => delete updated[code]);
-        return updated;
-      });
-    }
-  }, [equipment, committedUpdates]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -450,13 +391,15 @@ export function BlobbiInfoModal({
                       the overlay's inset-0 percentage space IS the canonical
                       renderer box — the same space the world renderer uses. */}
                   {!readOnly && selectedTab === 'inventory' && (
-                    <AccessoryOverlay
+                    <PlacementOverlay
                       className="absolute inset-0 z-20"
+                      accessories={accessories}
+                      definitionsByAddress={definitionsByAddress}
                       containerRef={stageRef}
-                      selectedAccessory={selectedAccessory}
-                      onAccessorySelect={setSelectedAccessory}
-                      onAccessoryUpdate={(code, updates) => handleAccessoryUpdate(code, updates)}
-                      pendingUpdates={{ ...committedUpdates, ...pendingUpdates }}
+                      selectedSlot={selectedSlot}
+                      onSelectSlot={setSelectedSlot}
+                      onTransformChange={handleTransformChange}
+                      pendingUpdates={pendingUpdates}
                     />
                   )}
                 </div>
@@ -682,32 +625,21 @@ export function BlobbiInfoModal({
                 {/* Inventory Tab Content */}
                 <TabsContent value="inventory" className="mt-2 pb-2 focus-visible:outline-none flex flex-col">
                   <div>
-                    <AccessoryInventoryUI
-                      onEquippedAccessoryClick={setSelectedAccessory}
-                      selectedAccessory={selectedAccessory}
-                      currentAccessory={currentAccessory}
-                      hasUnsavedChanges={hasUnsavedChanges}
-                      onScaleChange={handleScaleChange}
-                      onRotationChange={handleRotationChange}
-                      onSaveChanges={handleSaveChanges}
-                      isUpdating={isSaving || isUpdating}
+                    <EquipmentPanel
+                      characterId={characterId}
+                      form={currentPet?.stage}
+                      selectedSlot={selectedSlot}
+                      onSelectSlot={setSelectedSlot}
+                      pendingUpdates={pendingUpdates}
+                      onTransformChange={handleTransformChange}
+                      onSaveTransforms={handleSaveTransforms}
+                      onEquip={handleEquip}
+                      onUnequip={handleUnequip}
+                      publishError={publishError}
+                      isPublishing={equipmentMutation.isPending}
                     />
                   </div>
 
-                  {/* Debug button (developer overlays toggle) */}
-                  {showDebugOverlays && (
-                    <div className="pt-4 border-t border-purple-200/60 dark:border-purple-800/60">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsDebugModalOpen(true)}
-                        className="w-full"
-                      >
-                        <Settings className="h-3 w-3 mr-2" />
-                        Debug Accessories
-                      </Button>
-                    </div>
-                  )}
                 </TabsContent>
               </div>
             </Tabs>
@@ -715,11 +647,6 @@ export function BlobbiInfoModal({
         </div>
       </div>
 
-      {/* Debug Accessories Modal (development only) */}
-      <DebugAccessoriesModal
-        isOpen={isDebugModalOpen}
-        onClose={() => setIsDebugModalOpen(false)}
-      />
     </div>
   );
 }

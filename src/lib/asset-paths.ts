@@ -10,7 +10,7 @@
  * See `docs/asset-organization.md` for the full directory layout and conventions.
  */
 
-import type { AccessorySlot } from '@/components/blobbi/lib/accessory-types';
+import type { AccessorySlot } from '@blobbi/react';
 
 /** Root directories of every asset domain. Keep in sync with docs/asset-organization.md. */
 export const ASSET_DIRS = {

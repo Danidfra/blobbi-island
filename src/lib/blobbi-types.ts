@@ -279,12 +279,6 @@ export interface PetStateSpecialTags {
   client?: string;
 }
 
-/** Equipment tags for kind 31124 Pet State events */
-export interface PetStateEquipmentTags {
-  /** Equipped accessories (multiple) - format: ["equip", "code", "x", "50", "y", "50", "scale", "1.0", "rot", "0", "flipX", "0", "refw", "100", "refh", "100", "form", "default", "url", "...", "ver", "1"] */
-  equip?: string[][];
-}
-
 /** Complete tag interface for kind 31124 Pet State events */
 export type PetStateTags = PetStateRequiredTags &
   PetStateAppearanceTags &
@@ -293,8 +287,7 @@ export type PetStateTags = PetStateRequiredTags &
   PetStateBehaviorTags &
   PetStateCareTags &
   PetStateSocialTags &
-  PetStateSpecialTags &
-  PetStateEquipmentTags;
+  PetStateSpecialTags;
 
 /** Parsed pet state data structure */
 export interface PetState {

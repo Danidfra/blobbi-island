@@ -31,7 +31,6 @@ const nostrQuery = vi.fn<() => Promise<NostrEvent[]>>();
 const applyOptimisticUpdate = vi.fn();
 
 let currentPet: Record<string, unknown> | null;
-let equipmentData: unknown;
 
 vi.mock('@nostrify/react', () => ({
   useNostr: () => ({ nostr: { query: nostrQuery, event: vi.fn() } }),
@@ -113,8 +112,6 @@ function makeWrapper(client: QueryClient) {
 
 function renderUse() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  // Seed accessory equipment for the pet so the hook picks it up.
-  client.setQueryData(['accessory-equipment', 'blobbi-1'], equipmentData ?? []);
   return renderHook(() => useUseItem(), { wrapper: makeWrapper(client) });
 }
 
@@ -193,7 +190,6 @@ describe('useUseItem — Blobbi state timestamp & care-streak regression', () =>
     inventoryMutate.mockReset();
     nostrQuery.mockReset();
     applyOptimisticUpdate.mockReset();
-    equipmentData = [];
     currentPet = makeAdultPet();
     publish.mockResolvedValue(undefined);
     inventoryMutate.mockResolvedValue(undefined);
@@ -317,24 +313,13 @@ describe('useUseItem — Blobbi state timestamp & care-streak regression', () =>
     expect(tag(tags, 'care_streak_last_at')).toBe(String(NOW_UNIX));
   });
 
-  it('preserves unrelated Blobbi state and equipped accessories', async () => {
-    // Equipped accessories are owned by the accessory system (the live
-    // `accessory-equipment` cache), NOT the raw `equip` tag — the hook re-emits
-    // them via createEquipTag so they survive the 31124 republish.
-    equipmentData = [
-      {
-        code: 'hat_wizard',
-        x: 50,
-        y: 10,
-        scale: 1,
-        rot: 0,
-        flipX: false,
-        refw: 100,
-        refh: 100,
-        form: 'adult',
-        url: 'https://example.com/hat.png',
-      },
-    ];
+  it('preserves unrelated Blobbi state and never authors an equipment tag', async () => {
+    // Equipment moved to kind:31634. Feeding a Blobbi republishes its kind:31124
+    // state and must not AUTHOR equipment: it neither reads the old vocabulary
+    // nor writes a fresh copy of it. A legacy `equip` tag already on the event
+    // rides along verbatim through the unknown-tag passthrough — this client
+    // has stopped understanding that tag, which is not a licence to delete a
+    // player's record.
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
@@ -343,8 +328,9 @@ describe('useUseItem — Blobbi state timestamp & care-streak regression', () =>
     const { tags } = stateEvent();
     // Unrelated Ditto tag survives.
     expect(tag(tags, 'progression_state')).toBe('growing');
-    // Equipped accessory survives (re-emitted from the equipment cache).
-    expect(tags.some(([n, v]) => n === 'equip' && v === 'hat_wizard')).toBe(true);
+    // Carried through byte-for-byte, and neither duplicated nor rewritten.
+    const equipTags = tags.filter(([n]) => n === 'equip');
+    expect(equipTags).toEqual([['equip', 'hat:wizard']]);
   });
 
   it('inventory still decrements AFTER the Blobbi state event (ordering 1124 -> 31124 -> 31633)', async () => {

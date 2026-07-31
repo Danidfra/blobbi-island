@@ -67,6 +67,7 @@ function ticketWithImages(
     topics: ['currency', 'arcade'],
     slot: null,
     forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
     source: 'definition',
   };
 }

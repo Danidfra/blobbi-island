@@ -69,6 +69,7 @@ function appleWithImages(
     topics: ['edible', 'food'],
     slot: null,
     forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
     source: 'definition',
   };
 }

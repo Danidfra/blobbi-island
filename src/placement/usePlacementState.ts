@@ -29,6 +29,7 @@ import {
   characterEquipmentPlacementD,
   placementTargetForCharacter,
 } from './identity';
+import { ISLAND_PLACEMENT_REFERENCE } from './render-model';
 
 /** A parsed placement document plus the parse warnings that produced it. */
 export interface PlacementState {
@@ -74,6 +75,7 @@ export function buildEmptyPlacement(
   const template = buildGameItemPlacementEvent({
     id: characterEquipmentPlacementD(characterId),
     target: placementTargetForCharacter(ownerPubkey, characterId),
+    reference: ISLAND_PLACEMENT_REFERENCE,
     placements: [],
   });
   const event: NostrEvent = {

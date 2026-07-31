@@ -144,15 +144,21 @@ describe('mergePetStateTags — canonical alignment', () => {
     expect(tagValue(tags, 'progression_state')).toBe('none');
   });
 
-  it('does not standardize or mutate equip (equip is caller-managed, not touched by merge)', () => {
-    // equip is intentionally excluded from mergePetStateTags output: callers
-    // (feed/play/accessory paths) append equip tags themselves after merging.
+  it('carries a legacy equip tag through verbatim, without standardizing it', () => {
+    // Equipment moved to kind:31634. `equip` used to be excluded from the merge
+    // output because the accessory system re-appended it; now nothing does, so
+    // excluding it would DELETE a player's legacy record on the next
+    // republish. It is passed through as an unknown tag instead: this client
+    // has stopped reading and writing it, which is not the same as destroying
+    // it. Migrating that data is a separate, deliberate act.
     // This test pins that contract so the alignment change never starts
     // rewriting equip. The merge must not emit or mutate any equip tag.
     const equipTag = ['equip', 'hat_01', '10', '20', '1.0'];
     const pet = makePet([equipTag]);
     const tags = mergePetStateTags(pet);
-    expect(tagCount(tags, 'equip')).toBe(0);
+    expect(tagCount(tags, 'equip')).toBe(1);
+    // Verbatim: same order, same arity, same values.
+    expect(tags.find(([n]) => n === 'equip')).toEqual(equipTag);
     // The canonical alignment additions must not have altered the passthrough
     // of other unknown tags either.
     expect(tagValue(tags, 'b')).toBe(BLOBBI_ECOSYSTEM_NAMESPACE);
@@ -197,14 +203,15 @@ describe('mergeOwnerProfileTags — canonical alignment', () => {
     expect(tagValue(tags, 'b')).toBe(BLOBBI_ECOSYSTEM_NAMESPACE);
   });
 
-  it('does not standardize or mutate inv (inv is caller-managed, not touched by merge)', () => {
-    // inv is intentionally excluded from mergeOwnerProfileTags output: the
-    // accessory system manages inv via updateInvTags. This test pins that
-    // contract so the alignment change never starts rewriting inv.
+  it('carries a legacy inv tag through verbatim, without standardizing it', () => {
+    // Same reasoning as `equip` above: accessory ownership moved to kind:31633,
+    // and this client no longer manages `inv` — but a player's existing tags
+    // are their data and survive a republish untouched, exactly like `storage`.
     const invTag = ['inv', 'hat_01', '3'];
     const profile = makeProfile([invTag]);
     const tags = mergeOwnerProfileTags(profile);
-    expect(tagCount(tags, 'inv')).toBe(0);
+    expect(tagCount(tags, 'inv')).toBe(1);
+    expect(tags.find(([n]) => n === 'inv')).toEqual(invTag);
     expect(tagValue(tags, 'b')).toBe(BLOBBI_ECOSYSTEM_NAMESPACE);
   });
 
