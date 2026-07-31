@@ -113,12 +113,114 @@ describe('useCoinsMutation regression', () => {
     expect(tagValue(published.tags, 'xp')).toBe('42');
     // Content preserved.
     expect(published.content).toBe('{"custom":true}');
-    // Accessory inv tag NOT deleted (Phase 10 boundary).
-    expect(published.tags.some((t) => t[0] === 'inv' && t[1] === 'headwear-1')).toBe(true);
+    // Accessory inv tag NOT deleted (Phase 10 boundary) — and not duplicated
+    // either, so assert the whole tag list rather than mere existence.
+    expect(published.tags.filter((t) => t[0] === 'inv')).toEqual([
+      ['inv', 'headwear-1', 'qty', '2', 'url', 'x', 'ver', '1'],
+    ]);
     // Legacy consumable `storage` is opaque: never read, never rewritten, but
     // carried through verbatim so a coins write cannot destroy old inventory.
     expect(published.tags.filter((t) => t[0] === 'storage')).toEqual([
       ['storage', 'food_apple:5'],
+    ]);
+  });
+
+  it('emits every preserved legacy/unknown tag EXACTLY ONCE', async () => {
+    // `mergeOwnerProfileTags` does not manage `inv`, `storage` or unknown tags,
+    // so all three ride its unknown-tag passthrough. A writer that ALSO
+    // re-appends them from the source event publishes each one twice.
+    //
+    // `.some(...)`-style assertions cannot catch that — only counts can.
+    nostrQuery.mockResolvedValue([
+      {
+        id: 'profile',
+        pubkey: TEST_PUBKEY,
+        created_at: 100,
+        kind: 11125,
+        tags: [
+          ['d', 'profile'],
+          ['b', 'blobbi:ecosystem:v1'],
+          ['name', 'Tester'],
+          ['coins', '200'],
+          ['inv', 'legacy-hat', '1'],
+          ['storage', 'legacy-food', '2'],
+          ['future_tag', 'future-value'],
+        ],
+        content: '',
+        sig: 'sig',
+      },
+    ]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => useCoinsMutation(), {
+      wrapper: makeWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync(-35);
+    });
+
+    const published = nostrEvent.mock.calls[0][0];
+
+    // Each preserved tag appears once, whole, unmodified.
+    expect(published.tags.filter((t) => t[0] === 'inv')).toEqual([
+      ['inv', 'legacy-hat', '1'],
+    ]);
+    expect(published.tags.filter((t) => t[0] === 'storage')).toEqual([
+      ['storage', 'legacy-food', '2'],
+    ]);
+    expect(published.tags.filter((t) => t[0] === 'future_tag')).toEqual([
+      ['future_tag', 'future-value'],
+    ]);
+    // The managed coin state is also emitted exactly once.
+    expect(published.tags.filter((t) => t[0] === 'coins')).toEqual([['coins', '165']]);
+  });
+
+  it('preserves genuinely distinct repeated legacy tags without deduplicating them', async () => {
+    // Preservation is not deduplication: two `inv` tags with different values
+    // are two different records, and both must survive exactly once each.
+    nostrQuery.mockResolvedValue([
+      {
+        id: 'profile',
+        pubkey: TEST_PUBKEY,
+        created_at: 100,
+        kind: 11125,
+        tags: [
+          ['d', 'profile'],
+          ['b', 'blobbi:ecosystem:v1'],
+          ['name', 'Tester'],
+          ['coins', '200'],
+          ['inv', 'legacy-hat', '1'],
+          ['inv', 'legacy-boots', '3'],
+          ['inv', 'legacy-hat', '2'], // same code, different quantity — still distinct
+          ['storage', 'legacy-food', '2'],
+          ['storage', 'legacy-drink', '7'],
+        ],
+        content: '',
+        sig: 'sig',
+      },
+    ]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const { result } = renderHook(() => useCoinsMutation(), {
+      wrapper: makeWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync(-35);
+    });
+
+    const published = nostrEvent.mock.calls[0][0];
+
+    // Same tags, same values, same relative order, same count — nothing merged.
+    expect(published.tags.filter((t) => t[0] === 'inv')).toEqual([
+      ['inv', 'legacy-hat', '1'],
+      ['inv', 'legacy-boots', '3'],
+      ['inv', 'legacy-hat', '2'],
+    ]);
+    expect(published.tags.filter((t) => t[0] === 'storage')).toEqual([
+      ['storage', 'legacy-food', '2'],
+      ['storage', 'legacy-drink', '7'],
     ]);
   });
 

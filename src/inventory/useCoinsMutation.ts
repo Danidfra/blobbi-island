@@ -8,8 +8,9 @@
  *
  * It intentionally does NOT touch inventory: the clean inventory lives in
  * kind:31633. It still routes through `mergeOwnerProfileTags` so unknown Ditto
- * tags, coins, pets, achievements, and current companion are preserved — as is
- * any legacy `storage` tag, which is carried through opaquely and never read.
+ * tags, coins, pets, achievements, and current companion are preserved — as are
+ * the legacy `storage` and `inv` tags, which are carried through opaquely by
+ * that helper's unknown-tag passthrough and never read, written or rewritten.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -81,14 +82,13 @@ export function useCoinsMutation() {
       // Preserve everything else; only coins changes. Inventory is NOT written
       // here — the clean consumable inventory lives in kind:31633.
       //
-      // Accessory boundary (Phase 10): `mergeOwnerProfileTags` intentionally
-      // drops legacy `inv` accessory tags. To avoid this coins write REGRESSING
-      // accessory ownership, we re-append the raw `inv` tags from the source
-      // event verbatim. We neither read nor migrate `inv` quantities — we only
-      // pass them through untouched.
-      const ownerTags = mergeOwnerProfileTags({ ...profile, coins: newCoins });
-      const invTags = latest.tags.filter((t) => t[0] === 'inv');
-      const finalTags = [...ownerTags, ...invTags];
+      // Legacy `inv` accessory tags need no special handling: `inv` is not a
+      // managed owner-profile tag, so `mergeOwnerProfileTags` already carries it
+      // through its unknown-tag passthrough verbatim, exactly like `storage` and
+      // any unknown Ditto tag. Re-appending it here would publish a SECOND copy
+      // of every `inv` tag on each coins write. We neither read nor migrate
+      // `inv` quantities — the shared passthrough passes them through untouched.
+      const finalTags = mergeOwnerProfileTags({ ...profile, coins: newCoins });
       await publish({
         kind: KIND_BLOBBONAUT_PROFILE,
         content: profile.rawContent,
