@@ -15,30 +15,34 @@
  *
  * Nothing here publishes an event, owns an item, or reaches a relay: the
  * definition is a fixture supplied straight to the context.
+ *
+ * Since the kind:31634 migration an accessory is identified by its ITEM
+ * ADDRESS, and there is no filename-convention fallback left: an address with
+ * no published definition resolves to no artwork at all. That is the point of
+ * the clean cut — artwork comes from an issuer, never from a guessed path.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import type { AccessoryPlacementInput } from '@blobbi/react';
 
-import { AccessoryItemDefinitionsContext } from '@/contexts/AccessoryItemDefinitionsContext';
+import { CharacterEquipmentContext } from '@/contexts/CharacterEquipmentContext';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory';
 import { FIXTURE_IMAGE_URLS as U } from '@/inventory/item-image-fixtures';
 
-const STORED_URL = 'https://stored.invalid/headwear-viewed.png';
+const HAT = '31632:fixture:fixture:accessory:hat';
+const GOGGLES = '31632:fixture:fixture:accessory:goggles';
 
 /** A hat that survives rear view, and a pair of goggles that does not. */
 const WORN: readonly AccessoryPlacementInput[] = [
   {
-    code: 'headwear-viewed',
+    code: HAT,
     slot: 'headwear',
     x: 50, y: 20, scale: 1, rot: 0, flipX: false,
-    url: STORED_URL,
   },
   {
-    code: 'eyewear-viewed',
+    code: GOGGLES,
     slot: 'eyewear',
     x: 50, y: 45, scale: 1, rot: 0, flipX: false,
-    url: 'https://stored.invalid/eyewear-viewed.png',
   },
 ];
 
@@ -52,7 +56,7 @@ const VISUAL = {
 
 /** A definition publishing a default plus both poses Island can render. */
 const HAT_DEFINITION = {
-  address: '31632:fixture:fixture:accessory:hat',
+  address: HAT,
   itemId: null,
   d: 'fixture:accessory:hat',
   name: 'Fixture Hat',
@@ -70,6 +74,8 @@ const HAT_DEFINITION = {
     { url: U.sideRight, marker: 'side-right' },
   ],
   topics: [],
+  slot: 'headwear',
+  forms: null,
   source: 'definition',
 } satisfies ResolvedBlobbiItemDefinition;
 
@@ -77,20 +83,23 @@ vi.mock('@/hooks/useBlobbis', () => ({ useBlobbis: () => ({ data: [] }) }));
 vi.mock('@/hooks/useBlobbonautProfile', () => ({
   useBlobbonautProfile: () => ({ data: undefined }),
 }));
-vi.mock('./hooks/useAccessoryManagement', () => ({
-  useAccessoryManagement: () => ({ equipment: [] }),
-}));
-
 const { CurrentBlobbiDisplay } = await import('./CurrentBlobbiDisplay');
 
 const definitions = new Map<string, ResolvedBlobbiItemDefinition>([
-  ['headwear-viewed', HAT_DEFINITION],
+  [HAT, HAT_DEFINITION],
 ]);
 
 function renderWorn(facing: 'front' | 'back', withDefinitions = true) {
   return render(
-    <AccessoryItemDefinitionsContext.Provider
-      value={withDefinitions ? definitions : new Map()}
+    <CharacterEquipmentContext.Provider
+      value={{
+        accessories: [],
+        definitionsByAddress: withDefinitions ? definitions : new Map(),
+        hidden: [],
+        warnings: [],
+        isLoading: false,
+        isEmpty: false,
+      }}
     >
       <CurrentBlobbiDisplay
         idSuffix={`views-${facing}-${withDefinitions}`}
@@ -98,7 +107,7 @@ function renderWorn(facing: 'front' | 'back', withDefinitions = true) {
         visualOverride={VISUAL}
         accessoryOverride={WORN}
       />
-    </AccessoryItemDefinitionsContext.Provider>,
+    </CharacterEquipmentContext.Provider>,
   );
 }
 
@@ -110,12 +119,12 @@ const srcOf = (container: HTMLElement, code: string) =>
 describe('accessory artwork follows the Blobbi it is drawn on', () => {
   it('draws the FRONT image on a front-facing Blobbi', () => {
     const { container } = renderWorn('front');
-    expect(srcOf(container, 'headwear-viewed')).toBe(U.front);
+    expect(srcOf(container, HAT)).toBe(U.front);
   });
 
   it('draws the BACK image on a rear-facing Blobbi', () => {
     const { container } = renderWorn('back');
-    expect(srcOf(container, 'headwear-viewed')).toBe(U.back);
+    expect(srcOf(container, HAT)).toBe(U.back);
   });
 
   it('never draws a side view on either pose', () => {
@@ -132,23 +141,25 @@ describe('the definition changes the PICTURE, never the POLICY', () => {
     // asset is an answer to "what does it look like from behind", not a request
     // to be visible from behind.
     const { container } = renderWorn('back');
-    expect(container.querySelector('[data-accessory-code="eyewear-viewed"]')).toBeNull();
-    expect(container.querySelector('[data-accessory-code="headwear-viewed"]')).toBeTruthy();
+    expect(container.querySelector(`[data-accessory-code="${GOGGLES}"]`)).toBeNull();
+    expect(container.querySelector(`[data-accessory-code="${HAT}"]`)).toBeTruthy();
   });
 
-  it('leaves accessories with no definition on their stored URL', () => {
+  it('draws no artwork for an item with no published definition', () => {
+    // The goggles have no definition. Before the kind:31634 migration a stored
+    // URL or a filename guess would have covered for that; now an item whose
+    // issuer has not said what it looks like simply has no picture. The
+    // placement still exists — this is a missing asset, not a hidden accessory.
     const { container } = renderWorn('front');
-    expect(srcOf(container, 'eyewear-viewed')).toBe(
-      'https://stored.invalid/eyewear-viewed.png',
-    );
+    expect(srcOf(container, GOGGLES)).toBe('');
   });
 });
 
-describe('without the provider, accessories fall back to legacy artwork', () => {
-  it('renders the stored URL rather than failing or blanking', () => {
-    // This is the pre-existing behavior, and it is what makes the component
-    // renderable in a test, a preview, or any tree without the app providers.
+describe('without definitions, accessories draw no artwork', () => {
+  it('renders the accessory element with an empty src, rather than guessing a path', () => {
+    // This is what makes the component renderable in a test, a preview, or any
+    // tree without the app providers: it degrades to bare, never to broken.
     const { container } = renderWorn('front', false);
-    expect(srcOf(container, 'headwear-viewed')).toBe(STORED_URL);
+    expect(srcOf(container, HAT)).toBe('');
   });
 });

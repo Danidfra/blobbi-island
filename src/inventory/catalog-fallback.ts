@@ -107,6 +107,29 @@ export interface ResolvedBlobbiItemDefinition {
   images: readonly GameItemImage[];
   /** `t` topic tags. */
   topics: string[];
+  /**
+   * The wearable slot the issuer declared in `content.visual.slot`, or `null`.
+   *
+   * THE DEFINITION IS THE AUTHORITY ON WHERE A COSMETIC GOES. The legacy path
+   * inferred a slot from an accessory code's prefix (`headwear-8` → `headwear`),
+   * which only worked because the code and the artwork filename were the same
+   * invented string. Items identified by address have no such prefix, so the
+   * issuer states the slot and Island validates it against the slots the
+   * renderer knows (`EQUIPPABLE_SLOTS`).
+   *
+   * `null` for every non-cosmetic item and for a cosmetic whose issuer did not
+   * declare one — which is not equippable, rather than equippable somewhere
+   * guessed.
+   */
+  slot: string | null;
+  /**
+   * Blobbi forms this item is valid for, from `content.visual.forms`, or `null`
+   * when the issuer declared none.
+   *
+   * `null` means NO RESTRICTION, not "no forms". An issuer that says nothing
+   * about forms is not saying the item fits nothing.
+   */
+  forms: readonly string[] | null;
   /** Where this resolution came from. */
   source: 'definition' | 'fallback' | 'unknown';
 }
@@ -197,6 +220,10 @@ export function bundledFallbackDefinition(
     // views only ever come from a fetched definition.
     images: meta.image ? [{ url: meta.image }] : [],
     topics: meta.topics,
+    // Care items are consumables, never worn. The bundled fallback says so
+    // explicitly rather than leaving it to be inferred from a missing field.
+    slot: null,
+    forms: null,
     source: 'fallback',
   };
 }
@@ -222,6 +249,9 @@ export function unknownItemDefinition(
     emoji: GENERIC_ITEM_EMOJI,
     images: [],
     topics: [],
+    // An item nothing is known about is not equippable anywhere.
+    slot: null,
+    forms: null,
     source: 'unknown',
   };
 }
@@ -264,6 +294,13 @@ export function bundledCosmeticFallbackDefinition(
     // `["image", url]` tag parses to. Marked views never come from here.
     images: entry.primaryImage ? [{ url: entry.primaryImage }] : [],
     topics: [],
+    // The bundled entry deliberately records NO slot and NO forms: both live in
+    // the published definition's `content.visual`, and a second copy here would
+    // be a second thing to keep in sync. A cosmetic whose definition could not
+    // be fetched is therefore not equippable until it is — which is the honest
+    // answer, since Island cannot know where to draw it.
+    slot: null,
+    forms: null,
     source: 'fallback',
   };
 }

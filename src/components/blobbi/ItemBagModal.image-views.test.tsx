@@ -65,6 +65,8 @@ function ticketWithImages(
     ...(image ? { image } : {}),
     images,
     topics: ['currency', 'arcade'],
+    slot: null,
+    forms: null,
     source: 'definition',
   };
 }

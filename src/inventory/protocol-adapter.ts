@@ -163,6 +163,44 @@ function readEffectsFromContent(contentJson: unknown): {
  * (`item-image-resolution.ts`); it never narrows it here, because a lossy
  * projection at the adapter would make every downstream policy impossible.
  */
+/**
+ * Read the wearable facts an issuer declares in `content.visual`.
+ *
+ * `visual.slot` says WHERE a cosmetic is worn and `visual.forms` says WHICH
+ * Blobbi forms it fits. Both are optional in the kind:31632 spec, and both are
+ * read defensively: `contentJson` is whatever the issuer published, so a wrong
+ * type at any level resolves to "not declared" rather than throwing or being
+ * coerced into a plausible-looking lie.
+ *
+ * Absent is NOT the same as empty. A missing `forms` means the issuer placed no
+ * restriction (`null`); an empty array would mean they restricted it to nothing,
+ * which no issuer means, so it is normalized to `null` too.
+ */
+function readVisualFromContent(contentJson: unknown): {
+  slot: string | null;
+  forms: readonly string[] | null;
+} {
+  if (!contentJson || typeof contentJson !== 'object') {
+    return { slot: null, forms: null };
+  }
+  const visual = (contentJson as Record<string, unknown>).visual;
+  if (!visual || typeof visual !== 'object') {
+    return { slot: null, forms: null };
+  }
+  const obj = visual as Record<string, unknown>;
+
+  const rawSlot = obj.slot;
+  const slot =
+    typeof rawSlot === 'string' && rawSlot.trim() !== '' ? rawSlot : null;
+
+  const rawForms = obj.forms;
+  const forms = Array.isArray(rawForms)
+    ? rawForms.filter((f): f is string => typeof f === 'string' && f !== '')
+    : [];
+
+  return { slot, forms: forms.length > 0 ? forms : null };
+}
+
 export function resolveFromDefinition(
   def: GameItemDefinition,
 ): ResolvedBlobbiItemDefinition {
@@ -170,6 +208,7 @@ export function resolveFromDefinition(
   const itemId = addressToItemId(address);
   const bundled = bundledFallbackDefinition(address);
   const fromContent = readEffectsFromContent(def.contentJson);
+  const visual = readVisualFromContent(def.contentJson);
 
   const category: ItemCategory | 'unknown' =
     def.category && VALID_CATEGORIES.has(def.category)
@@ -195,6 +234,11 @@ export function resolveFromDefinition(
     image: def.image,
     images: def.images,
     topics: def.topics.length > 0 ? def.topics : (bundled?.topics ?? []),
+    // Wearable facts come from the PUBLISHED definition only. The bundled
+    // fallback deliberately records neither, so these never silently inherit a
+    // slot the issuer did not actually declare.
+    slot: visual.slot,
+    forms: visual.forms,
     source: 'definition',
   };
 }

@@ -13,23 +13,54 @@
  * the equipment hook fired regardless of whose visual was on screen. The last
  * test in this file is that leak, asserted not to come back.
  *
- * Local equipment is mocked at the hook boundary, so these tests need no relay,
- * no signer and no inventory event.
+ * Local equipment is mocked at the CONTEXT boundary, so these tests need no
+ * relay, no signer, no inventory event and no placement event. Since the
+ * kind:31634 migration the context already carries policy-approved, renderer-
+ * ready accessories — whether an item is owned, official and slot-compatible is
+ * decided in `src/placement/policy.ts` and tested there, not here.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import type { AccessoryPlacementInput } from '@blobbi/react';
 
-/** The local player owns exactly one, unmistakable accessory. */
-const LOCAL_EQUIPMENT = [
+/**
+ * The local player wears exactly one, unmistakable accessory.
+ *
+ * The `code` is an ITEM ADDRESS now, because that is the identity a kind:31634
+ * placement carries and the only one the renderer is handed.
+ */
+const LOCAL_ITEM = '31632:issuer:blobbi:cosmetic:local_hat';
+const LOCAL_EQUIPMENT: readonly AccessoryPlacementInput[] = [
   {
-    code: 'headwear-local',
-    slot: 'headwear' as const,
+    code: LOCAL_ITEM,
+    slot: 'headwear',
     x: 50, y: 20, scale: 1, rot: 0, flipX: false,
-    refw: 100, refh: 100, form: 'default' as const,
-    url: 'https://example.test/headwear-local.png',
   },
 ];
+
+const LOCAL_DEFINITIONS = new Map([
+  [
+    LOCAL_ITEM,
+    {
+      address: LOCAL_ITEM,
+      itemId: null,
+      d: 'blobbi:cosmetic:local_hat',
+      name: 'Local Hat',
+      type: 'cosmetic',
+      category: 'unknown' as const,
+      effects: {},
+      action: null,
+      stages: [],
+      emoji: '🧢',
+      image: 'https://example.test/headwear-local.png',
+      images: [{ url: 'https://example.test/headwear-local.png' }],
+      topics: [],
+      slot: 'headwear',
+      forms: null,
+      source: 'definition' as const,
+    },
+  ],
+]);
 
 /** What a caller would hand over for someone else's Blobbi. */
 const SUPPLIED_ACCESSORIES: readonly AccessoryPlacementInput[] = [
@@ -64,8 +95,15 @@ vi.mock('@/hooks/useBlobbis', () => ({
 vi.mock('@/hooks/useBlobbonautProfile', () => ({
   useBlobbonautProfile: () => ({ data: { currentCompanion: 'pet-local' } }),
 }));
-vi.mock('./hooks/useAccessoryManagement', () => ({
-  useAccessoryManagement: () => ({ equipment: LOCAL_EQUIPMENT }),
+vi.mock('@/hooks/useCharacterEquipmentContext', () => ({
+  useCharacterEquipmentContext: () => ({
+    accessories: LOCAL_EQUIPMENT,
+    definitionsByAddress: LOCAL_DEFINITIONS,
+    hidden: [],
+    warnings: [],
+    isLoading: false,
+    isEmpty: false,
+  }),
 }));
 
 const { CurrentBlobbiDisplay } = await import('./CurrentBlobbiDisplay');
@@ -83,7 +121,7 @@ describe('accessories follow the visual, not the component', () => {
   it('draws the local companion wearing its own equipment', () => {
     const { container } = render(<CurrentBlobbiDisplay idSuffix="policy-local" />);
     expect(container.querySelector('[data-blobbi-renderer]')).toBeTruthy();
-    expect(wornCodes(container)).toEqual(['headwear-local']);
+    expect(wornCodes(container)).toEqual([LOCAL_ITEM]);
   });
 
   it('draws an override visual wearing NOTHING when no accessories are supplied', () => {
@@ -105,7 +143,7 @@ describe('accessories follow the visual, not the component', () => {
     );
     expect(wornCodes(container)).toEqual(['eyewear-supplied']);
     // And specifically: the local player's hat is not among them.
-    expect(wornCodes(container)).not.toContain('headwear-local');
+    expect(wornCodes(container)).not.toContain(LOCAL_ITEM);
   });
 
   it('ignores accessoryOverride on the local path, so it cannot dress the local Blobbi', () => {
@@ -115,7 +153,7 @@ describe('accessories follow the visual, not the component', () => {
     const { container } = render(
       <CurrentBlobbiDisplay idSuffix="policy-local-ignore" accessoryOverride={SUPPLIED_ACCESSORIES} />,
     );
-    expect(wornCodes(container)).toEqual(['headwear-local']);
+    expect(wornCodes(container)).toEqual([LOCAL_ITEM]);
   });
 
   it('still honors showAccessories={false} on both paths', () => {

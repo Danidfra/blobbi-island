@@ -75,6 +75,8 @@ function capDefinition(): ResolvedBlobbiItemDefinition {
       { url: BACK, marker: 'back' },
     ],
     topics: [],
+    slot: 'headwear',
+    forms: null,
     source: 'definition',
   };
 }

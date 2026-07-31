@@ -229,7 +229,13 @@ describe('remote rendering never subscribes to local-player data', () => {
     const wrapper = importsOf(join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx'));
     expect(wrapper.some((s) => /useBlobbis/.test(s))).toBe(true);
     expect(wrapper.some((s) => /useBlobbonautProfile/.test(s))).toBe(true);
-    expect(wrapper.some((s) => /useAccessoryManagement/.test(s))).toBe(true);
+    // Equipment arrives through a CONTEXT, not a query. Resolving kind:31634
+    // needs three queries (placement, inventory, catalog) and this component
+    // renders once per Blobbi on screen, so the queries live at the app root
+    // and this wrapper consumes their result. Asserting the context — rather
+    // than a hook — is what stops the queries from creeping back in here.
+    expect(wrapper.some((s) => /useCharacterEquipmentContext/.test(s))).toBe(true);
+    expect(wrapper.some((s) => /usePlacementState|useIslandInventory|useItemCatalog/.test(s))).toBe(false);
   });
 });
 
@@ -256,8 +262,11 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
     // definitions), so what is asserted is that the wrapper still supplies an
     // Island-made resolver rather than letting the package choose one.
     expect(display).toContain('resolveSources: resolveAccessorySources');
-    expect(display).toContain('createIslandAccessorySourceResolver');
-    expect(importsOf(displayPath)).toContain('./lib/island-accessory-sources');
+    // Since the kind:31634 migration the adapter is keyed by ITEM ADDRESS, not
+    // by a legacy accessory code, and has no filename-convention fallback — an
+    // item either has a published definition or it is not drawn.
+    expect(display).toContain('createPlacementAccessorySourceResolver');
+    expect(importsOf(displayPath)).toContain('@/placement/accessory-sources');
 
     const normalizer = readFileSync(join(ROOT, PACKAGE, 'src/accessory-normalize.ts'), 'utf8');
     expect(normalizer).toContain('DEFAULT_ACCESSORY_SOURCES');

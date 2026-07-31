@@ -52,9 +52,8 @@ import {
   type BlobbiRenderSize,
   type BlobbiRenderVisual,
 } from "@blobbi/react";
-import { createIslandAccessorySourceResolver } from "./lib/island-accessory-sources";
-import { useAccessoryItemDefinitionsContext } from "@/hooks/useAccessoryItemDefinitionsContext";
-import { useAccessoryManagement } from "./hooks/useAccessoryManagement";
+import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
+import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
@@ -133,26 +132,32 @@ export function CurrentBlobbiDisplay({
   // pure renderer below must never call them.
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
-  const { equipment } = useAccessoryManagement();
+
+  // What the local companion is wearing, resolved once at the app root from
+  // kind:31634 (placement) + kind:31633 (ownership) + kind:31632 (artwork), and
+  // already filtered by Island policy. This component receives renderer input
+  // and makes no protocol or authorization decision of its own.
+  const { accessories: wornEquipment, definitionsByAddress } =
+    useCharacterEquipmentContext();
 
   // Accessory ARTWORK selection. Which picture an accessory uses depends on
   // which way this Blobbi is turned, so the resolver is built per `facing`
   // rather than being a module constant. Item definitions stay entirely on this
   // side of the boundary: the package's resolver contract still receives only
-  // `{ code, slot, url }` and still returns plain URLs.
+  // `{ code, slot, url }` and still returns plain URLs — `code` is now the item
+  // ADDRESS, which is opaque to the renderer.
   //
   // Read from context, not fetched here: this component renders once per Blobbi
   // on screen, and drawing a Blobbi must not require an app config or a query
-  // client. Outside the provider the map is empty and accessories fall back to
-  // their legacy artwork, which is exactly the behavior that predates this.
-  const accessoryDefinitions = useAccessoryItemDefinitionsContext();
+  // client. Outside the provider there are no definitions and no equipment, so
+  // the Blobbi renders bare.
   const resolveAccessorySources = useMemo(
     () =>
-      createIslandAccessorySourceResolver({
-        definitionsByCode: accessoryDefinitions,
+      createPlacementAccessorySourceResolver({
+        definitionsByAddress,
         facing,
       }),
-    [accessoryDefinitions, facing],
+    [definitionsByAddress, facing],
   );
 
   const currentBlobbi = visualOverride
@@ -187,7 +192,7 @@ export function CurrentBlobbiDisplay({
     // Accessories follow the VISUAL. An override draws only what the caller
     // explicitly handed over; the local player's equipment is reachable solely
     // on the local-companion path. See the ownership table in the module doc.
-    const wornAccessories = visualOverride ? accessoryOverride : equipment;
+    const wornAccessories = visualOverride ? accessoryOverride : wornEquipment;
     const accessories = showAccessories
       ? normalizeAccessoryPlacements(wornAccessories ?? [], {
           facing,

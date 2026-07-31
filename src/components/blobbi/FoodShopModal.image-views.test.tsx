@@ -67,6 +67,8 @@ function appleWithImages(
     ...(image ? { image } : {}),
     images,
     topics: ['edible', 'food'],
+    slot: null,
+    forms: null,
     source: 'definition',
   };
 }
