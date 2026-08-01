@@ -25,6 +25,7 @@ import {
 } from '@/protocol/event-registry';
 
 import {
+  type DefinitionEffectVisual,
   type DefinitionVisualDiagnostics,
   type ItemAction,
   type ItemCategory,
@@ -236,6 +237,45 @@ function readVisualFromContent(contentJson: unknown): {
   return { slot, forms, visualDiagnostics: { slot: slotState, forms: formsState } };
 }
 
+/**
+ * Read the effect-visual declarations (`visual.kind`, `visual.effect`,
+ * `visual.effectSlot`) out of a definition's content.
+ *
+ * DIAGNOSTICS ONLY. These are what the ISSUER claims the item does; whether an
+ * item actually activates a local effect is decided by the trusted
+ * full-address registry and never by these values (a third-party event may
+ * claim any of them). They are parsed so fixture tests can assert
+ * expected-vs-published agreement and the dev inspector can display it.
+ *
+ * Returns `undefined` when the definition declares none of the three fields,
+ * so plain wearables and consumables carry no vestigial effect record.
+ */
+function readEffectVisualFromContent(
+  contentJson: unknown,
+): DefinitionEffectVisual | undefined {
+  const visual = readVisualObject(contentJson);
+  if (visual === null) return undefined;
+
+  const readString = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+
+  const kind = readString(visual.kind);
+  const effect = readString(visual.effect);
+  const effectSlot = readString(visual.effectSlot);
+
+  if (kind === null && effect === null && effectSlot === null) return undefined;
+  return { kind, effect, effectSlot };
+}
+
+/** The human-readable `content.description`, or `undefined`. Display only. */
+function readDescriptionFromContent(contentJson: unknown): string | undefined {
+  if (!contentJson || typeof contentJson !== 'object') return undefined;
+  const description = (contentJson as Record<string, unknown>).description;
+  return typeof description === 'string' && description.trim() !== ''
+    ? description
+    : undefined;
+}
+
 /** The `content.visual` object, or `null` when there is not one. */
 function readVisualObject(contentJson: unknown): Record<string, unknown> | null {
   if (!contentJson || typeof contentJson !== 'object') return null;
@@ -252,6 +292,8 @@ export function resolveFromDefinition(
   const bundled = bundledFallbackDefinition(address);
   const fromContent = readEffectsFromContent(def.contentJson);
   const visual = readVisualFromContent(def.contentJson);
+  const effectVisual = readEffectVisualFromContent(def.contentJson);
+  const description = readDescriptionFromContent(def.contentJson);
 
   const category: ItemCategory | 'unknown' =
     def.category && VALID_CATEGORIES.has(def.category)
@@ -283,6 +325,11 @@ export function resolveFromDefinition(
     slot: visual.slot,
     forms: visual.forms,
     visualDiagnostics: visual.visualDiagnostics,
+    ...(description === undefined ? {} : { description }),
+    // The published `rarity` tag, verbatim, when present. Display metadata.
+    ...(def.rarity === undefined ? {} : { rarity: def.rarity }),
+    // Issuer-claimed effect fields, for diagnostics — never for activation.
+    ...(effectVisual === undefined ? {} : { effectVisual }),
     source: 'definition',
   };
 }

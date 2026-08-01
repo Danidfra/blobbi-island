@@ -32,6 +32,9 @@ import type { CharacterEquipment } from '@/placement/useCharacterEquipment';
  */
 export const NO_CHARACTER_EQUIPMENT: CharacterEquipment = {
   accessories: [],
+  effects: [],
+  activeEffects: [],
+  rejectedEffects: [],
   definitionsByAddress: new Map(),
   hidden: [],
   warnings: [],

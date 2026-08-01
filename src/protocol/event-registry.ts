@@ -59,6 +59,7 @@
 import {
   KIND_GAME_ITEM_DEFINITION,
   KIND_GAME_INVENTORY,
+  KIND_GAME_ITEM_PLACEMENT,
 } from '@nostr-games/inventory';
 import { buildGameItemAddress } from '@nostr-games/inventory';
 
@@ -440,6 +441,36 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md'],
     notes:
       'Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking.',
+  },
+  {
+    kind: KIND_GAME_ITEM_PLACEMENT, // 31634
+    name: 'Game Item Placement',
+    purpose:
+      "Where a player's owned items are equipped or placed — Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.",
+    eventClass: 'addressable',
+    addressFormat: '31634:<owner>:<d>',
+    authority: 'player',
+    lifecycle:
+      'One document per Blobbi (d = "blobbi-island:character:<characterId>:equipment"), rebuilt in full on every mutation from a fresh relay read; unknown fields and unrelated entries are preserved.',
+    expiration: null,
+    clientStatus: 'implemented',
+    protocolStatus: 'current',
+    protocolStatusEvidence: null,
+    ownership: 'external-package',
+    owningPackage: '@nostr-games/inventory',
+    sourceFiles: [
+      'src/placement/identity.ts',
+      'src/placement/usePlacementState.ts',
+      'src/placement/useEquipmentMutation.ts',
+      'src/placement/policy.ts',
+      'src/placement/useCharacterEquipment.ts',
+    ],
+    docs: [
+      'docs/blobbi-placement-activation-audit.md',
+      'docs/blobbi-effect-activation.md',
+    ],
+    notes:
+      'Placement is never possession: equipping requires kind:31633 quantity > 0 and never consumes it. Authorization (author, ownership, issuer, slot, form) is Island policy in src/placement/policy.ts; the package owns parsing/building only.',
   },
   {
     kind: KIND_DRAFT_INTERACTION, // 14919
@@ -1173,6 +1204,35 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
       // wss://relay.dreamith.to — see docs/accessory-definition-migration.md.
       status: 'active',
     },
+    // The three wearables below were published by the official issuer alongside
+    // the twelve visual-effect items (Phase 9). Every value here was taken from
+    // the signed events supplied with that phase, whose ids and signatures were
+    // verified locally — see src/effects/official-item-event-fixtures.ts and
+    // its tests, which assert this registry still agrees with the events.
+    {
+      d: 'blobbi:cosmetic:celestial-seraph-necklace',
+      name: 'Celestial Seraph Necklace',
+      symbol: '🪽',
+      primaryImage:
+        'https://blossom.primal.net/5f336dd3c25ba80f296bfabcce3a329b4418f9b00901a632e9c0385ca06add35.webp',
+      status: 'active',
+    },
+    {
+      d: 'blobbi:cosmetic:starlight-bow-tie',
+      name: 'Starlight Bow Tie',
+      symbol: '🎀',
+      primaryImage:
+        'https://blossom.primal.net/d82adf8e2004ef4ea93a44ddf3070c8885b961d71ac41eb3c3f8635ab6908448.webp',
+      status: 'active',
+    },
+    {
+      d: 'blobbi:cosmetic:stargazer-glasses',
+      name: 'Stargazer Glasses',
+      symbol: '👓',
+      primaryImage:
+        'https://blossom.primal.net/0f67191987cfbfd637c8eb57db2741dd48b2d74180ef187fdf8297674a80006c.webp',
+      status: 'active',
+    },
   ];
 
 /** An official cosmetic plus its derived canonical address. */
@@ -1200,6 +1260,260 @@ export function officialCosmeticByAddress(
   address: string,
 ): AddressedOfficialCosmetic | null {
   return ADDRESSED_OFFICIAL_COSMETICS.find((i) => i.address === address) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Official VISUAL-EFFECT ITEMS
+//
+// A THIRD IDENTITY LIST, for the same reason cosmetics are a second one: effect
+// items are official kind:31632 definitions from the same issuer, resolved
+// through the same catalog query and cache, but they are neither care items nor
+// image-drawn wearables. What an effect item grants is a LOCALLY IMPLEMENTED
+// renderer effect, and the binding between an item address and that local
+// effect is a TRUST decision this registry records as plain data.
+//
+// This list is stable identity + activation expectations + a minimal display
+// fallback. It deliberately does NOT hold: event ids or signatures (a later
+// addressable update changes both while the address stays), executable
+// anything, inventory quantities, or placement state. The full signed events
+// live in `src/effects/official-item-event-fixtures.ts` for tests and dev
+// diagnostics only.
+//
+// `effectId`/`effectSlot` are plain strings HERE because this module must not
+// import `@blobbi/react`. The typed projection with renderer-consistency checks
+// is `src/effects/official-visual-effect-items.ts`, whose tests fail if any
+// entry names an effect or slot the renderer does not implement.
+// ---------------------------------------------------------------------------
+
+/** An official visual-effect item: stable identity plus activation data. */
+export interface OfficialEffectItemDefinition {
+  /** The kind:31632 `d` tag. Canonical identity together with the issuer. */
+  d: string;
+  /** Display name — FALLBACK ONLY. The published `name` tag wins. */
+  name: string;
+  /** Emoji shown when no artwork loads — FALLBACK ONLY. */
+  symbol: string;
+  /** The published primary `image` URL — FALLBACK ONLY. */
+  primaryImage: string | null;
+  /** The published `rarity` tag — FALLBACK ONLY; the definition wins. */
+  rarity: string;
+  /** The LOCAL renderer effect this item entitles its owner to activate. */
+  effectId: string;
+  /** The only placement slot this item may be equipped into. */
+  effectSlot: string;
+  /** Blobbi forms the effect may be active on. Never empty. */
+  forms: readonly string[];
+  /**
+   * Whether the published definition carries the `arcade-prize` topic.
+   * ACQUISITION METADATA ONLY: it never affects rendering, ownership or
+   * placement resolution, and granting is not implemented in this phase.
+   */
+  arcadePrize: boolean;
+  status: OfficialItemStatus;
+}
+
+const EFFECT_FORMS_BABY_ADULT: readonly string[] = ['baby', 'adult'];
+
+/**
+ * The twelve official visual-effect items, exactly as published (Phase 9).
+ *
+ * Values were taken from the signed kind:31632 events supplied with the phase
+ * (ids and signatures verified locally against the official issuer). The
+ * fixture tests assert this table still agrees with those events — including
+ * that ONLY Golden Sparkles, Mystic Fog and Celestial Aura carry `arcade-prize`.
+ */
+export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefinition[] =
+  [
+    {
+      d: 'blobbi:effect:golden-sparkles',
+      name: 'Golden Sparkles',
+      symbol: '✨',
+      primaryImage:
+        'https://blossom.primal.net/02be7a6849c3599ded9261f3d2d346e6a88261510f052ee2638406fc64c04877.webp',
+      rarity: 'rare',
+      effectId: 'golden-sparkles',
+      effectSlot: 'ambient-particles',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: true,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:bubble-bliss',
+      name: 'Bubble Bliss',
+      symbol: '🫧',
+      primaryImage:
+        'https://blossom.primal.net/3eb9f13c831adf9c916d32d0231b4cccdcb7edfdbbdb37d0ba25297d445c1b4f.webp',
+      rarity: 'uncommon',
+      effectId: 'bubble-bliss',
+      effectSlot: 'ambient-particles',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:love-burst',
+      name: 'Love Burst',
+      symbol: '💖',
+      primaryImage:
+        'https://blossom.primal.net/359b7369a33a90d9a822bc2a82b27aad80ef777ec98cf863b0a8bbcb36e09301.webp',
+      rarity: 'rare',
+      effectId: 'love-burst',
+      effectSlot: 'ambient-particles',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:firefly-friends',
+      name: 'Firefly Friends',
+      symbol: '🏮',
+      primaryImage:
+        'https://blossom.primal.net/fc287963f85d392b50eac59f45b32c30fff456d624691696d333256df5a27b16.webp',
+      rarity: 'rare',
+      effectId: 'firefly-friends',
+      effectSlot: 'ambient-particles',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:mystic-fog',
+      name: 'Mystic Fog',
+      symbol: '🌫️',
+      primaryImage:
+        'https://blossom.primal.net/26d2c81643b914cda7418de76f38da83d3ba09497323f2528924e45c2e7ff732.webp',
+      rarity: 'epic',
+      effectId: 'mystic-fog',
+      effectSlot: 'ground-local',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: true,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:frost-breath',
+      name: 'Frost Breath',
+      symbol: '❄️',
+      primaryImage:
+        'https://blossom.primal.net/af1e6d2e9b4dc835ae351ccd532d3837ad8b93e412818ecddda739ceb8e9e3a8.webp',
+      rarity: 'epic',
+      effectId: 'frost-breath',
+      effectSlot: 'ground-local',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:pixel-glitch',
+      name: 'Pixel Glitch',
+      symbol: '👾',
+      primaryImage:
+        'https://blossom.primal.net/85c2d70642a4504cb2650a41c7f002727f28a18da2fe811388aa03620d6db3d1.webp',
+      rarity: 'epic',
+      effectId: 'pixel-glitch',
+      effectSlot: 'body-overlay',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:electric-charge',
+      name: 'Electric Charge',
+      symbol: '⚡',
+      primaryImage:
+        'https://blossom.primal.net/5c6b68f354d627984555865820668cb6dd51acfdc5981405682eeddae0f341f5.webp',
+      rarity: 'epic',
+      effectId: 'electric-charge',
+      effectSlot: 'body-overlay',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:celestial-aura',
+      name: 'Celestial Aura',
+      symbol: '🌌',
+      primaryImage:
+        'https://blossom.primal.net/509be399fc971a21831fb0d233800560be198e9284f09e27380b014a77ef1c59.webp',
+      rarity: 'legendary',
+      effectId: 'celestial-aura',
+      effectSlot: 'aura',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: true,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:solar-radiance',
+      name: 'Solar Radiance',
+      symbol: '☀️',
+      primaryImage:
+        'https://blossom.primal.net/e3e1a8066656a685341ac9b0a9f4328f392ef00c795447bd50cc006dba753c4c.webp',
+      rarity: 'legendary',
+      effectId: 'solar-radiance',
+      effectSlot: 'aura',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:void-whispers',
+      name: 'Void Whispers',
+      symbol: '🌑',
+      primaryImage:
+        'https://blossom.primal.net/e2f61dff13ee7baee7a15d4df4de8f96af8c439cbee295cfbb962b466269f043.webp',
+      rarity: 'legendary',
+      effectId: 'void-whispers',
+      effectSlot: 'aura',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+    {
+      d: 'blobbi:effect:rainbow-dream',
+      name: 'Rainbow Dream',
+      symbol: '🌈',
+      primaryImage:
+        'https://blossom.primal.net/9b1f04492087f138c27604b55feaa3264d6b4b00d2a77e9286319243317ae3bd.webp',
+      rarity: 'mythic',
+      effectId: 'rainbow-dream',
+      effectSlot: 'aura',
+      forms: EFFECT_FORMS_BABY_ADULT,
+      arcadePrize: false,
+      status: 'active',
+    },
+  ];
+
+/** An official effect item plus its derived canonical address. */
+export interface AddressedOfficialEffectItem extends OfficialEffectItemDefinition {
+  /** `31632:<issuer>:<d>`, derived — never hardcoded. */
+  address: string;
+}
+
+/** Every official effect item, with its address derived from issuer + `d`. */
+export const ADDRESSED_OFFICIAL_EFFECT_ITEMS: readonly AddressedOfficialEffectItem[] =
+  OFFICIAL_EFFECT_ITEM_DEFINITIONS.map((item) => ({
+    ...item,
+    address: officialItemAddress(item.d),
+  }));
+
+/** Look up an official effect item by its `d` tag. */
+export function officialEffectItemByD(
+  d: string,
+): AddressedOfficialEffectItem | null {
+  return ADDRESSED_OFFICIAL_EFFECT_ITEMS.find((i) => i.d === d) ?? null;
+}
+
+/**
+ * Look up an official effect item by its canonical address.
+ *
+ * The WHOLE address, never the `d` tail: `31632:<stranger>:blobbi:effect:…` is
+ * a different item by a different author and must answer `null`.
+ */
+export function officialEffectItemByAddress(
+  address: string,
+): AddressedOfficialEffectItem | null {
+  return (
+    ADDRESSED_OFFICIAL_EFFECT_ITEMS.find((i) => i.address === address) ?? null
+  );
 }
 
 /**

@@ -35,10 +35,11 @@
  * and flow through `useInventoryMutation`; a placement never moves a quantity.
  */
 
-import type { AccessorySlot } from '@blobbi/react';
-import { REAR_VIEW_HIDDEN_SLOTS } from '@blobbi/react';
+import type { AccessorySlot, BlobbiEffectSlot } from '@blobbi/react';
+import { EFFECT_SLOT_ORDER, REAR_VIEW_HIDDEN_SLOTS } from '@blobbi/react';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import { officialCosmeticByAddress } from '@/protocol/event-registry';
+import { isOfficialEffectItemAddress } from '@/inventory/registry';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
 
 /** Every slot the Island renderer understands. `unknown` is not equippable. */
@@ -60,6 +61,44 @@ export function isEquippableSlot(slot: string | undefined): slot is AccessorySlo
   return slot !== undefined && EQUIPPABLE_SLOT_SET.has(slot);
 }
 
+/**
+ * The placement slots occupied by VISUAL EFFECTS, in the renderer's canonical
+ * order. Derived from `@blobbi/react` rather than restated, so the placement
+ * vocabulary and the painter can never disagree about what an effect slot is.
+ *
+ * `aura` appears in BOTH vocabularies on purpose: an image-drawn aura
+ * accessory and an aura effect are two ways of filling the same visual slot,
+ * and the canonical-slot rule (one active placement per exact slot name) is
+ * what stops a Blobbi from wearing both at once.
+ */
+export const EFFECT_PLACEMENT_SLOTS: readonly BlobbiEffectSlot[] =
+  EFFECT_SLOT_ORDER;
+
+const EFFECT_SLOT_SET: ReadonlySet<string> = new Set(EFFECT_PLACEMENT_SLOTS);
+
+/** Whether `slot` is one of the renderer's visual-effect slots. */
+export function isEffectPlacementSlot(
+  slot: string | undefined,
+): slot is BlobbiEffectSlot {
+  return slot !== undefined && EFFECT_SLOT_SET.has(slot);
+}
+
+/**
+ * Any slot Island can write into a kind:31634 equipment document — a wearable
+ * accessory slot or a visual-effect slot. This is the vocabulary the mutation
+ * layer validates against; which ITEMS may occupy which slot is a separate
+ * question answered per item (wearables by their published `visual.slot`,
+ * effect items by the trusted registry's expected slot).
+ */
+export type PlacementSlot = AccessorySlot | BlobbiEffectSlot;
+
+/** Whether `slot` may appear in an Island-written equipment document. */
+export function isPlacementSlot(
+  slot: string | undefined,
+): slot is PlacementSlot {
+  return isEquippableSlot(slot) || isEffectPlacementSlot(slot);
+}
+
 export { REAR_VIEW_HIDDEN_SLOTS };
 
 /**
@@ -77,7 +116,14 @@ export type PlacementRejectionReason =
   | 'malformed-forms'
   | 'unsupported-slot'
   | 'slot-mismatch'
-  | 'unsupported-mode';
+  | 'unsupported-mode'
+  /**
+   * The item is an official VISUAL-EFFECT item, which this wearable path never
+   * draws — it is resolved by `resolveActiveBlobbiEffects` instead. Reported
+   * here so a caller that feeds every entry through the wearable policy gets an
+   * honest "not mine" rather than a misleading `untrusted-issuer`.
+   */
+  | 'official-effect-item';
 
 export interface PlacementPolicyContext {
   /** The pubkey that signed the placement event. */
@@ -218,6 +264,14 @@ export function decidePlacementEntry(
   // simply not what a character equipment document is for.
   if (entry.mode !== 'equip') {
     return refuse('unsupported-mode');
+  }
+
+  // Official effect items are the EFFECT path's business
+  // (`resolveActiveBlobbiEffects`), never drawn as image accessories. Checked
+  // by full address before the issuer gate so the reason is "this is an effect
+  // item" rather than a false "untrusted issuer".
+  if (isOfficialEffectItemAddress(entry.item)) {
+    return refuse('official-effect-item');
   }
 
   if (!isEquippableSlot(entry.slot)) {

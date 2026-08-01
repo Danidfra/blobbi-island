@@ -50,7 +50,7 @@ import {
   placementQueryKey,
   type PlacementState,
 } from './usePlacementState';
-import { isEquippableSlot } from './policy';
+import { isPlacementSlot } from './policy';
 import { buildEquipEntry, ISLAND_PLACEMENT_REFERENCE } from './render-model';
 
 // --- Per-document serialization -------------------------------------------
@@ -140,7 +140,10 @@ export function applyEquipmentMutation(
 }
 
 function assertEquippableSlot(slot: string): asserts slot is string {
-  if (!isEquippableSlot(slot)) {
+  // Wearable accessory slots AND visual-effect slots: both live in the same
+  // per-character equipment document since Phase 9. Anything outside the
+  // combined vocabulary is still refused before a byte is published.
+  if (!isPlacementSlot(slot)) {
     throw new Error(`Unknown equipment slot: ${slot}`);
   }
 }

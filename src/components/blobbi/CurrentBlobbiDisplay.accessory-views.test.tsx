@@ -95,6 +95,9 @@ function renderWorn(facing: 'front' | 'back', withDefinitions = true) {
     <CharacterEquipmentContext.Provider
       value={{
         accessories: [],
+        effects: [],
+        activeEffects: [],
+        rejectedEffects: [],
         definitionsByAddress: withDefinitions ? definitions : new Map(),
         hidden: [],
         warnings: [],

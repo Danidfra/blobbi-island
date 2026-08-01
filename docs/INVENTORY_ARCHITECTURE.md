@@ -299,3 +299,8 @@ image views live in the published definition and nowhere else — inventing them
 offline would be the second authoritative catalog the migration exists to avoid.
 
 See [`accessory-definition-migration.md`](./accessory-definition-migration.md).
+
+Since Phase 9 the catalog also resolves the twelve official VISUAL-EFFECT
+items (`OFFICIAL_EFFECT_ITEM_DEFINITIONS`), whose ownership-backed activation
+through kind:31634 is described in
+[`blobbi-effect-activation.md`](./blobbi-effect-activation.md).

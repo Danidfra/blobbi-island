@@ -285,3 +285,6 @@ build a source list, no side-facing Blobbi poses. The remaining 24 legacy
 accessories are unpublished and resolve through the legacy chain unchanged.
 
 See [`accessory-definition-migration.md`](./accessory-definition-migration.md).
+Visual-EFFECT items carry a single primary image (card artwork only — an
+effect's look is local code, not an image): see
+[`blobbi-effect-activation.md`](./blobbi-effect-activation.md).

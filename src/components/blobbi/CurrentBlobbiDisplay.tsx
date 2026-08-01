@@ -51,6 +51,7 @@ import {
   type AccessoryPlacementInput,
   type BlobbiRenderSize,
   type BlobbiRenderVisual,
+  type BlobbiVisualEffect,
 } from "@blobbi/react";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
 import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
@@ -99,6 +100,22 @@ export interface CurrentBlobbiDisplayProps {
    * ownership table in the module doc).
    */
   accessoryOverride?: readonly AccessoryPlacementInput[];
+  /**
+   * Visual effects to draw INSTEAD of whatever this component would resolve.
+   *
+   * Effects follow the visual, exactly like accessories:
+   *
+   *   no `visualOverride`                     → the local companion's ACTIVE
+   *     effects (ownership + kind:31634, resolved at the app root); an
+   *     `effectsOverride` replaces them — this is the preview path, purely
+   *     visual and never persisted.
+   *   `visualOverride`, no `effectsOverride`  → that visual, no effects (the
+   *     honest render of unknown state — see the accessory ownership table).
+   *   `visualOverride` + `effectsOverride`    → that visual, exactly those.
+   *
+   * Plain serializable data. Passing `[]` explicitly means "no effects".
+   */
+  effectsOverride?: readonly BlobbiVisualEffect[];
 }
 
 export function CurrentBlobbiDisplay({
@@ -114,6 +131,7 @@ export function CurrentBlobbiDisplay({
   idSuffix,
   visualOverride,
   accessoryOverride,
+  effectsOverride,
   eyeOffset,
   facing = "front",
 }: CurrentBlobbiDisplayProps) {
@@ -137,8 +155,11 @@ export function CurrentBlobbiDisplay({
   // kind:31634 (placement) + kind:31633 (ownership) + kind:31632 (artwork), and
   // already filtered by Island policy. This component receives renderer input
   // and makes no protocol or authorization decision of its own.
-  const { accessories: wornEquipment, definitionsByAddress } =
-    useCharacterEquipmentContext();
+  const {
+    accessories: wornEquipment,
+    effects: activeEffects,
+    definitionsByAddress,
+  } = useCharacterEquipmentContext();
 
   // Accessory ARTWORK selection. Which picture an accessory uses depends on
   // which way this Blobbi is turned, so the resolver is built per `facing`
@@ -199,6 +220,15 @@ export function CurrentBlobbiDisplay({
           resolveSources: resolveAccessorySources,
         })
       : [];
+    // Effects follow the visual, exactly like accessories (see the prop doc):
+    // an override visual draws only explicitly supplied effects; the local
+    // companion draws its resolved ACTIVE effects, unless a preview override
+    // replaces them. Gated by `showAccessories` with the same reasoning —
+    // a caller that asked for a bare Blobbi gets a bare Blobbi.
+    const wornEffects = visualOverride
+      ? effectsOverride
+      : (effectsOverride ?? activeEffects);
+    const effects = showAccessories ? (wornEffects ?? []) : [];
 
     return (
       <BlobbiRendererView
@@ -210,6 +240,7 @@ export function CurrentBlobbiDisplay({
         facing={facing}
         eyeOffset={eyeOffset}
         accessories={accessories}
+        effects={effects}
         transparent={transparent}
         interactive={interactive}
         onClick={onClick}

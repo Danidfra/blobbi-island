@@ -27,6 +27,7 @@ import type {
   GameItemPlacementReference,
 } from '@/inventory/package';
 import { isGameItemPlacement2DReference } from '@/inventory/package';
+import type { PlacementSlot } from './policy';
 
 /**
  * Island's rendering defaults for fields a placement omits.
@@ -154,7 +155,8 @@ export function toAccessoryPlacementInput(
  */
 export function buildEquipEntry(options: {
   itemAddress: string;
-  slot: AccessorySlot;
+  /** A wearable accessory slot or a visual-effect slot — same document. */
+  slot: PlacementSlot;
   x?: number;
   y?: number;
   scale?: number;

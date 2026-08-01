@@ -29,12 +29,15 @@ import {
 import {
   OFFICIAL_COSMETIC_ADDRESSES,
   OFFICIAL_COSMETIC_D_TAGS,
+  OFFICIAL_EFFECT_ITEM_ADDRESSES,
+  OFFICIAL_EFFECT_ITEM_D_TAGS,
   OFFICIAL_ITEM_ADDRESSES,
   OFFICIAL_ITEM_D_TAGS,
 } from './registry';
 import {
   type ResolvedBlobbiItemDefinition,
   bundledCosmeticFallbackDefinition,
+  bundledEffectItemFallbackDefinition,
   bundledFallbackDefinition,
 } from './catalog-fallback';
 import {
@@ -58,6 +61,10 @@ export interface ItemCatalog {
   cosmeticsFetched: number;
   /** Total official cosmetics. */
   cosmeticsTotal: number;
+  /** How many official VISUAL-EFFECT items were resolved from a fetched 31632. */
+  effectItemsFetched: number;
+  /** Total official visual-effect items. */
+  effectItemsTotal: number;
 }
 
 /**
@@ -75,7 +82,11 @@ async function fetchOfficialDefinitions(
   const filter = {
     kinds: [KIND_GAME_ITEM_DEFINITION],
     authors: [OFFICIAL_ITEM_ISSUER_PUBKEY],
-    '#d': [...OFFICIAL_ITEM_D_TAGS, ...OFFICIAL_COSMETIC_D_TAGS],
+    '#d': [
+      ...OFFICIAL_ITEM_D_TAGS,
+      ...OFFICIAL_COSMETIC_D_TAGS,
+      ...OFFICIAL_EFFECT_ITEM_D_TAGS,
+    ],
   };
 
   // Query each relay in parallel with a bounded timeout; tolerate failures.
@@ -176,12 +187,30 @@ export function useItemCatalog() {
         }
       }
 
+      // Effect items resolve into the SAME map for the same reason cosmetics
+      // do — one catalog, one cache. Counted separately so the existing
+      // coverage figures keep their meaning. A missing fetched definition
+      // costs only description text and marked image views; ACTIVATION never
+      // depends on this map (see src/effects/official-visual-effect-items.ts).
+      let effectItemsFetched = 0;
+      for (const address of OFFICIAL_EFFECT_ITEM_ADDRESSES) {
+        const def = fetched.get(address);
+        if (def) {
+          byAddress.set(address, resolveFromDefinition(def));
+          effectItemsFetched += 1;
+        } else {
+          byAddress.set(address, bundledEffectItemFallbackDefinition(address)!);
+        }
+      }
+
       return {
         byAddress,
         fetchedCount,
         totalCount: OFFICIAL_ITEM_ADDRESSES.length,
         cosmeticsFetched,
         cosmeticsTotal: OFFICIAL_COSMETIC_ADDRESSES.length,
+        effectItemsFetched,
+        effectItemsTotal: OFFICIAL_EFFECT_ITEM_ADDRESSES.length,
       };
     },
     // Definitions are effectively static; cache aggressively.

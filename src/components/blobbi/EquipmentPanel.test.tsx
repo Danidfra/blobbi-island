@@ -217,9 +217,11 @@ describe('EquipmentPanel', () => {
     await waitFor(() =>
       expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull(),
     );
+    // FOUR official cosmetics now share this state in the empty-catalog
+    // harness (cap, necklace, bow tie, glasses) — at least one row shows it.
     expect(
-      screen.getByText(/official definition has not been published/i),
-    ).toBeInTheDocument();
+      screen.getAllByText(/official definition has not been published/i).length,
+    ).toBeGreaterThan(0);
   });
 
   it('does not offer a cosmetic signed by an untrusted issuer', async () => {

@@ -4,15 +4,17 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package } from 'lucide-react';
+import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2 } from 'lucide-react';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { EquipmentPanel } from './EquipmentPanel';
+import { EffectsPanel } from './EffectsPanel';
 import { PlacementOverlay } from './PlacementOverlay';
 import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
 import { buildEquipEntry } from '@/placement/render-model';
-import type { AccessorySlot } from '@blobbi/react';
+import { isEffectPlacementSlot, type PlacementSlot } from '@/placement/policy';
+import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/react';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
@@ -126,7 +128,15 @@ export function BlobbiInfoModal({
   // The same policy-filtered accessories the world draws, so the editor and the
   // world can never disagree about what is worn.
   const { accessories, definitionsByAddress } = useCharacterEquipmentContext();
-  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory'>(readOnly ? 'primary' : defaultTab);
+  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory' | 'effects'>(readOnly ? 'primary' : defaultTab);
+  /**
+   * Effect PREVIEW state — purely visual, never persisted. Non-null while the
+   * player is previewing an effect from the Effects tab; drawn through the
+   * real renderer path via `effectsOverride` and cleared on cancel, on tab
+   * change and whenever a real equip/remove lands (the persisted state is then
+   * the truth again).
+   */
+  const [previewEffects, setPreviewEffects] = useState<readonly BlobbiVisualEffect[] | null>(null);
 
   const characterId = currentPet?.id;
   const characterName = currentPet?.name;
@@ -166,7 +176,7 @@ export function BlobbiInfoModal({
     }
   };
 
-  const handleEquip = async (address: string, slot: AccessorySlot) => {
+  const handleEquip = async (address: string, slot: PlacementSlot) => {
     if (!characterId) return;
     setPublishError(null);
     try {
@@ -179,7 +189,11 @@ export function BlobbiInfoModal({
           entry: buildEquipEntry({ itemAddress: address, slot }),
         },
       });
-      setSelectedSlot(slot);
+      // A landed equip makes the persisted state the truth again; keeping a
+      // preview alive here would hide what was just published.
+      setPreviewEffects(null);
+      // Transform editing applies to wearable accessory slots only.
+      if (!isEffectPlacementSlot(slot)) setSelectedSlot(slot);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Publish failed.';
       setPublishError(message);
@@ -194,7 +208,7 @@ export function BlobbiInfoModal({
    * inventory: taking a hat off does not give it back, because wearing it never
    * took it away.
    */
-  const handleUnequip = async (slot: AccessorySlot) => {
+  const handleUnequip = async (slot: PlacementSlot) => {
     if (!characterId) return;
     setPublishError(null);
     try {
@@ -203,6 +217,7 @@ export function BlobbiInfoModal({
         ...(characterName === undefined ? {} : { characterName }),
         mutation: { type: 'unequip', slot },
       });
+      setPreviewEffects(null);
       setPendingUpdates((prev) => {
         const next = { ...prev };
         delete next[slot];
@@ -383,6 +398,15 @@ export function BlobbiInfoModal({
                        to inherit the LOCAL player's accessories here, drawing a
                        stranger in your hats (fixed in Phase 5). */
                     visualOverride={readOnly ? externalVisual : undefined}
+                    /* Effect PREVIEW: while non-null this replaces the
+                       persisted active effects on the stage only. Publishing
+                       never happens from here; cancelling (or leaving the
+                       Effects tab) restores the persisted view. */
+                    effectsOverride={
+                      !readOnly && previewEffects !== null
+                        ? previewEffects
+                        : undefined
+                    }
                     idSuffix={`preview:${previewKey}`}
                   />
 
@@ -411,10 +435,20 @@ export function BlobbiInfoModal({
 
           {/* Sidebar - Right side with tabbed interface */}
           <div className="w-2/3 lg:w-3/5 flex-1 min-h-0 flex flex-col">
-            <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as 'primary' | 'inventory')} className="flex flex-col h-full">
+            <Tabs
+              value={selectedTab}
+              onValueChange={(value) => {
+                setSelectedTab(value as 'primary' | 'inventory' | 'effects');
+                // Leaving the Effects tab ends any preview: the stage must
+                // always show the persisted state unless the player is
+                // actively previewing.
+                if (value !== 'effects') setPreviewEffects(null);
+              }}
+              className="flex flex-col h-full"
+            >
               {/* Tabs Header - sticky at top */}
               <div className="sticky top-0 backdrop-blur-sm z-20 rounded-xl border-purple-200/60 dark:border-purple-800/60">
-                <TabsList className={`grid ${readOnly ? 'grid-cols-1' : 'grid-cols-2'} bg-purple-100/60 dark:bg-purple-900/60`}>
+                <TabsList className={`grid ${readOnly ? 'grid-cols-1' : 'grid-cols-3'} bg-purple-100/60 dark:bg-purple-900/60`}>
                   <TabsTrigger
                     value="primary"
                     className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
@@ -429,6 +463,16 @@ export function BlobbiInfoModal({
                     >
                       <Package className="h-4 w-4 mr-2" />
                       Inventory
+                    </TabsTrigger>
+                  )}
+                  {!readOnly && (
+                    <TabsTrigger
+                      value="effects"
+                      data-testid="effects-tab"
+                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
+                    >
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Effects
                     </TabsTrigger>
                   )}
                 </TabsList>
@@ -640,6 +684,23 @@ export function BlobbiInfoModal({
                     />
                   </div>
 
+                </TabsContent>
+
+                {/* Effects Tab Content */}
+                <TabsContent value="effects" className="mt-2 pb-2 focus-visible:outline-none">
+                  <EffectsPanel
+                    stage={currentPet?.stage}
+                    onEquip={handleEquip}
+                    onRemove={handleUnequip}
+                    onPreview={setPreviewEffects}
+                    previewingEffectId={
+                      previewEffects && previewEffects.length > 0
+                        ? previewEffects[0].id
+                        : null
+                    }
+                    publishError={publishError}
+                    isPublishing={equipmentMutation.isPending}
+                  />
                 </TabsContent>
               </div>
             </Tabs>

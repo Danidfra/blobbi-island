@@ -23,6 +23,7 @@
 
 import {
   ADDRESSED_OFFICIAL_COSMETICS,
+  ADDRESSED_OFFICIAL_EFFECT_ITEMS,
   ADDRESSED_OFFICIAL_ITEMS,
   type ItemActionName,
   type ItemCategoryName,
@@ -74,6 +75,24 @@ export type ItemCategory = ItemCategoryName;
 export interface DefinitionVisualDiagnostics {
   slot: 'declared' | 'missing' | 'malformed';
   forms: 'declared' | 'absent' | 'malformed';
+}
+
+/**
+ * What an issuer declared about a VISUAL-EFFECT item in `content.visual`.
+ *
+ * DIAGNOSTICS ONLY, never authorization. The renderer effect an item activates
+ * is decided by the trusted registry keyed by full address
+ * (`src/effects/official-visual-effect-items.ts`); these parsed values exist so
+ * fixture tests and the dev inspector can show "expected vs published" without
+ * re-reading raw content JSON. Nothing in the activation path reads them.
+ */
+export interface DefinitionEffectVisual {
+  /** `visual.kind` — `'blobbi-effect'` marks a definition as an effect item. */
+  kind: string | null;
+  /** `visual.effect` — the effect id the ISSUER claims. Untrusted. */
+  effect: string | null;
+  /** `visual.effectSlot` — the slot the ISSUER claims. Untrusted. */
+  effectSlot: string | null;
 }
 
 /**
@@ -168,6 +187,30 @@ export interface ResolvedBlobbiItemDefinition {
    * issuer can see why their cosmetic is not offered.
    */
   visualDiagnostics: DefinitionVisualDiagnostics;
+  /**
+   * The human-readable `content.description`, when the definition carries one.
+   *
+   * Display only. Absent for bundled fallbacks (which deliberately do not
+   * invent copy) and for definitions that publish none.
+   */
+  description?: string;
+  /**
+   * The published `rarity` tag, when one exists.
+   *
+   * Display metadata only — never identity, never authorization, never a
+   * price. Present for fetched definitions that carry the tag and for the
+   * bundled effect-item fallback (whose recorded rarity mirrors the published
+   * events); absent everywhere else.
+   */
+  rarity?: string;
+  /**
+   * Parsed effect-visual declarations, when the definition made any.
+   *
+   * See {@link DefinitionEffectVisual}: diagnostics for tests and the dev
+   * inspector, never an activation input. Absent when the definition declares
+   * none of the three fields.
+   */
+  effectVisual?: DefinitionEffectVisual;
   /** Where this resolution came from. */
   source: 'definition' | 'fallback' | 'unknown';
 }
@@ -345,6 +388,51 @@ export function bundledCosmeticFallbackDefinition(
     slot: null,
     forms: null,
     visualDiagnostics: { slot: 'missing', forms: 'absent' },
+    source: 'fallback',
+  };
+}
+
+/**
+ * The bundled fallback for an official VISUAL-EFFECT item address, or `null`.
+ *
+ * Follows the cosmetic fallback's honesty rules: name, symbol, primary artwork
+ * and rarity are the little the canonical registry legitimately records (all
+ * verified against the published events), and everything else is stated as
+ * unknown rather than invented. `category: 'unknown'` and `action: null` keep
+ * effect items out of every care and shop flow.
+ *
+ * Deliberately NO `slot`, NO `forms` and NO `effectVisual` here: what an effect
+ * item ACTIVATES is decided by the trusted registry in
+ * `src/effects/official-visual-effect-items.ts`, not by this display fallback,
+ * and duplicating those facts into a second shape would create a copy that can
+ * drift. A missing fetched definition therefore costs only description text and
+ * marked image views — never activation.
+ */
+export function bundledEffectItemFallbackDefinition(
+  address: string,
+): ResolvedBlobbiItemDefinition | null {
+  const entry = ADDRESSED_OFFICIAL_EFFECT_ITEMS.find(
+    (e) => e.address === address,
+  );
+  if (!entry) return null;
+  return {
+    address: entry.address,
+    itemId: null,
+    d: entry.d,
+    name: entry.name,
+    type: 'cosmetic',
+    category: 'unknown',
+    effects: {},
+    action: null,
+    stages: [],
+    emoji: entry.symbol,
+    ...(entry.primaryImage ? { image: entry.primaryImage } : {}),
+    images: entry.primaryImage ? [{ url: entry.primaryImage }] : [],
+    topics: [],
+    slot: null,
+    forms: null,
+    visualDiagnostics: { slot: 'missing', forms: 'absent' },
+    rarity: entry.rarity,
     source: 'fallback',
   };
 }

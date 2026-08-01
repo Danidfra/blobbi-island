@@ -234,3 +234,8 @@ Two behavioral notes, both intentional:
   resolved fallback chain is unchanged on every Island path.
 - The accessory-ownership fix in §8 / §9 is the one deliberate on-screen change
   in the phase.
+
+Phase 9 note: `BlobbiRendererView.effects` is now fed on the local-companion
+path from ownership-backed kind:31634 state, still as plain `{ id }` data —
+the package remains protocol-agnostic. See
+[`blobbi-effect-activation.md`](./blobbi-effect-activation.md).

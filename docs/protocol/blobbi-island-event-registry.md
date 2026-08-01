@@ -21,6 +21,7 @@ Two independent status axes. **This client** says what the code in this reposito
 | `21951` | Shared Playback Command | Ephemeral | Blobbi Island | Implemented (read + write) | Current |
 | `31632` | Game Item Definition | Addressable | External — `@nostr-games/inventory` | Implemented (read only) | Current |
 | `31633` | Game Inventory | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `31634` | Game Item Placement | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
 | `14919` | Blobbi Interaction (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Superseded |
 | `14920` | Blobbi Breeding Event (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Undetermined by this repository |
 | `14921` | Blobbi Record (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Undetermined by this repository |
@@ -41,6 +42,7 @@ Addressable and replaceable kinds are referenced by coordinate. Non-addressable 
 | `21951` | not addressable |
 | `31632` | `31632:<issuer>:<d>` |
 | `31633` | `31633:<owner>:<d>` |
+| `31634` | `31634:<owner>:<d>` |
 | `14919` | not addressable |
 | `14920` | not addressable |
 | `14921` | not addressable |
@@ -61,6 +63,7 @@ Authority in Nostr derives from authorship: an event is authoritative for a thin
 | `21951` | Blobbi Island | Session host |
 | `31632` | `@nostr-games/inventory` | Official item issuer |
 | `31633` | `@nostr-games/inventory` | The player |
+| `31634` | `@nostr-games/inventory` | The player |
 | `14919` | Blobbi Island | The player |
 | `14920` | Blobbi Island | The player |
 | `14921` | Blobbi Island | The player |
@@ -225,6 +228,22 @@ The player's item inventory: kind:31632 addresses with integer quantities.
 - **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking.
+
+### Kind 31634 — Game Item Placement
+
+Where a player's owned items are equipped or placed — Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.
+
+- **Class:** Addressable
+- **Address format:** `31634:<owner>:<d>`
+- **Signed by:** The player
+- **Lifecycle:** One document per Blobbi (d = "blobbi-island:character:<characterId>:equipment"), rebuilt in full on every mutation from a fresh relay read; unknown fields and unrelated entries are preserved.
+- **Expiration:** none
+- **This client:** Implemented (read + write)
+- **Protocol status:** Current
+- **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
+- **Implemented in:** `src/placement/identity.ts`, `src/placement/usePlacementState.ts`, `src/placement/useEquipmentMutation.ts`, `src/placement/policy.ts`, `src/placement/useCharacterEquipment.ts`
+- **Documented in:** `docs/blobbi-placement-activation-audit.md`, `docs/blobbi-effect-activation.md`
+- **Notes:** Placement is never possession: equipping requires kind:31633 quantity > 0 and never consumes it. Authorization (author, ownership, issuer, slot, form) is Island policy in src/placement/policy.ts; the package owns parsing/building only.
 
 ### Kind 14919 — Blobbi Interaction (NIP-BB draft)
 

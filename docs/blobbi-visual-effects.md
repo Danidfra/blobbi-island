@@ -340,14 +340,16 @@ streaks or any world-persistent particle · any change to movement, ground
 anchors, shadows, depth scaling, presence, theater, accessories or Blobbi
 bodies.
 
-`CurrentBlobbiDisplay` was deliberately **not** given an effect override. The
-dev harness uses the pure renderer directly, so no wrapper support was needed —
-and adding one would have put an effect entry point on the local-player path
-this phase has no business touching.
+`CurrentBlobbiDisplay` was deliberately **not** given an effect override in
+this phase. (Phase 9 later added `effectsOverride` alongside the activation
+path — see `blobbi-effect-activation.md` — with the same ownership semantics
+as `accessoryOverride`.)
 
-## 14. The future activation path
+## 14. The activation path (implemented in Phase 9)
 
-When effects become equippable, the shape is already there:
+This section was written when activation was future work. It is now
+implemented — `docs/blobbi-effect-activation.md` is the authoritative
+description — and landed in almost exactly this shape:
 
 ```
 kind:31634 placement (equipped)  →  entry.item is an ITEM ADDRESS
@@ -362,13 +364,15 @@ BlobbiRendererView effects={[{ id }]}
 
 Every gate an effect needs — is the author allowed to dress this Blobbi, does
 the player own the item, is the issuer trusted, does it fit this form — is a
-gate `decidePlacementEntry` already answers for cosmetics. The work is to give
-placement a slot vocabulary that includes effect slots, not to invent a second
-authorization path. `visualEffectForItemAddress` is the last step, and it is
-already written and tested.
+gate `decidePlacementEntry` already answers for cosmetics. Phase 9 gave
+placement a slot vocabulary that includes the effect slots and put the effect
+gates in a PURE resolver (`src/effects/active-effects.ts`) beside the wearable
+policy, keyed on `resolveOfficialVisualEffectItem` — the same full-address
+trust rule this section described.
 
 ---
 
-**See also:** [`blobbi-visual-effects-audit.md`](./blobbi-visual-effects-audit.md)
+**See also:** [`blobbi-effect-activation.md`](./blobbi-effect-activation.md)
+· [`blobbi-visual-effects-audit.md`](./blobbi-visual-effects-audit.md)
 · [`blobbi-renderer-contract.md`](./blobbi-renderer-contract.md)
 · [`blobbi-package-readiness.md`](./blobbi-package-readiness.md)

@@ -18,6 +18,7 @@
 
 import {
   ADDRESSED_OFFICIAL_COSMETICS,
+  ADDRESSED_OFFICIAL_EFFECT_ITEMS,
   ADDRESSED_OFFICIAL_ITEMS,
 } from '@/protocol/event-registry';
 
@@ -139,4 +140,36 @@ const cosmeticAddresses = new Set(OFFICIAL_COSMETIC_ADDRESSES);
  */
 export function isOfficialCosmeticAddress(address: string): boolean {
   return cosmeticAddresses.has(address);
+}
+
+// --- Official visual-effect items -----------------------------------------
+//
+// Projected from the same canonical registry. Effect items are cosmetics in
+// the published events' `type` tag but a separate identity list here: they are
+// never care items, never image-drawn wearables, and what they unlock — a
+// locally implemented renderer effect — is authorized through
+// `src/effects/official-visual-effect-items.ts` by FULL address only.
+
+const EFFECT_ENTRIES = ADDRESSED_OFFICIAL_EFFECT_ITEMS;
+
+/** All official visual-effect item addresses (canonical identities). */
+export const OFFICIAL_EFFECT_ITEM_ADDRESSES: readonly string[] =
+  EFFECT_ENTRIES.map((e) => e.address);
+
+/** All official effect-item `d` tags, for constructing relay filters. */
+export const OFFICIAL_EFFECT_ITEM_D_TAGS: readonly string[] = EFFECT_ENTRIES.map(
+  (e) => e.d,
+);
+
+const effectItemAddresses = new Set(OFFICIAL_EFFECT_ITEM_ADDRESSES);
+
+/**
+ * Is this address one of the official visual-effect item addresses?
+ *
+ * Compares the WHOLE address: a copied `d` under another issuer answers
+ * `false`, which is what keeps a third-party `blobbi:effect:celestial-aura`
+ * from ever entering the effect path.
+ */
+export function isOfficialEffectItemAddress(address: string): boolean {
+  return effectItemAddresses.has(address);
 }

@@ -23,12 +23,19 @@ import { useItemCatalog } from '@/inventory/useItemCatalog';
 import { getInventoryItems } from '@/inventory/package';
 import type { GameItemPlacementEntry, ParseWarning } from '@/inventory/package';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
-import type { AccessoryPlacementInput } from '@blobbi/react';
+import type { AccessoryPlacementInput, BlobbiVisualEffect } from '@blobbi/react';
+import {
+  isEffectItemPlacement,
+  resolveActiveBlobbiEffects,
+  type ActiveEffectPlacement,
+  type RejectedEffectPlacement,
+} from '@/effects/active-effects';
 
 import { usePlacementState } from './usePlacementState';
 import {
   selectRenderablePlacements,
   decidePlacementEntry,
+  mayModifyCharacter,
   type PlacementPolicyContext,
   type PlacementRejectionReason,
 } from './policy';
@@ -46,6 +53,17 @@ export interface HiddenPlacement {
 export interface CharacterEquipment {
   /** Renderer input for every drawable accessory, in slot paint order. */
   accessories: AccessoryPlacementInput[];
+  /**
+   * Renderer input for the ACTIVE visual effects, in the renderer's canonical
+   * slot order. Plain `{ id }` data — exactly what `BlobbiRendererView.effects`
+   * takes. Empty (the same frozen array) whenever nothing is active, so the
+   * no-effect render path stays byte-identical to the Phase-8 baseline.
+   */
+  effects: readonly BlobbiVisualEffect[];
+  /** The effect placements behind {@link effects}, for the management UI. */
+  activeEffects: readonly ActiveEffectPlacement[];
+  /** Effect-item placements that were refused, with the reason. */
+  rejectedEffects: readonly RejectedEffectPlacement[];
   /** `itemAddress → definition` for the drawable accessories' artwork. */
   definitionsByAddress: ReadonlyMap<string, ResolvedBlobbiItemDefinition>;
   /** Entries that exist in the document but are not drawn, with the reason. */
@@ -58,8 +76,15 @@ export interface CharacterEquipment {
   isEmpty: boolean;
 }
 
+const NO_EFFECTS: readonly BlobbiVisualEffect[] = Object.freeze([]);
+const NO_ACTIVE_EFFECTS: readonly ActiveEffectPlacement[] = Object.freeze([]);
+const NO_REJECTED_EFFECTS: readonly RejectedEffectPlacement[] = Object.freeze([]);
+
 const EMPTY_EQUIPMENT: CharacterEquipment = {
   accessories: [],
+  effects: NO_EFFECTS,
+  activeEffects: NO_ACTIVE_EFFECTS,
+  rejectedEffects: NO_REJECTED_EFFECTS,
   definitionsByAddress: new Map(),
   hidden: [],
   warnings: [],
@@ -121,10 +146,17 @@ export function useCharacterEquipment(
       definitionsByAddress,
     };
 
-    const renderable = selectRenderablePlacements(
-      state.placement.placements,
-      context,
+    // ONE document, TWO vocabularies. Official effect items are resolved by
+    // the pure effect resolver; everything else stays on the wearable policy
+    // path. Partitioned by full item address so a third-party copy of an
+    // official effect `d` remains a wearable-path concern (refused there as
+    // `untrusted-issuer`) and never enters the effect resolver at all.
+    const effectEntries = state.placement.placements.filter(isEffectItemPlacement);
+    const wearableEntries = state.placement.placements.filter(
+      (entry) => !isEffectItemPlacement(entry),
     );
+
+    const renderable = selectRenderablePlacements(wearableEntries, context);
     const renderableEntryIds = new Set(renderable.map((r) => r.entry));
 
     const accessories: AccessoryPlacementInput[] = [];
@@ -145,7 +177,7 @@ export function useCharacterEquipment(
 
     // Everything policy refused, with its reason — including entries that lost
     // a slot conflict, which `selectRenderablePlacements` resolves last-wins.
-    for (const entry of state.placement.placements) {
+    for (const entry of wearableEntries) {
       if (renderableEntryIds.has(entry)) continue;
       const decision = decidePlacementEntry(entry, context);
       hidden.push({
@@ -154,8 +186,28 @@ export function useCharacterEquipment(
       });
     }
 
+    // The AUTHOR gate is applied here, before the pure resolver, because the
+    // resolver deliberately knows nothing about signatures: a document not
+    // signed by the Blobbi's owner activates no effects, same as it draws no
+    // accessories.
+    const authorMayModify = mayModifyCharacter(
+      context.authorPubkey,
+      context.ownerPubkey,
+    );
+    const effectResolution =
+      authorMayModify && effectEntries.length > 0
+        ? resolveActiveBlobbiEffects({
+            placements: effectEntries,
+            quantityByAddress,
+            stage: form,
+          })
+        : null;
+
     return {
       accessories,
+      effects: effectResolution?.effects ?? NO_EFFECTS,
+      activeEffects: effectResolution?.active ?? NO_ACTIVE_EFFECTS,
+      rejectedEffects: effectResolution?.rejected ?? NO_REJECTED_EFFECTS,
       definitionsByAddress,
       hidden,
       warnings: state.warnings,

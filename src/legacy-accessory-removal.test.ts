@@ -125,6 +125,8 @@ describe('equipment has exactly one read path and one write path', () => {
     expect(matching(/KIND_GAME_ITEM_PLACEMENT/)).toEqual([
       'src/inventory/package.ts',
       'src/placement/usePlacementState.ts',
+      // Names the kind in the canonical protocol registry; reads nothing.
+      'src/protocol/event-registry.ts',
     ]);
   });
 

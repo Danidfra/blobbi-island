@@ -127,8 +127,17 @@ describe('the registry holds no executable anything', () => {
     const roundTripped = JSON.parse(JSON.stringify(ADDRESSED_VISUAL_EFFECT_ITEMS));
     expect(roundTripped).toEqual(ADDRESSED_VISUAL_EFFECT_ITEMS);
     for (const item of ADDRESSED_VISUAL_EFFECT_ITEMS) {
-      for (const value of Object.values(item)) {
-        expect(typeof value).toBe('string');
+      for (const [key, value] of Object.entries(item)) {
+        if (key === 'forms') {
+          expect(Array.isArray(value)).toBe(true);
+          for (const form of value as unknown[]) {
+            expect(typeof form).toBe('string');
+          }
+        } else if (key === 'arcadePrize') {
+          expect(typeof value).toBe('boolean');
+        } else {
+          expect(typeof value, key).toBe('string');
+        }
       }
     }
   });
@@ -148,7 +157,7 @@ describe('the registry holds no executable anything', () => {
   });
 });
 
-describe('this phase wires the registry to nothing', () => {
+describe('the registry stays inside its Phase-9 activation boundary', () => {
   function sourceFiles(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const full = join(dir, entry.name);
@@ -164,14 +173,25 @@ describe('this phase wires the registry to nothing', () => {
     .map((f) => f.replace(`${ROOT}/`, ''))
     .sort();
 
-  it('is imported only by the dev preview and this test', () => {
+  it('is imported only by the activation path, the effect UI hook, the dev preview and the tests', () => {
+    // Phase 8 asserted this registry was wired to NOTHING; Phase 9 is the
+    // activation phase, so the allowed set grows — but stays exact, and stays
+    // conspicuously free of: the renderer package, presence/multiplayer, the
+    // Arcade, and any publishing module. Growth here should be deliberate.
     expect(importers).toEqual([
+      'src/components/blobbi/EffectsPanel.test.tsx',
+      'src/effects/active-effects.test.ts',
+      'src/effects/active-effects.ts',
+      'src/effects/official-item-event-fixtures.test.ts',
       'src/effects/official-visual-effect-items.test.ts',
+      'src/effects/useOwnedVisualEffects.ts',
       'src/pages/DevBlobbiEffects.tsx',
+      'src/placement/character-equipment-effects.test.tsx',
+      'src/placement/effect-equipment-mutation.test.tsx',
     ]);
   });
 
-  it('reaches no inventory, placement or publishing module', () => {
+  it('reaches no inventory-state, placement or publishing module', () => {
     const source = readFileSync(
       join(ROOT, 'src/effects/official-visual-effect-items.ts'),
       'utf8',
