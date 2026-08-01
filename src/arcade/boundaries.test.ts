@@ -147,10 +147,12 @@ describe('the Prize Counter keeps its boundaries', () => {
     }
   });
 
-  it('routes ticket SPENDING through one approved boundary, and nowhere else', () => {
-    // Mirror of the reward rule: the redemption hook is the only module that
-    // holds the spend writer, and the counter components reach spending only
-    // through that hook (the detail panel imports its state TYPE only).
+  it('routes ticket SPENDING nowhere — the counter is preview-only since Phase 9.5', () => {
+    // The temporary V1 redemption was retired from the player-facing surface:
+    // NO arcade component may reach the spend writer OR the (dormant)
+    // redemption hook any more. The hook and writer stay in the tree for the
+    // future audited grant phase, still bound to each other — asserted last so
+    // their reunion cannot happen by accident on some other path.
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
       (f) => !/\.test\.tsx?$|\/test-/.test(f),
     );
@@ -161,18 +163,8 @@ describe('the Prize Counter keeps its boundaries', () => {
 
     const hookUsers = componentFiles
       .filter((file) => importsOf(file).some((s) => /useArcadePrizeRedemption/.test(s)))
-      .map((f) => f.replace(`${process.cwd()}/`, ''))
-      .sort();
-    expect(hookUsers).toEqual([
-      'src/components/blobbi/arcade/prizes/PrizeCounter.tsx',
-      'src/components/blobbi/arcade/prizes/PrizeDetail.tsx',
-    ]);
-    expect(
-      readFileSync(
-        join(process.cwd(), 'src/components/blobbi/arcade/prizes/PrizeDetail.tsx'),
-        'utf8',
-      ),
-    ).toContain('import type { PrizeRedemptionUiState }');
+      .map((f) => f.replace(`${process.cwd()}/`, ''));
+    expect(hookUsers).toEqual([]);
 
     const hook = importsOf(join(process.cwd(), 'src/hooks/useArcadePrizeRedemption.ts'));
     expect(hook.some((s) => /arcade-prize-spend-writer/.test(s))).toBe(true);

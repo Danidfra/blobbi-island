@@ -32,6 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
+import { InventoryEquipmentLab } from '@/components/tools/game-items/InventoryEquipmentLab';
 import { InventoryInspector } from '@/components/tools/game-items/InventoryInspector';
 import { ItemStudio } from '@/components/tools/game-items/ItemStudio';
 import { PublishedItemsBrowser } from '@/components/tools/game-items/PublishedItemsBrowser';
@@ -53,7 +54,7 @@ import {
 } from '@/tools/game-items/useItemDefinitions';
 import { useItemStudio } from '@/tools/game-items/useItemStudio';
 
-type ToolTab = 'studio' | 'published' | 'inventory';
+type ToolTab = 'studio' | 'published' | 'inventory' | 'lab';
 
 export function GameItemTools() {
   const { user } = useCurrentUser();
@@ -144,10 +145,13 @@ export function GameItemTools() {
         <SignerBanner identity={identity} relayUrls={relayUrls} />
 
         <Tabs value={tab} onValueChange={(value) => setTab(value as ToolTab)}>
-          <TabsList className="grid w-full grid-cols-3 sm:max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 sm:max-w-2xl">
             <TabsTrigger value="studio">Item Studio</TabsTrigger>
             <TabsTrigger value="published">Published Items</TabsTrigger>
             <TabsTrigger value="inventory">Inventory Inspector</TabsTrigger>
+            <TabsTrigger value="lab" data-testid="lab-tab">
+              Equipment Lab
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="studio" className="pt-4">
@@ -185,6 +189,13 @@ export function GameItemTools() {
               onOpenInEditor={openInEditor}
               onUseAsTemplate={useAsTemplate}
             />
+          </TabsContent>
+
+          <TabsContent value="lab" className="pt-4">
+            {/* REAL kind:31633/31634 writes, developer-initiated only — the
+                inspector above stays read-only; the lab is where mutations
+                live, behind explicit confirmations. */}
+            <InventoryEquipmentLab />
           </TabsContent>
         </Tabs>
 

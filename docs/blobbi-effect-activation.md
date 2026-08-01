@@ -233,3 +233,9 @@ which items the Prize Counter may offer once Grant exists.
 - `docs/game-item-image-views.md` — accessory artwork views
 - `docs/blobbi-renderer-contract.md` — the renderer boundary
 - `docs/protocol/blobbi-island-event-registry.md` — generated kind registry (now includes 31634)
+
+Phase 9.5 additions: the internal
+[`inventory-equipment-lab.md`](./inventory-equipment-lab.md) exercises this
+activation path end-to-end with real writes, and the preview-only
+[`arcade-prize-catalog.md`](./arcade-prize-catalog.md) previews three of the
+twelve effects through the same renderer contract.

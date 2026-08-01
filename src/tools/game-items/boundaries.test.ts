@@ -53,20 +53,56 @@ const featureFiles = [...sourceFiles(TOOLS_LOGIC), ...sourceFiles(TOOLS_UI)].fil
   (file) => !/\.test\.tsx?$/.test(file),
 );
 
+/**
+ * The Inventory & Equipment Lab (Phase 9.5) is the ONE sanctioned mutation
+ * surface inside the tools: an explicitly developer-initiated UI over the two
+ * canonical production writers. Every OTHER tools module keeps the original
+ * no-mutation rules unchanged, and the lab gets its own, different rules below
+ * (canonical writers only, no hand-built events, no legacy equip vocabulary).
+ */
+const LAB_FILES = new Set([
+  'src/tools/game-items/inventory-equipment-lab.ts',
+  'src/components/tools/game-items/InventoryEquipmentLab.tsx',
+]);
+
 const featureSources = featureFiles.map((file) => ({
   file: file.slice(ROOT.length + 1),
   text: stripComments(readFileSync(file, 'utf8')),
 }));
 
-describe('the tools never mutate an inventory', () => {
-  it('imports no inventory mutation hook anywhere', () => {
-    for (const { file, text } of featureSources) {
+const nonLabSources = featureSources.filter(({ file }) => !LAB_FILES.has(file));
+const labSources = featureSources.filter(({ file }) => LAB_FILES.has(file));
+
+describe('the tools never mutate an inventory (outside the sanctioned lab)', () => {
+  it('found both lab files (the allowlist is not silently stale)', () => {
+    expect(labSources.map((s) => s.file).sort()).toEqual([...LAB_FILES].sort());
+  });
+
+  it('imports no inventory mutation hook anywhere outside the lab', () => {
+    for (const { file, text } of nonLabSources) {
       expect(text, file).not.toMatch(/useInventoryMutation/);
       expect(text, file).not.toMatch(/useBatchPurchase/);
       expect(text, file).not.toMatch(/usePurchaseItem/);
       expect(text, file).not.toMatch(/useUseItem/);
       expect(text, file).not.toMatch(/useCoinsMutation/);
     }
+  });
+
+  it('the lab mutates ONLY through the two canonical production writers', () => {
+    const labUi = labSources.find((s) => s.file.endsWith('.tsx'))!;
+    // The UI file imports both writers; the pure module imports neither.
+    expect(labUi.text).toMatch(/from '@\/inventory\/useInventoryMutation'/);
+    expect(labUi.text).toMatch(/from '@\/placement\/useEquipmentMutation'/);
+    for (const { file, text } of labSources) {
+      // No third writer, no direct publisher, no shop/care mutations.
+      expect(text, file).not.toMatch(/useNostrPublish/);
+      expect(text, file).not.toMatch(/useBatchPurchase|usePurchaseItem|useUseItem|useCoinsMutation/);
+      expect(text, file).not.toMatch(/buildGameInventoryEvent|buildGameItemPlacementEvent/);
+      // Only the player's own state: no foreign pubkey parameter anywhere.
+      expect(text, file).not.toMatch(/ownerPubkey\s*:/);
+    }
+    const labLogic = labSources.find((s) => s.file.endsWith('.ts'))!;
+    expect(labLogic.text).not.toMatch(/useInventoryMutation\(|useEquipmentMutation\(/);
   });
 
   it('never builds or publishes a kind:31633 event', () => {
@@ -86,11 +122,18 @@ describe('no Grant and no Placement implementation', () => {
     }
   });
 
-  it('never writes an equip tag or a placement record', () => {
-    for (const { file, text } of featureSources) {
+  it('never writes an equip tag or a placement record outside the lab', () => {
+    for (const { file, text } of nonLabSources) {
       // The preview holds x/y/scale in local state; what must not exist is any
       // path that serializes them into an event.
       expect(text, file).not.toMatch(/['"]equip['"]/);
+      expect(text, file).not.toMatch(/EquipTag/);
+      expect(text, file).not.toMatch(/EquipmentConfig/);
+      expect(text, file).not.toMatch(/useAccessoryManagement/);
+    }
+    // The lab EQUIPS (that is its job) — through the canonical kind:31634
+    // writer only, still never through the deleted legacy vocabulary.
+    for (const { file, text } of labSources) {
       expect(text, file).not.toMatch(/EquipTag/);
       expect(text, file).not.toMatch(/EquipmentConfig/);
       expect(text, file).not.toMatch(/useAccessoryManagement/);
@@ -174,20 +217,22 @@ describe('@blobbi/react stays protocol-agnostic', () => {
   it('is never imported by the tools' + ' pure logic layer', () => {
     // The renderer belongs to the UI. Pulling it into the domain layer would
     // put React in the middle of event building.
+    // TYPE-ONLY imports are the whole exemption: `import type` is erased at
+    // compile time, so nothing about the renderer reaches the emitted domain
+    // layer. Two modules hold the exemption — the preview model and the lab's
+    // pure half (slot/effect-id types) — and both are asserted to use the
+    // `import type` form only.
+    const TYPE_ONLY_EXEMPT = ['preview-model.ts', 'inventory-equipment-lab.ts'];
     for (const file of sourceFiles(TOOLS_LOGIC).filter((f) => !/\.test\.tsx?$/.test(f))) {
       const text = stripComments(readFileSync(file, 'utf8'));
-      if (file.endsWith('preview-model.ts')) continue; // type-only import, asserted below
+      if (TYPE_ONLY_EXEMPT.some((name) => file.endsWith(name))) continue;
       expect(text, file).not.toMatch(/from '@blobbi\/react'/);
     }
-    const previewModel = stripComments(
-      readFileSync(join(TOOLS_LOGIC, 'preview-model.ts'), 'utf8'),
-    );
-    // TYPE-ONLY is the whole exemption: `import type` is erased at compile
-    // time, so nothing about the renderer reaches the emitted domain layer. The
-    // assertion is on the `import type` form rather than the exact symbol list,
-    // which grows as the preview model does.
-    expect(previewModel).toMatch(/import type \{[^}]*\} from '@blobbi\/react'/);
-    expect(previewModel).not.toMatch(/^import \{/m);
+    for (const name of TYPE_ONLY_EXEMPT) {
+      const text = stripComments(readFileSync(join(TOOLS_LOGIC, name), 'utf8'));
+      expect(text, name).toMatch(/import type \{[^}]*\} from '@blobbi\/react'/);
+      expect(text, name).not.toMatch(/^import \{[^}]*\} from '@blobbi\/react'/m);
+    }
   });
 
   it('cannot reach the renderer through the UI layer either', () => {

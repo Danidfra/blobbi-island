@@ -1,466 +1,277 @@
 /**
- * Prize Counter surface tests.
+ * The preview-only Prize Counter (Phase 9.5), against seeded real state.
  *
- * The REAL counter, cards, detail panel, redemption hook, state machine and
- * ledger — with a fake spend writer, a fake ownership store and a scripted
- * balance, so every visual state is reachable and nothing can publish.
+ * What must hold:
+ *
+ *  - the shelf shows exactly the SIX official prizes, resolved from the real
+ *    kind:31632 catalog (real primary images, real names, real rarities);
+ *  - Accessory/Effect distinction, ownership, equipped and affordability all
+ *    display from the real inventory/equipment state;
+ *  - the preview renders through the real renderer path and publishes nothing;
+ *  - redemption is VISIBLY disabled — no redeem control exists at all, and the
+ *    honest message shows instead;
+ *  - nothing in the flow signs, spends or mutates anything.
+ *
+ * Inventory and catalog are seeded straight into the query cache; the signer
+ * mock records every signing attempt so "publishes nothing" is an assertion,
+ * not an assumption.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { NostrEvent } from '@nostrify/nostrify';
 
-import { PrizeCounter } from './PrizeCounter';
-import { QueryProviders } from '../test-providers';
-import { getArcadePrize } from '@/arcade/prizes/prize-catalogue';
-import type { ArcadePrize } from '@/arcade/prizes/prize-catalogue';
-import type { ArcadePrizeSpendWriter } from '@/inventory/arcade-prize-spend-writer';
-import { ArcadePrizeSpendError } from '@/inventory/arcade-prize-spend-writer';
-import type { ArcadePrizeOwnership } from '@/lib/arcade-prize-ownership';
-import { clearRedemptions, resetRedemptionLocks } from '@/lib/arcade-redemption-ledger';
-import { clearLocalPrizeOwnership } from '@/lib/arcade-prize-ownership';
+const OWNER = 'a'.repeat(64);
 
-const PUBKEY = 'f'.repeat(64);
-const GLASSES = getArcadePrize('neon-star-glasses')!; // 40
-const CABINET = getArcadePrize('mini-arcade-cabinet')!; // 500, premium
+const signEvent = vi.fn();
+const nostrEvent = vi.fn();
 
-let currentUser:
-  | { pubkey: string; signer: { getPublicKey: () => Promise<string> } }
-  | undefined = { pubkey: PUBKEY, signer: { getPublicKey: async () => PUBKEY } };
-
+vi.mock('@nostrify/react', () => ({
+  useNostr: () => ({ nostr: { query: async () => [], event: nostrEvent } }),
+}));
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({ user: currentUser, users: currentUser ? [currentUser] : [] }),
+  useCurrentUser: () => ({ user: { pubkey: OWNER, signer: { signEvent } } }),
+}));
+vi.mock('@/hooks/useAppContext', () => ({
+  useAppContext: () => ({ config: { relayUrl: 'wss://example.invalid' } }),
+}));
+// The preview stage falls back to its sample Blobbi when no companion exists.
+vi.mock('@/hooks/useBlobbis', () => ({ useBlobbis: () => ({ data: [] }) }));
+vi.mock('@/hooks/useBlobbonautProfile', () => ({
+  useBlobbonautProfile: () => ({ data: undefined }),
 }));
 
-vi.mock('@nostrify/react', async () => {
-  const actual = await vi.importActual<typeof import('@nostrify/react')>('@nostrify/react');
+import { buildGameInventoryEvent } from '@/inventory/package';
+import { ISLAND_INVENTORY_D } from '@/inventory/constants';
+import {
+  parseInventoryEvent,
+  parseOfficialItemDefinition,
+  resolveFromDefinition,
+} from '@/inventory/protocol-adapter';
+import { inventoryQueryKey } from '@/inventory/useIslandInventory';
+import {
+  ITEM_CATALOG_QUERY_KEY,
+  type ItemCatalog,
+} from '@/inventory/useItemCatalog';
+import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
+import {
+  ARCADE_TICKET_D,
+  officialItemAddress,
+} from '@/protocol/event-registry';
+import { OFFICIAL_ARCADE_PRIZE_CATALOG } from '@/arcade/prizes/official-prize-catalog';
+import { OFFICIAL_ITEM_EVENT_FIXTURES } from '@/effects/official-item-event-fixtures';
+import { visualEffectItemForEffect } from '@/effects/official-visual-effect-items';
+import {
+  CharacterEquipmentContext,
+  NO_CHARACTER_EQUIPMENT,
+} from '@/contexts/CharacterEquipmentContext';
+import type { CharacterEquipment } from '@/placement/useCharacterEquipment';
+
+import { PrizeCounter } from './PrizeCounter';
+
+const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
+const CAP_ADDRESS = officialItemAddress('blobbi:cosmetic:block-builder-cap');
+const AURA = visualEffectItemForEffect('celestial-aura')!;
+
+/** The full published catalog, resolved from the sixteen signed fixtures. */
+function fixtureCatalog(): ItemCatalog {
+  const byAddress = new Map<string, ResolvedBlobbiItemDefinition>();
+  for (const { event } of OFFICIAL_ITEM_EVENT_FIXTURES) {
+    const parsed = parseOfficialItemDefinition(event);
+    if (parsed) byAddress.set(parsed.address, resolveFromDefinition(parsed));
+  }
   return {
-    ...actual,
-    useNostr: () => ({
-      nostr: {
-        query: async () => [],
-        event: async () => {
-          throw new Error('The test pool refuses to publish');
-        },
-      },
-    }),
+    byAddress,
+    fetchedCount: 0,
+    totalCount: 0,
+    cosmeticsFetched: 4,
+    cosmeticsTotal: 4,
+    effectItemsFetched: 12,
+    effectItemsTotal: 12,
   };
-});
-
-// Scripted balance: the counter reads the shared inventory hook.
-const mockInventory = vi.fn();
-vi.mock('@/inventory', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/inventory')>();
-  return { ...actual, useIslandInventory: () => mockInventory() };
-});
-
-/** A fake kind:31633 whose ONLY reader here is `getQuantity`. */
-async function inventoryWith(tickets: number) {
-  const { buildEmptyInventory } = await vi.importActual<typeof import('@/inventory')>(
-    '@/inventory',
-  );
-  const { addInventoryItemQuantity } = await import('@nostr-games/inventory');
-  const { officialItemAddress, ARCADE_TICKET_D } = await import('@/protocol/event-registry');
-  const base = buildEmptyInventory(PUBKEY);
-  return tickets > 0
-    ? addInventoryItemQuantity(base, officialItemAddress(ARCADE_TICKET_D), tickets)
-    : base;
 }
 
-function fakeWriter(options: { balance?: number; spendError?: unknown } = {}) {
-  let balance = options.balance ?? 100;
-  let spends = 0;
-  return {
-    spendCount: () => spends,
-    async spendTickets(redemption) {
-      spends += 1;
-      if (options.spendError) throw options.spendError;
-      balance -= redemption.price;
-    },
-    async readTicketQuantity() {
-      return balance;
-    },
-  } satisfies ArcadePrizeSpendWriter & { spendCount: () => number };
-}
-
-function fakeOwnership(options: { preOwned?: string[]; failGrants?: number } = {}) {
-  /** prizeId → delivered redemption ids. Pre-owned prizes get a seed id. */
-  const owned = new Map<string, Set<string>>(
-    (options.preOwned ?? []).map((prizeId) => [prizeId, new Set(['pre-owned'])]),
-  );
-  let failures = options.failGrants ?? 0;
-  const deliveries = (prizeId: string) => {
-    const set = owned.get(prizeId) ?? new Set<string>();
-    owned.set(prizeId, set);
-    return set;
+function inventoryOf(items: { address: string; quantity: number }[]) {
+  const template = buildGameInventoryEvent({ id: ISLAND_INVENTORY_D, items });
+  const event: NostrEvent = {
+    id: 'inv',
+    pubkey: OWNER,
+    created_at: 100,
+    kind: template.kind,
+    tags: template.tags,
+    content: template.content,
+    sig: 'sig',
   };
-  return {
-    async hasPrize(_pubkey: string, prizeId: string) {
-      return (owned.get(prizeId)?.size ?? 0) > 0;
-    },
-    async hasDelivery(_pubkey: string, prizeId: string, redemptionId: string) {
-      return deliveries(prizeId).has(redemptionId);
-    },
-    async grantPrize(_pubkey: string, prize: ArcadePrize, redemptionId: string) {
-      const set = deliveries(prize.id);
-      if (set.has(redemptionId)) return;
-      if (failures > 0) {
-        failures -= 1;
-        throw new Error('DEV: delivery refused');
-      }
-      set.add(redemptionId);
-    },
-    async listOwnedPrizes() {
-      return [...owned.entries()]
-        .filter(([, ids]) => ids.size > 0)
-        .map(([prizeId, ids]) => ({
-          prizeId,
-          count: ids.size,
-          firstGrantedAt: 1,
-          deliveredRedemptionIds: [...ids],
-        }));
-    },
-  } satisfies ArcadePrizeOwnership;
+  return parseInventoryEvent(event)!;
 }
 
-let attempt = 0;
+beforeEach(() => {
+  signEvent.mockClear();
+  nostrEvent.mockClear();
+});
 
 function renderCounter(options: {
-  writer?: ReturnType<typeof fakeWriter>;
-  ownership?: ArcadePrizeOwnership;
-  catalogue?: readonly ArcadePrize[];
+  tickets?: number;
+  owned?: { address: string; quantity: number }[];
+  equipment?: Partial<CharacterEquipment>;
 } = {}) {
-  const writer = options.writer ?? fakeWriter();
-  const ownership = options.ownership ?? fakeOwnership();
-  const mintAttemptId = () => `attempt-${++attempt}`;
-  render(
-    <QueryProviders>
-      <PrizeCounter
-        catalogue={options.catalogue}
-        redemptionOptions={{ writer, ownership, mintAttemptId }}
-      />
-    </QueryProviders>,
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  client.setQueryData(
+    inventoryQueryKey(OWNER),
+    inventoryOf([
+      ...(options.tickets !== undefined
+        ? [{ address: TICKET_ADDRESS, quantity: options.tickets }]
+        : []),
+      ...(options.owned ?? []),
+    ]),
   );
-  return { writer, ownership };
+  const catalog = fixtureCatalog();
+  client.setQueryData(ITEM_CATALOG_QUERY_KEY, catalog);
+
+  // Accessory artwork resolves through the equipment context's definitions
+  // map, exactly as in production (where the app-root provider carries the
+  // full catalog).
+  const equipment = {
+    ...NO_CHARACTER_EQUIPMENT,
+    definitionsByAddress: catalog.byAddress,
+    ...options.equipment,
+  };
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>
+      <CharacterEquipmentContext.Provider value={equipment}>
+        {children}
+      </CharacterEquipmentContext.Provider>
+    </QueryClientProvider>
+  );
+  return render(<PrizeCounter />, { wrapper });
 }
 
-const card = (id: string) => document.querySelector(`[data-prize-card="${id}"]`);
-const detail = () => document.querySelector('[data-prize-detail]');
+describe('the shelf', () => {
+  it('shows exactly the six official prizes with real published artwork and names', () => {
+    const { container } = renderCounter({ tickets: 0 });
+    const cards = container.querySelectorAll('[data-prize-card]');
+    expect(cards).toHaveLength(6);
 
-async function selectPrize(id: string) {
-  await act(async () => {
-    fireEvent.click(card(id)!);
-  });
-}
-
-beforeEach(async () => {
-  localStorage.clear();
-  clearRedemptions();
-  clearLocalPrizeOwnership();
-  resetRedemptionLocks();
-  attempt = 0;
-  currentUser = { pubkey: PUBKEY, signer: { getPublicKey: async () => PUBKEY } };
-  mockInventory.mockReturnValue({
-    data: await inventoryWith(100),
-    isLoading: false,
-    isError: false,
-  });
-});
-
-afterEach(() => {
-  localStorage.clear();
-  resetRedemptionLocks();
-});
-
-describe('the counter and its balance', () => {
-  it('shows the shelf, the sign and the real balance', () => {
-    renderCounter();
-    expect(document.querySelector('[data-prize-counter]')).toBeInTheDocument();
-    const balance = document.querySelector('[data-prize-counter-balance]')!;
-    expect(balance).toHaveAttribute('data-prize-counter-balance', 'ready');
-    expect(balance).toHaveAttribute('aria-label', 'You have 100 Arcade Tickets');
-    expect(document.querySelector('[data-prize-grid]')).toBeInTheDocument();
-  });
-
-  it('shows a loading balance without flashing a false zero', () => {
-    mockInventory.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    renderCounter();
-    const balance = document.querySelector('[data-prize-counter-balance]')!;
-    expect(balance).toHaveAttribute('data-prize-counter-balance', 'loading');
-    expect(balance.textContent).not.toContain('0');
-  });
-
-  it('distinguishes an unavailable balance and pauses redeeming', async () => {
-    mockInventory.mockReturnValue({ data: undefined, isLoading: false, isError: true });
-    renderCounter();
-    expect(document.querySelector('[data-prize-counter-balance]')).toHaveAttribute(
-      'data-prize-counter-balance',
-      'unavailable',
-    );
-    expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
-    await selectPrize(GLASSES.id);
-    expect(screen.getByRole('button', { name: /balance unavailable/i })).toBeDisabled();
-  });
-
-  it('tells a logged-out player browsing is free, and disables redeeming', async () => {
-    currentUser = undefined;
-    renderCounter();
-    expect(screen.getByText(/browsing is free/i)).toBeInTheDocument();
-    await selectPrize(GLASSES.id);
-    expect(screen.getByRole('button', { name: /log in to redeem/i })).toBeDisabled();
-  });
-
-  it('shows an empty-catalogue state', () => {
-    renderCounter({ catalogue: [] });
-    expect(document.querySelector('[data-prize-empty="catalogue"]')).toBeInTheDocument();
-  });
-});
-
-describe('filters', () => {
-  it('filters by category and announces the tabs as a radio group', () => {
-    renderCounter();
-    expect(screen.getByRole('radiogroup', { name: /prize category/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('radio', { name: 'Accessories' }));
-    expect(card('neon-star-glasses')).toBeInTheDocument();
-    expect(card('arcade-champion-cap')).toBeInTheDocument();
-    expect(card('mini-arcade-cabinet')).toBeNull();
-
-    fireEvent.click(screen.getByRole('radio', { name: 'All' }));
-    expect(card('mini-arcade-cabinet')).toBeInTheDocument();
-  });
-
-  it('shows a friendly no-results state for an empty category', () => {
-    // A catalogue with no badges, filtered to badges.
-    renderCounter({ catalogue: [GLASSES, CABINET] });
-    expect(screen.queryByRole('radio', { name: 'Badges' })).toBeNull();
-    // Categories with no entries are not offered at all — the better initial
-    // UI — so drive the empty state through a present category instead.
-    fireEvent.click(screen.getByRole('radio', { name: 'Furniture' }));
-    expect(card('mini-arcade-cabinet')).toBeInTheDocument();
-  });
-});
-
-describe('cards and selection', () => {
-  it('selecting a card opens the detail and NEVER spends', async () => {
-    const { writer } = renderCounter();
-    expect(detail()).toBeNull();
-    await selectPrize(GLASSES.id);
-    expect(detail()).toHaveAttribute('data-prize-detail', GLASSES.id);
-    expect(within(detail() as HTMLElement).getByText(GLASSES.description)).toBeInTheDocument();
-    expect(writer.spendCount()).toBe(0);
-  });
-
-  it('labels affordability in words on the card', async () => {
-    mockInventory.mockReturnValue({
-      data: await inventoryWith(20),
-      isLoading: false,
-      isError: false,
-    });
-    renderCounter();
-    expect(card('neon-star-glasses')).toHaveAttribute('data-prize-state', 'unaffordable');
-    expect(within(card('neon-star-glasses') as HTMLElement).getByText(/need 20 more/i))
-      .toBeInTheDocument();
-    // Pixel Confetti (15) is still affordable at 20 tickets.
-    expect(card('pixel-confetti')).toHaveAttribute('data-prize-state', 'available');
-  });
-
-  it('marks owned and coming-soon prizes in text', async () => {
-    renderCounter({ ownership: fakeOwnership({ preOwned: [GLASSES.id] }) });
-    await waitFor(() =>
-      expect(card('neon-star-glasses')).toHaveAttribute('data-prize-state', 'owned'),
-    );
-    expect(within(card('neon-star-glasses') as HTMLElement).getByText('Owned')).toBeInTheDocument();
-    expect(
-      within(card('golden-ticket-frame') as HTMLElement).getByText('Coming soon'),
-    ).toBeInTheDocument();
-  });
-
-  it('shows the Mini Arcade Cabinet as the premium long-term goal, with future-Home copy', async () => {
-    renderCounter();
-    await selectPrize(CABINET.id);
-    const panel = detail() as HTMLElement;
-    expect(within(panel).getByText(/future home furniture/i)).toBeInTheDocument();
-    expect(within(panel).getByText(/will not award arcade tickets/i)).toBeInTheDocument();
-    expect(
-      within(panel).getByRole('button', { name: /not enough tickets/i }),
-    ).toBeDisabled();
-  });
-});
-
-describe('redemption', () => {
-  it('redeems only after the explicit confirmation, then celebrates and marks Owned', async () => {
-    const { writer } = renderCounter();
-    await selectPrize(GLASSES.id);
-
-    const redeemButton = screen.getByRole('button', { name: /redeem for 40 tickets/i });
-    await act(async () => {
-      fireEvent.click(redeemButton);
-    });
-
-    await waitFor(() => expect(detail()).toHaveAttribute('data-prize-detail-phase', 'confirmed'));
-    expect(writer.spendCount()).toBe(1);
-    expect(screen.getByText(/neon star glasses is yours/i)).toBeInTheDocument();
-    expect(document.querySelector('[data-prize-success-stamp]')).toBeInTheDocument();
-    expect(document.querySelector('[data-prize-action="owned"]')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(card('neon-star-glasses')).toHaveAttribute('data-prize-state', 'owned'),
-    );
-  });
-
-  it('shows the failed-before-spend state with a retry', async () => {
-    renderCounter({
-      writer: fakeWriter({ spendError: new ArcadePrizeSpendError('no', 'sign-failed') }),
-    });
-    await selectPrize(GLASSES.id);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /redeem for 40 tickets/i }));
-    });
-    await waitFor(() => expect(detail()).toHaveAttribute('data-prize-detail-phase', 'failed'));
-    expect(screen.getByText(/nothing was spent/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
-  });
-
-  it('offers ONLY a read-only status check for an unresolved spend', async () => {
-    const { writer } = renderCounter({
-      writer: fakeWriter({
-        spendError: Object.assign(new Error('timeout'), { name: 'TimeoutError' }),
-      }),
-    });
-    await selectPrize(GLASSES.id);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /redeem for 40 tickets/i }));
-    });
-
-    await waitFor(() =>
-      expect(detail()).toHaveAttribute('data-prize-detail-phase', 'spend-unresolved'),
-    );
-    expect(screen.getByText(/will not send it again/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /redeem for/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /check spend status/i })).toBeInTheDocument();
-    expect(writer.spendCount()).toBe(1);
-  });
-
-  it('recovers a paid-but-undelivered prize without spending again', async () => {
-    const { writer } = renderCounter({ ownership: fakeOwnership({ failGrants: 1 }) });
-    await selectPrize(GLASSES.id);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /redeem for 40 tickets/i }));
-    });
-
-    await waitFor(() =>
-      expect(detail()).toHaveAttribute('data-prize-detail-phase', 'delivery-recovery'),
-    );
-    expect(screen.getByText(/without paying again/i)).toBeInTheDocument();
-
-    // The detail's own action — the pending-delivery banner offers one too.
-    await act(async () => {
-      fireEvent.click(document.querySelector('[data-prize-finish-delivery]') as HTMLElement);
-    });
-    await waitFor(() => expect(detail()).toHaveAttribute('data-prize-detail-phase', 'confirmed'));
-    expect(writer.spendCount()).toBe(1);
-  });
-
-  it('surfaces a pending delivery on a fresh mount — the refresh recovery', async () => {
-    // First mount: spend succeeds, delivery fails.
-    const ownership = fakeOwnership({ failGrants: 1 });
-    const first = render(
-      <QueryProviders>
-        <PrizeCounter
-          redemptionOptions={{
-            writer: fakeWriter(),
-            ownership,
-            mintAttemptId: () => `attempt-${++attempt}`,
-          }}
-        />
-      </QueryProviders>,
-    );
-    await selectPrize(GLASSES.id);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /redeem for 40 tickets/i }));
-    });
-    await waitFor(() =>
-      expect(detail()).toHaveAttribute('data-prize-detail-phase', 'delivery-recovery'),
-    );
-    first.unmount();
-
-    // The "refresh": a brand-new mount sees the ledger and offers recovery.
-    renderCounter({ ownership });
-    const banner = document.querySelector('[data-prize-pending-delivery]')!;
-    expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toMatch(/paid for but not delivered/i);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /finish delivery/i }));
-    });
-    await waitFor(() =>
-      expect(document.querySelector('[data-prize-pending-delivery]')).toBeNull(),
-    );
-  });
-});
-
-describe('repeatable prizes in the UI', () => {
-  const SNACK_ID = 'arcade-snack';
-
-  it('returns to a redeemable action after a confirmed attempt, and shows the count', async () => {
-    const { writer } = renderCounter();
-    await selectPrize(SNACK_ID);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /redeem for 20 tickets/i }));
-    });
-    await waitFor(() => expect(detail()).toHaveAttribute('data-prize-detail-phase', 'confirmed'));
-
-    // Celebrated — and still purchasable, never retired.
-    expect(document.querySelector('[data-prize-action="owned"]')).toBeNull();
-    const again = screen.getByRole('button', { name: /redeem again for 20 tickets/i });
-    expect(again).toBeEnabled();
-    // The count is visible on the card and in the detail.
-    await waitFor(() =>
-      expect(
-        within(card(SNACK_ID) as HTMLElement).getByText(/owned ×1/i),
-      ).toBeInTheDocument(),
-    );
-    expect(within(detail() as HTMLElement).getByText(/redeemed ×1/i)).toBeInTheDocument();
-
-    // A second explicit redemption spends again and counts to 2.
-    await act(async () => {
-      fireEvent.click(again);
-    });
-    await waitFor(() => expect(writer.spendCount()).toBe(2));
-    await waitFor(() =>
-      expect(
-        within(card(SNACK_ID) as HTMLElement).getByText(/owned ×2/i),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it('keeps a repeatable card in the ordinary states rather than an owned lock', async () => {
-    renderCounter({ ownership: fakeOwnership({ preOwned: [SNACK_ID] }) });
-    await waitFor(() =>
-      expect(
-        within(card(SNACK_ID) as HTMLElement).getByText(/owned ×1/i),
-      ).toBeInTheDocument(),
-    );
-    expect(card(SNACK_ID)).toHaveAttribute('data-prize-state', 'available');
-    await selectPrize(SNACK_ID);
-    expect(screen.getByRole('button', { name: /redeem for 20 tickets/i })).toBeEnabled();
-  });
-});
-
-describe('layout affordances', () => {
-  it('gives the mobile detail a way back to the shelf', async () => {
-    renderCounter();
-    await selectPrize(GLASSES.id);
-    const back = document.querySelector('[data-prize-detail-back]') as HTMLElement;
-    expect(back).toBeInTheDocument();
-    fireEvent.click(back);
-    expect(detail()).toBeNull();
-  });
-
-  it('keeps every interactive target at 44px minimum height', () => {
-    renderCounter();
-    for (const selector of ['[data-prize-filter]', '[data-prize-card]']) {
-      for (const el of document.querySelectorAll(selector)) {
-        expect(el.className).toMatch(/min-h-\[44px\]/);
-      }
+    for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
+      const card = container.querySelector(`[data-prize-card="${prize.d}"]`);
+      expect(card, prize.d).not.toBeNull();
+      const img = card!.querySelector('img');
+      expect(img?.getAttribute('src'), prize.d).toMatch(/blossom\.primal\.net/);
     }
+    expect(screen.getByText('Block Builder Cap')).toBeInTheDocument();
+    expect(screen.getByText('Celestial Aura')).toBeInTheDocument();
+    // The reserved mythic necklace is NOT on the shelf.
+    expect(screen.queryByText('Celestial Seraph Necklace')).toBeNull();
+  });
+
+  it('distinguishes accessories from effects, on the cards and through the filters', () => {
+    const { container } = renderCounter({ tickets: 0 });
+    expect(container.querySelectorAll('[data-prize-kind="accessory"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-prize-kind="effect"]')).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Effects' }));
+    expect(container.querySelectorAll('[data-prize-card]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-prize-kind="accessory"]')).toHaveLength(0);
+  });
+
+  it('shows ticket prices and the balance, and marks affordability honestly', () => {
+    const { container } = renderCounter({ tickets: 450 });
+    // 450 tickets: cap (200) and sparkles (400) affordable; glasses (500) not.
+    expect(
+      container.querySelector('[data-prize-card="blobbi:cosmetic:block-builder-cap"]'),
+    ).toHaveAttribute('data-prize-state', 'preview');
+    expect(
+      container.querySelector('[data-prize-card="blobbi:cosmetic:stargazer-glasses"]'),
+    ).toHaveAttribute('data-prize-state', 'unaffordable');
+    expect(
+      container.querySelector('[data-prize-counter-balance="ready"]'),
+    ).toHaveTextContent('450');
+  });
+
+  it('marks owned and equipped items from the real inventory and equipment state', () => {
+    const { container } = renderCounter({
+      tickets: 0,
+      owned: [{ address: AURA.address, quantity: 1 }],
+      equipment: {
+        activeEffects: [
+          {
+            entry: { id: 'aura', item: AURA.address, mode: 'equip', slot: 'aura' },
+            registration: AURA,
+          },
+        ],
+      },
+    });
+    const auraCard = container.querySelector(
+      '[data-prize-card="blobbi:effect:celestial-aura"]',
+    ) as HTMLElement;
+    expect(auraCard).toHaveAttribute('data-prize-state', 'owned');
+    expect(within(auraCard).getByText(/Owned/)).toBeInTheDocument();
+    expect(within(auraCard).getByText('Equipped')).toBeInTheDocument();
+  });
+});
+
+describe('the detail panel and the preview', () => {
+  it('opens a detail with description, slot, rarity — and the honest disabled-redemption message', () => {
+    const { container } = renderCounter({ tickets: 100 });
+    fireEvent.click(
+      container.querySelector('[data-prize-card="blobbi:effect:celestial-aura"]')!,
+    );
+    const detail = container.querySelector(
+      '[data-prize-detail="blobbi:effect:celestial-aura"]',
+    ) as HTMLElement;
+    expect(detail).not.toBeNull();
+    expect(within(detail).getByText(/celestial halo/)).toBeInTheDocument();
+    expect(container.querySelector('[data-prize-detail-slot="aura"]')).not.toBeNull();
+    expect(
+      within(detail).getByText(
+        'Prize redemption is being prepared. You can preview rewards now.',
+      ),
+    ).toBeInTheDocument();
+    // No redeem control exists anywhere — not disabled: ABSENT.
+    expect(screen.queryByRole('button', { name: /redeem/i })).toBeNull();
+  });
+
+  it('previews an effect through the real renderer without signing or publishing', () => {
+    const { container } = renderCounter({ tickets: 0 });
+    fireEvent.click(
+      container.querySelector('[data-prize-card="blobbi:effect:mystic-fog"]')!,
+    );
+    expect(container.querySelector('[data-prize-preview-stage]')).not.toBeNull();
+    // The effect renders through the real effect path.
+    expect(container.querySelector('[data-blobbi-effect="mystic-fog"]')).not.toBeNull();
+    expect(signEvent).not.toHaveBeenCalled();
+    expect(nostrEvent).not.toHaveBeenCalled();
+  });
+
+  it('previews an accessory with its published artwork, front and back, on the sample Blobbi', () => {
+    const { container } = renderCounter({ tickets: 0 });
+    fireEvent.click(
+      container.querySelector('[data-prize-card="blobbi:cosmetic:block-builder-cap"]')!,
+    );
+    const stage = container.querySelector('[data-prize-preview-stage]') as HTMLElement;
+    expect(stage.querySelector('img[src*="blossom"]')).not.toBeNull();
+    expect(screen.getByText('Shown on a sample Blobbi')).toBeInTheDocument();
+
+    // Flip to the back view; the cap has a published back image and stays on.
+    fireEvent.click(container.querySelector('[data-prize-preview-facing]')!);
+    expect(stage.querySelector('img[src*="blossom"]')).not.toBeNull();
+    expect(signEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe('what this counter cannot do', () => {
+  it('never signs, publishes, or mutates anything during a full browse of all six prizes', () => {
+    const { container } = renderCounter({
+      tickets: 5000,
+      owned: [{ address: CAP_ADDRESS, quantity: 1 }],
+    });
+    for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
+      fireEvent.click(container.querySelector(`[data-prize-card="${prize.d}"]`)!);
+    }
+    expect(signEvent).not.toHaveBeenCalled();
+    expect(nostrEvent).not.toHaveBeenCalled();
   });
 });

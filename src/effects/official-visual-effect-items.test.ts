@@ -173,21 +173,28 @@ describe('the registry stays inside its Phase-9 activation boundary', () => {
     .map((f) => f.replace(`${ROOT}/`, ''))
     .sort();
 
-  it('is imported only by the activation path, the effect UI hook, the dev preview and the tests', () => {
-    // Phase 8 asserted this registry was wired to NOTHING; Phase 9 is the
-    // activation phase, so the allowed set grows — but stays exact, and stays
-    // conspicuously free of: the renderer package, presence/multiplayer, the
-    // Arcade, and any publishing module. Growth here should be deliberate.
+  it('is imported only by the activation path, the trusted UI surfaces and the tests', () => {
+    // Phase 8 asserted this registry was wired to NOTHING; Phase 9 activated
+    // it; Phase 9.5 added two READ-ONLY display consumers (the preview-only
+    // Prize Counter resolver) and the internal lab's item projection. The set
+    // stays exact, and stays conspicuously free of: the renderer package,
+    // presence/multiplayer, and any module that could activate an effect from
+    // anything but the full official address. Growth here should be deliberate.
     expect(importers).toEqual([
       'src/components/blobbi/EffectsPanel.test.tsx',
+      'src/components/blobbi/arcade/prizes/PrizeCounter.test.tsx',
+      'src/components/blobbi/arcade/prizes/useOfficialArcadePrizes.ts',
+      'src/components/tools/game-items/InventoryEquipmentLab.test.tsx',
       'src/effects/active-effects.test.ts',
       'src/effects/active-effects.ts',
       'src/effects/official-item-event-fixtures.test.ts',
       'src/effects/official-visual-effect-items.test.ts',
       'src/effects/useOwnedVisualEffects.ts',
       'src/pages/DevBlobbiEffects.tsx',
+      'src/placement/apply-set-mutation.test.tsx',
       'src/placement/character-equipment-effects.test.tsx',
       'src/placement/effect-equipment-mutation.test.tsx',
+      'src/tools/game-items/inventory-equipment-lab.ts',
     ]);
   });
 

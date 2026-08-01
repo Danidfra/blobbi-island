@@ -134,6 +134,14 @@ export interface InventoryBatchLine {
   relay?: string;
 }
 
+/** One absolute-quantity target within a `set-many` mutation. */
+export interface InventorySetTarget {
+  address: string;
+  /** Non-negative integer. Zero removes the entry (package-canonical). */
+  quantity: number;
+  relay?: string;
+}
+
 export type InventoryMutation =
   | { type: 'add'; address: string; amount: number; relay?: string }
   | { type: 'remove'; address: string; amount: number }
@@ -141,6 +149,16 @@ export type InventoryMutation =
   | { type: 'consume'; address: string }
   | { type: 'purchase'; address: string; units: number; relay?: string }
   | { type: 'batch'; lines: InventoryBatchLine[] }
+  /**
+   * Set SEVERAL absolute quantities in ONE canonical publish.
+   *
+   * The Inventory & Equipment Lab's bulk actions ("add all official effects",
+   * "remove all official wearables") fold their targets through this so a
+   * sixteen-item change is one replaceable-event write, never sixteen racing
+   * ones. Only the listed addresses move; every unrelated entry and unknown
+   * field rides through the package builder untouched.
+   */
+  | { type: 'set-many'; targets: InventorySetTarget[] }
   | { type: 'replace'; inventory: GameInventory };
 
 /**
@@ -213,6 +231,28 @@ export function applyMutation(
           line.address,
           line.amount,
           line.relay,
+        );
+      }, base);
+    }
+    case 'set-many': {
+      if (mutation.targets.length === 0) {
+        throw new Error('set-many mutation requires at least one target');
+      }
+      const seen = new Set<string>();
+      return mutation.targets.reduce((acc, target) => {
+        assertValidAddress(target.address);
+        assertValidAmount(target.quantity, 'set-many quantity');
+        if (seen.has(target.address)) {
+          // Two targets for one address is a caller bug, not a fold order to
+          // silently resolve.
+          throw new Error(`set-many has a duplicate target: ${target.address}`);
+        }
+        seen.add(target.address);
+        return setInventoryItemQuantity(
+          acc,
+          target.address,
+          target.quantity,
+          target.relay,
         );
       }, base);
     }

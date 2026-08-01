@@ -220,3 +220,14 @@ logged-out state. Nothing in the harness can publish a real spend.
    result → redemption request → verifiable grant — with no change to the
    counter, the catalogue shape, or the ledger's exactly-once rules.
 4. Migrate or amnesty the `temp-v1` ownership namespace, then delete it.
+
+---
+
+**Superseded (Phase 9.5):** the counter described above — the temporary
+fixture catalogue and the client-trusted V1 redemption — was retired from the
+player-facing surface. The counter now shows the six official
+kind:31632-backed prizes, preview-only, with redemption disabled until the
+durable grant flow ships. See
+[`arcade-prize-catalog.md`](./arcade-prize-catalog.md). The spend machinery
+documented here remains in the tree, tested and unwired, as the future
+phase's starting point.

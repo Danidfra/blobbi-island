@@ -89,6 +89,22 @@ export type EquipmentMutation =
   | { type: 'equip'; slot: string; entry: GameItemPlacementEntry }
   | { type: 'unequip'; slot: string }
   /**
+   * Equip and/or unequip SEVERAL slots in ONE canonical publish.
+   *
+   * The Inventory & Equipment Lab's bulk actions (apply the test loadout,
+   * unequip all effects) fold their changes through this so a seven-slot
+   * change is one replaceable event with one incremented revision — never
+   * seven racing writes to the same address. Slot semantics per slot are
+   * identical to the single-slot mutations: `setEquippedPlacementForSlot`
+   * last-wins replacement, `removeEquippedPlacementFromSlot` removal;
+   * unrelated placements and unknown fields are untouched.
+   */
+  | {
+      type: 'apply-set';
+      equips: { slot: string; entry: GameItemPlacementEntry }[];
+      unequips: string[];
+    }
+  /**
    * Apply transform edits to several equipped slots in ONE publish.
    *
    * The editor lets a player drag three accessories and then save. Publishing
@@ -115,6 +131,29 @@ export function applyEquipmentMutation(
     case 'unequip':
       assertEquippableSlot(mutation.slot);
       return removeEquippedPlacementFromSlot(base, mutation.slot);
+    case 'apply-set': {
+      if (mutation.equips.length === 0 && mutation.unequips.length === 0) {
+        throw new Error('apply-set mutation requires at least one change');
+      }
+      // Refuse a slot equipped AND unequipped in one set: the caller's intent
+      // is ambiguous and fold order should not decide a player-visible state.
+      const equipSlots = new Set(mutation.equips.map((e) => e.slot));
+      for (const slot of mutation.unequips) {
+        if (equipSlots.has(slot)) {
+          throw new Error(`apply-set both equips and unequips slot: ${slot}`);
+        }
+      }
+      let next = base;
+      for (const { slot, entry } of mutation.equips) {
+        assertEquippableSlot(slot);
+        next = setEquippedPlacementForSlot(next, slot, entry);
+      }
+      for (const slot of mutation.unequips) {
+        assertEquippableSlot(slot);
+        next = removeEquippedPlacementFromSlot(next, slot);
+      }
+      return next;
+    }
     case 'set-transforms': {
       // Folded over one snapshot, so every edit lands in a single document.
       // A slot with no equipped entry is skipped rather than invented: a
@@ -286,20 +325,31 @@ export function useEquipmentMutation() {
       }
       const pubkey = user.pubkey;
 
+      // Every entry being EQUIPPED this write, whatever the mutation shape —
+      // the ownership gate below applies to all of them uniformly.
+      const equippedEntries =
+        mutation.type === 'equip'
+          ? [mutation.entry]
+          : mutation.type === 'apply-set'
+            ? mutation.equips.map((e) => e.entry)
+            : [];
+
       return serialize(`${pubkey}:${characterId}`, async () => {
         const [state, inventory] = await Promise.all([
           fetchPlacement(nostr, pubkey, characterId, AbortSignal.timeout(3000)),
-          mutation.type === 'equip'
+          equippedEntries.length > 0
             ? fetchInventory(nostr, pubkey, AbortSignal.timeout(3000))
             : Promise.resolve(null),
         ]);
 
-        if (mutation.type === 'equip' && inventory !== null) {
-          const held = getInventoryItemQuantity(inventory, mutation.entry.item);
-          if (held <= 0) {
-            throw new Error(
-              `Cannot equip an item you do not own: ${mutation.entry.item}`,
-            );
+        if (inventory !== null) {
+          for (const entry of equippedEntries) {
+            const held = getInventoryItemQuantity(inventory, entry.item);
+            if (held <= 0) {
+              throw new Error(
+                `Cannot equip an item you do not own: ${entry.item}`,
+              );
+            }
           }
         }
 

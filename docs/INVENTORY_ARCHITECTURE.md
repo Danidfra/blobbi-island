@@ -304,3 +304,8 @@ Since Phase 9 the catalog also resolves the twelve official VISUAL-EFFECT
 items (`OFFICIAL_EFFECT_ITEM_DEFINITIONS`), whose ownership-backed activation
 through kind:31634 is described in
 [`blobbi-effect-activation.md`](./blobbi-effect-activation.md).
+
+Phase 9.5: bulk absolute-quantity writes go through the `set-many` inventory
+mutation (one canonical event per bulk action) — added for the internal
+[`inventory-equipment-lab.md`](./inventory-equipment-lab.md), which is the
+only sanctioned developer mutation surface.

@@ -1,58 +1,51 @@
 import { useState } from 'react';
 
 import { cn } from '@/lib/utils';
-import type { ArcadePrize } from '@/arcade/prizes/prize-catalogue';
+import type { ResolvedArcadePrize } from './useOfficialArcadePrizes';
 
 /**
- * One prize on the shelf.
+ * One official prize on the shelf.
  *
- * A single BUTTON — selecting is the only thing a card does. Redemption lives
- * in the detail panel behind an explicit confirmation, so a stray tap on the
- * shelf can never spend anything.
+ * A single BUTTON — selecting is the only thing a card does; everything else
+ * (preview, the redemption-disabled notice) lives in the detail panel, so a
+ * stray tap on the shelf can never do anything at all.
  *
  * ## State is words, not colour
  *
- * Owned, Coming soon, Premium and "affordable" all get text (or a text chip),
- * so the card reads correctly in greyscale and to a screen reader. The
- * unaffordable treatment dims the card but ALSO says "Need N more" — the dim
- * is the redundant signal, not the message.
+ * Owned, Equipped, the Accessory/Effect type, the rarity and "Need N more"
+ * all get text chips, so the card reads correctly in greyscale and to a
+ * screen reader. Dimming is the redundant signal, never the message.
  */
 
 interface PrizeCardProps {
-  readonly prize: ArcadePrize;
+  readonly resolved: ResolvedArcadePrize;
   readonly selected: boolean;
-  /** Grants recorded by the TEMPORARY store. Drives Owned / ×N labelling. */
-  readonly ownedCount: number;
-  /** Null while the balance is unknown — affordability is then not claimed. */
-  readonly balance: number | null;
-  readonly onSelect: (prizeId: string) => void;
+  readonly onSelect: (itemAddress: string) => void;
 }
 
-export function PrizeCard({ prize, selected, ownedCount, balance, onSelect }: PrizeCardProps) {
+export function PrizeCard({ resolved, selected, onSelect }: PrizeCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const showImage = Boolean(prize.image) && !imageFailed;
-  const comingSoon = prize.availability === 'coming-soon';
-  // Owning a NON-repeatable prize retires it; a repeatable one stays on sale,
-  // so its card keeps the ordinary states and adds an ×N label instead.
-  const owned = ownedCount > 0 && !prize.repeatable;
-  const unaffordable =
-    !owned && !comingSoon && balance !== null && balance < prize.price;
-  const shortBy = unaffordable ? prize.price - (balance ?? 0) : 0;
+  const { prize } = resolved;
+  const showImage = Boolean(resolved.image) && !imageFailed;
+  const unaffordable = !resolved.owned && resolved.affordable === false;
 
   return (
     <button
       type="button"
-      data-prize-card={prize.id}
-      data-prize-state={owned ? 'owned' : comingSoon ? 'coming-soon' : unaffordable ? 'unaffordable' : 'available'}
+      data-prize-card={prize.d}
+      data-prize-kind={prize.kind}
+      data-prize-state={
+        resolved.owned ? 'owned' : unaffordable ? 'unaffordable' : 'preview'
+      }
       aria-pressed={selected}
-      onClick={() => onSelect(prize.id)}
+      onClick={() => onSelect(prize.itemAddress)}
       className={cn(
         'group flex min-h-[44px] w-full flex-col items-stretch gap-1.5 rounded-2xl border-2 p-2.5 text-left',
         'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-island-purple',
         selected
           ? 'border-island-purple bg-island-purple/10'
           : 'border-island-wood/25 bg-island-cream/70 hover:border-island-purple/50',
-        prize.rarity === 'premium' && !selected && 'border-amber-400/60 bg-amber-50/60',
+        prize.featured && !selected && 'border-amber-400/60 bg-amber-50/60',
       )}
     >
       {/* The artwork shelf. Emoji is the guaranteed fallback. */}
@@ -60,27 +53,28 @@ export function PrizeCard({ prize, selected, ownedCount, balance, onSelect }: Pr
         aria-hidden
         className={cn(
           'flex h-16 items-center justify-center rounded-xl text-4xl sm:h-20',
-          prize.rarity === 'premium'
+          prize.featured
             ? 'bg-gradient-to-b from-amber-100 to-island-cream-2'
             : 'bg-island-cream-2',
-          comingSoon && 'opacity-60 grayscale',
           unaffordable && 'opacity-70',
         )}
       >
         {showImage ? (
           <img
-            src={prize.image}
+            src={resolved.image}
             alt=""
             className="h-full w-full rounded-xl object-contain p-1"
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <span>{prize.emojiFallback}</span>
+          <span>{resolved.emoji}</span>
         )}
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate text-sm font-bold text-island-ink">{prize.title}</span>
+        <span className="block truncate text-sm font-bold text-island-ink">
+          {resolved.name}
+        </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span
             className={cn(
@@ -90,35 +84,33 @@ export function PrizeCard({ prize, selected, ownedCount, balance, onSelect }: Pr
           >
             <span aria-hidden>🎟️ </span>
             <span className="sr-only">Price: </span>
-            {prize.price}
+            {prize.tickets}
           </span>
-          {owned && (
-            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-              Owned
+          <span className="rounded-full bg-island-purple/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-island-purple">
+            {prize.kind === 'accessory' ? 'Accessory' : 'Effect'}
+          </span>
+          {resolved.rarity && (
+            <span className="rounded-full bg-island-wood/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-island-wood-dark">
+              {resolved.rarity}
             </span>
           )}
-          {prize.repeatable && ownedCount > 0 && (
+          {resolved.owned && (
             <span
-              data-prize-owned-count={ownedCount}
+              data-prize-owned-quantity={resolved.ownedQuantity}
               className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800"
             >
-              Owned ×{ownedCount}
+              Owned{resolved.ownedQuantity > 1 ? ` ×${resolved.ownedQuantity}` : ''}
             </span>
           )}
-          {comingSoon && (
-            <span className="rounded-full bg-island-wood/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-island-wood-dark">
-              Coming soon
-            </span>
-          )}
-          {prize.rarity === 'premium' && !owned && !comingSoon && (
-            <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-              Premium
+          {resolved.equipped && (
+            <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+              Equipped
             </span>
           )}
         </span>
-        {unaffordable && (
+        {unaffordable && resolved.affordable === false && (
           <span className="mt-0.5 block text-[11px] blobbi-text-muted">
-            Need {shortBy} more ticket{shortBy === 1 ? '' : 's'}
+            Need more tickets
           </span>
         )}
       </span>

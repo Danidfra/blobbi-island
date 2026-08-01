@@ -323,13 +323,15 @@ describe('item-definition knowledge stops at the Island adapter', () => {
         !/\.test\.tsx?$/.test(file) &&
         importsOf(file).some((s) => /item-image-resolution/.test(s)),
     ).map(rel).sort();
-    // `EquipmentPanel` and `EffectsPanel` read `primaryItemImageUrl` for their
-    // inventory THUMBNAILS, which is a UI use and not a renderer source. What
-    // matters is that no component builds a renderer candidate list itself:
-    // that is `@/placement/accessory-sources` alone, asserted below.
+    // `EquipmentPanel`, `EffectsPanel` and the Prize Counter's resolver read
+    // `primaryItemImageUrl` for their CARD THUMBNAILS, which is a UI use and
+    // not a renderer source. What matters is that no component builds a
+    // renderer candidate list itself: that is `@/placement/accessory-sources`
+    // alone, asserted below.
     expect(importers).toEqual([
       'src/components/blobbi/EffectsPanel.tsx',
       'src/components/blobbi/EquipmentPanel.tsx',
+      'src/components/blobbi/arcade/prizes/useOfficialArcadePrizes.ts',
     ]);
 
     const resolverBuilders = ISLAND_FILES.filter(

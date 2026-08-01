@@ -1,16 +1,17 @@
 /**
- * The Prize Counter's catalogue — pure data, deliberately TEMPORARY content.
+ * The RETIRED fixture catalogue and the FUTURE redemption contract.
  *
- * ## What is permanent here, and what is not
+ * ## Status since Phase 9.5
  *
- * The TYPES are the contract the Prize Counter is built against: six
- * categories, a delivery union that already knows about badges, Blobbi effects
- * and Home furniture, and a prize shape with price, rarity and availability.
- * The ENTRIES are placeholder fixtures — the real prize list and artwork are
- * being designed separately, and every entry below exists only so the counter
- * has something to render, order, filter and redeem. Replacing them with
- * official kind:31632-backed definitions later means editing THIS module (and
- * the delivery writers), not the UI.
+ * The Prize Counter no longer renders from this module: the operative catalog
+ * is `official-prize-catalog.ts` (six real kind:31632-backed prizes, preview
+ * only), and no production component imports these entries any more. What
+ * remains load-bearing here is the TYPE contract (`ArcadePrize`, the category
+ * and delivery unions) that the dormant redemption machinery
+ * (`prize-redemption.ts`, `useArcadePrizeRedemption`, the spend writer, the
+ * temporary ownership store) is built against — all of it retained, tested and
+ * unwired, for the future separately-audited grant phase. The placeholder
+ * ENTRIES below survive solely as fixtures for that machinery's tests.
  *
  * ## Why this module is pure
  *
