@@ -115,8 +115,9 @@ describe('equipment has exactly one read path and one write path', () => {
   it('is written only by the placement mutation', () => {
     // Every other module must go through `useEquipmentMutation`; only it may
     // build the event.
+    // Since Phase 9.5b the dev harness is simulation-only, so the writer is
+    // now the SOLE builder of equipment events.
     expect(matching(/buildEquipmentTemplate/)).toEqual([
-      'src/pages/DevEquipment.tsx',
       'src/placement/useEquipmentMutation.ts',
     ]);
   });

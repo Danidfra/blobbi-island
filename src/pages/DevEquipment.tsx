@@ -1,459 +1,524 @@
 /**
- * DevEquipment — development-only inspector for the item/equipment stack.
+ * DevEquipment — the SIMULATION harness for official wearables and effects
+ * (dev-only route `/dev/equipment`; excluded from production builds).
  *
- * DEVELOPMENT ONLY. Mounted from `AppRouter` behind `import.meta.env.DEV`, so
- * a production build collapses the branch to `null`, drops the dynamic import,
- * and never emits this chunk. `src/dev-routes.test.ts` asserts that against the
- * built output.
+ * ## What this route is, since Phase 9.5b
  *
- * WHAT MAKES IT USEFUL IS THAT IT IS NOT A SIMULATOR. Every control here goes
- * through the same service boundary production uses:
+ * A publish-free playground over ALL SIXTEEN official items: simulate
+ * ownership, equip/replace/unequip, apply the documented seven-slot loadout,
+ * flip form and facing, and watch the result render through the REAL
+ * production paths —
  *
- *   inventory changes → `useInventoryMutation` (kind:31633)
- *   equip / unequip   → `useEquipmentMutation` (kind:31634)
- *   definitions       → `useItemCatalog` (kind:31632, official issuer only)
+ *   simulated placements → `selectRenderablePlacements` →
+ *     `toAccessoryPlacementInput` → accessory source resolution →
+ *     `BlobbiRendererView`
+ *   simulated inventory + placements → `resolveActiveBlobbiEffects` →
+ *     `BlobbiRendererView.effects`
  *
- * There is deliberately NO local placement state, no fake catalog and no
- * in-memory inventory. A developer who equips something here publishes exactly
- * the event a player would, which is the only way this tool can prove anything
- * about production behavior.
+ * so ownership gates, slot policy, form rejection (egg!), stale placements
+ * and deterministic effect order here are the SAME code production runs, not
+ * a re-implementation. Item identity is the canonical Lab projection of the
+ * Phase-9 registries (full official addresses, never event ids), and display
+ * data prefers resolved kind:31632 definitions with registry fallbacks.
  *
- * Adding inventory quantity from here is DEVELOPER TOOLING, not a migration and
- * not a grant: it writes the player's own kind:31633 event, exactly as the shop
- * and arcade already do.
+ * ## What this route is NOT
+ *
+ * It mutates nothing real: no `useInventoryMutation`, no
+ * `useEquipmentMutation`, no signer, no publish, no query-cache writes — a
+ * boundary test pins the import graph. Real kind:31633/31634 writes live
+ * EXCLUSIVELY in the flag-gated Equipment Lab (`/tools/game-items`,
+ * `VITE_ENABLE_LIVE_INVENTORY_LAB=true`); the Live Account section at the
+ * bottom explains exactly how to get there. The two surfaces are deliberately
+ * not merged: one simulates, one signs.
  */
-import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { AccessorySlot } from '@blobbi/react';
+import { useMemo, useReducer, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+import {
+  BlobbiRendererView,
+  normalizeAccessoryPlacements,
+  type AccessoryPlacementInput,
+  type BlobbiRenderVisual,
+} from '@blobbi/react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useCurrentPet } from '@/hooks/useOptimizedStatus';
+import { LIVE_INVENTORY_LAB_ENABLED } from '@/lib/feature-flags';
+import {
+  INITIAL_DEV_SIM_STATE,
+  devSimReducer,
+  type DevSimStage,
+} from '@/lib/dev-equipment-simulation';
+import {
+  LAB_OFFICIAL_ITEMS,
+  LAB_TEST_LOADOUT,
+  labItemByAddress,
+  type LabOfficialItem,
+} from '@/tools/game-items/inventory-equipment-lab';
+
 import { useItemCatalog } from '@/inventory/useItemCatalog';
-import { useIslandInventory, inventoryQueryKey } from '@/inventory/useIslandInventory';
-import { useInventoryMutation } from '@/inventory/useInventoryMutation';
-import { getInventoryItems } from '@/inventory/package';
-import {
-  ADDRESSED_OFFICIAL_COSMETICS,
-  OFFICIAL_ISSUER_PUBKEY,
-} from '@/protocol/event-registry';
+import { primaryItemImageUrl } from '@/inventory/item-image-resolution';
+import { getItemImageByMarker } from '@/inventory/package';
+import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
 
 import {
-  usePlacementState,
-  placementQueryKey,
-} from '@/placement/usePlacementState';
+  decidePlacementEntry,
+  definitionSlot,
+  selectRenderablePlacements,
+  type PlacementPolicyContext,
+} from '@/placement/policy';
 import {
-  useEquipmentMutation,
-  buildEquipmentTemplate,
-  applyEquipmentMutation,
-  type PlacementTransformPatch,
-} from '@/placement/useEquipmentMutation';
-import { buildEquipEntry } from '@/placement/render-model';
-import { characterEquipmentPlacementAddress } from '@/placement/identity';
-import { definitionSlot, decidePlacementEntry } from '@/placement/policy';
-import { useEquippableCosmetics, explainUnavailable } from '@/placement/useEquippableCosmetics';
+  ISLAND_PLACEMENT_REFERENCE,
+  toAccessoryPlacementInput,
+} from '@/placement/render-model';
+import { createPlacementAccessorySourceResolver } from '@/placement/accessory-sources';
+import {
+  isEffectItemPlacement,
+  resolveActiveBlobbiEffects,
+  explainEffectRejection,
+} from '@/effects/active-effects';
+
+/** The simulation's stand-in identity: author and owner are the same, so the
+ * real author gate passes and the policy focuses on the interesting gates. */
+const SIM_PUBKEY = 'dev-equipment-simulation';
+
+const BASE_VISUAL = {
+  adultType: 'catti',
+  baseColor: '#8E6BE8',
+  secondaryColor: '#B79CF2',
+  eyeColor: '#3A2A1A',
+  name: 'Sim Blobbi',
+};
+
+const STAGES: readonly DevSimStage[] = ['egg', 'baby', 'adult'];
 
 export function DevEquipment() {
-  const { user } = useCurrentUser();
-  const currentPet = useCurrentPet();
-  const queryClient = useQueryClient();
-
-  const characterId = currentPet?.id;
-  const form = currentPet?.stage;
-
   const catalog = useItemCatalog();
-  const inventoryQuery = useIslandInventory();
-  const placementQuery = usePlacementState(characterId);
-  const cosmetics = useEquippableCosmetics(form);
+  const [sim, dispatch] = useReducer(devSimReducer, INITIAL_DEV_SIM_STATE);
+  const [facing, setFacing] = useState<'front' | 'back'>('front');
 
-  const inventoryMutation = useInventoryMutation();
-  const equipmentMutation = useEquipmentMutation();
-
-  const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const quantities = new Map(
-    inventoryQuery.data
-      ? getInventoryItems(inventoryQuery.data).map((i) => [i.address, i.quantity])
-      : [],
+  const definitionsByAddress = useMemo(
+    () =>
+      catalog.data?.byAddress ??
+      new Map<string, ResolvedBlobbiItemDefinition>(),
+    [catalog.data],
   );
-  const state = placementQuery.data;
 
-  const run = async (label: string, task: () => Promise<unknown>) => {
-    setError(null);
-    try {
-      await task();
-    } catch (e) {
-      setError(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+  // ── The real render pipeline, over the simulated state ──────────────────
+  const pipeline = useMemo(() => {
+    const context: PlacementPolicyContext = {
+      authorPubkey: SIM_PUBKEY,
+      ownerPubkey: SIM_PUBKEY,
+      form: sim.stage,
+      quantityByAddress: sim.quantities,
+      definitionsByAddress,
+    };
+    const wearableEntries = sim.placements.filter(
+      (entry) => !isEffectItemPlacement(entry),
+    );
+    const effectEntries = sim.placements.filter(isEffectItemPlacement);
+
+    const renderable = selectRenderablePlacements(wearableEntries, context);
+    const renderableSet = new Set(renderable.map((r) => r.entry));
+    const accessories: AccessoryPlacementInput[] = [];
+    const hidden: { item: string; slot: string | undefined; reason: string }[] = [];
+    for (const { entry, slot } of renderable) {
+      const result = toAccessoryPlacementInput(entry, slot, ISLAND_PLACEMENT_REFERENCE);
+      if (result.ok) accessories.push(result.input);
+      else hidden.push({ item: entry.item, slot: entry.slot, reason: result.reason });
     }
-  };
-
-  const refresh = () => {
-    // Re-read relay state through the real query keys, so what appears here is
-    // what production would next read.
-    void queryClient.invalidateQueries({ queryKey: inventoryQueryKey(user?.pubkey) });
-    void queryClient.invalidateQueries({
-      queryKey: placementQueryKey(user?.pubkey, characterId),
-    });
-    void catalog.refetch();
-  };
-
-  /**
-   * Build the exact unsigned event the next publish would send, WITHOUT
-   * publishing it. Uses the same builder the mutation uses, so a preview that
-   * looks right is evidence about the real write path rather than a mock-up.
-   */
-  const previewEvent = (
-    mutation: Parameters<typeof applyEquipmentMutation>[1],
-  ) => {
-    if (!state || !user?.pubkey || !characterId) return;
-    try {
-      const next = applyEquipmentMutation(state.placement, mutation);
-      const template = buildEquipmentTemplate(next, {
-        ownerPubkey: user.pubkey,
-        characterId,
-        ...(currentPet?.name === undefined ? {} : { characterName: currentPet.name }),
-        baseRevision: state.isEmpty ? undefined : state.placement.revision,
+    for (const entry of wearableEntries) {
+      if (renderableSet.has(entry)) continue;
+      hidden.push({
+        item: entry.item,
+        slot: entry.slot,
+        reason: decidePlacementEntry(entry, context).reason ?? 'slot-mismatch',
       });
-      setPreview(JSON.stringify(template, null, 2));
-    } catch (e) {
-      setError(`preview: ${e instanceof Error ? e.message : String(e)}`);
     }
+
+    const resolution = resolveActiveBlobbiEffects({
+      placements: effectEntries,
+      quantityByAddress: sim.quantities,
+      stage: sim.stage,
+    });
+
+    return { accessories, hidden, resolution };
+  }, [sim, definitionsByAddress]);
+
+  const resolveSources = useMemo(
+    () => createPlacementAccessorySourceResolver({ definitionsByAddress, facing }),
+    [definitionsByAddress, facing],
+  );
+  const renderedAccessories = useMemo(
+    () =>
+      normalizeAccessoryPlacements(pipeline.accessories, {
+        facing,
+        resolveSources,
+      }),
+    [pipeline.accessories, facing, resolveSources],
+  );
+
+  const visual: BlobbiRenderVisual = {
+    ...BASE_VISUAL,
+    stage: sim.stage,
+    adultType: sim.stage === 'adult' ? BASE_VISUAL.adultType : undefined,
   };
 
-  if (!user?.pubkey) {
-    return <Shell>Log in to inspect equipment state.</Shell>;
-  }
+  const equippedBySlot = useMemo(
+    () => new Map(sim.placements.map((p) => [p.slot, p.item])),
+    [sim.placements],
+  );
+  const equippedAddresses = useMemo(
+    () => new Set(sim.placements.map((p) => p.item)),
+    [sim.placements],
+  );
+
+  const slotForItem = (item: LabOfficialItem): string | null =>
+    item.kind === 'effect'
+      ? item.expectedSlot
+      : definitionSlot(definitionsByAddress.get(item.address));
 
   return (
-    <Shell>
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Equipment inspector (dev)</h1>
-        <Button size="sm" variant="outline" onClick={refresh}>
-          Re-read relay state
+    <div className="min-h-screen space-y-4 bg-neutral-50 p-4 text-sm dark:bg-neutral-950">
+      <header className="space-y-1">
+        <h1 className="text-lg font-semibold">Equipment harness (dev)</h1>
+        <p
+          data-testid="dev-sim-banner"
+          className="inline-block rounded border border-sky-400/50 bg-sky-50 px-2 py-1 text-xs font-bold text-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+        >
+          Simulation only — no Nostr events are published. Real writes live in
+          the flag-gated Equipment Lab (see Live Account below).
+        </p>
+      </header>
+
+      {/* ── Simulation controls ── */}
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-white p-2 text-xs dark:bg-neutral-900">
+        <span className="font-bold">Form:</span>
+        {STAGES.map((stage) => (
+          <Button
+            key={stage}
+            size="sm"
+            variant={sim.stage === stage ? 'default' : 'outline'}
+            data-testid={`dev-stage-${stage}`}
+            onClick={() => dispatch({ type: 'set-stage', stage })}
+          >
+            {stage}
+          </Button>
+        ))}
+        <span className="ml-2 font-bold">Facing:</span>
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid="dev-facing"
+          onClick={() => setFacing((f) => (f === 'front' ? 'back' : 'front'))}
+        >
+          {facing} → show {facing === 'front' ? 'back' : 'front'}
+        </Button>
+        <label className="ml-2 flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={sim.allowUnownedEquip}
+            data-testid="dev-allow-unowned"
+            onChange={(e) =>
+              dispatch({ type: 'set-allow-unowned', value: e.target.checked })
+            }
+          />
+          allow unowned equip (creates stale placements)
+        </label>
+        <Button
+          size="sm"
+          variant="ghost"
+          data-testid="dev-reset"
+          onClick={() => dispatch({ type: 'reset' })}
+        >
+          Reset simulation
         </Button>
       </div>
 
-      {error && (
-        <p role="alert" className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
-          {error}
-        </p>
-      )}
+      {/* ── Bulk simulated inventory ── */}
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        <Button size="sm" variant="outline" data-testid="dev-own-wearables" onClick={() => dispatch({ type: 'bulk-own', kind: 'wearables' })}>
+          Own all official wearables
+        </Button>
+        <Button size="sm" variant="outline" data-testid="dev-clear-wearables" onClick={() => dispatch({ type: 'bulk-clear', kind: 'wearables' })}>
+          Remove all simulated wearables
+        </Button>
+        <Button size="sm" variant="outline" data-testid="dev-own-effects" onClick={() => dispatch({ type: 'bulk-own', kind: 'effects' })}>
+          Own all visual effects
+        </Button>
+        <Button size="sm" variant="outline" data-testid="dev-clear-effects" onClick={() => dispatch({ type: 'bulk-clear', kind: 'effects' })}>
+          Remove all simulated effects
+        </Button>
+        <Button size="sm" variant="outline" data-testid="dev-own-all" onClick={() => dispatch({ type: 'bulk-own', kind: 'all' })}>
+          Own all sixteen
+        </Button>
+        <Button size="sm" variant="outline" data-testid="dev-clear-all" onClick={() => dispatch({ type: 'bulk-clear', kind: 'all' })}>
+          Clear simulated inventory
+        </Button>
+      </div>
 
-      {/* ------------------------------------------------ definitions ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">
-            Official kind:31632 cosmetics ({ADDRESSED_OFFICIAL_COSMETICS.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-xs">
-          <p className="text-muted-foreground">
-            Trusted issuer <code className="break-all">{OFFICIAL_ISSUER_PUBKEY}</code>
-          </p>
-          {ADDRESSED_OFFICIAL_COSMETICS.length === 0 && (
-            <p className="text-muted-foreground">
-              No official cosmetic identities are registered. Production shows an
-              empty catalog — this is the honest state, not an error.
-            </p>
-          )}
-          {ADDRESSED_OFFICIAL_COSMETICS.map((official) => {
-            const definition = catalog.data?.byAddress.get(official.address);
-            const quantity = quantities.get(official.address) ?? 0;
-            const slot = definitionSlot(definition);
-            return (
-              <div key={official.address} className="space-y-1 rounded border p-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{definition?.name ?? official.name}</p>
-                    <p className="break-all text-muted-foreground">{official.address}</p>
-                  </div>
-                  <Badge variant={definition?.source === 'definition' ? 'default' : 'outline'}>
-                    {definition?.source ?? 'unresolved'}
-                  </Badge>
-                </div>
-
-                <dl className="grid grid-cols-2 gap-x-2">
-                  <dt className="text-muted-foreground">slot</dt>
-                  <dd>
-                    {definition?.slot ?? '—'}{' '}
-                    <span className="text-muted-foreground">
-                      ({definition?.visualDiagnostics.slot ?? 'unknown'})
-                    </span>
-                  </dd>
-                  <dt className="text-muted-foreground">forms</dt>
-                  <dd>
-                    {definition?.forms?.join(', ') ?? '—'}{' '}
-                    <span className="text-muted-foreground">
-                      ({definition?.visualDiagnostics.forms ?? 'unknown'})
-                    </span>
-                  </dd>
-                  <dt className="text-muted-foreground">owned (31633)</dt>
-                  <dd>{quantity}</dd>
-                  <dt className="text-muted-foreground">equippable</dt>
-                  <dd>{slot !== null && quantity > 0 ? 'yes' : 'no'}</dd>
-                </dl>
-
-                <div className="flex flex-wrap gap-1">
-                  {(definition?.images ?? []).map((image, i) => (
-                    <figure key={`${image.url}-${i}`} className="w-16 text-center">
-                      <img src={image.url} alt={image.marker ?? 'primary'} className="h-12 w-full object-contain" />
-                      <figcaption className="text-[10px] text-muted-foreground">
-                        {image.marker ?? 'primary'}
-                      </figcaption>
-                    </figure>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-1 pt-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={inventoryMutation.isPending}
-                    onClick={() =>
-                      void run('add to inventory', () =>
-                        inventoryMutation.mutateAsync({
-                          type: 'add',
-                          address: official.address,
-                          amount: 1,
-                        }),
-                      )
-                    }
-                  >
-                    +1 inventory
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={inventoryMutation.isPending || quantity === 0}
-                    onClick={() =>
-                      void run('remove from inventory', () =>
-                        inventoryMutation.mutateAsync({
-                          type: 'remove',
-                          address: official.address,
-                          amount: 1,
-                        }),
-                      )
-                    }
-                  >
-                    −1 inventory
-                  </Button>
-                  {slot !== null && (
-                    <>
-                      <Button
-                        size="sm"
-                        disabled={equipmentMutation.isPending || !characterId}
-                        onClick={() =>
-                          void run('equip', () =>
-                            equipmentMutation.mutateAsync({
-                              characterId: characterId!,
-                              mutation: {
-                                type: 'equip',
-                                slot,
-                                entry: buildEquipEntry({
-                                  itemAddress: official.address,
-                                  slot,
-                                }),
-                              },
-                            }),
-                          )
-                        }
-                      >
-                        Equip
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          previewEvent({
-                            type: 'equip',
-                            slot,
-                            entry: buildEquipEntry({
-                              itemAddress: official.address,
-                              slot,
-                            }),
-                          })
-                        }
-                      >
-                        Preview event
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {cosmetics.unavailable.length > 0 && (
-            <>
-              <Separator />
-              <ul className="space-y-0.5 text-muted-foreground">
-                {cosmetics.unavailable.map((item) => (
-                  <li key={item.address}>
-                    {item.definition?.name ?? item.address} — {explainUnavailable(item.reason)}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* -------------------------------------------------- placement ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Current kind:31634 document</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs">
-          {!characterId ? (
-            <p className="text-muted-foreground">No current Blobbi selected.</p>
-          ) : !state ? (
-            <p className="text-muted-foreground">Loading…</p>
-          ) : (
-            <>
-              <dl className="grid grid-cols-[8rem_1fr] gap-x-2 gap-y-0.5">
-                <dt className="text-muted-foreground">address</dt>
-                <dd className="break-all">
-                  {characterEquipmentPlacementAddress(user.pubkey, characterId)}
-                </dd>
-                <dt className="text-muted-foreground">published</dt>
-                <dd>{state.isEmpty ? 'no event yet' : 'yes'}</dd>
-                <dt className="text-muted-foreground">revision</dt>
-                <dd>{state.placement.revision ?? '—'}</dd>
-                <dt className="text-muted-foreground">target</dt>
-                <dd className="break-all">{JSON.stringify(state.placement.target) ?? '—'}</dd>
-                <dt className="text-muted-foreground">reference</dt>
-                <dd className="break-all">{JSON.stringify(state.placement.reference) ?? '—'}</dd>
-              </dl>
-
-              {state.warnings.length > 0 && (
-                <ul className="rounded border border-amber-400/40 bg-amber-50/40 p-2 dark:bg-amber-950/20">
-                  {state.warnings.map((w, i) => (
-                    <li key={`${w.code}-${i}`}>
-                      <code>{w.code}</code> — {w.message}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {state.placement.placements.length === 0 ? (
-                <p className="text-muted-foreground">No placements.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {state.placement.placements.map((entry) => {
-                    const decision = decidePlacementEntry(entry, {
-                      authorPubkey: state.placement.author,
-                      ownerPubkey: user.pubkey,
-                      form,
-                      quantityByAddress: quantities,
-                      definitionsByAddress:
-                        catalog.data?.byAddress ?? new Map(),
-                    });
-                    const slot = entry.slot as AccessorySlot | undefined;
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-4">
+          {/* ── Wearables and Visual Effects sections ── */}
+          {(['wearable', 'effect'] as const).map((kind) => (
+            <Card key={kind}>
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  {kind === 'wearable'
+                    ? 'Wearables (4 official)'
+                    : 'Visual Effects (12 official)'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                {LAB_OFFICIAL_ITEMS.filter((item) => item.kind === kind).map(
+                  (item) => {
+                    const definition = definitionsByAddress.get(item.address);
+                    const owned = (sim.quantities.get(item.address) ?? 0) > 0;
+                    const equipped = equippedAddresses.has(item.address);
+                    const slot = slotForItem(item);
+                    const image =
+                      (definition ? primaryItemImageUrl(definition) : undefined) ??
+                      item.image ??
+                      undefined;
+                    const hasBackView = definition
+                      ? getItemImageByMarker(
+                          { images: definition.images },
+                          'back',
+                        ) !== undefined
+                      : false;
                     return (
-                      <li key={entry.id} className="rounded border p-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium">{entry.slot ?? entry.id}</span>
-                          <Badge variant={decision.allowed ? 'default' : 'destructive'}>
-                            {decision.allowed ? 'rendered' : decision.reason}
+                      <div
+                        key={item.address}
+                        data-testid={`dev-item-${item.d}`}
+                        className="rounded border p-2"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {image ? (
+                            <img src={image} alt="" className="h-8 w-8 rounded object-contain" />
+                          ) : (
+                            <span className="text-lg">{item.symbol}</span>
+                          )}
+                          <span className="font-bold">{item.name}</span>
+                          {(definition?.rarity ?? item.rarity) && (
+                            <Badge variant="outline" className="text-[9px] capitalize">
+                              {definition?.rarity ?? item.rarity}
+                            </Badge>
+                          )}
+                          {slot && (
+                            <Badge variant="outline" className="text-[9px]">
+                              slot: {slot}
+                            </Badge>
+                          )}
+                          {item.effectId && (
+                            <Badge variant="outline" className="text-[9px]">
+                              effect: {item.effectId}
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-[9px]">
+                            forms: {(definition?.forms ?? ['baby', 'adult']).join(', ')}
                           </Badge>
+                          {kind === 'wearable' && (
+                            <Badge variant="outline" className="text-[9px]">
+                              back view: {hasBackView ? 'published' : '—'}
+                            </Badge>
+                          )}
+                          {owned && (
+                            <Badge variant="secondary" className="text-[9px]">
+                              owned (sim)
+                            </Badge>
+                          )}
+                          {equipped && (
+                            <Badge className="text-[9px]">equipped (sim)</Badge>
+                          )}
                         </div>
-                        <p className="break-all text-muted-foreground">{entry.item}</p>
-                        <pre className="overflow-x-auto whitespace-pre-wrap break-all text-[10px]">
-                          {JSON.stringify(entry, null, 2)}
-                        </pre>
-                        {slot && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {(
-                              [
-                                ['x −5', { x: (entry.position?.x ?? 50) - 5 }],
-                                ['x +5', { x: (entry.position?.x ?? 50) + 5 }],
-                                ['y −5', { y: (entry.position?.y ?? 50) - 5 }],
-                                ['y +5', { y: (entry.position?.y ?? 50) + 5 }],
-                                ['scale +0.1', { scale: (entry.scale?.x ?? 1) + 0.1 }],
-                                ['rot +5', {
-                                  rot:
-                                    (entry.rotation?.type === 'euler' &&
-                                    typeof entry.rotation.z === 'number'
-                                      ? entry.rotation.z
-                                      : 0) + 5,
-                                }],
-                                ['flip', { flipX: !(entry.flip?.x ?? false) }],
-                              ] as [string, PlacementTransformPatch][]
-                            ).map(([label, patch]) => (
-                              <Button
-                                key={label}
-                                size="sm"
-                                variant="outline"
-                                disabled={equipmentMutation.isPending}
-                                onClick={() =>
-                                  void run('edit transform', () =>
-                                    equipmentMutation.mutateAsync({
-                                      characterId,
-                                      mutation: {
-                                        type: 'set-transforms',
-                                        transforms: { [slot]: patch },
-                                      },
-                                    }),
-                                  )
-                                }
-                              >
-                                {label}
-                              </Button>
-                            ))}
+                        <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground">
+                          {item.address}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-1.5 text-[10px]"
+                            data-testid={`dev-own-${item.d}`}
+                            onClick={() =>
+                              dispatch({
+                                type: 'set-owned',
+                                address: item.address,
+                                owned: !owned,
+                              })
+                            }
+                          >
+                            {owned ? 'Simulate unowned' : 'Simulate owned'}
+                          </Button>
+                          {equipped ? (
                             <Button
                               size="sm"
-                              variant="ghost"
-                              disabled={equipmentMutation.isPending}
-                              onClick={() =>
-                                void run('unequip', () =>
-                                  equipmentMutation.mutateAsync({
-                                    characterId,
-                                    mutation: { type: 'unequip', slot },
-                                  }),
-                                )
-                              }
+                              variant="secondary"
+                              className="h-6 px-1.5 text-[10px]"
+                              data-testid={`dev-unequip-${item.d}`}
+                              onClick={() => {
+                                const occupied = [...equippedBySlot.entries()].find(
+                                  ([, address]) => address === item.address,
+                                )?.[0];
+                                if (occupied) dispatch({ type: 'unequip', slot: occupied });
+                              }}
                             >
                               Unequip
                             </Button>
-                          </div>
-                        )}
-                      </li>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="h-6 px-1.5 text-[10px]"
+                              disabled={
+                                slot === null || (!owned && !sim.allowUnownedEquip)
+                              }
+                              data-testid={`dev-equip-${item.d}`}
+                              onClick={() =>
+                                slot &&
+                                dispatch({ type: 'equip', address: item.address, slot })
+                              }
+                            >
+                              {slot &&
+                              equippedBySlot.has(slot) &&
+                              equippedBySlot.get(slot) !== item.address
+                                ? `Replace ${labItemByAddress(equippedBySlot.get(slot)!)?.name ?? 'occupant'}`
+                                : 'Equip'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     );
-                  })}
-                </ul>
+                  },
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* ── Diagnostics ── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Diagnostics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-xs" data-testid="dev-diagnostics">
+              {pipeline.hidden.length === 0 &&
+                pipeline.resolution.rejected.length === 0 && (
+                  <p className="text-muted-foreground">
+                    Every simulated placement passed the production policy.
+                  </p>
+                )}
+              {pipeline.hidden.map((h, i) => (
+                <p key={`h-${i}`} className="text-amber-700 dark:text-amber-400">
+                  ✗ wearable {labItemByAddress(h.item)?.name ?? h.item} in{' '}
+                  {h.slot ?? '?'} — {h.reason}
+                </p>
+              ))}
+              {pipeline.resolution.rejected.map((r, i) => (
+                <p key={`r-${i}`} className="text-amber-700 dark:text-amber-400">
+                  ✗ effect {r.registration.name} — {r.reason}:{' '}
+                  {explainEffectRejection(r.reason)}
+                </p>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* ── Live Account ── */}
+          <Card data-testid="dev-live-account">
+            <CardHeader>
+              <CardTitle className="text-sm">Live Account</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs">
+              <p>
+                Everything above is LOCAL SIMULATION. To put items in your real
+                kind:31633 inventory and equip them through real kind:31634
+                events, use the Equipment Lab in the Game Item Tools — it signs
+                with your account and every write requires confirmation.
+              </p>
+              {LIVE_INVENTORY_LAB_ENABLED ? (
+                <Button asChild size="sm" data-testid="dev-open-lab">
+                  <Link to="/tools/game-items?tab=lab">Open Live Equipment Lab</Link>
+                </Button>
+              ) : (
+                <pre
+                  data-testid="dev-lab-disabled-instructions"
+                  className="whitespace-pre-wrap rounded bg-muted p-2 text-[11px]"
+                >
+{`Real inventory editing is disabled in this build.
+Enable it with a local env file, then FULLY restart Vite
+(hot reload cannot change build-time variables):
+
+  # .env.local
+  VITE_ENABLE_LIVE_INVENTORY_LAB=true
+
+Then open: Tools → Game Items → Equipment Lab
+(or: npm run dev:inventory-lab)`}
+                </pre>
               )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-      {preview && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Unsigned event preview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all text-[10px]">
-              {preview}
-            </pre>
-            <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
-              Close
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4">{children}</div>
+        {/* ── Active Loadout: the real renderer over the simulated state ── */}
+        <div className="space-y-2">
+          <Card className="sticky top-4">
+            <CardHeader>
+              <CardTitle className="text-sm">Active loadout (simulated)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div
+                data-testid="dev-stage-render"
+                className="flex h-80 items-center justify-center rounded-lg"
+                style={{ background: 'linear-gradient(180deg,#FFF4D8,#FBEAC2)' }}
+              >
+                <BlobbiRendererView
+                  visual={visual}
+                  instanceId="dev-equipment-sim"
+                  size="2xl"
+                  facing={facing}
+                  accessories={renderedAccessories}
+                  effects={pipeline.resolution.effects}
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5 text-xs">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="dev-apply-loadout"
+                  onClick={() => dispatch({ type: 'apply-loadout' })}
+                >
+                  Apply simulated full loadout
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid="dev-clear-loadout"
+                  onClick={() => dispatch({ type: 'clear-loadout' })}
+                >
+                  Clear simulated loadout
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Loadout: {LAB_TEST_LOADOUT.map((s) => s.slot).join(' · ')}. Steps
+                whose item is not simulated-owned are skipped — own all sixteen
+                first, or enable the stale-placement override.
+              </p>
+              <ul className="space-y-0.5 text-[11px]" data-testid="dev-active-list">
+                {sim.placements.length === 0 && (
+                  <li className="text-muted-foreground">Nothing equipped (sim).</li>
+                )}
+                {sim.placements.map((p) => (
+                  <li key={p.slot}>
+                    <span className="font-mono">{p.slot}</span> →{' '}
+                    {labItemByAddress(p.item)?.name ?? p.item}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 

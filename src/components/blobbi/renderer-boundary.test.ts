@@ -340,11 +340,14 @@ describe('item-definition knowledge stops at the Island adapter', () => {
         /createPlacementAccessorySourceResolver/.test(readFileSync(file, 'utf8')) &&
         !/placement\/accessory-sources\.ts$/.test(file),
     ).map(rel).sort();
-    // Only the two render surfaces may CALL the builder; nobody else may
-    // reimplement one.
+    // Only the render surfaces may CALL the builder; nobody else may
+    // reimplement one. The dev simulation harness is on the list for exactly
+    // that reason — it must run the REAL source resolution rather than build
+    // its own candidate lists.
     expect(resolverBuilders).toEqual([
       'src/components/blobbi/CurrentBlobbiDisplay.tsx',
       'src/components/blobbi/PlacementOverlay.tsx',
+      'src/pages/DevEquipment.tsx',
     ]);
   });
 });

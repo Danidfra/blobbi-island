@@ -29,7 +29,7 @@
 
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 import { LIVE_INVENTORY_LAB_ENABLED } from '@/lib/feature-flags';
@@ -93,7 +93,16 @@ export function GameItemTools() {
   const identity = useMemo(() => describeSigner(user?.pubkey), [user?.pubkey]);
   const relayUrls = useToolRelayUrls();
   const studio = useItemStudio(user?.pubkey);
-  const [tab, setTab] = useState<ToolTab>('studio');
+  // Initial tab may be deep-linked (`/tools/game-items?tab=lab`, used by the
+  // dev equipment harness's Live Account section). The value goes through
+  // `coerceToolTab`, so a forged or stale `lab` in a disabled build falls back
+  // to the studio — the deep link can never reveal a tab the build does not
+  // have. Selecting tabs afterwards does not rewrite the URL (matching the
+  // page's existing behavior).
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<ToolTab>(() =>
+    coerceToolTab(searchParams.get('tab') ?? 'studio'),
+  );
 
   // The browser always shows the official issuer's items, plus the signer's own
   // when they are somebody else. One query, one key.

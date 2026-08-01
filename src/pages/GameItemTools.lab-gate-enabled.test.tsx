@@ -59,18 +59,22 @@ vi.mock('@/hooks/useToast', () => ({
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
+async function renderTools(initialEntry = '/tools/game-items') {
+  // Imported AFTER the env stub so the module-level flag evaluation sees it.
+  const { GameItemTools } = await import('./GameItemTools');
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <GameItemTools />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 describe('enabled build', () => {
   it('shows the fourth tab, mounts the Lab only when selected, and hides the disabled note', async () => {
-    // Imported AFTER the env stub so the module-level flag evaluation sees it.
-    const { GameItemTools } = await import('./GameItemTools');
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <GameItemTools />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
+    await renderTools();
 
     const tab = screen.getByTestId('lab-tab');
     expect(tab).toHaveTextContent('Equipment Lab');
@@ -83,5 +87,12 @@ describe('enabled build', () => {
       expect(screen.getByTestId('lab-stub')).toBeInTheDocument(),
     );
     expect(labMounts).toHaveBeenCalled();
+  });
+
+  it('the ?tab=lab deep link opens the Lab directly', async () => {
+    await renderTools('/tools/game-items?tab=lab');
+    await waitFor(() =>
+      expect(screen.getByTestId('lab-stub')).toBeInTheDocument(),
+    );
   });
 });

@@ -14,6 +14,7 @@
     "build": "npm i && vite build && cp dist/index.html dist/404.html",
     "test": "tsc -p tsconfig.app.json --noEmit && npm run typecheck --workspaces --if-present && eslint && vitest run && vite build",
     "docs:registry": "UPDATE_REGISTRY_DOC=1 vitest run src/protocol/event-registry-doc.test.ts",
+    "dev:inventory-lab": "VITE_ENABLE_LIVE_INVENTORY_LAB=true vite",
     "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup",
     "build:package": "npm run build --workspace @blobbi/react"
   },

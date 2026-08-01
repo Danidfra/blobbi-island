@@ -20,7 +20,21 @@ expose the tab, do not include the Lab's chunk, and mount none of its
 mutation hooks; a stale or forged tab value falls back to the Item Studio,
 and the tools page shows a read-only "Live Inventory Lab is disabled in this
 build." note. Enabling the flag is a **deliberate operator/developer
-decision** (locally: `.env.local`).
+decision**:
+
+```
+# .env.local   (git-ignored; see .env.example)
+VITE_ENABLE_LIVE_INVENTORY_LAB=true
+```
+
+then **fully restart Vite** — build-time variables are baked in at server
+start, and hot reload cannot change them. Convenience script:
+`npm run dev:inventory-lab`. An enabled build supports the safe deep link
+`/tools/game-items?tab=lab` (used by the `/dev/equipment` harness's Live
+Account card); in a disabled build the same link falls back to the Item
+Studio via `coerceToolTab`. For publish-free visual testing of all sixteen
+items, use the simulation harness instead —
+[`dev-equipment-harness.md`](./dev-equipment-harness.md).
 
 The rest of the Game Item Tools keep their existing policy (production
 bundle, direct URL, no player navigation link). To be clear about what each

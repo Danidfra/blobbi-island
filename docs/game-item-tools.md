@@ -703,3 +703,9 @@ nor include its chunk, every Lab write requires an explicit confirmation, and
 normal controls respect published `max_stack`. See
 [`inventory-equipment-lab.md`](./inventory-equipment-lab.md); the boundary
 amendments live in `src/tools/game-items/boundaries.test.ts`.
+
+**Phase 9.5b:** the tools page accepts a validated `?tab=` deep link
+(`/tools/game-items?tab=lab` from the `/dev/equipment` harness); values go
+through `coerceToolTab`, so disabled builds fall back to the Item Studio.
+The publish-free visual harness for all sixteen official items is
+[`dev-equipment-harness.md`](./dev-equipment-harness.md).

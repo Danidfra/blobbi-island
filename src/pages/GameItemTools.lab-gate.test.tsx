@@ -71,11 +71,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { GameItemTools } from './GameItemTools';
 
-function renderTools() {
+function renderTools(initialEntry = '/tools/game-items') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <GameItemTools />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -111,5 +111,25 @@ describe('disabled build (the default)', () => {
     expect(screen.queryByTestId('lab-tab')).toBeNull();
     expect(screen.queryByTestId('lab-stub')).toBeNull();
     expect(labMounts).not.toHaveBeenCalled();
+  });
+
+  it('the ?tab=lab deep link (and garbage values) fall back to the studio', () => {
+    for (const entry of [
+      '/tools/game-items?tab=lab',
+      '/tools/game-items?tab=</script>',
+      '/tools/game-items?tab=LAB',
+    ]) {
+      const { unmount } = renderTools(entry);
+      expect(screen.getByTestId('studio-stub')).toBeInTheDocument();
+      expect(screen.queryByTestId('lab-tab')).toBeNull();
+      expect(screen.queryByTestId('lab-stub')).toBeNull();
+      unmount();
+    }
+    expect(labMounts).not.toHaveBeenCalled();
+  });
+
+  it('the deep link still selects the read-only tabs it names', () => {
+    renderTools('/tools/game-items?tab=inventory');
+    expect(screen.getByTestId('inspector-stub')).toBeInTheDocument();
   });
 });
