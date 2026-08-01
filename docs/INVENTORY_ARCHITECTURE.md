@@ -308,4 +308,7 @@ through kind:31634 is described in
 Phase 9.5: bulk absolute-quantity writes go through the `set-many` inventory
 mutation (one canonical event per bulk action) — added for the internal
 [`inventory-equipment-lab.md`](./inventory-equipment-lab.md), which is the
-only sanctioned developer mutation surface.
+only sanctioned developer mutation surface. Phase 9.5a hardened it: the Lab
+is build-flag gated (`VITE_ENABLE_LIVE_INVENTORY_LAB`, off by default), every
+Lab write is explicitly confirmed, and its normal controls respect the
+published `max_stack` (bulk add ensures ownership instead of incrementing).

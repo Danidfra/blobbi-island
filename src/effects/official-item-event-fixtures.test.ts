@@ -109,6 +109,18 @@ describe('published official item events (fixtures)', () => {
     }
   });
 
+  it('registry maxStack mirrors the published max_stack tag for all sixteen items', () => {
+    for (const { d, kind, event } of OFFICIAL_ITEM_EVENT_FIXTURES) {
+      const published = Number(tagValue(event.tags, 'max_stack'));
+      const registered =
+        kind === 'wearable'
+          ? ADDRESSED_OFFICIAL_COSMETICS.find((c) => c.d === d)?.maxStack
+          : ADDRESSED_OFFICIAL_EFFECT_ITEMS.find((e) => e.d === d)?.maxStack;
+      expect(registered, d).toBe(published);
+      expect(registered, d).toBe(1);
+    }
+  });
+
   it('event ids are all distinct from each other and never used as registry keys', () => {
     const ids = OFFICIAL_ITEM_EVENT_FIXTURES.map((f) => f.event.id);
     expect(new Set(ids).size).toBe(ids.length);

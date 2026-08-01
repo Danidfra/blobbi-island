@@ -1179,6 +1179,12 @@ export interface OfficialCosmeticDefinition {
    * from a fetched definition.
    */
   primaryImage: string | null;
+  /**
+   * The published `max_stack` tag as a number. STABLE ITEM POLICY, not display
+   * fallback: normal client controls must never push a quantity above it. The
+   * fixture tests assert this mirrors the signed events.
+   */
+  maxStack: number;
   status: OfficialItemStatus;
 }
 
@@ -1202,6 +1208,7 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
       // ACTIVE: the issuer-signed kind:31632 event was fetched back from
       // wss://relay.ditto.pub with a valid signature. NOTE it was NOT found on
       // wss://relay.dreamith.to — see docs/accessory-definition-migration.md.
+      maxStack: 1,
       status: 'active',
     },
     // The three wearables below were published by the official issuer alongside
@@ -1215,6 +1222,7 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
       symbol: '🪽',
       primaryImage:
         'https://blossom.primal.net/5f336dd3c25ba80f296bfabcce3a329b4418f9b00901a632e9c0385ca06add35.webp',
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1223,6 +1231,7 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
       symbol: '🎀',
       primaryImage:
         'https://blossom.primal.net/d82adf8e2004ef4ea93a44ddf3070c8885b961d71ac41eb3c3f8635ab6908448.webp',
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1231,6 +1240,7 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
       symbol: '👓',
       primaryImage:
         'https://blossom.primal.net/0f67191987cfbfd637c8eb57db2741dd48b2d74180ef187fdf8297674a80006c.webp',
+      maxStack: 1,
       status: 'active',
     },
   ];
@@ -1309,6 +1319,12 @@ export interface OfficialEffectItemDefinition {
    * placement resolution, and granting is not implemented in this phase.
    */
   arcadePrize: boolean;
+  /**
+   * The published `max_stack` tag as a number. STABLE ITEM POLICY, not display
+   * fallback: normal client controls must never push a quantity above it. The
+   * fixture tests assert this mirrors the signed events.
+   */
+  maxStack: number;
   status: OfficialItemStatus;
 }
 
@@ -1335,6 +1351,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ambient-particles',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: true,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1348,6 +1365,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ambient-particles',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1361,6 +1379,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ambient-particles',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1374,6 +1393,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ambient-particles',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1387,6 +1407,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ground-local',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: true,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1400,6 +1421,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'ground-local',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1413,6 +1435,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'body-overlay',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1426,6 +1449,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'body-overlay',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1439,6 +1463,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'aura',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: true,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1452,6 +1477,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'aura',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1465,6 +1491,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'aura',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
     {
@@ -1478,6 +1505,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
       effectSlot: 'aura',
       forms: EFFECT_FORMS_BABY_ADULT,
       arcadePrize: false,
+      maxStack: 1,
       status: 'active',
     },
   ];

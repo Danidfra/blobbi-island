@@ -47,6 +47,13 @@ export interface LabOfficialItem {
    */
   readonly expectedSlot: BlobbiEffectSlot | null;
   readonly effectId: BlobbiVisualEffectId | null;
+  /**
+   * The published `max_stack`, from the canonical registry (which the fixture
+   * tests pin against the signed events), or `null` if a future item ever
+   * registers without one. Normal lab controls must never plan a quantity
+   * above it — all sixteen current items are `1`.
+   */
+  readonly maxStack: number | null;
 }
 
 const WEARABLE_ITEMS: readonly LabOfficialItem[] =
@@ -60,6 +67,7 @@ const WEARABLE_ITEMS: readonly LabOfficialItem[] =
     rarity: undefined,
     expectedSlot: null,
     effectId: null,
+    maxStack: entry.maxStack,
   }));
 
 const EFFECT_ITEMS: readonly LabOfficialItem[] =
@@ -77,6 +85,7 @@ const EFFECT_ITEMS: readonly LabOfficialItem[] =
       rarity: item.rarity,
       expectedSlot: item.effectSlot,
       effectId: item.effectId,
+      maxStack: canonical?.maxStack ?? null,
     };
   });
 
@@ -105,7 +114,9 @@ export type LabBulkInventoryAction =
   | 'add-all-effects'
   | 'remove-all-effects'
   | 'add-all-official'
-  | 'remove-all-official';
+  | 'remove-all-official'
+  /** Repair: set every official max_stack:1 quantity above one back to one. */
+  | 'normalize-stacks';
 
 /** One row of a bulk-plan diff: what a quantity would become, and why. */
 export interface LabInventoryChange {
@@ -115,12 +126,28 @@ export interface LabInventoryChange {
   readonly to: number;
 }
 
+/**
+ * A quantity that already violates the item's published `max_stack`.
+ *
+ * `add-*` actions never touch these (they neither increment nor silently
+ * normalize them — an add is not a repair); they are reported so the operator
+ * can run the explicit `normalize-stacks` action.
+ */
+export interface LabStackAnomaly {
+  readonly address: string;
+  readonly name: string;
+  readonly quantity: number;
+  readonly maxStack: number;
+}
+
 export interface LabInventoryPlan {
   readonly action: LabBulkInventoryAction;
   /** Only the quantities that actually change. Empty means nothing to do. */
   readonly changes: readonly LabInventoryChange[];
   /** Ready for ONE canonical `set-many` publish. */
   readonly targets: readonly InventorySetTarget[];
+  /** Pre-existing over-max quantities the plan deliberately left alone. */
+  readonly anomalies: readonly LabStackAnomaly[];
 }
 
 function addressesFor(action: LabBulkInventoryAction): readonly string[] {
@@ -133,6 +160,7 @@ function addressesFor(action: LabBulkInventoryAction): readonly string[] {
       return LAB_EFFECT_ADDRESSES;
     case 'add-all-official':
     case 'remove-all-official':
+    case 'normalize-stacks':
       return LAB_OFFICIAL_ITEMS.map((i) => i.address);
     default: {
       const exhaustive: never = action;
@@ -142,34 +170,56 @@ function addressesFor(action: LabBulkInventoryAction): readonly string[] {
 }
 
 /**
- * Plan a bulk inventory action against the CURRENT quantities.
+ * Plan a bulk inventory action against the CURRENT quantities, respecting the
+ * published `max_stack` of every official item.
  *
- * `add-*` adds one unit to each targeted item; `remove-*` sets each targeted
- * item to zero. Only OFFICIAL REGISTERED addresses are ever targeted — a
- * third-party entry in the same inventory is structurally out of reach, and
- * the resulting `set-many` touches nothing outside `targets`.
+ * `add-*` ENSURES OWNERSHIP rather than incrementing: `0 → 1`, an owned item
+ * is omitted from the diff, and a quantity already ABOVE the max is neither
+ * incremented nor silently normalized — it is reported in `anomalies` for the
+ * explicit `normalize-stacks` repair. `remove-*` sets targeted items to zero.
+ * `normalize-stacks` plans `quantity > max → max` and nothing else.
+ *
+ * Only OFFICIAL REGISTERED addresses are ever targeted — a third-party entry
+ * in the same inventory is structurally out of reach, and the resulting
+ * `set-many` touches nothing outside `targets`.
  */
 export function planBulkInventoryAction(
   action: LabBulkInventoryAction,
   currentQuantities: ReadonlyMap<string, number>,
 ): LabInventoryPlan {
-  const adds = action.startsWith('add-');
   const changes: LabInventoryChange[] = [];
+  const anomalies: LabStackAnomaly[] = [];
+
   for (const address of addressesFor(action)) {
+    const item = labItemByAddress(address);
+    const name = item?.name ?? address;
+    const maxStack = item?.maxStack ?? null;
     const from = currentQuantities.get(address) ?? 0;
-    const to = adds ? from + 1 : 0;
+
+    let to = from;
+    if (action === 'normalize-stacks') {
+      if (maxStack !== null && from > maxStack) to = maxStack;
+    } else if (action.startsWith('add-')) {
+      if (from === 0) {
+        to = 1;
+      } else if (maxStack !== null && from > maxStack) {
+        // Already invalid: an add action must not compound OR repair it.
+        anomalies.push({ address, name, quantity: from, maxStack });
+      }
+      // 1..max: already owned — nothing to plan.
+    } else {
+      to = 0;
+    }
+
     if (to === from) continue;
-    changes.push({
-      address,
-      name: labItemByAddress(address)?.name ?? address,
-      from,
-      to,
-    });
+    changes.push({ address, name, from, to });
   }
+
   return {
     action,
     changes,
     targets: changes.map((c) => ({ address: c.address, quantity: c.to })),
+    anomalies,
   };
 }
 

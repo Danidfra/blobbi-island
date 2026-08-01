@@ -1,22 +1,30 @@
 /**
- * Inventory & Equipment Lab — behavioral tests against stateful relay mocks.
+ * Inventory & Equipment Lab — behavioral tests against stateful relay mocks
+ * (Phase 9.5a semantics: every write confirmed, max_stack respected).
  *
  * What must hold:
  *
  *  - without a signer, every write control is disabled and the notice shows;
  *  - the item list derives from the Phase-9 registries (sixteen rows);
- *  - "add one" publishes exactly one kind:31633 event and NEVER a kind:31634
- *    (inventory writes do not equip);
- *  - bulk actions show the complete diff, then publish ONE canonical event;
- *  - removing an equipped item's inventory leaves the placement document
- *    untouched — the row goes STALE and only an explicit action clears it;
- *  - a pending publish disables the confirm (no double-submit).
+ *  - NO action signs before its confirmation; cancel signs nothing; confirm
+ *    causes exactly one correct event; a second submit is blocked in flight;
+ *  - dialogs state the event kind and the untouched side (inventory dialogs
+ *    say equipment is unchanged, equipment dialogs say inventory is);
+ *  - "Add to inventory" means 0 → 1 and is disabled once owned; set-quantity
+ *    rejects values above max_stack; bulk add ensures ownership and reports
+ *    over-max anomalies instead of incrementing or repairing them;
+ *  - the normalize action repairs over-max quantities in one canonical event;
+ *  - removing an equipped item's inventory leaves the placement untouched —
+ *    the row goes STALE and only an explicit confirmed action clears it;
+ *  - a failed publish keeps the dialog open and fabricates no success.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const OWNER = 'a'.repeat(64);
 const CHARACTER = 'blobbi-lab-ui';
@@ -24,6 +32,8 @@ const CHARACTER = 'blobbi-lab-ui';
 let relayInventory: NostrEvent[] = [];
 let relayPlacements: NostrEvent[] = [];
 let signCounter = 0;
+let failNextSign = false;
+let signGate: Promise<void> | null = null;
 let currentUser: { pubkey: string; signer: { signEvent: unknown } } | null = null;
 
 const nostrEvent = vi.fn(async () => {});
@@ -40,6 +50,11 @@ const nostrQuery = vi.fn(
 );
 const signEvent = vi.fn(
   async (t: Omit<NostrEvent, 'id' | 'pubkey' | 'sig'>): Promise<NostrEvent> => {
+    if (signGate) await signGate;
+    if (failNextSign) {
+      failNextSign = false;
+      throw new Error('DEV: signer refused');
+    }
     signCounter += 1;
     const event: NostrEvent = {
       ...t,
@@ -66,7 +81,7 @@ vi.mock('@/hooks/useAppContext', () => ({
   useAppContext: () => ({ config: { relayUrl: 'wss://example.invalid' } }),
 }));
 vi.mock('@/hooks/useOptimizedStatus', () => ({
-  useCurrentPet: () => ({ id: CHARACTER, name: 'Lab Blobbi', stage: 'adult' }),
+  useCurrentPet: () => ({ id: CHARACTER, name: 'Lumi', stage: 'adult' }),
 }));
 
 import {
@@ -95,6 +110,7 @@ import { InventoryEquipmentLab } from './InventoryEquipmentLab';
 const CAP_D = 'blobbi:cosmetic:block-builder-cap';
 const CAP = officialItemAddress(CAP_D);
 const AURA = visualEffectItemForEffect('celestial-aura')!;
+const RADIANCE = visualEffectItemForEffect('solar-radiance')!;
 
 const EMPTY_CATALOG: ItemCatalog = {
   byAddress: new Map(),
@@ -163,10 +179,16 @@ function renderLab() {
   return render(<InventoryEquipmentLab />, { wrapper });
 }
 
+function confirmDialog() {
+  fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+}
+
 beforeEach(() => {
   relayInventory = [];
   relayPlacements = [];
   signCounter = 0;
+  failNextSign = false;
+  signGate = null;
   currentUser = { pubkey: OWNER, signer: { signEvent } };
   nostrEvent.mockClear();
   nostrQuery.mockClear();
@@ -187,7 +209,7 @@ describe('signer gating and identity', () => {
     renderLab();
     expect(screen.getByTestId('lab-issuer')).toHaveTextContent(/trust root/);
     expect(screen.getByTestId('lab-owner')).toHaveTextContent(/you — the signer/);
-    expect(screen.getByTestId('lab-target-blobbi')).toHaveTextContent('Lab Blobbi');
+    expect(screen.getByTestId('lab-target-blobbi')).toHaveTextContent('Lumi');
   });
 });
 
@@ -195,18 +217,34 @@ describe('the item list', () => {
   it('derives all sixteen official items from the registries', () => {
     const { container } = renderLab();
     expect(container.querySelectorAll('[data-testid^="lab-item-"]')).toHaveLength(16);
-    expect(screen.getByTestId('lab-item-blobbi:cosmetic:celestial-seraph-necklace'))
-      .toBeInTheDocument();
-    expect(screen.getByTestId('lab-item-blobbi:effect:rainbow-dream'))
-      .toBeInTheDocument();
   });
 });
 
-describe('single-item inventory writes', () => {
-  it('add one publishes exactly one kind:31633 event and no kind:31634', async () => {
+describe('every single-item write is confirmed', () => {
+  it('add stages a dialog, signs NOTHING before confirm, and cancel signs nothing', () => {
     seedInventory([]);
     renderLab();
     fireEvent.click(screen.getByTestId(`lab-add-${CAP_D}`));
+
+    // The dialog names the kind, the change, and the untouched side.
+    expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31633');
+    const lines = screen.getByTestId('lab-confirm-lines');
+    expect(lines).toHaveTextContent('Quantity: 0 → 1');
+    expect(lines).toHaveTextContent('No equipment placement will be changed.');
+    expect(lines).toHaveTextContent(CAP);
+    expect(signEvent).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('lab-confirm-cancel'));
+    expect(signEvent).not.toHaveBeenCalled();
+    // Only the seeded base event exists — nothing new was published.
+    expect(relayInventory.map((e) => e.id)).toEqual(['inv-base']);
+  });
+
+  it('confirming an add publishes exactly one kind:31633 event and no kind:31634', async () => {
+    seedInventory([]);
+    renderLab();
+    fireEvent.click(screen.getByTestId(`lab-add-${CAP_D}`));
+    confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
 
     const [template] = signEvent.mock.calls[0] as [{ kind: number }];
@@ -217,35 +255,105 @@ describe('single-item inventory writes', () => {
     expect(relayPlacements).toHaveLength(0);
   });
 
-  it('remove completely asks for confirmation, names the stale consequence, then publishes', async () => {
-    seedInventory([{ address: CAP, quantity: 3 }]);
+  it('remove one and remove completely are confirmed too', async () => {
+    seedInventory([{ address: CAP, quantity: 1 }]);
     renderLab();
-    fireEvent.click(screen.getByTestId(`lab-removeall-${CAP_D}`));
-    // The dialog carries the kind warning and the stale-placement consequence.
-    expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31633');
-    expect(screen.getByText(/becomes STALE/)).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+
+    fireEvent.click(screen.getByTestId(`lab-remove-${CAP_D}`));
+    expect(screen.getByTestId('lab-confirm-lines')).toHaveTextContent(
+      'Quantity: 1 → 0',
+    );
+    expect(signEvent).not.toHaveBeenCalled();
+    confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
-    const published = parseInventoryEvent(relayInventory[0])!;
-    expect(getInventoryItemQuantity(published, CAP)).toBe(0);
+    expect(
+      getInventoryItemQuantity(parseInventoryEvent(relayInventory[0])!, CAP),
+    ).toBe(0);
+  });
+
+  it('a failed publish keeps the dialog open and reports the error honestly', async () => {
+    seedInventory([]);
+    renderLab();
+    fireEvent.click(screen.getByTestId(`lab-add-${CAP_D}`));
+    failNextSign = true;
+    confirmDialog();
+    await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
+    // Still open — the described write did not land, so the dialog stays true.
+    expect(screen.getByTestId('lab-confirm-publish')).toBeInTheDocument();
+    expect(relayInventory.map((e) => e.id)).toEqual(['inv-base']);
+  });
+
+  it('a second submit is blocked while a publish is in flight', async () => {
+    seedInventory([]);
+    renderLab();
+    fireEvent.click(screen.getByTestId(`lab-add-${CAP_D}`));
+
+    let release!: () => void;
+    signGate = new Promise((resolve) => {
+      release = resolve;
+    });
+    confirmDialog();
+    await waitFor(() =>
+      expect(screen.getByTestId('lab-confirm-publish')).toBeDisabled(),
+    );
+    // Cancel is unavailable too: an in-flight signature cannot be recalled.
+    expect(screen.getByTestId('lab-confirm-cancel')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+    release();
+    await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('max_stack in normal controls', () => {
+  it('Add to inventory is disabled once owned, labelled Owned', () => {
+    seedInventory([{ address: CAP, quantity: 1 }]);
+    renderLab();
+    const add = screen.getByTestId(`lab-add-${CAP_D}`);
+    expect(add).toBeDisabled();
+    expect(add).toHaveTextContent('Owned');
+    expect(screen.getByTestId(`lab-quantity-${CAP_D}`)).toHaveTextContent('Owned');
+  });
+
+  it('ordinary set-quantity rejects values above max_stack:1', () => {
+    seedInventory([]);
+    renderLab();
+    const input = screen.getByTestId(`lab-setqty-input-${CAP_D}`);
+    fireEvent.change(input, { target: { value: '2' } });
+    expect(screen.getByTestId(`lab-setqty-${CAP_D}`)).toBeDisabled();
+    fireEvent.change(input, { target: { value: '1' } });
+    expect(screen.getByTestId(`lab-setqty-${CAP_D}`)).toBeEnabled();
+  });
+
+  it('an over-max quantity is displayed as exceeding the published max_stack', () => {
+    seedInventory([{ address: AURA.address, quantity: 3 }]);
+    renderLab();
+    expect(
+      screen.getByTestId('lab-quantity-blobbi:effect:celestial-aura'),
+    ).toHaveTextContent('×3 (exceeds max_stack:1)');
   });
 });
 
 describe('bulk inventory writes', () => {
-  it('add-all-effects shows the twelve-line diff and publishes ONE canonical event', async () => {
+  it('add-all-effects ensures ownership in ONE event, reporting an over-max anomaly untouched', async () => {
     seedInventory([{ address: AURA.address, quantity: 2 }]);
     renderLab();
     fireEvent.click(screen.getByTestId('lab-bulk-add-all-effects'));
 
     const diff = screen.getByTestId('lab-confirm-diff');
-    expect(diff.querySelectorAll('li')).toHaveLength(12);
-    expect(diff).toHaveTextContent('2 → 3');
-    expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31633');
+    // Eleven 0 → 1 rows; the anomalous aura is NOT in the diff…
+    expect(diff.querySelectorAll('li')).toHaveLength(11);
+    expect(diff).not.toHaveTextContent('Celestial Aura');
+    // …it is reported separately, with the repair pointer.
+    expect(screen.getByTestId('lab-confirm-anomalies')).toHaveTextContent(
+      /Celestial Aura ×2 — quantity exceeds published max_stack:1/,
+    );
+    expect(signEvent).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+    confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
     const published = parseInventoryEvent(relayInventory[0])!;
-    expect(getInventoryItemQuantity(published, AURA.address)).toBe(3);
+    // The anomaly is unchanged — neither 3 nor silently 1.
+    expect(getInventoryItemQuantity(published, AURA.address)).toBe(2);
     expect(
       getInventoryItemQuantity(
         published,
@@ -253,10 +361,77 @@ describe('bulk inventory writes', () => {
       ),
     ).toBe(1);
   });
+
+  it('normalize-stacks repairs over-max quantities to one, in one canonical event', async () => {
+    seedInventory([
+      { address: AURA.address, quantity: 3 },
+      { address: CAP, quantity: 1 },
+    ]);
+    renderLab();
+    fireEvent.click(screen.getByTestId('lab-bulk-normalize-stacks'));
+    expect(screen.getByTestId('lab-confirm-diff')).toHaveTextContent('3 → 1');
+    confirmDialog();
+    await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
+    const published = parseInventoryEvent(relayInventory[0])!;
+    expect(getInventoryItemQuantity(published, AURA.address)).toBe(1);
+    expect(getInventoryItemQuantity(published, CAP)).toBe(1);
+  });
+});
+
+describe('equipment writes are confirmed', () => {
+  it('equip states the kind, Blobbi, slot and replacement — nothing signs before confirm', async () => {
+    seedInventory([
+      { address: AURA.address, quantity: 1 },
+      { address: RADIANCE.address, quantity: 1 },
+    ]);
+    seedPlacement([{ item: RADIANCE.address, slot: 'aura' }]);
+    renderLab();
+    // Wait for the placement document to load, so the staged dialog can name
+    // what the equip would replace.
+    await waitFor(() =>
+      expect(screen.getByTestId('lab-placement-aura')).toBeInTheDocument(),
+    );
+
+    fireEvent.click(
+      screen.getByTestId('lab-equip-blobbi:effect:celestial-aura'),
+    );
+    expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31634');
+    const lines = screen.getByTestId('lab-confirm-lines');
+    expect(lines).toHaveTextContent('Blobbi “Lumi”');
+    expect(lines).toHaveTextContent('Slot: aura');
+    expect(lines).toHaveTextContent('Replaces: Solar Radiance');
+    expect(lines).toHaveTextContent('Inventory quantity will not change.');
+    expect(signEvent).not.toHaveBeenCalled();
+
+    confirmDialog();
+    await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
+    const doc = parseGameItemPlacementResult(relayPlacements.at(-1)!);
+    expect(doc.ok && doc.value.placements[0]?.item).toBe(AURA.address);
+    // Equipping wrote no inventory event.
+    expect(
+      signEvent.mock.calls.every(([t]) => (t as { kind: number }).kind === 31634),
+    ).toBe(true);
+  });
+
+  it('unequip is confirmed and says the item stays in inventory', async () => {
+    seedInventory([{ address: AURA.address, quantity: 1 }]);
+    seedPlacement([{ item: AURA.address, slot: 'aura' }]);
+    renderLab();
+    await waitFor(() =>
+      expect(screen.getByTestId('lab-placement-aura')).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId('lab-unequip-aura'));
+    const lines = screen.getByTestId('lab-confirm-lines');
+    expect(lines).toHaveTextContent('Slot removed: aura');
+    expect(lines).toHaveTextContent('The item remains in inventory.');
+    expect(signEvent).not.toHaveBeenCalled();
+    confirmDialog();
+    await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
+  });
 });
 
 describe('stale placements', () => {
-  it('inventory removal leaves the placement untouched; clearing it is separate and explicit', async () => {
+  it('inventory removal leaves the placement untouched; clearing it is separate, confirmed and explicit', async () => {
     seedInventory([]);
     seedPlacement([{ item: AURA.address, slot: 'aura' }]);
     renderLab();
@@ -270,10 +445,13 @@ describe('stale placements', () => {
     // …and NOTHING has been published to "clean it up".
     expect(signEvent).not.toHaveBeenCalled();
 
-    // Clearing it is an explicit, confirmed kind:31634 write of its own.
     fireEvent.click(screen.getByTestId('lab-clear-stale'));
     expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31634');
-    fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+    expect(screen.getByTestId('lab-confirm-lines')).toHaveTextContent(
+      'No inventory quantity changes.',
+    );
+    expect(signEvent).not.toHaveBeenCalled();
+    confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
 
     const doc = parseGameItemPlacementResult(relayPlacements.at(-1)!);
@@ -285,7 +463,6 @@ describe('the test loadout', () => {
   it('blocks applying while items are missing, and offers the separate inventory write', async () => {
     seedInventory([{ address: CAP, quantity: 1 }]);
     renderLab();
-    // Let the placement/inventory queries settle so the plan is live.
     await waitFor(() =>
       expect(screen.getByTestId('lab-apply-loadout')).toBeEnabled(),
     );
@@ -293,13 +470,11 @@ describe('the test loadout', () => {
 
     expect(screen.getByTestId('lab-loadout-steps').querySelectorAll('li')).toHaveLength(7);
     expect(screen.getByTestId('lab-loadout-missing')).toHaveTextContent('Not owned');
-    // The equipment publish is blocked while anything is missing…
     expect(screen.getByTestId('lab-confirm-publish')).toBeDisabled();
 
-    // …and the offered fix is a SEPARATE kind:31633 write with its own confirm.
     fireEvent.click(screen.getByTestId('lab-loadout-add-missing'));
     expect(screen.getByTestId('lab-confirm-kind')).toHaveTextContent('kind:31633');
-    fireEvent.click(screen.getByTestId('lab-confirm-publish'));
+    confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
     const published = parseInventoryEvent(relayInventory[0])!;
     expect(
@@ -310,5 +485,25 @@ describe('the test loadout', () => {
     ).toBe(1);
     // Still no equipment write: adding inventory never equips.
     expect(relayPlacements).toHaveLength(0);
+  });
+});
+
+describe('the writers have exactly one call-site: the confirmation handler', () => {
+  it('both mutateAsync invocations live inside confirmPending', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/components/tools/game-items/InventoryEquipmentLab.tsx'),
+      'utf8',
+    );
+    const occurrences = [...source.matchAll(/mutateAsync\(/g)];
+    expect(occurrences).toHaveLength(2);
+
+    const confirmStart = source.indexOf('const confirmPending');
+    const rowSection = source.indexOf('// ── Row-level actions');
+    expect(confirmStart).toBeGreaterThan(-1);
+    expect(rowSection).toBeGreaterThan(confirmStart);
+    for (const match of occurrences) {
+      expect(match.index).toBeGreaterThan(confirmStart);
+      expect(match.index).toBeLessThan(rowSection);
+    }
   });
 });

@@ -694,8 +694,12 @@ the mapping resolves the official address and that event is not at it.
 
 ---
 
-**Phase 9.5:** the tools gained a fourth tab, the **Inventory & Equipment
-Lab** — the one sanctioned mutation surface inside the tools, over the two
-canonical kind:31633/31634 writers. See
+**Phase 9.5 (hardened in 9.5a):** the tools gained a fourth tab, the
+**Equipment Lab** — the one sanctioned mutation surface inside the tools,
+over the two canonical kind:31633/31634 writers. Unlike the read-only tabs it
+is **build-flag gated and off by default**
+(`VITE_ENABLE_LIVE_INVENTORY_LAB=true`); default builds neither show the tab
+nor include its chunk, every Lab write requires an explicit confirmation, and
+normal controls respect published `max_stack`. See
 [`inventory-equipment-lab.md`](./inventory-equipment-lab.md); the boundary
 amendments live in `src/tools/game-items/boundaries.test.ts`.

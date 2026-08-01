@@ -65,20 +65,33 @@ describe('the official item list derives from the Phase-9 registries', () => {
   });
 });
 
-describe('bulk inventory planning', () => {
-  it('add-all-effects adds one unit to each of the twelve, on top of what is held', () => {
+describe('max stack is item policy, not a UI constant', () => {
+  it('all sixteen official lab items resolve an effective max stack of one', () => {
+    expect(LAB_OFFICIAL_ITEMS).toHaveLength(16);
+    for (const item of LAB_OFFICIAL_ITEMS) {
+      expect(item.maxStack, item.d).toBe(1);
+    }
+  });
+});
+
+describe('bulk inventory planning respects max_stack', () => {
+  it('add-all-effects ENSURES ownership: 0 → 1, owned omitted, over-max reported not incremented', () => {
     const plan = planBulkInventoryAction(
       'add-all-effects',
-      new Map([[AURA, 2]]),
+      new Map([
+        [AURA, 2], // already invalid — must not become 3, must not silently become 1
+        [SPARKLES, 1], // owned — omitted from the diff
+      ]),
     );
-    expect(plan.changes).toHaveLength(12);
-    expect(plan.changes.find((c) => c.address === AURA)).toEqual({
-      address: AURA,
-      name: 'Celestial Aura',
-      from: 2,
-      to: 3,
-    });
-    expect(plan.targets).toHaveLength(12);
+    // Ten effects go 0 → 1; the owned and the anomalous ones plan nothing.
+    expect(plan.changes).toHaveLength(10);
+    expect(plan.changes.every((c) => c.from === 0 && c.to === 1)).toBe(true);
+    expect(plan.changes.find((c) => c.address === AURA)).toBeUndefined();
+    expect(plan.changes.find((c) => c.address === SPARKLES)).toBeUndefined();
+    // The invalid quantity is surfaced as an anomaly for the explicit repair.
+    expect(plan.anomalies).toEqual([
+      { address: AURA, name: 'Celestial Aura', quantity: 2, maxStack: 1 },
+    ]);
     // Ready for ONE canonical set-many write, targeting only official items.
     for (const target of plan.targets) {
       expect(labItemByAddress(target.address)).not.toBeNull();
@@ -104,12 +117,29 @@ describe('bulk inventory planning', () => {
     const plan = planBulkInventoryAction('remove-all-official', new Map());
     expect(plan.changes).toEqual([]);
     expect(plan.targets).toEqual([]);
+    expect(plan.anomalies).toEqual([]);
   });
 
-  it('add-all-official targets all sixteen', () => {
+  it('add-all-official targets all sixteen from empty, each at exactly one', () => {
     const plan = planBulkInventoryAction('add-all-official', new Map());
     expect(plan.targets).toHaveLength(16);
     expect(plan.targets.every((t) => t.quantity === 1)).toBe(true);
+  });
+
+  it('normalize-stacks repairs over-max quantities to the max, and nothing else', () => {
+    const plan = planBulkInventoryAction(
+      'normalize-stacks',
+      new Map([
+        [AURA, 3],
+        [CAP, 1], // valid — untouched
+        [SPARKLES, 0], // unowned — normalization never grants
+        ['31632:beef:third-party:item', 9], // never targeted
+      ]),
+    );
+    expect(plan.changes).toEqual([
+      { address: AURA, name: 'Celestial Aura', from: 3, to: 1 },
+    ]);
+    expect(plan.targets).toEqual([{ address: AURA, quantity: 1 }]);
   });
 });
 

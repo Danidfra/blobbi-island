@@ -27,12 +27,12 @@
  * change or a relay change on its own.
  */
 
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
-import { InventoryEquipmentLab } from '@/components/tools/game-items/InventoryEquipmentLab';
+import { LIVE_INVENTORY_LAB_ENABLED } from '@/lib/feature-flags';
 import { InventoryInspector } from '@/components/tools/game-items/InventoryInspector';
 import { ItemStudio } from '@/components/tools/game-items/ItemStudio';
 import { PublishedItemsBrowser } from '@/components/tools/game-items/PublishedItemsBrowser';
@@ -55,6 +55,35 @@ import {
 import { useItemStudio } from '@/tools/game-items/useItemStudio';
 
 type ToolTab = 'studio' | 'published' | 'inventory' | 'lab';
+
+/**
+ * The mutation-capable Inventory & Equipment Lab is BUILD-FLAG GATED
+ * (`VITE_ENABLE_LIVE_INVENTORY_LAB=true`, default off — see
+ * `src/lib/feature-flags.ts`). In a disabled build the tab does not exist, no
+ * Lab hook mounts, no tab-state value can select it — and the chunk is not
+ * even EMITTED: the condition below is the inline `import.meta.env`
+ * comparison (not the helper constant) because Vite statically replaces it,
+ * letting the bundler eliminate the dead branch and its dynamic import, the
+ * same mechanism that strips the `/dev/*` chunks. `LIVE_INVENTORY_LAB_ENABLED`
+ * reads the identical variable, so the UI conditions below can never disagree
+ * with this one. Signer checks remain necessary for any write, but the flag —
+ * not route obscurity, not the signer — is the product access gate.
+ */
+const InventoryEquipmentLab =
+  import.meta.env.VITE_ENABLE_LIVE_INVENTORY_LAB === 'true'
+    ? lazy(() =>
+        import('@/components/tools/game-items/InventoryEquipmentLab').then((m) => ({
+          default: m.InventoryEquipmentLab,
+        })),
+      )
+    : null;
+
+/** Coerce any requested tab to one that exists in this build. */
+function coerceToolTab(tab: string): ToolTab {
+  if (tab === 'studio' || tab === 'published' || tab === 'inventory') return tab;
+  if (tab === 'lab' && LIVE_INVENTORY_LAB_ENABLED) return 'lab';
+  return 'studio';
+}
 
 export function GameItemTools() {
   const { user } = useCurrentUser();
@@ -144,14 +173,18 @@ export function GameItemTools() {
 
         <SignerBanner identity={identity} relayUrls={relayUrls} />
 
-        <Tabs value={tab} onValueChange={(value) => setTab(value as ToolTab)}>
-          <TabsList className="grid w-full grid-cols-4 sm:max-w-2xl">
+        <Tabs value={tab} onValueChange={(value) => setTab(coerceToolTab(value))}>
+          <TabsList
+            className={`grid w-full ${LIVE_INVENTORY_LAB_ENABLED ? 'grid-cols-4 sm:max-w-2xl' : 'grid-cols-3 sm:max-w-lg'}`}
+          >
             <TabsTrigger value="studio">Item Studio</TabsTrigger>
             <TabsTrigger value="published">Published Items</TabsTrigger>
             <TabsTrigger value="inventory">Inventory Inspector</TabsTrigger>
-            <TabsTrigger value="lab" data-testid="lab-tab">
-              Equipment Lab
-            </TabsTrigger>
+            {LIVE_INVENTORY_LAB_ENABLED && (
+              <TabsTrigger value="lab" data-testid="lab-tab">
+                Equipment Lab
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="studio" className="pt-4">
@@ -191,13 +224,33 @@ export function GameItemTools() {
             />
           </TabsContent>
 
-          <TabsContent value="lab" className="pt-4">
-            {/* REAL kind:31633/31634 writes, developer-initiated only — the
-                inspector above stays read-only; the lab is where mutations
-                live, behind explicit confirmations. */}
-            <InventoryEquipmentLab />
-          </TabsContent>
+          {InventoryEquipmentLab !== null && (
+            <TabsContent value="lab" className="pt-4">
+              {/* REAL kind:31633/31634 writes, developer-initiated only — the
+                  inspector above stays read-only; the lab is where mutations
+                  live, behind explicit confirmations, and only in builds that
+                  set VITE_ENABLE_LIVE_INVENTORY_LAB=true. */}
+              <Suspense
+                fallback={
+                  <p className="pt-4 text-center text-xs text-muted-foreground">
+                    Loading the lab…
+                  </p>
+                }
+              >
+                <InventoryEquipmentLab />
+              </Suspense>
+            </TabsContent>
+          )}
         </Tabs>
+
+        {!LIVE_INVENTORY_LAB_ENABLED && (
+          <p
+            data-testid="lab-disabled-note"
+            className="pt-2 text-center text-[11px] text-muted-foreground"
+          >
+            Live Inventory Lab is disabled in this build.
+          </p>
+        )}
 
         <footer className="pb-6 pt-2 text-center text-[11px] text-muted-foreground">
           Vibed with{' '}

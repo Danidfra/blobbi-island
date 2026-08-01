@@ -2,31 +2,42 @@
  * Inventory & Equipment Lab — internal developer tool for REAL kind:31633 and
  * kind:31634 mutations against the CURRENT account.
  *
- * ## Access and safety policy (see docs/inventory-equipment-lab.md)
+ * ## Access policy (see docs/inventory-equipment-lab.md)
  *
- * Lives in `/tools/game-items` — reachable by direct URL, linked from no
- * player navigation, shipped in production because it must work against
- * production relays. Obscurity is NOT authorization: the real boundary is
- * that every write requires an explicit click and a signature from the
- * logged-in account, and can only ever touch THAT account's own inventory
- * and its own Blobbi's equipment document. Without a signer every write
- * control is disabled.
+ * BUILD-FLAG GATED: this component exists in a build only when
+ * `VITE_ENABLE_LIVE_INVENTORY_LAB=true` (`src/lib/feature-flags.ts`); default
+ * builds do not include its chunk, its tab, or any of its mutation hooks. The
+ * flag — not route obscurity, not the signer — is the product access gate.
+ * Within an enabled build, every write still requires an explicit
+ * confirmation and a signature from the logged-in account, and can only ever
+ * touch THAT account's own inventory and its own Blobbi's equipment document.
+ * Without a signer every write control is disabled.
  *
  * The three roles stay visibly apart: the official ISSUER authored the
  * kind:31632 definitions (shown as the trust root); the PLAYER — the signer —
  * owns kind:31633 and equips through kind:31634. This lab acts only as the
  * player.
  *
- * ## What a write is, and is not
+ * ## Every write is confirmed, and max_stack is respected
  *
- * Every mutation flows through the SAME two production writers
- * (`useInventoryMutation`, `useEquipmentMutation`): serialized, fresh-read
- * based, optimistic with rollback, reconciled after publish. Bulk actions
- * compute ONE final state and publish ONE canonical replacement event —
- * previewed as a diff and confirmed before signing. Inventory writes never
- * equip; equipping never grants; removing an owned item never silently edits
- * the placement document (a stale placement stays, diagnosed, with its own
- * explicit remove action).
+ * EVERY real write — single-item add/remove/set, equip/unequip, stale
+ * cleanup, bulk actions, the loadout, the stack repair — flows through ONE
+ * confirmation surface ({@link PendingWrite}); `confirmPending` below is the
+ * only code path in this component that invokes a writer, and a source test
+ * pins that. Normal controls never plan a quantity above the item's published
+ * `max_stack` (all sixteen current items: 1): "Add to inventory" means
+ * `0 → 1` and is disabled once owned, bulk add ENSURES ownership rather than
+ * incrementing, and a pre-existing over-max quantity is reported as an
+ * anomaly for the explicit "Normalize stacks" repair — never silently
+ * changed. There is deliberately NO control that can create an over-max
+ * quantity.
+ *
+ * Both writers are the canonical production ones (`useInventoryMutation`,
+ * `useEquipmentMutation`): serialized, fresh-read based, optimistic with
+ * rollback, reconciled after publish. Inventory writes never equip; equipping
+ * never grants; removing an owned item never silently edits the placement
+ * document (a stale placement stays, diagnosed, with its own explicit remove
+ * action).
  */
 
 import { useMemo, useState } from 'react';
@@ -62,7 +73,6 @@ import { useIslandInventory } from '@/inventory/useIslandInventory';
 import {
   useInventoryMutation,
   type InventoryMutation,
-  type InventorySetTarget,
 } from '@/inventory/useInventoryMutation';
 import { useItemCatalog } from '@/inventory/useItemCatalog';
 import { getInventoryItems } from '@/inventory/package';
@@ -84,9 +94,10 @@ import {
   planMissingLoadoutItems,
   planTestLoadout,
   type LabBulkInventoryAction,
-  type LabInventoryPlan,
+  type LabInventoryChange,
   type LabLoadoutPlan,
   type LabOfficialItem,
+  type LabStackAnomaly,
 } from '@/tools/game-items/inventory-equipment-lab';
 import { safeNpub, shortHex } from '@/tools/game-items/signer-identity';
 import { CopyButton } from './RawEventInspector';
@@ -98,22 +109,34 @@ const BULK_ACTION_LABELS: Record<LabBulkInventoryAction, string> = {
   'remove-all-effects': 'Remove all official visual effects',
   'add-all-official': 'Add all sixteen published items',
   'remove-all-official': 'Remove all sixteen published items',
+  'normalize-stacks': 'Normalize official non-stackable quantities',
 };
 
-/** A write awaiting explicit confirmation, with its complete diff. */
+/**
+ * A write awaiting explicit confirmation. EVERY real kind:31633/31634 write
+ * this component can make is expressed as one of these first; nothing signs
+ * until `confirmPending` runs. `lines` is the complete consequence statement
+ * shown in the dialog (kind, target, item, quantity/slot change, and what is
+ * deliberately NOT touched).
+ */
 type PendingWrite =
-  | { kind: 'inventory'; title: string; plan: LabInventoryPlan }
   | {
-      kind: 'inventory-targets';
+      kind: 'inventory';
       title: string;
-      description: string;
-      targets: readonly InventorySetTarget[];
+      lines: readonly string[];
+      /** Bulk from→to table, when the write came from a bulk plan. */
+      diff?: readonly LabInventoryChange[];
+      /** Over-max quantities the plan deliberately left alone. */
+      anomalies?: readonly LabStackAnomaly[];
+      mutation: InventoryMutation;
+      success: string;
     }
   | {
       kind: 'equipment';
       title: string;
-      description: string;
+      lines: readonly string[];
       mutation: EquipmentMutation;
+      success: string;
     }
   | { kind: 'loadout'; plan: LabLoadoutPlan };
 
@@ -128,6 +151,7 @@ export function InventoryEquipmentLab() {
   const equipmentMutation = useEquipmentMutation();
 
   const characterId = currentPet?.id;
+  const characterName = currentPet?.name;
   const equipment = useCharacterEquipment(characterId, {
     ...(currentPet?.stage === undefined ? {} : { form: currentPet.stage }),
   });
@@ -139,6 +163,9 @@ export function InventoryEquipmentLab() {
   const signedIn = Boolean(user?.pubkey);
   const busy = inventoryMutation.isPending || equipmentMutation.isPending;
   const writesDisabled = !signedIn || busy;
+
+  const ownerShort = user?.pubkey ? shortHex(user.pubkey) : 'no signer';
+  const blobbiLabel = characterName ?? characterId ?? 'no companion';
 
   const inventory = inventoryQuery.data;
   const quantities = useMemo(
@@ -167,69 +194,151 @@ export function InventoryEquipmentLab() {
     [equippedBySlot],
   );
 
-  // ── Write helpers: every publish goes through here, post-confirmation. ──
-
-  const runInventory = async (mutation: InventoryMutation, success: string) => {
-    try {
-      await inventoryMutation.mutateAsync(mutation);
-      toast({ title: success });
-    } catch (error) {
-      toast({
-        title: 'Inventory write failed',
-        description: error instanceof Error ? error.message : 'Publish failed.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const runEquipment = async (mutation: EquipmentMutation, success: string) => {
-    if (!characterId) {
-      toast({ title: 'No target Blobbi', variant: 'destructive' });
-      return;
-    }
-    try {
-      await equipmentMutation.mutateAsync({
-        characterId,
-        ...(currentPet?.name === undefined ? {} : { characterName: currentPet.name }),
-        mutation,
-      });
-      toast({ title: success });
-    } catch (error) {
-      toast({
-        title: 'Equipment write failed',
-        description: error instanceof Error ? error.message : 'Publish failed.',
-        variant: 'destructive',
-      });
-    }
-  };
+  // ── THE one writer call-site ─────────────────────────────────────────────
+  //
+  // Both `mutateAsync` invocations in this component live inside this handler
+  // and nowhere else (pinned by a source-level test). Success closes the
+  // dialog; failure keeps it open with the state it described still true —
+  // rollback already restored the caches. While a publish is in flight both
+  // dialog buttons and every row control are disabled, and Cancel is
+  // unavailable rather than pretending an in-flight signature can be recalled.
 
   const confirmPending = async () => {
-    if (!pending) return;
+    if (!pending || busy) return;
     const write = pending;
-    setPending(null);
-    if (write.kind === 'inventory') {
-      await runInventory(
-        { type: 'set-many', targets: [...write.plan.targets] },
-        `${BULK_ACTION_LABELS[write.plan.action]} — published`,
-      );
-    } else if (write.kind === 'inventory-targets') {
-      await runInventory(
-        { type: 'set-many', targets: [...write.targets] },
-        `${write.title} — published`,
-      );
-    } else if (write.kind === 'equipment') {
-      await runEquipment(write.mutation, `${write.title} — published`);
-    } else {
-      await runEquipment(
-        { type: 'apply-set', equips: [...write.plan.equips], unequips: [] },
-        'Test loadout — published',
-      );
+    try {
+      if (write.kind === 'inventory') {
+        await inventoryMutation.mutateAsync(write.mutation);
+        toast({ title: write.success });
+      } else if (write.kind === 'equipment' || write.kind === 'loadout') {
+        if (!characterId) throw new Error('No target Blobbi selected');
+        const mutation: EquipmentMutation =
+          write.kind === 'equipment'
+            ? write.mutation
+            : { type: 'apply-set', equips: [...write.plan.equips], unequips: [] };
+        await equipmentMutation.mutateAsync({
+          characterId,
+          ...(characterName === undefined ? {} : { characterName }),
+          mutation,
+        });
+        toast({
+          title: write.kind === 'equipment' ? write.success : 'Test loadout — published',
+        });
+      }
+      setPending(null);
+    } catch (error) {
+      toast({
+        title: 'Write failed — nothing further was published',
+        description: error instanceof Error ? error.message : 'Publish failed.',
+        variant: 'destructive',
+      });
     }
   };
 
-  // ── Row-level actions ────────────────────────────────────────────────────
+  // ── Row-level actions: each one only STAGES a confirmed write ───────────
 
-  const equipItem = (item: LabOfficialItem) => {
+  const stageAddOne = (item: LabOfficialItem, from: number) => {
+    setPending({
+      kind: 'inventory',
+      title: `Add ${item.name} to inventory`,
+      lines: [
+        'This will publish a signed kind:31633 event.',
+        `Target account: ${ownerShort}`,
+        `Item: ${item.name}`,
+        `Address: ${item.address}`,
+        `Quantity: ${from} → ${from + 1}`,
+        'No equipment placement will be changed.',
+      ],
+      mutation: { type: 'add', address: item.address, amount: 1 },
+      success: `${item.name} added`,
+    });
+  };
+
+  const stageRemoveOne = (item: LabOfficialItem, from: number) => {
+    setPending({
+      kind: 'inventory',
+      title: `Remove one ${item.name}`,
+      lines: [
+        'This will publish a signed kind:31633 event.',
+        `Target account: ${ownerShort}`,
+        `Item: ${item.name}`,
+        `Address: ${item.address}`,
+        `Quantity: ${from} → ${from - 1}`,
+        'No equipment placement will be changed.',
+      ],
+      mutation: { type: 'remove', address: item.address, amount: 1 },
+      success: `${item.name} −1`,
+    });
+  };
+
+  const stageSetQuantity = (item: LabOfficialItem, from: number, to: number) => {
+    setPending({
+      kind: 'inventory',
+      title: `Set ${item.name} to ${to}`,
+      lines: [
+        'This will publish a signed kind:31633 event.',
+        `Target account: ${ownerShort}`,
+        `Item: ${item.name}`,
+        `Address: ${item.address}`,
+        `Quantity: ${from} → ${to}`,
+        'Every other inventory entry is preserved.',
+        'No equipment placement will be changed.',
+      ],
+      mutation: { type: 'set', address: item.address, quantity: to },
+      success: `${item.name} set to ${to}`,
+    });
+  };
+
+  const stageRemoveCompletely = (item: LabOfficialItem, from: number) => {
+    setPending({
+      kind: 'inventory',
+      title: `Remove ${item.name} completely`,
+      lines: [
+        'This will publish a signed kind:31633 event.',
+        `Target account: ${ownerShort}`,
+        `Item: ${item.name}`,
+        `Address: ${item.address}`,
+        `Quantity: ${from} → 0 (the entry is omitted, as the protocol specifies)`,
+        'Any equipped placement of it becomes STALE and stays in the equipment document until you remove it explicitly.',
+      ],
+      mutation: { type: 'set', address: item.address, quantity: 0 },
+      success: `${item.name} removed`,
+    });
+  };
+
+  const stageBulkInventory = (action: LabBulkInventoryAction) => {
+    const plan = planBulkInventoryAction(action, quantities);
+    if (plan.changes.length === 0) {
+      toast({
+        title:
+          plan.anomalies.length > 0
+            ? 'Nothing to change — only over-max anomalies (use Normalize)'
+            : 'Nothing would change',
+      });
+      return;
+    }
+    setPending({
+      kind: 'inventory',
+      title: BULK_ACTION_LABELS[action],
+      lines: [
+        'This will publish ONE signed kind:31633 event.',
+        `Target account: ${ownerShort}`,
+        action.startsWith('add-')
+          ? 'Add means ENSURE OWNED (0 → 1); owned items are untouched.'
+          : action === 'normalize-stacks'
+            ? 'Quantities above the published max_stack are set back to it.'
+            : 'Targeted quantities are set to 0.',
+        'Unrelated inventory entries are preserved.',
+        'No equipment placement will be changed.',
+      ],
+      diff: plan.changes,
+      anomalies: plan.anomalies,
+      mutation: { type: 'set-many', targets: [...plan.targets] },
+      success: `${BULK_ACTION_LABELS[action]} — published`,
+    });
+  };
+
+  const stageEquip = (item: LabOfficialItem) => {
     const definition = catalogQuery.data?.byAddress.get(item.address);
     const slot = item.kind === 'effect' ? item.expectedSlot : definition?.slot;
     if (!slot) {
@@ -241,27 +350,60 @@ export function InventoryEquipmentLab() {
       });
       return;
     }
-    void runEquipment(
-      {
+    const occupant = equippedBySlot.get(slot);
+    const replaces =
+      occupant && occupant.item !== item.address
+        ? (labItemByAddress(occupant.item)?.name ?? occupant.item)
+        : null;
+    setPending({
+      kind: 'equipment',
+      title: replaces ? `Replace ${replaces} with ${item.name}` : `Equip ${item.name}`,
+      lines: [
+        `This will publish a signed kind:31634 event for Blobbi “${blobbiLabel}”.`,
+        `Slot: ${slot}`,
+        replaces ? `Replaces: ${replaces}` : 'The slot is currently empty.',
+        `Item: ${item.name}`,
+        `Address: ${item.address}`,
+        'Inventory quantity will not change.',
+        'Unrelated placements are preserved.',
+      ],
+      mutation: {
         type: 'equip',
         slot,
         entry: { id: slot, item: item.address, mode: 'equip', slot },
       },
-      `${item.name} equipped`,
-    );
+      success: `${item.name} equipped`,
+    });
   };
 
-  const unequipAddress = (address: string) => {
-    const slots = [...equippedBySlot.entries()]
-      .filter(([, entry]) => entry.item === address)
-      .map(([slot]) => slot);
-    if (slots.length === 0) return;
-    void runEquipment({ type: 'unequip', slot: slots[0] }, 'Unequipped');
+  const stageUnequipSlot = (slot: string, stale: boolean) => {
+    const entry = equippedBySlot.get(slot);
+    const name = entry ? (labItemByAddress(entry.item)?.name ?? entry.item) : slot;
+    setPending({
+      kind: 'equipment',
+      title: stale ? `Remove stale placement: ${name}` : `Unequip ${name}`,
+      lines: [
+        `This will publish a signed kind:31634 event for Blobbi “${blobbiLabel}”.`,
+        `Slot removed: ${slot}`,
+        stale
+          ? 'The placement is stale (the item is no longer in the inventory); removing it changes no quantity.'
+          : 'The item remains in inventory.',
+        'Unrelated placements are preserved.',
+      ],
+      mutation: { type: 'unequip', slot },
+      success: stale ? 'Stale placement removed' : `${slot} cleared`,
+    });
   };
 
-  // ── Bulk equipment plans ─────────────────────────────────────────────────
+  const stageUnequipAddress = (address: string) => {
+    const slot = [...equippedBySlot.entries()].find(
+      ([, entry]) => entry.item === address,
+    )?.[0];
+    if (slot === undefined) return;
+    stageUnequipSlot(slot, (quantities.get(address) ?? 0) <= 0);
+  };
 
-  const unequipAllOfKind = (kind: 'wearable' | 'effect') => {
+  const stageUnequipAllOfKind = (kind: 'wearable' | 'effect') => {
     const slots = [...equippedBySlot.keys()].filter((slot) =>
       kind === 'effect' ? isEffectPlacementSlot(slot) : !isEffectPlacementSlot(slot),
     );
@@ -272,8 +414,14 @@ export function InventoryEquipmentLab() {
     setPending({
       kind: 'equipment',
       title: kind === 'effect' ? 'Unequip all effects' : 'Unequip all wearables',
-      description: `Removes ${slots.length} slot${slots.length === 1 ? '' : 's'}: ${slots.join(', ')}. Unrelated placements are preserved. Inventory quantities do not change.`,
+      lines: [
+        `This will publish ONE signed kind:31634 event for Blobbi “${blobbiLabel}”.`,
+        `Slots removed: ${slots.join(', ')}`,
+        'Every item remains in inventory.',
+        'Unrelated placements are preserved.',
+      ],
       mutation: { type: 'apply-set', equips: [], unequips: slots },
+      success: 'Unequipped',
     });
   };
 
@@ -285,7 +433,7 @@ export function InventoryEquipmentLab() {
     [equippedBySlot, quantities],
   );
 
-  const clearStalePlacements = () => {
+  const stageClearStalePlacements = () => {
     if (stalePlacements.length === 0) {
       toast({ title: 'No stale placements' });
       return;
@@ -293,14 +441,20 @@ export function InventoryEquipmentLab() {
     setPending({
       kind: 'equipment',
       title: 'Clear stale placements',
-      description: `Removes ${stalePlacements
-        .map(([slot, entry]) => `${slot} (${labItemByAddress(entry.item)?.name ?? entry.item})`)
-        .join(', ')}. Only slots whose item is no longer in the inventory are touched.`,
+      lines: [
+        `This will publish ONE signed kind:31634 event for Blobbi “${blobbiLabel}”.`,
+        `Slots removed: ${stalePlacements
+          .map(([slot, entry]) => `${slot} (${labItemByAddress(entry.item)?.name ?? entry.item})`)
+          .join(', ')}`,
+        'Only slots whose item is no longer in the inventory are touched.',
+        'No inventory quantity changes.',
+      ],
       mutation: {
         type: 'apply-set',
         equips: [],
         unequips: stalePlacements.map(([slot]) => slot),
       },
+      success: 'Stale placements cleared',
     });
   };
 
@@ -319,7 +473,9 @@ export function InventoryEquipmentLab() {
       <section className="rounded-lg border border-amber-400/50 bg-amber-50/40 p-3 text-xs dark:border-amber-700/50 dark:bg-amber-950/20">
         <p className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
           <FlaskConical className="h-3.5 w-3.5" />
-          Internal developer lab — every action here publishes REAL signed events.
+          Internal developer lab — every action here publishes REAL signed
+          events, each behind its own confirmation. This surface exists only in
+          builds with VITE_ENABLE_LIVE_INVENTORY_LAB=true.
         </p>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           <dt className="text-muted-foreground">Official item issuer (31632)</dt>
@@ -341,7 +497,7 @@ export function InventoryEquipmentLab() {
           <dt className="text-muted-foreground">Equipment target (31634)</dt>
           <dd data-testid="lab-target-blobbi">
             {characterId
-              ? `${currentPet?.name ?? characterId} · ${characterId} · ${currentPet?.stage ?? 'unknown stage'}`
+              ? `${characterName ?? characterId} · ${characterId} · ${currentPet?.stage ?? 'unknown stage'}`
               : 'no current companion selected'}
           </dd>
         </dl>
@@ -369,18 +525,7 @@ export function InventoryEquipmentLab() {
                 size="sm"
                 disabled={writesDisabled}
                 data-testid={`lab-bulk-${action}`}
-                onClick={() => {
-                  const plan = planBulkInventoryAction(action, quantities);
-                  if (plan.changes.length === 0) {
-                    toast({ title: 'Nothing would change' });
-                    return;
-                  }
-                  setPending({
-                    kind: 'inventory',
-                    title: BULK_ACTION_LABELS[action],
-                    plan,
-                  });
-                }}
+                onClick={() => stageBulkInventory(action)}
               >
                 {BULK_ACTION_LABELS[action]}
               </Button>
@@ -401,76 +546,44 @@ export function InventoryEquipmentLab() {
             {kind === 'wearable' ? 'Official wearables' : 'Official visual effects'}
           </h3>
           <ul className="space-y-1.5">
-            {LAB_OFFICIAL_ITEMS.filter((item) => item.kind === kind).map((item) => (
-              <LabItemRow
-                key={item.address}
-                item={item}
-                quantity={quantities.get(item.address) ?? 0}
-                equipped={equippedAddresses.has(item.address)}
-                stale={
-                  equippedAddresses.has(item.address) &&
-                  (quantities.get(item.address) ?? 0) <= 0
-                }
-                definitionImage={(() => {
-                  const definition = catalogQuery.data?.byAddress.get(item.address);
-                  return definition ? primaryItemImageUrl(definition) : undefined;
-                })()}
-                definitionRarity={
-                  catalogQuery.data?.byAddress.get(item.address)?.rarity ?? item.rarity
-                }
-                definitionSlot={
-                  item.kind === 'effect'
-                    ? item.expectedSlot
-                    : (catalogQuery.data?.byAddress.get(item.address)?.slot ?? null)
-                }
-                definitionCategory={
-                  catalogQuery.data?.byAddress.get(item.address)?.category
-                }
-                inventoryJson={
-                  inventory ? JSON.stringify(getInventoryItems(inventory), null, 2) : ''
-                }
-                definitionJson={JSON.stringify(
-                  catalogQuery.data?.byAddress.get(item.address) ?? null,
-                  null,
-                  2,
-                )}
-                writesDisabled={writesDisabled}
-                quantityDraft={quantityDrafts[item.address] ?? ''}
-                onQuantityDraft={(value) =>
-                  setQuantityDrafts((prev) => ({ ...prev, [item.address]: value }))
-                }
-                onAddOne={() =>
-                  void runInventory(
-                    { type: 'add', address: item.address, amount: 1 },
-                    `${item.name} +1`,
-                  )
-                }
-                onRemoveOne={() =>
-                  void runInventory(
-                    { type: 'remove', address: item.address, amount: 1 },
-                    `${item.name} −1`,
-                  )
-                }
-                onSetQuantity={(quantity) =>
-                  setPending({
-                    kind: 'inventory-targets',
-                    title: `Set ${item.name} to ${quantity}`,
-                    description: `Sets the quantity of ${item.name} from ${quantities.get(item.address) ?? 0} to ${quantity}. Every other inventory entry is preserved.`,
-                    targets: [{ address: item.address, quantity }],
-                  })
-                }
-                onRemoveCompletely={() =>
-                  setPending({
-                    kind: 'inventory-targets',
-                    title: `Remove ${item.name} completely`,
-                    description: `Sets ${item.name} (currently ×${quantities.get(item.address) ?? 0}) to zero. The entry is omitted from the next inventory event, as the protocol specifies. Any equipped placement of it becomes STALE and stays in the equipment document until you remove it explicitly.`,
-                    targets: [{ address: item.address, quantity: 0 }],
-                  })
-                }
-                onEquip={() => equipItem(item)}
-                onUnequip={() => unequipAddress(item.address)}
-              />
-            ))}
+            {LAB_OFFICIAL_ITEMS.filter((item) => item.kind === kind).map((item) => {
+              const quantity = quantities.get(item.address) ?? 0;
+              const definition = catalogQuery.data?.byAddress.get(item.address);
+              return (
+                <LabItemRow
+                  key={item.address}
+                  item={item}
+                  quantity={quantity}
+                  equipped={equippedAddresses.has(item.address)}
+                  stale={equippedAddresses.has(item.address) && quantity <= 0}
+                  definitionImage={definition ? primaryItemImageUrl(definition) : undefined}
+                  definitionRarity={definition?.rarity ?? item.rarity}
+                  definitionSlot={
+                    item.kind === 'effect'
+                      ? item.expectedSlot
+                      : (definition?.slot ?? null)
+                  }
+                  definitionCategory={definition?.category}
+                  inventoryJson={
+                    inventory
+                      ? JSON.stringify(getInventoryItems(inventory), null, 2)
+                      : ''
+                  }
+                  definitionJson={JSON.stringify(definition ?? null, null, 2)}
+                  writesDisabled={writesDisabled}
+                  quantityDraft={quantityDrafts[item.address] ?? ''}
+                  onQuantityDraft={(value) =>
+                    setQuantityDrafts((prev) => ({ ...prev, [item.address]: value }))
+                  }
+                  onAddOne={() => stageAddOne(item, quantity)}
+                  onRemoveOne={() => stageRemoveOne(item, quantity)}
+                  onSetQuantity={(to) => stageSetQuantity(item, quantity, to)}
+                  onRemoveCompletely={() => stageRemoveCompletely(item, quantity)}
+                  onEquip={() => stageEquip(item)}
+                  onUnequip={() => stageUnequipAddress(item.address)}
+                />
+              );
+            })}
           </ul>
         </section>
       ))}
@@ -486,7 +599,7 @@ export function InventoryEquipmentLab() {
             size="sm"
             disabled={writesDisabled || !characterId}
             data-testid="lab-unequip-all-effects"
-            onClick={() => unequipAllOfKind('effect')}
+            onClick={() => stageUnequipAllOfKind('effect')}
           >
             Unequip all effects
           </Button>
@@ -495,7 +608,7 @@ export function InventoryEquipmentLab() {
             size="sm"
             disabled={writesDisabled || !characterId}
             data-testid="lab-unequip-all-wearables"
-            onClick={() => unequipAllOfKind('wearable')}
+            onClick={() => stageUnequipAllOfKind('wearable')}
           >
             Unequip all wearables
           </Button>
@@ -504,7 +617,7 @@ export function InventoryEquipmentLab() {
             size="sm"
             disabled={writesDisabled || !characterId}
             data-testid="lab-clear-stale"
-            onClick={clearStalePlacements}
+            onClick={stageClearStalePlacements}
           >
             Clear stale placements ({stalePlacements.length})
           </Button>
@@ -566,12 +679,7 @@ export function InventoryEquipmentLab() {
                         size="sm"
                         disabled={writesDisabled}
                         data-testid={`lab-unequip-${slot}`}
-                        onClick={() =>
-                          void runEquipment(
-                            { type: 'unequip', slot },
-                            `${slot} cleared`,
-                          )
-                        }
+                        onClick={() => stageUnequipSlot(slot, !owned)}
                       >
                         {owned ? 'Unequip' : 'Remove stale placement'}
                       </Button>
@@ -609,30 +717,45 @@ export function InventoryEquipmentLab() {
         )}
       </section>
 
-      {/* ── Confirmation dialog: the complete diff, then the signature ── */}
-      <Dialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+      {/* ── THE confirmation dialog: complete consequences, then a signature ── */}
+      <Dialog
+        open={pending !== null}
+        onOpenChange={(open) => {
+          // While a publish is in flight the dialog cannot be dismissed —
+          // an in-flight signature cannot honestly be "cancelled".
+          if (!open && !busy) setPending(null);
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {pending?.kind === 'loadout'
                 ? 'Apply the full test loadout'
-                : pending?.kind === 'inventory'
-                  ? BULK_ACTION_LABELS[pending.plan.action]
-                  : pending?.title}
+                : pending?.title}
             </DialogTitle>
             <DialogDescription data-testid="lab-confirm-kind">
-              {pending?.kind === 'equipment' || pending?.kind === 'loadout'
-                ? 'This will publish a signed kind:31634 event.'
-                : 'This will publish a signed kind:31633 event.'}
+              {pending?.kind === 'inventory'
+                ? 'This will publish a signed kind:31633 event.'
+                : 'This will publish a signed kind:31634 event.'}
             </DialogDescription>
           </DialogHeader>
 
-          {pending?.kind === 'inventory' && (
+          {(pending?.kind === 'inventory' || pending?.kind === 'equipment') && (
+            <ul data-testid="lab-confirm-lines" className="space-y-0.5 text-xs">
+              {pending.lines.map((line) => (
+                <li key={line} className="break-all">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {pending?.kind === 'inventory' && pending.diff && (
             <ul
               data-testid="lab-confirm-diff"
               className="max-h-56 space-y-0.5 overflow-y-auto text-xs"
             >
-              {pending.plan.changes.map((change) => (
+              {pending.diff.map((change) => (
                 <li key={change.address} className="flex justify-between gap-2">
                   <span>{change.name}</span>
                   <span className="font-mono">
@@ -642,14 +765,33 @@ export function InventoryEquipmentLab() {
               ))}
             </ul>
           )}
-          {pending?.kind === 'inventory-targets' && (
-            <p className="text-xs">{pending.description}</p>
-          )}
-          {pending?.kind === 'equipment' && (
-            <p className="text-xs">{pending.description}</p>
-          )}
+
+          {pending?.kind === 'inventory' &&
+            pending.anomalies &&
+            pending.anomalies.length > 0 && (
+              <div
+                data-testid="lab-confirm-anomalies"
+                className="rounded-md border border-amber-400/50 bg-amber-50/50 p-2 text-xs dark:border-amber-800/50 dark:bg-amber-950/30"
+              >
+                <p className="font-bold">Left unchanged (already owned):</p>
+                <ul className="mt-0.5 space-y-0.5 text-muted-foreground">
+                  {pending.anomalies.map((a) => (
+                    <li key={a.address}>
+                      {a.name} ×{a.quantity} — quantity exceeds published
+                      max_stack:{a.maxStack}. Use “{BULK_ACTION_LABELS['normalize-stacks']}”
+                      to repair it.
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
           {pending?.kind === 'loadout' && (
             <div className="space-y-2 text-xs">
+              <p>
+                This will publish ONE signed kind:31634 event for Blobbi
+                “{blobbiLabel}”. Inventory quantities are not modified.
+              </p>
               <ul data-testid="lab-loadout-steps" className="space-y-0.5">
                 {pending.plan.steps.map((step) => (
                   <li key={step.slot} className="flex justify-between gap-2">
@@ -687,12 +829,21 @@ export function InventoryEquipmentLab() {
                     data-testid="lab-loadout-add-missing"
                     onClick={() =>
                       setPending({
-                        kind: 'inventory-targets',
+                        kind: 'inventory',
                         title: 'Add required loadout items',
-                        description: `Sets quantity 1 for: ${pending.plan.missing
-                          .map((m) => m.name)
-                          .join(', ')}. Nothing is equipped by this write.`,
-                        targets: planMissingLoadoutItems(pending.plan),
+                        lines: [
+                          'This will publish ONE signed kind:31633 event.',
+                          `Target account: ${ownerShort}`,
+                          `Sets quantity 1 for: ${pending.plan.missing
+                            .map((m) => m.name)
+                            .join(', ')}.`,
+                          'Nothing is equipped by this write.',
+                        ],
+                        mutation: {
+                          type: 'set-many',
+                          targets: [...planMissingLoadoutItems(pending.plan)],
+                        },
+                        success: 'Required loadout items added',
                       })
                     }
                   >
@@ -700,14 +851,16 @@ export function InventoryEquipmentLab() {
                   </Button>
                 </div>
               )}
-              <p className="text-muted-foreground">
-                Quantities are not modified by applying the loadout.
-              </p>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setPending(null)}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              data-testid="lab-confirm-cancel"
+              onClick={() => setPending(null)}
+            >
               Cancel
             </Button>
             <Button
@@ -777,9 +930,17 @@ function LabItemRow({
   onUnequip: () => void;
 }) {
   const image = definitionImage ?? item.image ?? undefined;
+  // "Add to inventory" honours the published max_stack: for the current
+  // sixteen (all max_stack:1) it means 0 → 1 and is disabled once owned.
+  // The set-quantity input is bounded the same way — no ordinary control can
+  // create an over-max quantity, and no advanced override exists.
+  const atOrAboveMax = item.maxStack !== null && quantity >= item.maxStack;
   const draftQuantity = Number.parseInt(quantityDraft, 10);
   const draftValid =
-    quantityDraft !== '' && Number.isInteger(draftQuantity) && draftQuantity >= 0;
+    quantityDraft !== '' &&
+    Number.isInteger(draftQuantity) &&
+    draftQuantity >= 0 &&
+    (item.maxStack === null || draftQuantity <= item.maxStack);
 
   return (
     <li
@@ -810,11 +971,21 @@ function LabItemRow({
             slot: {definitionSlot}
           </Badge>
         )}
+        {item.maxStack !== null && (
+          <Badge variant="outline" className="text-[9px]">
+            max_stack: {item.maxStack}
+          </Badge>
+        )}
         <span
           data-testid={`lab-quantity-${item.d}`}
           className={cn('font-mono font-bold', quantity === 0 && 'text-muted-foreground')}
         >
-          ×{quantity}
+          {quantity > 0 ? 'Owned' : 'Not owned'}
+          {item.maxStack !== null && quantity > item.maxStack
+            ? ` ×${quantity} (exceeds max_stack:${item.maxStack})`
+            : quantity > 1
+              ? ` ×${quantity}`
+              : ''}
         </span>
         {equipped && (
           <Badge variant="secondary" className="text-[9px]">
@@ -836,13 +1007,14 @@ function LabItemRow({
         <Button
           variant="outline"
           size="sm"
-          className="h-6 px-1.5"
-          disabled={writesDisabled}
+          className="h-6 px-1.5 text-[10px]"
+          disabled={writesDisabled || atOrAboveMax}
           data-testid={`lab-add-${item.d}`}
           onClick={onAddOne}
-          aria-label={`Add one ${item.name}`}
+          aria-label={`Add ${item.name} to inventory`}
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="mr-0.5 h-3 w-3" />
+          {atOrAboveMax ? 'Owned' : 'Add to inventory'}
         </Button>
         <Button
           variant="outline"
@@ -859,7 +1031,7 @@ function LabItemRow({
           <Input
             value={quantityDraft}
             onChange={(e) => onQuantityDraft(e.target.value)}
-            placeholder="qty"
+            placeholder={item.maxStack !== null ? `0–${item.maxStack}` : 'qty'}
             inputMode="numeric"
             className="h-6 w-14 px-1.5 text-[11px]"
             data-testid={`lab-setqty-input-${item.d}`}
