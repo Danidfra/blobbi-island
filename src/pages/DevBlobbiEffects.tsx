@@ -16,7 +16,7 @@
  *
  * REDUCED MOTION is simulated with CSS rather than by patching `matchMedia`,
  * because the package's reduced-motion support IS a `@media` block: there is no
- * JavaScript to fool. The override below repeats that block's two declarations
+ * JavaScript to fool. The override below repeats that block's declaration
  * verbatim under a scoping attribute, so what the toggle shows is what a user
  * with the OS setting on actually sees.
  */
@@ -72,17 +72,20 @@ const REGISTRY_BY_EFFECT = new Map(
 /**
  * The reduced-motion simulation.
  *
- * Two declarations, copied from the package's own `@media
- * (prefers-reduced-motion: reduce)` block. Scoped to an attribute so the rest
- * of the page keeps animating and the two states can be compared side by side.
+ * The one declaration the package's own `@media (prefers-reduced-motion:
+ * reduce)` block applies, copied verbatim and scoped to an attribute so the
+ * rest of the page keeps animating and the two states can be compared side by
+ * side. Animation only: static transforms are PLACEMENT (a lightning segment's
+ * tilt) and survive reduced motion in the package too.
  */
 function ReducedMotionOverride() {
   return (
     <style>{`
 [data-fx-reduced="true"] .blobbi-fx-track,
-[data-fx-reduced="true"] .blobbi-fx-piece {
+[data-fx-reduced="true"] .blobbi-fx-piece,
+[data-fx-reduced="true"] .blobbi-fx-bolt,
+[data-fx-reduced="true"] .blobbi-fx-impact {
   animation: none !important;
-  transform: none !important;
 }
 `}</style>
   );

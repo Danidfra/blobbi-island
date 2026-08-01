@@ -172,15 +172,20 @@ wrapper exists because CSS percentage translations resolve against the
 element's own size — a 3 %-wide mote asked to `translateY(-45%)` would move by
 45 % of 3 %. On a box-sized track, `-45%` means 45 % of the box.
 
-No SVG element is used, and therefore no id: the effect layer cannot produce an
-id collision between instances the way the body SVG can (which is what
-`uniquifySvgIds` exists for).
+The particle system uses no SVG element and therefore mints no id. The one
+exception is the lightning renderer, which needs SVG paint servers (a gradient,
+a glow filter) — and those follow the body SVG's own rule: every id is
+namespaced by the renderer's `instanceId`, so two instances on one page share
+nothing. Asserted by test in both directions.
 
 ## 8. Reduced motion
 
 Implemented as a `@media (prefers-reduced-motion: reduce)` block inside the
 package's own stylesheet — **no hook, no JavaScript, no consumer wiring**. It
-switches every animation and transform off.
+switches every animation off, and only animation: a *static* transform is
+placement, not motion (a lightning segment's fixed tilt), so it survives — the
+resting composition keeps the shape it was designed to be. Animated transforms
+need no separate kill switch; with `animation: none` they cease to exist.
 
 That works only because of the opacity protocol: a piece's resting `opacity` is
 `var(--fx-o)` (its authored opacity × the caller's intensity), and every piece
@@ -195,15 +200,15 @@ Markup is identical in both modes, so the determinism guarantees still hold.
 
 | Constraint | Value |
 | --- | --- |
-| Pieces per effect | ≤ 18 (heaviest: Pixel Glitch, 14) |
-| Pieces across all four slots | ≤ 48 (worst case: 40) |
+| Pieces per effect | ≤ 18 (heaviest: Pixel Glitch, 14; Electric Charge adds 9 SVG strike elements) |
+| Pieces across all four slots | ≤ 48 (worst case: 42) |
 | Minimum animation cycle | 1.2 s — no decoration may read as flicker |
-| Animated properties | `transform` and `opacity` only |
-| Blur radius | ≤ 4 px (fog uses 3 px) |
+| Animated properties | `transform`, `opacity`, and (lightning only) `stroke-dashoffset` |
+| Blur radius | ≤ 4 px CSS (fog uses 3 px); the lightning glow is a bounded two-pass SVG `feGaussianBlur` (σ 1.2/4 box units) |
 | Timers / frame loops | **none** — no `setInterval`, `setTimeout`, `requestAnimationFrame` |
 | React state / effects / refs | **none** — the walker is a pure function of props |
 | DOM measurement | **none** |
-| Canvas | not used; CSS + `clip-path` proved sufficient |
+| Canvas | not used; CSS + `clip-path` + one SVG stroke renderer proved sufficient |
 
 No `effectQuality` mode is exposed. The caps put a fully-loaded Blobbi at ≤ 48
 compositor-friendly elements, comparable to one existing dance receptor; adding
@@ -263,9 +268,18 @@ reading as room weather.
 (`steps(1, end)`) displacement so fragments jump rather than slide. The body is
 never transformed or filtered: silhouette, face and hat stay readable.
 
-**Electric Charge** — small radial arcs around the body, one flash per cycle
-(deliberately not two — two would land near 5 Hz), plus sparks and a faint blue
-halo. Local; no full-screen flash.
+**Electric Charge** — two real lightning bolts flanking the body, drawn as SVG
+strokes (`LightningEffect.tsx`): a blue→gold→white gradient outer channel with
+a pure-white core down the same path, round joins, thin electric-blue branches
+forking outward, a radial impact glow pooling at each origin, and a two-pass
+`feGaussianBlur` bloom over all of it. Each bolt originates at the Blobbi's
+feet and DRAWS itself upward via `stroke-dashoffset` (`pathLength="100"`) in
+~180 ms, flickers like a real strike (1 → 0.3 → 1 → out over ~320 ms), and
+extinguishes; the two bolts alternate half a cycle apart on one shared 2.8 s
+cycle, with origin and tip sparks (ordinary catalog pieces) popping on the same
+clock. Exact hand-authored geometry — structure, not scatter — with only a
+small seeded per-instance jitter on branch timing. Local; no full-screen
+flash.
 
 **Celestial Aura** — a slow-pulsing blue-violet halo behind the body with tiny
 stars on two counter-rotating orbits. Premium but readable.

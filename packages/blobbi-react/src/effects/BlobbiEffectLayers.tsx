@@ -49,6 +49,7 @@ import type { ResolvedBlobbiVisualEffect } from './effect-model';
 import { pickFor, roundedRangeFor } from './deterministic';
 import { pieceShapeStyle } from './effect-shapes';
 import { effectStylesheetFor } from './effect-styles';
+import { LightningEffect } from './LightningEffect';
 
 /**
  * How far outside the renderer box each layer may reach.
@@ -89,9 +90,10 @@ function animationShorthand(
   delayS: number,
   timing: string,
   direction: 'normal' | 'reverse',
+  fill?: 'backwards',
 ): string | undefined {
   if (!name) return undefined;
-  return `${name} ${durationS}s ${timing} ${delayS}s infinite ${direction}`;
+  return `${name} ${durationS}s ${timing} ${delayS}s infinite ${direction}${fill ? ` ${fill}` : ''}`;
 }
 
 interface PieceNodeProps {
@@ -162,6 +164,7 @@ function EffectPieceNode({ group, seed, index, intensity }: PieceNodeProps) {
       pieceDelay,
       piece.timing ?? 'ease-in-out',
       piece.direction ?? 'normal',
+      piece.fill,
     ),
     ...pieceShapeStyle(piece.kind, color, group.accent),
   };
@@ -186,6 +189,7 @@ function EffectPieceNode({ group, seed, index, intensity }: PieceNodeProps) {
   if (piece.glitchYPct) {
     setVar(pieceStyle, '--fx-gy', `${fromRange(piece.glitchYPct, seed, index, 'gy')}%`);
   }
+
 
   return (
     <div className="blobbi-fx-track" style={trackStyle}>
@@ -244,6 +248,22 @@ export function BlobbiEffectLayer({
     const preset = BLOBBI_VISUAL_EFFECT_PRESETS[effect.id];
     const seed = `${instanceId}:${effect.id}`;
 
+    // Lightning is structure, not scatter: its channel is a connected SVG
+    // stroke that no generic piece walk can express, so it mounts as its own
+    // renderer on the mid layer (over the body, under the front accessories),
+    // alongside the effect's ordinary spark pieces. The special case is named
+    // here, once, rather than smuggled into the data model as a component —
+    // presets stay plain data.
+    const structural =
+      effect.id === 'electric-charge' && layer === 'mid' ? (
+        <LightningEffect
+          key={`${effect.id}-strike`}
+          instanceId={instanceId}
+          seed={seed}
+          intensity={effect.intensity}
+        />
+      ) : null;
+
     const nodes = preset.groups.flatMap((group, groupIndex) => {
       if (group.layer !== layer) return [];
       return Array.from({ length: group.count }, (_, pieceIndex) => {
@@ -260,7 +280,7 @@ export function BlobbiEffectLayer({
       });
     });
 
-    if (nodes.length === 0) return [];
+    if (nodes.length === 0 && structural === null) return [];
     return [
       <div
         key={effect.id}
@@ -272,6 +292,7 @@ export function BlobbiEffectLayer({
         data-blobbi-effect={effect.id}
         data-blobbi-effect-slot={effect.slot}
       >
+        {structural}
         {nodes}
       </div>,
     ];
@@ -311,10 +332,13 @@ export function BlobbiEffectStyles({
 
   const animations = new Set<string>();
   for (const effect of effects) {
-    for (const group of BLOBBI_VISUAL_EFFECT_PRESETS[effect.id].groups) {
+    const preset = BLOBBI_VISUAL_EFFECT_PRESETS[effect.id];
+    for (const group of preset.groups) {
       if (group.track.animation) animations.add(group.track.animation);
       if (group.piece.animation) animations.add(group.piece.animation);
     }
+    // Keyframes a structural renderer uses that no group names.
+    for (const name of preset.extraAnimations ?? []) animations.add(name);
   }
 
   return (

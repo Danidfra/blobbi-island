@@ -409,12 +409,39 @@ describe('effect markup is deterministic and instance-isolated', () => {
     );
   });
 
-  it('produces no element ids at all, so two instances cannot collide', () => {
-    // The body SVG needs `uniquifySvgIds` because SVG paint servers are
-    // referenced by id. The effect system deliberately uses none.
+  it('namespaces every effect id by instance, so two instances cannot collide', () => {
+    // The particle system mints no ids at all; the lightning SVG must mint its
+    // paint-server ids (filters and gradients are referenced by id), and every
+    // one is prefixed with the renderer's instance id — the same rule the body
+    // SVG follows. Two instances therefore share nothing.
     const { container } = draw(ALL.map((id) => ({ id })));
     for (const el of container.querySelectorAll('[class*="blobbi-fx"]')) {
       expect(el.getAttribute('id')).toBeNull();
+    }
+    // The lightning renderer is the one id-minting effect (pixel-glitch wins
+    // the body-overlay slot in the all-twelve draw above, so it needs its own
+    // render here), and every id it mints carries the instance prefix.
+    const strike = draw([{ id: 'electric-charge' }]);
+    const effectIds = [
+      ...strike.container.querySelectorAll('[data-blobbi-effect-layer] [id]'),
+    ].map((el) => el.id);
+    expect(effectIds.length).toBeGreaterThan(0);
+    for (const id of effectIds) {
+      expect(id.startsWith('fx-'), `${id} must carry the instance prefix`).toBe(true);
+    }
+
+    const two = render(
+      <div>
+        <BlobbiRendererView visual={BABY} instanceId="one" effects={[{ id: 'electric-charge' }]} />
+        <BlobbiRendererView visual={BABY} instanceId="two" effects={[{ id: 'electric-charge' }]} />
+      </div>,
+    );
+    const idsOf = (instance: number) => [
+      ...two.container.children[0].children[instance].querySelectorAll('[id]'),
+    ].map((el) => el.id);
+    const first = new Set(idsOf(0));
+    for (const id of idsOf(1)) {
+      expect(first.has(id), `${id} appears in both instances`).toBe(false);
     }
   });
 
@@ -474,6 +501,11 @@ describe('the effect stylesheet travels with the effects that need it', () => {
         ...pieces(container).map(animationOf),
         ...[...container.querySelectorAll('.blobbi-fx-track')].map((t) =>
           animationOf(t as HTMLElement),
+        ),
+        // The lightning renderer's SVG strokes and impact flashes animate too,
+        // and their keyframes must ship exactly like everyone else's.
+        ...[...container.querySelectorAll('.blobbi-fx-bolt, .blobbi-fx-impact')].map(
+          (el) => animationOf(el as HTMLElement),
         ),
       ].filter(Boolean),
     );

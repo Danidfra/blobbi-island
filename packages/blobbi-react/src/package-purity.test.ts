@@ -200,6 +200,9 @@ describe('the package reaches nothing it must not', () => {
     expect(components).toEqual([
       'src/BlobbiRendererView.tsx',
       'src/effects/BlobbiEffectLayers.tsx',
+      // Lightning: the one effect that is a connected structure rather than a
+      // particle scatter, drawn as instance-namespaced SVG strokes.
+      'src/effects/LightningEffect.tsx',
     ]);
   });
 

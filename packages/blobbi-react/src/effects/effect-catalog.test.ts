@@ -160,6 +160,11 @@ describe('animation references and timing', () => {
           expect(isKnownEffectAnimation(name), `${preset.id} → ${name}`).toBe(true);
         }
       }
+      // Structural renderers declare their keyframes on the preset; a typo
+      // there would emit an animation name with no rule behind it.
+      for (const name of preset.extraAnimations ?? []) {
+        expect(isKnownEffectAnimation(name), `${preset.id} → extra ${name}`).toBe(true);
+      }
     }
   });
 
@@ -301,7 +306,7 @@ describe('the layer model', () => {
 
 describe('shapes', () => {
   const KINDS: EffectPieceKind[] = [
-    'dot', 'glow-dot', 'star4', 'star6', 'bubble', 'heart', 'bolt',
+    'dot', 'glow-dot', 'star4', 'star6', 'bubble', 'heart',
     'pixel', 'ring', 'halo', 'rays', 'fog', 'rainbow-ring',
   ];
 
@@ -315,7 +320,7 @@ describe('shapes', () => {
   });
 
   it('uses percentage clip-paths, so a shape scales with the renderer box', () => {
-    for (const kind of ['star4', 'star6', 'heart', 'bolt'] as EffectPieceKind[]) {
+    for (const kind of ['star4', 'star6', 'heart'] as EffectPieceKind[]) {
       const clip = pieceShapeStyle(kind, '#fff', '#000').clipPath as string;
       expect(clip, kind).toMatch(/^polygon\(/);
       expect(clip, `${kind} must not use pixel coordinates`).not.toMatch(/\dpx/);
@@ -358,7 +363,7 @@ describe('the stylesheet', () => {
     }
   });
 
-  it('removes every animation under prefers-reduced-motion', () => {
+  it('removes every animation under prefers-reduced-motion — and ONLY animation', () => {
     const block = /@media \(prefers-reduced-motion: reduce\)\{([\s\S]*?)\n\}/.exec(
       BLOBBI_EFFECT_STYLESHEET,
     );
@@ -367,7 +372,11 @@ describe('the stylesheet', () => {
     expect(rules).toContain('.blobbi-fx-track');
     expect(rules).toContain('.blobbi-fx-piece');
     expect(rules).toContain('animation:none !important');
-    expect(rules).toContain('transform:none !important');
+    // Deliberately NOT `transform:none`: a static transform is placement — a
+    // lightning segment's tilt, a radially arranged arc — and stripping it
+    // would bend the resting composition into something never designed.
+    // Animated transforms die with `animation:none` on their own.
+    expect(rules).not.toContain('transform:none');
   });
 
   it('makes the resting opacity of a piece its own --fx-o', () => {
@@ -379,7 +388,8 @@ describe('the stylesheet', () => {
     // Every opacity inside a PIECE keyframe must be expressed in terms of
     // `--fx-o`; a literal like `opacity:0.6` would ignore intensity entirely.
     const pieceKeyframes = ['blobbi-fx-twinkle', 'blobbi-fx-blink', 'blobbi-fx-pulse',
-      'blobbi-fx-shimmer', 'blobbi-fx-glitch', 'blobbi-fx-zap'];
+      'blobbi-fx-shimmer', 'blobbi-fx-glitch', 'blobbi-fx-bolt-seg', 'blobbi-fx-bolt-draw',
+      'blobbi-fx-impact-flash'];
     for (const name of pieceKeyframes) {
       const block = new RegExp(`@keyframes ${name}\\{([\\s\\S]*?)\\}\\}`).exec(
         BLOBBI_EFFECT_STYLESHEET,

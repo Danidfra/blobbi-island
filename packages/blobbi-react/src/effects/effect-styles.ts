@@ -42,13 +42,22 @@
  * take pointer events, layers are absolutely positioned so they cannot
  * influence layout, and the reduced-motion block removes every animation the
  * system can produce.
+ *
+ * REDUCED MOTION removes `animation` and nothing else. Motion is what the
+ * preference is about; a STATIC transform is placement, not motion — a
+ * lightning segment's fixed tilt, a radially arranged arc — and stripping it
+ * would bend the resting composition into something never designed. Animated
+ * transforms need no separate kill switch: with `animation: none` they simply
+ * stop existing, and the element falls back to its inline (static) transform.
  */
 const BASE_RULES = `
 .blobbi-fx-layer{position:absolute;pointer-events:none;overflow:visible;}
 .blobbi-fx-track{position:absolute;inset:0;pointer-events:none;transform-origin:50% 50%;will-change:transform;}
 .blobbi-fx-piece{position:absolute;pointer-events:none;transform-origin:50% 50%;will-change:transform,opacity;opacity:var(--fx-o,1);}
+.blobbi-fx-bolt{fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;stroke-dasharray:100;opacity:var(--fx-o,1);}
+.blobbi-fx-impact{pointer-events:none;opacity:calc(var(--fx-o,1) * 0.55);}
 @media (prefers-reduced-motion: reduce){
-.blobbi-fx-track,.blobbi-fx-piece{animation:none !important;transform:none !important;}
+.blobbi-fx-track,.blobbi-fx-piece,.blobbi-fx-bolt,.blobbi-fx-impact{animation:none !important;}
 }
 `;
 
@@ -145,13 +154,47 @@ to{transform:rotate(360deg)}}`,
 60%{transform:translate(var(--fx-gx,6%),calc(var(--fx-gy,4%) * -1));opacity:var(--fx-o,1)}
 80%{transform:translate(0,0);opacity:calc(var(--fx-o,1) * 0.32)}}`,
 
-  // ONE flash per cycle, deliberately. An arc that strobes twice per cycle at
-  // these durations lands near 5 Hz, and nothing decorative should go there.
-  'blobbi-fx-zap': `@keyframes blobbi-fx-zap{
-0%,62%,100%{opacity:0;transform:scaleY(0.55)}
-68%{opacity:var(--fx-o,1);transform:scaleY(1)}
-78%{opacity:calc(var(--fx-o,1) * 0.5);transform:scaleY(1.05)}
-86%{opacity:0;transform:scaleY(0.7)}}`,
+  // ── The lightning strike ──────────────────────────────────────────────
+  //
+  // Three keyframes, one shared 2.8 s cycle, exact per-element delays:
+  //
+  //  bolt-draw     the channel itself. Every strike path carries
+  //                `pathLength="100"` and `stroke-dasharray:100`, so driving
+  //                stroke-dashoffset 100→0 DRAWS the path from its `M` (the
+  //                origin at the Blobbi's feet) to its tip in 0→6.5% of the
+  //                cycle — 182 ms, fast enough to feel instant, slow enough to
+  //                see the bolt travel. Then the flicker of a real strike:
+  //                full → 0.3 → full → out across ~320 ms, one restrike only
+  //                (more would head toward strobe territory).
+  //  impact-flash  the strike-point glow at the origin: snaps on with the
+  //                draw, decays with the flicker.
+  //  bolt-seg      the tip/origin sparks (ordinary catalog pieces): a sharp
+  //                pop timed into the same cycle.
+  'blobbi-fx-bolt-draw': `@keyframes blobbi-fx-bolt-draw{
+0%{stroke-dashoffset:100;opacity:0}
+0.5%{opacity:var(--fx-o,1)}
+6.5%{stroke-dashoffset:0;opacity:var(--fx-o,1)}
+8.5%{opacity:calc(var(--fx-o,1) * 0.3)}
+10.5%{opacity:var(--fx-o,1)}
+13%{opacity:calc(var(--fx-o,1) * 0.75)}
+16%{opacity:calc(var(--fx-o,1) * 0.9)}
+18%,100%{stroke-dashoffset:0;opacity:0}}`,
+
+  'blobbi-fx-impact-flash': `@keyframes blobbi-fx-impact-flash{
+0%{opacity:0}
+1%{opacity:var(--fx-o,1)}
+8%{opacity:calc(var(--fx-o,1) * 0.5)}
+11%{opacity:calc(var(--fx-o,1) * 0.85)}
+20%,100%{opacity:0}}`,
+
+  'blobbi-fx-bolt-seg': `@keyframes blobbi-fx-bolt-seg{
+0%{opacity:0}
+1.5%{opacity:var(--fx-o,1)}
+6%{opacity:calc(var(--fx-o,1) * 0.92)}
+8.5%{opacity:calc(var(--fx-o,1) * 0.48)}
+11%{opacity:var(--fx-o,1)}
+16%{opacity:calc(var(--fx-o,1) * 0.85)}
+19%,100%{opacity:0}}`,
 };
 
 const ALL_KEYFRAMES: Record<string, string> = {

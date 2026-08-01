@@ -82,6 +82,14 @@ export interface EffectPieceSpec {
   /** Displacement amplitudes for `blobbi-fx-glitch`, as % of the piece. */
   glitchXPct?: EffectRange;
   glitchYPct?: EffectRange;
+  /**
+   * `backwards` keeps the FIRST keyframe applied during the initial
+   * animation-delay. Ambient particles deliberately omit it — they should be
+   * visible at their authored spots from the first frame, not fade in over
+   * their stagger window — but strike-synchronized pieces must stay dark until
+   * their cue.
+   */
+  fill?: 'backwards';
 }
 
 export interface EffectPieceGroup {
@@ -102,6 +110,12 @@ export interface BlobbiVisualEffectPreset {
   /** One sentence, presentation-level. Rarity and item identity are Island's. */
   description: string;
   groups: readonly EffectPieceGroup[];
+  /**
+   * Keyframes used by this effect's STRUCTURAL renderer (`LightningEffect`),
+   * which the group walk cannot discover. `BlobbiEffectStyles` merges these
+   * into the emitted stylesheet; the catalog test verifies each one exists.
+   */
+  extraAnimations?: readonly string[];
 }
 
 /**
@@ -134,11 +148,51 @@ const VIOLET_FOG = ['#a98cf0', '#8f6fe0', '#c3a9ff'] as const;
 const FROST_VAPOUR = ['#dffaff', '#b6ecf7', '#ffffff'] as const;
 const FROST_CRYSTAL = ['#bfeffb', '#8fd6ea', '#eafaff'] as const;
 const ARCADE = ['#4ff0ff', '#ff5ce0', '#ffe74f'] as const;
-const ELECTRIC = ['#cfe8ff', '#8fd4ff', '#5fb4ff'] as const;
 const CELESTIAL = ['#cfd8ff', '#a9b8ff', '#ffffff'] as const;
 const SOLAR = ['#ffe9b0', '#ffd070', '#fff8e0'] as const;
 const VOID_MOTE = ['#c4a6ff', '#9a74e8', '#e3d4ff'] as const;
 const PASTEL = ['#ffc7de', '#ffe9b8', '#c9f2d4', '#bfe4ff', '#d9cdff'] as const;
+
+// ─── Lightning ──────────────────────────────────────────────────────────────
+//
+// Electric Charge is the one effect that is STRUCTURE, not scatter: a bolt is
+// a single connected channel, so it is drawn as SVG strokes with a dash-offset
+// draw-on (`LightningEffect.tsx`) rather than as catalog pieces. What remains
+// here is the part that IS particles — the tip and origin sparks — plus the
+// shared cycle constant both halves are timed against, so the sparks can pop
+// exactly when the leader arrives.
+
+/** One shared cycle for the whole strike, so every delay stays in phase. */
+export const STRIKE_CYCLE_S = 2.8;
+
+/** One exactly-placed, exactly-timed strike spark. */
+function strikeSpark(opts: {
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  layer: EffectLayer;
+}): EffectPieceGroup {
+  return {
+    layer: opts.layer,
+    count: 1,
+    colors: ['#ffffff'],
+    accent: 'rgba(112,214,255,0.7)',
+    track: {},
+    piece: {
+      kind: 'glow-dot',
+      sizePct: [opts.size, opts.size],
+      xPct: [opts.x, opts.x],
+      yPct: [opts.y, opts.y],
+      opacity: [0.95, 0.95],
+      animation: 'blobbi-fx-bolt-seg',
+      durationS: [STRIKE_CYCLE_S, STRIKE_CYCLE_S],
+      delayS: [opts.delay, opts.delay],
+      timing: 'linear',
+      fill: 'backwards',
+    },
+  };
+}
 
 /**
  * Every effect this package draws.
@@ -321,7 +375,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           sizePct: [4, 8],
           xPct: [12, 88],
           yPct: [44, 86],
-          opacity: [0.7, 0.95],
+          opacity: [0.78, 1],
           animation: 'blobbi-fx-twinkle',
           durationS: [2, 3.2],
           delayS: [0, 2.2],
@@ -447,6 +501,32 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           animation: 'blobbi-fx-shimmer',
           durationS: [7, 11],
           delayS: [0, 6],
+        },
+      },
+      {
+        // Enchantment motes glinting INSIDE the mist — the tell that this fog
+        // is magical rather than meteorological. Slow, sparse, low.
+        layer: 'front',
+        count: 3,
+        colors: ['#e6d8ff', '#cdb2ff', '#f2ecff'],
+        accent: 'rgba(180,140,255,0.5)',
+        track: {
+          animation: 'blobbi-fx-drift',
+          durationS: [9, 14],
+          delayS: [0, 7],
+          dxPct: [-6, 6],
+          dyPct: [-3, 3],
+          timing: 'ease-in-out',
+        },
+        piece: {
+          kind: 'glow-dot',
+          sizePct: [1.8, 3],
+          xPct: [18, 82],
+          yPct: [64, 88],
+          opacity: [0.5, 0.8],
+          animation: 'blobbi-fx-twinkle',
+          durationS: [3.5, 5.5],
+          delayS: [0, 4],
         },
       },
     ],
@@ -576,62 +656,19 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
     displayName: 'Electric Charge',
     description:
       'Bright electric arcs crackle around your Blobbi with the energy of a fully charged arcade machine.',
+    // The bolts themselves are SVG strokes drawn by `LightningEffect` on the
+    // mid layer — see the module note above. These groups are the sparks that
+    // ride the same 2.8 s cycle: a pair popping at each origin as the strike
+    // leaves the ground, and one at each tip as the leader arrives.
+    extraAnimations: ['blobbi-fx-bolt-draw', 'blobbi-fx-impact-flash'],
     groups: [
-      {
-        layer: 'behind',
-        count: 1,
-        colors: ['rgba(120,190,255,0.6)'],
-        accent: 'rgba(80,150,255,0.2)',
-        track: {},
-        piece: {
-          kind: 'halo',
-          sizePct: [118, 118],
-          xPct: [50, 50],
-          yPct: [50, 50],
-          opacity: [0.5, 0.5],
-          animation: 'blobbi-fx-pulse',
-          durationS: [3.4, 3.4],
-          delayS: [0, 0],
-        },
-      },
-      {
-        // Arcs arranged radially by rotating each (still) track. Local and
-        // small: no arc spans the body, and nothing flashes full-screen.
-        layer: 'mid',
-        count: 5,
-        colors: ELECTRIC,
-        accent: '#2f7fd0',
-        track: { rotateDeg: [0, 330] },
-        piece: {
-          kind: 'bolt',
-          sizePct: [10, 17],
-          xPct: [22, 78],
-          yPct: [24, 76],
-          opacity: [0.75, 1],
-          animation: 'blobbi-fx-zap',
-          durationS: [2.2, 3.6],
-          delayS: [0, 3.2],
-          timing: 'ease-out',
-        },
-      },
-      {
-        layer: 'front',
-        count: 4,
-        colors: ELECTRIC,
-        accent: '#2f7fd0',
-        track: { rotateDeg: [0, 300] },
-        piece: {
-          kind: 'dot',
-          sizePct: [2.2, 3.8],
-          xPct: [20, 80],
-          yPct: [26, 78],
-          opacity: [0.8, 1],
-          animation: 'blobbi-fx-zap',
-          durationS: [1.9, 3.2],
-          delayS: [0, 2.8],
-          timing: 'ease-out',
-        },
-      },
+      // Left bolt (fires at 0.0s): origin cluster, then the tip.
+      strikeSpark({ x: 30, y: 90, size: 2.6, delay: 0.02, layer: 'mid' }),
+      strikeSpark({ x: 38, y: 89, size: 2, delay: 0.05, layer: 'mid' }),
+      strikeSpark({ x: 29, y: 34, size: 2.4, delay: 0.2, layer: 'front' }),
+      // Right bolt (fires half a cycle later).
+      strikeSpark({ x: 70, y: 88, size: 2.2, delay: 1.42, layer: 'mid' }),
+      strikeSpark({ x: 70, y: 38, size: 2.2, delay: 1.6, layer: 'front' }),
     ],
   },
 
@@ -655,7 +692,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           sizePct: [148, 148],
           xPct: [50, 50],
           yPct: [50, 50],
-          opacity: [0.55, 0.55],
+          opacity: [0.6, 0.6],
           animation: 'blobbi-fx-pulse',
           durationS: [6.5, 6.5],
           delayS: [0, 0],
@@ -729,7 +766,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           sizePct: [172, 172],
           xPct: [50, 50],
           yPct: [50, 50],
-          opacity: [0.62, 0.62],
+          opacity: [0.68, 0.68],
           animation: 'blobbi-fx-spin',
           // Slow enough to read as radiance rather than as a spinning wheel.
           durationS: [34, 34],
@@ -877,7 +914,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           sizePct: [152, 152],
           xPct: [50, 50],
           yPct: [50, 50],
-          opacity: [0.5, 0.5],
+          opacity: [0.56, 0.56],
           animation: 'blobbi-fx-spin',
           durationS: [26, 26],
           delayS: [0, 0],
