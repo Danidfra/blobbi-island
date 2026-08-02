@@ -194,20 +194,19 @@ describe('granting tickets', () => {
     expect(itemsOf(h.published[0])[unknown]).toBe(7);
   });
 
-  it('drops unknown NON-item tags — exactly as every other inventory write does', async () => {
+  it('preserves unknown NON-item tags — exactly as every other inventory write does', async () => {
     // This is the canonical `buildInventoryTemplate` behaviour, not something
-    // the arcade introduced: the builder reconstructs the event from the parsed
-    // items plus the Island's own name/alt, so a tag it does not model is lost
-    // on the next write by ANY caller (purchase, use, batch, or this one).
-    // Pinned here so the limitation is visible rather than discovered, and
-    // documented in `docs/blobbi-dance.md`. Fixing it belongs to the inventory
-    // layer, not to a reward writer that must not diverge from it.
+    // the arcade introduced: kind:31633 is a replaceable event, so a write that
+    // drops tags it does not model destroys other clients' (and our own
+    // markers') data permanently. The builder passes every foreign tag through
+    // verbatim on the next write by ANY caller (purchase, use, batch, or this
+    // one).
     const h = harness({
       events: [inventoryEvent([[APPLE, 2]], [['mystery', 'value']])],
     });
     await h.writer.publishTicketGrant(claim(1));
-    expect(h.published[0].tags.some(([name]) => name === 'mystery')).toBe(false);
-    // The thing that actually matters — the other balance — is intact.
+    expect(h.published[0].tags).toContainEqual(['mystery', 'value']);
+    // The other balance is intact too.
     expect(itemsOf(h.published[0])[APPLE]).toBe(2);
   });
 

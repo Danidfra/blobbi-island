@@ -473,18 +473,16 @@ It never reads or writes kind:11125 coins. The Arcade **Pass** (temporary
 `sessionStorage` floor access) is not an item and has no address, so it cannot be
 confused with the Arcade **Ticket** by construction.
 
-### One honest limitation: unknown non-item tags
+### Unknown non-item tags (limitation fixed by the economy reset)
 
-`buildInventoryTemplate` reconstructs the event from the parsed items plus the
-Island's own `name`/`alt`, so a kind:31633 tag it does not model is **dropped on
-the next write by ANY caller** — purchase, use, batch, or this one. That is
-pre-existing canonical behaviour, not something the arcade introduced. It is
-pinned by a test so the limitation is visible rather than discovered. Fixing it
-belongs to the inventory layer; a reward writer that diverged from the canonical
-builder to work around it would be worse than the problem.
+`buildInventoryTemplate` is now LOSSLESS for data it does not own: unknown
+tags, `context` tags, grant references and event `content` all ride through
+every write by ANY caller — purchase, use, batch, or this one. (Historically
+they were dropped; that defect was fixed in the inventory layer before the
+economy-entry allocation marker could rely on surviving rewrites, and the old
+destruction-pinning test became a preservation test.)
 
-Unknown *item addresses* — the thing that actually matters — are preserved with
-their quantities intact.
+Unknown *item addresses* are likewise preserved with their quantities intact.
 
 ---
 
@@ -575,9 +573,10 @@ The player is under-paid by 3. That is accepted for this phase, deliberately:
   **inflating a scarce currency**, and this phase picks the first.
 
 Fixing it properly needs per-event attribution — knowing that *this* grant is in
-that balance. kind:31633 cannot express that without inventing tags the canonical
-parser drops and other clients would not understand, which is explicitly out of
-scope. It is recorded, not hidden: see
+that balance. kind:31633 cannot express that without inventing per-operation
+tags other clients would not understand (the builder now preserves unknown tags,
+but a tag convention nobody else reads is still not attribution), which is
+explicitly out of scope. It is recorded, not hidden: see
 `src/hooks/useArcadeReward.test.tsx` → *"the >= baseline + award inference,
 recorded deliberately"*, which asserts the false positive on purpose so nobody
 "fixes" it into a republish.
@@ -631,9 +630,13 @@ offline; the alternative cost is paying twice.
   ledger. The exposure is bounded — a `runId` is minted per run and never leaves
   the device that minted it, so another device has no run id to re-claim — but
   that is an obstacle, not a guarantee.
-- **Protocol level: nothing.** There is nowhere in kind:31633 to record "run X
-  has been paid" without inventing tags the canonical parser drops and other
-  clients would not understand. Rejected deliberately; documented instead.
+- **Protocol level: nothing.** Recording "run X has been paid" in kind:31633
+  would mean inventing a per-run tag convention other clients do not read (the
+  builder preserves unknown tags now, but preservation is not attribution).
+  Rejected deliberately for per-run rewards; documented instead. The ONE
+  protocol-level record of this shape that does exist is the economy-entry
+  allocation marker — viable precisely because it is a single per-account fact,
+  not an unbounded per-run history.
 - **Two tabs racing before either has written to the ledger.** Excluded by the
   cross-tab lock. Where the Web Locks API exists that exclusion is real and
   atomic — **verified in Chrome across two genuine tabs**: tab B saw tab A's

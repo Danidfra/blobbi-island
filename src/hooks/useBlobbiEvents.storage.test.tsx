@@ -78,7 +78,6 @@ describe('kind:11125 write path — legacy storage opacity', () => {
       await result.current.mutateAsync({
         profileId: 'profile',
         name: 'Newcomer',
-        coins: 100,
         pettingLevel: 0,
         lifetimeBlobbis: 1,
         ownedPets: ['blobbi-abc'],
@@ -88,8 +87,10 @@ describe('kind:11125 write path — legacy storage opacity', () => {
 
     const tags = publishedTags();
     // The profile was really written...
-    expect(tags.find(([n]) => n === 'coins')?.[1]).toBe('100');
     expect(tagsNamed(tags, 'has')).toEqual([['has', 'blobbi-abc']]);
+    // ...and since the Coin cutover a fresh profile carries NO coins tag at
+    // all — the initial balance is a wallet grant into kind:31633.
+    expect(tags.find(([n]) => n === 'coins')).toBeUndefined();
     // ...with no consumable inventory anywhere on it.
     expect(tagsNamed(tags, 'storage')).toEqual([]);
   });
@@ -120,12 +121,15 @@ describe('kind:11125 write path — legacy storage opacity', () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ coins: 165 });
+      await result.current.mutateAsync({ name: 'Veteran Renamed' });
     });
 
     const tags = publishedTags();
     // The intended change landed.
-    expect(tags.find(([n]) => n === 'coins')?.[1]).toBe('165');
+    expect(tags.find(([n]) => n === 'name')?.[1]).toBe('Veteran Renamed');
+    // The historic coins tag rides the passthrough VERBATIM — a profile
+    // update can never change a balance since the Coin cutover.
+    expect(tags.find(([n]) => n === 'coins')?.[1]).toBe('200');
     // Legacy storage survived with every element intact, exactly once.
     expect(tagsNamed(tags, 'storage')).toEqual([
       ['storage', 'food_apple:5', 'legacy-extra'],

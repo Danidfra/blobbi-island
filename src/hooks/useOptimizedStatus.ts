@@ -166,12 +166,6 @@ export function useOptimizedStatus() {
     });
   }, [applyOptimisticUpdate]);
 
-  const updateOwnerCoins = useCallback((coins: number) => {
-    applyOptimisticUpdate({
-      ownerUpdates: { coins },
-    });
-  }, [applyOptimisticUpdate]);
-
   const updatePetCareTimestamp = useCallback((petId: string, careType: keyof Pick<PetState, 'lastMeal' | 'lastClean' | 'lastWarm' | 'lastTalk' | 'lastCheck' | 'lastSing' | 'lastMedicine'>) => {
     applyOptimisticUpdate({
       petId,
@@ -205,7 +199,6 @@ export function useOptimizedStatus() {
 
     // Update functions
     updatePetStats,
-    updateOwnerCoins,
     updatePetCareTimestamp,
     updatePetBehavior,
     setCurrentCompanion,

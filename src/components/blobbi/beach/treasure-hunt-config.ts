@@ -103,6 +103,22 @@ export const TREASURE_HUNT_UI_POLICY: TreasureHuntPolicy = {
   ...DEFAULT_TREASURE_HUNT_POLICY,
   fieldWidth: TREASURE_FIELD_WIDTH,
   initialCoilPosition: { x: TREASURE_FIELD_WIDTH / 2, y: 0.5 },
+  /*
+   * The SPECIAL candidate slot is disabled in production: the current reward
+   * policy grants Blobbi Coins only, and generating a "special" find would
+   * imply an item reward the product does not grant. The pure model keeps
+   * the concept (Phase 1A unchanged); this policy simply never asks for one.
+   * With litter 4–5 and valuable 3–4 summing to 9, the composition resolves
+   * deterministically to 5 litter + 4 valuables.
+   */
+  categories: {
+    ...DEFAULT_TREASURE_HUNT_POLICY.categories,
+    special: {
+      ...DEFAULT_TREASURE_HUNT_POLICY.categories.special,
+      minCount: 0,
+      maxCount: 0,
+    },
+  },
 };
 
 // An invalid derived policy is a build bug; fail at import, like shop-catalog.

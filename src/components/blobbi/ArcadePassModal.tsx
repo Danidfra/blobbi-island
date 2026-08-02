@@ -10,12 +10,12 @@ import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useToast } from '@/hooks/useToast';
-import { useCoinsMutation } from '@/inventory/useCoinsMutation';
+import { useCoinBalance, useCoinWallet } from '@/inventory/useCoinWallet';
+import { mintCoinOpId, CoinWalletError } from '@/inventory/coin-wallet';
 import { grantArcadePass } from '@/lib/arcade-pass';
 
-/** What an Arcade Pass costs, in kind:11125 coins. */
+/** What an Arcade Pass costs, in Blobbi Coins. */
 export const ARCADE_PASS_PRICE = 20;
 
 /**
@@ -25,6 +25,12 @@ export const ARCADE_PASS_PRICE = 20;
  */
 const PASS_STORAGE_FAILED = '__pass-storage-failed__';
 
+/**
+ * Prefix marking an AMBIGUOUS charge message: the "no coins were deducted"
+ * suffix would be a lie there, so the alert renders these verbatim.
+ */
+const CHARGE_AMBIGUOUS_PREFIX = '__ambiguous__';
+
 interface ArcadePassModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,82 +39,38 @@ interface ArcadePassModalProps {
 /**
  * Buy an Arcade Pass.
  *
- * ## What changed, and why it had to
+ * ## Coin cutover
  *
- * The purchase used to call `useOptimizedStatus().updateOwnerCoins(coins - 20)`,
- * which is a purely local optimistic mutation: it pushes onto a per-hook-instance
- * `useRef` and invalidates with `refetchType: 'none'`. Nothing was published. A
- * WebSocket spy during the audit's purchase recorded zero events beyond presence
- * heartbeats, the deduction was visible *only inside this modal*, and a reload
- * restored the full balance while clearing the pass — so passes were unlimited
- * and free.
- *
- * The charge now goes through `useCoinsMutation`, the canonical coin writer:
- * it re-reads the freshest kind:11125 available from the relay as its write
- * base, merges through `mergeOwnerProfileTags` (preserving unknown Ditto tags,
- * pets, achievements, current companion) plus the raw `inv` accessory tags,
- * refuses a negative result, and publishes exactly once.
- *
- * ## What "the charge succeeded" actually guarantees — and what it does not
- *
- * `useCoinsMutation` resolves once, in order: the freshest profile was fetched
- * and parsed, the new balance is non-negative, the signer produced a signed
- * kind:11125, and `nostr.event()` returned. It does **not** guarantee relay
- * settlement, and nothing here verifies the write afterwards:
- *
- * | outcome inside `useNostrPublish` | what this modal sees |
- * | --- | --- |
- * | a relay accepted the event | resolves — genuinely published |
- * | **5 s timeout / abort** | **resolves** — a `console.warn`, treated as success |
- * | every relay hard-rejected | throws |
- *
- * So a resolved charge can mean "no relay confirmed within 5 s", which includes
- * "no relay ever received it". That leniency is deliberate in the shared
- * primitive (it is tuned for presence heartbeats) and is NOT changed here — see
- * `docs/arcade-reward-publication-boundary.md` for why, and for the
- * strict-publish + verify pattern the reward phase will use instead. The
- * consequence for this modal is bounded and worth stating plainly: the failure
- * mode is a pass granted for coins that were never durably deducted, which
- * favours the player, is worth 20 coins, and expires when they leave the arcade.
+ * The charge is a canonical Coin WALLET spend (official Blobbi Coin quantity
+ * in kind:31633) — fresh authoritative balance read, strict publish (a
+ * timeout is AMBIGUOUS, never success), durable per-operation ledger, and
+ * read-back verification. The old kind:11125 path (and before it, the local
+ * `updateOwnerCoins` mutation that published nothing at all) is gone.
  *
  * ## Transaction boundary
  *
- * **The pass is granted only after the coin publish resolves.** There is no
- * optimistic pass and no optimistic balance here — an optimistic update is only
- * honest when it is backed by a rollback, and the thing being "rolled back"
- * would be access the player had already used.
+ * **The pass is granted only after the spend reports `applied`.** Three
+ * failure shapes, each with its own copy, because they are not the same:
  *
- * Three outcomes, each reported differently, because they are not the same
- * thing:
- *
- * 1. **the charge threw** — no pass, and the coins were not deducted;
- * 2. **the charge resolved but storing the pass failed** — the coins may already
- *    be gone, so the copy must NOT claim otherwise. No compensating coin write
- *    is attempted: a refund would be a second unverified publish on top of a
- *    first one whose outcome we do not actually know, and could hand back coins
- *    that were never taken;
- * 3. **full success**.
- *
- * ## Loading and error states
- *
- * The balance used to render as `status.owner?.coins || 0`, so a query in flight
- * — or a failed one — told the player they had zero coins and disabled the
- * button. A transient relay problem presented as "you are broke". Now an
- * unresolved balance is a skeleton, a failed one is an error with a retry, and
- * neither is a number.
+ * 1. **the spend threw** — provably pre-publish (insufficient funds, signer
+ *    refusal…): no pass, and no coins moved;
+ * 2. **the spend is `ambiguous`** — the publish MAY have landed. No pass is
+ *    granted and no retry is offered here: the durable operation record
+ *    blocks a duplicate, and reconciliation resolves it on the next wallet
+ *    touch. The copy never claims the coins are safe;
+ * 3. **the spend applied but storing the pass failed** — the coins are gone;
+ *    the copy says so honestly. No compensating grant is attempted (a refund
+ *    would be a second value mutation for a storage problem).
  */
 export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
   const stageOverlayHost = useStageOverlayHost();
-  const { status, refreshFromRelay } = useOptimizedStatus();
+  const { balance: coins, isLoading: isLoadingBalance, isError, refetch } = useCoinBalance();
   const { toast } = useToast();
-  const { mutateAsync: changeCoins, isPending: isPurchasing } = useCoinsMutation();
+  const { spendCoins } = useCoinWallet();
+  const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  const isLoadingBalance = status.isLoading;
-  // A resolved-but-absent profile is as unknown as a failed one: the player has
-  // a balance somewhere, we just could not read it.
-  const balanceError = status.error ?? (!isLoadingBalance && !status.owner ? 'Balance unavailable' : null);
-  const coins = status.owner?.coins ?? null;
+  const balanceError = isError ? 'Balance unavailable' : null;
 
   const canAfford = coins !== null && coins >= ARCADE_PASS_PRICE;
   const canPurchase = !isLoadingBalance && !balanceError && canAfford && !isPurchasing;
@@ -126,14 +88,36 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
   const handlePurchasePass = async () => {
     if (!canPurchase || coins === null || inFlightRef.current) return;
     inFlightRef.current = true;
+    setIsPurchasing(true);
     setPurchaseError(null);
 
     try {
-      // The canonical writer re-reads the balance itself, so the number rendered
-      // above is a display value only — it is never the basis for the charge.
-      await changeCoins(-ARCADE_PASS_PRICE);
+      // The wallet re-reads the authoritative balance itself, so the number
+      // rendered above is a display value only — never the basis for the
+      // charge. One durable operation per attempt.
+      const outcome = await spendCoins({
+        opId: mintCoinOpId('arcade-pass'),
+        amount: ARCADE_PASS_PRICE,
+        label: 'arcade-pass',
+      });
+      if (outcome.status === 'ambiguous' || outcome.status === 'blocked') {
+        const message =
+          'The charge could not be confirmed. It will be reconciled — no pass was issued and nothing will be charged twice.';
+        setPurchaseError(`${CHARGE_AMBIGUOUS_PREFIX}${message}`);
+        toast({
+          title: 'Purchase not confirmed',
+          description: message,
+          variant: 'destructive',
+        });
+        return;
+      }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not reach a relay';
+      const message =
+        error instanceof CoinWalletError && error.reason === 'insufficient-funds'
+          ? 'Not enough Blobbi Coins'
+          : error instanceof Error
+            ? error.message
+            : 'Could not reach a relay';
       setPurchaseError(message);
       toast({
         title: 'Purchase failed',
@@ -143,6 +127,7 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
       return;
     } finally {
       inFlightRef.current = false;
+      setIsPurchasing(false);
     }
 
     // Storage can refuse the write. Granting is the last step and the only one
@@ -230,7 +215,7 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
                     size="sm"
                     onClick={() => {
                       setPurchaseError(null);
-                      refreshFromRelay();
+                      refetch();
                     }}
                     className="rounded-full"
                   >
@@ -260,7 +245,9 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
             ) : (
               purchaseError && (
                 <p role="alert" className="mb-4 text-sm text-island-danger">
-                  {purchaseError}. No coins were deducted and no pass was issued.
+                  {purchaseError.startsWith(CHARGE_AMBIGUOUS_PREFIX)
+                    ? purchaseError.slice(CHARGE_AMBIGUOUS_PREFIX.length)
+                    : `${purchaseError}. No coins were deducted and no pass was issued.`}
                 </p>
               )
             )}

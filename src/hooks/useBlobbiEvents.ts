@@ -26,8 +26,9 @@ export interface CreateOwnerProfileInput {
   profileId: string;
   /** Display name (can be empty) */
   name: string;
-  /** Currency amount */
-  coins?: number;
+  // NOTE: no `coins` field. The Coin balance is kind:31633 (the wallet);
+  // profile creation and updates have no coin responsibility since the
+  // cutover — see `src/inventory/coin-wallet.ts`.
   /** Interaction level */
   pettingLevel?: number;
   /** Total Blobbis the user has ever owned */
@@ -62,7 +63,6 @@ function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   ];
 
   // Add optional single-value tags
-  if (input.coins !== undefined) tags.push(['coins', input.coins.toString()]);
   if (input.pettingLevel !== undefined) tags.push(['pettingLevel', input.pettingLevel.toString()]);
   if (input.lifetimeBlobbis !== undefined) tags.push(['lifetimeBlobbis', input.lifetimeBlobbis.toString()]);
   if (input.favoriteBlobbi) tags.push(['favoriteBlobbi', input.favoriteBlobbi]);
@@ -136,11 +136,18 @@ export function useUpdateOwnerProfile() {
       // Get existing owner profile data from cache
       const existingProfile = queryClient.getQueryData(['owner-profile', user.pubkey]) as OwnerProfile | null;
 
+      // An empty base would republish a fabricated profile — wiping unknown
+      // tags and every field the cache never held. Refuse instead: a profile
+      // update without a loaded profile is a caller bug, not a state to
+      // repair by clobbering the replaceable event.
+      if (!existingProfile) {
+        throw new Error('Owner profile not loaded; refusing to republish from an empty base');
+      }
+
       // Merge with updates
       const mergedProfile: OwnerProfile = {
         id: updates.profileId || existingProfile?.id || 'profile',
         name: updates.name !== undefined ? updates.name : (existingProfile?.name || ''),
-        coins: updates.coins !== undefined ? updates.coins : (existingProfile?.coins ?? 0),
         pettingLevel: updates.pettingLevel !== undefined ? updates.pettingLevel : (existingProfile?.pettingLevel ?? 0),
         lifetimeBlobbis: updates.lifetimeBlobbis !== undefined ? updates.lifetimeBlobbis : (existingProfile?.lifetimeBlobbis ?? 0),
         favoriteBlobbi: updates.favoriteBlobbi !== undefined ? updates.favoriteBlobbi : existingProfile?.favoriteBlobbi,

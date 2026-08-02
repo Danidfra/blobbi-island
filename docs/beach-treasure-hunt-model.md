@@ -80,9 +80,11 @@ into an economy-neutral `TreasureHuntResult`: end reason, duration, dig
 statistics, finds grouped by category, `rawCleanupValue` /
 `rawTreasureValue` in abstract units, and `specialCandidateFound`.
 
-**Units are not Coins.** Mapping units to Coins, and a special candidate to
-a real kind:31632 item, is the Beach 2 reward boundary — this model grants
-nothing, mutates nothing, and publishes nothing.
+**Units are not Coins.** Mapping units to Coins is the reward boundary
+(`src/beach/rewards/` + `docs/blobbi-coin-cutover.md`) — this model still
+grants nothing, mutates nothing, and publishes nothing. The special
+candidate remains a model concept only; the production policy disables its
+generation and no item is granted.
 
 ## Round identity
 

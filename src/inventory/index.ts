@@ -19,10 +19,20 @@ export * from './shop-catalog';
 export * from './useItemCatalog';
 export * from './useIslandInventory';
 export * from './useInventoryMutation';
-export * from './useCoinsMutation';
 export * from './usePurchaseItem';
 export * from './useBatchPurchase';
 export * from './useUseItem';
 
 // Re-export the package surface for consumers that want it from one place.
 export * as inventoryProtocol from './package';
+
+export { useCoinWallet, useCoinBalance } from './useCoinWallet';
+export { createCoinWallet, mintCoinOpId, CoinWalletError } from './coin-wallet';
+export * from './coin';
+export * from './economy-entry';
+export {
+  useEconomyEntryController,
+  useEconomyEntryStatus,
+  type EconomyEntryPhase,
+  type EconomyEntrySnapshot,
+} from './useEconomyEntry';

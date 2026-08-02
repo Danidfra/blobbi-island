@@ -28,14 +28,23 @@ import { StageOverlayContext } from '@/contexts/StageOverlayContext';
 // Collaborators. Nothing here touches a relay — these tests are about layout.
 // ---------------------------------------------------------------------------
 
-vi.mock('@/inventory/useCoinsMutation', () => ({
-  useCoinsMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+vi.mock('@/inventory/useCoinWallet', () => ({
+  useCoinWallet: () => ({
+    spendCoins: vi.fn().mockResolvedValue({ status: 'applied', balance: 80, verified: true }),
+    grantCoins: vi.fn(),
+    wallet: null,
+  }),
+  useCoinBalance: () => ({
+    balance: 100,
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 vi.mock('@/hooks/useOptimizedStatus', () => ({
   useOptimizedStatus: () => ({
     status: { owner: { coins: 100 }, isLoading: false },
     refreshFromRelay: vi.fn(),
-    updateOwnerCoins: vi.fn(),
   }),
 }));
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));

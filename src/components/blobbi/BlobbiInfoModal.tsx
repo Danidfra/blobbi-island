@@ -18,7 +18,9 @@ import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/react';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
-import { useOwnerProfile } from '@/hooks/useOptimizedStatus';
+import { useCoinBalance } from '@/inventory/useCoinWallet';
+import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
+import { CoinAmount } from './CoinAmount';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { dbg } from '@/lib/debug';
@@ -110,7 +112,11 @@ export function BlobbiInfoModal({
   externalVisual
 }: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
-  const ownerProfile = useOwnerProfile();
+  // The HUD balance is the canonical inventory Coin; the legacy profile value
+  // is never displayed again. The economy-entry status keeps an in-flight or
+  // ambiguous initial allocation from being shown as a zero balance.
+  const coinBalance = useCoinBalance();
+  const economyEntry = useEconomyEntryStatus();
 
   // Use external data if in read-only mode, otherwise use current pet data
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
@@ -501,12 +507,31 @@ export function BlobbiInfoModal({
 
                   {/* Coins Display - Only show in non-read-only mode */}
                   {!readOnly && (
-                    <div className="blobbi-card rounded-lg p-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="text-lg">🪙</span>
-                        <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
-                          {ownerProfile?.coins || 0} Coins
-                        </span>
+                    <div className="blobbi-card rounded-lg p-2" data-coin-hud>
+                      <div className="flex items-center justify-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300">
+                        {economyEntry.phase === 'checking' ||
+                        economyEntry.phase === 'applying' ||
+                        coinBalance.isLoading ? (
+                          <CoinAmount amount={null} loading className="text-sm" />
+                        ) : economyEntry.phase === 'ambiguous' ? (
+                          <span role="status" className="text-xs font-medium blobbi-text-muted">
+                            Confirming your Coin balance…
+                          </span>
+                        ) : coinBalance.isError ? (
+                          <button
+                            type="button"
+                            className="text-xs font-medium underline blobbi-text-muted"
+                            onClick={() => coinBalance.refetch()}
+                          >
+                            Balance unavailable — tap to retry
+                          </button>
+                        ) : (
+                          <CoinAmount
+                            amount={coinBalance.balance}
+                            className="text-sm"
+                            aria-label={`${coinBalance.balance} Blobbi Coins`}
+                          />
+                        )}
                       </div>
                     </div>
                   )}

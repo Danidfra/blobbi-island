@@ -88,7 +88,7 @@ Append-only log of a care/social action performed on a Blobbi (feed, play, clean
 
 ### Kind 11125 — Blobbonaut Owner Profile
 
-The player's account: coins, owned Blobbis, achievements, current companion.
+The player's account: owned Blobbis, achievements, current companion. (Historic `coins` tag deprecated by the Coin cutover.)
 
 - **Class:** Replaceable
 - **Address format:** not addressable
@@ -98,9 +98,9 @@ The player's account: coins, owned Blobbis, achievements, current companion.
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** Blobbi Island
-- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/inventory/useCoinsMutation.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
-- **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
-- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do live here.
+- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
+- **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`, `docs/blobbi-coin-cutover.md`
+- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data — never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.
 
 ### Kind 31125 — Blobbonaut Owner Profile (legacy)
 
@@ -225,9 +225,9 @@ The player's item inventory: kind:31632 addresses with integer quantities.
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
-- **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`
+- **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`, `src/inventory/economy-entry.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
-- **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking.
+- **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).
 
 ### Kind 31634 — Game Item Placement
 
@@ -329,6 +329,7 @@ Status meanings: **Active** — the issuer-signed kind:31632 event is published.
 | `blobbi:hygiene:soft-towel` | Soft Towel | hygiene | `clean` | Active |
 | `blobbi:energy:drink` | Energy Drink | energy | `boost` | Active |
 | `blobbi:currency:arcade-ticket` | Arcade Ticket | currency | — | Active |
+| `blobbi:currency:coin` | Blobbi Coin | currency | — | Active |
 
 ## 7. Canonical kind:31632 addresses
 
@@ -356,6 +357,7 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 | Soft Towel | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:soft-towel` |
 | Energy Drink | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:energy:drink` |
 | Arcade Ticket | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-ticket` |
+| Blobbi Coin | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:coin` |
 
 ## 8. Item detail
 
@@ -621,6 +623,22 @@ Earned by playing games at the Blobbi Island Arcade. Exchange it for exclusive p
 - **Topics:** `currency`, `arcade`
 - **Stackable:** yes
 - **Referenced by:** `src/components/blobbi/ArcadeTicketBalance.tsx`, `src/components/blobbi/ItemBagModal.tsx`
+
+### Blobbi Coin — `blobbi:currency:coin`
+
+The official currency of Blobbi Island, minted for Blobbis who explore, play, discover treasures, and help the island thrive.
+
+- **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:coin`
+- **Status:** Active
+- **Category:** `currency` · **Type:** `currency`
+- **Action:** none — cannot be used on a Blobbi
+- **Stages:** `egg`, `baby`, `adult`
+- **Effects:** none
+- **Emoji fallback:** 🪙
+- **Image:** `https://blossom.primal.net/e18905da8edcf4d620be8b2106b6a890a29f073f35254b3241c53aded3917a27.webp`
+- **Topics:** `currency`, `coin`, `official-currency`, `spendable`, `earnable`, `blobbi-coin`
+- **Stackable:** yes
+- **Referenced by:** `src/inventory/coin.ts`, `src/inventory/coin-wallet.ts`
 
 ## 9. Recovery boundary
 

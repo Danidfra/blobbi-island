@@ -85,14 +85,56 @@ describe('useFirstEggAdoption', () => {
     expect(signEvent).not.toHaveBeenCalled();
   });
 
-  it('publishes the baby (31124) BEFORE the profile (11125)', async () => {
+  it('publishes ONLY baby (31124) then profile (11125) — adoption is currency-free', async () => {
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
     await result.current.finalizeAdoption(preview, 'Puck');
 
     const publishedKinds = nostrEvent.mock.calls.map(([e]) => e.kind);
+    // Economy reset: adoption creates/adopts a Blobbi and nothing else. The
+    // initial 200-Coin allocation belongs to economy entry, so NO kind:31633
+    // event is published here and a fresh profile carries NO coins tag.
     expect(publishedKinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE]);
+    expect(publishedKinds).not.toContain(31633);
+    const profileEvent = nostrEvent.mock.calls[1][0];
+    expect(profileEvent.tags.find(([n]: string[]) => n === 'coins')).toBeUndefined();
+  });
+
+  it('regression: adoption never publishes kind:31633, for new OR existing profiles', async () => {
+    // New profile (default mock: no existing profile).
+    {
+      const { result } = renderHook(() => useFirstEggAdoption());
+      await result.current.finalizeAdoption(result.current.generatePreview(), 'A');
+      expect(nostrEvent.mock.calls.every(([e]) => e.kind !== 31633)).toBe(true);
+    }
+    // Existing profile: identical currency-independent behavior.
+    nostrEvent.mockClear();
+    nostrQuery.mockResolvedValue([
+      {
+        id: 'existing-profile',
+        pubkey: TEST_PUBKEY,
+        created_at: 1000,
+        kind: KIND_BLOBBONAUT_PROFILE,
+        tags: [
+          ['d', `blobbi-owner-${TEST_PUBKEY.slice(0, 16)}`],
+          ['name', 'Existing'],
+          ['coins', '5000'],
+        ],
+        content: '',
+        sig: 'sig',
+      },
+    ]);
+    {
+      const { result } = renderHook(() => useFirstEggAdoption());
+      await result.current.finalizeAdoption(result.current.generatePreview(), 'B');
+      const kinds = nostrEvent.mock.calls.map(([e]) => e.kind);
+      expect(kinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE]);
+      // The legacy coins tag rides through opaquely — preserved verbatim,
+      // never updated, never triggering any grant.
+      const profileEvent = nostrEvent.mock.calls[1][0];
+      expect(profileEvent.tags).toContainEqual(['coins', '5000']);
+    }
   });
 
   it('uses the same canonical d in the baby d, profile has[], and current_companion', async () => {

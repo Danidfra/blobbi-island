@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
+import { useCoinBalance } from '@/inventory/useCoinWallet';
+import { CoinAmount } from './CoinAmount';
 import { useToast } from '@/hooks/useToast';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,14 +51,14 @@ const FOOD_IMAGES: Record<string, string> = {
 };
 
 export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
-  const { status } = useOptimizedStatus();
+  const { balance: userCoins, isLoading: balanceLoading } = useCoinBalance();
   const { data: catalog } = useItemCatalog();
   const { mutateAsync: purchaseBatch, isPending } = useBatchPurchase();
   const { toast } = useToast();
 
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  const userCoins = status.owner?.coins ?? 0;
+
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -135,7 +136,10 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       });
   }, [quantities, shopItems]);
 
-  const canAfford = userCoins >= totalCost;
+  // A null balance is UNKNOWN, not zero: purchases stay disabled until the
+  // canonical inventory balance loads. The wallet re-validates on spend
+  // anyway — this is presentation-side honesty, not the guard.
+  const canAfford = userCoins !== null && userCoins >= totalCost;
 
   const handleQuantityChange = (address: string, value: string) => {
     const quantity = parseInt(value, 10);
@@ -157,8 +161,12 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
   };
 
   const handleConfirmPurchase = async () => {
-    if (!status.owner) {
-      toast({ title: 'Error', description: 'Owner profile not found.', variant: 'destructive' });
+    if (userCoins === null) {
+      toast({
+        title: 'Balance unavailable',
+        description: 'Your Coin balance has not loaded yet.',
+        variant: 'destructive',
+      });
       return;
     }
     if (isPending) {
@@ -174,8 +182,9 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       return;
     }
 
-    // ONE true multi-item purchase: a single 31633 grant containing all cart
-    // lines, followed by a single 11125 total-coin deduction (non-atomic).
+    // ONE true multi-item purchase: a single canonical inventory event
+    // carrying the total Coin deduction AND every item grant — atomic since
+    // the Coin cutover.
     try {
       const result = await purchaseBatch({
         lines: selectedLines.map(({ address, quantity, unitPrice }) => ({
@@ -183,19 +192,18 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
           quantity,
           unitPrice,
         })),
-        currentCoins: userCoins,
       });
 
       toast(
-        result.coinsCharged
+        result.outcome === 'applied'
           ? {
               title: 'Purchase Successful',
-              description: `Spent ${result.totalCost} coins. Your items are in your inventory.`,
+              description: `Spent ${result.totalCost} Blobbi Coins. Your items are in your inventory.`,
             }
           : {
-              title: 'Purchase Partially Completed',
+              title: 'Purchase Not Confirmed',
               description:
-                'You received all your items, but the coin charge could not be confirmed. Please check your balance.',
+                'The purchase could not be confirmed. It will be reconciled — nothing will be charged twice. Check your balance in a moment.',
               variant: 'destructive',
             },
       );
@@ -441,7 +449,12 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
               <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
             </div>
             <div className="text-right text-sm blobbi-text-muted">
-              Your balance: <span className="icon-yellow font-semibold">{userCoins} coins</span>
+              Your balance:{' '}
+              <CoinAmount
+                amount={userCoins}
+                loading={balanceLoading}
+                className="icon-yellow font-semibold"
+              />
             </div>
             {!canAfford && <p className="text-island-danger text-sm text-center mt-2">You don't have enough coins!</p>}
           </div>

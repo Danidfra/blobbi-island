@@ -24,28 +24,21 @@ import { clearArcadePass, hasArcadePass } from '@/lib/arcade-pass';
 // the CANONICAL writer, not that the writer works (it has its own tests).
 // ---------------------------------------------------------------------------
 
-const changeCoins = vi.fn();
-let coinsPending = false;
+const spendCoins = vi.fn();
+const grantCoins = vi.fn();
 
-vi.mock('@/inventory/useCoinsMutation', () => ({
-  useCoinsMutation: () => ({ mutateAsync: changeCoins, isPending: coinsPending }),
+vi.mock('@/inventory/useCoinWallet', () => ({
+  useCoinWallet: () => ({ spendCoins, grantCoins, wallet: null }),
+  useCoinBalance: () => balanceState,
 }));
 
-let statusValue: {
-  owner: { coins: number } | null;
+let balanceState: {
+  balance: number | null;
   isLoading: boolean;
-  error?: string;
+  isError: boolean;
+  refetch: () => void;
 };
-const refreshFromRelay = vi.fn();
-const updateOwnerCoins = vi.fn();
-
-vi.mock('@/hooks/useOptimizedStatus', () => ({
-  useOptimizedStatus: () => ({
-    status: statusValue,
-    refreshFromRelay,
-    updateOwnerCoins,
-  }),
-}));
+const refetch = vi.fn();
 
 const toast = vi.fn();
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast }) }));
@@ -57,12 +50,13 @@ function renderModal() {
 const buyButton = () => screen.getByRole('button', { name: /buy ticket|buying/i });
 
 beforeEach(() => {
-  changeCoins.mockReset().mockResolvedValue({ previousCoins: 100, newCoins: 80 });
-  refreshFromRelay.mockReset();
-  updateOwnerCoins.mockReset();
+  spendCoins
+    .mockReset()
+    .mockResolvedValue({ status: 'applied', balance: 80, verified: true });
+  grantCoins.mockReset();
+  refetch.mockReset();
   toast.mockReset();
-  coinsPending = false;
-  statusValue = { owner: { coins: 100 }, isLoading: false };
+  balanceState = { balance: 100, isLoading: false, isError: false, refetch };
   clearArcadePass();
 });
 
@@ -72,7 +66,7 @@ afterEach(() => {
 
 describe('the coin balance is never faked', () => {
   it('shows a skeleton, not a zero, while the balance is loading', () => {
-    statusValue = { owner: null, isLoading: true };
+    balanceState = { balance: null, isLoading: true, isError: false, refetch };
     renderModal();
 
     expect(screen.getByText(/your current coins/i)).toBeInTheDocument();
@@ -85,7 +79,7 @@ describe('the coin balance is never faked', () => {
   });
 
   it('shows an error with a retry when the balance cannot be read', () => {
-    statusValue = { owner: null, isLoading: false, error: 'relay unreachable' };
+    balanceState = { balance: null, isLoading: false, isError: true, refetch };
     renderModal();
 
     expect(screen.getByText(/couldn't read your coin balance/i)).toBeInTheDocument();
@@ -93,19 +87,11 @@ describe('the coin balance is never faked', () => {
     expect(buyButton()).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
-    expect(refreshFromRelay).toHaveBeenCalledTimes(1);
-  });
-
-  it('treats a resolved-but-absent profile as unknown, not as zero', () => {
-    statusValue = { owner: null, isLoading: false };
-    renderModal();
-
-    expect(screen.getByText(/couldn't read your coin balance/i)).toBeInTheDocument();
-    expect(buyButton()).toBeDisabled();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows the real balance once it resolves', () => {
-    statusValue = { owner: { coins: 983338 }, isLoading: false };
+    balanceState = { balance: 983338, isLoading: false, isError: false, refetch };
     renderModal();
 
     expect(screen.getByText('983338')).toBeInTheDocument();
@@ -113,7 +99,12 @@ describe('the coin balance is never faked', () => {
   });
 
   it('refuses the purchase when the player genuinely cannot afford it', () => {
-    statusValue = { owner: { coins: ARCADE_PASS_PRICE - 1 }, isLoading: false };
+    balanceState = {
+      balance: ARCADE_PASS_PRICE - 1,
+      isLoading: false,
+      isError: false,
+      refetch,
+    };
     renderModal();
 
     expect(buyButton()).toBeDisabled();
@@ -122,30 +113,37 @@ describe('the coin balance is never faked', () => {
 });
 
 describe('the purchase is a real transaction', () => {
-  it('charges through the canonical coin mutation, exactly once', async () => {
+  it('charges through the canonical Coin wallet, exactly once', async () => {
     renderModal();
     fireEvent.click(buyButton());
 
-    await waitFor(() => expect(changeCoins).toHaveBeenCalledTimes(1));
-    expect(changeCoins).toHaveBeenCalledWith(-ARCADE_PASS_PRICE);
+    await waitFor(() => expect(spendCoins).toHaveBeenCalledTimes(1));
+    const op = spendCoins.mock.calls[0][0];
+    expect(op.amount).toBe(ARCADE_PASS_PRICE);
+    expect(op.opId).toMatch(/^arcade-pass:/);
+    expect(grantCoins).not.toHaveBeenCalled();
   });
 
-  it('never uses the local optimistic coin path', async () => {
+  it('an ambiguous charge grants NO pass and never claims the coins are safe', async () => {
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
     renderModal();
     fireEvent.click(buyButton());
 
-    await waitFor(() => expect(changeCoins).toHaveBeenCalled());
-    // `updateOwnerCoins` publishes nothing and is per-hook-instance; using it is
-    // what made the charge fictional.
-    expect(updateOwnerCoins).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(hasArcadePass()).toBe(false);
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not be confirmed/i);
+    expect(screen.getByRole('alert')).not.toHaveTextContent(/no coins were deducted/i);
+    // No blind retry: exactly one wallet call happened.
+    expect(spendCoins).toHaveBeenCalledTimes(1);
   });
 
   it('grants the pass only after the charge succeeds', async () => {
     let resolveCharge: () => void = () => {};
-    changeCoins.mockImplementation(
+    spendCoins.mockImplementation(
       () =>
-        new Promise<void>((resolve) => {
-          resolveCharge = resolve;
+        new Promise((resolve) => {
+          resolveCharge = () =>
+            resolve({ status: 'applied', balance: 80, verified: true });
         }),
     );
 
@@ -159,8 +157,8 @@ describe('the purchase is a real transaction', () => {
     await waitFor(() => expect(hasArcadePass()).toBe(true));
   });
 
-  it('grants nothing when the publish fails, and says so', async () => {
-    changeCoins.mockRejectedValue(new Error('Insufficient coins'));
+  it('grants nothing when the spend rejects pre-publish, and says so', async () => {
+    spendCoins.mockRejectedValue(new Error('Insufficient coins'));
     const onClose = vi.fn();
     render(<ArcadePassModal isOpen onClose={onClose} />);
 
@@ -188,20 +186,10 @@ describe('the purchase is a real transaction', () => {
     );
   });
 
-  it('cannot be double-charged by a double click', async () => {
-    coinsPending = true;
-    renderModal();
-
-    expect(buyButton()).toBeDisabled();
-    fireEvent.click(buyButton());
-    fireEvent.click(buyButton());
-    expect(changeCoins).not.toHaveBeenCalled();
-  });
-
   it('charges once even when two clicks land in the same tick', async () => {
-    // `isPending` only flips after a re-render, so the disabled button cannot be
-    // the guarantee — the synchronous in-flight ref is.
-    changeCoins.mockImplementation(() => new Promise(() => {}));
+    // The pending state only flips after a re-render, so the disabled button
+    // cannot be the guarantee — the synchronous in-flight ref is.
+    spendCoins.mockImplementation(() => new Promise(() => {}));
     renderModal();
 
     const button = buyButton();
@@ -209,13 +197,19 @@ describe('the purchase is a real transaction', () => {
     fireEvent.click(button);
     fireEvent.click(button);
 
-    expect(changeCoins).toHaveBeenCalledTimes(1);
+    expect(spendCoins).toHaveBeenCalledTimes(1);
+    // And the pending state disables the button once React catches up.
+    await waitFor(() => expect(buyButton()).toBeDisabled());
   });
 
   it('does not grant a pass when the modal is closed mid-charge', async () => {
     let resolveCharge: () => void = () => {};
-    changeCoins.mockImplementation(
-      () => new Promise<void>((resolve) => { resolveCharge = resolve; }),
+    spendCoins.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCharge = () =>
+            resolve({ status: 'applied', balance: 80, verified: true });
+        }),
     );
 
     const { unmount } = renderModal();
@@ -274,15 +268,14 @@ describe('storage failure after a successful charge', () => {
     fireEvent.click(buyButton());
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
 
-    // A refund would be a second unverified publish stacked on a first whose
-    // outcome is unknown, and could hand back coins that were never taken.
-    expect(changeCoins).toHaveBeenCalledTimes(1);
-    expect(changeCoins).toHaveBeenCalledWith(-ARCADE_PASS_PRICE);
+    // A refund would be a second value mutation stacked on a storage problem.
+    expect(spendCoins).toHaveBeenCalledTimes(1);
+    expect(grantCoins).not.toHaveBeenCalled();
     restore();
   });
 
   it('reports a failed charge and a failed pass write differently', async () => {
-    changeCoins.mockRejectedValue(new Error('Insufficient coins'));
+    spendCoins.mockRejectedValue(new Error('Insufficient coins'));
     render(<ArcadePassModal isOpen onClose={() => {}} />);
 
     fireEvent.click(buyButton());

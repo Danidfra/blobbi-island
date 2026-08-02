@@ -19,7 +19,7 @@ import { DevTreasureHunt } from './DevTreasureHunt';
 const ROOT = process.cwd();
 
 const FORBIDDEN_IMPORTS =
-  /useCoinsMutation|useInventoryMutation|useBatchPurchase|usePurchaseItem|useNostrPublish|useBlobbiEvents|useBlobbonautProfile|arcade-reward-writer|arcade-prize-spend-writer|signEvent|useArcadeReward/;
+  /useCoinsMutation|useInventoryMutation|useBatchPurchase|usePurchaseItem|useNostrPublish|useBlobbiEvents|useBlobbonautProfile|arcade-reward-writer|arcade-prize-spend-writer|useArcadeReward|coin-wallet|useCoinWallet|useEconomyEntry|economy-entry|useTreasureHuntRewards/;
 
 function resolveImport(fromFile: string, specifier: string): string | null {
   let base: string;
@@ -38,6 +38,24 @@ function resolveImport(fromFile: string, specifier: string): string | null {
   return null;
 }
 
+/**
+ * Import specifiers of a file, RUNTIME imports only: `import type { … }`
+ * statements are erased at build time and cannot reach a write path, so the
+ * graph walk skips them (the same rule DevEquipment's boundary test applies).
+ */
+function runtimeImportSpecifiers(source: string): string[] {
+  const specifiers: string[] = [];
+  // Both `import … from` and re-exporting `export … from` are runtime edges;
+  // the `type` keyword marks either as erased.
+  for (const match of source.matchAll(
+    /(?:import|export)\s+(type\s+)?[^'"]*?from\s+['"]([^'"]+)['"]/g,
+  )) {
+    if (match[1]) continue; // type-only
+    specifiers.push(match[2]);
+  }
+  return specifiers;
+}
+
 function importGraph(entry: string): Set<string> {
   const visited = new Set<string>();
   const queue = [entry];
@@ -46,8 +64,8 @@ function importGraph(entry: string): Set<string> {
     if (!file || visited.has(file)) continue;
     visited.add(file);
     const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
-      const resolved = resolveImport(file, match[1]);
+    for (const specifier of runtimeImportSpecifiers(source)) {
+      const resolved = resolveImport(file, specifier);
       if (resolved) queue.push(resolved);
     }
   }
@@ -76,8 +94,12 @@ describe('DevTreasureHunt', () => {
     const visited = importGraph(join(ROOT, 'src/pages/DevTreasureHunt.tsx'));
     expect(visited.size).toBeGreaterThan(10); // the walk is real
 
+    // Checked against IMPORT SPECIFIERS, not free text: registry records and
+    // doc comments legitimately NAME writer files without importing them.
     const offenders = [...visited].filter((file) =>
-      FORBIDDEN_IMPORTS.test(readFileSync(file, 'utf8'))
+      runtimeImportSpecifiers(readFileSync(file, 'utf8')).some((specifier) =>
+        FORBIDDEN_IMPORTS.test(specifier),
+      ),
     );
     expect(offenders.map((f) => f.replace(`${ROOT}/`, ''))).toEqual([]);
   });

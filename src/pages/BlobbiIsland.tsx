@@ -8,6 +8,7 @@ import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
 import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen";
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
+import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
 
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
 import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
@@ -260,6 +261,10 @@ export function BlobbiIsland() {
         onOpenCollection={handleSwitchBlobbi}
       >
         {renderGameContent()}
+        {/* Pre-world economy-entry status: in the world the HUD/coin chip
+            owns this; before it, the compact notice speaks only when the
+            initial allocation is applying, ambiguous, or needs a retry. */}
+        {!isPlaying && <EconomyEntryNotice />}
         <Suspense fallback={null}>
           <SceneTransition />
           <MapModal />

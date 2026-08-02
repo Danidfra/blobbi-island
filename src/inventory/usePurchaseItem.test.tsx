@@ -1,13 +1,9 @@
 /**
- * Partial-failure tests for the two-event purchase flow (Q7 of the audit).
+ * Tests for the single-item purchase flow (`usePurchaseItem`).
  *
- * A purchase is: (1) grant item to kind:31633, then (2) deduct coins in
- * kind:11125. These are independent events and NOT atomic. We assert:
- *  - both-succeed → coinsCharged true;
- *  - step 1 (grant) fails → the whole purchase rejects and coins are NOT touched;
- *  - step 1 succeeds but step 2 (coins) fails → item stays granted, a WARNING is
- *    returned (favor-the-user), and the purchase does not throw;
- *  - insufficient coins → rejects before granting anything.
+ * Since the Coin cutover a paid purchase is ONE canonical wallet operation
+ * (coin deduction + item grant in the same kind:31633 event), so the old
+ * two-event partial-failure matrix no longer exists.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -18,7 +14,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const TEST_PUBKEY = 'd'.repeat(64);
 
 const inventoryMutate = vi.fn();
-const coinsMutate = vi.fn();
+const spendCoins = vi.fn();
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({ user: { pubkey: TEST_PUBKEY } }),
@@ -32,97 +28,109 @@ vi.mock('./useInventoryMutation', async (importOriginal) => {
   };
 });
 
-vi.mock('./useCoinsMutation', () => ({
-  useCoinsMutation: () => ({ mutateAsync: coinsMutate }),
+vi.mock('./useCoinWallet', () => ({
+  useCoinWallet: () => ({ spendCoins, grantCoins: vi.fn(), wallet: null }),
 }));
+
+let priceOverride: ((address: string) => number | null) | null = null;
+vi.mock('./shop-catalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./shop-catalog')>();
+  return {
+    ...actual,
+    priceForAddress: (address: string) =>
+      priceOverride ? priceOverride(address) : actual.priceForAddress(address),
+  };
+});
 
 import { usePurchaseItem } from './usePurchaseItem';
 import { itemIdToAddress } from './registry';
 
-const APPLE = itemIdToAddress('food_apple')!; // price 10
-
-function makeWrapper(client: QueryClient) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    );
-  };
-}
+const APPLE = itemIdToAddress('food_apple')!; // priced 10 in the shop catalog
 
 function renderPurchase() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return renderHook(() => usePurchaseItem(), { wrapper: makeWrapper(client) });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  return renderHook(() => usePurchaseItem(), { wrapper });
 }
 
-describe('usePurchaseItem partial failures', () => {
+describe('usePurchaseItem — one atomic wallet operation', () => {
   beforeEach(() => {
     inventoryMutate.mockReset();
-    coinsMutate.mockReset();
+    spendCoins.mockReset();
+    spendCoins.mockResolvedValue({ status: 'applied', balance: 90, verified: true });
+    priceOverride = null;
   });
 
-  it('both events succeed → coinsCharged true', async () => {
+  it('a FREE item skips the wallet entirely and uses a plain inventory grant', async () => {
+    priceOverride = () => 0;
     inventoryMutate.mockResolvedValue(undefined);
-    coinsMutate.mockResolvedValue({ previousCoins: 100, newCoins: 90 });
-
     const { result } = renderPurchase();
-    let res: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined;
-    await act(async () => {
-      res = await result.current.mutateAsync({ address: APPLE, units: 1, currentCoins: 100 });
-    });
-
-    expect(inventoryMutate).toHaveBeenCalledTimes(1);
-    expect(coinsMutate).toHaveBeenCalledWith(-10);
-    expect(res!.coinsCharged).toBe(true);
-    expect(res!.warning).toBeUndefined();
+    const outcome = await act(() =>
+      result.current.mutateAsync({ address: APPLE, units: 2 }),
+    );
+    expect(outcome).toEqual({ address: APPLE, units: 2, totalCost: 0, outcome: 'applied' });
+    expect(spendCoins).not.toHaveBeenCalled();
+    expect(inventoryMutate).toHaveBeenCalledWith({ type: 'purchase', address: APPLE, units: 2 });
   });
 
-  it('grant (step 1) failure rejects the purchase and does NOT deduct coins', async () => {
-    inventoryMutate.mockRejectedValue(new Error('relay down'));
-
+  it('spends the catalog price and grants the units in one operation', async () => {
     const { result } = renderPurchase();
-    let error: Error | undefined;
+    let outcome;
     await act(async () => {
-      try {
-        await result.current.mutateAsync({ address: APPLE, units: 1, currentCoins: 100 });
-      } catch (e) {
-        error = e as Error;
-      }
+      outcome = await result.current.mutateAsync({ address: APPLE, units: 3 });
     });
-
-    expect(error?.message).toMatch(/relay down/);
-    expect(inventoryMutate).toHaveBeenCalledTimes(1);
-    expect(coinsMutate).not.toHaveBeenCalled();
-  });
-
-  it('coins (step 2) failure keeps the item and returns a warning (no throw)', async () => {
-    inventoryMutate.mockResolvedValue(undefined);
-    coinsMutate.mockRejectedValue(new Error('sign failed'));
-
-    const { result } = renderPurchase();
-    let res: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined;
-    await act(async () => {
-      res = await result.current.mutateAsync({ address: APPLE, units: 1, currentCoins: 100 });
-    });
-
-    expect(inventoryMutate).toHaveBeenCalledTimes(1);
-    expect(coinsMutate).toHaveBeenCalledTimes(1);
-    expect(res!.coinsCharged).toBe(false);
-    expect(res!.warning).toMatch(/coins were not charged/i);
-  });
-
-  it('insufficient coins rejects before granting anything', async () => {
-    const { result } = renderPurchase();
-    let error: Error | undefined;
-    await act(async () => {
-      try {
-        await result.current.mutateAsync({ address: APPLE, units: 5, currentCoins: 10 });
-      } catch (e) {
-        error = e as Error;
-      }
-    });
-
-    expect(error?.message).toMatch(/Insufficient coins/);
+    expect(spendCoins).toHaveBeenCalledTimes(1);
+    const op = spendCoins.mock.calls[0][0];
+    expect(op.amount).toBe(30);
+    expect(op.grantLines).toEqual([{ address: APPLE, amount: 3 }]);
     expect(inventoryMutate).not.toHaveBeenCalled();
-    expect(coinsMutate).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ totalCost: 30, outcome: 'applied' });
+  });
+
+  it('rejects non-positive/non-integer units before any wallet call', async () => {
+    const { result } = renderPurchase();
+    for (const units of [0, -2, 1.5]) {
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({ address: APPLE, units }),
+        ).rejects.toThrow(/positive integer/);
+      });
+    }
+    expect(spendCoins).not.toHaveBeenCalled();
+  });
+
+  it('rejects an item that is not for sale', async () => {
+    const { result } = renderPurchase();
+    await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+          address: `31632:${'a'.repeat(64)}:blobbi:food:mystery`,
+          units: 1,
+        }),
+        ).rejects.toThrow(/not for sale/);
+      });
+    expect(spendCoins).not.toHaveBeenCalled();
+  });
+
+  it('surfaces an ambiguous publish as an ambiguous outcome', async () => {
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
+    const { result } = renderPurchase();
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+    expect(outcome).toMatchObject({ outcome: 'ambiguous' });
+  });
+
+  it('propagates an insufficient-funds rejection from the wallet', async () => {
+    spendCoins.mockRejectedValue(new Error('Insufficient coins'));
+    const { result } = renderPurchase();
+    await act(async () => {
+        await expect(
+          result.current.mutateAsync({ address: APPLE, units: 1 }),
+        ).rejects.toThrow('Insufficient coins');
+      });
   });
 });

@@ -326,12 +326,23 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
  * values), while nothing in this client can ever create or modify one.
  */
 const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
-  'd', 'b', 'name', 'coins', 'pettingLevel', 'lifetimeBlobbis',
+  'd', 'b', 'name', 'pettingLevel', 'lifetimeBlobbis',
   'favoriteBlobbi', 'starterBlobbi', 'current_companion',
   'style', 'background', 'title',
   // Multi-value tags
   'has', 'achievements',
 ]);
+
+// NOTE the deliberate absence of `coins` (since the economy reset).
+//
+// The canonical Coin balance is the official Blobbi Coin quantity in
+// kind:31633, moved only by the Coin wallet (`src/inventory/coin-wallet.ts`).
+// A pre-existing `coins` tag is OBSOLETE HISTORICAL data: it is never
+// migrated, never read for economic decisions, never displayed and never
+// updated. It rides the unknown-tag passthrough verbatim on every republish —
+// preserved opaquely, never treated as a balance again. Emitting a managed
+// `coins` tag here is precisely how a profile republish used to roll balances
+// back; no production writer may reintroduce it.
 
 // NOTE the deliberate absence of `inv`.
 //
@@ -362,7 +373,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
     // author the canonical namespace. Additive + idempotent.
     ['b', rawTagValue(profile.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE],
     ['name', profile.name],
-    ['coins', profile.coins.toString()],
+    // `coins` is deliberately NOT emitted — see the managed-set note above.
     ['pettingLevel', profile.pettingLevel.toString()],
     ['lifetimeBlobbis', profile.lifetimeBlobbis.toString()],
   ];

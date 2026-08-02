@@ -4,8 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useUpdatePetState, useUpdateOwnerProfile } from '@/hooks/useBlobbiEvents';
+import { useUpdatePetState } from '@/hooks/useBlobbiEvents';
+import { useCoinWallet } from '@/inventory/useCoinWallet';
+import { mintCoinOpId, CoinWalletError } from '@/inventory/coin-wallet';
 import { miningItemPath } from '@/lib/asset-paths';
+
+/**
+ * Reward boundary (Coin cutover): the payout is a canonical Coin wallet
+ * grant — one durable operation per mining session, minted at Start. The old
+ * path (an absolute `coins` republish of kind:11125 from the React cache,
+ * fire-and-forget) is gone; the wallet gives the session fresh reads, strict
+ * publish, exactly-once application and honest ambiguous states. The game
+ * design and the drop table are unchanged.
+ */
+type MineRewardState =
+  | { phase: 'idle' }
+  | { phase: 'granting'; amount: number }
+  | { phase: 'applied'; amount: number }
+  | { phase: 'ambiguous'; amount: number }
+  | { phase: 'failed'; amount: number; message: string };
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -24,18 +41,22 @@ interface MinedItem {
 
 export function MiningGame() {
   const { setCurrentLocation } = useLocation();
-  const { status, updatePetStats, updateOwnerCoins } = useOptimizedStatus();
+  const { status, updatePetStats, refreshFromRelay } = useOptimizedStatus();
   const { mutate: updatePetState } = useUpdatePetState();
-  const { mutate: updateOwnerProfile } = useUpdateOwnerProfile();
+  const { grantCoins } = useCoinWallet();
   const currentPet = status.currentPet;
-  const owner = status.owner;
 
   const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results' | 'low-energy'>('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
   const [currentEnergy, setCurrentEnergy] = useState(currentPet?.energy || 100);
+  const [reward, setReward] = useState<MineRewardState>({ phase: 'idle' });
   const miningAreaRef = useRef<HTMLDivElement>(null);
+  // One reward operation per session, minted at Start; the wallet ledger
+  // makes it exactly-once even across the two finish paths (auto + button).
+  const rewardOpIdRef = useRef<string | null>(null);
+  const finishedRef = useRef(false);
 
   // Update local energy state when currentPet changes
   useEffect(() => {
@@ -44,28 +65,52 @@ export function MiningGame() {
     }
   }, [currentPet?.energy]);
 
-
+  // A stale cached energy value is free mining; re-read the authoritative
+  // state when the cave opens. (Client-trusted like everything here, but the
+  // honest client no longer mines against a 30-second-old snapshot.)
+  useEffect(() => {
+    refreshFromRelay();
+    // eslint intentionally satisfied: refreshFromRelay is stable per hook.
+  }, [refreshFromRelay]);
 
   const startGame = () => {
+    rewardOpIdRef.current = mintCoinOpId('mine-reward');
+    finishedRef.current = false;
+    setReward({ phase: 'idle' });
     setGameState('playing');
   };
 
+  const grantReward = async (totalCoins: number) => {
+    const opId = rewardOpIdRef.current;
+    if (!opId || totalCoins <= 0) return;
+    setReward({ phase: 'granting', amount: totalCoins });
+    try {
+      const outcome = await grantCoins({ opId, amount: totalCoins, label: 'mine-reward' });
+      if (outcome.status === 'applied' || outcome.status === 'already-applied') {
+        setReward({ phase: 'applied', amount: totalCoins });
+      } else {
+        // ambiguous / blocked: the grant MAY have landed. Recorded durably;
+        // reconciliation happens on the next wallet touch — never a blind
+        // second grant.
+        setReward({ phase: 'ambiguous', amount: totalCoins });
+      }
+    } catch (error) {
+      const message =
+        error instanceof CoinWalletError ? error.reason : 'the reward could not be published';
+      setReward({ phase: 'failed', amount: totalCoins, message });
+    }
+  };
+
   const finishMining = () => {
-    // Calculate total coins earned
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
     const totalCoins = minedItems.reduce((acc, item) => {
       return acc + GEM_VALUES[item.type];
     }, 0);
 
-    // Add coins to user's balance
-    if (totalCoins > 0 && owner) {
-      const newCoins = (owner.coins || 0) + totalCoins;
-      updateOwnerCoins(newCoins);
-      updateOwnerProfile({
-        coins: newCoins
-      });
-    }
-
     setGameState('results');
+    void grantReward(totalCoins);
   };
 
   const handleMineClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -174,10 +219,32 @@ export function MiningGame() {
                 ))}
               </ul>
             </div>
-            <div className="border-t pt-2">
+            <div className="border-t pt-2 space-y-1" data-mine-reward-status={reward.phase}>
               <p className="font-bold">Total Coins Earned: {totalCoins}</p>
-              {totalCoins > 0 && (
-                <p className="text-sm text-green-600">Coins added to your balance!</p>
+              {reward.phase === 'granting' && (
+                <p className="text-sm text-muted-foreground">Adding your Coins…</p>
+              )}
+              {reward.phase === 'applied' && (
+                <p className="text-sm text-green-600">
+                  {reward.amount} Blobbi Coins added to your balance!
+                </p>
+              )}
+              {reward.phase === 'ambiguous' && (
+                <p className="text-sm text-amber-600">
+                  Your reward is being confirmed — it will appear in your balance
+                  once we can verify it. It will not be lost or doubled.
+                </p>
+              )}
+              {reward.phase === 'failed' && (
+                <div className="space-y-1">
+                  <p className="text-sm text-red-600">
+                    The reward could not be sent ({reward.message}). Nothing was
+                    published.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={() => void grantReward(reward.amount)}>
+                    Try again
+                  </Button>
+                </div>
               )}
             </div>
             <Button onClick={() => setCurrentLocation('mine')} className="w-full">Exit Cave</Button>
