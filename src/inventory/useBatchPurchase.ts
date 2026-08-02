@@ -2,46 +2,34 @@
  * Blobbi Island — batch (multi-item) purchase flow.
  *
  * A single shop confirmation may include multiple DIFFERENT item types, each
- * with its own quantity. This hook performs ONE true multi-item purchase:
+ * with its own quantity. Since the Coin cutover the whole purchase is ONE
+ * canonical wallet operation:
  *
  *   1. validate every line (positive integer quantity, integer unit price);
  *   2. normalize + merge duplicate addresses into a single line each;
- *   3. validate the TOTAL cost against the coin balance passed by the caller
- *      (with overflow protection);
- *   4. read the current kind:31633 inventory ONCE (inside the inventory
- *      mutation's read-modify-write) and apply ALL additions to that single
- *      snapshot via the package quantity helpers;
- *   5. publish EXACTLY ONE kind:31633 event with the complete resulting
- *      inventory (via the `batch` inventory mutation);
- *   6. publish EXACTLY ONE kind:11125 event deducting the TOTAL coin cost.
+ *   3. compute the TOTAL cost (overflow-protected);
+ *   4. `spendCoins({ amount: total, grantLines })` — the wallet reads the
+ *      FRESH inventory, validates the real balance (a stale HUD number is
+ *      never spendable truth), and publishes EXACTLY ONE kind:31633 event
+ *      carrying BOTH the coin deduction and every item grant.
  *
- * This is NOT implemented by looping the single-item purchase mutation: it
- * folds every line into one inventory snapshot and charges coins once.
+ * That single event is what retires the old, documented non-atomicity
+ * ("items granted but coins not charged"): with the Coin in the same
+ * inventory, either the purchase happens or nothing does. The wallet's
+ * durable operation ledger makes a retried confirmation exactly-once, its
+ * strict publish never treats a timeout as success, and an `ambiguous`
+ * outcome is surfaced to the caller instead of being retried blindly.
  *
- * Ordering + atomicity (SAME decision as the single-item flow — see
- * usePurchaseItem.ts): GRANT ALL ITEMS FIRST (one 31633), then deduct the total
- * (one 11125). The operation is explicitly NON-ATOMIC across the two kinds:
- *
- *   - inventory publish fails  → no items granted, no coins charged (we throw
- *     before touching coins);
- *   - inventory succeeds but coin publish fails → ALL cart items remain granted,
- *     coins are NOT confirmed charged, and a partial-completion warning is
- *     returned for the whole cart (favor-the-user; no relay rollback).
- *
- * Never writes kind:11125.storage (coins go through `useCoinsMutation`, which
- * routes via `mergeOwnerProfileTags`; that writer never emits `storage`, and
- * passes any pre-existing legacy `storage` tag through opaquely).
+ * kind:11125 is never touched.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-import {
-  useInventoryMutation,
-  type InventoryBatchLine,
-} from './useInventoryMutation';
-import { useCoinsMutation } from './useCoinsMutation';
+import { useInventoryMutation } from './useInventoryMutation';
+import { useCoinWallet } from './useCoinWallet';
+import { mintCoinOpId } from './coin-wallet';
 import { inventoryQueryKey } from './useIslandInventory';
 
 /** One requested purchase line in the cart. */
@@ -56,8 +44,6 @@ export interface PurchaseLine {
 
 export interface BatchPurchaseInput {
   lines: PurchaseLine[];
-  /** Latest known coin balance to validate the total against. */
-  currentCoins: number;
 }
 
 export interface BatchPurchaseResultLine {
@@ -71,10 +57,13 @@ export interface BatchPurchaseResult {
   /** Merged/normalized lines actually applied. */
   lines: BatchPurchaseResultLine[];
   totalCost: number;
-  /** True when BOTH the inventory grant and the coin deduction succeeded. */
-  coinsCharged: boolean;
-  /** Present when the coin deduction failed after items were granted. */
-  warning?: string;
+  /**
+   * `applied`   — the single purchase event published (and the grant with it).
+   * `ambiguous` — the publish MAY have landed; recorded durably, reconciled
+   *               later, never blindly retried. The UI must not claim success
+   *               and must not re-submit the same cart operation.
+   */
+  outcome: 'applied' | 'ambiguous';
 }
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
@@ -157,75 +146,55 @@ export function totalCostForLines(lines: BatchPurchaseResultLine[]): number {
 }
 
 /**
- * Buy multiple item types in one confirmation as a single 31633 + single 11125.
+ * Buy multiple item types in one confirmation as ONE canonical inventory
+ * event (coins spent + items granted together).
  */
 export function useBatchPurchase() {
   const { user } = useCurrentUser();
   const { mutateAsync: mutateInventory } = useInventoryMutation();
-  const { mutateAsync: mutateCoins } = useCoinsMutation();
+  const { spendCoins } = useCoinWallet();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      lines,
-      currentCoins,
-    }: BatchPurchaseInput): Promise<BatchPurchaseResult> => {
+    mutationFn: async ({ lines }: BatchPurchaseInput): Promise<BatchPurchaseResult> => {
       if (!user?.pubkey) throw new Error('User not logged in');
 
-      // 1 + 2. Validate + merge duplicates into one line per address.
       const normalized = normalizePurchaseLines(lines);
-
-      // 3. Validate the TOTAL cost against the balance (overflow-protected).
       const totalCost = totalCostForLines(normalized);
-      if (currentCoins < totalCost) {
-        throw new Error('Insufficient coins');
-      }
-
       const resultLines: BatchPurchaseResultLine[] = normalized.map((l) => ({
         ...l,
         lineCost: l.quantity * l.unitPrice,
       }));
-
-      // 4 + 5. ONE fresh read + apply all additions to that single snapshot,
-      //        then publish EXACTLY ONE kind:31633 event. The `batch` inventory
-      //        mutation folds every line through the package add helper and
-      //        drives a single optimistic cache update + rollback.
-      const batchLines: InventoryBatchLine[] = normalized.map((l) => ({
+      const grantLines = normalized.map((l) => ({
         address: l.address,
         amount: l.quantity,
       }));
-      await mutateInventory({ type: 'batch', lines: batchLines });
 
-      // 6. Deduct the TOTAL cost with EXACTLY ONE kind:11125 event. If this
-      //    fails, all items are already granted; return a whole-cart warning
-      //    rather than throwing away the grant.
-      try {
-        await mutateCoins(-totalCost);
-      } catch (err) {
-        return {
-          lines: resultLines,
-          totalCost,
-          coinsCharged: false,
-          warning:
-            err instanceof Error
-              ? `Items granted but coins were not charged: ${err.message}`
-              : 'Items granted but coins were not charged.',
-        };
+      // A zero-cost cart (free items) has no coin movement, so it goes
+      // through the ordinary inventory mutation instead of a wallet no-op.
+      if (totalCost === 0) {
+        await mutateInventory({ type: 'batch', lines: grantLines });
+        return { lines: resultLines, totalCost, outcome: 'applied' };
       }
 
-      return { lines: resultLines, totalCost, coinsCharged: true };
+      // The wallet performs the fresh balance read and rejects insufficient
+      // funds; the caller's rendered balance is presentation, never truth.
+      const outcome = await spendCoins({
+        opId: mintCoinOpId('shop-purchase'),
+        amount: totalCost,
+        label: 'shop-purchase',
+        grantLines,
+      });
+
+      if (outcome.status === 'applied' || outcome.status === 'already-applied') {
+        return { lines: resultLines, totalCost, outcome: 'applied' };
+      }
+      return { lines: resultLines, totalCost, outcome: 'ambiguous' };
     },
     onSettled: () => {
       if (!user?.pubkey) return;
-      // Reconcile BOTH canonical caches after settlement.
       queryClient.invalidateQueries({
         queryKey: inventoryQueryKey(user.pubkey),
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['blobbonaut-profile', user.pubkey],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['owner-profile', user.pubkey],
       });
     },
   });

@@ -5,9 +5,12 @@
  */
 
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import { TreasureHuntModal } from './TreasureHuntModal';
+import { TreasureHuntModalView } from './TreasureHuntModalView';
+import type { TreasureHuntRewardsService } from '@/hooks/useTreasureHuntRewards';
+import { BEACH_REWARD_POLICY } from '@/beach/rewards/policy';
+import { calculateTreasureHuntReward, rewardEligibility } from '@/beach/rewards/coin-reward';
 import { TREASURE_HUNT_UI_POLICY, SAND_RECT, PLAYFIELD_IMAGE_ASPECT } from './treasure-hunt-config';
 import { fieldPointToImagePercent, fitFieldLayout, type FieldMapping } from './field-transform';
 import type { DetectorAudioEngine } from './detector-audio';
@@ -74,10 +77,67 @@ function makeEngine(): DetectorAudioEngine & {
   };
 }
 
+type MockGrant = 'applied' | 'ambiguous' | 'failed';
+
+/** A deterministic in-memory reward service for the view layer. */
+function makeRewardsService(options?: {
+  remaining?: number;
+  windowStatus?: null;
+  grant?: MockGrant;
+}): TreasureHuntRewardsService & {
+  reserved: string[];
+  abandoned: { opId: string; digs: number; activeSeconds: number }[];
+  authorized: string[];
+} {
+  const reserved: string[] = [];
+  const abandoned: { opId: string; digs: number; activeSeconds: number }[] = [];
+  const authorized: string[] = [];
+  const remaining = options?.remaining ?? 10;
+  const grant = options?.grant ?? 'applied';
+  return {
+    reserved,
+    abandoned,
+    authorized,
+    windowStatus:
+      options?.windowStatus === null
+        ? null
+        : { limit: 10, remaining, windowKey: 'w', resetsAt: 0 },
+    policy: BEACH_REWARD_POLICY,
+    async reserveRewardedHunt() {
+      if (remaining <= 0) return { ok: false, reason: 'limit-reached' as const };
+      const opId = `mock-op-${reserved.length}`;
+      reserved.push(opId);
+      return { ok: true, opId };
+    },
+    reportParticipation() {},
+    async authorizeReward(result, opId) {
+      authorized.push(opId);
+      // Flow tests cannot wait 20 real seconds under a rAF clock; the
+      // participation rule itself is pinned by the pure coin-reward tests.
+      const flowPolicy = { ...BEACH_REWARD_POLICY, minActiveSeconds: 0 };
+      const eligibility = rewardEligibility(result, flowPolicy);
+      if (!eligibility.eligible) return { status: 'ineligible', reason: eligibility.reason };
+      const reward = calculateTreasureHuntReward(result, flowPolicy)!;
+      if (grant === 'ambiguous') return { status: 'ambiguous', reward };
+      if (grant === 'failed') return { status: 'failed', reward, message: 'simulated' };
+      return { status: 'applied', reward, alreadyApplied: false };
+    },
+    abandonHunt(opId, participation) {
+      abandoned.push({ opId, ...participation });
+    },
+    pendingOps: [],
+    refreshPending() {},
+    async recoverPendingReward() {
+      return 'applied' as const;
+    },
+  };
+}
+
 function renderModal(options?: {
   policy?: TreasureHuntPolicy;
   onClose?: () => void;
   onActorSuppressionChange?: (suppressed: boolean) => void;
+  rewards?: TreasureHuntRewardsService;
 }) {
   const engines: ReturnType<typeof makeEngine>[] = [];
   const audioFactory = vi.fn(() => {
@@ -86,11 +146,14 @@ function renderModal(options?: {
     return engine;
   });
   const onClose = options?.onClose ?? vi.fn();
+  const rewards =
+    options?.rewards ?? makeRewardsService({ windowStatus: null });
   const view = render(
-    <TreasureHuntModal
+    <TreasureHuntModalView
       open
       onClose={onClose}
       onActorSuppressionChange={options?.onActorSuppressionChange}
+      rewards={rewards}
       dev={{
         seed: 'modal-test',
         policy: options?.policy ?? TREASURE_HUNT_UI_POLICY,
@@ -99,11 +162,15 @@ function renderModal(options?: {
       }}
     />
   );
-  return { view, audioFactory, engines, onClose };
+  return { view, audioFactory, engines, onClose, rewards };
 }
 
-function startHunt() {
-  fireEvent.click(screen.getByRole('button', { name: 'Start Practice Hunt' }));
+async function startHunt(label: string | RegExp = 'Start Practice Hunt') {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+  // Reservation (if any) resolves on a microtask; the game mounts after it.
+  await waitFor(() =>
+    expect(document.querySelector('[data-treasure-game]')).not.toBeNull(),
+  );
 }
 
 /** The same round the modal builds, for computing dig coordinates. */
@@ -133,17 +200,17 @@ function fieldEl(): HTMLElement {
   return element;
 }
 
-describe('screen flow', () => {
-  it('opens on the intro without touching audio', () => {
+describe('screen flow', async () => {
+  it('opens on the intro without touching audio', async () => {
     const { audioFactory } = renderModal();
     expect(screen.getByText('Beach Treasure Hunt')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start Practice Hunt' })).toBeInTheDocument();
     expect(audioFactory).not.toHaveBeenCalled();
   });
 
-  it('Start Hunt builds the audio engine inside the click and mounts the game', () => {
+  it('Start Hunt builds the audio engine inside the click and mounts the game', async () => {
     const { audioFactory } = renderModal();
-    startHunt();
+    await startHunt();
     expect(audioFactory).toHaveBeenCalledTimes(1);
     expect(document.querySelector('[data-treasure-game]')).not.toBeNull();
     expect(screen.getByRole('button', { name: /metal detector/i })).toHaveAttribute(
@@ -152,7 +219,7 @@ describe('screen flow', () => {
     );
   });
 
-  it('closing from the intro needs no confirmation', () => {
+  it('closing from the intro needs no confirmation', async () => {
     const onClose = vi.fn();
     renderModal({ onClose });
     fireEvent.click(screen.getByRole('button', { name: /Close Beach Treasure Hunt/ }));
@@ -161,19 +228,19 @@ describe('screen flow', () => {
   });
 });
 
-describe('pause and interruption', () => {
-  it('pauses and resumes through the shell controls', () => {
+describe('pause and interruption', async () => {
+  it('pauses and resumes through the shell controls', async () => {
     renderModal();
-    startHunt();
+    await startHunt();
     fireEvent.click(screen.getByRole('button', { name: /Pause Beach Treasure Hunt/ }));
     expect(document.querySelector('[data-treasure-paused]')).not.toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Resume Beach Treasure Hunt/ }));
     expect(document.querySelector('[data-treasure-paused]')).toBeNull();
   });
 
-  it('window blur pauses a live round and never auto-resumes', () => {
+  it('window blur pauses a live round and never auto-resumes', async () => {
     renderModal();
-    startHunt();
+    await startHunt();
     fireEvent.blur(window);
     expect(document.querySelector('[data-treasure-paused]')).not.toBeNull();
     fireEvent.focus(window);
@@ -181,11 +248,11 @@ describe('pause and interruption', () => {
   });
 });
 
-describe('exit rule', () => {
-  it('mid-round close asks first; Keep Digging resumes', () => {
+describe('exit rule', async () => {
+  it('mid-round close asks first; Keep Digging resumes', async () => {
     const onClose = vi.fn();
     renderModal({ onClose });
-    startHunt();
+    await startHunt();
 
     fireEvent.click(screen.getByRole('button', { name: /Leave Beach Treasure Hunt/ }));
     expect(onClose).not.toHaveBeenCalled();
@@ -198,10 +265,10 @@ describe('exit rule', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('confirming the exit closes, discards the round and silences the engine', () => {
+  it('confirming the exit closes, discards the round and silences the engine', async () => {
     const onClose = vi.fn();
     const { engines } = renderModal({ onClose });
-    startHunt();
+    await startHunt();
 
     fireEvent.click(screen.getByRole('button', { name: /Leave Beach Treasure Hunt/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Leave Hunt' }));
@@ -210,29 +277,29 @@ describe('exit rule', () => {
     expect(engines[0].dispose).toHaveBeenCalled();
   });
 
-  it('Escape follows the same confirmation path', () => {
+  it('Escape follows the same confirmation path', async () => {
     const onClose = vi.fn();
     renderModal({ onClose });
-    startHunt();
+    await startHunt();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
     expect(screen.getByText('Leave the hunt?')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('unmounting disposes the engine — no beep outlives the shell', () => {
+  it('unmounting disposes the engine — no beep outlives the shell', async () => {
     const { view, engines } = renderModal();
-    startHunt();
+    await startHunt();
     view.unmount();
     expect(engines[0].dispose).toHaveBeenCalled();
   });
 });
 
-describe('finish and results', () => {
+describe('finish and results', async () => {
   const onePolicy: TreasureHuntPolicy = { ...TREASURE_HUNT_UI_POLICY, shovelUses: 1 };
 
-  it('a shovel-depleting miss ends the round and shows the findings summary', () => {
+  it('a shovel-depleting miss ends the round and shows the findings summary', async () => {
     const { engines } = renderModal({ policy: onePolicy });
-    startHunt();
+    await startHunt();
 
     const reference = referenceRound(onePolicy);
     const miss = findMissPoint(reference);
@@ -247,15 +314,15 @@ describe('finish and results', () => {
     // Practice framing: says plainly that nothing durable was granted, and
     // never claims an inventory grant.
     expect(
-      screen.getByText('Practice round — no Coins or items were awarded.')
+      screen.getByText('Practice round — no Coins were awarded.')
     ).toBeInTheDocument();
     expect(screen.queryByText(/inventory/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/added to/i)).not.toBeInTheDocument();
   });
 
-  it('a dig on a target reveals it, updates the finds count and records a hit', () => {
+  it('a dig on a target reveals it, updates the finds count and records a hit', async () => {
     const { engines } = renderModal();
-    startHunt();
+    await startHunt();
 
     const reference = referenceRound(TREASURE_HUNT_UI_POLICY);
     const target = reference.targets[0];
@@ -271,9 +338,9 @@ describe('finish and results', () => {
     expect(document.querySelector('[data-find-marker]')).not.toBeNull();
   });
 
-  it('Practice Again starts a completely fresh simulation with a new engine', () => {
+  it('Practice Again starts a completely fresh simulation with a new engine', async () => {
     const { audioFactory, engines } = renderModal({ policy: onePolicy });
-    startHunt();
+    await startHunt();
     const reference = referenceRound(onePolicy);
     fireEvent.click(screen.getByRole('button', { name: /shovel/i }));
     fireEvent.pointerDown(fieldEl(), { pointerId: 4, ...pxFor(findMissPoint(reference), onePolicy) });
@@ -285,10 +352,10 @@ describe('finish and results', () => {
     expect(document.querySelector('[data-treasure-game]')).not.toBeNull();
   });
 
-  it('Return to Beach closes without confirmation after results', () => {
+  it('Return to Beach closes without confirmation after results', async () => {
     const onClose = vi.fn();
     renderModal({ policy: onePolicy, onClose });
-    startHunt();
+    await startHunt();
     const reference = referenceRound(onePolicy);
     fireEvent.click(screen.getByRole('button', { name: /shovel/i }));
     fireEvent.pointerDown(fieldEl(), { pointerId: 4, ...pxFor(findMissPoint(reference), onePolicy) });
@@ -299,7 +366,7 @@ describe('finish and results', () => {
   });
 });
 
-describe('tool switching, audio and actor suppression', () => {
+describe('tool switching, audio and actor suppression', async () => {
   const frames = () =>
     new Promise<void>((resolve) => {
       requestAnimationFrame(() => {
@@ -309,7 +376,7 @@ describe('tool switching, audio and actor suppression', () => {
 
   it('detector audio only operates while the detector is the active tool', async () => {
     const { engines } = renderModal();
-    startHunt();
+    await startHunt();
     const engine = engines[0];
 
     await frames();
@@ -328,9 +395,9 @@ describe('tool switching, audio and actor suppression', () => {
     expect(engines).toHaveLength(1); // same engine — nothing duplicated
   });
 
-  it('selecting the shovel docks and deactivates the detector; reselecting restores it', () => {
+  it('selecting the shovel docks and deactivates the detector; reselecting restores it', async () => {
     renderModal();
-    startHunt();
+    await startHunt();
 
     const detector = document.querySelector('[data-treasure-detector]') as HTMLElement;
     const activeLeft = detector.style.left;
@@ -347,7 +414,7 @@ describe('tool switching, audio and actor suppression', () => {
     expect(detector.style.left).toBe(activeLeft);
   });
 
-  it('suppresses the actor for playing and results, restoring it on close and unmount', () => {
+  it('suppresses the actor for playing and results, restoring it on close and unmount', async () => {
     const onSuppress = vi.fn();
     const onClose = vi.fn();
     const onePolicy: TreasureHuntPolicy = { ...TREASURE_HUNT_UI_POLICY, shovelUses: 1 };
@@ -359,7 +426,7 @@ describe('tool switching, audio and actor suppression', () => {
 
     expect(onSuppress).not.toHaveBeenCalledWith(true); // intro keeps the actor
 
-    startHunt();
+    await startHunt();
     expect(onSuppress).toHaveBeenLastCalledWith(true);
 
     // Finish the round: still covered by the shell → still suppressed.
@@ -375,6 +442,135 @@ describe('tool switching, audio and actor suppression', () => {
     onSuppress.mockClear();
     view.unmount();
     expect(onSuppress).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('rewarded hunts', () => {
+  const onePolicy: TreasureHuntPolicy = { ...TREASURE_HUNT_UI_POLICY, shovelUses: 1 };
+
+  it('rewarded intro shows the remaining count and Start Hunt reserves a slot', async () => {
+    const rewards = makeRewardsService({ remaining: 7 });
+    renderModal({ rewards });
+
+    expect(document.querySelector('[data-treasure-intro-mode="rewarded"]')).not.toBeNull();
+    expect(screen.getByText(/Rewarded hunts remaining today/)).toHaveTextContent('7');
+
+    await startHunt('Start Hunt');
+    expect(rewards.reserved).toHaveLength(1);
+    expect(document.querySelector('[data-treasure-rewarded-chip]')).not.toBeNull();
+  });
+
+  it('at the limit the intro switches to practice and reserves nothing', async () => {
+    const rewards = makeRewardsService({ remaining: 0 });
+    renderModal({ rewards });
+
+    expect(document.querySelector('[data-treasure-intro-mode="practice-limit"]')).not.toBeNull();
+    expect(screen.getByText(/completed today’s rewarded hunts/)).toBeInTheDocument();
+
+    await startHunt('Start Practice Hunt');
+    expect(rewards.reserved).toHaveLength(0);
+    expect(document.querySelector('[data-treasure-rewarded-chip]')).toBeNull();
+  });
+
+  it('a finished rewarded hunt authorizes once and shows the applied breakdown', async () => {
+    const rewards = makeRewardsService({ remaining: 5, grant: 'applied' });
+    renderModal({ rewards, policy: onePolicy });
+    await startHunt('Start Hunt');
+
+    // Play out: pass the 20 s participation floor, then burn the only dig.
+    const reference = referenceRound(onePolicy);
+    fireEvent.click(screen.getByRole('button', { name: /shovel/i }));
+    fireEvent.pointerDown(fieldEl(), {
+      pointerId: 4,
+      ...pxFor(reference.targets[0].position, onePolicy),
+    });
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-treasure-reward-status="applied"]'),
+      ).not.toBeNull(),
+    );
+    expect(rewards.authorized).toHaveLength(1);
+    expect(rewards.authorized[0]).toBe(rewards.reserved[0]);
+    expect(screen.getByText(/Blobbi Coins added/)).toBeInTheDocument();
+    expect(screen.getByText('Base reward')).toBeInTheDocument();
+  });
+
+  it('an ambiguous grant never claims Coins were added and blocks replay', async () => {
+    const rewards = makeRewardsService({ remaining: 5, grant: 'ambiguous' });
+    renderModal({ rewards, policy: onePolicy });
+    await startHunt('Start Hunt');
+
+    const reference = referenceRound(onePolicy);
+    fireEvent.click(screen.getByRole('button', { name: /shovel/i }));
+    fireEvent.pointerDown(fieldEl(), {
+      pointerId: 4,
+      ...pxFor(reference.targets[0].position, onePolicy),
+    });
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-treasure-reward-status="ambiguous"]'),
+      ).not.toBeNull(),
+    );
+    expect(screen.queryByText(/Blobbi Coins added/)).not.toBeInTheDocument();
+    expect(screen.getByText(/will not be lost or doubled/)).toBeInTheDocument();
+    // Replay is withheld while the outcome is unsettled.
+    expect(screen.queryByRole('button', { name: /Hunt Again|Practice Again/ })).toBeNull();
+  });
+
+  it('a provably-failed grant offers a retry', async () => {
+    const rewards = makeRewardsService({ remaining: 5, grant: 'failed' });
+    renderModal({ rewards, policy: onePolicy });
+    await startHunt('Start Hunt');
+
+    const reference = referenceRound(onePolicy);
+    fireEvent.click(screen.getByRole('button', { name: /shovel/i }));
+    fireEvent.pointerDown(fieldEl(), {
+      pointerId: 4,
+      ...pxFor(reference.targets[0].position, onePolicy),
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Try again/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Try again/i }));
+    await waitFor(() => expect(rewards.authorized).toHaveLength(2));
+  });
+
+  it('leaving mid-hunt reports the abandonment with its participation', async () => {
+    const rewards = makeRewardsService({ remaining: 5 });
+    renderModal({ rewards });
+    await startHunt('Start Hunt');
+
+    fireEvent.click(screen.getByRole('button', { name: /Leave Beach Treasure Hunt/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Leave Hunt' }));
+
+    expect(rewards.abandoned).toHaveLength(1);
+    expect(rewards.abandoned[0].opId).toBe(rewards.reserved[0]);
+    // No result was finalized, so nothing was authorized.
+    expect(rewards.authorized).toHaveLength(0);
+  });
+
+  it('a pending operation from an earlier session surfaces on the intro', async () => {
+    const rewards = makeRewardsService({ remaining: 5 });
+    const pending = {
+      opId: 'old-op',
+      roundKey: 'r',
+      windowKey: 'w',
+      status: 'finalized' as const,
+      amount: 9,
+      digs: 3,
+      activeSeconds: 40,
+      createdAt: 0,
+      updatedAt: 0,
+    };
+    renderModal({
+      rewards: { ...rewards, pendingOps: [pending] },
+    });
+    expect(document.querySelector('[data-treasure-pending-recovery]')).not.toBeNull();
+    expect(screen.getByText(/9 Coins ready to finish/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish reward' })).toBeInTheDocument();
   });
 });
 

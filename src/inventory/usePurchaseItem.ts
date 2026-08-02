@@ -16,11 +16,10 @@
  *   coins (a small favor-the-user leak) rather than losing coins and receiving
  *   nothing. The alternative (coins first) risks charging a player who then
  *   never receives the item — the worse failure for trust. We surface a clear
- *   warning on partial failure so the player and logs know coins were not
- *   charged.
- *
- * There is no relay rollback after a successful publish; a failed coin
- * deduction leaves the granted item in place and reports partial success.
+ *   Since the Coin cutover the whole purchase is ONE canonical wallet
+ *   operation: the coin deduction and the item grant land in the SAME
+ *   kind:31633 replacement event, so the old partial-failure mode ("item
+ *   granted but coins not charged") no longer exists.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,7 +27,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 import { useInventoryMutation } from './useInventoryMutation';
-import { useCoinsMutation } from './useCoinsMutation';
+import { useCoinWallet } from './useCoinWallet';
+import { mintCoinOpId } from './coin-wallet';
 import { priceForAddress } from './shop-catalog';
 import { inventoryQueryKey } from './useIslandInventory';
 
@@ -43,10 +43,12 @@ export interface PurchaseResult {
   address: string;
   units: number;
   totalCost: number;
-  /** True when both writes succeeded. */
-  coinsCharged: boolean;
-  /** Present when coin deduction failed after the item was granted. */
-  warning?: string;
+  /**
+   * `applied` — the single purchase event published (grant + charge
+   * together). `ambiguous` — the publish MAY have landed; recorded durably
+   * and reconciled later, never blindly retried.
+   */
+  outcome: 'applied' | 'ambiguous';
 }
 
 /**
@@ -61,15 +63,14 @@ export interface PurchaseResult {
 export function usePurchaseItem() {
   const { user } = useCurrentUser();
   const { mutateAsync: mutateInventory } = useInventoryMutation();
-  const { mutateAsync: mutateCoins } = useCoinsMutation();
+  const { spendCoins } = useCoinWallet();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       address,
       units,
-      currentCoins,
-    }: PurchaseInput & { currentCoins: number }): Promise<PurchaseResult> => {
+    }: PurchaseInput): Promise<PurchaseResult> => {
       if (!user?.pubkey) throw new Error('User not logged in');
       if (!Number.isInteger(units) || units < 1) {
         throw new Error('Purchase units must be a positive integer');
@@ -80,33 +81,26 @@ export function usePurchaseItem() {
       }
       const totalCost = price * units;
 
-      // Validate affordability up-front (best-effort; coins mutation also guards
-      // against a negative balance using a fresh profile read).
-      if (currentCoins < totalCost) {
-        throw new Error('Insufficient coins');
+      // Free items have no coin movement: plain inventory grant.
+      if (totalCost === 0) {
+        await mutateInventory({ type: 'purchase', address, units });
+        return { address, units, totalCost, outcome: 'applied' };
       }
 
-      // 1. Grant item first (favor-the-user ordering — see file header).
-      await mutateInventory({ type: 'purchase', address, units });
-
-      // 2. Deduct coins. If this fails, the item is already granted; report a
-      //    partial-success warning rather than throwing away the grant.
-      try {
-        await mutateCoins(-totalCost);
-      } catch (err) {
-        return {
-          address,
-          units,
-          totalCost,
-          coinsCharged: false,
-          warning:
-            err instanceof Error
-              ? `Item granted but coins were not charged: ${err.message}`
-              : 'Item granted but coins were not charged.',
-        };
+      // ONE canonical wallet operation: the coin deduction and the item grant
+      // in the same replacement event. The wallet performs the fresh balance
+      // read and rejects insufficient funds — a rendered HUD number is never
+      // spendable truth.
+      const outcome = await spendCoins({
+        opId: mintCoinOpId('shop-purchase'),
+        amount: totalCost,
+        label: 'shop-purchase',
+        grantLines: [{ address, amount: units }],
+      });
+      if (outcome.status === 'applied' || outcome.status === 'already-applied') {
+        return { address, units, totalCost, outcome: 'applied' };
       }
-
-      return { address, units, totalCost, coinsCharged: true };
+      return { address, units, totalCost, outcome: 'ambiguous' };
     },
     onSettled: () => {
       if (!user?.pubkey) return;

@@ -81,6 +81,8 @@ import {
   INITIAL_BLOBBONAUT_COINS,
 } from '@blobbi-kit/core';
 import { validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
+import { createCoinWallet } from '@/inventory/coin-wallet';
+import { INITIAL_GRANT_OP_ID } from '@/inventory/useCoinBootstrap';
 
 import {
   generateEggPreview,
@@ -190,10 +192,12 @@ export function useFirstEggAdoption() {
             authorData?.metadata?.name ||
             authorData?.metadata?.display_name ||
             'Blobbonaut';
+          // NOTE: no `coins` tag. Since the Coin cutover a fresh profile never
+          // carries an active balance — the initial allocation is a canonical
+          // wallet grant into kind:31633 (step e below).
           baseProfileTags = [
             ...buildBlobbonautTags(pubkey),
             ['name', suggestedName],
-            ['coins', INITIAL_BLOBBONAUT_COINS.toString()],
           ];
         } else {
           baseProfileTags = existingProfile.tags;
@@ -228,6 +232,29 @@ export function useFirstEggAdoption() {
           tags: finalProfileTags,
         });
 
+        // ── e. Initial Coin allocation — ONLY for a brand-new profile, as a
+        //       canonical wallet grant with a FIXED operation id: the durable
+        //       Coin op ledger makes it exactly-once across retries and
+        //       refreshes, so a partially-failed adoption can be retried
+        //       without ever double-granting (and a failed grant after a
+        //       successful profile publish is retried by re-running finalize,
+        //       where steps a–d re-merge idempotently). Existing profiles get
+        //       nothing here: their balance history is theirs, and the legacy
+        //       `coins` tag is the bootstrap's business. ──
+        if (!existingProfile) {
+          const wallet = createCoinWallet({ nostr, user });
+          const outcome = await wallet.grantCoins({
+            opId: INITIAL_GRANT_OP_ID,
+            amount: INITIAL_BLOBBONAUT_COINS,
+            label: 'initial-grant',
+          });
+          if (outcome.status === 'blocked') {
+            // A previous attempt's grant may already be in flight/ambiguous.
+            // Do not fail the adoption over it; reconciliation resolves it.
+            console.warn('Initial coin grant is pending reconciliation');
+          }
+        }
+
         return preview.d;
       };
 
@@ -239,7 +266,7 @@ export function useFirstEggAdoption() {
       finalizeInFlightRef.current = promise;
       return promise;
     },
-    [nostr, user?.pubkey, authorData, strictPublish],
+    [nostr, user, authorData, strictPublish],
   );
 
   return { generatePreview, finalizeAdoption };

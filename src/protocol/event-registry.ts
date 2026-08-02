@@ -232,7 +232,7 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     kind: KIND_BLOBBONAUT_PROFILE, // 11125
     name: 'Blobbonaut Owner Profile',
     purpose:
-      "The player's account: coins, owned Blobbis, achievements, current companion.",
+      "The player's account: owned Blobbis, achievements, current companion. (Historic `coins` tag deprecated by the Coin cutover.)",
     eventClass: 'replaceable',
     addressFormat: null,
     authority: 'player-or-ditto',
@@ -245,14 +245,15 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     ownership: 'blobbi-island',
     sourceFiles: [
       'src/lib/blobbi-parsers.ts',
-      'src/inventory/useCoinsMutation.ts',
       'src/hooks/useBlobbiEvents.ts',
+      'src/hooks/useBlobbonautProfile.ts',
       'src/hooks/useOptimizedStatus.ts',
       'src/hooks/useFirstEggAdoption.ts',
+      'src/inventory/useCoinBootstrap.ts',
     ],
-    docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md'],
+    docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md', 'docs/blobbi-coin-cutover.md'],
     notes:
-      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do live here.',
+      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the Coin cutover: the canonical balance is the official Blobbi Coin quantity in kind 31633, a pre-existing `coins` tag is historical (read once by the legacy bootstrap, preserved verbatim on republish, never updated), and no production writer emits it.',
   },
   {
     kind: KIND_BLOBBONAUT_PROFILE_LEGACY, // 31125
@@ -696,6 +697,30 @@ export const ARCADE_TICKET_D = 'blobbi:currency:arcade-ticket';
 export const ARCADE_TICKET_IMAGE_URL =
   'https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp';
 
+/**
+ * The canonical Blobbi Coin identity — the island's OFFICIAL currency.
+ *
+ * The issuer-signed kind:31632 definition is published (see
+ * `docs/blobbi-coin-cutover.md` for the verification record). Identity is the
+ * stable address `31632:<issuer>:blobbi:currency:coin` — the event id of the
+ * currently observed revision is a diagnostic in `src/inventory/coin.ts`,
+ * never identity.
+ *
+ * The published definition intentionally omits `max_stack` (the inventory
+ * spec makes it optional and games MAY ignore it); the application-level
+ * balance ceiling lives in `src/inventory/coin.ts`, enforced by the wallet —
+ * never by rejecting the definition.
+ */
+export const BLOBBI_COIN_D = 'blobbi:currency:coin';
+
+/** Published front artwork (`image` tag + `front` view) of the Blobbi Coin. */
+export const BLOBBI_COIN_IMAGE_URL =
+  'https://blossom.primal.net/e18905da8edcf4d620be8b2106b6a890a29f073f35254b3241c53aded3917a27.webp';
+
+/** Published back-view artwork of the Blobbi Coin. */
+export const BLOBBI_COIN_IMAGE_BACK_URL =
+  'https://blossom.primal.net/7e8046f5bc216ad0fdabc71fa91be2f241e9fa126ebade2c3c11375b0c7f968e.webp';
+
 export const OFFICIAL_ITEM_DEFINITIONS: readonly OfficialItemDefinition[] = [
   // --- Food (action: feed; stages: baby, adult) ---
   {
@@ -1042,6 +1067,30 @@ export const OFFICIAL_ITEM_DEFINITIONS: readonly OfficialItemDefinition[] = [
       'src/components/blobbi/ArcadeTicketBalance.tsx',
       'src/components/blobbi/ItemBagModal.tsx',
     ],
+  },
+  {
+    d: BLOBBI_COIN_D,
+    // Mirrors the published `content.metadata.itemId`. Never protocol identity.
+    itemId: 'blobbi-coin',
+    name: 'Blobbi Coin',
+    description:
+      'The official currency of Blobbi Island, minted for Blobbis who explore, play, discover treasures, and help the island thrive.',
+    type: 'currency',
+    category: 'currency',
+    emoji: '🪙',
+    image: BLOBBI_COIN_IMAGE_URL,
+    // Currency is never used on a Blobbi; the null action keeps Coins out of
+    // every care flow, exactly like the Arcade Ticket.
+    action: null,
+    stages: ['egg', 'baby', 'adult'],
+    effects: {},
+    topics: ['currency', 'coin', 'official-currency', 'spendable', 'earnable', 'blobbi-coin'],
+    // ACTIVE: the issuer-signed kind:31632 definition (event id recorded in
+    // `src/inventory/coin.ts` for diagnostics) is published with these exact
+    // tags. The bundled fallback derived from this record is the offline path.
+    status: 'active',
+    stackable: true,
+    sourceFiles: ['src/inventory/coin.ts', 'src/inventory/coin-wallet.ts'],
   },
 ];
 

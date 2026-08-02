@@ -85,14 +85,19 @@ describe('useFirstEggAdoption', () => {
     expect(signEvent).not.toHaveBeenCalled();
   });
 
-  it('publishes the baby (31124) BEFORE the profile (11125)', async () => {
+  it('publishes baby (31124), then profile (11125), then the initial Coin grant (31633)', async () => {
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
     await result.current.finalizeAdoption(preview, 'Puck');
 
     const publishedKinds = nostrEvent.mock.calls.map(([e]) => e.kind);
-    expect(publishedKinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE]);
+    // Since the Coin cutover the initial 200-Coin allocation is a canonical
+    // wallet grant into kind:31633 (exactly-once via the durable op ledger) —
+    // a fresh profile carries NO coins tag.
+    expect(publishedKinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE, 31633]);
+    const profileEvent = nostrEvent.mock.calls[1][0];
+    expect(profileEvent.tags.find(([n]: string[]) => n === 'coins')).toBeUndefined();
   });
 
   it('uses the same canonical d in the baby d, profile has[], and current_companion', async () => {

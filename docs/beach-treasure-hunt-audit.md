@@ -1,6 +1,10 @@
 # Beach Treasure Hunt — Repository Audit and Implementation Plan (Beach 0)
 
-Status: **audit only — no implementation approved yet.**
+Status: **implemented through Beach 2 (provisional rewards)** — see
+`docs/blobbi-coin-cutover.md` for the reward system. This document remains
+the audit-time reference.
+
+Original status: audit only — no implementation approved yet.
 Companion document: `docs/coin-economy-migration-audit.md` (Coin economy and migration).
 
 This document records what actually exists in the repository today, verified at the

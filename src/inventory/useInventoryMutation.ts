@@ -55,6 +55,19 @@ import {
 
 const mutationChains = new Map<string, Promise<unknown>>();
 
+/**
+ * Serialize an inventory write on the shared per-user chain. Exported so the
+ * Coin wallet's strict writes ride the SAME chain as ordinary inventory
+ * mutations — a coin grant and a shop purchase in one tab can never
+ * interleave their read-modify-write windows.
+ */
+export function serializeInventoryWrite<T>(
+  pubkey: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  return serialize(pubkey, task);
+}
+
 function serialize<T>(pubkey: string, task: () => Promise<T>): Promise<T> {
   const prev = mutationChains.get(pubkey) ?? Promise.resolve();
   const next = prev.then(task, task);

@@ -129,8 +129,10 @@ describe('mergeOwnerProfileTags preserves legacy storage opaquely', () => {
 
     const out = mergeOwnerProfileTags({ ...profile, coins: 165, name: 'Renamed' });
 
-    // The intended update happened...
-    expect(out.find(([n]) => n === 'coins')?.[1]).toBe('165');
+    // Since the Coin cutover `coins` is NOT a managed tag: the historic value
+    // rides the unknown-tag passthrough VERBATIM — a profile update can never
+    // change (or roll back) a balance again. The in-memory field is inert.
+    expect(out.find(([n]) => n === 'coins')?.[1]).toBe('200');
     expect(out.find(([n]) => n === 'name')?.[1]).toBe('Renamed');
     // ...and storage is present exactly once, unchanged.
     expect(tagsNamed(out, 'storage')).toEqual([['storage', 'food_apple:5']]);

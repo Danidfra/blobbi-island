@@ -302,18 +302,16 @@ describe('no arcade component performs an inventory or coin write except the pas
     expect(writerImports.some((s) => /useCoinsMutation|blobbi-kinds/.test(s))).toBe(false);
   });
 
-  it('leaves the ONE coin write in ArcadePassModal, and nowhere else', () => {
-    // The pass purchase is the arcade's only write of any kind, and it writes
-    // coins (kind:11125), never inventory (kind:31633).
-    const modal = readFileSync(
-      join(process.cwd(), 'src/components/blobbi/ArcadePassModal.tsx'),
-      'utf8',
-    );
+  it('leaves the ONE coin write in ArcadePassModal, through the wallet', () => {
+    // The pass purchase is the arcade's only value write, and since the Coin
+    // cutover it spends through the canonical Coin WALLET (official Blobbi
+    // Coin in kind:31633) — never the raw inventory mutation layer and never
+    // the retired kind:11125 path.
     const specifiers = importsOf(
       join(process.cwd(), 'src/components/blobbi/ArcadePassModal.tsx'),
     );
-    expect(specifiers.some((s) => /useCoinsMutation/.test(s))).toBe(true);
+    expect(specifiers.some((s) => /useCoinWallet/.test(s))).toBe(true);
+    expect(specifiers.some((s) => /useCoinsMutation/.test(s))).toBe(false);
     expect(specifiers.some((s) => /useInventoryMutation/.test(s))).toBe(false);
-    expect(modal).not.toContain('31633');
   });
 });

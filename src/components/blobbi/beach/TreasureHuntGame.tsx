@@ -72,6 +72,8 @@ interface TreasureHuntGameProps {
   onDig: (position: Point) => void;
   muted: boolean;
   onToggleMuted: () => void;
+  /** Small "Rewarded Hunt" indicator; the amount is never shown mid-round. */
+  rewarded?: boolean;
   /** Dev-harness override; production leaves it undefined. */
   reducedMotionOverride?: boolean;
   /** Dev-harness overlays; production leaves it undefined. */
@@ -89,6 +91,7 @@ export function TreasureHuntGame({
   onDig,
   muted,
   onToggleMuted,
+  rewarded = false,
   reducedMotionOverride,
   devOverlays,
 }: TreasureHuntGameProps) {
@@ -325,6 +328,14 @@ export function TreasureHuntGame({
         className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm font-semibold text-island-ink"
         data-treasure-hud
       >
+        {rewarded && (
+          <span
+            className="rounded-full bg-amber-100/90 px-2 py-0.5 text-xs font-semibold text-island-ink"
+            data-treasure-rewarded-chip
+          >
+            Rewarded Hunt
+          </span>
+        )}
         <span data-treasure-time>
           <span aria-hidden>⏱️ </span>
           <span className="sr-only">Time remaining: </span>

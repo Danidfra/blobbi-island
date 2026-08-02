@@ -1,6 +1,11 @@
 # Coin Economy — Repository Audit and Migration Planning (Coin 0)
 
-Status: **audit only — no Coin item defined, no migration performed, no writers added.**
+Status: **superseded — the cutover described by this audit is IMPLEMENTED.**
+See `docs/blobbi-coin-cutover.md` for the canonical current state (official
+Blobbi Coin in kind:31633, wallet, bootstrap, Beach rewards). This document
+remains the audit-time reference for the risks that drove the design.
+
+Original status: audit only — no Coin item defined, no migration performed, no writers added.
 Companion document: `docs/beach-treasure-hunt-audit.md` (Beach minigame audit; shared
 repository-state section lives there — HEAD `305087b` on `production`, clean tree,
 219/4414 tests green).

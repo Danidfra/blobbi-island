@@ -20,16 +20,16 @@ import {
 } from '@/protocol/event-registry';
 
 describe('official item registry', () => {
-  it('contains 20 published official items and nothing reserved', () => {
-    // All 20 definitions (19 consumables + the Arcade Ticket currency) are now
-    // published and issuer-signed. Purchasability is a separate question — see
-    // shop-catalog.test.ts.
-    expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(20);
+  it('contains 21 published official items and nothing reserved', () => {
+    // All 21 definitions (19 consumables + the Arcade Ticket and Blobbi Coin
+    // currencies) are published and issuer-signed. Purchasability is a
+    // separate question — see shop-catalog.test.ts.
+    expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(21);
     expect(RESERVED_OFFICIAL_ITEMS).toHaveLength(0);
     expect(DEPRECATED_OFFICIAL_ITEMS).toHaveLength(0);
 
-    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(20);
-    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(20);
+    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(21);
+    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(21);
   });
 
   it('builds every address from the official issuer', () => {
@@ -196,10 +196,11 @@ describe('bundled fallback exact metadata (all 20 published items)', () => {
     // Currency. Published 2026-07-28; verified on both official relays. Unlike
     // the 19 consumables it carries an `image` and has NO action and NO effects.
     cur_arcade_ticket: { name: 'Arcade Ticket', type: 'currency', category: 'currency', emoji: '🎟️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
+    'blobbi-coin': { name: 'Blobbi Coin', type: 'currency', category: 'currency', emoji: '🪙', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'coin', 'official-currency', 'spendable', 'earnable', 'blobbi-coin'], effects: {} },
   };
 
-  it('covers exactly the 20 published items', () => {
-    expect(Object.keys(EXPECTED)).toHaveLength(20);
+  it('covers exactly the 21 published items', () => {
+    expect(Object.keys(EXPECTED)).toHaveLength(21);
     expect(Object.keys(EXPECTED).sort()).toEqual(
       ACTIVE_OFFICIAL_ITEMS.map((i) => i.itemId).sort(),
     );

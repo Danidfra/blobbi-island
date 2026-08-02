@@ -127,10 +127,8 @@ export function OptimizedStatusExample() {
                   <p className="text-sm text-muted-foreground">Name</p>
                   <p className="font-medium">{owner.name || 'Unnamed'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Coins</p>
-                  <p className="font-medium">{owner.coins}</p>
-                </div>
+                {/* Coins are deliberately absent here: the balance is the
+                    official Blobbi Coin in kind:31633 — see useCoinBalance. */}
                 <div>
                   <p className="text-sm text-muted-foreground">Petting Level</p>
                   <p className="font-medium">{owner.pettingLevel}</p>

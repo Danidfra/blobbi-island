@@ -63,11 +63,19 @@ export function useSetCurrentCompanion() {
         limit: 1
       }]);
 
+      // Deterministic latest-event selection: relays return replaceable
+      // events in arbitrary order, and republishing whichever arrived first
+      // used to be able to resurrect a STALE profile (including the historic
+      // `coins` tag) — the balance-rollback hazard the Coin audit flagged.
+      const latest = events
+        .filter(validateOwnerProfileEvent)
+        .sort((a, b) => b.created_at - a.created_at)[0];
+
       let existingTags: string[][] = [];
       let existingContent = '';
-      if (events.length > 0 && validateOwnerProfileEvent(events[0])) {
-        existingTags = events[0].tags;
-        existingContent = events[0].content;
+      if (latest) {
+        existingTags = latest.tags;
+        existingContent = latest.content;
       }
 
       // 2. Filter out the old 'current_companion' tag, if it exists
