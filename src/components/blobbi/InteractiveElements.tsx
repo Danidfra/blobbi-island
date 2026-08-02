@@ -21,6 +21,8 @@ import { townBushes } from '@/lib/town-bushes-config';
 import { TheaterSeat } from './theater/TheaterSeat';
 import { TheaterStage } from './theater/TheaterStage';
 import { theaterSeats } from '@/lib/theater-seats-config';
+import { TreasureHuntShack } from './beach/TreasureHuntShack';
+import { TreasureHuntModal } from './beach/TreasureHuntModal';
 import {
   STREETLIGHT_SRC,
   streetlightBaseBlocker,
@@ -61,17 +63,24 @@ interface InteractiveElementsProps {
   hiddenIn?: string | null;
   /** Called when the local player arrives at and hides inside a hiding spot. */
   onHideInSpot?: (hidingSpotId: string) => void;
+  /**
+   * LOCAL-ONLY suppression of the player's actor while a contained minigame
+   * is running (the treasure hunt). Never touches the pose controller or
+   * presence — see the note in `PlayingView`.
+   */
+  onActorSuppressionChange?: (suppressed: boolean) => void;
 }
 
 const noopHide = () => {};
 const noopSit = () => {};
 const NO_OCCUPIED_SEATS: ReadonlySet<string> = new Set();
 
-export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, occupiedSeats = NO_OCCUPIED_SEATS, onSitInSeat, onActivityChange, sessionParticipants = 1, hiddenIn = null, onHideInSpot }: InteractiveElementsProps) {
+export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = null, occupiedSeats = NO_OCCUPIED_SEATS, onSitInSeat, onActivityChange, sessionParticipants = 1, hiddenIn = null, onHideInSpot, onActorSuppressionChange }: InteractiveElementsProps) {
   const { currentLocation, setIsMapModalOpen, setCurrentLocation } = useLocation();
   const backgroundFile = getBackgroundForLocation(currentLocation);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFoodShopModalOpen, setIsFoodShopModalOpen] = useState(false);
+  const [isTreasureHuntOpen, setIsTreasureHuntOpen] = useState(false);
   const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
@@ -690,6 +699,20 @@ if (backgroundFile === 'nostr-station-open.webp') {
             className="size-24 sm:size-28 md:size-32 lg:size-36"
           />
         </div>
+
+        {/* Treasure-hunting shack on the right sand shelf. Arrival opens the
+            contained hunt; the modal reports LOCAL actor suppression while a
+            hunt is actually running (never the published hidden pose — that
+            would tell remote players this Blobbi is hidden in a world spot). */}
+        <TreasureHuntShack
+          requestInteraction={requestInteraction}
+          onArrive={() => setIsTreasureHuntOpen(true)}
+        />
+        <TreasureHuntModal
+          open={isTreasureHuntOpen}
+          onClose={() => setIsTreasureHuntOpen(false)}
+          onActorSuppressionChange={onActorSuppressionChange}
+        />
       </>
     );
   }

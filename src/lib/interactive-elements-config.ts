@@ -251,6 +251,15 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
     zIndex: 15,
     backgroundFile: 'beach-open.webp'
   },
+  {
+    // Treasure-hunt shack. Placement + stand point live in
+    // `beach-shack-config.ts`; this entry records the depth contract only.
+    // Base sits at y=79 (bottom-21%), square art 16% wide → top ≈ 55.
+    id: 'treasure-shack',
+    yPosition: 55,
+    zIndex: 15,
+    backgroundFile: 'beach-open.webp'
+  },
 
   // Home elements (home-inside.png)
   {

@@ -136,6 +136,23 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     forgetWatchSession(user?.pubkey);
   }, [currentLocation, user?.pubkey]);
 
+  /**
+   * LOCAL-ONLY actor suppression for contained minigames (the treasure hunt).
+   *
+   * Deliberately NOT the pose controller's `hiddenIn`: that state is published
+   * to presence (`MultiplayerLayer` calls `hideAt(hiddenIn)`) and means "this
+   * player is hidden inside a world hiding spot" — remote clients stop drawing
+   * the player entirely. Being inside a minigame dialog is not a world state;
+   * remote players should keep seeing this Blobbi standing at the shack. This
+   * flag only gates the local `MovableBlobbi` render and resets with the
+   * location, so a mid-game location change can never strand an invisible
+   * actor.
+   */
+  const [actorSuppressed, setActorSuppressed] = useState(false);
+  useEffect(() => {
+    setActorSuppressed(false);
+  }, [currentLocation]);
+
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
   const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation, previousLocation);
@@ -472,6 +489,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         onActivityChange={setActivitySession}
         hiddenIn={hiddenIn}
         onHideInSpot={hideInSpot}
+        onActorSuppressionChange={setActorSuppressed}
       />
 
       {/* Furniture */}
@@ -529,7 +547,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         key={currentLocation}
         containerRef={containerRef}
         boundary={boundary}
-        isVisible={!!selectedBlobbi}
+        isVisible={!!selectedBlobbi && !actorSuppressed}
         // One coherent presentation description (standing / sleeping / seated /
         // hidden), owned by the pose controller and resolved through the same
         // pure resolver remote actors use.

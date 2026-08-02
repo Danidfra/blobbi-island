@@ -58,6 +58,13 @@ const DevBlobbiEffects = import.meta.env.DEV
   ? lazy(() => import("./pages/DevBlobbiEffects").then(m => ({ default: m.DevBlobbiEffects })))
   : null;
 
+// Beach Treasure Hunt harness (Beach 1B). Simulation-only: drives the pure
+// seeded model and the real UI with overlays and forced policies — no signer,
+// no relay, no inventory or profile writes.
+const DevTreasureHunt = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevTreasureHunt").then(m => ({ default: m.DevTreasureHunt })))
+  : null;
+
 // Loading component for lazy-loaded routes
 const PageLoading = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -120,6 +127,13 @@ export function AppRouter() {
           <Route path="/dev/blobbi-effects" element={
             <Suspense fallback={<PageLoading />}>
               <DevBlobbiEffects />
+            </Suspense>
+          } />
+        )}
+        {DevTreasureHunt && (
+          <Route path="/dev/treasure-hunt" element={
+            <Suspense fallback={<PageLoading />}>
+              <DevTreasureHunt />
             </Suspense>
           } />
         )}

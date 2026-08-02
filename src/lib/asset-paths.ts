@@ -76,3 +76,12 @@ export function accessoryImagePath(
 export function miningItemPath(file: string): string {
   return `${ASSET_DIRS.minigames}/mining/${file}`;
 }
+
+/**
+ * Beach Treasure Hunt minigame art. Every treasure-hunt asset reference goes
+ * through `src/components/blobbi/beach/treasure-hunt-config.ts`, which is the
+ * one registry allowed to call this.
+ */
+export function treasureHuntAssetPath(file: string): string {
+  return `${ASSET_DIRS.minigames}/treasure-hunt/${file}`;
+}

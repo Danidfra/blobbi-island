@@ -1078,6 +1078,75 @@ img {
   overscroll-behavior: contain;
 }
 
+/* Same recipe for the treasure-hunt sand field: dragging the detector must
+   never scroll the dialog, flash a tap highlight or select copy. Scoped to
+   the field so the intro/results panels still scroll. */
+[data-treasure-field] {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: contain;
+}
+
+/* Treasure shack affordance. The transform layers are deliberately split:
+   the horizontal flip lives on its own inner element ([data-shack-flip]),
+   so the hover/press/hop transforms here can never overwrite it. Origin is
+   the shack's base so growth reads as standing taller, not floating. */
+[data-treasure-shack-anim] {
+  display: block;
+  transform-origin: 50% 100%;
+  transition: transform 160ms ease-out;
+}
+[data-treasure-shack]:hover [data-treasure-shack-anim],
+[data-treasure-shack]:focus-visible [data-treasure-shack-anim] {
+  transform: scale(1.04);
+}
+[data-treasure-shack]:active [data-treasure-shack-anim] {
+  transform: scale(0.97);
+}
+[data-treasure-shack][data-activated='true'] [data-treasure-shack-anim] {
+  animation: treasure-shack-hop 240ms ease-out;
+}
+@keyframes treasure-shack-hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-5%) scale(1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* The decorative shovel cursor dips briefly on an accepted dig. */
+@keyframes treasure-shovel-dig {
+  0% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(9%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep the STATE change (grown while hovered/focused, compressed while
+     pressed) but drop the motion between states and the hop entirely. */
+  [data-treasure-shack-anim] {
+    transition: none;
+  }
+  [data-treasure-shack][data-activated='true'] [data-treasure-shack-anim] {
+    animation: none;
+  }
+  .treasure-shovel-dig {
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arcade-pop-in,
   .dance-bulb,

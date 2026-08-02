@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 720" width="100%" height="100%">
+  <defs>
+    <!-- Outlines and Base Colors -->
+    <style>
+      .stroke-main { stroke: #1A2836; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .stroke-thin { stroke: #1A2836; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+
+    <!-- Gradients -->
+    <linearGradient id="teal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#56C8C3"/>
+      <stop offset="100%" stop-color="#309B95"/>
+    </linearGradient>
+
+    <linearGradient id="teal-dark-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3FAEA8"/>
+      <stop offset="100%" stop-color="#217974"/>
+    </linearGradient>
+
+    <linearGradient id="screen-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#B8F3E6"/>
+      <stop offset="100%" stop-color="#73DBC7"/>
+    </linearGradient>
+
+    <linearGradient id="gray-dish-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E2E7EC"/>
+      <stop offset="60%" stop-color="#C5CBD1"/>
+      <stop offset="100%" stop-color="#9FA8B1"/>
+    </linearGradient>
+
+    <linearGradient id="shaft-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFF8EB"/>
+      <stop offset="50%" stop-color="#F5EBD7"/>
+      <stop offset="100%" stop-color="#E3D2B8"/>
+    </linearGradient>
+
+    <linearGradient id="handle-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF8A7A"/>
+      <stop offset="40%" stop-color="#EE6958"/>
+      <stop offset="100%" stop-color="#C94939"/>
+    </linearGradient>
+
+    <linearGradient id="yellow-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFD868"/>
+      <stop offset="100%" stop-color="#E5A823"/>
+    </linearGradient>
+  </defs>
+
+  <g id="metal-detector">
+    <!-- 1. CENTRAL SHAFT (STEM) -->
+    <!-- Lower shaft behind control box -->
+    <rect x="145" y="420" width="30" height="200" fill="url(#shaft-grad)" class="stroke-main" />
+    
+    <!-- Upper shaft inside coil gap -->
+    <path d="M 146 220 L 146 310 L 174 310 L 174 220 Z" fill="url(#shaft-grad)" class="stroke-main" />
+
+    <!-- 2. SEARCH COIL (TOP LOOP) -->
+    <!-- Outer Coil Ring Shadow / Base -->
+    <ellipse cx="160" cy="180" rx="118" ry="153" fill="#1A2836" />
+    
+    <!-- Outer Teal Ring -->
+    <ellipse cx="160" cy="176" rx="115" ry="150" fill="url(#teal-grad)" />
+
+    <!-- Inner Gray Plate Dish -->
+    <ellipse cx="160" cy="176" rx="76" ry="110" fill="#1A2836" />
+    <ellipse cx="160" cy="174" rx="72" ry="106" fill="url(#gray-dish-grad)" />
+    
+    <!-- Inner Dish Shading / Rim Depth -->
+    <path d="M 88 174 A 72 106 0 0 0 232 174 A 72 100 0 0 1 88 174 Z" fill="#1A2836" opacity="0.15" />
+
+    <!-- Central Inner Arch Connector (Teal Mount) -->
+    <path d="M 130 280 L 130 220 C 130 195, 190 195, 190 220 L 190 280 Z" fill="#1A2836" />
+    <path d="M 134 280 L 134 220 C 134 201, 186 201, 186 220 L 186 280 Z" fill="url(#teal-grad)" />
+    <path d="M 144 275 L 144 224 C 144 212, 176 212, 176 224 L 176 275 Z" fill="#1A2836" />
+
+    <!-- 3. CONTROL BOX (MIDDLE UNIT) -->
+    <g id="control-box">
+      <!-- Main Body Outer Stroke & Fill -->
+      <rect x="90" y="320" width="140" height="110" rx="28" fill="#1A2836" />
+      <rect x="94" y="324" width="132" height="102" rx="24" fill="url(#teal-grad)" />
+      
+      <!-- Inner Dark Rim for Screen Area -->
+      <rect x="108" y="338" width="104" height="58" rx="14" fill="#1A2836" />
+      
+      <!-- Screen Display.
+           Semantic hooks for the game UI: ids plus CSS-custom-property styles
+           with fallbacks that preserve this artwork's stock appearance when the
+           file is shown as a plain image (tool docks, previews). The game sets
+           the variables from its centralized signal config. -->
+      <rect id="th-display-screen" x="112" y="342" width="96" height="50" rx="10" fill="url(#screen-grad)" style="fill: var(--th-screen-fill, url(#screen-grad))" />
+
+      <!-- Wi-Fi / Signal Wave Icon on Screen -->
+      <!-- Top Arc (outermost — strongest signal) -->
+      <path id="th-signal-arc-3" style="opacity: var(--th-arc3-opacity, 1)" d="M 140 357 A 22 22 0 0 1 180 357" fill="none" stroke="#1A2836" stroke-width="4.5" stroke-linecap="round" />
+      <!-- Middle Arc -->
+      <path id="th-signal-arc-2" style="opacity: var(--th-arc2-opacity, 1)" d="M 146 364 A 14 14 0 0 1 174 364" fill="none" stroke="#1A2836" stroke-width="4.5" stroke-linecap="round" />
+      <!-- Inner Arc (first to light up) -->
+      <path id="th-signal-arc-1" style="opacity: var(--th-arc1-opacity, 1)" d="M 152 371 A 7 7 0 0 1 168 371" fill="none" stroke="#1A2836" stroke-width="4.5" stroke-linecap="round" />
+      <!-- Dot -->
+      <circle id="th-signal-dot" style="opacity: var(--th-dot-opacity, 1)" cx="160" cy="378" r="3.5" fill="#1A2836" />
+
+      <!-- Left Button (Coral Rectangle) -->
+      <rect x="118" y="403" width="22" height="11" rx="4" fill="#1A2836" />
+      <rect x="120" y="404" width="18" height="9" rx="3" fill="#F06B5B" />
+
+      <!-- Right Button (Yellow Circle) -->
+      <circle cx="192" cy="408" r="8" fill="#1A2836" />
+      <circle cx="192" cy="408" r="6" fill="url(#yellow-grad)" />
+    </g>
+
+    <!-- 4. HANDLE GRIP & BASE (BOTTOM) -->
+    <g id="handle">
+      <!-- Upper Yellow Collar -->
+      <rect x="136" y="475" width="48" height="22" rx="8" fill="#1A2836" />
+      <rect x="139" y="478" width="42" height="16" rx="6" fill="url(#yellow-grad)" />
+
+      <!-- Main Red/Coral Hand Grip -->
+      <rect x="141" y="495" width="38" height="120" fill="#1A2836" />
+      <rect x="145" y="495" width="30" height="120" fill="url(#handle-grad)" />
+
+      <!-- Lower Yellow Collar -->
+      <rect x="136" y="612" width="48" height="22" rx="8" fill="#1A2836" />
+      <rect x="139" y="615" width="42" height="16" rx="6" fill="url(#yellow-grad)" />
+
+      <!-- Bottom Teal End Cap Base -->
+      <path d="M 132 630 L 188 630 C 194 630, 196 642, 194 652 L 188 672 C 182 682, 138 682, 132 672 L 126 652 C 124 642, 126 630, 132 630 Z" fill="#1A2836" />
+      <path d="M 135 634 L 185 634 C 189 634, 191 643, 190 650 L 185 668 C 180 676, 140 676, 135 668 L 130 650 C 129 643, 131 634, 135 634 Z" fill="url(#teal-grad)" />
+    </g>
+  </g>
+</svg>

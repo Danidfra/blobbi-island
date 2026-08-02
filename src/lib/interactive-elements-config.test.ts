@@ -136,9 +136,13 @@ describe('Interactive Elements Configuration', () => {
     });
 
     it('should return correct elements for beach backgrounds', () => {
+      // Two since Beach 1B: the boat and the treasure-hunt shack.
       const beachOpenElements = getInteractiveElementsForBackground('beach-open.webp');
-      expect(beachOpenElements).toHaveLength(1);
-      expect(beachOpenElements[0].id).toBe('boat');
+      expect(beachOpenElements).toHaveLength(2);
+      expect(beachOpenElements.map((element) => element.id)).toEqual([
+        'boat',
+        'treasure-shack',
+      ]);
     });
 
     it('should return empty array for unknown background', () => {
