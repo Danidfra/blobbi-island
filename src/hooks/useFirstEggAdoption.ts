@@ -15,12 +15,18 @@
  * finalizeAdoption publish sequence (hardened against orphan/partial profiles):
  *   a. Query the latest existing profile (canonical 11125 + legacy 31125 read).
  *   b. Build the DESIRED FINAL profile tags entirely in memory:
- *        - if no profile exists → buildBlobbonautTags(pubkey) + name + coins,
+ *        - if no profile exists → buildBlobbonautTags(pubkey) + name,
  *        - merge has[] (union, never shrink) + newly-adopted d,
  *        - set current_companion.
  *   c. Publish the final kind 31124 BABY state with the chosen name.
  *   d. ONLY after the baby publish succeeds, publish EXACTLY ONE final profile
  *      kind 11125 event carrying the merged has[] + current_companion.
+ *
+ * Adoption is currency-independent (economy reset): it publishes ONLY the two
+ * events above — never kind:31633, never a Coin grant, never a `coins` tag.
+ * The exactly-once 200-Coin initial allocation happens at economy entry
+ * (`src/inventory/economy-entry.ts`), decoupled from adoption entirely; a new
+ * and an existing profile follow the identical adoption path.
  *
  * Why this ordering matters:
  *   - No empty/new profile is ever published before the baby exists, so a
@@ -78,11 +84,8 @@ import {
   updateBlobbonautTags,
   mergeHasForAdoption,
   getTagValues,
-  INITIAL_BLOBBONAUT_COINS,
 } from '@blobbi-kit/core';
 import { validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
-import { createCoinWallet } from '@/inventory/coin-wallet';
-import { INITIAL_GRANT_OP_ID } from '@/inventory/useCoinBootstrap';
 
 import {
   generateEggPreview,
@@ -192,9 +195,9 @@ export function useFirstEggAdoption() {
             authorData?.metadata?.name ||
             authorData?.metadata?.display_name ||
             'Blobbonaut';
-          // NOTE: no `coins` tag. Since the Coin cutover a fresh profile never
-          // carries an active balance — the initial allocation is a canonical
-          // wallet grant into kind:31633 (step e below).
+          // NOTE: no `coins` tag. A fresh profile never carries a balance —
+          // the canonical Coin balance lives in kind:31633 and the initial
+          // allocation belongs to economy entry, not to adoption.
           baseProfileTags = [
             ...buildBlobbonautTags(pubkey),
             ['name', suggestedName],
@@ -232,29 +235,9 @@ export function useFirstEggAdoption() {
           tags: finalProfileTags,
         });
 
-        // ── e. Initial Coin allocation — ONLY for a brand-new profile, as a
-        //       canonical wallet grant with a FIXED operation id: the durable
-        //       Coin op ledger makes it exactly-once across retries and
-        //       refreshes, so a partially-failed adoption can be retried
-        //       without ever double-granting (and a failed grant after a
-        //       successful profile publish is retried by re-running finalize,
-        //       where steps a–d re-merge idempotently). Existing profiles get
-        //       nothing here: their balance history is theirs, and the legacy
-        //       `coins` tag is the bootstrap's business. ──
-        if (!existingProfile) {
-          const wallet = createCoinWallet({ nostr, user });
-          const outcome = await wallet.grantCoins({
-            opId: INITIAL_GRANT_OP_ID,
-            amount: INITIAL_BLOBBONAUT_COINS,
-            label: 'initial-grant',
-          });
-          if (outcome.status === 'blocked') {
-            // A previous attempt's grant may already be in flight/ambiguous.
-            // Do not fail the adoption over it; reconciliation resolves it.
-            console.warn('Initial coin grant is pending reconciliation');
-          }
-        }
-
+        // Adoption ends here. No currency moves: the initial Coin allocation
+        // is economy entry's responsibility and has already run (or will run)
+        // independently of whether this user ever adopts.
         return preview.d;
       };
 

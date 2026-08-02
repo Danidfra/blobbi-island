@@ -18,7 +18,11 @@ export interface OwnerProfileRequiredTags {
 
 /** Optional tags for kind 11125 Owner Profile events */
 export interface OwnerProfileOptionalTags {
-  /** Currency amount */
+  /**
+   * OBSOLETE legacy tag (pre-reset profile currency). Never written; a stored
+   * value rides the unknown-tag passthrough opaquely. Typed here only so the
+   * historic tag shape stays documented for legacy parsing.
+   */
   coins?: string;
   /** Interaction level */
   pettingLevel?: string;
@@ -65,8 +69,12 @@ export interface OwnerProfile {
   id: string;
   /** Display name */
   name: string;
-  /** Currency amount */
-  coins: number;
+  /**
+   * OBSOLETE legacy profile currency, surfaced by the parser as inert compat
+   * data only. Nothing may act on it economically: it is never migrated,
+   * displayed, summed, updated, or used for allocation eligibility.
+   */
+  coins?: number;
   /** Interaction level */
   pettingLevel: number;
   /** Total Blobbis the user has ever owned */
@@ -101,8 +109,6 @@ export interface CreateOwnerProfileInput {
   profileId: string;
   /** Display name (can be empty) */
   name: string;
-  /** Currency amount */
-  coins?: number;
   /** Interaction level */
   pettingLevel?: number;
   /** Total Blobbis the user has ever owned */

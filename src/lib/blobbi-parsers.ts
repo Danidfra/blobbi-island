@@ -333,16 +333,16 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
   'has', 'achievements',
 ]);
 
-// NOTE the deliberate absence of `coins` (since the Coin cutover).
+// NOTE the deliberate absence of `coins` (since the economy reset).
 //
 // The canonical Coin balance is the official Blobbi Coin quantity in
 // kind:31633, moved only by the Coin wallet (`src/inventory/coin-wallet.ts`).
-// A pre-existing `coins` tag is HISTORICAL data: it was migrated once by the
-// legacy bootstrap (`src/inventory/useCoinBootstrap.ts`), and afterwards it
-// rides the unknown-tag passthrough verbatim on every republish — preserved,
-// deprecated, never updated, never treated as a balance again. Emitting a
-// managed `coins` tag here is precisely how a profile republish used to roll
-// balances back; no production writer may reintroduce it.
+// A pre-existing `coins` tag is OBSOLETE HISTORICAL data: it is never
+// migrated, never read for economic decisions, never displayed and never
+// updated. It rides the unknown-tag passthrough verbatim on every republish —
+// preserved opaquely, never treated as a balance again. Emitting a managed
+// `coins` tag here is precisely how a profile republish used to roll balances
+// back; no production writer may reintroduce it.
 
 // NOTE the deliberate absence of `inv`.
 //

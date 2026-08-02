@@ -249,11 +249,10 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
       'src/hooks/useBlobbonautProfile.ts',
       'src/hooks/useOptimizedStatus.ts',
       'src/hooks/useFirstEggAdoption.ts',
-      'src/inventory/useCoinBootstrap.ts',
     ],
     docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md', 'docs/blobbi-coin-cutover.md'],
     notes:
-      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the Coin cutover: the canonical balance is the official Blobbi Coin quantity in kind 31633, a pre-existing `coins` tag is historical (read once by the legacy bootstrap, preserved verbatim on republish, never updated), and no production writer emits it.',
+      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data — never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.',
   },
   {
     kind: KIND_BLOBBONAUT_PROFILE_LEGACY, // 31125
@@ -438,10 +437,11 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
       'src/inventory/useIslandInventory.ts',
       'src/inventory/useInventoryMutation.ts',
       'src/inventory/constants.ts',
+      'src/inventory/economy-entry.ts',
     ],
     docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md'],
     notes:
-      'Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking.',
+      'Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).',
   },
   {
     kind: KIND_GAME_ITEM_PLACEMENT, // 31634

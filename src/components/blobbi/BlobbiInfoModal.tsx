@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
-import { useCoinBootstrap } from '@/inventory/useCoinBootstrap';
+import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
 import { CoinAmount } from './CoinAmount';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
@@ -113,10 +113,10 @@ export function BlobbiInfoModal({
 }: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
   // The HUD balance is the canonical inventory Coin; the legacy profile value
-  // is never displayed again. The bootstrap hook runs the one-time migration
-  // and reports its state so a migrating balance is not shown as zero.
+  // is never displayed again. The economy-entry status keeps an in-flight or
+  // ambiguous initial allocation from being shown as a zero balance.
   const coinBalance = useCoinBalance();
-  const coinBootstrap = useCoinBootstrap();
+  const economyEntry = useEconomyEntryStatus();
 
   // Use external data if in read-only mode, otherwise use current pet data
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
@@ -509,9 +509,11 @@ export function BlobbiInfoModal({
                   {!readOnly && (
                     <div className="blobbi-card rounded-lg p-2" data-coin-hud>
                       <div className="flex items-center justify-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300">
-                        {coinBootstrap.status === 'checking' || coinBalance.isLoading ? (
+                        {economyEntry.phase === 'checking' ||
+                        economyEntry.phase === 'applying' ||
+                        coinBalance.isLoading ? (
                           <CoinAmount amount={null} loading className="text-sm" />
-                        ) : coinBootstrap.status === 'ambiguous' ? (
+                        ) : economyEntry.phase === 'ambiguous' ? (
                           <span role="status" className="text-xs font-medium blobbi-text-muted">
                             Confirming your Coin balance…
                           </span>

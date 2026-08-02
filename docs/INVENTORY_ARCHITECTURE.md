@@ -15,9 +15,12 @@ inventory data is copied, and no dual-read / dual-write exists.
   result/error types. Island never re-implements these.
 - **Island code** owns UI, relay orchestration, gameplay, optimistic updates,
   shops, item effects, and interaction flows.
-- **kind:11125** remains valid for non-inventory profile data only (coins,
-  owned pets, current companion, achievements, profile metadata, Ditto tags).
-  **Inventory is never written into 11125.**
+- **kind:11125** remains valid for non-inventory profile data only (owned
+  pets, current companion, achievements, profile metadata, Ditto tags).
+  **Inventory is never written into 11125.** A historic `coins` tag is
+  obsolete data since the economy reset: preserved opaquely on republish,
+  never read for economic decisions — the canonical balance is the official
+  Blobbi Coin quantity in kind:31633.
 
 ## Official issuer
 
@@ -162,7 +165,8 @@ Concurrency model:
   `OwnerProfile.inventory` is `OptimizedStatusExample.tsx:157-161`, a dev-only
   example component that is not imported anywhere in `src` (not routed, never
   rendered). `parseOwnerProfile` itself is NOT dead — it is the production
-  profile reader for coins / current companion / owned pets — only its
+  profile reader for current companion / owned pets (its `coins` field is
+  inert legacy compat data since the economy reset) — only its
   consumable sub-branch is inert. This compatibility code is retained so a
   pre-existing legacy `storage` tag can still be read without error; it can be
   removed once 11125 `storage` is confirmed retired. It is intentionally kept in
@@ -235,10 +239,9 @@ Concurrency model:
 
 ## Known non-atomic multi-event limitations
 
-- **Purchase** = two independent events (grant item to 31633, deduct coins in
-  11125). Ordering: **grant item first, then deduct coins**. On coin-deduction
-  failure the player keeps both item and coins (favor-the-user leak) and a
-  warning is surfaced; this is less harmful than charging with no item.
+- **Purchase** is NO LONGER on this list: since the Coin cutover the charge
+  and the item grant land in ONE kind:31633 replacement event through the
+  canonical wallet (`spendCoins` + `grantLines`) — atomic by construction.
 - **Consumption** = interaction (1124) + Blobbi state (31124) + inventory
   decrement (31633). A fresh ownership read gates the flow first (unowned →
   rejected before any publish). Ordering: **apply Blobbi effect first, then
@@ -256,7 +259,7 @@ and there is no relay rollback after a partial success.
 - **Image updates:** when definitions add an `image` tag, `resolveFromDefinition`
   already prefers it over the emoji fallback.
 - **Accessory migration:** accessories still live on kind:11125 `inv` +
-  kind:31124 `equip`. They are NOT migrated here. The coins write preserves
+  kind:31124 `equip`. They are NOT migrated here. Profile republishes preserve
   existing `inv` tags verbatim to avoid regressing accessory ownership. Moving
   accessories to 31632/31633 is future work; no official accessory definitions
   were invented.

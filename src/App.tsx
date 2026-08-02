@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
+import { EconomyEntryController } from '@/components/EconomyEntryController';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
@@ -54,6 +55,7 @@ export function App() {
           <QueryClientProvider client={queryClient}>
             <NostrLoginProvider storageKey='nostr:login'>
               <NostrProvider>
+              <EconomyEntryController />
               <CharacterEquipmentProvider>
               <PhotoBoothProvider>
                 <DebugOverlaysProvider>

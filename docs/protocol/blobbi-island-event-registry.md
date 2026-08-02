@@ -98,9 +98,9 @@ The player's account: owned Blobbis, achievements, current companion. (Historic 
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** Blobbi Island
-- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`, `src/inventory/useCoinBootstrap.ts`
+- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`, `docs/blobbi-coin-cutover.md`
-- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the Coin cutover: the canonical balance is the official Blobbi Coin quantity in kind 31633, a pre-existing `coins` tag is historical (read once by the legacy bootstrap, preserved verbatim on republish, never updated), and no production writer emits it.
+- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data — never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.
 
 ### Kind 31125 — Blobbonaut Owner Profile (legacy)
 
@@ -225,9 +225,9 @@ The player's item inventory: kind:31632 addresses with integer quantities.
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
-- **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`
+- **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`, `src/inventory/economy-entry.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
-- **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking.
+- **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).
 
 ### Kind 31634 — Game Item Placement
 

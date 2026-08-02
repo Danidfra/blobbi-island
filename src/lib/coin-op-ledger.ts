@@ -180,6 +180,49 @@ export function persistCoinOp(pubkey: string | undefined, record: CoinOpRecord):
   return stored !== null && stored.status === record.status;
 }
 
+/**
+ * Resolve an operation using AUTHORITATIVE external proof.
+ *
+ * The one-way doors in `persistCoinOp` exist because for ordinary operations
+ * the ledger record is the ONLY evidence — once a publish is possibly out,
+ * nothing can prove it did not land, so `ambiguous`/`applied` must never
+ * regress. The economy-entry allocation is different by construction: its
+ * marker tag travels in the SAME replaceable event as the quantity change, so
+ * a fresh authoritative read of the newest kind:31633 IS the proof —
+ * marker present ⇒ the operation is the current state; marker absent ⇒ it is
+ * not, and re-publishing cannot double-apply (the marker rides along again).
+ *
+ * `'applied'` advances the record through the normal door. `'not-published'`
+ * downgrades a possibly-published (or even `applied`) record to `failed` —
+ * deliberately bypassing the doors. Callers MUST hold marker-grade proof
+ * (an atomically-verifiable effect on the authoritative event, confirmed by a
+ * fresh read that RESOLVED, not one that timed out). Nothing else qualifies.
+ *
+ * Returns `true` when the resolution is durably stored (or there was nothing
+ * to resolve for `'not-published'`).
+ */
+export function resolveCoinOpByAuthoritativeProof(
+  pubkey: string | undefined,
+  opId: string,
+  resolution: 'applied' | 'not-published',
+  note: string,
+): boolean {
+  if (!pubkey) return false;
+  const ledger = readLedger();
+  const owner = { ...(ledger[pubkey] ?? {}) };
+  const existing = owner[opId];
+  if (!existing) return resolution === 'not-published';
+
+  const status: CoinOpStatus = resolution === 'applied' ? 'applied' : 'failed';
+  if (existing.status === status) return true;
+
+  owner[opId] = { ...existing, status, note, updatedAt: Date.now() };
+  ledger[pubkey] = owner;
+  if (!writeLedger(ledger)) return false;
+  const stored = readCoinOp(pubkey, opId);
+  return stored !== null && stored.status === status;
+}
+
 /** Remove one operation record. Reservation-release and tests only. */
 export function deleteCoinOp(pubkey: string | undefined, opId: string): boolean {
   if (!pubkey) return false;

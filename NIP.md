@@ -100,7 +100,29 @@ Items fall into two kinds of category. **Consumable care items** (`food`, `toy`,
 are used on a Blobbi. **Currency items** (`currency`) carry no effects and no
 action; they are held as a stackable quantity in the same 31633 inventory and can
 never be used on a Blobbi. The Arcade Ticket
-(`blobbi:currency:arcade-ticket`) is the first of these.
+(`blobbi:currency:arcade-ticket`) is the first of these; the official Blobbi
+Coin (`blobbi:currency:coin`) is the canonical player currency.
+
+### The `allocation` marker tag (Island extension on kind:31633)
+
+Blobbi Island records that an account's one-time initial Coin allocation was
+processed with a forward-compatible extra tag on the SAME kind:31633 event:
+
+```json
+["allocation", "island-economy:v1"]
+```
+
+The tag is published atomically with the 200-Coin quantity increase, which is
+what makes the allocation exactly-once across devices without any server: the
+marker's presence on the newest inventory event is the durable proof, and a
+retry after an ambiguous publish can never double-credit because marker and
+quantity replace together. The tag is an unknown/extra tag under the
+`@nostr-games/inventory` spec (which requires tolerating unknown tags), and
+this client preserves ALL unknown tags, `context` tags, grant references and
+event `content` verbatim on every inventory rewrite. Each future economy
+version would use a new second element; the current Coin balance and the
+legacy kind:11125 `coins` tag (obsolete, opaque, never migrated) play no role
+in allocation eligibility.
 
 The complete, machine-checked list — every official `d`, its canonical
 `31632:<issuer>:<d>` address, category, action, effects, artwork and publication

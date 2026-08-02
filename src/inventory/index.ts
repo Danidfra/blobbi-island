@@ -29,4 +29,10 @@ export * as inventoryProtocol from './package';
 export { useCoinWallet, useCoinBalance } from './useCoinWallet';
 export { createCoinWallet, mintCoinOpId, CoinWalletError } from './coin-wallet';
 export * from './coin';
-export { useCoinBootstrap } from './useCoinBootstrap';
+export * from './economy-entry';
+export {
+  useEconomyEntryController,
+  useEconomyEntryStatus,
+  type EconomyEntryPhase,
+  type EconomyEntrySnapshot,
+} from './useEconomyEntry';

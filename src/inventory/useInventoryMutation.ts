@@ -37,6 +37,7 @@ import {
   ISLAND_INVENTORY_NAME,
   ISLAND_INVENTORY_ALT,
   KIND_GAME_INVENTORY,
+  GRANT_MARKER,
   addInventoryItemQuantity,
   removeInventoryItemQuantity,
   setInventoryItemQuantity,
@@ -114,26 +115,110 @@ function assertValidAddress(address: string): void {
   }
 }
 
+// --- Lossless template building --------------------------------------------
+
+/**
+ * Tag names the canonical builder OWNS on every Island write. `d`, `context`,
+ * `name` and `alt` are rebuilt from the parsed inventory / Island constants;
+ * every `a` tag is the item representation; `e` tags carrying the `grant`
+ * marker are rebuilt from `inventory.grants`. Reproducing any of these through
+ * the foreign-tag passthrough would emit duplicates (the package builder
+ * rejects them from `extraTags` for exactly that reason).
+ *
+ * `client` is also excluded: every Island publish path re-adds its own
+ * `['client', 'blobbi']` when absent, so passing the previous event's tag
+ * through would either duplicate it or pin a foreign client's attribution.
+ */
+function isForeignInventoryTag(tag: readonly string[]): boolean {
+  const name = tag[0];
+  if (!name) return false;
+  if (name === 'd' || name === 'context' || name === 'name' || name === 'alt') {
+    return false;
+  }
+  if (name === 'a') return false;
+  if (name === 'e' && tag[3] === GRANT_MARKER) return false;
+  if (name === 'client') return false;
+  return true;
+}
+
+/**
+ * Extract every tag on the inventory's source event that the canonical builder
+ * does not own — unknown/forward-compatible tags (including the economy
+ * allocation marker and non-grant `e` tags). These MUST ride through every
+ * rewrite verbatim: kind:31633 is a replaceable event, so a write that drops
+ * them destroys other clients' (and our own markers') data permanently.
+ */
+export function extractForeignInventoryTags(
+  inventory: GameInventory,
+): string[][] {
+  const tags = inventory.event?.tags ?? [];
+  return tags.filter(isForeignInventoryTag).map((tag) => [...tag]);
+}
+
+/**
+ * Deduplicate exactly-equal tag tuples, keeping first occurrence order. Two
+ * byte-identical unknown tags carry no more information than one, and this is
+ * what keeps repeated rewrites (and a preserved marker plus a freshly-added
+ * one) from accumulating copies.
+ */
+function dedupeExactTags(tags: readonly (readonly string[])[]): string[][] {
+  const seen = new Set<string>();
+  const out: string[][] = [];
+  for (const tag of tags) {
+    const key = JSON.stringify(tag);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push([...tag]);
+  }
+  return out;
+}
+
+export interface BuildInventoryTemplateOptions {
+  duplicateStrategy?: DuplicateStrategy;
+  /**
+   * Additional forward-compatible tags for THIS write (e.g. the economy
+   * allocation marker). Merged with the preserved foreign tags and deduplicated
+   * exactly, so adding a tag that is already present is a no-op.
+   */
+  extraTags?: readonly (readonly string[])[];
+}
+
 /**
  * Build a signed-and-publishable kind:31633 event template from a
- * `GameInventory`, preserving all items and using the package builder (which
- * emits zero-quantity omission, deterministic ordering, and duplicate
- * resolution).
+ * `GameInventory`, using the package builder (which emits zero-quantity
+ * omission, deterministic ordering, and duplicate resolution).
+ *
+ * The build is LOSSLESS for everything this client does not own: `content`,
+ * `context` tags, grant references, and unknown/forward-compatible tags from
+ * the parsed source event all ride through unchanged. Only items (from the
+ * mutated inventory), the Island's own `name`/`alt`, and the caller's
+ * `extraTags` are (re)written.
  */
 export function buildInventoryTemplate(
   inventory: GameInventory,
-  duplicateStrategy: DuplicateStrategy = 'last',
+  options: BuildInventoryTemplateOptions = {},
 ) {
   return buildGameInventoryEvent({
     id: ISLAND_INVENTORY_D,
     name: ISLAND_INVENTORY_NAME,
     alt: ISLAND_INVENTORY_ALT,
+    contexts: inventory.contexts,
+    grants: inventory.grants.map((grant) => ({
+      eventId: grant.eventId,
+      relay: grant.relay || undefined,
+    })),
+    // Raw content string passes through `serializeContent` verbatim.
+    content: inventory.content,
     items: getInventoryItems(inventory).map((i) => ({
       address: i.address,
       relay: i.relay || undefined,
       quantity: i.quantity,
     })),
-    duplicateStrategy,
+    extraTags: dedupeExactTags([
+      ...extractForeignInventoryTags(inventory),
+      ...(options.extraTags ?? []),
+    ]),
+    duplicateStrategy: options.duplicateStrategy ?? 'last',
   });
 }
 

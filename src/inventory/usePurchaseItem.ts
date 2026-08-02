@@ -1,25 +1,18 @@
 /**
- * Blobbi Island — purchase flow (Phase 7).
+ * Blobbi Island — single-item purchase flow.
  *
- * A purchase is TWO independent replaceable-event writes:
- *   1. grant N units of the item to kind:31633 (inventory);
- *   2. deduct coins in kind:11125 (profile).
+ * A paid purchase is ONE canonical wallet operation: the Coin deduction and
+ * the item grant land in the SAME kind:31633 replacement event
+ * (`spendCoins` + `grantLines`), so the purchase is atomic — either the
+ * charge and the items both happen or nothing does. The historical two-event
+ * model (item to kind:31633, coins to kind:11125) and its favor-the-user
+ * partial-grant leak no longer exist; kind:11125 is never touched.
  *
- * These are separate events on different kinds, so the operation is NOT atomic.
- * We document and choose the ordering deliberately:
- *
- *   Chosen order: GRANT ITEM FIRST, then deduct coins.
- *
- *   Rationale: Blobbi Island has very limited usage and user trust matters more
- *   than a negligible economy leak. If the second write (coin deduction) fails,
- *   the less-harmful outcome is that the player keeps BOTH the item and the
- *   coins (a small favor-the-user leak) rather than losing coins and receiving
- *   nothing. The alternative (coins first) risks charging a player who then
- *   never receives the item — the worse failure for trust. We surface a clear
- *   Since the Coin cutover the whole purchase is ONE canonical wallet
- *   operation: the coin deduction and the item grant land in the SAME
- *   kind:31633 replacement event, so the old partial-failure mode ("item
- *   granted but coins not charged") no longer exists.
+ * Outcomes: `applied` (published, exactly once per operation id) or
+ * `ambiguous` (the publish MAY have landed — recorded durably by the wallet
+ * ledger, reconciled read-only, never blindly retried). Insufficient funds
+ * reject before anything is published; free items skip the wallet entirely
+ * and use a plain inventory grant.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -54,11 +47,11 @@ export interface PurchaseResult {
 /**
  * Buy `units` of an item.
  *
- * 1. validate the price and that the player can afford it (against current
- *    coins passed in by the caller);
- * 2. grant the item to kind:31633;
- * 3. deduct coins in kind:11125;
- * 4. report partial failure explicitly.
+ * 1. validate the units and resolve the catalog price;
+ * 2. free items: plain inventory grant, no coin movement;
+ * 3. paid items: one atomic wallet spend carrying the item grant lines —
+ *    affordability is enforced by the wallet against a fresh canonical
+ *    balance read, never against a rendered number.
  */
 export function usePurchaseItem() {
   const { user } = useCurrentUser();

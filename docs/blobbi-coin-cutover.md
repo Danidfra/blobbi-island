@@ -1,9 +1,12 @@
 # Blobbi Coin — the Official Currency Cutover and Provisional Beach Rewards
 
-Status: **implemented.** The canonical production Coin balance is the official
-Blobbi Coin quantity in the player's kind:31633 inventory. kind:11125 `coins`
-is deprecated (historical, preserved, never active). Beach Treasure Hunt pays
-provisional, client-trusted Coin rewards.
+Status: **implemented (amended by the economy reset).** The canonical
+production Coin balance is the official Blobbi Coin quantity in the player's
+kind:31633 inventory. kind:11125 `coins` is OBSOLETE historical data — never
+migrated, never read for economic decisions, never displayed, never updated;
+preserved opaquely on republish. Beach Treasure Hunt pays provisional,
+client-trusted Coin rewards. The initial 200-Coin allocation happens at
+economy entry (§3), decoupled from adoption and from any legacy value.
 
 Supersedes the "current state" sections of
 `docs/coin-economy-migration-audit.md` (the audit's findings drove this
@@ -63,31 +66,50 @@ unknown — an unavailable balance is never a fake zero).
 gives no exactly-once (bounded: op ids never leave the device that minted
 them). Nothing here is server-authoritative or cheat-proof.
 
-## 3. Legacy bootstrap (kind:11125 → kind:31633)
+## 3. Economy entry — the exactly-once initial allocation (economy reset)
 
-`src/inventory/useCoinBootstrap.ts`, fixed op id `legacy-coin-bootstrap`:
+There is NO legacy migration. A historic kind:11125 `coins` tag is obsolete
+data: never migrated, never summed, never displayed, never used for
+eligibility. It left the managed tag set (`blobbi-parsers.ts`) and rides the
+unknown-tag passthrough on every republish, verbatim, forever. A legacy user
+with 50,000 profile coins and one with 0 are treated identically.
 
-- idempotent (durable ledger), refresh-safe, fresh reads of BOTH sides,
-  serialized through the wallet, read-back verified, ambiguous surfaced;
-- an already-populated inventory with no local record is treated as
-  migrated-elsewhere and NEVER re-credited (the cross-device guard);
-- zero/invalid/missing legacy values are recorded as durable no-ops;
-- afterwards the old `coins` tag stays on the profile **verbatim as
-  history**: it left the managed tag set (`blobbi-parsers.ts`), rides the
-  unknown-tag passthrough on every republish, is read by nothing but the
-  bootstrap, and is displayed nowhere. No summing of legacy + inventory.
+Every authenticated pubkey receives 200 Coins exactly once for economy v1,
+at its first authenticated Island entry — independent of profile existence,
+Blobbi ownership, adoption, legacy values, current balance, other inventory
+items, localStorage, and device.
 
-**New players:** profile creation writes NO `coins` tag. The initial
-`INITIAL_BLOBBONAUT_COINS` (200) allocation is a wallet grant with fixed op
-id `initial-coin-grant` after the profile publish in `useFirstEggAdoption` —
-exactly-once across retries, and a partially-failed adoption can re-run
-`finalize` safely.
+`src/inventory/economy-entry.ts` (service) + `src/inventory/useEconomyEntry.ts`
+(root-mounted controller, `src/components/EconomyEntryController.tsx`):
+
+- the durable proof is a marker tag published ATOMICALLY in the same
+  kind:31633 replacement event as the +200 (see the module for the canonical
+  tag). The marker is authoritative; the local Coin-op ledger is an
+  operational journal only;
+- eligibility = authenticated pubkey + marker authoritatively absent. The
+  balance is never proof (it legitimately returns to zero); inventory
+  contents never gate; kind:11125 is never queried;
+- retries are safe by construction: marker present ⇒ done; marker absent on
+  a RESOLVED (EOSE) read ⇒ granting again republishes marker + quantity
+  together and cannot double-apply. A read that fails proves nothing and
+  publishes nothing — an empty base is never fabricated from an unanswered
+  read, and the first-ever publish requires a confirming second read;
+- one stable op id per economy version (never minted randomly); the in-lock
+  wallet `precondition` re-checks the marker on the exact base the event
+  extends, so a concurrent tab's win becomes a no-op;
+- two devices converge by replaceable-event semantics (newest wins, each
+  device grants onto its own fresh base): the tested race settles on ONE
+  marker and ONE +200 — never a stable 400. Not server-authoritative.
+
+**Adoption is currency-free.** `useFirstEggAdoption` publishes the baby
+(31124) and the profile (11125) and nothing else; profile creation writes NO
+`coins` tag; new and existing profiles follow the identical path.
 
 ## 4. Production cutover (complete)
 
 | Surface | Now |
 |---|---|
-| HUD chip (`BlobbiInfoModal`) | `useCoinBalance` + bootstrap state; official artwork w/ 🪙 fallback; loading/ambiguous/error states; no `?? 0` |
+| HUD chip (`BlobbiInfoModal`) | `useCoinBalance` + economy-entry state; official artwork w/ 🪙 fallback; loading/ambiguous/error states; no `?? 0` |
 | Food Shop / batch + single purchases | ONE atomic wallet spend (`grantLines`); affordability from the canonical balance; ambiguous surfaced, never retried |
 | Arcade Pass | wallet spend (op per attempt); ambiguous grants no pass and says so honestly |
 | Mine payout | wallet grant, op id minted at session start; states granting/applied/ambiguous/failed+retry; fresh status re-read on cave entry |

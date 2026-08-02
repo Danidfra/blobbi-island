@@ -32,6 +32,16 @@ vi.mock('./useCoinWallet', () => ({
   useCoinWallet: () => ({ spendCoins, grantCoins: vi.fn(), wallet: null }),
 }));
 
+let priceOverride: ((address: string) => number | null) | null = null;
+vi.mock('./shop-catalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./shop-catalog')>();
+  return {
+    ...actual,
+    priceForAddress: (address: string) =>
+      priceOverride ? priceOverride(address) : actual.priceForAddress(address),
+  };
+});
+
 import { usePurchaseItem } from './usePurchaseItem';
 import { itemIdToAddress } from './registry';
 
@@ -50,6 +60,19 @@ describe('usePurchaseItem — one atomic wallet operation', () => {
     inventoryMutate.mockReset();
     spendCoins.mockReset();
     spendCoins.mockResolvedValue({ status: 'applied', balance: 90, verified: true });
+    priceOverride = null;
+  });
+
+  it('a FREE item skips the wallet entirely and uses a plain inventory grant', async () => {
+    priceOverride = () => 0;
+    inventoryMutate.mockResolvedValue(undefined);
+    const { result } = renderPurchase();
+    const outcome = await act(() =>
+      result.current.mutateAsync({ address: APPLE, units: 2 }),
+    );
+    expect(outcome).toEqual({ address: APPLE, units: 2, totalCost: 0, outcome: 'applied' });
+    expect(spendCoins).not.toHaveBeenCalled();
+    expect(inventoryMutate).toHaveBeenCalledWith({ type: 'purchase', address: APPLE, units: 2 });
   });
 
   it('spends the catalog price and grants the units in one operation', async () => {

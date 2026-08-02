@@ -39,6 +39,8 @@ export {
   parseGameInventoryResult,
   buildGameInventoryEvent,
   validateGameInventory,
+  // Marker (`e` tag index 3) identifying grant/receipt references in 31633
+  GRANT_MARKER,
   // Item images / view markers (31632 `image` tags)
   GAME_ITEM_IMAGE_MARKERS,
   isGameItemImageMarker,

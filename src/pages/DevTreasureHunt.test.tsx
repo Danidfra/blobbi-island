@@ -19,7 +19,7 @@ import { DevTreasureHunt } from './DevTreasureHunt';
 const ROOT = process.cwd();
 
 const FORBIDDEN_IMPORTS =
-  /useCoinsMutation|useInventoryMutation|useBatchPurchase|usePurchaseItem|useNostrPublish|useBlobbiEvents|useBlobbonautProfile|arcade-reward-writer|arcade-prize-spend-writer|useArcadeReward|coin-wallet|useCoinWallet|useCoinBootstrap|useTreasureHuntRewards/;
+  /useCoinsMutation|useInventoryMutation|useBatchPurchase|usePurchaseItem|useNostrPublish|useBlobbiEvents|useBlobbonautProfile|arcade-reward-writer|arcade-prize-spend-writer|useArcadeReward|coin-wallet|useCoinWallet|useEconomyEntry|economy-entry|useTreasureHuntRewards/;
 
 function resolveImport(fromFile: string, specifier: string): string | null {
   let base: string;

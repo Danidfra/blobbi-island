@@ -148,10 +148,6 @@ export function useUpdateOwnerProfile() {
       const mergedProfile: OwnerProfile = {
         id: updates.profileId || existingProfile?.id || 'profile',
         name: updates.name !== undefined ? updates.name : (existingProfile?.name || ''),
-        // Legacy value carried on the parsed profile for type completeness;
-        // the serializer no longer emits a managed `coins` tag, so this can
-        // never publish a balance.
-        coins: existingProfile?.coins ?? 0,
         pettingLevel: updates.pettingLevel !== undefined ? updates.pettingLevel : (existingProfile?.pettingLevel ?? 0),
         lifetimeBlobbis: updates.lifetimeBlobbis !== undefined ? updates.lifetimeBlobbis : (existingProfile?.lifetimeBlobbis ?? 0),
         favoriteBlobbi: updates.favoriteBlobbi !== undefined ? updates.favoriteBlobbi : existingProfile?.favoriteBlobbi,

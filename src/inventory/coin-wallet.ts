@@ -4,9 +4,9 @@
  *
  * A generalization of the arcade ticket writer's currency-grade guarantees
  * into one reusable mutator, so the Beach, the Mine, the shops, the Arcade
- * Pass and the legacy bootstrap all move Coins through identical machinery
- * instead of five slightly-different ones (the exact defect the Coin audit
- * mapped in the kind:11125 era).
+ * Pass and the economy-entry allocation all move Coins through identical
+ * machinery instead of five slightly-different ones (the exact defect the
+ * Coin audit mapped in the kind:11125 era).
  *
  * ## What every mutation gets
  *
@@ -120,6 +120,23 @@ export interface CoinOperation {
    * purchase happens or nothing does.
    */
   readonly grantLines?: readonly { address: string; amount: number }[];
+  /**
+   * Forward-compatible tags published in the SAME replacement event as the
+   * coin movement (e.g. the economy-entry allocation marker). Deduplicated
+   * against tags already preserved from the previous event, so re-adding an
+   * existing tag never duplicates it.
+   */
+  readonly extraTags?: readonly (readonly string[])[];
+  /**
+   * Evaluated on the FRESH in-lock inventory read that the replacement event
+   * is built from. Returning `false` aborts the mutation with a `skipped`
+   * outcome — nothing is published and no ledger record is written. This is
+   * how a caller makes eligibility and publication atomic: the economy-entry
+   * allocation checks "marker still absent" on the exact base it would extend,
+   * so a concurrent tab that already published the marker turns this attempt
+   * into a no-op instead of a duplicate grant.
+   */
+  readonly precondition?: (inventory: GameInventory) => boolean;
 }
 
 export type CoinMutationOutcome =
@@ -127,6 +144,8 @@ export type CoinMutationOutcome =
   | { readonly status: 'applied'; readonly balance: number; readonly verified: boolean }
   /** This opId was already applied earlier — idempotent success, no publish. */
   | { readonly status: 'already-applied' }
+  /** The op's `precondition` returned false on the fresh in-lock base. */
+  | { readonly status: 'skipped' }
   /** The publish MAY have landed. Recorded; reconcile, never blind-retry. */
   | { readonly status: 'ambiguous'; readonly reason: 'publish-timeout' | 'publish-unknown' }
   /** A durable in-flight/ambiguous record for this opId blocks a new publish. */
@@ -151,13 +170,24 @@ export class CoinWalletError extends Error {
   }
 }
 
-interface InventoryWithMeta {
+export interface InventoryWithMeta {
   readonly inventory: GameInventory;
   /** `created_at` of the newest valid event, or 0 when none exists. */
   readonly createdAt: number;
 }
 
-async function fetchInventoryWithMeta(
+/**
+ * Fetch the newest valid kind:31633 with its `created_at`.
+ *
+ * A RESOLVED call is as authoritative as Nostr allows: the pool's `query`
+ * resolves only after the configured relay answered the REQ (EOSE) or the
+ * filter limit was satisfied, so a resolved-but-empty result means "the relay
+ * says there is no event", not "the relay never answered" — that case rejects
+ * (timeout/abort) and MUST be treated as unknown, never as empty. Exported for
+ * the economy-entry service, whose eligibility depends on exactly this
+ * distinction.
+ */
+export async function fetchInventoryWithMeta(
   nostr: CoinWalletNostr,
   pubkey: string,
 ): Promise<InventoryWithMeta> {
@@ -289,6 +319,14 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
           }
 
           const meta = await readMeta();
+
+          // Atomic eligibility: the precondition sees the exact base the
+          // replacement event would be built from, inside the lock. A false
+          // result publishes nothing and records nothing.
+          if (op.precondition && !op.precondition(meta.inventory)) {
+            return { status: 'skipped' };
+          }
+
           const balance = getQuantity(meta.inventory, BLOBBI_COIN_ADDRESS);
           if (!isValidCoinBalance(balance)) {
             throw new CoinWalletError(
@@ -341,7 +379,9 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
             );
           }
 
-          const template = buildInventoryTemplate(next);
+          const template = buildInventoryTemplate(next, {
+            extraTags: op.extraTags,
+          });
           const tags = [...template.tags];
           if (!tags.some(([name]) => name === 'client')) tags.push(['client', 'blobbi']);
 

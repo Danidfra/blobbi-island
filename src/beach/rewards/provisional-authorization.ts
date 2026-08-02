@@ -126,6 +126,14 @@ export function createProvisionalTreasureHuntAuthorizer(
           case 'blocked':
             resolveBeachReward(pubkey, opId, 'ambiguous', now());
             return { status: 'ambiguous', reward };
+          case 'skipped':
+            // Beach reward ops carry no precondition, so the wallet can never
+            // skip them; typed for exhaustiveness only.
+            return {
+              status: 'failed',
+              reward,
+              message: 'The reward grant was skipped unexpectedly.',
+            };
         }
       } catch (error) {
         // Provably pre-publish: the op stays `finalized` and MAY be retried.
