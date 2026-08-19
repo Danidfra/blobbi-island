@@ -12,19 +12,29 @@
  *
  * ```
  *   validate amount (integer, positive, ≤ MAX_COIN_BALANCE; zero REJECTED)
- *   → durable op-ledger check (applied → idempotent success; in-flight → block)
- *   → queued cross-tab lock + shared per-tab write chain
- *   → FRESH newest kind:31633 read (raw event, for created_at)
- *   → balance validation (insufficient funds / cap, never silent clamps)
- *   → ledger `publishing` record, read-back verified   ← no record, no publish
- *   → replacement event; created_at = max(now, previous.created_at + 1)
- *   → sign; STRICT publish (a timeout is NOT success)
+ *   ┌ runInventoryTransaction ────────────────────────────────────────────┐
+ *   │ queued cross-tab lock + shared per-tab write chain                  │
+ *   │ (the SAME lock every other kind:31633 writer takes)                 │
+ *   │ → durable op-ledger check (applied → idempotent; in-flight → block) │
+ *   │ → AUTHORITATIVE base read: newest kind:31633, and a resolved-EMPTY  │
+ *   │   answer confirmed by a second read before it may be built on       │
+ *   │ → balance validation (insufficient funds / cap, never silent clamps)│
+ *   │ → the mutation is always a DELTA on that base, never an absolute    │
+ *   │ → ledger `publishing` record                    ← no record, no publish
+ *   │ → replacement event; created_at = max(now, previous.created_at + 1) │
+ *   │ → sign; STRICT publish (a timeout is NOT success)                   │
+ *   └─────────────────────────────────────────────────────────────────────┘
  *   → read-back verification against the expected balance
  *   → ledger `applied` / `ambiguous`
  * ```
  *
  * Unrelated inventory entries ride through the canonical builder untouched,
  * exactly as every other inventory write.
+ *
+ * The empty-base confirmation is not a nicety: kind:31633 is REPLACEABLE, so a
+ * grant built on a relay's spurious "no events" answer does not lose a delta —
+ * it replaces the player's whole inventory with the reward amount. That is the
+ * defect behind "my Mine reward replaced my balance instead of adding to it".
  *
  * ## Trust model, stated plainly
  *
@@ -46,7 +56,6 @@
  * surface — never silently retried.
  */
 
-import type { NostrEvent } from '@nostrify/nostrify';
 import type { NUser } from '@nostrify/react/login';
 
 import {
@@ -56,7 +65,6 @@ import {
   type CoinOpKind,
   type CoinOpRecord,
 } from '@/lib/coin-op-ledger';
-import { withQueuedCrossTabLock } from '@/lib/cross-tab-op-lock';
 
 import {
   BLOBBI_COIN_ADDRESS,
@@ -64,36 +72,24 @@ import {
   coinAmountProblem,
   isValidCoinBalance,
 } from './coin';
+import { applyMutation, getQuantity } from './useInventoryMutation';
+import { type GameInventory } from './package';
 import {
-  applyMutation,
-  buildInventoryTemplate,
-  getQuantity,
-  serializeInventoryWrite,
-} from './useInventoryMutation';
-import {
-  ISLAND_INVENTORY_D,
-  KIND_GAME_INVENTORY,
-  type GameInventory,
-} from './package';
-import { buildEmptyInventory } from './useIslandInventory';
-import { parseInventoryEvent } from './protocol-adapter';
+  InventoryTransactionError,
+  fetchInventoryWithMeta,
+  readAuthoritativeInventoryBase,
+  runInventoryTransaction,
+  type InventoryTransactionNostr,
+  type InventoryWithMeta,
+} from './inventory-transaction';
 
-const READ_TIMEOUT_MS = 3000;
-const PUBLISH_TIMEOUT_MS = 5000;
-
-/** The narrow relay surface the wallet needs; trivial to fake in tests. */
-export interface CoinWalletNostr {
-  query: (
-    filters: {
-      kinds: number[];
-      authors: string[];
-      '#d': string[];
-      limit?: number;
-    }[],
-    options: { signal: AbortSignal },
-  ) => Promise<NostrEvent[]>;
-  event: (event: NostrEvent, options?: { signal?: AbortSignal }) => Promise<void>;
-}
+/**
+ * The narrow relay surface the wallet needs; trivial to fake in tests.
+ *
+ * Structurally the shared transaction surface — the wallet is one writer among
+ * several on the same kind:31633 event, not a protocol of its own.
+ */
+export type CoinWalletNostr = InventoryTransactionNostr;
 
 export interface CoinWalletDeps {
   readonly nostr: CoinWalletNostr;
@@ -101,6 +97,14 @@ export interface CoinWalletDeps {
   /** Injectable clock for tests. */
   readonly now?: () => number;
 }
+
+export type { InventoryWithMeta };
+
+/**
+ * Re-exported so existing consumers (the economy-entry service) keep one
+ * import site. The implementation is the shared transaction module's.
+ */
+export { fetchInventoryWithMeta };
 
 /** A value-bearing Coin operation. `opId` is its exactly-once identity. */
 export interface CoinOperation {
@@ -170,48 +174,6 @@ export class CoinWalletError extends Error {
   }
 }
 
-export interface InventoryWithMeta {
-  readonly inventory: GameInventory;
-  /** `created_at` of the newest valid event, or 0 when none exists. */
-  readonly createdAt: number;
-}
-
-/**
- * Fetch the newest valid kind:31633 with its `created_at`.
- *
- * A RESOLVED call is as authoritative as Nostr allows: the pool's `query`
- * resolves only after the configured relay answered the REQ (EOSE) or the
- * filter limit was satisfied, so a resolved-but-empty result means "the relay
- * says there is no event", not "the relay never answered" — that case rejects
- * (timeout/abort) and MUST be treated as unknown, never as empty. Exported for
- * the economy-entry service, whose eligibility depends on exactly this
- * distinction.
- */
-export async function fetchInventoryWithMeta(
-  nostr: CoinWalletNostr,
-  pubkey: string,
-): Promise<InventoryWithMeta> {
-  const events = await nostr.query(
-    [
-      {
-        kinds: [KIND_GAME_INVENTORY],
-        authors: [pubkey],
-        '#d': [ISLAND_INVENTORY_D],
-        limit: 1,
-      },
-    ],
-    { signal: AbortSignal.timeout(READ_TIMEOUT_MS) },
-  );
-  const valid = events
-    .map((event) => ({ event, parsed: parseInventoryEvent(event) }))
-    .filter((x): x is { event: NostrEvent; parsed: GameInventory } => Boolean(x.parsed))
-    .sort((a, b) => b.event.created_at - a.event.created_at);
-  if (valid.length === 0) {
-    return { inventory: buildEmptyInventory(pubkey), createdAt: 0 };
-  }
-  return { inventory: valid[0].parsed, createdAt: valid[0].event.created_at };
-}
-
 export interface CoinWallet {
   /** Fresh authoritative balance. Throws `read-failed` when unreachable. */
   readBalance(): Promise<number>;
@@ -240,7 +202,9 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
 
   const readMeta = async (): Promise<InventoryWithMeta> => {
     try {
-      return await fetchInventoryWithMeta(nostr, requireUser());
+      // Empty-confirming: a balance of "0" read from a relay that simply does
+      // not carry the event must never be mistaken for a real zero.
+      return await readAuthoritativeInventoryBase(nostr, requireUser());
     } catch (error) {
       if (error instanceof CoinWalletError) throw error;
       throw new CoinWalletError(
@@ -302,162 +266,147 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
       );
     }
 
-    const { value } = await withQueuedCrossTabLock(
-      `blobbi-coin-wallet:${pubkey}`,
-      () =>
-        serializeInventoryWrite(pubkey, async (): Promise<CoinMutationOutcome> => {
-          // Exactly-once: the durable ledger is consulted INSIDE the lock.
-          const existing = readCoinOp(pubkey, op.opId);
-          if (existing?.status === 'applied') return { status: 'already-applied' };
-          if (existing && coinOpBlocksPublish(existing)) {
-            const reconciled = await reconcileAgainstRecord(pubkey, existing);
-            if (reconciled.status === 'applied') return { status: 'already-applied' };
-            return {
-              status: 'blocked',
-              blockedBy: existing.status as 'publishing' | 'ambiguous',
-            };
-          }
+    return runInventoryTransaction(
+      { nostr, user, now },
+      async (ctx): Promise<CoinMutationOutcome> => {
+        // Exactly-once: the durable ledger is consulted INSIDE the lock.
+        const existing = readCoinOp(pubkey, op.opId);
+        if (existing?.status === 'applied') return { status: 'already-applied' };
+        if (existing && coinOpBlocksPublish(existing)) {
+          const reconciled = await reconcileAgainstRecord(pubkey, existing);
+          if (reconciled.status === 'applied') return { status: 'already-applied' };
+          return {
+            status: 'blocked',
+            blockedBy: existing.status as 'publishing' | 'ambiguous',
+          };
+        }
 
-          const meta = await readMeta();
-
-          // Atomic eligibility: the precondition sees the exact base the
-          // replacement event would be built from, inside the lock. A false
-          // result publishes nothing and records nothing.
-          if (op.precondition && !op.precondition(meta.inventory)) {
-            return { status: 'skipped' };
-          }
-
-          const balance = getQuantity(meta.inventory, BLOBBI_COIN_ADDRESS);
-          if (!isValidCoinBalance(balance)) {
-            throw new CoinWalletError(
-              `Stored coin balance ${balance} is outside the valid range`,
-              'invalid-balance',
-            );
-          }
-          if (kind === 'spend' && balance < op.amount) {
-            throw new CoinWalletError(
-              `Insufficient coins: have ${balance}, need ${op.amount}`,
-              'insufficient-funds',
-            );
-          }
-          if (kind === 'grant' && balance + op.amount > MAX_COIN_BALANCE) {
-            throw new CoinWalletError(
-              `Grant would exceed the coin balance ceiling`,
-              'balance-cap',
-            );
-          }
-
-          let next = applyMutation(meta.inventory, {
-            type: kind === 'grant' ? 'add' : 'remove',
-            address: BLOBBI_COIN_ADDRESS,
-            amount: op.amount,
-          });
-          if (op.grantLines && op.grantLines.length > 0) {
-            next = applyMutation(next, {
-              type: 'batch',
-              lines: op.grantLines.map((line) => ({
-                address: line.address,
-                amount: line.amount,
-              })),
-            });
-          }
-          const expected = kind === 'grant' ? balance + op.amount : balance - op.amount;
-
-          // No durable record, no publish — the rule the arcade learned.
-          const publishing = record({
-            opId: op.opId,
-            kind,
-            amount: op.amount,
-            status: 'publishing',
-            label: op.label,
-            balanceBefore: balance,
-          });
-          if (!persistCoinOp(pubkey, publishing)) {
-            throw new CoinWalletError(
-              'Could not durably record the operation; refusing to publish',
-              'ledger-unavailable',
-            );
-          }
-
-          const template = buildInventoryTemplate(next, {
-            extraTags: op.extraTags,
-          });
-          const tags = [...template.tags];
-          if (!tags.some(([name]) => name === 'client')) tags.push(['client', 'blobbi']);
-
-          // Monotonic created_at: two wallet writes inside one wall-clock
-          // second must not tie (NIP-01 breaks ties by lowest id — a write
-          // could silently lose).
-          const createdAt = Math.max(Math.floor(now() / 1000), meta.createdAt + 1);
-
-          let signed: NostrEvent;
-          try {
-            signed = await user.signer.signEvent({
-              kind: template.kind,
-              content: template.content ?? '',
-              tags,
-              created_at: createdAt,
-            });
-          } catch (error) {
-            persistCoinOp(
-              pubkey,
-              record({ ...publishing, status: 'failed', note: 'sign-failed' }),
-            );
-            throw new CoinWalletError(
-              error instanceof Error ? error.message : 'The signer refused',
-              'sign-failed',
-            );
-          }
-
-          // STRICT publish: resolving means at least one relay accepted the
-          // event. A timeout or an unclassifiable error is recorded as
-          // AMBIGUOUS — possibly published — never resolved through as
-          // success and never blindly retried.
-          try {
-            await nostr.event(signed, {
-              signal: AbortSignal.timeout(PUBLISH_TIMEOUT_MS),
-            });
-          } catch (error) {
-            const isTimeout =
-              error instanceof Error &&
-              (error.name === 'AbortError' || error.name === 'TimeoutError');
-            persistCoinOp(
-              pubkey,
-              record({
-                ...publishing,
-                status: 'ambiguous',
-                note: isTimeout ? 'publish-timeout' : 'publish-unknown',
-              }),
-            );
-            return {
-              status: 'ambiguous',
-              reason: isTimeout ? 'publish-timeout' : 'publish-unknown',
-            };
-          }
-
-          // Read-back verification. A mismatch does not un-publish anything —
-          // the publish provably reached a relay — so the outcome stays
-          // `applied` with `verified: false` for the caller to surface.
-          let verified = false;
-          try {
-            const after = await fetchInventoryWithMeta(nostr, pubkey);
-            verified = getQuantity(after.inventory, BLOBBI_COIN_ADDRESS) === expected;
-          } catch {
-            verified = false;
-          }
-
-          persistCoinOp(
-            pubkey,
-            record({
-              ...publishing,
-              status: 'applied',
-              note: verified ? 'read-back-verified' : 'read-back-unverified',
-            }),
+        // The AUTHORITATIVE base: an empty answer is confirmed by a second
+        // read before it may become a publish base, so a relay that does not
+        // carry the inventory can never turn a +N grant into a total of N.
+        // A read that cannot be completed is `read-failed`, which callers
+        // (economy entry) branch on — keep the wallet's error vocabulary.
+        let meta: InventoryWithMeta;
+        try {
+          meta = await ctx.readBase();
+        } catch (error) {
+          throw new CoinWalletError(
+            error instanceof Error ? error.message : 'Inventory read failed',
+            'read-failed',
           );
-          return { status: 'applied', balance: expected, verified };
-        }),
+        }
+
+        // Atomic eligibility: the precondition sees the exact base the
+        // replacement event would be built from, inside the lock. A false
+        // result publishes nothing and records nothing.
+        if (op.precondition && !op.precondition(meta.inventory)) {
+          return { status: 'skipped' };
+        }
+
+        const balance = getQuantity(meta.inventory, BLOBBI_COIN_ADDRESS);
+        if (!isValidCoinBalance(balance)) {
+          throw new CoinWalletError(
+            `Stored coin balance ${balance} is outside the valid range`,
+            'invalid-balance',
+          );
+        }
+        if (kind === 'spend' && balance < op.amount) {
+          throw new CoinWalletError(
+            `Insufficient coins: have ${balance}, need ${op.amount}`,
+            'insufficient-funds',
+          );
+        }
+        if (kind === 'grant' && balance + op.amount > MAX_COIN_BALANCE) {
+          throw new CoinWalletError(
+            `Grant would exceed the coin balance ceiling`,
+            'balance-cap',
+          );
+        }
+
+        // THE DELTA INVARIANT: the mutation is always applied to the
+        // authoritative base, never a value written absolutely. `expected`
+        // below is derived from that same base for read-back verification.
+        let next = applyMutation(meta.inventory, {
+          type: kind === 'grant' ? 'add' : 'remove',
+          address: BLOBBI_COIN_ADDRESS,
+          amount: op.amount,
+        });
+        if (op.grantLines && op.grantLines.length > 0) {
+          next = applyMutation(next, {
+            type: 'batch',
+            lines: op.grantLines.map((line) => ({
+              address: line.address,
+              amount: line.amount,
+            })),
+          });
+        }
+        const expected = kind === 'grant' ? balance + op.amount : balance - op.amount;
+
+        // No durable record, no publish — the rule the arcade learned.
+        const publishing = record({
+          opId: op.opId,
+          kind,
+          amount: op.amount,
+          status: 'publishing',
+          label: op.label,
+          balanceBefore: balance,
+        });
+        if (!persistCoinOp(pubkey, publishing)) {
+          throw new CoinWalletError(
+            'Could not durably record the operation; refusing to publish',
+            'ledger-unavailable',
+          );
+        }
+
+        // Build + monotonic created_at + sign + STRICT publish, all owned by
+        // the shared transaction. A timeout is AMBIGUOUS, never success.
+        try {
+          await ctx.publish(next, { extraTags: op.extraTags });
+        } catch (error) {
+          if (error instanceof InventoryTransactionError) {
+            if (error.reason === 'sign-failed') {
+              persistCoinOp(
+                pubkey,
+                record({ ...publishing, status: 'failed', note: 'sign-failed' }),
+              );
+              throw new CoinWalletError(error.message, 'sign-failed');
+            }
+            if (
+              error.reason === 'publish-timeout' ||
+              error.reason === 'publish-unknown'
+            ) {
+              persistCoinOp(
+                pubkey,
+                record({ ...publishing, status: 'ambiguous', note: error.reason }),
+              );
+              return { status: 'ambiguous', reason: error.reason };
+            }
+          }
+          throw error;
+        }
+
+        // Read-back verification. A mismatch does not un-publish anything —
+        // the publish provably reached a relay — so the outcome stays
+        // `applied` with `verified: false` for the caller to surface.
+        let verified = false;
+        try {
+          const after = await fetchInventoryWithMeta(nostr, pubkey);
+          verified = getQuantity(after.inventory, BLOBBI_COIN_ADDRESS) === expected;
+        } catch {
+          verified = false;
+        }
+
+        persistCoinOp(
+          pubkey,
+          record({
+            ...publishing,
+            status: 'applied',
+            note: verified ? 'read-back-verified' : 'read-back-unverified',
+          }),
+        );
+        return { status: 'applied', balance: expected, verified };
+      },
     );
-    return value;
   };
 
   return {

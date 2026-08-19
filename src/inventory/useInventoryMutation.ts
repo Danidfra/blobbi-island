@@ -16,7 +16,10 @@
  *
  * Mutations are serialized per-user via an in-module promise chain so two rapid
  * actions (e.g. double-consuming the final unit) cannot both read the same
- * starting quantity and both succeed.
+ * starting quantity and both succeed. The Coin wallet and the Arcade Ticket
+ * writers ride the SAME chain (see `inventory-transaction.ts`), so no two
+ * kind:31633 writers in this tab can interleave their read-modify-write
+ * windows.
  *
  * Optimistic UI updates the canonical inventory cache immediately and rolls back
  * on signing/publication failure. There is NO relay rollback after a successful
@@ -47,9 +50,9 @@ import {
 } from './package';
 import { getInventoryItems } from './protocol-adapter';
 import {
-  fetchInventory,
   inventoryQueryKey,
   buildEmptyInventory,
+  readAuthoritativeInventoryBase,
 } from './useIslandInventory';
 
 // --- Per-user serialization ------------------------------------------------
@@ -392,10 +395,14 @@ export function useInventoryMutation() {
 
       return serialize(pubkey, async () => {
         // Read-modify-write against the authoritative newest relay event.
-        const base = await fetchInventory(
+        // The AUTHORITATIVE base. kind:31633 is REPLACEABLE, so building on a
+        // resolved-empty answer from a relay that simply does not carry the
+        // event would not lose one item — it would erase the player's whole
+        // inventory, Coins and Arcade Tickets included. The empty answer is
+        // confirmed by a second read before it may be used.
+        const { inventory: base } = await readAuthoritativeInventoryBase(
           nostr,
           pubkey,
-          AbortSignal.timeout(3000),
         );
 
         const next = applyMutation(base, mutation);

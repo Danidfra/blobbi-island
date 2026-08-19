@@ -24,10 +24,10 @@ human-readable description for clients that do not understand the kind.
 | Kind | Name | Class | Purpose |
 |------|------|-------|---------|
 | `1124` | Blobbi Social Interaction | Regular | Append-only log of care/social actions (feed, play, etc.) |
-| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: coins, owned pets, achievements, current companion |
+| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: owned pets, achievements, current companion. **Not the Coin balance** — see kind `31633` |
 | `31124` | Blobbi Pet State | Addressable | Full state of a single Blobbi creature (stats, appearance, care timestamps) |
 | `31632` | Game Item Definition | Addressable | Canonical item catalog (official issuer). See `@nostr-games/inventory`. |
-| `31633` | Game Inventory | Addressable | Player consumable inventory. See `@nostr-games/inventory`. |
+| `31633` | Game Inventory | Addressable | Player consumable inventory **and the canonical Blobbi Coin / Arcade Ticket balances**. See `@nostr-games/inventory`. |
 | `31950` | Island Presence | Addressable | Real-time multiplayer presence (location, position, movement) |
 | `21201` | Island Chat | Ephemeral | In-world speech-bubble chat messages |
 | `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
@@ -64,7 +64,10 @@ The player's account/profile. One per pubkey. Co-authored with Ditto; unknown ta
 
 - **`content`**: optional; canonical structured fields are carried in tags.
 - **Notable tags** (non-exhaustive):
-  - `["coins", "<number>"]`
+  - `["coins", "<number>"]` — **OBSOLETE.** Historical pre-cutover currency.
+    Never written by this client, never read for any economic decision, never
+    displayed. A pre-existing tag is preserved verbatim on republish. The live
+    balance is the Blobbi Coin quantity in kind `31633` (see below).
   - `["current_companion", "<blobbiD>"]`
   - `["starter_blobbi", "<blobbiD>"]`
   - `["favorite_blobbi", "<blobbiD>"]`
@@ -72,9 +75,12 @@ The player's account/profile. One per pubkey. Co-authored with Ditto; unknown ta
   - `["achievement", "<id>"]` (repeatable)
   - `["alt", "Blobbonaut owner profile"]`
 
-> **Note:** The player's consumable inventory is **no longer stored on kind
-> 11125**. It lives in **kind 31633** (Game Inventory). This client does not
-> write inventory tags into 11125.
+> **Note:** Neither the player's consumable inventory nor their **Coin balance**
+> is stored on kind 11125 any more. Both live in **kind 31633** (Game
+> Inventory): the Coin is the official item
+> `31632:<issuer>:blobbi:currency:coin`, and its balance is that item's
+> quantity. This client does not write inventory tags — or a `coins` tag — into
+> 11125.
 
 ---
 

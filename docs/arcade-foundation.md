@@ -426,6 +426,12 @@ caller wired up too early fails loudly instead of silently doing nothing.
 
 ## 10. Pass economy and lifecycle fixes
 
+> **Historical record of this phase.** The coin-charge row below describes the
+> fix as it shipped *then*. The Coin cutover has since replaced it: the pass is
+> charged against the canonical Blobbi Coin quantity in **kind:31633** via
+> `coinWallet.spendCoins()`, and `useCoinsMutation` is deleted. Every other row
+> still describes current behaviour. See `docs/blobbi-coin-cutover.md`.
+
 | Defect | Fix |
 | --- | --- |
 | The 20-coin charge published nothing (`updateOwnerCoins` is a local optimistic mutation on a per-hook-instance ref) | Routed through `useCoinsMutation`: fresh relay read as the write base, `mergeOwnerProfileTags` + raw `inv` passthrough, negative balance rejected, published exactly once |
@@ -445,16 +451,25 @@ the pass into a 31632 item is a product decision and is out of scope.
 
 ### What a resolved charge does and does not prove
 
-`useCoinsMutation` resolving means, in order: the freshest available kind:11125
-was fetched and parsed, the new balance is non-negative, the signer produced a
-signed event, and `nostr.event()` returned. It does **not** mean a relay
-acknowledged it — `useNostrPublish` swallows a 5 s timeout and resolves. Nothing
-verifies the write afterwards, and this phase deliberately does not add that (see
-§9 for why the strict-publish + verify pattern belongs to the reward path). The
-bounded consequence is a pass granted for coins that may not have been durably
-deducted: it favours the player, costs 20 coins, and expires on leaving the
-arcade. `ArcadePassModal`'s header comment states this in full; product copy must
-not claim more.
+> **Superseded by the Coin cutover.** The pass is no longer charged against
+> kind:11125. `useCoinsMutation` is deleted; the charge is
+> `coinWallet.spendCoins()` against the canonical Blobbi Coin quantity in
+> kind:31633.
+
+`spendCoins` resolving with `applied` means, in order: a durable operation
+record was written (no record ⇒ no publish), the shared cross-tab lock and the
+per-user write chain were held, the newest kind:31633 was read authoritatively
+(an empty answer confirmed by a second read), the balance covered the price,
+one replacement event was signed with a monotonic `created_at`, **at least one
+relay accepted it**, and a read-back was attempted (`verified`).
+
+A timeout is NOT success: it resolves as `ambiguous`, is recorded durably, and
+is reconciled read-only — never blind-retried. So the old "pass granted for
+coins that may not have been deducted" hazard is gone in that direction. What
+remains, and is stated honestly in `ArcadePassModal`'s header, is the reverse:
+the pass itself is `sessionStorage`, granted AFTER the charge, so a storage
+failure can leave the coins spent with no pass. Product copy must not claim
+more.
 
 ### The pass is tab-scoped, deliberately
 

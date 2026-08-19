@@ -7,13 +7,19 @@
  * every failure mode the reward boundary was rebuilt around:
  *
  * ```
- *   read the FRESHEST kind:31633 from the relay      ← never the React cache
+ *   queued cross-tab lock + shared per-tab chain     ← no writer runs alone
+ *   → authoritative read, empty base CONFIRMED        ← never the React cache
  *   → refuse when held < price                        ← no negative balances, ever
  *   → applyMutation({ type: 'remove', … })            ← the canonical helper
  *   → buildInventoryTemplate(next)                    ← the canonical builder
+ *   → created_at = max(now, previous + 1)             ← no same-second ties
  *   → sign
  *   → nostr.event(…) with a 5 s timeout, STRICTLY     ← a timeout is NOT success
  * ```
+ *
+ * The lock is shared with the Coin wallet on purpose: Coins and Tickets are
+ * quantities in the SAME replaceable kind:31633 event, so a spend built from a
+ * base a concurrent coin write is replacing would roll that coin write back.
  *
  * Every step is the same code path `useInventoryMutation` uses, so a spend
  * preserves every unrelated item, rejects negative and non-integer amounts,
@@ -29,30 +35,28 @@
  * storage) is never read or written.
  */
 
-import type { NostrEvent } from '@nostrify/nostrify';
 import type { NUser } from '@nostrify/react/login';
 
 import type { ArcadePrizeRedemption } from '@/arcade/prizes/prize-redemption';
 import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry';
 
-import { applyMutation, buildInventoryTemplate, getQuantity } from './useInventoryMutation';
-import { fetchInventory } from './useIslandInventory';
-import type { GameInventory } from './package';
+import { applyMutation, getQuantity } from './useInventoryMutation';
+import {
+  InventoryTransactionError,
+  readAuthoritativeInventoryBase,
+  runInventoryTransaction,
+  unwrapInventoryTransactionError,
+  type InventoryTransactionNostr,
+} from './inventory-transaction';
 
 /** Canonical Arcade Ticket address — derived, never a literal. */
 const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
-const RELAY_TIMEOUT_MS = 5000;
-const READ_TIMEOUT_MS = 3000;
-
-/** The slice of `useNostr()` this module needs. Narrow, so a fake is trivial. */
-export interface PrizeSpendNostr {
-  query: (
-    filters: { kinds: number[]; authors: string[]; '#d': string[]; limit?: number }[],
-    options: { signal: AbortSignal },
-  ) => Promise<NostrEvent[]>;
-  event: (event: NostrEvent, options?: { signal?: AbortSignal }) => Promise<void>;
-}
+/**
+ * The slice of `useNostr()` this module needs — structurally the shared
+ * inventory-transaction surface, because that is what this writer now is.
+ */
+export type PrizeSpendNostr = InventoryTransactionNostr;
 
 /**
  * The spend capability the redemption hook holds — an interface, so the DEV
@@ -95,20 +99,15 @@ export class ArcadePrizeSpendError extends Error {
 export interface ArcadePrizeSpendWriterDeps {
   readonly nostr: PrizeSpendNostr;
   readonly user: Pick<NUser, 'pubkey' | 'signer'>;
+  /** Injectable clock for tests (monotonic `created_at`). */
+  readonly now?: () => number;
 }
 
 /** Build the spend writer for one signed-in user. A factory, not a hook. */
 export function createArcadePrizeSpendWriter(
   deps: ArcadePrizeSpendWriterDeps,
 ): ArcadePrizeSpendWriter {
-  const { nostr, user } = deps;
-
-  const readInventory = (): Promise<GameInventory> =>
-    fetchInventory(
-      nostr as unknown as Parameters<typeof fetchInventory>[0],
-      user.pubkey,
-      AbortSignal.timeout(READ_TIMEOUT_MS),
-    );
+  const { nostr, user, now } = deps;
 
   return {
     async spendTickets(redemption: ArcadePrizeRedemption): Promise<void> {
@@ -122,52 +121,50 @@ export function createArcadePrizeSpendWriter(
         );
       }
 
-      // Read-modify-write against the authoritative newest event. A stale
-      // React cache as the write base is how an inventory gets clobbered.
-      const base = await readInventory();
-      const held = getQuantity(base, TICKET_ADDRESS);
-      if (held < redemption.price) {
-        // Provably pre-publish: nothing was sent, and no balance may ever go
-        // negative — the freshest read is the last word.
-        throw new ArcadePrizeSpendError(
-          `Holding ${held} tickets; ${redemption.price} needed`,
-          'insufficient-tickets',
-        );
-      }
-      const next = applyMutation(base, {
-        type: 'remove',
-        address: TICKET_ADDRESS,
-        amount: redemption.price,
-      });
-      const template = buildInventoryTemplate(next);
-
-      const tags = [...template.tags];
-      if (!tags.some(([name]) => name === 'client')) tags.push(['client', 'blobbi']);
-
-      let signed: NostrEvent;
+      // `insufficient-tickets` must stay PROVABLY pre-publish, so it is
+      // captured inside the transaction and rethrown outside it.
+      let insufficient: ArcadePrizeSpendError | null = null;
       try {
-        signed = await user.signer.signEvent({
-          kind: template.kind,
-          content: template.content ?? '',
-          tags,
-          created_at: Math.floor(Date.now() / 1000),
+        await runInventoryTransaction({ nostr, user, now }, async (ctx) => {
+          // Read-modify-write against the authoritative newest event, on the
+          // SHARED lock. The empty base is confirmed before use, so a spend
+          // can never replace a real inventory with a ticket-only one.
+          const { inventory } = await ctx.readBase();
+          const held = getQuantity(inventory, TICKET_ADDRESS);
+          if (held < redemption.price) {
+            // Nothing sent, and no balance may ever go negative — the freshest
+            // read is the last word.
+            insufficient = new ArcadePrizeSpendError(
+              `Holding ${held} tickets; ${redemption.price} needed`,
+              'insufficient-tickets',
+            );
+            return;
+          }
+          const next = applyMutation(inventory, {
+            type: 'remove',
+            address: TICKET_ADDRESS,
+            amount: redemption.price,
+          });
+          // STRICT: resolving means at least one relay accepted it. A timeout
+          // is NOT resolved through as "probably fine".
+          await ctx.publish(next);
         });
       } catch (error) {
-        throw new ArcadePrizeSpendError(
-          error instanceof Error ? error.message : 'The signer refused',
-          'sign-failed',
-        );
+        // Only provable pre-publish failures may be wrapped; a publish timeout
+        // must stay raw so the redemption machine classifies it as unresolved.
+        if (error instanceof InventoryTransactionError && error.reason === 'sign-failed') {
+          throw new ArcadePrizeSpendError(error.message, 'sign-failed');
+        }
+        // Read and publish failures keep their ORIGINAL identity — the
+        // redemption machine classifies the thrown value, not this writer.
+        throw unwrapInventoryTransactionError(error);
       }
-
-      // STRICT: `NPool.event` rejects only when every relay fails, so resolving
-      // means at least one relay accepted it. A timeout is NOT resolved through
-      // as "probably fine".
-      await nostr.event(signed, { signal: AbortSignal.timeout(RELAY_TIMEOUT_MS) });
+      if (insufficient) throw insufficient;
     },
 
     async readTicketQuantity(): Promise<number | null> {
       try {
-        const inventory = await readInventory();
+        const { inventory } = await readAuthoritativeInventoryBase(nostr, user.pubkey);
         return getQuantity(inventory, TICKET_ADDRESS);
       } catch {
         // A failed READ is not a failed write.

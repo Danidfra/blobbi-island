@@ -11,17 +11,26 @@ Run against the real app with two prepared Nostr accounts.
   `npub1nmac6vz9hf6n7dny65pnpz6f0qe4dvn2d405h9ztltzz8xh7vw5sg0wu5e`
   (hex `9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9`).
 - Official item relays: `wss://relay.ditto.pub`, `wss://relay.dreamith.to`.
-- Non-inventory profile (coins, `has[]`, `current_companion`, achievements,
-  accessory `inv`) stays in **kind:11125**; legacy 31125 dual-read for profile
-  only. Inventory is NEVER written to 11125.
+- Coin balance: the **official Blobbi Coin quantity inside kind:31633**
+  (`31632:<issuer>:blobbi:currency:coin`). Since the Coin cutover, kind:11125
+  `coins` is OBSOLETE historical data — never read for economic decisions,
+  never displayed, never written; it rides the unknown-tag passthrough
+  verbatim.
+- Non-inventory profile (`has[]`, `current_companion`, achievements, accessory
+  `inv`) stays in **kind:11125**; legacy 31125 dual-read for profile only.
+  Inventory is NEVER written to 11125.
 
 ## Pre-test operator setup
 
 - [ ] Account A: has an existing kind:31633 (some items) for consumption tests.
 - [ ] Account B: confirm it has **no** kind:31633 event (empty-inventory tests).
-- [ ] Record Account A + B current **11125 tags verbatim** (coins, `inv`,
-      `has[]`, `current_companion`, achievements, unknown Ditto tags) so profile
-      + accessory preservation can be diffed after every write.
+- [ ] Record Account A + B current **11125 tags verbatim** (`inv`, `has[]`,
+      `current_companion`, achievements, any historic `coins`, unknown Ditto
+      tags) so profile + accessory preservation can be diffed after every
+      write. **No write in this checklist may change any of them.**
+- [ ] Record Account A + B current **31633 quantities verbatim** (Blobbi Coin,
+      Arcade Tickets, every consumable) — the Coin balance lives here now, and
+      every write must preserve the entries it does not target.
 - [ ] Open a relay event monitor subscribed to both accounts for kinds
       `[1124, 11125, 31124, 31632, 31633]`.
 - [ ] Results table columns: `action | expected events | actual events | UI result | reload result`.
@@ -55,19 +64,23 @@ Run against the real app with two prepared Nostr accounts.
 
 For each: food, toy, medicine, hygiene, energy —
 - [ ] Purchase 1 unit.
-- [ ] Coins decrease in **11125** by the local shop price.
+- [ ] The Blobbi Coin quantity in **31633** decreases by the local shop price,
+      and the item quantity increases — **in ONE replacement event**.
 - [ ] Quantity persists in **31633** after reload.
-- [ ] Accessories (`inv`) and `current_companion` unchanged (diff vs recorded
-      11125 tags); `has[]`, achievements, unknown Ditto tags unchanged.
+- [ ] kind:11125 is **not published at all** (no new 11125 event in the
+      monitor); accessories (`inv`), `current_companion`, `has[]`,
+      achievements and unknown Ditto tags unchanged.
+- [ ] Arcade Tickets and every untargeted 31633 entry unchanged.
 - [ ] Reload after each purchase confirms persistence.
 
 Edge cases:
-- [ ] Insufficient coins → purchase blocked, clear toast, no 31633 write, no
-      coin change.
+- [ ] Insufficient coins → purchase blocked against a FRESH relay read, clear
+      toast, no 31633 write at all.
 - [ ] Rapid double-click on Buy → serialized; quantity increments correctly (no
       lost/duplicated grant); coins deducted per successful purchase only.
-- [ ] Ordering: item grant (31633) publishes BEFORE coin deduct (11125). On coin
-      failure, item is kept and a partial-success warning is shown (favor-user).
+- [ ] Atomicity: the charge and the item grant are the SAME kind:31633 event —
+      there is no ordering to observe and no partial-success state. A failed
+      publish leaves BOTH the balance and the item quantity unchanged.
 
 ## 4. Consumption (per surface + reload)
 

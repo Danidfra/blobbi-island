@@ -103,6 +103,91 @@ export async function fetchInventory(
   return valid.length > 0 ? valid[0].parsed : buildEmptyInventory(pubkey);
 }
 
+/** The narrow relay surface an inventory read needs; trivial to fake in tests. */
+export interface InventoryReadNostr {
+  query: (
+    filters: {
+      kinds: number[];
+      authors: string[];
+      '#d': string[];
+      limit?: number;
+    }[],
+    options: { signal: AbortSignal },
+  ) => Promise<NostrEvent[]>;
+}
+
+export interface InventoryWithMeta {
+  readonly inventory: GameInventory;
+  /** `created_at` of the newest valid event, or 0 when none exists. */
+  readonly createdAt: number;
+}
+
+/**
+ * Fetch the newest valid kind:31633 together with its `created_at`.
+ *
+ * A RESOLVED call is as authoritative as Nostr allows: the pool's `query`
+ * resolves only after the relay answered the REQ (EOSE) or the filter limit
+ * was satisfied, so a resolved-but-empty result means "the relay says there is
+ * no event", not "the relay never answered" — that case rejects
+ * (timeout/abort) and MUST be treated as unknown, never as empty.
+ *
+ * NOTE this is the RAW read. Anything that will become a PUBLISH BASE must use
+ * {@link readAuthoritativeInventoryBase} instead.
+ */
+export async function fetchInventoryWithMeta(
+  nostr: InventoryReadNostr,
+  pubkey: string,
+): Promise<InventoryWithMeta> {
+  const events = await nostr.query(
+    [
+      {
+        kinds: [KIND_GAME_INVENTORY],
+        authors: [pubkey],
+        '#d': [ISLAND_INVENTORY_D],
+        limit: 1,
+      },
+    ],
+    { signal: AbortSignal.timeout(3000) },
+  );
+  const valid = events
+    .map((event) => ({ event, parsed: parseInventoryEvent(event) }))
+    .filter((x): x is { event: NostrEvent; parsed: GameInventory } => Boolean(x.parsed))
+    .sort((a, b) => b.event.created_at - a.event.created_at);
+  if (valid.length === 0) {
+    return { inventory: buildEmptyInventory(pubkey), createdAt: 0 };
+  }
+  return { inventory: valid[0].parsed, createdAt: valid[0].event.created_at };
+}
+
+/**
+ * Read the base a REPLACEMENT event may safely be built from.
+ *
+ * kind:31633 is replaceable: a publish does not patch the inventory, it
+ * replaces it. So an empty base is not merely a missing delta — it erases
+ * every item the player owns. And a resolved-empty read is NOT proof of an
+ * empty inventory: "new account" and "this relay does not carry (or has not
+ * caught up with) the event" look identical over Nostr.
+ *
+ * This is the read that resolves that ambiguity:
+ *
+ * - first read returns an event    ⇒ use it;
+ * - first read empty, second returns an event ⇒ use it (the first answer was
+ *   wrong; without this the player's whole inventory would be replaced —
+ *   the reported "Mine reward replaced my balance" bug);
+ * - both reads empty               ⇒ genuinely no inventory; an empty base is
+ *   correct and a first-ever write still works;
+ * - confirming read REJECTS        ⇒ unknown, so it throws. Publishing from an
+ *   unconfirmed empty base is exactly the defect.
+ */
+export async function readAuthoritativeInventoryBase(
+  nostr: InventoryReadNostr,
+  pubkey: string,
+): Promise<InventoryWithMeta> {
+  const first = await fetchInventoryWithMeta(nostr, pubkey);
+  if (first.createdAt !== 0) return first;
+  return await fetchInventoryWithMeta(nostr, pubkey);
+}
+
 /**
  * Load the current user's canonical Island inventory (kind:31633).
  *

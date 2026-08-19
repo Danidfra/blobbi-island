@@ -12,13 +12,24 @@
  *
  * ## What it does, in order
  *
+ * The whole read-modify-write runs inside {@link runInventoryTransaction} —
+ * the SAME primitive the Coin wallet uses, on the SAME cross-tab lock name:
+ *
  * ```
- *   read the FRESHEST kind:31633 from the relay      ← never the React cache
- *   → applyMutation({ type: 'add', address, amount })  ← the canonical helper
- *   → buildInventoryTemplate(next)                     ← the canonical builder
+ *   queued cross-tab lock + shared per-tab chain     ← no writer runs alone
+ *   → authoritative read, empty base CONFIRMED        ← never the React cache
+ *   → applyMutation({ type: 'add', address, amount }) ← the canonical helper
+ *   → buildInventoryTemplate(next)                    ← the canonical builder
+ *   → created_at = max(now, previous + 1)             ← no same-second ties
  *   → sign
- *   → nostr.event(…) with a 5 s timeout, STRICTLY      ← a timeout is a FAILURE
+ *   → nostr.event(…) with a 5 s timeout, STRICTLY     ← a timeout is a FAILURE
  * ```
+ *
+ * Sharing the lock is not tidiness: Coins and Arcade Tickets live in the SAME
+ * replaceable kind:31633 event, so a ticket grant built from a base that a
+ * concurrent coin grant is already replacing would silently roll the Coin
+ * balance back — and a ticket grant built from an unconfirmed empty read would
+ * erase the balance outright.
  *
  * Every step after the read is the same code path `useInventoryMutation` uses,
  * so a ticket grant preserves unrelated item balances, rejects negative and
@@ -37,21 +48,27 @@
  *
  * ## kind:11125 is never touched
  *
- * Coins live in the Blobbonaut profile and are a different currency with a
- * different lifecycle. Nothing here reads or writes them. The Arcade **Pass**
- * (temporary `sessionStorage` floor access) is not an item at all and has no
- * address, so it cannot be confused with the Arcade **Ticket** by construction.
+ * Since the Coin cutover the canonical Coin balance is the official Blobbi
+ * Coin quantity in kind:31633 — the same event this writer replaces — and a
+ * historic kind:11125 `coins` tag is obsolete data nothing here reads or
+ * writes. The Arcade **Pass** (temporary `sessionStorage` floor access) is not
+ * an item at all and has no address, so it cannot be confused with the Arcade
+ * **Ticket** by construction.
  */
 
-import type { NostrEvent } from '@nostrify/nostrify';
 import type { NUser } from '@nostrify/react/login';
 
 import type { ArcadeRewardClaim, ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
 import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry';
 
-import { applyMutation, buildInventoryTemplate, getQuantity } from './useInventoryMutation';
-import { fetchInventory } from './useIslandInventory';
-import type { GameInventory } from './package';
+import { applyMutation, getQuantity } from './useInventoryMutation';
+import {
+  InventoryTransactionError,
+  readAuthoritativeInventoryBase,
+  runInventoryTransaction,
+  unwrapInventoryTransactionError,
+  type InventoryTransactionNostr,
+} from './inventory-transaction';
 
 /**
  * The canonical Arcade Ticket address, derived from the official issuer and the
@@ -61,24 +78,19 @@ import type { GameInventory } from './package';
  */
 export const ARCADE_TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
-/** Timeout for both the publish and the reads, in milliseconds. */
-const RELAY_TIMEOUT_MS = 5000;
-const READ_TIMEOUT_MS = 3000;
-
-/** The slice of `useNostr()` this module needs. Narrow, so a fake is trivial. */
-export interface RewardWriterNostr {
-  query: (
-    filters: { kinds: number[]; authors: string[]; '#d': string[]; limit?: number }[],
-    options: { signal: AbortSignal },
-  ) => Promise<NostrEvent[]>;
-  event: (event: NostrEvent, options?: { signal?: AbortSignal }) => Promise<void>;
-}
+/**
+ * The slice of `useNostr()` this module needs — structurally the shared
+ * inventory-transaction surface, because that is what this writer now is.
+ */
+export type RewardWriterNostr = InventoryTransactionNostr;
 
 export interface ArcadeRewardWriterDeps {
   readonly nostr: RewardWriterNostr;
   readonly user: Pick<NUser, 'pubkey' | 'signer'>;
   /** Overridable so a test can grant a different item without faking the registry. */
   readonly itemAddress?: string;
+  /** Injectable clock for tests (monotonic `created_at`). */
+  readonly now?: () => number;
 }
 
 /**
@@ -118,17 +130,8 @@ export class ArcadeRewardWriterError extends Error {
  * not require rendering anything.
  */
 export function createArcadeTicketWriter(deps: ArcadeRewardWriterDeps): ArcadeRewardWriter {
-  const { nostr, user } = deps;
+  const { nostr, user, now } = deps;
   const itemAddress = deps.itemAddress ?? ARCADE_TICKET_ADDRESS;
-
-  const readInventory = (): Promise<GameInventory> =>
-    fetchInventory(
-      // `fetchInventory` only calls `.query`, and typing this parameter as the
-      // full Nostrify pool would force every test to construct one.
-      nostr as unknown as Parameters<typeof fetchInventory>[0],
-      user.pubkey,
-      AbortSignal.timeout(READ_TIMEOUT_MS),
-    );
 
   return {
     async publishTicketGrant(claim: ArcadeRewardClaim): Promise<void> {
@@ -142,44 +145,41 @@ export function createArcadeTicketWriter(deps: ArcadeRewardWriterDeps): ArcadeRe
         );
       }
 
-      // Read-modify-write against the authoritative newest event, exactly as the
-      // canonical mutation layer does. A stale React cache as the write base is
-      // how an inventory gets clobbered back to an older state.
-      const base = await readInventory();
-      const next = applyMutation(base, {
-        type: 'add',
-        address: itemAddress,
-        amount: claim.tickets,
-      });
-      const template = buildInventoryTemplate(next);
-
-      const tags = [...template.tags];
-      if (!tags.some(([name]) => name === 'client')) tags.push(['client', 'blobbi']);
-
-      let signed: NostrEvent;
       try {
-        signed = await user.signer.signEvent({
-          kind: template.kind,
-          content: template.content ?? '',
-          tags,
-          created_at: Math.floor(Date.now() / 1000),
+        await runInventoryTransaction({ nostr, user, now }, async (ctx) => {
+          // Read-modify-write against the authoritative newest event, on the
+          // SHARED lock so a concurrent Coin write cannot be built over. The
+          // base's empty answer is confirmed before it is ever used, so this
+          // grant can never replace a real inventory with "tickets only".
+          const { inventory } = await ctx.readBase();
+          const next = applyMutation(inventory, {
+            type: 'add',
+            address: itemAddress,
+            amount: claim.tickets,
+          });
+          // STRICT publish: resolving means at least one relay accepted it. A
+          // timeout is NOT resolved through as "probably fine" — that is the
+          // defect this whole boundary exists for.
+          await ctx.publish(next);
         });
       } catch (error) {
-        throw new ArcadeRewardWriterError(
-          error instanceof Error ? error.message : 'The signer refused',
-          'sign-failed',
-        );
+        // Only a provable pre-publish failure may be wrapped: the claim
+        // boundary treats a wrapped error as retryable and a raw one as
+        // possibly-published. A read failure and a signer refusal are provable;
+        // a publish timeout is exactly what must stay raw.
+        if (error instanceof InventoryTransactionError && error.reason === 'sign-failed') {
+          throw new ArcadeRewardWriterError(error.message, 'sign-failed');
+        }
+        // Read and publish failures keep their ORIGINAL identity: this
+        // boundary's contract is that the claim machine classifies the thrown
+        // value, and a wrapper would be a new, unrecognised type.
+        throw unwrapInventoryTransactionError(error);
       }
-
-      // STRICT: `NPool.event` rejects only when every relay fails, so resolving
-      // means at least one relay accepted it. A timeout is NOT resolved through
-      // as "probably fine" — that is the defect this whole boundary exists for.
-      await nostr.event(signed, { signal: AbortSignal.timeout(RELAY_TIMEOUT_MS) });
     },
 
     async readTicketQuantity(): Promise<number | null> {
       try {
-        const inventory = await readInventory();
+        const { inventory } = await readAuthoritativeInventoryBase(nostr, user.pubkey);
         return getQuantity(inventory, itemAddress);
       } catch {
         // A failed READ is not a failed write. Returning null lets the caller say
