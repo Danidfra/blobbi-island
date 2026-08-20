@@ -29,6 +29,11 @@ import {
   unknownItemDefinition,
 } from './catalog-fallback';
 import { addressToItemId } from './registry';
+import {
+  readRelayConfirmedOrThrow,
+  readRelayEventsOrThrow,
+  type RelayReader,
+} from '@/lib/relay-read';
 import type { ItemCatalog } from './useItemCatalog';
 
 /** Island view-model entry for a single owned item. */
@@ -103,18 +108,15 @@ export async function fetchInventory(
   return valid.length > 0 ? valid[0].parsed : buildEmptyInventory(pubkey);
 }
 
-/** The narrow relay surface an inventory read needs; trivial to fake in tests. */
-export interface InventoryReadNostr {
-  query: (
-    filters: {
-      kinds: number[];
-      authors: string[];
-      '#d': string[];
-      limit?: number;
-    }[],
-    options: { signal: AbortSignal },
-  ) => Promise<NostrEvent[]>;
-}
+/**
+ * The narrow relay surface an inventory read needs.
+ *
+ * Structurally the shared {@link RelayReader}: `query` plus the OPTIONAL
+ * EOSE-aware `req`. Production always has `req` (`NPool` implements `NRelay`);
+ * a fake with only `query` still works, on the weaker "a resolved call is an
+ * answer" assumption. See `src/lib/relay-read.ts`.
+ */
+export type InventoryReadNostr = RelayReader;
 
 export interface InventoryWithMeta {
   readonly inventory: GameInventory;
@@ -122,33 +124,47 @@ export interface InventoryWithMeta {
   readonly createdAt: number;
 }
 
+const INVENTORY_FILTERS = (pubkey: string) => [
+  {
+    kinds: [KIND_GAME_INVENTORY],
+    authors: [pubkey],
+    '#d': [ISLAND_INVENTORY_D],
+    limit: 1,
+  },
+];
+
+const INVENTORY_READ_TIMEOUT_MS = 3000;
+
 /**
  * Fetch the newest valid kind:31633 together with its `created_at`.
  *
- * A RESOLVED call is as authoritative as Nostr allows: the pool's `query`
- * resolves only after the relay answered the REQ (EOSE) or the filter limit
- * was satisfied, so a resolved-but-empty result means "the relay says there is
- * no event", not "the relay never answered" — that case rejects
- * (timeout/abort) and MUST be treated as unknown, never as empty.
+ * CORRECTION (this phase): the previous comment here claimed a timeout/abort
+ * makes `nostr.query` reject. It does not — `NPool.query` swallows every
+ * failure and resolves with partial results, usually `[]`. That is why the
+ * read now goes through {@link readRelayEventsOrThrow}, which reports an
+ * unusable read as {@link RelayReadUnknownError} instead of as "no inventory".
+ * Every caller already treats a throw as "unknown": the Coin wallet maps it to
+ * `read-failed`, the read-back verification to `verified: false`, and the
+ * economy-entry service to "cannot confirm — publish nothing".
  *
- * NOTE this is the RAW read. Anything that will become a PUBLISH BASE must use
- * {@link readAuthoritativeInventoryBase} instead.
+ * NOTE this is the SINGLE read. Anything that will become a PUBLISH BASE must
+ * use {@link readAuthoritativeInventoryBase} instead.
  */
 export async function fetchInventoryWithMeta(
   nostr: InventoryReadNostr,
   pubkey: string,
 ): Promise<InventoryWithMeta> {
-  const events = await nostr.query(
-    [
-      {
-        kinds: [KIND_GAME_INVENTORY],
-        authors: [pubkey],
-        '#d': [ISLAND_INVENTORY_D],
-        limit: 1,
-      },
-    ],
-    { signal: AbortSignal.timeout(3000) },
-  );
+  const events = await readRelayEventsOrThrow(nostr, INVENTORY_FILTERS(pubkey), {
+    timeoutMs: INVENTORY_READ_TIMEOUT_MS,
+  });
+  return selectNewestInventory(events, pubkey);
+}
+
+/** Newest valid inventory event, or an empty base when there genuinely is none. */
+function selectNewestInventory(
+  events: NostrEvent[],
+  pubkey: string,
+): InventoryWithMeta {
   const valid = events
     .map((event) => ({ event, parsed: parseInventoryEvent(event) }))
     .filter((x): x is { event: NostrEvent; parsed: GameInventory } => Boolean(x.parsed))
@@ -176,16 +192,24 @@ export async function fetchInventoryWithMeta(
  *   the reported "Mine reward replaced my balance" bug);
  * - both reads empty               ⇒ genuinely no inventory; an empty base is
  *   correct and a first-ever write still works;
- * - confirming read REJECTS        ⇒ unknown, so it throws. Publishing from an
- *   unconfirmed empty base is exactly the defect.
+ * - either read UNKNOWN            ⇒ throws {@link RelayReadUnknownError}.
+ *   Publishing from an unconfirmed empty base is exactly the defect.
+ *
+ * (Before this phase the "unknown" branch relied on `nostr.query` rejecting on
+ * timeout. It never does — see `src/lib/relay-read.ts` — so the guarantee was
+ * only as strong as "two consecutive timeouts are unlikely". It is now real.)
  */
 export async function readAuthoritativeInventoryBase(
   nostr: InventoryReadNostr,
   pubkey: string,
 ): Promise<InventoryWithMeta> {
-  const first = await fetchInventoryWithMeta(nostr, pubkey);
-  if (first.createdAt !== 0) return first;
-  return await fetchInventoryWithMeta(nostr, pubkey);
+  // Confirmation lives in the shared primitive: an EOSE-completed empty answer
+  // is re-read once before it is believed, and an unusable read throws rather
+  // than degrading to "no inventory".
+  const events = await readRelayConfirmedOrThrow(nostr, INVENTORY_FILTERS(pubkey), {
+    timeoutMs: INVENTORY_READ_TIMEOUT_MS,
+  });
+  return selectNewestInventory(events, pubkey);
 }
 
 /**
@@ -205,8 +229,14 @@ export function useIslandInventory() {
         // No user: return a placeholder empty inventory owned by nobody.
         return buildEmptyInventory('');
       }
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-      return fetchInventory(nostr, user.pubkey, signal);
+      // Same confirmed-empty rule as the publish base: an unusable read must
+      // not render as "you own nothing" (a Coin balance of 0 is alarming and
+      // wrong). Throwing keeps React Query's last good inventory on screen.
+      const events = await readRelayConfirmedOrThrow(nostr, INVENTORY_FILTERS(user.pubkey), {
+        signal: c.signal,
+        timeoutMs: INVENTORY_READ_TIMEOUT_MS,
+      });
+      return selectNewestInventory(events, user.pubkey).inventory;
     },
     enabled: !!user?.pubkey,
     staleTime: 15000,

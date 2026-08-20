@@ -69,7 +69,7 @@ function makeRelay(initialByPubkey: Record<string, NostrEvent | null> = {}) {
     Object.entries(initialByPubkey).flatMap(([pk, ev]) => (ev ? [[pk, ev]] : [])),
   );
   const published: NostrEvent[] = [];
-  const queries: { kinds: number[]; authors: string[]; '#d': string[] }[] = [];
+  const queries: { kinds?: number[]; authors?: string[]; '#d'?: string[] }[] = [];
   let readBehavior: 'ok' | 'reject' | 'stale' = 'ok';
   let publishBehavior: 'ok' | 'timeout' | 'timeout-but-landed' | 'error' = 'ok';
   /** Snapshot served while readBehavior === 'stale'. */

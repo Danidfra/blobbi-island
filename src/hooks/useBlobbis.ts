@@ -4,6 +4,7 @@ import { useCurrentUser } from './useCurrentUser';
 import type { PetState } from '@/lib/blobbi-types';
 import { parsePetState, validatePetStateEvent } from '@/lib/blobbi-parsers';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
 
 // Legacy interface for backward compatibility
 export interface Blobbi {
@@ -73,6 +74,13 @@ function petStateToLegacyBlobbi(petState: PetState): Blobbi {
   };
 }
 
+/**
+ * Deadline for reaching EOSE. Unchanged from the previous implementation — the
+ * fix is that exceeding it is now reported as UNKNOWN instead of as "no
+ * Blobbis", not that the read is given longer.
+ */
+const READ_TIMEOUT_MS = 2000;
+
 export function useBlobbis() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
@@ -84,14 +92,21 @@ export function useBlobbis() {
         throw new Error('User not logged in');
       }
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(2000)]); // Reduced timeout
-
-      // Query for kind 31124 events (Pet State)
-      const events = await nostr.query([{
-        kinds: [KIND_BLOBBI_STATE],
-        authors: [user.pubkey],
-        limit: 25 // Reduced limit for faster initial load
-      }], { signal });
+      // CONFIRMED-EMPTY read. This list decides whether the player owns any
+      // Blobbi at all, so a relay that times out (or answers partially) must
+      // NOT be able to say "zero". `readRelayConfirmedOrThrow` throws on an
+      // unusable read, which makes React Query keep the previously known list
+      // instead of replacing it with `[]`; only a completed empty answer,
+      // confirmed by a second completed read, resolves to an empty list.
+      const events = await readRelayConfirmedOrThrow(
+        nostr,
+        [{
+          kinds: [KIND_BLOBBI_STATE],
+          authors: [user.pubkey],
+          limit: 25, // Reduced limit for faster initial load
+        }],
+        { signal: c.signal, timeoutMs: READ_TIMEOUT_MS },
+      );
 
       // Transform events to typed PetState objects, then convert to legacy format
       const petStates = events

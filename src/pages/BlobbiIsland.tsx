@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -13,6 +13,7 @@ import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
 import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { nextGameState, type GameState } from "./blobbi-island-state";
 
 // Lazy load heavy components
 const PlayingView = lazy(() => import("@/components/blobbi/PlayingView").then(module => ({ default: module.PlayingView })));
@@ -29,8 +30,6 @@ const GameComponentLoading = () => (
     </div>
   </div>
 );
-
-type GameState = 'login' | 'loading' | 'selection' | 'hatching' | 'playing';
 
 export function BlobbiIsland() {
   const { user } = useCurrentUser();
@@ -62,17 +61,41 @@ export function BlobbiIsland() {
   // app routes to the selection screen (which shows a friendly "older format"
   // notice and a modern-only grid) instead of silently entering the game with a
   // legacy Blobbi. An explicit manualSelection always wins and is unaffected.
+  //
+  // COMPANION PRESERVATION: the last companion we actually resolved. The
+  // profile read can become temporarily unusable (relay timeout), and without
+  // this the derived selection would collapse to null and eject a playing
+  // player. The fallback is deliberately narrow — it re-selects the SAME
+  // Blobbi we already had, only while it is still present in the known pet
+  // list. It never picks a different Blobbi (the `allPets[0]` shape in
+  // `useOptimizedStatus` is for a player who has never chosen one, not for
+  // covering an unresolved read).
+  const lastResolvedCompanionIdRef = useRef<string | null>(null);
+
   const selectedBlobbi = useMemo(() => {
-    if (manualSelectionId && blobbis) {
+    if (!blobbis) return null;
+    if (manualSelectionId) {
       const manual = blobbis.find(b => b.id === manualSelectionId);
       if (manual) return manual;
     }
-    if (currentCompanionId && blobbis) {
+    if (currentCompanionId) {
       const current = blobbis.find(b => b.id === currentCompanionId);
       return current && isModernBlobbi(current) ? current : null;
     }
+    // No companion from the profile: either the player never picked one, or
+    // the profile is momentarily unresolved. Only the second case is
+    // recoverable, and only to the Blobbi we already had.
+    const lastId = lastResolvedCompanionIdRef.current;
+    if (lastId) {
+      const last = blobbis.find(b => b.id === lastId);
+      if (last && isModernBlobbi(last)) return last;
+    }
     return null;
   }, [manualSelectionId, currentCompanionId, blobbis]);
+
+  useEffect(() => {
+    if (selectedBlobbi) lastResolvedCompanionIdRef.current = selectedBlobbi.id;
+  }, [selectedBlobbi]);
 
   // Determine game state based on user login and data loading
   useEffect(() => {
@@ -88,14 +111,14 @@ export function BlobbiIsland() {
     // While the first-egg hatching ceremony is running, it owns the screen.
     // Data queries will refetch underneath it; don't yank the player out mid
     // -ceremony. The ceremony's onComplete handler transitions to 'playing'.
-    setGameState((current) => {
-      if (current === 'hatching') return current;
-      if (isLoading) return 'loading';
-      if (blobbiError || companionError) return 'selection';
-      if (!blobbis || blobbis.length === 0) return 'selection';
-      if (!selectedBlobbi) return 'selection';
-      return 'playing';
-    });
+    setGameState((current) =>
+      nextGameState(current, {
+        isLoading,
+        hasReadError: Boolean(blobbiError || companionError),
+        blobbis,
+        hasSelectedBlobbi: Boolean(selectedBlobbi),
+      }),
+    );
 
     if (isLoading) {
       // Only show loading for a short time, then fall back to selection.

@@ -138,12 +138,12 @@ describe('every kind:31633 writer joins the shared serialization boundary', () =
 
 describe('no writer may build on an unconfirmed empty base', () => {
   it('the confirming read exists and is the documented publish base', () => {
+    // Structural only: that the helper EXISTS and is exported. Its confirming
+    // behaviour is asserted behaviourally in
+    // `inventory-authoritative-base.test.ts`, not by pinning its source shape.
     const source = read('src/inventory/useIslandInventory.ts');
     expect(source).toMatch(/export async function readAuthoritativeInventoryBase/);
-    // Empty first answer ⇒ a second read before the base is handed out.
-    expect(source).toMatch(
-      /const first = await fetchInventoryWithMeta[\s\S]{0,240}return await fetchInventoryWithMeta/,
-    );
+    expect(source).toMatch(/readRelayConfirmedOrThrow/);
   });
 
   it('every writer reads its base through the confirming read', () => {

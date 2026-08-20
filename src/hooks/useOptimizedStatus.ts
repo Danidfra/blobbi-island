@@ -27,6 +27,7 @@ import {
   validatePetStateEvent
 } from '@/lib/blobbi-parsers';
 import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
 
 // ============================================================================
 // Main Hook
@@ -46,13 +47,17 @@ export function useOptimizedStatus() {
     queryFn: async (c) => {
       if (!user?.pubkey) return null;
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-
-      const events = await nostr.query([{
-        kinds: [...BLOBBONAUT_PROFILE_KINDS],
-        authors: [user.pubkey],
-        limit: 1
-      }], { signal });
+      // Unusable read → throw, so React Query retains the last known owner
+      // profile (and with it `current_companion`). Confirmed empty → null.
+      const events = await readRelayConfirmedOrThrow(
+        nostr,
+        [{
+          kinds: [...BLOBBONAUT_PROFILE_KINDS],
+          authors: [user.pubkey],
+          limit: 1,
+        }],
+        { signal: c.signal, timeoutMs: 3000 },
+      );
 
       const validEvents = events.filter(validateOwnerProfileEvent);
       return validEvents.length > 0 ? parseOwnerProfile(validEvents[0]) : null;
@@ -67,13 +72,18 @@ export function useOptimizedStatus() {
     queryFn: async (c) => {
       if (!user?.pubkey) return [];
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-
-      const events = await nostr.query([{
-        kinds: [KIND_BLOBBI_STATE],
-        authors: [user.pubkey],
-        limit: 50
-      }], { signal });
+      // Unusable read → throw, so the status cache keeps the pets it knows
+      // about instead of collapsing to `[]` (which makes `currentPet` null and
+      // breaks every surface that reads it). Confirmed empty → [].
+      const events = await readRelayConfirmedOrThrow(
+        nostr,
+        [{
+          kinds: [KIND_BLOBBI_STATE],
+          authors: [user.pubkey],
+          limit: 50,
+        }],
+        { signal: c.signal, timeoutMs: 3000 },
+      );
 
       const validEvents = events.filter(validatePetStateEvent);
       return validEvents
@@ -186,12 +196,22 @@ export function useOptimizedStatus() {
     });
   }, [applyOptimisticUpdate]);
 
-  // Function to refresh data from relays
+  // Function to refresh data from relays.
+  //
+  // Depends on the two `refetch` FUNCTIONS, not on the whole `useQuery` result
+  // objects. Those objects get a new identity on every render, which used to
+  // give `refreshFromRelay` a new identity on every render too — so a consumer
+  // doing `useEffect(() => refreshFromRelay(), [refreshFromRelay])` (the Mine)
+  // re-fired the effect on EVERY render and issued two relay reads each time.
+  // React Query guarantees `refetch` is referentially stable, so this callback
+  // is now genuinely stable and the effect runs once per mount.
+  const { refetch: refetchOwner } = ownerQuery;
+  const { refetch: refetchPets } = petsQuery;
   const refreshFromRelay = useCallback(() => {
     clearPendingUpdates();
-    ownerQuery.refetch();
-    petsQuery.refetch();
-  }, [clearPendingUpdates, ownerQuery, petsQuery]);
+    refetchOwner();
+    refetchPets();
+  }, [clearPendingUpdates, refetchOwner, refetchPets]);
 
   return {
     // Main status object

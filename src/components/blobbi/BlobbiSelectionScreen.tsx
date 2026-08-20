@@ -72,12 +72,29 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [canClose, onCancel]);
 
-  // Show loading screen while fetching data
-  if (!user || isLoading || isLoadingCompanion) {
+  // ── Read-state gates ──────────────────────────────────────────────────────
+  //
+  // Four distinct states, deliberately not three:
+  //
+  //   loading            no cached pets yet, a read is in flight
+  //   unknown / error    the read could not be completed AND we know nothing
+  //   known non-empty    render the grid (even if a background read failed)
+  //   CONFIRMED empty    the only state allowed to say "you have no Blobbi"
+  //
+  // `useBlobbis` now throws on an unusable read instead of resolving `[]`, so
+  // React Query keeps the last good list behind `error`. That means "we have
+  // pets AND a failed refetch" must keep showing the pets — replacing them
+  // with an error screen would be the same destructive downgrade in a
+  // friendlier costume.
+  const hasKnownPets = (blobbis?.length ?? 0) > 0;
+  const isReadUnusable = Boolean(error);
+
+  // Show loading screen while fetching data (nothing known yet).
+  if (!user || ((isLoading || isLoadingCompanion) && !hasKnownPets)) {
     return <BlobbiLoadingScreen />;
   }
 
-  if (error) {
+  if (isReadUnusable && !hasKnownPets) {
     return (
       <div className="flex min-h-full items-center justify-center bg-gradient-to-b from-island-sky/60 via-island-cream to-island-sand/60 p-4 sm:p-6">
         <div className="w-full max-w-sm rounded-3xl border-4 border-island-wood bg-island-cream p-6 text-center shadow-cozy-frame">
@@ -85,11 +102,11 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
             <MascotBlobbi size="sm" sleeping />
           </div>
           <h3 className="text-lg font-bold text-island-ink">The nest is hiding</h3>
+          {/* Deliberately no transport detail: the product only needs
+              "we could not establish the state". Reasons stay in logs/tests. */}
           <p className="mt-1 text-sm text-island-ink-soft">
-            We couldn't reach your Blobbis right now.
-            {error instanceof Error && (
-              <span className="mt-1 block text-xs opacity-70">{error.message}</span>
-            )}
+            We couldn't reach your Blobbis right now. Your Blobbis are safe —
+            this is a connection problem, not a missing nest.
           </p>
           <Button
             onClick={() => window.location.reload()}
@@ -130,6 +147,9 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
   };
 
   const hasBlobbis = modernBlobbis.length > 0;
+  // The destructive empty state requires an ACTUAL completed list. `undefined`
+  // means "never successfully read", which is not the same as "none".
+  const isConfirmedEmpty = Array.isArray(blobbis) && !hasBlobbis && !isReadUnusable;
   const isAlreadyActive = !!selectedBlobbi && selectedBlobbi.id === currentCompanionId;
 
   return (
@@ -176,6 +196,20 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
           </div>
         )}
 
+        {/* Known-good pets exist but the latest read failed: keep the cards and
+            say so quietly. Never swap the collection for an error screen. */}
+        {isReadUnusable && hasKnownPets && (
+          <div className="mx-auto mb-4 max-w-2xl rounded-2xl border-2 border-island-wood/25 bg-island-cream-2/70 p-3 text-center shadow-cozy-soft">
+            <p className="text-sm text-island-ink">
+              <RotateCw className="mr-1 inline size-4 animate-spin align-text-bottom text-island-ocean" />
+              Reconnecting…
+            </p>
+            <p className="mt-0.5 text-xs text-island-ink-soft">
+              Showing the Blobbis we already know about.
+            </p>
+          </div>
+        )}
+
         {hasBlobbis ? (
           <div className="mx-auto grid max-w-5xl grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 landscape:max-md:grid-cols-5 landscape:max-md:gap-2">
             {modernBlobbis.map((blobbi) => (
@@ -189,9 +223,11 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
               />
             ))}
           </div>
-        ) : (
-          /* Friendly empty state — no modern Blobbis to show (whether the nest
-             is truly empty or only holds older-format Blobbis). */
+        ) : isConfirmedEmpty ? (
+          /* CONFIRMED empty — a completed read, confirmed by a second completed
+             read, found no modern Blobbis (whether the nest is truly empty or
+             only holds older-format Blobbis). This is the ONLY path allowed to
+             tell the player they do not have a Blobbi. */
           <div className="flex h-full items-center justify-center">
             <div className="w-full max-w-sm rounded-3xl border-2 border-dashed border-island-wood/35 bg-island-cream/80 p-8 text-center shadow-cozy-soft">
               <div className="mb-3 flex justify-center">
@@ -217,6 +253,18 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
                 <Egg className="mr-2 size-4" />
                 Hatch your first Blobbi
               </Button>
+            </div>
+          </div>
+        ) : (
+          /* Nothing known and the read is not usable — say so, never "empty". */
+          <div className="flex h-full items-center justify-center">
+            <div className="w-full max-w-sm rounded-3xl border-2 border-dashed border-island-wood/35 bg-island-cream/80 p-8 text-center shadow-cozy-soft">
+              <h3 className="text-lg font-bold text-island-ink">
+                Reconnecting to your Blobbi Nest…
+              </h3>
+              <p className="mt-1 text-sm text-island-ink-soft">
+                We couldn't reach the island just now. Your Blobbis are safe.
+              </p>
             </div>
           </div>
         )}

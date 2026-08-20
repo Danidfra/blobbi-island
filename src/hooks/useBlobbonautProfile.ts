@@ -10,6 +10,7 @@ import { useCurrentUser } from './useCurrentUser';
 import { useNostrPublish } from './useNostrPublish';
 
 import { parseOwnerProfile, validateOwnerProfileEvent } from '@/lib/blobbi-parsers';
+import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
 import { BLOBBONAUT_PROFILE_KINDS, KIND_BLOBBONAUT_PROFILE } from '@/lib/blobbi-kinds';
 import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
 
@@ -22,13 +23,20 @@ export function useBlobbonautProfile() {
     queryFn: async (c) => {
       if (!user?.pubkey) return null;
 
-      const signal = AbortSignal.any([c.signal, AbortSignal.timeout(3000)]);
-
-      const events = await nostr.query([{
-        kinds: [...BLOBBONAUT_PROFILE_KINDS],
-        authors: [user.pubkey],
-        limit: 1
-      }], { signal });
+      // CONFIRMED-EMPTY read. `current_companion` lives here, and losing it
+      // routes an active player back to the selection screen — so an unusable
+      // read must throw (React Query then keeps the last known profile) rather
+      // than resolve to `null`. Only a completed empty answer, confirmed by a
+      // second completed read, means "this account has no profile".
+      const events = await readRelayConfirmedOrThrow(
+        nostr,
+        [{
+          kinds: [...BLOBBONAUT_PROFILE_KINDS],
+          authors: [user.pubkey],
+          limit: 1,
+        }],
+        { signal: c.signal, timeoutMs: 3000 },
+      );
 
       // Always reconcile against the LATEST replaceable event. Relays / multiple
       // kinds can return events out of order, so pick the highest created_at
