@@ -9,6 +9,17 @@ Companion: [`player-session-resilience-audit.md`](player-session-resilience-audi
 which proves *why* the session dies. This document covers *what is lost* and
 *how end-of-run settlement should work*.
 
+> **RESOLVED.** The durable Mine session and end-of-run energy settlement
+> designed in §7–§9 are **implemented** — see
+> [`mine-session-settlement.md`](mine-session-settlement.md). Gameplay now
+> publishes nothing (8 → **0** kind:31124 writes per run, 32 → **0**
+> invalidations), the reward and energy cost settle once at the end under
+> deterministic operation ids, and an interrupted run costs the player nothing.
+> The one deliberate exception is §3's generic `useUpdatePetState`, left
+> unchanged and recorded as follow-up in §12 of the implementation doc.
+>
+> Earlier note (relay-read phase):
+>
 > **PARTIALLY RESOLVED.** The relay-read phase
 > ([`relay-read-resilience.md`](relay-read-resilience.md)) fixed the
 > `refreshFromRelay` storm (11 → 1 refresh, 38 → **18** relay reads per session)
@@ -18,7 +29,7 @@ which proves *why* the session dies. This document covers *what is lost* and
 
 ---
 
-## 1. Verdict
+## 1. Verdict (audit-time; now fixed)
 
 > **The Mine persists energy 8 times and the reward once, in that order, with
 > no durable session identity. Any interruption between the first click and the

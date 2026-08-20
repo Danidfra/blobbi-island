@@ -4,25 +4,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useUpdatePetState } from '@/hooks/useBlobbiEvents';
-import { useCoinWallet } from '@/inventory/useCoinWallet';
-import { mintCoinOpId, CoinWalletError } from '@/inventory/coin-wallet';
+import { useMineSettlement } from '@/hooks/useMineSettlement';
 import { miningItemPath } from '@/lib/asset-paths';
 
 /**
- * Reward boundary (Coin cutover): the payout is a canonical Coin wallet
- * grant — one durable operation per mining session, minted at Start. The old
- * path (an absolute `coins` republish of kind:11125 from the React cache,
- * fire-and-forget) is gone; the wallet gives the session fresh reads, strict
- * publish, exactly-once application and honest ambiguous states. The game
- * design and the drop table are unchanged.
+ * Settlement boundary.
+ *
+ * A mining run is now entirely LOCAL while it is played: energy comes down in
+ * component state and NOTHING is published per click. Both value-bearing
+ * writes happen once, at the end, through a durable session:
+ *
+ * ```
+ *   Start   → mint a durable session (no publish)
+ *   Play    → local energy + local loot, ZERO kind:31124 writes
+ *   Finish  → freeze {energyDelta, coinReward} → settle Coins → settle energy
+ * ```
+ *
+ * The previous shape published energy on every click, so an interruption left
+ * the cost paid and the reward unearned. Now an interrupted run costs nothing:
+ * the session is abandoned on recovery. Gameplay, the drop table and the
+ * energy cost per click are unchanged.
+ *
+ * See `docs/mine-session-settlement.md`.
  */
 type MineRewardState =
   | { phase: 'idle' }
-  | { phase: 'granting'; amount: number }
-  | { phase: 'applied'; amount: number }
-  | { phase: 'ambiguous'; amount: number }
-  | { phase: 'failed'; amount: number; message: string };
+  | { phase: 'settling'; amount: number }
+  | { phase: 'settled'; amount: number }
+  | { phase: 'coin-pending'; amount: number }
+  | { phase: 'energy-pending'; amount: number }
+  | { phase: 'unresolved'; amount: number };
 
 const GEM_VALUES = {
   'stone.png': 1,
@@ -41,29 +52,34 @@ interface MinedItem {
 
 export function MiningGame() {
   const { setCurrentLocation } = useLocation();
-  const { status, updatePetStats, refreshFromRelay } = useOptimizedStatus();
-  const { mutate: updatePetState } = useUpdatePetState();
-  const { grantCoins } = useCoinWallet();
+  const { status, refreshFromRelay } = useOptimizedStatus();
+  const { settlement, settle } = useMineSettlement();
   const currentPet = status.currentPet;
 
   const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results' | 'low-energy'>('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
+  // LOCAL session energy. Deliberately not pushed into global pet state: the
+  // rest of the app must not show a reduced energy until settlement lands.
   const [currentEnergy, setCurrentEnergy] = useState(currentPet?.energy || 100);
   const [reward, setReward] = useState<MineRewardState>({ phase: 'idle' });
   const miningAreaRef = useRef<HTMLDivElement>(null);
-  // One reward operation per session, minted at Start; the wallet ledger
-  // makes it exactly-once even across the two finish paths (auto + button).
-  const rewardOpIdRef = useRef<string | null>(null);
+  // The durable session identity, minted at Start. Both settlement operation
+  // ids derive from it deterministically, so a retry never mints a new one.
+  const sessionIdRef = useRef<string | null>(null);
+  // Energy the run began from, for the local delta. Never a write base.
+  const startEnergyRef = useRef<number>(0);
   const finishedRef = useRef(false);
 
-  // Update local energy state when currentPet changes
+  // Track the Blobbi's energy for the pre-run display. Once a run is under way
+  // the local value is authoritative for gameplay — a background refetch must
+  // not rewind the player's progress mid-session.
   useEffect(() => {
-    if (currentPet) {
+    if (currentPet && gameState === 'instructions') {
       setCurrentEnergy(currentPet.energy);
     }
-  }, [currentPet?.energy]);
+  }, [currentPet?.energy, gameState]);
 
   // A stale cached energy value is free mining; re-read the authoritative
   // state when the cave opens. (Client-trusted like everything here, but the
@@ -76,45 +92,86 @@ export function MiningGame() {
     // every render (measured: 11 calls / 22 relay reads in one session).
   }, [refreshFromRelay]);
 
+  const [startError, setStartError] = useState<string | null>(null);
+
   const startGame = () => {
-    rewardOpIdRef.current = mintCoinOpId('mine-reward');
+    if (!currentPet) return;
+    // A durable session id BEFORE any gameplay: no durable operation identity,
+    // no value-bearing run. This is the same rule the Coin wallet applies
+    // before it publishes.
+    const started = settlement?.startSession({
+      petId: currentPet.id,
+      startEnergy: currentEnergy,
+    });
+    if (settlement && (!started || !started.ok)) {
+      setStartError(
+        "We couldn't set up this mining trip. Please check your browser storage settings and try again.",
+      );
+      return;
+    }
+    sessionIdRef.current = started?.ok ? started.sessionId : null;
+    startEnergyRef.current = currentEnergy;
     finishedRef.current = false;
+    setStartError(null);
     setReward({ phase: 'idle' });
     setGameState('playing');
   };
 
-  const grantReward = async (totalCoins: number) => {
-    const opId = rewardOpIdRef.current;
-    if (!opId || totalCoins <= 0) return;
-    setReward({ phase: 'granting', amount: totalCoins });
-    try {
-      const outcome = await grantCoins({ opId, amount: totalCoins, label: 'mine-reward' });
-      if (outcome.status === 'applied' || outcome.status === 'already-applied') {
-        setReward({ phase: 'applied', amount: totalCoins });
-      } else {
-        // ambiguous / blocked: the grant MAY have landed. Recorded durably;
-        // reconciliation happens on the next wallet touch — never a blind
-        // second grant.
-        setReward({ phase: 'ambiguous', amount: totalCoins });
-      }
-    } catch (error) {
-      const message =
-        error instanceof CoinWalletError ? error.reason : 'the reward could not be published';
-      setReward({ phase: 'failed', amount: totalCoins, message });
+  /**
+   * Freeze the run's numbers, then settle: Coins first, energy second. Both
+   * live in the durable session, so an unmount here does not lose them — the
+   * next visit resumes under the same operation ids.
+   */
+  const settleRun = async (totalCoins: number, energyDelta: number) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId || !settlement) return; // practice run (logged out)
+    if (!settlement.finalizeSession(sessionId, { energyDelta, coinReward: totalCoins })) {
+      setReward({ phase: 'unresolved', amount: totalCoins });
+      return;
     }
+    setReward({ phase: 'settling', amount: totalCoins });
+    const outcome = await settle(sessionId);
+    setReward({ phase: outcome.phase, amount: totalCoins });
   };
 
-  const finishMining = () => {
+  /**
+   * `finalEnergy` is passed explicitly by the auto-finish path, because that
+   * runs inside the same click handler that just lowered the energy — the
+   * `currentEnergy` in this closure is still the PRE-click value, and reading
+   * it would silently drop the last click from the delta.
+   */
+  const finishMining = (finalEnergy: number = currentEnergy) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
 
     const totalCoins = minedItems.reduce((acc, item) => {
       return acc + GEM_VALUES[item.type];
     }, 0);
+    // The whole run's energy cost, as one delta. Settlement subtracts it from
+    // the FRESH authoritative energy, never from `startEnergyRef`.
+    const energyDelta = Math.max(0, startEnergyRef.current - finalEnergy);
 
     setGameState('results');
-    void grantReward(totalCoins);
+    void settleRun(totalCoins, energyDelta);
   };
+
+  // An unmount before the run finished owes nothing: no reward was frozen and
+  // no energy was ever published. Mark it abandoned so recovery stays quiet.
+  //
+  // Deliberately depends on NOTHING: this must fire on real unmount only. A
+  // dependency on `settlement` would abandon the live session every time that
+  // identity changed, which is exactly the kind of accidental teardown this
+  // whole phase exists to remove.
+  const settlementRef = useRef(settlement);
+  settlementRef.current = settlement;
+  useEffect(() => {
+    return () => {
+      const sessionId = sessionIdRef.current;
+      if (sessionId && !finishedRef.current) {
+        settlementRef.current?.abandonSession(sessionId);
+      }
+    };
+  }, []);
 
   const handleMineClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!currentPet) {
@@ -140,22 +197,15 @@ export function MiningGame() {
     setHoles(prev => [...prev, { x, y }]);
     setClicks(prev => prev + 1);
 
-    // Update the pet's energy by consuming 10 energy
+    // Energy is spent LOCALLY. No kind:31124 publish, no pet-query
+    // invalidation, no optimistic global pet update — the whole run's cost is
+    // settled once at the end as a single delta. Cost per click is unchanged.
     const newEnergy = Math.max(0, currentEnergy - 10);
     setCurrentEnergy(newEnergy);
 
-    // Apply optimistic update immediately for UI responsiveness
-    updatePetStats(currentPet.id, { energy: newEnergy });
-
-    // Publish to Nostr (kind 31124)
-    updatePetState({
-      petId: currentPet.id,
-      updates: { energy: newEnergy }
-    });
-
     // End game if energy is too low after this click
     if (newEnergy <= 20) {
-      finishMining();
+      finishMining(newEnergy);
       return;
     }
 
@@ -184,7 +234,10 @@ export function MiningGame() {
           <p>Objective: Click the wall to find gems and earn coins.</p>
           <p>Energy: Each click consumes 10 energy. The game ends if energy is 20 or less.</p>
           <p>Click the wall to start mining!</p>
-          <Button onClick={startGame}>Start</Button>
+          {startError && (
+            <p className="text-sm text-red-600" role="alert">{startError}</p>
+          )}
+          <Button onClick={startGame} disabled={!currentPet}>Start</Button>
         </CardContent>
       </Card>
     </div>
@@ -224,30 +277,31 @@ export function MiningGame() {
             </div>
             <div className="border-t pt-2 space-y-1" data-mine-reward-status={reward.phase}>
               <p className="font-bold">Total Coins Earned: {totalCoins}</p>
-              {reward.phase === 'granting' && (
-                <p className="text-sm text-muted-foreground">Adding your Coins…</p>
+              {reward.phase === 'settling' && (
+                <p className="text-sm text-muted-foreground">Saving your mining trip…</p>
               )}
-              {reward.phase === 'applied' && (
+              {reward.phase === 'settled' && (
                 <p className="text-sm text-green-600">
                   {reward.amount} Blobbi Coins added to your balance!
                 </p>
               )}
-              {reward.phase === 'ambiguous' && (
+              {reward.phase === 'energy-pending' && (
                 <p className="text-sm text-amber-600">
-                  Your reward is being confirmed — it will appear in your balance
-                  once we can verify it. It will not be lost or doubled.
+                  Reward saved — we're still finishing your Blobbi's energy
+                  update. It's safe to leave.
                 </p>
               )}
-              {reward.phase === 'failed' && (
-                <div className="space-y-1">
-                  <p className="text-sm text-red-600">
-                    The reward could not be sent ({reward.message}). Nothing was
-                    published.
-                  </p>
-                  <Button size="sm" variant="outline" onClick={() => void grantReward(reward.amount)}>
-                    Try again
-                  </Button>
-                </div>
+              {reward.phase === 'coin-pending' && (
+                <p className="text-sm text-amber-600">
+                  We're still confirming your mining trip. It's safe to leave —
+                  nothing will be lost or counted twice.
+                </p>
+              )}
+              {reward.phase === 'unresolved' && (
+                <p className="text-sm text-amber-600">
+                  We couldn't finish saving your mining trip just yet. It's safe
+                  to leave — we'll pick it up next time.
+                </p>
               )}
             </div>
             <Button onClick={() => setCurrentLocation('mine')} className="w-full">Exit Cave</Button>
@@ -311,7 +365,7 @@ export function MiningGame() {
       <div className="absolute top-4 left-4 w-32 space-y-2 text-white">
         <p>Energy: {currentEnergy}/100</p>
         <Progress value={currentEnergy} />
-        <Button onClick={finishMining}>Finish Mining</Button>
+        <Button onClick={() => finishMining()}>Finish Mining</Button>
       </div>
     </div>
   );

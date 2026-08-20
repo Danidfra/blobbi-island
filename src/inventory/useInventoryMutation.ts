@@ -32,6 +32,7 @@ import { useNostr } from '@nostrify/react';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { serializeByKey } from '@/lib/replaceable-write';
 
 import {
   type GameInventory,
@@ -57,8 +58,6 @@ import {
 
 // --- Per-user serialization ------------------------------------------------
 
-const mutationChains = new Map<string, Promise<unknown>>();
-
 /**
  * Serialize an inventory write on the shared per-user chain. Exported so the
  * Coin wallet's strict writes ride the SAME chain as ordinary inventory
@@ -72,19 +71,13 @@ export function serializeInventoryWrite<T>(
   return serialize(pubkey, task);
 }
 
+/**
+ * The chain itself is the shared `serializeByKey` primitive, namespaced so
+ * inventory writes never block an unrelated domain (pet state has its own
+ * per-owner+pet key).
+ */
 function serialize<T>(pubkey: string, task: () => Promise<T>): Promise<T> {
-  const prev = mutationChains.get(pubkey) ?? Promise.resolve();
-  const next = prev.then(task, task);
-  // Keep the chain alive but swallow errors so one failure doesn't block later
-  // mutations.
-  mutationChains.set(
-    pubkey,
-    next.then(
-      () => undefined,
-      () => undefined,
-    ),
-  );
-  return next;
+  return serializeByKey(`inventory:${pubkey}`, task);
 }
 
 // --- Pure inventory transforms (delegating to the package) -----------------

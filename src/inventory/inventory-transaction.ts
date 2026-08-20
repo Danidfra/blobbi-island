@@ -57,6 +57,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import type { NUser } from '@nostrify/react/login';
 
 import { withQueuedCrossTabLock } from '@/lib/cross-tab-op-lock';
+import { nextReplaceableCreatedAt } from '@/lib/replaceable-write';
 
 import {
   buildInventoryTemplate,
@@ -109,7 +110,7 @@ export function nextInventoryCreatedAt(
   nowMs: number,
   previousCreatedAt: number,
 ): number {
-  return Math.max(Math.floor(nowMs / 1000), previousCreatedAt + 1);
+  return nextReplaceableCreatedAt(nowMs, previousCreatedAt);
 }
 
 /**

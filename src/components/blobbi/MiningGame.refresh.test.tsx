@@ -89,14 +89,26 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
     vi.doMock('@/hooks/useBlobbiEvents', () => ({
       useUpdatePetState: () => ({ mutate: (args: unknown) => petStateWrites.push(args) }),
     }));
-    vi.doMock('@/inventory/useCoinWallet', () => ({
-      useCoinWallet: () => ({
-        grantCoins: async () => ({ status: 'applied', balance: 1, verified: true }),
+    vi.doMock('@/hooks/useMineSettlement', () => ({
+      useMineSettlement: () => ({
+        settlement: {
+          startSession: () => ({ ok: true, sessionId: 's1' }),
+          finalizeSession: () => true,
+          abandonSession: () => {},
+          settleSession: async () => ({ phase: 'settled', coinReward: 0, coinApplied: true }),
+          pendingSessions: () => [],
+          recoverSessions: async () => [],
+        },
+        settle: async () => ({ phase: 'settled', coinReward: 0, coinApplied: true }),
       }),
     }));
 
     const { MiningGame } = await import('./MiningGame');
-    render(<MiningGame />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MiningGame />
+      </QueryClientProvider>,
+    );
 
     expect(refreshCount).toBe(1);
 
@@ -106,12 +118,16 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
 
     const wall = document.querySelector('.hover\\:cursor-pickaxe') as HTMLElement;
     expect(wall).toBeTruthy();
+    let clicks = 0;
     for (let i = 0; i < 12; i += 1) {
+      clicks += 1;
       fireEvent.click(wall, { clientX: 10 + i, clientY: 10 + i });
     }
 
     // A whole session's worth of state updates and re-renders…
-    expect(petStateWrites.length).toBeGreaterThan(0);
+    expect(clicks).toBeGreaterThan(0);
+    // …with ZERO kind:31124 publishes during gameplay (settlement is at the end).
+    expect(petStateWrites).toHaveLength(0);
     // …and still exactly ONE refresh. This was 11 before the fix.
     expect(refreshCount).toBe(1);
   });

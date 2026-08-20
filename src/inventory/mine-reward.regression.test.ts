@@ -198,25 +198,44 @@ describe('MiningGame stays wired to the canonical delta path', () => {
     join(process.cwd(), 'src/components/blobbi/MiningGame.tsx'),
     'utf8',
   );
+  const settlement = readFileSync(
+    join(process.cwd(), 'src/mine/mine-settlement.ts'),
+    'utf8',
+  );
 
-  it('pays through the canonical wallet, not a bespoke inventory write', () => {
-    expect(source).toMatch(/useCoinWallet/);
-    expect(source).toMatch(/grantCoins\(/);
-    // No absolute quantity write, and no second inventory writer.
-    expect(source).not.toMatch(/spendCoins\(|applyMutation|buildInventoryTemplate/);
-    expect(source).not.toMatch(/type:\s*['"]set(-many)?['"]/);
+  it('pays through the canonical wallet, via the durable session settlement', () => {
+    // The Mine no longer calls the wallet directly; it hands a frozen reward to
+    // the settlement service, which grants through the ONE canonical wallet.
+    expect(source).toMatch(/useMineSettlement/);
+    expect(settlement).toMatch(/wallet\.grantCoins\(/);
+    expect(settlement).toMatch(/label: 'mine-reward'/);
+    // Still no bespoke inventory write anywhere on the Mine path.
+    expect(source).not.toMatch(/applyMutation|buildInventoryTemplate/);
+    expect(settlement).not.toMatch(/applyMutation|buildInventoryTemplate/);
   });
 
   it('passes the summed reward as an amount (a delta), never a balance', () => {
-    expect(source).toMatch(/amount:\s*totalCoins/);
+    expect(source).toMatch(/coinReward: totalCoins/);
+    expect(settlement).toMatch(/amount: coinReward/);
     // A balance read feeding the grant would be the absolute-write shape.
     expect(source).not.toMatch(/useCoinBalance/);
   });
 
-  it('mints ONE operation id per session, at Start', () => {
-    expect(source).toMatch(/rewardOpIdRef/);
-    expect(source).toMatch(/const startGame[\s\S]{0,200}mintCoinOpId\('mine-reward'\)/);
-    // Exactly one mint site: a second would make a refresh pay twice.
-    expect(source.match(/mintCoinOpId\(/g) ?? []).toHaveLength(1);
+  it('derives ONE stable session id per run, at Start', () => {
+    expect(source).toMatch(/sessionIdRef/);
+    expect(source).toMatch(/const startGame[\s\S]{0,400}startSession\(/);
+    // Exactly one place the session is created: a second would pay twice.
+    expect(source.match(/startSession\(/g) ?? []).toHaveLength(1);
+    // Operation ids are DERIVED from the session, never minted per attempt.
+    expect(settlement).toMatch(/mineCoinOpId\(current\.sessionId\)/);
+    expect(settlement).toMatch(/mineEnergyOpId\(current\.sessionId\)/);
+    expect(settlement).not.toMatch(/mintCoinOpId/);
+  });
+
+  it('publishes NO pet state during gameplay', () => {
+    // The per-click kind:31124 write is gone: the whole run's energy cost is
+    // one delta settled at the end.
+    expect(source).not.toMatch(/useUpdatePetState/);
+    expect(source).not.toMatch(/updatePetStats\(/);
   });
 });
