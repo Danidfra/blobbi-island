@@ -15,6 +15,7 @@ import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvi
 import { EconomyEntryController } from '@/components/EconomyEntryController';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
+import { DEFAULT_ISLAND_THEME_ID } from '@/lib/island-themes';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import AppRouter from './AppRouter';
@@ -38,7 +39,8 @@ const queryClient = new QueryClient({
 });
 
 const defaultConfig: AppConfig = {
-  theme: "light",
+  // Island theme id — see src/lib/island-themes.ts.
+  theme: DEFAULT_ISLAND_THEME_ID,
   relayUrl: "wss://relay.ditto.pub",
 };
 
@@ -65,8 +67,8 @@ export function App() {
                     <Suspense fallback={
                     <div className="min-h-screen bg-background flex items-center justify-center">
                       <div className="text-center space-y-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="text-muted-foreground">Loading Blobbi Island...</p>
+                        <div className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-island-wood/25 border-t-island-ocean mx-auto"></div>
+                        <p className="text-island-ink-soft">Loading Blobbi Island...</p>
                       </div>
                     </div>
                   }>

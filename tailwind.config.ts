@@ -73,20 +73,39 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// Raw cozy-island palette for new shell/HUD/frame components
+				// ── The Island palette ────────────────────────────────────────
+				// Every entry reads the ACTIVE THEME rather than a literal, which
+				// is what makes `text-island-ink`, `bg-island-cream` and
+				// `border-island-wood/30` — some 650 call sites across the game —
+				// switch with the theme without a single component edit.
+				//
+				// `<alpha-value>` is the placeholder Tailwind substitutes when a
+				// class carries an opacity modifier (`/30` → `0.3`) and replaces
+				// with `1` otherwise. Dropping it would silently break every
+				// `-island-*/NN` class in the codebase.
+				//
+				// The variables hold bare HSL channels ("27 40% 54%"), never
+				// colours — see the token block at the top of src/index.css.
 				island: {
-					sky: '#9DDCF9',
-					ocean: '#55BFEA',
-					grass: '#7CCB72',
-					'grass-dark': '#5BAE54',
-					sand: '#F6DFA6',
-					wood: '#B9855B',
-					'wood-dark': '#8C6239',
-					cream: '#FFF4D8',
-					'cream-2': '#FBEAC2',
-					purple: '#8E6BE8',
-					ink: '#3A2A1A',
-					'ink-soft': '#6B5742',
+					page: 'hsl(var(--island-page) / <alpha-value>)',
+					sky: 'hsl(var(--island-sky) / <alpha-value>)',
+					ocean: 'hsl(var(--island-ocean) / <alpha-value>)',
+					grass: 'hsl(var(--island-grass) / <alpha-value>)',
+					'grass-dark': 'hsl(var(--island-grass-dark) / <alpha-value>)',
+					sand: 'hsl(var(--island-sand) / <alpha-value>)',
+					wood: 'hsl(var(--island-wood) / <alpha-value>)',
+					'wood-dark': 'hsl(var(--island-wood-dark) / <alpha-value>)',
+					cream: 'hsl(var(--island-cream) / <alpha-value>)',
+					'cream-2': 'hsl(var(--island-cream-2) / <alpha-value>)',
+					purple: 'hsl(var(--island-purple) / <alpha-value>)',
+					ink: 'hsl(var(--island-ink) / <alpha-value>)',
+					'ink-soft': 'hsl(var(--island-ink-soft) / <alpha-value>)',
+					// `danger` and `warn` existed as CSS variables and were used
+					// as Tailwind classes (`text-island-danger`, 8 sites) but were
+					// never declared here, so those classes emitted nothing and
+					// the elements rendered at their inherited colour.
+					danger: 'hsl(var(--island-danger) / <alpha-value>)',
+					warn: 'hsl(var(--island-warn) / <alpha-value>)',
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -99,11 +118,15 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			// One definition per elevation, shared with the `--shadow-*` custom
+			// properties in index.css. Both spell the theme's own ink at low
+			// alpha, so a theme with a cooler or darker ink casts a shadow that
+			// belongs to it instead of a generic black.
 			boxShadow: {
-				'cozy-soft': '0 2px 6px rgba(58, 42, 26, 0.10)',
-				'cozy-raised': '0 8px 20px rgba(58, 42, 26, 0.14)',
-				'cozy-frame': '0 16px 40px rgba(58, 42, 26, 0.22)',
-				'cozy-inset': 'inset 0 2px 8px rgba(58, 42, 26, 0.18)',
+				'cozy-soft': 'var(--shadow-soft)',
+				'cozy-raised': 'var(--shadow-raised)',
+				'cozy-frame': 'var(--shadow-frame)',
+				'cozy-inset': 'var(--shadow-inset)',
 			},
 			transitionTimingFunction: {
 				cozy: 'cubic-bezier(0.34, 1.4, 0.5, 1)',
@@ -111,7 +134,13 @@ export default {
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				sm: 'calc(var(--radius) - 4px)',
+				// Game surfaces are rounder than form controls. `rounded-panel`
+				// is a cozy card, `rounded-frame` a framed modal or the wood
+				// frame itself — the two literals that were being written as
+				// `rounded-[1.25rem]` / `rounded-[1.5rem]` / `rounded-3xl`.
+				panel: 'var(--radius-panel)',
+				frame: 'var(--radius-frame)'
 			},
 			keyframes: {
 				'accordion-down': {
@@ -141,6 +170,13 @@ export default {
 				'sign-flip': {
 					'0%': { transform: 'perspective(800px) rotateY(-18deg)', opacity: '0.35' },
 					'100%': { transform: 'perspective(800px) rotateY(0deg)', opacity: '1' }
+				},
+				// Menu/popover entrance. `animate-scale-in` was already being
+				// used by AccountMenu and AccountSwitcher against a keyframe that
+				// did not exist, so those surfaces simply appeared.
+				'scale-in': {
+					'0%': { transform: 'scale(0.96)', opacity: '0' },
+					'100%': { transform: 'scale(1)', opacity: '1' }
 				}
 			},
 			animation: {
@@ -148,7 +184,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'cozy-pop': 'cozy-pop 0.24s cubic-bezier(0.34, 1.4, 0.5, 1)',
 				'cozy-wiggle': 'cozy-wiggle 0.5s ease-in-out',
-				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)'
+				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)',
+				'scale-in': 'scale-in 0.14s cubic-bezier(0.34, 1.4, 0.5, 1)'
 			},
 			cursor: {
 				pickaxe: "url('/assets/ui/cursors/pickaxe.png') 0 0, auto",
