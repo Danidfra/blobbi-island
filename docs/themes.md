@@ -8,7 +8,7 @@ See [`design-system.md`](./design-system.md) for the token layers this sits on.
 
 ## 1. What a theme is
 
-A **palette**. Fifteen HSL channel triplets, and nothing else.
+A **palette**. Sixteen HSL channel triplets, and nothing else.
 
 Everything downstream is derived from them by reference — the shadcn semantic
 tokens, every shadow, and all ~650 `text-island-ink` / `bg-island-cream` /
@@ -32,7 +32,7 @@ stale palette. Themes do not respond to `prefers-color-scheme`.
 `{background, text, primary}`, which is right for a social client where any
 user-picked colour must still produce a usable UI. The island's palette is art
 direction — sand is not a computed tint of cream, it is a specific warm sand —
-so every colour is authored. A theme costs fifteen values instead of three, and
+so every colour is authored. A theme costs sixteen values instead of three, and
 buys the ability to be *designed*.
 
 **Not a Nostr event.** Theme choice is a local display preference. It publishes
@@ -61,8 +61,10 @@ so check any new surface under it before shipping.
    forgetting fails a test rather than causing a silent flash.
 3. Nothing else. No component, no Tailwind class, no CSS.
 
-Then check it: open the picker (account menu → Appearance → Theme), and walk the
-manual matrix in §7.
+Then check it. `src/lib/island-theme-contrast.test.ts` runs against every theme
+in the registry automatically, so `npm test` will tell you if any real pairing
+falls below WCAG AA before you ever open the app. After that, open the picker
+(account menu → Appearance → Theme) and walk the manual matrix in §7.
 
 ### Authoring guidance
 
@@ -76,7 +78,13 @@ perfectly valid; a theme where `cream` and `ink` have similar lightness is not.
 - `wood-dark` is used as label text on `sand` as well as an edge. In a dark
   theme it usually needs to become *lighter* than `wood`, not darker. Lantern
   Night does exactly this.
-- `ocean` is the focus ring. It must be visible against both `cream` and `page`.
+- `focus` is the focus ring, and is a separate token from `ocean` for a reason:
+  a ring must clear 3:1 against `cream`, `cream-2` **and** `page`, and a pretty
+  sea usually cannot. In a dark theme the same colour often serves both.
+- `grass` is a fill (the online dot, a tint); `grass-dark` is the green used as
+  *text* on `cream`, so it must clear 4.5:1 there. In a dark theme `grass-dark`
+  is the *lighter* of the two — the name means "the readable one", not "the
+  darker one". `wood-dark` works the same way.
 - `purple`, `grass`, `danger` and `warn` carry `cream` as their foreground via
   the `-foreground` semantic tokens, so they must contrast with `cream` in *this*
   theme, not with white.

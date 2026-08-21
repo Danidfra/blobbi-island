@@ -90,6 +90,7 @@ export default {
 					page: 'hsl(var(--island-page) / <alpha-value>)',
 					sky: 'hsl(var(--island-sky) / <alpha-value>)',
 					ocean: 'hsl(var(--island-ocean) / <alpha-value>)',
+					focus: 'hsl(var(--island-focus) / <alpha-value>)',
 					grass: 'hsl(var(--island-grass) / <alpha-value>)',
 					'grass-dark': 'hsl(var(--island-grass-dark) / <alpha-value>)',
 					sand: 'hsl(var(--island-sand) / <alpha-value>)',

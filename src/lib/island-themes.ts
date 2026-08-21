@@ -3,7 +3,7 @@
  *
  * ## What a theme is
  *
- * A theme is a palette and nothing else: the fifteen HSL channel triplets that
+ * A theme is a palette and nothing else: the sixteen HSL channel triplets that
  * `--island-*` resolves to. Everything downstream — the shadcn semantic tokens,
  * every shadow, every `bg-island-cream` in the game — is derived from those by
  * reference (see the token block at the top of `src/index.css`).
@@ -24,7 +24,7 @@
  *   where any user-picked colour must produce a usable UI. The island's palette
  *   is art direction — sand is not a computed tint of cream, it is a specific
  *   warm sand — so every colour is authored. The cost is that a theme is
- *   fifteen values instead of three; the benefit is that a theme can be
+ *   sixteen values instead of three; the benefit is that a theme can be
  *   *designed*.
  * - **Not a Nostr event.** Theme choice is a local display preference. It is
  *   persisted in the existing `nostr:app-config` localStorage blob alongside
@@ -36,8 +36,18 @@ export interface IslandPalette {
   /** Page behind the wood frame. */
   page: string;
   sky: string;
-  /** Focus rings and informational accents. */
+  /** Informational accents, and the sea. */
   ocean: string;
+  /**
+   * Focus rings.
+   *
+   * Separate from `ocean` because the two have different jobs: `ocean` is a
+   * fill and may be any lightness the art wants, while a focus ring must clear
+   * 3:1 against every surface it can land on (WCAG 2.2 non-text contrast). In
+   * Cozy Day the sea is too pale to do that, so focus is a deeper version of
+   * it; in a dark theme the same colour usually serves both.
+   */
+  focus: string;
   /** Success, "play", online. */
   grass: string;
   'grass-dark': string;
@@ -66,6 +76,7 @@ export const ISLAND_PALETTE_KEYS = [
   'page',
   'sky',
   'ocean',
+  'focus',
   'grass',
   'grass-dark',
   'sand',
@@ -110,11 +121,12 @@ const cozyDay: IslandTheme = {
     page: '38 100% 96%',
     sky: '199 88% 80%',
     ocean: '197 78% 63%',
+    focus: '197 78% 40%',
     grass: '113 46% 62%',
-    'grass-dark': '115 36% 51%',
+    'grass-dark': '115 36% 33%',
     sand: '43 82% 81%',
     wood: '27 40% 54%',
-    'wood-dark': '30 42% 39%',
+    'wood-dark': '30 42% 35%',
     cream: '43 100% 92%',
     'cream-2': '42 88% 87%',
     purple: '257 73% 66%',
@@ -148,11 +160,12 @@ const lanternNight: IslandTheme = {
     page: '256 26% 12%',
     sky: '250 40% 26%',
     ocean: '196 70% 62%',
+    focus: '196 70% 62%',
     grass: '135 34% 52%',
-    'grass-dark': '138 30% 40%',
+    'grass-dark': '138 34% 62%',
     sand: '32 30% 32%',
-    wood: '28 34% 44%',
-    'wood-dark': '30 30% 68%',
+    wood: '28 34% 58%',
+    'wood-dark': '30 30% 82%',
     cream: '258 22% 20%',
     'cream-2': '256 20% 26%',
     purple: '265 78% 74%',

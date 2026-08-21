@@ -18,7 +18,7 @@ img {
    referenced by anything above it, and NOTHING outside this file may hardcode
    a colour.
 
-     1. THEME PALETTE   `--island-*`   the twelve-odd colours a theme owns.
+     1. THEME PALETTE   `--island-*`   the sixteen colours a theme owns.
                                        Redefined per theme, nothing else is.
      2. SEMANTIC ROLES  `--card`, …    shadcn/Radix contract, DERIVED from (1)
                                        by reference so the two can never drift.
@@ -54,12 +54,13 @@ img {
      and so the pre-paint boot script has something to fall back to. */
   --island-page: 38 100% 96%;      /* #FFF8EC page behind the wood frame */
   --island-sky: 199 88% 80%;       /* #9DDCF9 */
-  --island-ocean: 197 78% 63%;     /* #55BFEA focus / info */
+  --island-ocean: 197 78% 63%;     /* #55BFEA the sea, informational */
+  --island-focus: 197 78% 40%;     /* deeper ocean — must clear 3:1 on every surface */
   --island-grass: 113 46% 62%;     /* #7CCB72 success / play */
-  --island-grass-dark: 115 36% 51%;/* #5BAE54 */
+  --island-grass-dark: 115 36% 33%;/* label text / edge on cream — not a fill */
   --island-sand: 43 82% 81%;       /* #F6DFA6 secondary surface */
   --island-wood: 27 40% 54%;       /* #B9855B frame / primary */
-  --island-wood-dark: 30 42% 39%;  /* #8C6239 frame edge */
+  --island-wood-dark: 30 42% 35%;  /* frame edge, and label text on sand */
   --island-cream: 43 100% 92%;     /* #FFF4D8 panel */
   --island-cream-2: 42 88% 87%;    /* #FBEAC2 panel, muted */
   --island-purple: 257 73% 66%;    /* #8E6BE8 mascot accent */
@@ -140,7 +141,7 @@ img {
        accent ............... mascot purple — highlights, active state
        success .............. grass
        danger ............... soft coral
-       focus ................ ocean */
+       focus ................ a deeper ocean, contrast-checked */
   :root {
     --background: var(--island-page);
     --foreground: var(--island-ink);
@@ -174,7 +175,7 @@ img {
        that shows a border sets its own alpha). */
     --border: var(--island-wood);
     --input: var(--island-sand);
-    --ring: var(--island-ocean);
+    --ring: var(--island-focus);
 
     --sidebar-background: var(--island-cream);
     --sidebar-foreground: var(--island-ink);
@@ -183,7 +184,7 @@ img {
     --sidebar-accent: var(--island-sand);
     --sidebar-accent-foreground: var(--island-ink);
     --sidebar-border: var(--island-wood);
-    --sidebar-ring: var(--island-ocean);
+    --sidebar-ring: var(--island-focus);
   }
 
   /*

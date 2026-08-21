@@ -28,7 +28,7 @@ The system exists so that:
 Strict dependency order. Nothing may reach past its own layer.
 
 ```
-   theme palette          --island-*            15 HSL channel triplets
+   theme palette          --island-*            16 HSL channel triplets
         ↓                 (src/lib/island-themes.ts + :root in index.css)
    semantic roles         --card, --primary…    references INTO the palette
         ↓                 (@layer base in index.css)
@@ -41,7 +41,7 @@ Strict dependency order. Nothing may reach past its own layer.
 
 ### Layer 1 — the palette
 
-Fifteen colours, held as **bare HSL channels** (`27 40% 54%`), never as
+Sixteen colours, held as **bare HSL channels** (`27 40% 54%`), never as
 colours. That is what lets Tailwind declare them as
 `hsl(var(--island-wood) / <alpha-value>)`, which in turn is what makes
 `border-island-wood/30` — the opacity modifier included — follow the theme.
@@ -50,8 +50,10 @@ colours. That is what lets Tailwind declare them as
 | --- | --- |
 | `page` | the page behind the wood frame |
 | `sky` | sky plate, decorative fills |
-| `ocean` | focus rings, informational accents |
-| `grass` / `grass-dark` | success, "play", online |
+| `ocean` | the sea, informational accents |
+| `focus` | focus rings — see the note below |
+| `grass` | success, "play", online — a **fill**, never text |
+| `grass-dark` | the green used as *text* or an edge on cream |
 | `sand` | secondary surface, the title plaque |
 | `wood` | the frame, and the default cozy CTA |
 | `wood-dark` | frame edge, strong label text on cream |
@@ -61,6 +63,11 @@ colours. That is what lets Tailwind declare them as
 | `ink` / `ink-soft` | text / muted text |
 | `danger` | destructive, failure |
 | `warn` | caution, cost, attention |
+
+`focus` is separate from `ocean` because the two have different jobs: `ocean`
+is a fill and may be any lightness the art wants, while a focus ring must clear
+3:1 against every surface it can land on. Cozy Day's sea is far too pale for
+that (1.9:1 on cream), so focus is a deeper version of it.
 
 These names are art direction, not hues. `cream` means "the panel"; in Lantern
 Night it is a dark violet. Read them as roles and they never lie.
@@ -83,7 +90,7 @@ cannot drift.
 | `success` | `grass` |
 | `destructive` | `danger` |
 | `border` | `wood` (consumed at low alpha) |
-| `ring` | `ocean` |
+| `ring` | `focus` |
 | `foreground`, `muted-foreground` | `ink`, `ink-soft` |
 
 ### Layer 3 — composites
@@ -223,8 +230,9 @@ bare spinner or "No items found".
 Non-negotiable, and cheaper to keep than to retrofit:
 
 - **Focus is always visible.** `focus-visible:ring-2 focus-visible:ring-ring`,
-  with `ring-offset` matched to the surface behind it. `ring` is `ocean`, which
-  is chosen to read against both cream and dusk panels.
+  with `ring-offset` matched to the surface behind it. `ring` is the dedicated
+  `focus` token, which every theme must keep at 3:1 or better against all three
+  surfaces — asserted by `island-theme-contrast.test.ts`.
 - **Colour is never the only signal.** The theme picker pairs each swatch with a
   name and a description; a selected card carries a check, not just a border.
 - **Every dialog has an accessible name**, and its description lives in the
@@ -233,6 +241,12 @@ Non-negotiable, and cheaper to keep than to retrofit:
 - **Decorative art is `aria-hidden`.** Emoji icons, arrows, preview swatches.
 - **Semantic controls.** A thing that does something is a `<button>`. A
   single-choice set is `radiogroup` + `radio`, not a row of toggles.
+- **Contrast is a test, not a hope.** `src/lib/island-theme-contrast.test.ts`
+  runs the real colour pairings for every theme in the registry. It also records
+  the three saturated-CTA pairings that are currently below AA in Cozy Day
+  (2.9–3.6:1) and pins them so they can only improve; fixing them properly means
+  darkening the island's signature wood and purple, which is an art-direction
+  call rather than a bug in this layer.
 - **Reduced motion** is honoured in CSS (so it applies before React hydrates)
   and via `motion-reduce:` on interactive transforms. Under reduced motion a
   state change must still be *visible* — keep the state, drop the tween.
