@@ -13,7 +13,15 @@ import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
 import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
 import { LocationProvider } from "@/contexts/LocationContext";
+import { useIslandLocationResume } from "@/hooks/useIslandLocationResume";
 import { nextGameState, type GameState } from "./blobbi-island-state";
+
+/**
+ * The island this page is. Matches `MultiplayerLayer`'s `islandId` default —
+ * presence is scoped by an `island:<id>` tag, and a resume must only consider
+ * presence from the island being entered.
+ */
+const ISLAND_ID = "1";
 
 // Lazy load heavy components
 const PlayingView = lazy(() => import("@/components/blobbi/PlayingView").then(module => ({ default: module.PlayingView })));
@@ -37,6 +45,11 @@ export function BlobbiIsland() {
   const queryClient = useQueryClient();
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
+  // Where this session opens, from the player's own kind:31950 presence. Runs in
+  // parallel with the Blobbi/companion reads above — all three are relay
+  // round-trips started at the same moment, so resuming normally costs no extra
+  // wall-clock, and its read has its own hard deadline either way.
+  const locationResume = useIslandLocationResume(ISLAND_ID);
   const currentCompanionId = profile?.currentCompanion;
   // Track a manual (session) selection by ID only — never a snapshot object.
   // Resolving the live Blobbi from the ['blobbis'] cache keeps selectedBlobbi
@@ -248,6 +261,16 @@ export function BlobbiIsland() {
         );
 
       case 'playing':
+        // Hold the world until we know where it opens. Mounting PlayingView on
+        // the Town default and correcting it a moment later would render Town —
+        // backdrop, spawn, presence publish and all — then visibly teleport the
+        // player. The wait is bounded by the presence read's own deadline and,
+        // in practice, is already over: it started with the Blobbi and companion
+        // reads that had to finish before this branch could be reached.
+        if (!locationResume.isSettled) {
+          return <BlobbiLoadingScreen />;
+        }
+
         return (
           <Suspense fallback={<GameComponentLoading />}>
             <PlayingView
@@ -273,10 +296,17 @@ export function BlobbiIsland() {
     }
   };
 
-  const isPlaying = gameState === 'playing';
+  // "In the world" means the world is actually mounted. While the resume
+  // decision is still pending the playing branch renders the loading screen, so
+  // the game chrome must stay off — HUD over a loading screen would be the same
+  // half-entered state the gate exists to avoid.
+  const isPlaying = gameState === 'playing' && locationResume.isSettled;
 
   return (
-    <LocationProvider>
+    <LocationProvider
+      initialLocation={locationResume.isSettled ? locationResume.location : undefined}
+      initialPosition={locationResume.position}
+    >
       <BlobbiAppShell
         screen={gameState}
         showGameChrome={isPlaying}

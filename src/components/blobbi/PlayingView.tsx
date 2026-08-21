@@ -24,7 +24,7 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { useBlobbiPoseController } from '@/hooks/useBlobbiPoseController';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
-import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
+import { resolveActorSpawn } from '@/lib/location-initial-position';
 import { clearArcadePass } from '@/lib/arcade-pass';
 import { MultiplayerLayer } from './MultiplayerLayer';
 import { useNostr } from '@/hooks/useNostr';
@@ -62,7 +62,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // the local player when it walks (or, later, emotes/acts) nearby.
   const localActiveRef = useRef<LocalActiveState | null>(null);
   const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
-  const { currentLocation, previousLocation } = useLocation();
+  const { currentLocation, previousLocation, bootstrapPosition } = useLocation();
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
   const { showDebugOverlays } = useDebugOverlays();
@@ -155,7 +155,14 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
-  const blobbiInitialPosition = getBlobbiInitialPosition(currentLocation, previousLocation);
+  // A resumed session opens where presence recorded; every other entry uses the
+  // scene's canonical spawn. Read at `MovableBlobbi`'s first mount (it is keyed
+  // on the location), so the actor's first frame is already right.
+  const blobbiInitialPosition = resolveActorSpawn(
+    bootstrapPosition,
+    currentLocation,
+    previousLocation,
+  );
   const [myPosition, setMyPosition] = useState<Position>(blobbiInitialPosition);
   const boundary = locationBoundaries[background] || {
     shape: 'rectangle',

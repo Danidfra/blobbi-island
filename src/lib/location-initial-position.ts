@@ -92,6 +92,32 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   'home:back-yard': { x: 78, y: 84.2 },
 };
 
+/**
+ * Where the actor stands when a scene mounts.
+ *
+ * One rule, one place: a resumed session opens at the position kind:31950
+ * presence recorded; everything else — every ordinary arrival, and every
+ * navigation after the bootstrap — uses the scene's canonical entry point.
+ *
+ * `bootstrapPosition` comes from `LocationContext` and is non-null ONLY between
+ * the resume adoption and the first navigation, so this cannot shadow the spawn
+ * rules mid-session. It is already validated against the destination scene by
+ * the resume policy (`src/lib/location-resume.ts`), which is why it is taken as
+ * given here rather than re-clamped.
+ *
+ * `PlayingView` calls this to build `MovableBlobbi`'s `initialPosition`, and
+ * `MovableBlobbi` is keyed on the location — so the value lands at the actor's
+ * FIRST mount in a scene. Nothing moves it afterwards; there is no correcting
+ * effect and therefore no visible teleport.
+ */
+export function resolveActorSpawn(
+  bootstrapPosition: InitialPosition | null | undefined,
+  location: string,
+  previousLocation?: string | null,
+): InitialPosition {
+  return bootstrapPosition ?? getBlobbiInitialPosition(location, previousLocation);
+}
+
 export function getBlobbiInitialPosition(location: string, previousLocation?: string | null): InitialPosition {
   // If we have a previous location, try to find an exit position near the door
   if (previousLocation) {

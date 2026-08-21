@@ -21,6 +21,43 @@ import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 /** Expiration time in seconds (35 seconds) */
 export const EXP_SECONDS = 35;
 
+/**
+ * **The** presence lifetime rule. One comparison, every consumer.
+ *
+ * A kind:31950 event carries a NIP-40 `expiration` tag written by
+ * {@link buildPresence31950} as `created_at + EXP_SECONDS`. This predicate is
+ * the gate that decides whether such an event still means "this Blobbi is
+ * here": {@link explainPresenceEvent} rejects everything it returns `false`
+ * for, so an event that fails here can never enter the presence map, can never
+ * render a remote player, and — since the same predicate answers the resume
+ * question — can never restore a local one either.
+ *
+ * Strictly greater-than, deliberately: at `expiration === now` the event is
+ * spent. Shifting this to `>=` would widen remote visibility by a second as a
+ * side effect, which is why the comparison lives in exactly one place.
+ *
+ * Downstream of this gate, `useIslandPresence` sweeps already-accepted players
+ * on a `EXP_SECONDS + 5` grace over the LOCAL receive time (`lastSeen`), and
+ * its subscription asks for the same window. Neither is a second freshness
+ * policy — both only ever see events that passed here first.
+ */
+export function isPresenceAlive(expiration: number, now: number = nowSec()): boolean {
+  return expiration > now;
+}
+
+/**
+ * The NIP-40 expiration a presence event carries, or `null` when it is absent
+ * or unparseable. Split out so a reader can tell "no expiration" from "expired"
+ * — {@link explainPresenceEvent} reports those as different reasons, and the
+ * resume policy treats them as different outcomes.
+ */
+export function presenceExpirationOf(event: NostrEvent): number | null {
+  const raw = event.tags.find(([name]: string[]) => name === 'expiration')?.[1];
+  if (!raw) return null;
+  const parsed = parseInt(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 /** Default movement speed in pixels per second */
 export const DEFAULT_SPEED_PX = 120;
 
@@ -844,7 +881,8 @@ export function explainPresenceEvent(event: NostrEvent): PresenceValidation {
 
     const expiration = parseInt(expirationTag);
     if (Number.isNaN(expiration)) return { ok: false, reason: 'expiration NaN' };
-    if (expiration <= nowSec()) return { ok: false, reason: 'expired' };
+    // The one presence-lifetime comparison in the app. See {@link isPresenceAlive}.
+    if (!isPresenceAlive(expiration)) return { ok: false, reason: 'expired' };
 
     // Parse content
     const content: PresenceContent = JSON.parse(event.content);
