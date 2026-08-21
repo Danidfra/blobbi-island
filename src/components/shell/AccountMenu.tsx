@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogOut, UserIcon, UserPlus, PawPrint, Settings, ChevronDown, Wrench } from "lucide-react";
+import { LogOut, UserIcon, UserPlus, PawPrint, Settings, ChevronDown, Wrench, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -29,6 +29,8 @@ import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
 import { setIslandSkyDev, useIslandSkyDev } from "@/lib/island-sky-dev";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
+import { ThemePicker } from "@/components/shell/ThemePicker";
+import { useTheme } from "@/hooks/useTheme";
 import { genUserName } from "@/lib/genUserName";
 
 interface AccountMenuProps {
@@ -68,6 +70,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
   const portalContainer = useFullscreenPortalContainer();
 
   // Logged out: reuse the stable LoginArea login button unchanged.
@@ -90,6 +93,14 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
     setLoginDialogOpen(true);
   };
 
+  // The picker is its own modal, so the menu gets out of its way first —
+  // otherwise the dropdown's outside-click handling and the modal's focus trap
+  // fight over the same pointer events.
+  const handleOpenThemePicker = () => {
+    closeModal();
+    setThemePickerOpen(true);
+  };
+
   // The shared menu body — identical option set for both desktop & mobile.
   const body = (
     <AccountMenuBody
@@ -106,6 +117,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
       }}
       onAddAccount={handleAddAccount}
       onSwitchBlobbi={handleSwitchBlobbi}
+      onOpenThemePicker={handleOpenThemePicker}
       variant={variant}
     />
   );
@@ -173,6 +185,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
         onSignup={() => setSignupDialogOpen(true)}
       />
       <SignupDialog isOpen={signupDialogOpen} onClose={() => setSignupDialogOpen(false)} />
+      <ThemePicker open={themePickerOpen} onOpenChange={setThemePickerOpen} />
     </>
   );
 }
@@ -194,6 +207,7 @@ function AccountMenuBody({
   onRemoveLogin,
   onAddAccount,
   onSwitchBlobbi,
+  onOpenThemePicker,
   variant,
 }: {
   currentUser: Account;
@@ -203,11 +217,13 @@ function AccountMenuBody({
   onRemoveLogin: (id: string) => void;
   onAddAccount: () => void;
   onSwitchBlobbi: () => void;
+  onOpenThemePicker: () => void;
   variant: "dropdown" | "modal";
 }) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
   const { isDevMode, showDebugOverlays, setShowDebugOverlays } = useDebugOverlays();
+  const { theme } = useTheme();
   const skyDev = useIslandSkyDev();
   const currentCompanionId = profile?.currentCompanion;
   const currentBlobbi = currentCompanionId
@@ -291,6 +307,30 @@ function AccountMenuBody({
           <PawPrint className="size-4 shrink-0 text-island-purple" />
         </Row>
       </div>
+
+      <Divider />
+
+      {/* Appearance — currently just the theme, and the row is deliberately
+          shaped like a settings row with a value rather than a button, so an
+          Appearance section with more in it can grow here without moving. */}
+      <SectionLabel>
+        <span className="inline-flex items-center gap-1.5">
+          <Palette className="size-3.5" />
+          Appearance
+        </span>
+      </SectionLabel>
+      <Row onClick={onOpenThemePicker}>
+        <span
+          aria-hidden
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-island-wood/30 bg-island-cream-2 text-base"
+        >
+          {theme.emoji}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-island-ink">Theme</p>
+          <p className="truncate text-xs text-island-ink-soft">{theme.name}</p>
+        </div>
+      </Row>
 
       <Divider />
 
