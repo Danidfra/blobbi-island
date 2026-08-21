@@ -138,7 +138,7 @@ export function PrizeCounter({ catalog }: PrizeCounterProps) {
                   'min-h-[44px] shrink-0 rounded-full border-2 px-3 text-xs font-bold',
                   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
                   filter === kind
-                    ? 'border-island-purple bg-island-purple text-white'
+                    ? 'border-accent bg-accent text-accent-foreground'
                     : 'border-island-wood/30 bg-island-cream/70 text-island-ink',
                 )}
               >

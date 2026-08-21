@@ -307,8 +307,9 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
           <h3 className="text-lg font-bold text-island-ink">The nest went quiet</h3>
           <p className="mt-1 text-sm text-island-ink-soft">{errorMessage}</p>
           <Button
+            variant="accent"
             onClick={() => window.location.reload()}
-            className="mt-5 w-full rounded-full bg-island-purple font-bold text-white shadow-cozy-raised hover:bg-island-purple/90"
+            className="mt-5 w-full shadow-cozy-raised"
           >
             Try again
           </Button>

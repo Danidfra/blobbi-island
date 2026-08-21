@@ -246,9 +246,10 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
                 </p>
               </div>
               <Button
+                variant="accent"
                 onClick={() => onHatchFirstEgg?.()}
                 disabled={!onHatchFirstEgg}
-                className="mt-5 w-full rounded-full bg-island-purple font-bold text-white shadow-cozy-raised transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-purple/90 disabled:opacity-60"
+                className="mt-5 w-full shadow-cozy-raised"
               >
                 <Egg className="mr-2 size-4" />
                 Hatch your first Blobbi
@@ -285,9 +286,10 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
               </Button>
             )}
             <Button
+              variant="accent"
               onClick={handleConfirmSelection}
               disabled={!selectedBlobbi || isUpdatingCompanion || isAlreadyActive}
-              className="flex-1 rounded-full bg-island-purple font-bold text-white shadow-cozy-raised transition-transform duration-150 ease-cozy hover:scale-[1.02] hover:bg-island-purple/90 disabled:opacity-60"
+              className="flex-1 shadow-cozy-raised"
             >
               {isUpdatingCompanion
                 ? "Waking them up..."

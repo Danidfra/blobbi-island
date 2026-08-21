@@ -205,7 +205,7 @@ export function BlobbiActionDock({ compact = false, inWorld = true, className }:
                 title="Send"
                 className={cn(
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
-                  "bg-island-ocean text-white transition-transform duration-150 ease-cozy",
+                  "bg-island-ocean text-island-cream transition-transform duration-150 ease-cozy",
                   "hover:brightness-105 active:scale-95",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   "disabled:opacity-40 disabled:pointer-events-none",

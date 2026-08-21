@@ -24,6 +24,15 @@ export const buttonVariants = cva(
         // Success / play / go (leafy green)
         success:
           "bg-success text-success-foreground font-semibold rounded-2xl shadow-cozy-soft hover:brightness-105 active:scale-[0.97] transition-[transform,filter] duration-150 ease-cozy",
+        // The mascot-purple CTA. Nine hand-written spellings of this existed
+        // across the game — login, hatching, selection, shop, arcade, share —
+        // agreeing on the colour and disagreeing on radius, weight, shadow and
+        // press feedback. Spelt in SEMANTIC tokens (`accent` /
+        // `accent-foreground`) rather than `bg-island-purple text-white`,
+        // because a theme is free to make purple the LIGHT colour: those call
+        // sites all hardcoded white text and would have become white-on-light.
+        accent:
+          "bg-accent text-accent-foreground font-bold rounded-full shadow-cozy-soft hover:brightness-105 active:scale-[0.97] disabled:opacity-60 transition-[transform,filter] duration-150 ease-cozy motion-reduce:transition-none motion-reduce:active:scale-100",
         // HUD pill — cream surface, soft wood edge, used in the game HUD/dock
         hud:
           "bg-island-cream/95 text-island-ink border border-island-wood/30 rounded-full shadow-cozy-soft hover:bg-island-cream active:scale-[0.96] transition-[transform,background-color] duration-150 ease-cozy",

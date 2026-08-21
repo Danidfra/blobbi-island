@@ -69,17 +69,17 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
         inFrame
         className={cn(
           inFrameDialogPanelClass,
-          'bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-2xl',
+          'blobbi-card-xl rounded-panel border-2 border-island-wood/30',
         )}
       >
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-blue-800 mb-4">
+          <DialogTitle className="mb-4 text-center text-2xl font-bold text-island-ink">
             🛗 Select Floor
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-center text-gray-700 mb-6">
+          <p className="mb-6 text-center text-island-ink-soft">
             Choose which floor you want to visit:
           </p>
 
@@ -88,25 +88,25 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
               <Button
                 key={floor.id}
                 onClick={() => handleFloorSelect(floor.location)}
-                className="flex min-h-[44px] justify-between w-full p-4 h-auto bg-white hover:bg-blue-50 text-left border-2 border-blue-200 hover:border-blue-400 rounded-xl transition-all duration-200"
-                variant="outline"
+                variant="soft"
+                className="flex h-auto min-h-[44px] w-full justify-between rounded-xl p-4 text-left"
               >
-                  <div className='flex items-center space-x-4'>
-                    <div className="text-2xl">{floor.icon}</div>
-                    <div className="flex-1">
-                      <div className="font-bold text-blue-800">{floor.name}</div>
-                      <div className="text-sm text-gray-600">{floor.description}</div>
-                    </div>
+                <div className="flex items-center space-x-4">
+                  <div aria-hidden className="text-2xl">{floor.icon}</div>
+                  <div className="flex-1">
+                    <div className="font-bold text-island-ink">{floor.name}</div>
+                    <div className="text-sm text-island-ink-soft">{floor.description}</div>
                   </div>
-                  <div className="text-blue-500">→</div>
+                </div>
+                <div aria-hidden className="text-island-purple">→</div>
               </Button>
             ))}
           </div>
 
           <Button
-            variant="outline"
+            variant="soft"
             onClick={onClose}
-            className="min-h-[44px] w-full mt-4 rounded-xl border-2 border-gray-300 hover:bg-gray-50"
+            className="mt-4 min-h-[44px] w-full justify-center rounded-xl"
           >
             Cancel
           </Button>

@@ -57,8 +57,9 @@ export function NoPassModal({ isOpen, onClose }: NoPassModalProps) {
           </div>
 
           <Button
+            variant="accent"
             onClick={onClose}
-            className="min-h-[44px] w-full bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
+            className="min-h-[44px] w-full"
           >
             Got it!
           </Button>

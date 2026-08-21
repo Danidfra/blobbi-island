@@ -263,9 +263,10 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
               Cancel
             </Button>
             <Button
+              variant="accent"
               onClick={handlePurchasePass}
               disabled={!canPurchase}
-              className="min-h-[44px] flex-1 bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
+              className="min-h-[44px] flex-1"
             >
               {isPurchasing ? 'Buying…' : 'Buy Ticket'}
             </Button>

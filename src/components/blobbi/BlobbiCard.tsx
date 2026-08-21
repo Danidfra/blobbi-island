@@ -84,7 +84,7 @@ export function BlobbiCard({
 
       {/* Selected check badge */}
       {isSelected && !isCurrent && (
-        <span className="absolute top-1 right-1 z-20 inline-flex size-6 items-center justify-center rounded-full bg-island-ocean text-white shadow-cozy-soft">
+        <span className="absolute top-1 right-1 z-20 inline-flex size-6 items-center justify-center rounded-full bg-island-ocean text-island-cream shadow-cozy-soft">
           <Check className="size-3.5" />
         </span>
       )}

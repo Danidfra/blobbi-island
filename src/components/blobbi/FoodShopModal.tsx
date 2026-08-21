@@ -465,9 +465,9 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             Cancel
           </Button>
           <Button
+            variant="accent"
             onClick={handleConfirmPurchase}
             disabled={!canAfford || totalCost === 0 || isPending}
-            className="bg-island-purple hover:bg-island-purple/90 text-white border-0 font-medium shadow-cozy-soft theme-transition"
           >
             {isPending ? 'Purchasing...' : 'Confirm Purchase'}
           </Button>

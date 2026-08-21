@@ -30,8 +30,9 @@ export function LoginArea({ className }: LoginAreaProps) {
         <AccountSwitcher onAddAccountClick={() => setLoginDialogOpen(true)} />
       ) : (
         <Button
+          variant='accent'
           onClick={() => setLoginDialogOpen(true)}
-          className='flex items-center gap-2 px-4 py-2 rounded-full bg-island-purple hover:bg-island-purple/90 text-white w-full font-medium transition-all border-0 shadow-cozy-soft theme-transition'
+          className='w-full gap-2'
         >
           <User className='w-4 h-4' />
           <span className='truncate'>Enter Island</span>

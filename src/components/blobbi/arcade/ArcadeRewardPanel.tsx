@@ -294,7 +294,7 @@ export function ArcadeRewardPanel({
             disabled={busy || !canClaim || !isLoggedIn}
             className={cn(
               'min-h-[44px] w-full rounded-full border-2 border-island-purple px-4 py-2 text-sm font-bold',
-              'bg-island-purple text-white disabled:opacity-50',
+              'bg-accent text-accent-foreground disabled:opacity-50',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
             )}
           >
