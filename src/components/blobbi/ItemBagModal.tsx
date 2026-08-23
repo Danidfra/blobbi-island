@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { ItemTile } from '@/components/ui/item-tile';
+import { StateCard } from '@/components/ui/state-card';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useToast } from '@/hooks/useToast';
@@ -167,84 +167,67 @@ export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>🎒 Item Bag</DialogTitle>
-            <DialogDescription>
-              Use food, toys, medicine, hygiene, and energy items on your Blobbi.
-              Currency is shown for reference and cannot be used on a Blobbi.
-            </DialogDescription>
-          </DialogHeader>
+      <BlobbiModal
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        presentation="in-frame"
+        size="md"
+        title="Item Bag"
+        description="Tap an item to use it on your Blobbi. Currency is shown for reference only."
+        icon="🎒"
+      >
+        {isLoading && <StateCard kind="loading" compact title="Opening your bag…" />}
 
-          <ScrollArea className="max-h-[60vh] pr-3">
-            {isLoading && (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                Loading inventory...
-              </p>
-            )}
+        {!isLoading && isEmpty && (
+          <StateCard
+            kind="empty"
+            compact
+            title="Your bag is empty"
+            message="Buy something from the shop and it will show up here."
+          />
+        )}
 
-            {!isLoading && isEmpty && (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                Your bag is empty. Buy items from the shop!
-              </p>
-            )}
-
-            {!isLoading && !isEmpty && (
-              <div className="space-y-4">
-                {CATEGORY_SECTIONS.map((section) => {
-                  const items = byCategory.get(section.category) ?? [];
-                  if (items.length === 0) return null;
-                  return (
-                    <div key={section.category} data-bag-section={section.category}>
-                      <h3 className="text-sm font-semibold mb-2">{section.label}</h3>
-                      <div className="grid grid-cols-3 gap-2">
-                        {items.map((entry) =>
-                          section.readOnly ? (
-                            // Display-only tile: a <div>, not a <Button>. No
-                            // handler, no consume modal, no "Use".
-                            <div
-                              key={entry.address}
-                              data-readonly-item={entry.address}
-                              className="h-auto flex flex-col items-center gap-1 py-2 px-2 relative rounded-md border border-input bg-background"
-                            >
-                              <ItemVisual definition={entry.definition} />
-                              <span className="text-xs truncate w-full text-center">
-                                {entry.definition.name}
-                              </span>
-                              <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
-                                {entry.quantity}
-                              </span>
-                            </div>
-                          ) : (
-                            <Button
-                              key={entry.address}
-                              variant="outline"
-                              onClick={() => {
+        {!isLoading && !isEmpty && (
+          <div className="space-y-4">
+            {CATEGORY_SECTIONS.map((section) => {
+              const items = byCategory.get(section.category) ?? [];
+              if (items.length === 0) return null;
+              return (
+                <section key={section.category} data-bag-section={section.category}>
+                  <h3 className="mb-2 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+                    {section.label}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {items.map((entry) => (
+                      /*
+                        One tile for both kinds. `onClick` is what makes it a
+                        button, so a read-only section renders a plain <div>
+                        with no handler and no consume flow — the same
+                        distinction the two hand-written tiles used to draw,
+                        minus the two different badge colours they drew it in.
+                      */
+                      <ItemTile
+                        key={entry.address}
+                        {...(section.readOnly
+                          ? { 'data-readonly-item': entry.address }
+                          : {
+                              onClick: () => {
                                 setSelectedEntry(entry);
                                 setIsConsumeOpen(true);
-                              }}
-                              className="h-auto flex flex-col items-center gap-1 py-2 relative"
-                            >
-                              <ItemVisual definition={entry.definition} />
-                              <span className="text-xs truncate w-full text-center">
-                                {entry.definition.name}
-                              </span>
-                              <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
-                                {entry.quantity}
-                              </span>
-                            </Button>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+                              },
+                            })}
+                        name={entry.definition.name}
+                        quantity={entry.quantity}
+                        art={<ItemVisual definition={entry.definition} />}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </BlobbiModal>
 
       {selectedEntry && (
         <ConsumeItemModal

@@ -87,8 +87,20 @@ function renderShop(definition?: ResolvedBlobbiItemDefinition) {
   );
 }
 
-const appleImageSrc = () =>
-  (screen.getByAltText('Apple') as HTMLImageElement).getAttribute('src');
+/**
+ * The shop's apple artwork.
+ *
+ * Located by the tile's `data-item-art` slot rather than by `alt="Apple"`.
+ * The image is decorative — `ItemTile` renders the item's name as text right
+ * beneath it, so an `alt` repeating that name would make a screen reader
+ * announce "Apple" twice — and a locator is not a reason to keep markup wrong.
+ */
+const appleImage = () => {
+  const tile = screen.getByText('Apple').closest('[class*="rounded-panel"]')!;
+  return tile.querySelector('[data-item-art] img') as HTMLImageElement | null;
+};
+
+const appleImageSrc = () => appleImage()?.getAttribute('src') ?? null;
 
 describe('shop cards use the primary image', () => {
   beforeEach(() => {
@@ -105,13 +117,13 @@ describe('shop cards use the primary image', () => {
     const apple = bundledFallbackDefinition(APPLE)!;
     expect(apple.images).toEqual([]);
     renderShop(apple);
-    await screen.findByAltText('Apple');
+    await screen.findByText('Apple');
     expect(appleImageSrc()).toBe(BUNDLED_APPLE_IMAGE);
   });
 
   it('prefers a published primary image over the bundled local path', async () => {
     renderShop(appleWithImages([{ url: U.primary }], U.primary));
-    await screen.findByAltText('Apple');
+    await screen.findByText('Apple');
     expect(appleImageSrc()).toBe(U.primary);
   });
 
@@ -126,7 +138,7 @@ describe('shop cards use the primary image', () => {
         U.primary,
       ),
     );
-    await screen.findByAltText('Apple');
+    await screen.findByText('Apple');
     expect(appleImageSrc()).toBe(U.primary);
     expect(document.body.innerHTML).not.toContain(U.front);
     expect(document.body.innerHTML).not.toContain(U.back);
@@ -139,13 +151,13 @@ describe('shop cards use the primary image', () => {
         { url: U.front, marker: 'front' },
       ]),
     );
-    await screen.findByAltText('Apple');
+    await screen.findByText('Apple');
     expect(appleImageSrc()).toBe(U.sideRight);
   });
 
   it('falls back to the bundled path when the definition has no usable image', async () => {
     renderShop(appleWithImages([]));
-    await screen.findByAltText('Apple');
+    await screen.findByText('Apple');
     expect(appleImageSrc()).toBe(BUNDLED_APPLE_IMAGE);
   });
 });

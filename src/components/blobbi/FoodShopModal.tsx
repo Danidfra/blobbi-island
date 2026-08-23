@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { CoinAmount } from './CoinAmount';
 import { useToast } from '@/hooks/useToast';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { ItemTile, PriceTag } from '@/components/ui/item-tile';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Minus, Plus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import {
   SHOP_ENTRIES,
   primaryItemImageUrl,
@@ -60,15 +61,11 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
 
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  /*
+    Escape is BlobbiModal's (Radix's) job now, and it closes only the topmost
+    surface. The `document`-level listener that used to be here fired even
+    while the confirm dialog was on top of the shop.
+  */
 
   // General store: sell all official items, grouped by category. Kept minimal —
   // food keeps its images; other categories use their emoji.
@@ -220,259 +217,144 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     onClose();
   };
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2"
-      onClick={handleBackdropClick}
-      onPointerDown={(e) => e.stopPropagation()}
-      data-overlay
-      data-block-move
-    >
-      <div className="w-[95%] h-full max-w-lg blobbi-card-xl border-4 border-island-wood/30 rounded-lg shadow-lg theme-transition flex flex-col max-h-[85%]"
-        role="dialog"
-        aria-modal="true"
-        data-block-move
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <div className="px-3 py-2 border-b border-island-wood/20 relative">
-          <h2 className="text-xl sm:text-2xl font-bold text-center text-island-ink">
-            🛒 Shop
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="absolute top-2 right-2 h-8 w-8 rounded-full"
-            data-block-move
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="p-3 pb-2 sm:p-4 sm:pb-2 flex-1 overflow-y-hidden flex flex-col">
-          <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="space-y-4">
-
-              {CATEGORY_ORDER.map(({ key, label }) => {
-
-                const items = shopItems.filter((item) => item.category === key);
-
-                if (items.length === 0) {
-
-                  return null;
-
-                }
-
-                return (
-
-                  <div key={key}>
-
-                    <h3 className="font-bold text-sm mb-2 blobbi-text">
-
-                      {label}
-
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-3">
-
-                      {items.map((item) => (
-
-                        <Card
-
-                          key={item.address}
-
-                          className="overflow-hidden blobbi-card blobbi-hover h-full"
-
-                        >
-
-                          <div className="w-auto h-20">
-
-                            <CardHeader className="p-0 items-center justify-center h-full">
-
-                              {item.imageUrl ? (
-
-                                <img
-
-                                  src={item.imageUrl}
-
-                                  alt={item.name}
-
-                                  className="object-cover"
-
-                                />
-
-                              ) : (
-
-                                <span
-
-                                  className="text-5xl"
-
-                                  role="img"
-
-                                  aria-label={item.name}
-
-                                >
-
-                                  {item.emoji}
-
-                                </span>
-
-                              )}
-
-                            </CardHeader>
-
-                          </div>
-
-                          <CardContent className="p-2 pt-1 text-center">
-
-                            <p className="font-bold blobbi-text">{item.name}</p>
-
-                            <p className="icon-yellow font-semibold">
-
-                              {item.price} coins
-
-                            </p>
-
-                          </CardContent>
-
-                          <CardFooter className="p-2 pt-0">
-
-                            <div className="flex items-center w-full gap-1">
-
-                              <Button
-
-                                variant="outline"
-
-                                size="icon"
-
-                                onClick={() => decrementQuantity(item.address)}
-
-                                disabled={(quantities[item.address] ?? 0) <= 0}
-
-                                className="h-9 w-9 min-w-[36px] shrink-0 blobbi-button border-island-wood/30 hover:bg-island-cream-2"
-
-                                aria-label={`Decrease ${item.name} quantity`}
-
-                              >
-
-                                <Minus className="h-4 w-4" />
-
-                              </Button>
-
-                              <Input
-
-                                type="number"
-
-                                min="0"
-
-                                value={quantities[item.address] || ''}
-
-                                onChange={(event) =>
-
-                                  handleQuantityChange(item.address, event.target.value)
-
-                                }
-
-                                placeholder="0"
-
-                                className="flex-1 min-w-0 text-center blobbi-button border-island-wood/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-
-                              />
-
-                              <Button
-
-                                variant="outline"
-
-                                size="icon"
-
-                                onClick={() => incrementQuantity(item.address)}
-
-                                className="h-9 w-9 min-w-[36px] shrink-0 blobbi-button border-island-wood/30 hover:bg-island-cream-2"
-
-                                aria-label={`Increase ${item.name} quantity`}
-
-                              >
-
-                                <Plus className="h-4 w-4" />
-
-                              </Button>
-
-                            </div>
-
-                          </CardFooter>
-
-                        </Card>
-
-                      ))}
-
-                    </div>
-
-                  </div>
-
-                );
-
-              })}
-
-            </div>
-          </ScrollArea>
-
-          <div className="mt-2 p-2 blobbi-card rounded-lg border-island-wood/30">
-            {selectedLines.length > 0 && (
-              <div className="mb-2 space-y-1 max-h-24 overflow-y-auto" data-testid="cart-summary">
-                {selectedLines.map((line) => (
-                  <div
-                    key={line.address}
-                    className="flex justify-between items-center text-sm blobbi-text"
-                  >
-                    <span className="truncate mr-2">
-                      {line.name} <span className="blobbi-text-muted">× {line.quantity}</span>
-                    </span>
-                    <span className="icon-yellow font-semibold whitespace-nowrap">
-                      {line.lineCost} coins
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-lg blobbi-text">Total Cost:</span>
-              <span className="font-bold text-lg icon-yellow">{totalCost} coins</span>
-            </div>
-            <div className="text-right text-sm blobbi-text-muted">
-              Your balance:{' '}
-              <CoinAmount
-                amount={userCoins}
-                loading={balanceLoading}
-                className="icon-yellow font-semibold"
-              />
-            </div>
-            {!canAfford && <p className="text-island-danger text-sm text-center mt-2">You don't have enough coins!</p>}
-          </div>
-        </div>
-
-        <div className="py-2 px-3 border-t border-island-wood/20 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className="blobbi-button border-island-wood/40 hover:bg-island-cream-2">
+    <BlobbiModal
+      open={isOpen}
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="lg"
+      title="Shop"
+      description="Tap − and + to build a basket, then confirm."
+      icon="🛒"
+      bodyClassName="flex min-h-0 flex-col gap-3 p-3 sm:p-4"
+      footer={
+        <>
+          <Button variant="soft" onClick={onClose} className="min-h-[44px]">
             Cancel
           </Button>
           <Button
             variant="accent"
             onClick={handleConfirmPurchase}
             disabled={!canAfford || totalCost === 0 || isPending}
+            className="min-h-[44px]"
           >
-            {isPending ? 'Purchasing...' : 'Confirm Purchase'}
+            {isPending ? 'Purchasing…' : 'Confirm Purchase'}
           </Button>
+        </>
+      }
+    >
+      <ScrollArea className="-mr-3 min-h-0 flex-1 pr-3">
+        <div className="space-y-4">
+          {CATEGORY_ORDER.map(({ key, label }) => {
+            const items = shopItems.filter((item) => item.category === key);
+            if (items.length === 0) return null;
+            return (
+              <section key={key}>
+                <h3 className="mb-2 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+                  {label}
+                </h3>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                  {items.map((item) => {
+                    const quantity = quantities[item.address] ?? 0;
+                    return (
+                      <ItemTile
+                        key={item.address}
+                        name={item.name}
+                        price={item.price}
+                        affordable={userCoins === null || item.price <= userCoins}
+                        selected={quantity > 0}
+                        quantity={quantity}
+                        art={
+                          item.imageUrl ? (
+                            <img src={item.imageUrl} alt="" />
+                          ) : (
+                            <span>{item.emoji}</span>
+                          )
+                        }
+                      >
+                        {/* The stepper lives INSIDE the tile rather than the
+                            tile being a button: a shop cell has two controls,
+                            so making the whole cell clickable would nest them. */}
+                        <div className="mt-1 flex w-full items-center gap-1">
+                          <Button
+                            variant="soft"
+                            size="icon"
+                            onClick={() => decrementQuantity(item.address)}
+                            disabled={quantity <= 0}
+                            className="size-9 shrink-0"
+                            aria-label={`Decrease ${item.name} quantity`}
+                          >
+                            <Minus className="size-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={quantities[item.address] || ''}
+                            onChange={(event) =>
+                              handleQuantityChange(item.address, event.target.value)
+                            }
+                            placeholder="0"
+                            aria-label={`${item.name} quantity`}
+                            className="h-9 min-w-0 flex-1 rounded-lg border-island-wood/25 bg-island-cream-2/60 text-center text-sm font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                          <Button
+                            variant="soft"
+                            size="icon"
+                            onClick={() => incrementQuantity(item.address)}
+                            className="size-9 shrink-0"
+                            aria-label={`Increase ${item.name} quantity`}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        </div>
+                      </ItemTile>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
+      </ScrollArea>
+
+      {/* The basket. Sticks below the scroller so the running total is always
+          visible while the player is still adding things. */}
+      <div className="shrink-0 rounded-panel border border-island-wood/25 bg-island-cream-2/60 p-3">
+        {selectedLines.length > 0 && (
+          <div className="mb-2 max-h-24 space-y-1 overflow-y-auto" data-testid="cart-summary">
+            {selectedLines.map((line) => (
+              <div
+                key={line.address}
+                className="flex items-center justify-between text-sm text-island-ink"
+              >
+                <span className="mr-2 truncate">
+                  {line.name} <span className="text-island-ink-soft">× {line.quantity}</span>
+                </span>
+                <PriceTag amount={line.lineCost} className="whitespace-nowrap" />
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-island-wood/20 pt-2">
+          <span className="text-sm font-bold text-island-ink">Total</span>
+          <PriceTag amount={totalCost} affordable={canAfford} className="text-base" />
+        </div>
+        <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-island-ink-soft">
+          Your balance:
+          <CoinAmount
+            amount={userCoins}
+            loading={balanceLoading}
+            className="font-semibold text-island-warn"
+          />
+        </div>
+        {!canAfford && (
+          <p role="status" className="mt-2 text-center text-sm text-island-danger">
+            You don&apos;t have enough coins.
+          </p>
+        )}
       </div>
-    </div>
+    </BlobbiModal>
   );
 }
