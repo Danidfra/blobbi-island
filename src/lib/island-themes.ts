@@ -53,21 +53,43 @@ export interface IslandPalette {
   'grass-dark': string;
   /** Secondary surface. */
   sand: string;
-  /** The frame, and the default cozy CTA. */
+  /**
+   * The frame. A decorative fill, not an action colour — `--primary` is
+   * `wood-dark`, because a button has to carry readable text and the frame
+   * does not.
+   */
   wood: string;
-  /** Frame edge and strong-on-cream label text. */
+  /**
+   * The deeper wood: the frame's edge, strong label text on cream, and the
+   * PRIMARY action surface.
+   */
   'wood-dark': string;
   /** The panel surface: cards, popovers, modals, HUD. */
   cream: string;
   /** The muted panel surface one step down from `cream`. */
   'cream-2': string;
-  /** Mascot accent — highlights and active state. */
+  /**
+   * Mascot accent — the accent CTA, highlights, active state, and prices.
+   *
+   * Deep enough to be readable in BOTH directions: as text on `cream`, and as
+   * a surface under `cream`. That constraint is why it is a shade deeper than
+   * the mascot's own artwork, which is a picture and not a token.
+   */
   purple: string;
   /** Text. */
   ink: string;
   /** Muted text. */
   'ink-soft': string;
+  /** Destructive actions and error text. Readable on `cream` in both directions. */
   danger: string;
+  /**
+   * Caution and cost.
+   *
+   * Held to 3:1 rather than 4.5:1 and used only as an icon tint and a low-alpha
+   * border — it has no text call sites. Deepening it to text contrast would
+   * turn the warning amber brown for no reader's benefit; if it ever carries
+   * text, it has to be deepened first.
+   */
   warn: string;
 }
 
@@ -129,10 +151,10 @@ const cozyDay: IslandTheme = {
     'wood-dark': '30 42% 35%',
     cream: '43 100% 92%',
     'cream-2': '42 88% 87%',
-    purple: '257 73% 66%',
+    purple: '257 70% 56%',
     ink: '30 38% 16%',
     'ink-soft': '31 24% 34%',
-    danger: '6 68% 62%',
+    danger: '6 62% 46%',
     warn: '36 80% 57%',
   },
 };
@@ -168,7 +190,7 @@ const lanternNight: IslandTheme = {
     'wood-dark': '30 30% 82%',
     cream: '258 22% 20%',
     'cream-2': '256 20% 26%',
-    purple: '265 78% 74%',
+    purple: '265 80% 78%',
     ink: '40 60% 94%',
     'ink-soft': '38 22% 72%',
     danger: '6 74% 68%',

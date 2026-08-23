@@ -63,10 +63,10 @@ img {
   --island-wood-dark: 30 42% 35%;  /* frame edge, and label text on sand */
   --island-cream: 43 100% 92%;     /* #FFF4D8 panel */
   --island-cream-2: 42 88% 87%;    /* #FBEAC2 panel, muted */
-  --island-purple: 257 73% 66%;    /* #8E6BE8 mascot accent */
+  --island-purple: 257 70% 56%;    /* mascot accent — readable as text AND as a surface */
   --island-ink: 30 38% 16%;        /* #3A2A1A text */
   --island-ink-soft: 31 24% 34%;   /* #6B5742 muted text */
-  --island-danger: 6 68% 62%;      /* #E06B5E */
+  --island-danger: 6 62% 46%;      /* destructive + error text */
   --island-warn: 36 80% 57%;       /* #E9A23B */
 
   /* Radius scale. `--radius` is the shadcn contract (Tailwind's lg/md/sm read
@@ -137,7 +137,8 @@ img {
        panel-muted .......... cream-2
        secondary surface .... sand
        text / text-muted .... ink / ink-soft
-       primary .............. wood — the default cozy CTA
+       primary .............. wood-DARK — the frame is `wood`, but a button
+                              has to carry readable text and the frame does not
        accent ............... mascot purple — highlights, active state
        success .............. grass
        danger ............... soft coral
@@ -152,7 +153,7 @@ img {
     --popover: var(--island-cream);
     --popover-foreground: var(--island-ink);
 
-    --primary: var(--island-wood);
+    --primary: var(--island-wood-dark);
     --primary-foreground: var(--island-cream);
 
     --secondary: var(--island-sand);
@@ -179,7 +180,7 @@ img {
 
     --sidebar-background: var(--island-cream);
     --sidebar-foreground: var(--island-ink);
-    --sidebar-primary: var(--island-wood);
+    --sidebar-primary: var(--island-wood-dark);
     --sidebar-primary-foreground: var(--island-cream);
     --sidebar-accent: var(--island-sand);
     --sidebar-accent-foreground: var(--island-ink);
