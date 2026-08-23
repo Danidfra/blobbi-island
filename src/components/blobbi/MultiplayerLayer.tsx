@@ -50,9 +50,20 @@ import { shouldTriggerWorldMove } from '@/lib/world-input';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
 import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
-import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
+import { CHAT_KIND, CHAT_EVICT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
+import {
+  SEND_COOLDOWN_MS,
+  buildMessagePayload,
+  createInboundThrottle,
+  messageAltText,
+  parseIslandChatPayload,
+  renderMessage,
+  bubbleTextEquivalent,
+  type IslandMessage,
+  type IslandMessageClass,
+} from '@/communication';
 
 type PlayerLike = {
   pubkey: string;
@@ -225,7 +236,11 @@ interface MultiplayerLayerProps {
   className?: string;
   onMyPositionChange?: (position: Position) => void;
   disabled?: boolean;
-  chatFunctionRef?: React.MutableRefObject<((text: string) => Promise<void>) | null>;
+  /**
+   * Filled with the send entry point for every message class, so the
+   * composition surface can publish without owning a relay connection.
+   */
+  sendMessageRef?: React.MutableRefObject<((message: IslandMessage) => Promise<boolean>) | null>;
   myAnchorId?: string;
   onOtherBlobbiClick?: (
     playerPubkey: string,
@@ -320,7 +335,7 @@ export function MultiplayerLayer({
   className,
   onMyPositionChange,
   disabled = false,
-  chatFunctionRef,
+  sendMessageRef,
   myAnchorId,
   onOtherBlobbiClick,
   hiddenIn = null,
@@ -361,7 +376,17 @@ export function MultiplayerLayer({
   const pendingTargetRef = useRef<Position | null>(null);
   const consecutiveFailureCountRef = useRef<number>(0);
   const cooldownActiveRef = useRef<boolean>(false);
-  const lastChatPublishRef = useRef<number>(0);
+  /** Last send time per message class — the per-class cooldowns live in `@/communication`. */
+  const lastSendAtRef = useRef<Partial<Record<IslandMessageClass, number>>>({});
+  /**
+   * Per-sender flood control for INBOUND messages.
+   *
+   * A send cooldown lives in the client the sender controls, so it protects
+   * nobody; this is the half that bounds what a player is actually subjected to.
+   * Held in a ref so it survives re-renders and keeps its memory of who has
+   * spoken recently.
+   */
+  const inboundThrottleRef = useRef(createInboundThrottle());
   const anchorIndexRef = React.useRef(new Map<string, string>());
 
   const resolveBlobbiD = useCallback(
@@ -704,31 +729,49 @@ export function MultiplayerLayer({
   });
 
   // ============================================================================
-  // Chat Message Publishing
+  // Sending
   // ============================================================================
 
-  const publishChatMessage = useCallback(async (text: string): Promise<void> => {
-    if (!user || !text.trim()) return;
+  /**
+   * Publish one message of any class.
+   *
+   * ONE publisher for text, quick phrases, templates and emotes. Four would be
+   * four chances for the envelope, the tags, the expiration or the capability
+   * check to drift apart, and the wire would end up carrying four dialects of
+   * one protocol.
+   *
+   * Returns whether the message was published. A refusal — by capability, by
+   * cooldown, or because this build cannot render what was asked for — is a
+   * `false`, not an exception: none of those is exceptional, and the composer
+   * only needs to know whether to clear itself. A genuine publish failure still
+   * throws, exactly as before.
+   */
+  const sendMessage = useCallback(async (message: IslandMessage): Promise<boolean> => {
+    if (!user) return false;
 
-    // The send half of the chat capability. Refusing here rather than only in
-    // the composer means no other caller of `chatFunctionRef` can route around
-    // it. Under Standard this admits everything, unconditionally.
-    if (!admitChatMessage(safetyPolicy, { text: text.trim() }).admitted) return;
+    // The send half of the capability check. Refusing here rather than only in
+    // the composer means no other holder of the ref can route around it. Under
+    // Standard every class is admitted, so this changes nothing.
+    if (!admitChatMessage(safetyPolicy, message).admitted) return false;
+
+    // Resolve locally what the message SAYS. Used for the optimistic bubble and
+    // for the `alt` tag; never for the payload. A message this build cannot
+    // render is one it has no business sending.
+    const bubble = renderMessage(message);
+    if (!bubble) return false;
 
     const now = Date.now();
 
-    // Rate limiting
-    if (now - lastChatPublishRef.current < CHAT_RATE_LIMIT_MS) {
-      throw new Error('Rate limited: Please wait before sending another message');
-    }
+    // Per-class cooldown: a one-tap emote needs a higher floor than a typed
+    // sentence, because typing is its own rate limit and tapping is not.
+    const cooldown = SEND_COOLDOWN_MS[message.type];
+    if (now - (lastSendAtRef.current[message.type] ?? 0) < cooldown) return false;
 
     const expirationTime = Math.floor((now + CHAT_EVICT_MS) / 1000);
 
-    const content = JSON.stringify({
-      type: 'chat',
+    const content = buildMessagePayload(message, {
       location: currentLocation,
       blobbiD: currentBlobbiD,
-      text: text.trim(),
       ts: Math.floor(now / 1000),
     });
 
@@ -741,7 +784,9 @@ export function MultiplayerLayer({
         ['expiration', expirationTime.toString()],
         ['p', user.pubkey],
         ['i', islandId],
-        ['alt', `Chat message: ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}`],
+        // NIP-31: describes the event for clients that do not know this kind.
+        // Built from the LOCAL rendering, and never read back by this app.
+        ['alt', messageAltText(bubbleTextEquivalent(bubble))],
       ],
     };
 
@@ -750,16 +795,16 @@ export function MultiplayerLayer({
       const results = await Promise.allSettled([publishEvent(event)]);
 
       const successful = results.filter(r => r.status === 'fulfilled').length;
-      if (DEBUG_MP) console.debug('[blobbi][chat] publish results', { successful, total: results.length });
+      if (DEBUG_MP) console.debug('[blobbi][chat] publish results', { successful, total: results.length, type: message.type });
 
-      // Update rate limit timestamp even on partial success
-      lastChatPublishRef.current = now;
+      // Update the cooldown even on partial success
+      lastSendAtRef.current[message.type] = now;
 
       // Show local bubble immediately (optimistic)
-      showBubble('me', text, now + CHAT_EVICT_MS);
-
+      showBubble('me', bubble, now + CHAT_EVICT_MS);
+      return true;
     } catch (error) {
-      console.error('Failed to publish chat message:', error);
+      console.error('Failed to publish message:', error);
       throw error;
     }
   }, [user, currentLocation, currentBlobbiD, islandId, publishEvent, showBubble, sessionId, safetyPolicy]);
@@ -768,6 +813,25 @@ export function MultiplayerLayer({
   // Chat Event Processing
   // ============================================================================
 
+  /**
+   * The inbound pipeline, in the order the steps have to happen.
+   *
+   *   scope → STRUCTURE → duplicate → CAPABILITY → flood → trusted render
+   *
+   * Two of those are the safety boundary and both run before anything can be
+   * presented:
+   *
+   *  - **Structure** (`parseIslandChatPayload`) validates against this build's
+   *    own catalogs and keeps only ids. A spoofed
+   *    `{"type":"quick","phrase":"want-to-play","text":"<abuse>"}` loses its
+   *    `text` here — nothing downstream can see a field the parser did not copy.
+   *  - **Capability** (`admitChatMessage`) decides whether this CLASS of message
+   *    is allowed at all, from the resolved policy and nothing else.
+   *
+   * Then the words are rebuilt locally by `renderMessage`, so the only class
+   * whose text came from the sender is free text — which is exactly the class
+   * the `freeTextChat` capability governs.
+   */
   const processChatEvent = useCallback((event: NostrEvent) => {
     try {
       if (event.kind !== CHAT_KIND) return;
@@ -797,45 +861,47 @@ export function MultiplayerLayer({
         return; // Too old
       }
 
-      let content;
-      try {
-        content = JSON.parse(event.content);
-      } catch {
-        return; // Invalid JSON
+      // 1. STRUCTURE. Cheapest meaningful rejection, and the step that strips a
+      //    structured payload down to catalog ids.
+      const parsed = parseIslandChatPayload(event.content);
+      if (!parsed.ok) {
+        if (DEBUG_MP) console.debug('[blobbi][chat] payload rejected', { reason: parsed.reason });
+        return;
       }
+      if (parsed.envelope.location !== currentLocation) return;
 
-      // Validate content structure
-      if (content.type !== 'chat' ||
-          content.location !== currentLocation ||
-          !content.text ||
-          typeof content.text !== 'string') {
+      // 2. Duplicate DELIVERY, keyed on the event id.
+      //    It used to key on `pubkey:sessionId`, which suppressed every second
+      //    message from a sender within the window — including two different
+      //    ones, so "wave" then "heart" would have silently lost the heart. The
+      //    rate limit that key was accidentally providing is now step 4, stated
+      //    where it can be reasoned about.
+      if (isDuplicate(event.id, CHAT_EVICT_MS)) {
+        if (DEBUG_MP) console.debug('[blobbi][chat] duplicate event ignored', { id: event.id });
         return;
       }
 
-      // Sanitize text (remove HTML, trim)
-      const sanitizedText = content.text.replace(/<[^>]*>/g, '').trim();
-      if (!sanitizedText) return;
+      // 3. CAPABILITY. The data boundary: what a player is allowed to be shown,
+      //    decided before anything can present it. The sender is not
+      //    necessarily this build, so this — not the composer — is the check
+      //    that protects a Family player.
+      if (!admitChatMessage(safetyPolicy, parsed.message).admitted) return;
 
-      // THE data boundary for foreign chat. The sender is not necessarily this
-      // build — a Standard player in the same room, or any third-party client,
-      // can emit a well-formed kind 21201 — so this is the check that decides
-      // what a Family player is shown, and it happens here rather than in a
-      // component because nothing may reach the presentation layer unadmitted.
-      // Under Standard it admits everything, so nothing below changes.
-      if (!admitChatMessage(safetyPolicy, { text: sanitizedText }).admitted) return;
-
-      // Dedupe by session ID
-      const dTag = event.tags.find(([name]) => name === 'd')?.[1];
-      if (!dTag) return;
-
-      const dedupeKey = `${event.pubkey}:${dTag}`;
-      if (isDuplicate(dedupeKey)) {
-        if (DEBUG_MP) console.debug('[blobbi][chat] duplicate message ignored', { dedupeKey });
+      // 4. Flood control, per sender. After the free checks so a stream of
+      //    malformed events cannot consume a well-behaved sender's budget.
+      if (!inboundThrottleRef.current.admit(event.pubkey, now)) {
+        if (DEBUG_MP) console.debug('[blobbi][chat] sender throttled', { pubkey: event.pubkey });
         return;
       }
+
+      // 5. TRUSTED RECONSTRUCTION. Every character of a structured message comes
+      //    from this build's catalogs. A message referencing an entry this build
+      //    does not have simply is not shown.
+      const bubble = renderMessage(parsed.message);
+      if (!bubble) return;
 
       const expiresAt = expirationTag ? parseInt(expirationTag) * 1000 : (now + CHAT_EVICT_MS);
-      queueBubble(`${event.pubkey}:pending`, sanitizedText, expiresAt);
+      queueBubble(`${event.pubkey}:pending`, bubble, expiresAt);
     } catch (error) {
       console.error('Error processing chat event:', error);
     }
@@ -885,17 +951,17 @@ export function MultiplayerLayer({
     clearBubbles();
   }, [currentLocation, clearBubbles]);
 
-  // Expose chat function to parent
+  // Expose the single send entry point to the parent.
   useEffect(() => {
-    if (chatFunctionRef) {
-      chatFunctionRef.current = publishChatMessage;
+    if (sendMessageRef) {
+      sendMessageRef.current = sendMessage;
     }
     return () => {
-      if (chatFunctionRef) {
-        chatFunctionRef.current = null;
+      if (sendMessageRef) {
+        sendMessageRef.current = null;
       }
     };
-  }, [chatFunctionRef, publishChatMessage]);
+  }, [sendMessageRef, sendMessage]);
 
   // ============================================================================
   // Click Handling

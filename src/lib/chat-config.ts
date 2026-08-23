@@ -11,8 +11,11 @@ export const CHAT_BUBBLE_MS = 4000;
 // Drop messages older than this (in milliseconds)
 export const CHAT_EVICT_MS = 10000;
 
-// Rate limiting: minimum time between messages per sender (in milliseconds)
-export const CHAT_RATE_LIMIT_MS = 500;
+// Rate limiting moved to `@/communication/rate-limit`, which sizes a cooldown
+// per message class (a one-tap emote needs a higher floor than a typed sentence)
+// and adds the receiver-side gate that a send cooldown cannot provide. Leaving a
+// second, flat constant here would have been a number that disagreed with the
+// one actually in force.
 
 // Ephemeral event kind for chat messages
 export const CHAT_KIND = 21201;

@@ -29,7 +29,7 @@ human-readable description for clients that do not understand the kind.
 | `31632` | Game Item Definition | Addressable | Canonical item catalog (official issuer). See `@nostr-games/inventory`. |
 | `31633` | Game Inventory | Addressable | Player consumable inventory **and the canonical Blobbi Coin / Arcade Ticket balances**. See `@nostr-games/inventory`. |
 | `31950` | Island Presence | Addressable | Real-time multiplayer presence (location, position, movement) |
-| `21201` | Island Chat | Ephemeral | In-world speech-bubble chat messages |
+| `21201` | Island Communication | Ephemeral | In-world speech bubbles: free text, quick phrases, phrase templates and emotes |
 | `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
 | `21951` | Shared Playback Command | Ephemeral | Low-latency playback commands for a watch session |
 
@@ -223,36 +223,67 @@ locally rather than streaming positions.
 > Note: `state` (`idle`/`moving`/`emote`) describes MOTION only. Sitting and
 > hiding are separate semantic fields, so a seated player is `state: "idle"`.
 
-> Note: `state: "emote"` is reserved for a future emote/reaction feature and is not
-> yet produced by this client.
+> Note: `state: "emote"` remains reserved and is still not produced by this
+> client. Emotes are **communication**, not presence: they travel on kind `21201`
+> (below), because an emote is a momentary utterance while presence is a
+> replaceable event with a 35-second lifetime and a heartbeat — an emote stored
+> there would either hang over a Blobbi for half a minute or need a second
+> clearing event racing the movement ordering. The slot is kept for a future
+> emote *pose* (a Blobbi that visibly waves), which is a rendering concern
+> layered on top of the message rather than a replacement for it.
 
 ---
 
-## Kind 21201 — Island Chat (Ephemeral)
+## Kind 21201 — Island Communication (Ephemeral)
 
-In-world chat shown as a speech bubble above a player's Blobbi. Ephemeral
-(20000–29999) with a short NIP-40 expiration; messages are transient and not
-expected to be stored.
+In-world communication shown as a speech bubble above a player's Blobbi.
+Ephemeral (20000–29999) with a short NIP-40 expiration; messages are transient
+and not expected to be stored.
 
-- **Tags**:
+The full specification, including the reasoning behind every rule, is
+[`docs/communication-v2.md`](docs/communication-v2.md).
+
+- **Tags** (identical for every message class):
   - `["d", "<sessionId>"]`
   - `["l", "<location>"]` — location scope.
   - `["i", "<islandId>"]` — island scope.
   - `["p", "<pubkey>"]` — author.
   - `["expiration", "<unix-seconds>"]` — NIP-40 (~10s).
-  - `["alt", "Chat message: <preview>"]`.
-- **`content`** (JSON):
+  - `["alt", "Chat message: <preview>"]` — NIP-31 description, built from the
+    SENDER's local rendering. Descriptive only; this client never reads it back.
+- **`content`** (JSON) — an envelope plus one of four message classes.
+
+  Envelope, on every class: `location` (the sender's location id), `blobbiD`
+  (optional), `ts` (unix seconds). Structured classes additionally carry
+  `v` (schema version, currently `1`); free text carries none, because its shape
+  predates versioning.
+
   ```json
-  {
-    "type": "chat",
-    "location": "<locationId>",
-    "blobbiD": "<blobbiD>",
-    "text": "<message, max 120 chars>",
-    "ts": <unix-seconds>
-  }
+  { "type": "chat",     "location": "town", "ts": 0, "text": "<message, max 120 chars>" }
+  { "type": "quick",    "v": 1, "location": "town", "ts": 0, "phrase": "want-to-play" }
+  { "type": "emote",    "v": 1, "location": "town", "ts": 0, "emote": "wave" }
+  { "type": "template", "v": 1, "location": "town", "ts": 0,
+    "template": "meet-at-in", "params": { "location": "arcade", "time": "10m" } }
   ```
-  Received `text` is HTML-stripped before rendering. Messages are deduplicated per
-  `pubkey:d` within a short window.
+
+  **`"chat"` is free text and is unchanged** from the original schema, so clients
+  that predate the structured classes keep rendering it. `"text"` is accepted as
+  a synonym on receive; this client emits `"chat"`. A client that does not know
+  the structured classes rejects them on `type` and ignores them.
+
+  **Structured messages carry ids, never words.** A quick phrase is a reference
+  into the receiver's own catalog, and a template is a template id plus one
+  allowed value id per parameter. There is deliberately no `text` and no
+  `fallback` field alongside them: the receiver reconstructs every character from
+  its own local catalogs, so a sender cannot put words in another player's
+  bubble. Ids are language-independent, which is also what makes translation
+  possible without invalidating published events.
+
+  Receivers MUST validate structurally — unknown `type`, unrecognised `v`,
+  unknown phrase/emote/template id, a missing, unexpected or out-of-catalog
+  parameter, and oversized payloads are all rejected rather than best-effort
+  rendered. Received free-text `text` is HTML-stripped before rendering.
+  Messages are deduplicated by event id.
 
 ---
 

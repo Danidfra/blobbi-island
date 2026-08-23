@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CHAT_BUBBLE_MS, CHAT_PLAYER_GRACE_MS } from '@/lib/chat-config';
+import type { CommunicationBubble } from '@/communication';
 import type { ChatBubble } from '@/components/ChatBubblesLayer';
 
 interface QueuedBubble {
   playerKey: string;
-  text: string;
+  content: CommunicationBubble;
   expiresAt: number;
   queuedAt: number;
 }
@@ -15,8 +16,13 @@ export function useChatBubbles() {
   const gcIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dedupeMapRef = useRef<Map<string, number>>(new Map());
 
-  // Show a bubble for a specific player
-  const showBubble = useCallback((playerKey: string, text: string, expiresAt?: number) => {
+  // Show a bubble for a specific player.
+  //
+  // `content` is a RESOLVED CommunicationBubble, never a raw payload: by the
+  // time anything reaches this hook the message has been parsed, admitted by
+  // the safety policy and re-rendered from the local catalogs, so there is no
+  // untrusted string left for a component to mishandle.
+  const showBubble = useCallback((playerKey: string, content: CommunicationBubble, expiresAt?: number) => {
     const now = Date.now();
     const finalExpiresAt = expiresAt || (now + CHAT_BUBBLE_MS);
     
@@ -26,7 +32,7 @@ export function useChatBubbles() {
     const bubble: ChatBubble = {
       id,
       playerKey,
-      text,
+      content,
       expiresAt: finalExpiresAt,
       createdAt: now,
     };
@@ -50,13 +56,13 @@ export function useChatBubbles() {
   }, []);
 
   // Queue a bubble for a player that might not be visible yet
-  const queueBubble = useCallback((playerKey: string, text: string, expiresAt?: number) => {
+  const queueBubble = useCallback((playerKey: string, content: CommunicationBubble, expiresAt?: number) => {
     const now = Date.now();
     const finalExpiresAt = expiresAt || (now + CHAT_BUBBLE_MS);
     
     const queuedBubble: QueuedBubble = {
       playerKey,
-      text,
+      content,
       expiresAt: finalExpiresAt,
       queuedAt: now,
     };
@@ -92,7 +98,7 @@ export function useChatBubbles() {
           if (isPlayerVisible(queuedBubble.playerKey)) {
             showBubble(
               queuedBubble.playerKey,
-              queuedBubble.text,
+              queuedBubble.content,
               queuedBubble.expiresAt
             );
             changed = true;

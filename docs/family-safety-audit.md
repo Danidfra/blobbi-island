@@ -27,6 +27,32 @@ inference rather than something the repo proves, it is marked **[inference]**.
 > unchanged — in particular C-2 (no blocking, muting or reporting) and C-3 (open
 > YouTube catalog) are untouched by Phase A.
 
+> **Status update (2026-08-23) — Phase B shipped (Communication V2).** Kind 21201
+> now carries four message classes — free text, quick phrases, filled-in phrase
+> templates and emotes — with structured messages validated against local
+> catalogs and their words *reconstructed locally* rather than read from the
+> payload. `admitChatMessage` discriminates on message class at both the send and
+> receive boundaries. Effect on the findings below:
+>
+> - **C-1 (unrestricted free-text chat)** — the *capability* half is now
+>   enforceable and enforced: a profile without `freeTextChat` refuses free text
+>   inbound and outbound, including from Standard and third-party clients, and
+>   keeps three working ways to talk. The finding stands for Standard, which is
+>   unchanged by design and still has no filter, block, mute or report.
+> - **H-7 (no receive-side bounds)** — **resolved.** The receive path now rejects
+>   payloads over 2 KiB and validates structure before anything is presented.
+> - **§4.2 (the HTML-strip regex reading like a security control)** — addressed:
+>   it moved into `parse.ts` and is documented there as cosmetic, with React
+>   escaping named as what actually protects the app.
+> - **M-8, and the inbound flood gap** — duplicate suppression now keys on the
+>   event id (it previously dropped *distinct* messages from the same sender) and
+>   a deliberate per-sender inbound rate limit replaces the accident.
+> - **C-2 (no block/mute/report) and C-3 (open YouTube catalog) remain
+>   untouched.** Restricting speech does not give a harassed child recourse, and
+>   C-2 is the strongest candidate for the next phase.
+>
+> Details: [`communication-v2.md`](./communication-v2.md).
+
 ---
 
 ## 1. Executive verdict

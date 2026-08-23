@@ -1,11 +1,21 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
+import { bubbleTextEquivalent, type CommunicationBubble } from '@/communication';
 
 export interface ChatBubble {
   id: string;
   playerKey: string;
-  text: string;
+  /**
+   * The RESOLVED presentation model — never a raw event payload.
+   *
+   * Structured messages (quick phrases, templates, emotes) are reconstructed
+   * from this build's own catalogs before they get here, so nothing in this
+   * component can render a string an author chose. Free text is the one class
+   * whose words come from the sender, which is exactly what the `freeTextChat`
+   * capability governs.
+   */
+  content: CommunicationBubble;
   expiresAt: number;
   createdAt: number;
 }
@@ -151,6 +161,8 @@ interface ChatBubbleElementProps { bubble: ChatBubble; isExpiring: boolean; }
 
 function ChatBubbleElement({ bubble, isExpiring }: ChatBubbleElementProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const content = bubble.content;
+  const isEmote = content.type === 'emote';
 
   // Trigger entrance animation
   useEffect(() => {
@@ -169,15 +181,29 @@ function ChatBubbleElement({ bubble, isExpiring }: ChatBubbleElementProps) {
       style={{ marginTop: '-18px' }}
     >
       {/* Speech bubble */}
-      <div className={cn(
-        "relative max-w-[220px] px-3 py-2",
-        "bg-white border border-gray-200 rounded-2xl shadow-lg",
-        "text-sm text-gray-900 break-words"
-      )}>
+      <div
+        className={cn(
+          "relative max-w-[220px]",
+          "bg-white border border-gray-200 rounded-2xl shadow-lg",
+          "text-sm text-gray-900 break-words",
+          // An emote is a picture, not a sentence: it gets a tighter, squarer
+          // bubble so a single glyph does not sit in a paragraph-shaped box.
+          isEmote ? "px-3 py-1.5" : "px-3 py-2",
+        )}
+        // The whole bubble is one utterance. Announcing it as a labelled group
+        // is what makes an emote — which has no readable text node at all —
+        // reach a screen reader as "Clap" rather than as a stray glyph.
+        role="status"
+        aria-label={bubbleTextEquivalent(content)}
+      >
         {/* Bubble content */}
-        <div className="whitespace-pre-wrap">
-          {bubble.text}
-        </div>
+        {content.type === 'emote' ? (
+          <div className="text-2xl leading-none text-center" aria-hidden="true">
+            {content.glyph}
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap">{content.text}</div>
+        )}
 
         {/* Speech bubble tail */}
         <div className={cn(

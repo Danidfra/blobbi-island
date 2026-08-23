@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { PlaceBackground } from './PlaceBackground';
 import { ArcadePassIcon } from './ArcadePassIcon';
 import { ArcadeTicketBalance } from './ArcadeTicketBalance';
@@ -33,7 +33,9 @@ import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { dbg } from '@/lib/debug';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
-import { DOCK_EVENTS, type SendChatDetail } from '@/components/shell/dock-events';
+import { DOCK_EVENTS } from '@/components/shell/dock-events';
+import { CommunicationPanel } from './communication/CommunicationPanel';
+import type { IslandMessage } from '@/communication';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -61,7 +63,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // MovableBlobbi and read by MultiplayerLayer so remote Blobbis can look at
   // the local player when it walks (or, later, emotes/acts) nearby.
   const localActiveRef = useRef<LocalActiveState | null>(null);
-  const chatFunctionRef = useRef<((text: string) => Promise<void>) | null>(null);
+  /**
+   * The single publisher for every message class, filled in by
+   * `MultiplayerLayer` (which owns the relay connection) and consumed by the
+   * communication panel below.
+   */
+  const sendMessageRef = useRef<((message: IslandMessage) => Promise<boolean>) | null>(null);
+  const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
   const { currentLocation, previousLocation, bootstrapPosition } = useLocation();
   const { user } = useCurrentUser();
   const { nostr } = useNostr();
@@ -432,13 +440,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     }
   };
 
-  const handleSendChatMessage = async (text: string) => {
-    if (chatFunctionRef.current) {
-      await chatFunctionRef.current(text);
-    } else {
-      throw new Error('Chat function not available');
-    }
-  };
+  const handleSendMessage = useCallback(async (message: IslandMessage) => {
+    // Before the world has mounted there is nothing to publish through; that is
+    // an ordinary startup state, not an error worth throwing over.
+    const send = sendMessageRef.current;
+    if (!send) return false;
+    return send(message);
+  }, []);
 
   // Listen for social share events from ShareModal
   useEffect(() => {
@@ -463,23 +471,20 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     return () => document.removeEventListener(DOCK_EVENTS.openMyBlobbi, open);
   }, []);
 
-  // Listen for chat messages sent from the bottom action dock's chat input.
-  // Send still flows through the unchanged chat function (chatFunctionRef).
-  const sendChatRef = useRef<(text: string) => Promise<void>>(async () => {});
-  sendChatRef.current = handleSendChatMessage;
+  // The dock is a launcher: it asks for the communication panel and nothing
+  // more. Sending no longer travels through a DOM event — the panel is rendered
+  // here, next to the publisher, and hands it a typed message directly.
   useEffect(() => {
-    const onSendChat = (e: Event) => {
-      const detail = (e as CustomEvent<SendChatDetail>).detail;
-      const text = detail?.text?.trim();
-      if (text) {
-        sendChatRef.current?.(text).catch((err) =>
-          console.error('Failed to send chat message:', err),
-        );
-      }
-    };
-    document.addEventListener(DOCK_EVENTS.sendChat, onSendChat);
-    return () => document.removeEventListener(DOCK_EVENTS.sendChat, onSendChat);
+    const open = () => setIsCommunicationOpen(true);
+    document.addEventListener(DOCK_EVENTS.openCommunication, open);
+    return () => document.removeEventListener(DOCK_EVENTS.openCommunication, open);
   }, []);
+
+  // Leaving the room closes the panel: a half-typed message to a room you are
+  // no longer standing in has nowhere to go.
+  useEffect(() => {
+    setIsCommunicationOpen(false);
+  }, [currentLocation]);
 
   return (
     <>
@@ -580,7 +585,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           currentBlobbiD={selectedBlobbi.id}
           startPosition={myPosition}
           onMyPositionChange={setMyPosition}
-          chatFunctionRef={chatFunctionRef}
+          sendMessageRef={sendMessageRef}
           myAnchorId="my-blobbi-anchor"
           onOtherBlobbiClick={handleOtherBlobbiClick}
           hiddenIn={hiddenIn}
@@ -599,9 +604,17 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           VirtualWorld so they keep full-stage sizing/positioning. Chat bubbles
           remain inside the world (they portal into the Blobbi anchors). ── */}
 
-      {/* Chat input lives in the bottom action dock (BlobbiActionDock), which
-          transforms into a compact chat input when the Chat button is pressed.
-          Sending dispatches DOCK_EVENTS.sendChat, handled above. */}
+      {/* Communication panel. Anchored above the dock so it reads as coming out
+          of the Talk button, inside the game frame rather than in a portal (the
+          island can be fullscreen, and a portalled overlay would land outside
+          it). It decides its own tabs from the safety policy. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-16 z-30 flex justify-center px-2 sm:bottom-20">
+        <CommunicationPanel
+          open={isCommunicationOpen}
+          onClose={() => setIsCommunicationOpen(false)}
+          onSend={handleSendMessage}
+        />
+      </div>
       {/* Arcade Pass Icon - top right, below the shell HUD.
           (Map and location now live in the shell HUD / dock.) */}
       <div

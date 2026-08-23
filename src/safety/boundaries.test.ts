@@ -168,19 +168,45 @@ describe('capability consumption', () => {
     expect(chat).not.toMatch(/\bprofile\s*===/);
   });
 
-  it('places the inbound check before anything can present the message', () => {
-    // Structural, not stylistic: the admission call must come before the first
-    // `queueBubble` in `processChatEvent`, because everything after that point
-    // is presentation.
+  it('orders the inbound pipeline so nothing unadmitted can be presented', () => {
+    // Structural, not stylistic. Three things must hold inside
+    // `processChatEvent`, and each is one reordering away from being false:
+    //
+    //   parse → admit → render → queue
+    //
+    // Parsing first is what strips a spoofed structured payload down to catalog
+    // ids; admitting before rendering is what stops a refused message from
+    // being turned into words at all; and both before `queueBubble` is what
+    // keeps unadmitted content out of the presentation layer entirely.
     const chat = readFileSync(join(SRC, 'components/blobbi/MultiplayerLayer.tsx'), 'utf8');
-    const admission = chat.indexOf('admitChatMessage(safetyPolicy, { text: sanitizedText })');
-    const presentation = chat.indexOf('queueBubble(');
+    const receive = chat.slice(chat.indexOf('const processChatEvent'));
 
+    const parse = receive.indexOf('parseIslandChatPayload(');
+    const admission = receive.indexOf('admitChatMessage(safetyPolicy, parsed.message)');
+    const render = receive.indexOf('renderMessage(');
+    const presentation = receive.indexOf('queueBubble(');
+
+    expect(parse, 'the payload should be parsed').toBeGreaterThan(-1);
     expect(admission, 'the inbound admission check should exist').toBeGreaterThan(-1);
+    expect(render, 'the message should be re-rendered locally').toBeGreaterThan(-1);
     expect(presentation, 'queueBubble should exist').toBeGreaterThan(-1);
+
+    expect(parse, 'structure must be validated before a capability is judged').toBeLessThan(
+      admission,
+    );
+    expect(admission, 'a refused message must never be rendered').toBeLessThan(render);
     expect(
       admission,
-      'chat admission must be decided before the message reaches the presentation layer',
+      'admission must be decided before the message reaches the presentation layer',
     ).toBeLessThan(presentation);
+  });
+
+  it('sends through the same capability check it receives through', () => {
+    // Composing and displaying can never diverge: both directions call the same
+    // pure function, so a build cannot end up refusing to show what it happily
+    // sends (or the reverse).
+    const chat = readFileSync(join(SRC, 'components/blobbi/MultiplayerLayer.tsx'), 'utf8');
+    const send = chat.slice(chat.indexOf('const sendMessage'), chat.indexOf('const processChatEvent'));
+    expect(send).toContain('admitChatMessage(safetyPolicy, message)');
   });
 });

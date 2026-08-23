@@ -28,6 +28,7 @@ export { IslandSafetyProvider } from './IslandSafetyProvider';
 export type {
   ChatAdmission,
   ChatMessageCandidate,
+  ChatMessageClass,
   ChatRejectionReason,
 } from './chat-admission';
 export { admitChatMessage } from './chat-admission';

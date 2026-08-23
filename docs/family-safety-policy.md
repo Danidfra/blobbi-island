@@ -1,10 +1,13 @@
 # The Island Safety Policy
 
-**Status: Phase A — foundation only.** The capability layer exists, is tested, and
-is wired into one data boundary. Family mode is **not** a user-facing feature: no
-setting, no onboarding step, no storage key and no URL parameter can select it.
-Every shipped build resolves to `standard`, which is the island exactly as it is
-today.
+**Status: Phase B.** The capability layer exists, is tested, and now governs
+four classes of in-world communication at both the send and receive boundaries.
+Family mode is still **not** a user-facing feature: no setting, no onboarding
+step, no storage key and no URL parameter can select it. Every shipped build
+resolves to `standard`, which is the island exactly as it is today.
+
+Communication V2 is specified in [`communication-v2.md`](./communication-v2.md);
+this document remains the capability contract.
 
 Rationale and evidence: [`family-safety-audit.md`](./family-safety-audit.md).
 This document is the implementation contract — what the pieces are, and the rules
@@ -247,30 +250,42 @@ because the composer (`BlobbiActionDock`) and the receive path
 (`MultiplayerLayer.processChatEvent`) are different files that do not know about
 each other.
 
-### The worked example: chat
+### The worked example: communication
 
 ```
-relay → subscription → processChatEvent → [ admitChatMessage ] → queueBubble → bubble
-                                                ▲
-                                    the boundary, before presentation
+relay → subscription → processChatEvent
+          → parse (structure + local catalogs)
+          → duplicate
+          → [ admitChatMessage ]     ← the capability boundary
+          → inbound throttle
+          → renderMessage (trusted local reconstruction)
+          → queueBubble → bubble
 ```
 
 `admitChatMessage` is consulted in two places in `MultiplayerLayer`:
 
-- **inbound**, in `processChatEvent`, immediately after sanitising and before
-  anything can queue a bubble — this is the one that protects a player;
-- **outbound**, in `publishChatMessage`, so no caller of `chatFunctionRef` can
-  route around the composer.
+- **inbound**, in `processChatEvent`, after the payload has been validated and
+  before anything can render or queue it — this is the one that protects a
+  player, because the sender is not necessarily this build;
+- **outbound**, in `sendMessage`, so no holder of the send ref can route around
+  the composer.
 
-Under Standard it admits **everything, unconditionally, with no inspection of the
-text** — no length limit, no filter, no heuristic. That is deliberate, and
-`chat-admission.test.ts` admits a hostile payload under Standard on purpose. It
-is a capability check, not a content filter: the audit is explicit that a filter
-is not a substitute for a capability decision, and mixing the two here would have
-changed what Standard players see.
+**Two separate concerns, deliberately kept apart.** Structure and bounds are the
+parser's job (`src/communication/parse.ts`); capability is admission's.
+Admission never inspects content — no length, no filter, no term list — and
+under Standard it admits every class unconditionally. `chat-admission.test.ts`
+admits a hostile payload under Standard on purpose: it is a capability check, not
+a content filter, and the audit is explicit that a filter is not a substitute for
+a capability decision.
 
-`src/safety/boundaries.test.ts` asserts structurally that the admission call
-appears *before* `queueBubble` in the source, so the ordering cannot drift.
+That split is also what defeats spoofing. A payload claiming to be a quick phrase
+while carrying abusive text loses the text in the **parser**, which copies only
+ids; admission then sees an ordinary quick phrase, because that is all that is
+left of it. The words come from the local catalog, never from the wire.
+
+`src/safety/boundaries.test.ts` asserts the pipeline order structurally — parse
+before admit, admit before render, admit before `queueBubble` — so it cannot
+drift.
 
 ---
 
@@ -312,14 +327,15 @@ while the reasoning is fresh.
 
 ## 9. What Phase A did *not* do
 
-Defined but unenforced — every capability except `freeTextChat` currently has no
-call site. In audit-roadmap order:
+Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
+`emotes` all have real call sites; the rest are still declarations. In
+audit-roadmap order:
 
 | Capability | Still needs |
 |---|---|
 | `externalLinks`, `socialPlatformSharing`, `nativeShareSheet` | the single `openExternal()` egress helper; `window.open` is still called directly in two components |
 | `relaySelection`, `authoringTools` | gating `RelaySelector` and the `/tools/game-items` route |
-| `predefinedPhrases`, `emotes` | the phrase catalog, the picker, and the reserved kind 31950 `state: 'emote'` channel |
+| ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
 | `openMediaEntry` | the curated theater catalog, re-validated on every `set-media` |
 | `mediaUploads`, `publicNotePublishing` | gating `useUploadFile` and the ShareModal Nostr section |
 | `strangerAuthoredNames`, `ownFreeTextNaming` | the name substitution and the word-pick composer |
