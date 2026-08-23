@@ -1,12 +1,21 @@
 import { useState } from "react";
-import { LogOut, UserIcon, UserPlus, PawPrint, Settings, ChevronDown, Wrench, Palette } from "lucide-react";
+import {
+  LogOut,
+  UserIcon,
+  UserPlus,
+  PawPrint,
+  Settings,
+  ChevronDown,
+  Wrench,
+  Palette,
+  Bug,
+  CloudSun,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -30,6 +39,7 @@ import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
 import { setIslandSkyDev, useIslandSkyDev } from "@/lib/island-sky-dev";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { ThemePicker } from "@/components/shell/ThemePicker";
+import { SettingsRow, SettingsSection } from "@/components/ui/settings-row";
 import { useTheme } from "@/hooks/useTheme";
 import { genUserName } from "@/lib/genUserName";
 
@@ -190,15 +200,6 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
   );
 }
 
-/** Section heading used inside the menu. */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-island-ink-soft">
-      {children}
-    </div>
-  );
-}
-
 function AccountMenuBody({
   currentUser,
   otherUsers,
@@ -231,150 +232,109 @@ function AccountMenuBody({
     : undefined;
   const blobbiName = currentBlobbi ? getBlobbiDisplayName(currentBlobbi) : undefined;
 
-  // Reusable row styling so the modal and dropdown look the same. In the
-  // dropdown we use DropdownMenuItem (keyboard nav); in the modal we use plain
-  // buttons (touch).
-  const rowClass =
-    "flex w-full items-center gap-2 cursor-pointer rounded-md p-2 text-left hover:bg-island-cream-2";
+  /*
+    Every row in this menu is a `SettingsRow`.
 
-  const Row = ({
-    onClick,
-    children,
-    className,
-  }: {
-    onClick: () => void;
-    children: React.ReactNode;
-    className?: string;
-  }) =>
-    variant === "dropdown" ? (
-      <DropdownMenuItem onClick={onClick} className={cn(rowClass, className)}>
-        {children}
-      </DropdownMenuItem>
-    ) : (
-      <button type="button" onClick={onClick} className={cn(rowClass, className)}>
-        {children}
-      </button>
-    );
-
-  const Divider = () =>
-    variant === "dropdown" ? (
-      <DropdownMenuSeparator />
-    ) : (
-      <div className="my-2 h-px bg-island-wood/15" />
-    );
-
+    It used to hand-roll one: a `rowClass` string, a `Row` component switching
+    between `DropdownMenuItem` and a bare `<button>`, and a `Divider` switching
+    between `DropdownMenuSeparator` and a `<div>` — and four more spellings of
+    the same row lived elsewhere in the game. Keeping `DropdownMenuItem` was
+    what forced the split, and it bought nothing here: the menu's rows either
+    open a surface or perform an action, and Radix's roving focus is not worth
+    two implementations of one row.
+  */
   return (
-    <div className="space-y-1">
-      {/* Top row: identity + current Blobbi. In the wider modal these sit side
-          by side to cut vertical scrolling; in the dropdown they stack. */}
-      <div className={cn(variant === "modal" && "grid grid-cols-2 gap-2")}>
-        {/* Current account identity */}
-        <div className="flex items-center gap-3 px-2 py-1.5">
-          <Avatar className="size-10 border-2 border-island-wood/30">
-            <AvatarImage src={currentUser.metadata.picture} alt={getDisplayName(currentUser)} />
-            <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
-              {getDisplayName(currentUser).charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-island-ink">
-              {getDisplayName(currentUser)}
-            </p>
-            <p className="truncate text-xs text-island-ink-soft">Signed in</p>
-          </div>
-        </div>
-
-        {variant === "dropdown" && <Divider />}
-
-        {/* Current Blobbi */}
-        {variant === "dropdown" && <SectionLabel>Current Blobbi</SectionLabel>}
-        <Row onClick={onSwitchBlobbi} className={cn(variant === "modal" && "!my-0")}>
-          <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-island-wood/30 bg-island-cream-2">
-            <CurrentBlobbiDisplay
-              size="sm"
-              showFallback
-              transparent
-              showAccessories={false}
-              className="size-full"
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-island-ink">
-              {blobbiName || "No Blobbi selected"}
-            </p>
-            <p className="truncate text-xs text-island-ink-soft">Switch Blobbi</p>
-          </div>
-          <PawPrint className="size-4 shrink-0 text-island-purple" />
-        </Row>
-      </div>
-
-      <Divider />
-
-      {/* Appearance — currently just the theme, and the row is deliberately
-          shaped like a settings row with a value rather than a button, so an
-          Appearance section with more in it can grow here without moving. */}
-      <SectionLabel>
-        <span className="inline-flex items-center gap-1.5">
-          <Palette className="size-3.5" />
-          Appearance
-        </span>
-      </SectionLabel>
-      <Row onClick={onOpenThemePicker}>
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-island-wood/30 bg-island-cream-2 text-base"
-        >
-          {theme.emoji}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-island-ink">Theme</p>
-          <p className="truncate text-xs text-island-ink-soft">{theme.name}</p>
-        </div>
-      </Row>
-
-      <Divider />
-
-      {/* Network / settings */}
-      <div className={cn(variant === "modal" && "flex items-center gap-2")}>
-        <SectionLabel>
-          <span className="inline-flex items-center gap-1.5">
-            <Settings className="size-3.5" />
-            Network
-          </span>
-        </SectionLabel>
-        <div className={cn("px-1 pb-1", variant === "modal" && "min-w-0 flex-1 pb-0")}>
-          <RelaySelector className="w-full" />
-        </div>
-      </div>
-
-      <Divider />
-
-      {/* Account actions — in the modal these flow in a 2-col grid to stay compact. */}
-      {otherUsers.length > 0 && <SectionLabel>Switch account</SectionLabel>}
-      <div className={cn(variant === "modal" && "grid grid-cols-2 gap-1")}>
-        {otherUsers.map((user) => (
-          <Row key={user.id} onClick={() => onSetLogin(user.id)}>
-            <Avatar className="size-8 border border-island-wood/30">
-              <AvatarImage src={user.metadata.picture} alt={getDisplayName(user)} />
-              <AvatarFallback className="bg-island-sand text-island-wood-dark blobbi-text">
-                {getDisplayName(user)?.charAt(0) || <UserIcon />}
+    // The modal presentation is used in mobile landscape and desktop
+    // fullscreen, where vertical space is the scarce resource — so its sections
+    // flow into two columns once there is width for them. The dropdown is
+    // 288px wide and always stacks. This is the only place `variant` still
+    // changes anything; the rows themselves are now identical in both.
+    <div
+      className={cn(
+        "space-y-3",
+        variant === "modal" && "sm:grid sm:grid-cols-2 sm:items-start sm:gap-3 sm:space-y-0",
+      )}
+    >
+      <SettingsSection>
+        {/* Identity is a row too, just not an actionable one — the trailing
+            slot carries the state instead of a control. */}
+        <SettingsRow
+          icon={
+            <Avatar className="size-9">
+              <AvatarImage src={currentUser.metadata.picture} alt="" />
+              <AvatarFallback className="bg-island-sand text-island-wood-dark">
+                {getDisplayName(currentUser).charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-island-ink">
-              {getDisplayName(user)}
+          }
+          label={getDisplayName(currentUser)}
+          description="Signed in"
+        />
+
+        <SettingsRow
+          icon={
+            <span className="flex size-9 items-center justify-center overflow-hidden rounded-full">
+              <CurrentBlobbiDisplay
+                size="sm"
+                showFallback
+                transparent
+                showAccessories={false}
+                className="size-full"
+              />
             </span>
-          </Row>
+          }
+          label={blobbiName || "No Blobbi selected"}
+          description="Switch Blobbi"
+          onClick={onSwitchBlobbi}
+          trailing={<PawPrint aria-hidden className="size-4 text-island-purple" />}
+        />
+      </SettingsSection>
+
+      <SettingsSection label="Appearance" icon={<Palette />}>
+        <SettingsRow
+          icon={theme.emoji}
+          label="Theme"
+          description={theme.name}
+          onClick={onOpenThemePicker}
+        />
+      </SettingsSection>
+
+      <SettingsSection label="Network" icon={<Settings />}>
+        <div className="px-1.5 py-1">
+          <RelaySelector className="w-full" />
+        </div>
+      </SettingsSection>
+
+      <SettingsSection label="Account" icon={<UserIcon />}>
+        {otherUsers.map((user) => (
+          <SettingsRow
+            key={user.id}
+            icon={
+              <Avatar className="size-9">
+                <AvatarImage src={user.metadata.picture} alt="" />
+                <AvatarFallback className="bg-island-sand text-island-wood-dark">
+                  {getDisplayName(user)?.charAt(0) || <UserIcon className="size-4" />}
+                </AvatarFallback>
+              </Avatar>
+            }
+            label={getDisplayName(user)}
+            description="Switch to this account"
+            onClick={() => onSetLogin(user.id)}
+          />
         ))}
 
-        <Row onClick={onAddAccount}>
-          <UserPlus className="size-4 shrink-0 text-island-purple" />
-          <span className="text-sm text-island-ink">Add another account</span>
-        </Row>
-        <Row onClick={() => onRemoveLogin(currentUser.id)} className="text-red-500 hover:bg-red-50">
-          <LogOut className="size-4 shrink-0" />
-          <span className="text-sm">Log out</span>
-        </Row>
-      </div>
+        <SettingsRow
+          icon={<UserPlus />}
+          label="Add another account"
+          onClick={onAddAccount}
+        />
+        <SettingsRow
+          icon={<LogOut />}
+          label="Log out"
+          tone="danger"
+          onClick={() => onRemoveLogin(currentUser.id)}
+        />
+      </SettingsSection>
 
       {/* Developer tools — dev/local builds only; never rendered in production. */}
       {/* `import.meta.env.DEV` is a literal `false` in a build, so the whole
@@ -383,46 +343,38 @@ function AccountMenuBody({
           cannot fold across the boundary — keeping both means the runtime gate is
           unchanged AND the markup stops shipping. */}
       {import.meta.env.DEV && isDevMode && (
-        <>
-          <Divider />
-          <SectionLabel>
-            <span className="inline-flex items-center gap-1.5">
-              <Wrench className="size-3.5" />
-              Developer tools
-            </span>
-          </SectionLabel>
-          {/* Plain label+switch row (no onClick row wrapper, so toggling never
-              closes the menu and the control stays put while on or off). */}
-          <label className="flex w-full items-center gap-2 rounded-md p-2 text-left cursor-pointer hover:bg-island-cream-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-island-ink">Debug overlays</p>
-              <p className="truncate text-xs text-island-ink-soft">
-                Boundaries, blockers &amp; position
-              </p>
-            </div>
-            <Switch
-              checked={showDebugOverlays}
-              onCheckedChange={setShowDebugOverlays}
-              aria-label="Toggle debug overlays"
-            />
-          </label>
+        <SettingsSection label="Developer tools" icon={<Wrench />}>
+          {/* The Switch is the control, so the ROW is not a button — otherwise
+              the toggle would be an interactive element inside another one, and
+              tapping the row would fight the toggle. */}
+          <SettingsRow
+            icon={<Bug />}
+            label="Debug overlays"
+            description="Boundaries, blockers & position"
+            trailing={
+              <Switch
+                checked={showDebugOverlays}
+                onCheckedChange={setShowDebugOverlays}
+                aria-label="Toggle debug overlays"
+              />
+            }
+          />
           {/* Opens the day/night sky harness inside the live world, so the sky is
               judged against the real Blobbi and real remote players rather than a
               replica scene. See src/components/sky/IslandSkyDevPanel.tsx. */}
-          <label className="flex w-full items-center gap-2 rounded-md p-2 text-left cursor-pointer hover:bg-island-cream-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-island-ink">Sky controls</p>
-              <p className="truncate text-xs text-island-ink-soft">
-                Scrub the island day &amp; night
-              </p>
-            </div>
-            <Switch
-              checked={skyDev.panelOpen}
-              onCheckedChange={(open) => setIslandSkyDev({ panelOpen: open })}
-              aria-label="Toggle sky dev controls"
-            />
-          </label>
-        </>
+          <SettingsRow
+            icon={<CloudSun />}
+            label="Sky controls"
+            description="Scrub the island day & night"
+            trailing={
+              <Switch
+                checked={skyDev.panelOpen}
+                onCheckedChange={(open) => setIslandSkyDev({ panelOpen: open })}
+                aria-label="Toggle sky dev controls"
+              />
+            }
+          />
+        </SettingsSection>
       )}
     </div>
   );
