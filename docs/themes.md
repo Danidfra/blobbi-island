@@ -190,29 +190,68 @@ For **each theme** (`cozy-day`, `lantern-night`):
 
 Viewports: desktop, mobile portrait, mobile landscape.
 
-## 8. Not yet themed
+## 8. Migration status
 
-These still carry stock Tailwind colours and will not follow a theme. They are
-the migration backlog, roughly in priority order:
+Every surface a player meets on the common journey, and where it stands.
 
-| Surface | Note |
-| --- | --- |
-| `ShareModal`, `SocialShareModal` | the largest remaining offenders |
-| `NostrHubModal` | |
-| `BlobbiInfoModal` | |
-| `ConsumeItemModal` | |
-| `PhotoBoothModal` | |
-| `beach/TreasureHuntGame`, `TreasureHuntResults` | beach work is active — coordinate |
-| `MiningGame` | mine work is active — coordinate |
-| `arcade/ArcadeRewardPanel` | partially migrated |
-| `tools/game-items/*` | internal authoring tools |
-| `pages/Dev*` | dev-only harnesses — last |
+| Surface | Presentation | Status |
+| --- | --- | --- |
+| Account menu | dropdown / modal | **migrated** — SettingsRow + SettingsSection |
+| Theme picker | dialog | **migrated** |
+| Blobbi care sheet (`BlobbiInfoModal`) | in-frame `full` | **migrated** |
+| Island map | in-frame `full` | **migrated** |
+| Shop (`FoodShopModal`) | in-frame `lg` | **migrated** — ItemTile, sticky basket |
+| Item bag | in-frame `md` | **migrated** — ItemTile |
+| Use item (`ConsumeItemModal`) | in-frame `sm` | **migrated** |
+| Arcade Pass | in-frame `sm` | **migrated** |
+| Elevator | in-frame `sm` | **migrated** — SettingsRow floors |
+| No Pass | in-frame `sm` | **migrated** |
+| Social share | in-frame `lg` | **migrated** |
+| Mine instructions / results / low energy | in-frame `sm` | **migrated** |
+| Mine in-cave status | HUD panel | **migrated** |
+| Beach treasure hunt HUD, docks, pause | in-place | **tokens only** — surface is correct, mechanism deliberately local |
+| Beach exit confirmation | in-place `alertdialog` | **tokens only** — see below |
+| Arcade reward panel, prize counter, prize cards | in-place | **tokens only** |
+| Equipment / Effects panels | inside the care sheet | **partial** — inherit the frame, own chrome still stock |
+| Chest | hand-rolled overlay | **deferred** |
+| Refrigerator | hand-rolled overlay | **deferred** |
+| Photo booth | hand-rolled overlay | **deferred** |
+| Share (photo) | hand-rolled overlay | **deferred** |
+| Nostr hub | dialog | **deferred** |
+| Theater controls / session / stage | in-place | **deferred** |
+| Hatching ceremony | full-bleed cinematic | **intentionally excluded** |
+| Game item tools, `/dev/*` harnesses | various | **last** — internal surfaces |
 
-The ten hand-rolled `absolute inset-0` overlays (`FoodShopModal`, `ChestModal`,
-`RefrigeratorModal`, `MapModal`, `PhotoBoothModal`, `BlobbiInfoModal`,
-`ShareModal`, `SocialShareModal`, `TreasureHuntGame`, `TreasureHuntModalView`)
-are a separate concern from colour: they have no focus trap, no restore-focus
-and no mobile presentation. Migrating them needs `BlobbiModal` to grow an
-`inFrame` presentation first, since several are deliberately stage-level rather
-than viewport-level, and `RefrigeratorModal` measures its own container to
-position food on shelves.
+### Why the deferrals are deferrals and not laziness
+
+- **Refrigerator** measures its own container and positions food on shelf
+  coordinates derived from that measurement. Changing its container changes
+  where the food sits.
+- **Chest** and **Photo booth** are the same shape of problem: draggable items
+  and a capture stage positioned against a measured box.
+- **Beach exit confirmation** layers over a *paused* minigame inside the
+  treasure field's own stacking context. Portalling it out would put it behind
+  the field. It wears the shared surface language without the shared mechanism,
+  which is the right trade.
+- **Hatching ceremony** is a deliberate full-bleed cinematic — a dark space with
+  its own light. It is art direction, not an unmigrated panel.
+- **Theater** is a coherent feature area of its own and deserves one batch, not
+  a partial pass.
+
+A `dark:` variant anywhere in the codebase is dead: `.dark` carries no colour.
+They are harmless and are being removed as each surface is migrated rather than
+in a sweep of their own.
+
+### Colours that are legitimately not tokens
+
+Three, and only three:
+
+1. **Artwork** — sprite palettes, effect gradients, canvas draw calls. Pictures
+   of things in the world, not UI surfaces.
+2. **Brand marks** — Facebook blue, Reddit orange in the share sheet. Facts
+   about other companies, not decisions this system gets to make.
+3. **Dev-harness overlays** — the treasure hunt's black-and-white diagnostic
+   markers. Deliberately harsh, never shown to a player.
+
+Everything else that still holds a stock Tailwind colour is a migration
+backlog item, not an exception.

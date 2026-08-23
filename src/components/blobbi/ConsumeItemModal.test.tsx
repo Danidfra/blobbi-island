@@ -22,9 +22,12 @@ describe('ConsumeItemModal', () => {
       </TestApp>
     );
 
-    expect(await screen.findByRole('heading', { name: 'Use Item' })).toBeInTheDocument();
-    expect(screen.getByText('Apple')).toBeInTheDocument();
-    expect(screen.getByText('Max: 5')).toBeInTheDocument();
+    // The window names itself; the item's own name and how many the player has
+    // are content. "Max: 5" became "You have 5", which is the same fact said
+    // the way a player would say it.
+    expect(await screen.findByRole('dialog')).toHaveAccessibleName('Use item');
+    expect(screen.getByRole('heading', { name: 'Apple' })).toBeInTheDocument();
+    expect(screen.getByText('You have 5')).toBeInTheDocument();
   });
 
   it('allows quantity adjustment within limits', async () => {

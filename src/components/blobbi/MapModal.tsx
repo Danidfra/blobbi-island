@@ -349,9 +349,9 @@ export function MapModal({ className }: MapModalProps) {
               <div
                 className={cn(
                   "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
-                  "bg-black/90 text-white text-xs font-medium px-3 py-1.5 rounded-full",
-                  "transition-all duration-300 ease-out",
-                  "whitespace-nowrap border border-white/20",
+                  "rounded-full bg-island-ink/90 px-3 py-1.5 text-xs font-medium text-island-cream",
+                  "transition-all duration-300 ease-out motion-reduce:transition-none",
+                  "whitespace-nowrap border border-island-cream/20",
                   "backdrop-blur-sm",
                   hoveredLocation === location.id
                     ? "opacity-100 translate-y-0"

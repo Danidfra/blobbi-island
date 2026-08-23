@@ -78,7 +78,7 @@ describe('ItemBagModal reachable UI', () => {
     fireEvent.click(vitaminsButton);
 
     // The shared ConsumeItemModal header appears.
-    expect(await screen.findByRole('heading', { name: 'Use Item' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();
   });
 
   it('shows an empty state when the bag has no items', async () => {
@@ -150,8 +150,10 @@ describe('ItemBagModal currency section', () => {
     expect(label.closest('button')).toBeNull();
 
     fireEvent.click(label);
-    // The shared consume modal must not open.
-    expect(screen.queryByRole('heading', { name: 'Use Item' })).toBeNull();
+    // The shared consume modal must not open. Queried as a DIALOG rather than
+    // as a heading: the window's title is its accessible name now, and a
+    // heading query would pass whether or not the window opened.
+    expect(screen.queryByRole('dialog', { name: 'Use item' })).toBeNull();
     expect(mockUseUseItem().mutate).not.toHaveBeenCalled();
   });
 
@@ -179,7 +181,7 @@ describe('ItemBagModal currency section', () => {
     expect(apple.closest('button')).not.toBeNull();
     fireEvent.click(apple);
     expect(
-      await screen.findByRole('heading', { name: 'Use Item' }),
+      await screen.findByRole('dialog', { name: 'Use item' }),
     ).toBeInTheDocument();
   });
 

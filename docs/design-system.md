@@ -168,25 +168,104 @@ island's **two overlay contexts**, which is a distinction worth internalising:
   `inFrame` supplies **positioning only**. A dialog moved into the frame must
   bring its own padding and side margins — use `inFrameDialogPanelClass`.
 
-### BlobbiModal
+### BlobbiModal — the game window
 
-The cozy game modal, composed over `Dialog` and vaul's `Drawer`. Use it for a
-new modal surface. It gives you, for free:
+**Every modal surface should be this.** It is composed over `Dialog` and vaul's
+`Drawer`, so it inherits focus trap, ESC, backdrop dismiss, scroll lock,
+restore-focus and `aria-modal`, and adds the frame, header, footer and
+responsive presentation on top.
 
-- a centered card on desktop and a **bottom sheet on a phone** — not the desktop
-  card shrunk until it fits;
-- the plaque title treatment;
-- focus trap, ESC, backdrop dismiss, scroll lock, restore-focus, `aria-modal`;
-- safe-area padding and `dvh` sizing on the sheet.
+#### Presentation taxonomy
 
-`title` is required and typed `string`, because an unnamed dialog is announced
-as nothing at all. Use `hideTitle` when the content carries its own heading —
-the accessible name survives.
+The one decision a caller has to make is **what the surface belongs to**:
+
+| `presentation` | For | Portals into | Positioned |
+| --- | --- | --- | --- |
+| `dialog` | app chrome — settings, auth, sharing | fullscreen root | `fixed`, viewport-centred |
+| `in-frame` | a thing in the world — a shop, a chest, a cabinet | stage host | `absolute`, inside the game window |
+| `sheet` | the mobile form of either | fullscreen root | `fixed`, bottom-anchored |
+| `auto` *(default)* | picks `sheet` on a phone, `dialog` otherwise | | |
+
+`in-frame` is the one worth internalising. On desktop it dims **only the game
+window** — the wood frame, the shell header and footer, and the page behind
+them all stay visible. A shop counter that blacks out the browser reads as "the
+website opened a dialog", not as "you are standing at a counter".
+
+Two automatic behaviours you do not have to handle:
+
+- an `in-frame` caller gets the **sheet** on a phone, because a stage a few
+  hundred pixels wide cannot host a centred window either;
+- `in-frame` with no stage host (a unit test rendering a room on its own) falls
+  back to `dialog`, rather than positioning `absolute` against the document.
+
+#### Sizes
+
+`sm` `md` `lg` `xl` `full`. Viewport sizes are `min(vw, rem)` so they cap AND
+keep side margins; in-frame sizes are percentages of the **stage**. Never
+reintroduce a `max-w-*` — the primitive clears the base one deliberately.
+
+#### Anatomy
+
+```
+┌─────────────────────────────────────────┐
+│ (icon)  Title                       [×] │  header band, cream-2, hairline
+│         description                     │
+├─────────────────────────────────────────┤
+│  body — scrolls, never overflows        │  p-4 sm:p-5
+├─────────────────────────────────────────┤
+│                    [Cancel]  [Primary]  │  footer band, hairline
+└─────────────────────────────────────────┘     stacks primary-first on mobile
+```
+
+- `title` is required and typed `string`, because an unnamed dialog is announced
+  as nothing at all, and markup in a title stops it working as an accessible
+  name. Put anything richer in `children`.
+- `description` is a **sibling** of the title, never nested in it — nesting
+  makes a screen reader read the whole paragraph on every focus entry.
+- `icon` is always decorative.
+- `hideHeader` keeps the accessible name and the close button for a window whose
+  own content carries the heading (an artwork board, a full-bleed minigame).
+- `bodyClassName` hands the body's padding and scroller back, for a surface that
+  owns its own layout (the care sheet's two columns, the map's measured box).
+
+#### When NOT to use it
+
+A surface that measures its own container and positions children against that
+measurement, or that layers over a live minigame inside its own stacking
+context. Forcing those through a portal breaks them. See
+[`themes.md` §8](./themes.md#8-migration-status) for which ones and why.
+
+### SettingsRow / SettingsSection
+
+`[icon] Label / description ……… [value, control, or chevron]`
+
+The island's list row, for any list where the player picks one of several
+labelled things — settings, the account menu, the elevator's floors.
+
+- Pass `onClick`/`href` → renders a real `<button>`/`<a>` with hover, press and
+  focus states.
+- Omit it → renders a `<div>`. **Use this when the trailing slot holds a
+  control**, so a Switch is never nested inside a button.
+- `selected` emits `aria-current`, so the state is not colour-only.
+- Rows are 44px minimum by construction.
+
+### ItemTile / PriceTag / QuantityBadge
+
+The economy vocabulary. A tile renders `selected`, `disabled` and `affordable`
+as **appearance only** — it never decides them, which is what makes it safe to
+drop into economy surfaces without going near economy rules. Its artwork is
+`aria-hidden` (the name is right beneath it), and an unaffordable price says
+"not enough" in text, not just in red.
 
 ### StateCard
 
-Loading / empty / error, with the mascot. Reach for it before writing another
-bare spinner or "No items found".
+`loading` / `pending` / `empty` / `error`, with the mascot. Reach for it before
+writing another bare spinner or "No items found" paragraph.
+
+`pending` is for work the player cannot influence — a Coin settlement
+confirming, a mine session closing. It suppresses the action button, because
+offering a Retry for something already reconciling is worse than offering
+nothing. `compact` drops the mascot for use inside a panel.
 
 ---
 
@@ -211,7 +290,10 @@ bare spinner or "No items found".
 
 - **Desktop** — the framed island: wood frame, header, footer, page behind.
 - **Narrow mobile** — modals become bottom sheets. `BlobbiModal` does this by
-  viewport; force it with `variant`.
+  viewport; force it with `presentation`. The sheet is safe-area padded, sized
+  in `dvh` (a mobile toolbar appears mid-scroll and `vh` measures the tallest
+  state, so the footer would hide exactly when reached for), and stacks its
+  footer primary-action-first, nearest the thumb.
 - **Landscape mobile** — vertical space is the scarce resource. The account menu
   becomes a compact centered modal rather than a dropdown for exactly this
   reason; follow that pattern rather than letting a tall surface scroll.

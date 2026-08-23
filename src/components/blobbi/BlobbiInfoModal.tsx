@@ -632,7 +632,7 @@ export function BlobbiInfoModal({
                           <span className="text-xs text-muted-foreground">
                             {blobbiData.careStreak} days
                           </span>
-                          <Star className="h-3 w-3 text-yellow-500" />
+                          <Star aria-hidden className="size-3 text-island-warn" />
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
