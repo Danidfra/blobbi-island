@@ -52,6 +52,7 @@ import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS, CHAT_RATE_LIMIT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
 
 type PlayerLike = {
   pubkey: string;
@@ -334,6 +335,9 @@ export function MultiplayerLayer({
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
+  // Capability set for the current experience. A frozen singleton, so it is
+  // referentially stable and safe to use directly as a hook dependency.
+  const safetyPolicy = useIslandSafetyPolicy();
   const { currentLocation } = useLocation();
   const { isPositionBlocked } = useMovementBlocker();
   const { showDebugOverlays } = useDebugOverlays();
@@ -706,6 +710,11 @@ export function MultiplayerLayer({
   const publishChatMessage = useCallback(async (text: string): Promise<void> => {
     if (!user || !text.trim()) return;
 
+    // The send half of the chat capability. Refusing here rather than only in
+    // the composer means no other caller of `chatFunctionRef` can route around
+    // it. Under Standard this admits everything, unconditionally.
+    if (!admitChatMessage(safetyPolicy, { text: text.trim() }).admitted) return;
+
     const now = Date.now();
 
     // Rate limiting
@@ -753,7 +762,7 @@ export function MultiplayerLayer({
       console.error('Failed to publish chat message:', error);
       throw error;
     }
-  }, [user, currentLocation, currentBlobbiD, islandId, publishEvent, showBubble, sessionId]);
+  }, [user, currentLocation, currentBlobbiD, islandId, publishEvent, showBubble, sessionId, safetyPolicy]);
 
   // ============================================================================
   // Chat Event Processing
@@ -807,6 +816,14 @@ export function MultiplayerLayer({
       const sanitizedText = content.text.replace(/<[^>]*>/g, '').trim();
       if (!sanitizedText) return;
 
+      // THE data boundary for foreign chat. The sender is not necessarily this
+      // build — a Standard player in the same room, or any third-party client,
+      // can emit a well-formed kind 21201 — so this is the check that decides
+      // what a Family player is shown, and it happens here rather than in a
+      // component because nothing may reach the presentation layer unadmitted.
+      // Under Standard it admits everything, so nothing below changes.
+      if (!admitChatMessage(safetyPolicy, { text: sanitizedText }).admitted) return;
+
       // Dedupe by session ID
       const dTag = event.tags.find(([name]) => name === 'd')?.[1];
       if (!dTag) return;
@@ -822,7 +839,7 @@ export function MultiplayerLayer({
     } catch (error) {
       console.error('Error processing chat event:', error);
     }
-  }, [user?.pubkey, currentLocation, queueBubble, isDuplicate]);
+  }, [user?.pubkey, currentLocation, queueBubble, isDuplicate, safetyPolicy]);
 
   // ============================================================================
   // Chat Subscription

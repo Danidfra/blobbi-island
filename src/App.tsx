@@ -17,6 +17,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
+import { IslandSafetyProvider } from '@/safety';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -50,6 +51,10 @@ const presetRelays = [
 export function App() {
   return (
     <ErrorBoundary>
+      {/* The safety policy sits above everything that can render content another
+          player authored. No profile is passed, so it resolves to the build's
+          active profile — Standard — deterministically. */}
+      <IslandSafetyProvider>
       <UnheadProvider head={head}>
         <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
           <QueryClientProvider client={queryClient}>
@@ -81,6 +86,7 @@ export function App() {
           </QueryClientProvider>
         </AppProvider>
       </UnheadProvider>
+      </IslandSafetyProvider>
     </ErrorBoundary>
   );
 }

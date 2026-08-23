@@ -47,6 +47,56 @@ export default tseslint.config(
     },
   },
   {
+    // The safety layer's one architectural rule, enforced where it is cheapest
+    // to notice: OUTSIDE `src/safety/`, code consumes CAPABILITIES.
+    //
+    // `useIslandSafetyPolicy`, the `IslandSafetyPolicy` type, the provider and
+    // the pure admission helpers are all freely importable — those are the
+    // capability surface. What is restricted is everything that would let a call
+    // site ask *who the player is* instead: the profile union, the two policy
+    // literals and the resolver. A feature that reaches for those has found a
+    // missing capability, and the fix is to add one rather than to branch on a
+    // profile. See `src/safety/island-safety-policy.ts` and
+    // `docs/family-safety-policy.md`.
+    //
+    // Tests are exempt: asserting the matrix is exactly what they are for.
+    // `src/safety/boundaries.test.ts` is the belt to this rule's braces — it
+    // checks the real import graph, so a relative-path import cannot slip past.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/safety/**", "src/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/safety",
+              importNames: [
+                "ExperienceProfile",
+                "EXPERIENCE_PROFILES",
+                "isExperienceProfile",
+                "STANDARD_POLICY",
+                "FAMILY_POLICY",
+                "resolveSafetyPolicy",
+                "ACTIVE_EXPERIENCE_PROFILE",
+                "IslandSafetyPolicyContext",
+              ],
+              message:
+                "Consume a capability, not a profile: use useIslandSafetyPolicy() and read the capability you need (adding one to IslandSafetyPolicy if it is missing).",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@/safety/*", "**/safety/*"],
+              message:
+                "Import the safety layer through its barrel ('@/safety'), which is where the capability surface is defined.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.html"],
     plugins: {
       "@html-eslint": htmlEslint,
