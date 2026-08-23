@@ -190,6 +190,60 @@ For **each theme** (`cozy-day`, `lantern-night`):
 
 Viewports: desktop, mobile portrait, mobile landscape.
 
+## 7b. Manual validation — the visible-redesign pass
+
+Automated tests cover the token contract, contrast in both themes, the window
+primitive's presentations, the row and tile semantics, and every migrated
+surface's behaviour. What they cannot cover is whether it LOOKS like one
+product. Nothing below was verified visually in the session that wrote it — no
+browser was available — so it is a checklist, not a report.
+
+Walk it in **both themes** × **desktop / mobile portrait / mobile landscape**.
+
+### The window frame — check once, then spot-check
+
+Open any migrated surface and confirm the shared frame reads correctly:
+header band separated by a hairline, icon chip, title, muted subtitle, one
+close button, body scrolling under a fixed header, footer band with the
+primary action on the right (desktop) or on top (mobile).
+
+### Surfaces
+
+| Open | Expect |
+| --- | --- |
+| Account menu (desktop) | dropdown; four labelled sections; rows press and show a focus ring |
+| Account menu (landscape) | centred modal; sections in **two columns**; scrolls |
+| Appearance → Theme | both cards; the miniature island matches the theme it names; check mark on the active one |
+| Blobbi care sheet | in-frame; named after the Blobbi; segmented tabs; stat panels; stage art not clipped |
+| → Inventory tab | equipment grid; placement overlay still aligns to the Blobbi |
+| → Effects tab | preview applies to the stage and reverts on leaving the tab |
+| Island map | fills the game window; markers aligned; hover label readable; description names your location |
+| Shop | tiles in a grid; stepper 36px; **basket stays visible while scrolling**; total turns danger when unaffordable |
+| Item bag | tiles; count badge one colour; currency section not clickable |
+| Use item | stepper 44px; totals lead; "Per item" folds open |
+| Arcade Pass / No Pass / Elevator | in-frame cards with a rim of game visible around them |
+| Mine → instructions / results / low energy | in-frame; results show swings, finds with prices, settlement block |
+| Mine → in cave | status panel is a HUD card, readable over the cave art |
+| Beach → treasure hunt | HUD chips, tool docks, pause overlay; exit confirmation matches the window surface |
+| Arcade → after a game | reward chip colour matches its state; prize cards |
+
+### Cross-cutting
+
+- **Loading / empty / error / pending** — open the bag with a slow relay, and
+  with nothing in it.
+- **Focus** — Tab through one window end to end. The ring must be visible on
+  every stop, including on the cream header band and on the sand plaque.
+- **Reduced motion** — turn the OS setting on. No spinner spin, no card lift,
+  no tile hop; every state still *changes*, just without the tween.
+- **Mobile portrait** — every migrated window is a bottom sheet. Check the
+  footer clears the home indicator and nothing scrolls sideways.
+- **Long labels** — a long Blobbi name must truncate, not wrap the header.
+
+### Known to look unmigrated
+
+Chest, refrigerator, photo booth, share, Nostr hub, theater, and the arcade
+minigame playfields. See the table below.
+
 ## 8. Migration status
 
 Every surface a player meets on the common journey, and where it stands.

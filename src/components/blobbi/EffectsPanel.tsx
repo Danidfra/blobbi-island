@@ -278,7 +278,7 @@ function EffectCard({
               </Badge>
             )}
             {previewing && (
-              <Badge className="bg-purple-500 text-[9px] text-white">
+              <Badge className="bg-island-purple text-[9px] text-island-cream">
                 previewing
               </Badge>
             )}

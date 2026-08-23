@@ -133,7 +133,7 @@ export function FoodItem({
 
       {/* Quantity badge */}
       {quantity !== undefined && quantity > 1 && (
-        <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold shadow-lg">
+        <div className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-island-cream bg-island-purple text-xs font-bold text-island-cream shadow-cozy-soft">
           {quantity > 99 ? '99+' : quantity}
         </div>
       )}

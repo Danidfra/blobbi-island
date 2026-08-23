@@ -88,7 +88,7 @@ const DialogContent = React.forwardRef<
         // 1rem + 0.25rem = 1.25rem from the content edge. Hence `right-5`.
         // `transition` replaces the pair `transition-opacity` (outer) and
         // `transition-colors` (inner) now that one element owns both.
-        <DialogPrimitive.Close className="absolute right-5 top-4 rounded-full p-1.5 text-white bg-black/50 opacity-70 ring-offset-background transition hover:opacity-100 hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <DialogPrimitive.Close className="absolute right-5 top-4 rounded-full border border-island-wood/30 bg-island-cream p-1.5 text-island-ink-soft shadow-cozy-soft ring-offset-background transition hover:text-island-ink hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
           <X className="size-5" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
