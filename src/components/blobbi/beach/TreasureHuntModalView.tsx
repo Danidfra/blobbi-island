@@ -468,23 +468,28 @@ export function TreasureHuntModalView({
 
           {confirmExit && (
             <div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 p-4"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-island-ink/50 p-4 backdrop-blur-[2px]"
               role="alertdialog"
               aria-labelledby="treasure-exit-heading"
               data-treasure-confirm-exit
             >
-              <div className="max-w-sm space-y-3 rounded-2xl bg-white p-5 text-center shadow-xl">
+              {/* Deliberately NOT a BlobbiModal: this is an `alertdialog`
+                  layered over a live minigame that is only paused, and routing
+                  it through a portal would take it out of the treasure field's
+                  own stacking context. The surface language is shared; the
+                  mechanism stays local. */}
+              <div className="max-w-sm space-y-3 rounded-frame border-2 border-island-wood/35 bg-island-cream p-5 text-center shadow-cozy-frame">
                 <h3 id="treasure-exit-heading" className="text-lg font-bold text-island-ink">
                   Leave the hunt?
                 </h3>
-                <p className="text-sm text-island-ink">
+                <p className="text-sm text-island-ink-soft">
                   The current hunt will be abandoned
                   {rewardOpIdRef.current ? ' and no Coins will be earned for it' : ''}.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="soft"
                     className="rounded-full min-h-[44px]"
                     onClick={() => {
                       setConfirmExit(false);

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { PriceTag } from '@/components/ui/item-tile';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
@@ -225,22 +226,41 @@ export function MiningGame() {
   };
 
   const renderInstructions = () => (
-    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Mining Game</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p>Objective: Click the wall to find gems and earn coins.</p>
-          <p>Energy: Each click consumes 10 energy. The game ends if energy is 20 or less.</p>
-          <p>Click the wall to start mining!</p>
-          {startError && (
-            <p className="text-sm text-red-600" role="alert">{startError}</p>
-          )}
-          <Button onClick={startGame} disabled={!currentPet}>Start</Button>
-        </CardContent>
-      </Card>
-    </div>
+    <BlobbiModal
+      open
+      onOpenChange={() => {}}
+      presentation="in-frame"
+      size="sm"
+      title="The Mine"
+      description="Swing at the wall, find gems, earn coins."
+      icon="⛏️"
+      hideClose
+      footer={
+        <Button variant="accent" onClick={startGame} disabled={!currentPet} className="min-h-[44px]">
+          Start
+        </Button>
+      }
+    >
+      <dl className="space-y-2 text-sm">
+        <div className="flex gap-2 rounded-xl border border-island-wood/20 bg-island-cream-2/60 p-3">
+          <dt aria-hidden className="text-lg leading-none">⛏️</dt>
+          <dd className="text-island-ink">
+            Objective: Click the wall to find gems and earn coins.
+          </dd>
+        </div>
+        <div className="flex gap-2 rounded-xl border border-island-wood/20 bg-island-cream-2/60 p-3">
+          <dt aria-hidden className="text-lg leading-none">⚡</dt>
+          <dd className="text-island-ink">
+            Energy: Each click consumes 10 energy. The game ends if energy is 20 or less.
+          </dd>
+        </div>
+      </dl>
+      {startError && (
+        <p className="mt-3 text-sm text-island-danger" role="alert">
+          {startError}
+        </p>
+      )}
+    </BlobbiModal>
   );
 
   const renderResults = () => {
@@ -256,81 +276,126 @@ export function MiningGame() {
     const finalEnergyStatus = currentEnergy <= 20 ? 'Your Blobbi is exhausted!' : 'Mining session complete!';
 
     return (
-      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Mining Results</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{finalEnergyStatus}</p>
-            <p>Total Clicks: {clicks}</p>
-            <div className="space-y-1">
-              <p className="font-semibold">Items Found:</p>
-              <ul className="text-sm space-y-1">
-                {Object.entries(results).map(([gem, count]) => (
-                  <li key={gem} className="flex justify-between">
-                    <span>{gem.replace('.png', '').replace('-', ' ')}: {count}</span>
-                    <span>{GEM_VALUES[gem as Gem] * count} coins</span>
-                  </li>
-                ))}
-              </ul>
+      <BlobbiModal
+        open
+        onOpenChange={() => {}}
+        presentation="in-frame"
+        size="sm"
+        title="Mining results"
+        description={finalEnergyStatus}
+        icon="💎"
+        hideClose
+        footer={
+          <Button
+            variant="accent"
+            onClick={() => setCurrentLocation('mine')}
+            className="min-h-[44px]"
+          >
+            Exit cave
+          </Button>
+        }
+      >
+        <div className="space-y-3">
+          <div className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-island-ink-soft">Swings</span>
+              <span className="font-bold tabular-nums text-island-ink">{clicks}</span>
             </div>
-            <div className="border-t pt-2 space-y-1" data-mine-reward-status={reward.phase}>
-              <p className="font-bold">Total Coins Earned: {totalCoins}</p>
+          </div>
+
+          <div className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3">
+            <h4 className="mb-1.5 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+              Items found
+            </h4>
+            <ul className="space-y-1 text-sm">
+              {Object.entries(results).map(([gem, count]) => (
+                <li key={gem} className="flex items-baseline justify-between gap-2">
+                  <span className="capitalize text-island-ink">
+                    {gem.replace('.png', '').replace('-', ' ')} × {count}
+                  </span>
+                  <PriceTag amount={GEM_VALUES[gem as Gem] * count} />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/*
+            `data-mine-reward-status` is the settlement state, read by
+            MiningGame.session.test.tsx. The phase values and every line of
+            copy below are unchanged — this pass restyles the panel and does
+            not touch what settlement says or when.
+          */}
+          <div
+            className="rounded-panel border border-island-wood/25 bg-island-cream p-3"
+            data-mine-reward-status={reward.phase}
+          >
+            <div className="flex items-baseline justify-between gap-2 border-b border-island-wood/20 pb-2">
+              <span className="text-sm font-bold text-island-ink">Total earned</span>
+              <PriceTag amount={totalCoins} className="text-base" />
+            </div>
+            <div className="pt-2">
               {reward.phase === 'settling' && (
-                <p className="text-sm text-muted-foreground">Saving your mining trip…</p>
+                <p className="text-sm text-island-ink-soft">Saving your mining trip…</p>
               )}
               {reward.phase === 'settled' && (
-                <p className="text-sm text-green-600">
+                <p className="text-sm font-semibold text-island-grass-dark">
                   {reward.amount} Blobbi Coins added to your balance!
                 </p>
               )}
               {reward.phase === 'energy-pending' && (
-                <p className="text-sm text-amber-600">
+                <p className="text-sm text-island-ink-soft">
                   Reward saved — we're still finishing your Blobbi's energy
                   update. It's safe to leave.
                 </p>
               )}
               {reward.phase === 'coin-pending' && (
-                <p className="text-sm text-amber-600">
+                <p className="text-sm text-island-ink-soft">
                   We're still confirming your mining trip. It's safe to leave —
                   nothing will be lost or counted twice.
                 </p>
               )}
               {reward.phase === 'unresolved' && (
-                <p className="text-sm text-amber-600">
+                <p className="text-sm text-island-ink-soft">
                   We couldn't finish saving your mining trip just yet. It's safe
                   to leave — we'll pick it up next time.
                 </p>
               )}
             </div>
-            <Button onClick={() => setCurrentLocation('mine')} className="w-full">Exit Cave</Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </BlobbiModal>
     );
   };
 
   const renderLowEnergy = () => (
-    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Not Enough Energy!</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p>Your Blobbi doesn't have enough energy to mine!</p>
-          <p className="text-sm text-muted-foreground">
-            Current Energy: {currentEnergy}/100
-          </p>
-          <p className="text-sm text-muted-foreground">
-            You need more than 20 energy to start mining.
-          </p>
-          <Button onClick={() => setCurrentLocation('mine')} className="w-full">
-            Exit Cave
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <BlobbiModal
+      open
+      onOpenChange={() => {}}
+      presentation="in-frame"
+      size="sm"
+      title="Not enough energy"
+      description="Your Blobbi is too tired to swing a pickaxe."
+      icon="😴"
+      hideClose
+      footer={
+        <Button
+          variant="accent"
+          onClick={() => setCurrentLocation('mine')}
+          className="min-h-[44px]"
+        >
+          Exit cave
+        </Button>
+      }
+    >
+      <div className="space-y-2 rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3">
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="text-island-ink-soft">Current energy</span>
+          <span className="font-bold tabular-nums text-island-ink">{currentEnergy}/100</span>
+        </div>
+        <Progress value={currentEnergy} />
+        <p className="text-xs text-island-ink-soft">Mining needs more than 20 energy.</p>
+      </div>
+    </BlobbiModal>
   );
 
   return (
@@ -362,10 +427,20 @@ export function MiningGame() {
         ))}
       </div>
 
-      <div className="absolute top-4 left-4 w-32 space-y-2 text-white">
-        <p>Energy: {currentEnergy}/100</p>
+      {/*
+        The in-cave status panel. It used to be bare `text-white` directly over
+        the cave artwork, which is unreadable against a lit gem and follows no
+        theme; it is now a HUD card on the panel surface.
+      */}
+      <div className="absolute left-3 top-3 w-40 space-y-2 rounded-panel border border-island-wood/25 bg-island-cream/90 p-2.5 shadow-cozy-raised backdrop-blur-sm">
+        <div className="flex items-baseline justify-between text-xs">
+          <span className="font-semibold text-island-ink-soft">Energy</span>
+          <span className="font-bold tabular-nums text-island-ink">{currentEnergy}/100</span>
+        </div>
         <Progress value={currentEnergy} />
-        <Button onClick={() => finishMining()}>Finish Mining</Button>
+        <Button variant="soft" size="sm" onClick={() => finishMining()} className="w-full">
+          Finish mining
+        </Button>
       </div>
     </div>
   );

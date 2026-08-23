@@ -84,9 +84,9 @@ const PHASE_CHIP: Readonly<
 > = {
   idle: { label: 'Ready to collect', className: 'bg-island-purple/15 text-island-purple' },
   claiming: { label: 'Saving…', className: 'bg-island-wood/15 text-island-wood-dark' },
-  confirmed: { label: 'In your inventory', className: 'bg-emerald-500/15 text-emerald-800' },
-  failed: { label: 'Not saved', className: 'bg-rose-500/15 text-rose-800' },
-  unresolved: { label: 'Not confirmed', className: 'bg-amber-500/15 text-amber-800' },
+  confirmed: { label: 'In your inventory', className: 'bg-island-grass/20 text-island-grass-dark' },
+  failed: { label: 'Not saved', className: 'bg-island-danger/15 text-island-danger' },
+  unresolved: { label: 'Not confirmed', className: 'bg-island-warn/20 text-island-wood-dark' },
   checking: { label: 'Checking…', className: 'bg-island-wood/15 text-island-wood-dark' },
   'already-claimed': { label: 'Already collected', className: 'bg-island-wood/15 text-island-wood-dark' },
 };
@@ -254,9 +254,9 @@ export function ArcadeRewardPanel({
           {...{ [`data-${prefix}-reward-message`]: true }}
           className={cn(
             'rounded-lg px-2 py-1.5 text-xs',
-            confirmed && 'bg-emerald-500/10 text-emerald-800',
-            reward.phase === 'failed' && 'bg-rose-500/10 text-rose-800',
-            unresolved && 'bg-amber-500/10 text-amber-800',
+            confirmed && 'bg-island-grass/15 text-island-grass-dark',
+            reward.phase === 'failed' && 'bg-island-danger/10 text-island-danger',
+            unresolved && 'bg-island-warn/15 text-island-wood-dark',
             already && 'bg-island-wood/10',
             (busy || checking) && 'bg-island-wood/10',
           )}

@@ -330,7 +330,7 @@ export function TreasureHuntGame({
       >
         {rewarded && (
           <span
-            className="rounded-full bg-amber-100/90 px-2 py-0.5 text-xs font-semibold text-island-ink"
+            className="rounded-full bg-island-warn/25 px-2 py-0.5 text-xs font-semibold text-island-wood-dark"
             data-treasure-rewarded-chip
           >
             Rewarded Hunt
@@ -356,7 +356,7 @@ export function TreasureHuntGame({
           onClick={onToggleMuted}
           aria-pressed={muted}
           aria-label={muted ? 'Unmute detector sounds' : 'Mute detector sounds'}
-          className="min-h-[44px] min-w-[44px] rounded-full border border-island-wood/30 bg-white/60 px-3 text-base"
+          className="min-h-[44px] min-w-[44px] rounded-full border border-island-wood/30 bg-island-cream/80 px-3 text-base"
           data-treasure-mute
         >
           <span aria-hidden>{muted ? '🔇' : '🔊'}</span>
@@ -373,7 +373,7 @@ export function TreasureHuntGame({
             aria-label={`Shovel — ${round.shovelUsesRemaining} uses remaining`}
             disabled={!interactive && round.status === 'finished'}
             className={cn(
-              'flex min-h-[56px] min-w-[56px] flex-col items-center justify-center rounded-2xl border-2 bg-white/70 p-1.5',
+              'flex min-h-[56px] min-w-[56px] flex-col items-center justify-center rounded-2xl border-2 bg-island-cream/85 p-1.5',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-island-ink',
               !reducedMotion && 'transition-all duration-200',
               tool === 'shovel'
@@ -488,7 +488,7 @@ export function TreasureHuntGame({
                 <div
                   aria-hidden
                   className={cn(
-                    'absolute rounded-full bg-amber-300 blur-md transition-opacity',
+                    'absolute rounded-full bg-island-warn blur-md transition-opacity',
                     !reducedMotion && signal.intensity > 0 && 'animate-pulse'
                   )}
                   style={{
@@ -620,10 +620,10 @@ export function TreasureHuntGame({
 
           {paused && (
             <div
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/35"
+              className="absolute inset-0 z-10 flex items-center justify-center bg-island-ink/40"
               data-treasure-paused
             >
-              <p className="rounded-full bg-white/90 px-5 py-2 text-base font-bold text-island-ink">
+              <p className="rounded-full bg-island-cream/95 px-5 py-2 text-base font-bold text-island-ink shadow-cozy-soft">
                 Paused
               </p>
             </div>
@@ -639,7 +639,7 @@ export function TreasureHuntGame({
             aria-label="Metal detector"
             disabled={!interactive && round.status === 'finished'}
             className={cn(
-              'flex min-h-[56px] min-w-[56px] flex-col items-center justify-center rounded-2xl border-2 bg-white/70 p-1.5',
+              'flex min-h-[56px] min-w-[56px] flex-col items-center justify-center rounded-2xl border-2 bg-island-cream/85 p-1.5',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-island-ink',
               !reducedMotion && 'transition-all duration-200',
               tool === 'detector'

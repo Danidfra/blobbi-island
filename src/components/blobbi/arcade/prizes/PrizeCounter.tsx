@@ -81,7 +81,7 @@ export function PrizeCounter({ catalog }: PrizeCounterProps) {
             data-prize-counter-balance={
               balance !== null ? 'ready' : balanceError ? 'unavailable' : 'loading'
             }
-            className="flex items-center gap-1 rounded-full bg-white/80 px-3 py-1.5 shadow"
+            className="flex items-center gap-1 rounded-full bg-island-cream/85 px-3 py-1.5 shadow"
             aria-label={
               balance !== null
                 ? `You have ${balance} Arcade Ticket${balance === 1 ? '' : 's'}`

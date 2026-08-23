@@ -45,7 +45,7 @@ export function PrizeCard({ resolved, selected, onSelect }: PrizeCardProps) {
         selected
           ? 'border-island-purple bg-island-purple/10'
           : 'border-island-wood/25 bg-island-cream/70 hover:border-island-purple/50',
-        prize.featured && !selected && 'border-amber-400/60 bg-amber-50/60',
+        prize.featured && !selected && 'border-island-warn/50 bg-island-warn/10',
       )}
     >
       {/* The artwork shelf. Emoji is the guaranteed fallback. */}
@@ -97,7 +97,7 @@ export function PrizeCard({ resolved, selected, onSelect }: PrizeCardProps) {
           {resolved.owned && (
             <span
               data-prize-owned-quantity={resolved.ownedQuantity}
-              className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800"
+              className="rounded-full bg-island-grass/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-island-grass-dark"
             >
               Owned{resolved.ownedQuantity > 1 ? ` ×${resolved.ownedQuantity}` : ''}
             </span>

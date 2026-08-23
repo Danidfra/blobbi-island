@@ -56,7 +56,7 @@ export function TreasureHuntIntro({
 
       {mode === 'rewarded' && (
         <div
-          className="max-w-md space-y-1 rounded-2xl bg-amber-100/80 px-4 py-2 text-sm text-island-ink"
+          className="max-w-md space-y-1 rounded-2xl bg-island-warn/20 px-4 py-2 text-sm text-island-ink"
           data-treasure-reward-notice
         >
           <p className="font-semibold">
@@ -72,7 +72,7 @@ export function TreasureHuntIntro({
 
       {mode === 'practice-limit' && (
         <div
-          className="max-w-md space-y-1 rounded-2xl bg-amber-100/80 px-4 py-2 text-sm text-island-ink"
+          className="max-w-md space-y-1 rounded-2xl bg-island-warn/20 px-4 py-2 text-sm text-island-ink"
           data-treasure-practice-notice
         >
           <p className="font-semibold">Practice Hunt</p>
@@ -83,7 +83,7 @@ export function TreasureHuntIntro({
 
       {mode === 'practice-only' && (
         <p
-          className="max-w-md rounded-2xl bg-amber-100/80 px-4 py-2 text-sm text-island-ink"
+          className="max-w-md rounded-2xl bg-island-warn/20 px-4 py-2 text-sm text-island-ink"
           data-treasure-practice-notice
         >
           <span className="font-semibold">Practice Hunt</span> — explore the
@@ -93,7 +93,7 @@ export function TreasureHuntIntro({
 
       {pendingOps.length > 0 && (
         <div
-          className="max-w-md space-y-2 rounded-2xl border border-island-wood/30 bg-white/70 px-4 py-2 text-sm text-island-ink"
+          className="max-w-md space-y-2 rounded-2xl border border-island-wood/30 bg-island-cream/85 px-4 py-2 text-sm text-island-ink"
           data-treasure-pending-recovery
           role="status"
         >
@@ -123,7 +123,7 @@ export function TreasureHuntIntro({
 
       {showHowTo && (
         <div
-          className="max-w-md rounded-2xl border border-island-wood/30 bg-white/60 p-4 text-sm text-island-ink"
+          className="max-w-md rounded-2xl border border-island-wood/30 bg-island-cream/80 p-4 text-sm text-island-ink"
           data-treasure-howto
         >
           <p>Move the detector across the sand and watch the signal.</p>
