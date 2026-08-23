@@ -374,10 +374,12 @@ export function BlobbiModal({
           // classes supply for a padded card: a 1rem gap between children,
           // which would separate the header band from the body, and a `max-w-lg`
           // cap that would silently clamp the `lg`, `xl` and `full` sizes to
-          // 32rem. tailwind-merge resolves the rest (display, padding, radius,
-          // background, shadow) in favour of the frame.
-          "gap-0 rounded-frame p-0 sm:rounded-frame",
-          inFrame ? IN_FRAME_WIDTH[size] : cn("max-w-none", DIALOG_WIDTH[size]),
+          // 32rem. Both branches need the cap removed — the in-frame widths are
+          // percentages of the stage, and a 32rem ceiling on top of them is a
+          // second, invisible width rule. tailwind-merge resolves the rest
+          // (display, padding, radius, background, shadow) in favour of the frame.
+          "max-w-none gap-0 rounded-frame p-0 sm:rounded-frame",
+          inFrame ? IN_FRAME_WIDTH[size] : DIALOG_WIDTH[size],
           inFrame ? "max-h-[calc(100%-1.5rem)]" : "max-h-[90dvh]",
           className,
         )}

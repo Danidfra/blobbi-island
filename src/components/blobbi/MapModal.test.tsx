@@ -13,29 +13,37 @@ vi.mock('@/hooks/useLocation', () => ({
   }),
 }));
 
-describe('MapModal', () => {
-  it('renders modal when open', async () => {
-    render(
-      <TestApp>
-        <div className="relative w-full h-screen">
-          <MapModal />
-        </div>
-      </TestApp>
-    );
+function renderMap() {
+  return render(
+    <TestApp>
+      <div className="relative w-full h-screen">
+        <MapModal />
+      </div>
+    </TestApp>,
+  );
+}
 
-    expect(await screen.findByText(/Click on a location to travel there/)).toBeInTheDocument();
-    expect(screen.getByText(/home/)).toBeInTheDocument();
+describe('MapModal', () => {
+  it('renders as a named dialog when open', async () => {
+    renderMap();
+    expect(await screen.findByRole('dialog')).toHaveAccessibleName('Island Map');
   });
 
-  it('renders close button', async () => {
-    render(
-      <TestApp>
-        <div className="relative w-full h-screen">
-          <MapModal />
-        </div>
-      </TestApp>
-    );
+  it('tells the player what to do and where they are', async () => {
+    // The instruction used to be a floating white pill over the map. It is now
+    // the window's description, which also makes it the dialog's accessible
+    // description rather than a stray paragraph.
+    renderMap();
 
-    expect(await screen.findByLabelText('Close Map')).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveAccessibleDescription(/Tap a place to travel there/);
+    expect(dialog).toHaveAccessibleDescription(/Home/);
+  });
+
+  it('offers the shared close control', async () => {
+    // The bespoke `bg-white/80 … hover:text-red-500` button is gone; the window
+    // frame supplies one close affordance for every surface.
+    renderMap();
+    expect(await screen.findByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 });

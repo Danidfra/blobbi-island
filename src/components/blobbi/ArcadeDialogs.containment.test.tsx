@@ -1,18 +1,32 @@
 /**
  * The arcade's card dialogs are contained AND comfortable.
  *
- * Containing them was right and is not in question here; what this file pins is
- * the regression containment caused. `DialogContent`'s two branches are not
- * symmetrical: the body-portal branch carries `p-6`, and the `inFrame` branch
- * carries positioning and animation only. So moving a dialog into the stage
- * silently dropped all of its padding, and its `w-full` started resolving
- * against the game stage instead of the viewport — dropping its side margins
- * too. `blobbi-card-xl` supplies background, border, radius and shadow, and no
- * padding at all, so nothing put it back.
+ * ## What this file has always been for
  *
- * The result was three cards flush against the stage edges with their titles
- * flush against the card edge. These tests assert the four properties that fix
- * it, for every dialog that took that path.
+ * Containing these dialogs inside the game stage was right and is not in
+ * question. What this file pins is the regression containment CAUSED: a dialog
+ * moved into the stage lost its padding and its side margins, because the
+ * mechanism that supplied them only existed on the viewport path. Three cards
+ * ended up flush against the stage edges with their titles flush against the
+ * card edge.
+ *
+ * ## Why the assertions changed shape
+ *
+ * The mechanism did. These three dialogs are now built on `BlobbiModal`
+ * (`presentation="in-frame"`), which owns the frame, the sizing, the padding
+ * and the scroll container, so the old `inFrameDialogPanelClass` literals it
+ * used to assert — `p-5`, `w-[calc(100%-2rem)]`, `max-w-md` — no longer appear
+ * and asserting them would only pin a dead implementation.
+ *
+ * Every PROPERTY they protected is still asserted here, and now measured
+ * against the rendered result rather than against a class string: contained in
+ * the stage, margins on every side, capped height with internal scrolling,
+ * padding around the content, nothing sized in viewport units, 44px targets,
+ * an accessible name, a focus trap and Escape.
+ *
+ * Asserting the property rather than the spelling is also what lets the
+ * primitive keep evolving without three feature tests having to be rewritten
+ * each time.
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -21,7 +35,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ArcadePassModal } from './ArcadePassModal';
 import { ElevatorModal } from './ElevatorModal';
 import { NoPassModal } from './NoPassModal';
-import { inFrameDialogPanelClass } from '@/components/ui/dialog';
 import { StageOverlayContext } from '@/contexts/StageOverlayContext';
 
 // ---------------------------------------------------------------------------
@@ -59,7 +72,7 @@ vi.mock('@/hooks/useLocation', () => ({
   }),
 }));
 
-/** Every dialog that was migrated onto the stage overlay host. */
+/** Every dialog that lives inside the game stage. */
 const DIALOGS = [
   { name: 'ArcadePassModal', Component: ArcadePassModal, title: /arcade pass/i },
   { name: 'ElevatorModal', Component: ElevatorModal, title: /select floor/i },
@@ -85,6 +98,10 @@ function WithStage({ children }: { children: React.ReactNode }) {
 
 const host = () => document.querySelector('[data-stage-overlay-host]') as HTMLElement | null;
 const panel = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
+
+/** The scrolling content box inside the window frame. */
+const scroller = () =>
+  panel()!.querySelector<HTMLElement>('.overflow-y-auto') as HTMLElement | null;
 
 beforeEach(() => {
   setCurrentLocation.mockClear();
@@ -112,33 +129,44 @@ describe.each(DIALOGS)('$name', ({ Component, title }) => {
     expect(host()!.contains(outside)).toBe(false);
   });
 
-  it('keeps a safe margin from the stage edges and a normal card width', () => {
+  it('is positioned against the stage rather than the viewport', () => {
+    // `absolute`, so the window covers the game window and the wood frame,
+    // shell header and page behind it all stay visible. `fixed` here is the
+    // bug that makes an in-world surface read as a website dialog.
+    renderInStage();
+    const tokens = panel()!.className.split(/\s+/);
+    expect(tokens).toContain('absolute');
+    expect(tokens).not.toContain('fixed');
+  });
+
+  it('keeps a margin from the stage edges rather than going flush', () => {
+    // The original failure. Width is a percentage of the STAGE with room left
+    // on both sides, and capped so a wide stage gets a card, not a banner.
     renderInStage();
     const className = panel()!.className;
-    // Percent of the STAGE — 1rem of visible room on each side at every size —
-    // and capped so a wide stage gets a card rather than a banner.
-    expect(className).toContain('w-[calc(100%-2rem)]');
-    expect(className).toContain('max-w-md');
-    // The base `w-full` must have been replaced, not merely accompanied: two
-    // widths in one class list is how a card ends up flush again.
-    expect(className.split(/\s+/)).not.toContain('w-full');
-    expect(className.split(/\s+/)).not.toContain('max-w-lg');
+    expect(className).toMatch(/w-\[min\(\d+%,[^\]]+\)]/);
+    // The base `w-full` / `max-w-lg` must be REPLACED, not merely accompanied:
+    // two widths in one class list is how a card ends up flush again.
+    const tokens = className.split(/\s+/);
+    expect(tokens).not.toContain('w-full');
+    expect(tokens).not.toContain('max-w-lg');
   });
 
   it('never grows past the stage, and scrolls inside itself instead', () => {
     renderInStage();
-    const className = panel()!.className;
-    expect(className).toContain('max-h-[calc(100%-2rem)]');
-    expect(className).toContain('overflow-y-auto');
+    expect(panel()!.className).toContain('max-h-[calc(100%-1.5rem)]');
+    // The scroller is the body, not the frame: the header and footer bands
+    // must stay put while the content moves under them.
+    expect(scroller()).not.toBeNull();
+    expect(scroller()!.className).toContain('overflow-y-auto');
   });
 
-  it('declares explicit internal padding, so nothing touches the card border', () => {
+  it('puts padding around its content, so nothing touches the border', () => {
+    // The other half of the original failure. It now lives on the body rather
+    // than the frame — the frame is `p-0` on purpose, because the header and
+    // footer bands run edge to edge.
     renderInStage();
-    const tokens = panel()!.className.split(/\s+/);
-    // `inFrame` gives none and `blobbi-card-xl` gives none, so the dialog must.
-    expect(tokens).toContain('p-5');
-    expect(tokens).toContain('sm:p-6');
-    expect(tokens.some((t) => /^p-0$/.test(t))).toBe(false);
+    expect(scroller()!.className).toMatch(/(^|\s)p-4(\s|$)/);
   });
 
   it('is sized against the stage, never against the browser viewport', () => {
@@ -163,13 +191,21 @@ describe.each(DIALOGS)('$name', ({ Component, title }) => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('gives every control a 44 px touch target', () => {
-    // The shared `Button` defaults to `h-10` — 40 px — so a dialog that wants a
-    // 44 px target has to say so. Asserted as the literal class rather than as
-    // "declares some height", which `h-10` would have satisfied while being
-    // four pixels short.
+  it('exempts itself from world click-to-move', () => {
+    // Read by src/lib/world-input.ts. Without it, a click inside the window
+    // can cancel a pending walk-to-interact.
     renderInStage();
-    const buttons = screen.getAllByRole('button');
+    expect(panel()).toHaveAttribute('data-block-move');
+  });
+
+  it('gives every control a 44 px touch target', () => {
+    // The shared `Button` defaults to `h-10` — 40 px — so a dialog that wants
+    // a 44 px target has to say so. The window's own close button is exempt:
+    // it is 36 px by design and is not the surface's primary action.
+    renderInStage();
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((b) => b.textContent?.trim() !== 'Close');
     expect(buttons.length).toBeGreaterThan(0);
     for (const button of buttons) {
       expect(button.className.split(/\s+/), button.textContent ?? '').toContain('min-h-[44px]');
@@ -177,28 +213,39 @@ describe.each(DIALOGS)('$name', ({ Component, title }) => {
   });
 });
 
-describe('the shared in-frame panel rule', () => {
-  it('is one definition, used by every contained card dialog', () => {
-    // Three dialogs that must not drift apart. A copy-pasted class list is how
-    // one of them quietly goes back to being flush.
-    for (const token of ['w-[calc(100%-2rem)]', 'max-w-md', 'max-h-[calc(100%-2rem)]', 'p-5']) {
-      expect(inFrameDialogPanelClass).toContain(token);
-    }
-  });
+describe('the shared window frame', () => {
+  it('is one primitive, so the three cannot drift apart', () => {
+    // Three dialogs that must keep looking like the same object. Rendering
+    // each and comparing the frame's classes is the check a copy-pasted class
+    // list used to need — and it catches a divergence the old string
+    // comparison could not, because it compares what actually rendered.
+    const frames = DIALOGS.map(({ Component }) => {
+      const { unmount } = render(
+        <WithStage>
+          <Component isOpen onClose={() => {}} />
+        </WithStage>,
+      );
+      // Only the size-dependent width may differ between surfaces.
+      const className = panel()!
+        .className.split(/\s+/)
+        .filter((t) => !t.startsWith('w-['))
+        .sort()
+        .join(' ');
+      unmount();
+      return className;
+    });
 
-  it('measures nothing in viewport units', () => {
-    for (const forbidden of ['vw', 'vh', 'dvh', 'svh']) {
-      expect(inFrameDialogPanelClass, forbidden).not.toContain(forbidden);
-    }
+    expect(new Set(frames).size).toBe(1);
   });
 });
 
 describe('without a stage', () => {
-  it('falls back to the Radix default rather than failing', () => {
-    // A unit test rendering a modal on its own has no host; `undefined` means
-    // `document.body`, so nothing has to guard.
+  it('falls back to a viewport dialog rather than failing', () => {
+    // A unit test rendering a modal on its own has no host. `absolute` with no
+    // host would resolve against the document and land somewhere arbitrary, so
+    // the primitive switches to the viewport presentation instead.
     render(<NoPassModal isOpen onClose={() => {}} />);
-    expect(panel()).not.toBeNull();
-    expect(host()).toBeNull();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog').className).toContain('fixed');
   });
 });

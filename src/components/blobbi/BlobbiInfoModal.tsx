@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import { X, Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2 } from 'lucide-react';
+import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint } from 'lucide-react';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { EquipmentPanel } from './EquipmentPanel';
@@ -16,7 +18,6 @@ import { buildEquipEntry } from '@/placement/render-model';
 import { isEffectPlacementSlot, type PlacementSlot } from '@/placement/policy';
 import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/react';
 import { useToast } from '@/hooks/useToast';
-import { Button } from '@/components/ui/button';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
@@ -26,6 +27,23 @@ import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { dbg } from '@/lib/debug';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
+
+/**
+ * Three repeated treatments, named once.
+ *
+ * They are module constants rather than components because each is a plain
+ * class string applied to markup that already exists — extracting components
+ * would restructure the modal, and this pass is deliberately presentation-only.
+ */
+const TAB_TRIGGER =
+  'rounded-lg text-xs font-semibold text-island-ink-soft transition-colors ' +
+  'data-[state=active]:bg-island-cream data-[state=active]:text-island-ink ' +
+  'data-[state=active]:shadow-cozy-soft sm:text-sm';
+
+const PANEL = 'rounded-xl border border-island-wood/20 bg-island-cream p-2 shadow-cozy-soft';
+
+const SECTION_HEAD =
+  'text-center text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 
@@ -280,39 +298,34 @@ export function BlobbiInfoModal({
   }, [isOpen, readOnly, previewKey]);
 
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && isOpen) {
-      onClose();
-    }
-  };
+  /*
+    The hand-rolled `document`-level Escape listener that used to live here is
+    gone. BlobbiModal's underlying Radix dialog handles Escape itself, and it
+    does so correctly for a STACK: only the topmost dialog closes. The global
+    listener fired regardless of what was on top, so opening the consume-item
+    dialog from the inventory tab and pressing Escape dismissed this modal out
+    from under it.
+  */
 
   if (!isOpen) return null;
 
   if (!blobbiData) {
     return (
-      <div
-        className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        onClick={handleBackdropClick}
+      <BlobbiModal
+        open
+        onOpenChange={(next) => !next && onClose()}
+        presentation="in-frame"
+        size="sm"
+        title="Blobbi"
+        icon={<PawPrint />}
       >
-        <div className="w-[85%] max-w-md p-4 rounded-2xl blobbi-card-xl blobbi-gradient-container">
-          <div className="text-center p-4">
-            <p className="blobbi-text-muted">No Blobbi selected</p>
-            <Button onClick={onClose} className="mt-3 blobbi-button" size="sm">
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
+        <StateCard
+          kind="empty"
+          compact
+          title="No Blobbi selected"
+          message="Pick a companion from the account menu to see their care sheet."
+        />
+      </BlobbiModal>
     );
   }
 
@@ -331,44 +344,29 @@ export function BlobbiInfoModal({
   });
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-      onPointerDown={(e) => e.stopPropagation()}
-      data-overlay
-      data-block-move
+    <BlobbiModal
+      open
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="full"
+      title={readOnly ? blobbiData.name : (currentPet ? getBlobbiDisplayName(currentPet) : 'Blobbi')}
+      description={
+        readOnly
+          ? `${blobbiData.stage} • Generation ${blobbiData.generation}`
+          : 'Stats, equipment and effects'
+      }
+      icon={<PawPrint />}
+      /* The body owns its own two-column layout and its inner panes scroll
+         independently, so the frame's default padding and single scroller are
+         handed back. */
+      bodyClassName="flex min-h-0 flex-row gap-4 overflow-hidden p-3 lg:gap-6 lg:p-5"
     >
-      <div
-        ref={modalRef}
-        className="w-[85%] max-h-[85%] p-0 blobbi-card-xl overflow-hidden flex flex-col theme-transition relative shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        data-block-move
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <div className="p-3 border-b border-purple-200/60 dark:border-purple-800/60 flex-shrink-0">
-          <h2 className="text-lg font-bold text-center text-gray-800 dark:text-gray-200">
-            {readOnly ? `Blobbi Info – ${blobbiData.name}` : 'Blobbi Info'}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="absolute top-2 right-2 h-8 w-8 rounded-full"
-            data-block-move
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="flex flex-row gap-4 lg:gap-6 flex-1 min-h-0 p-3 lg:p-5">
+      <div ref={modalRef} className="contents">
           {/* Stage - Left side with background and static Blobbi */}
           <div className="flex flex-col w-1/3 lg:w-2/5 flex-shrink-0 min-h-0">
             {/* Stage Container - constrained to available height on mobile landscape */}
             <div
-              className="relative aspect-square w-full max-h-full mx-auto overflow-hidden rounded-lg border border-purple-200/60 dark:border-purple-800/60"
+              className="relative mx-auto aspect-square max-h-full w-full overflow-hidden rounded-panel border border-island-wood/25 bg-island-cream-2 shadow-cozy-inset"
             >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
@@ -384,7 +382,7 @@ export function BlobbiInfoModal({
 
               {/* Optional: Subtle vignette for text contrast */}
               <div className="absolute inset-0 z-5 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-island-ink/10 to-transparent" />
               </div>
 
               {/* Static Blobbi - z-10, centered horizontally, anchored to bottom */}
@@ -453,11 +451,16 @@ export function BlobbiInfoModal({
               className="flex flex-col h-full"
             >
               {/* Tabs Header - sticky at top */}
-              <div className="sticky top-0 backdrop-blur-sm z-20 rounded-xl border-purple-200/60 dark:border-purple-800/60">
-                <TabsList className={`grid ${readOnly ? 'grid-cols-1' : 'grid-cols-3'} bg-purple-100/60 dark:bg-purple-900/60`}>
+              <div className="sticky top-0 z-20">
+                <TabsList
+                  className={cn(
+                    'grid h-auto w-full gap-1 rounded-xl border border-island-wood/20 bg-island-cream-2 p-1',
+                    readOnly ? 'grid-cols-1' : 'grid-cols-3',
+                  )}
+                >
                   <TabsTrigger
                     value="primary"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
+                    className={TAB_TRIGGER}
                   >
                     <Heart className="h-4 w-4 mr-2" />
                     Primary
@@ -465,7 +468,7 @@ export function BlobbiInfoModal({
                   {!readOnly && (
                     <TabsTrigger
                       value="inventory"
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
+                      className={TAB_TRIGGER}
                     >
                       <Package className="h-4 w-4 mr-2" />
                       Inventory
@@ -475,7 +478,7 @@ export function BlobbiInfoModal({
                     <TabsTrigger
                       value="effects"
                       data-testid="effects-tab"
-                      className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-700 dark:data-[state=active]:text-purple-300"
+                      className={TAB_TRIGGER}
                     >
                       <Wand2 className="h-4 w-4 mr-2" />
                       Effects
@@ -485,16 +488,13 @@ export function BlobbiInfoModal({
               </div>
 
               {/* Tab Content - scrollable panels */}
-              <div className="flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-transparent hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+              <div className="min-h-0 h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-track-transparent">
                 {/* Primary Tab Content */}
                 <TabsContent value="primary" className="mt-2 space-y-4 pb-2 focus-visible:outline-none">
                   {/* Basic Info */}
-                  <div className="blobbi-card rounded-lg p-3">
+                  <div className={cn(PANEL, 'p-3')}>
                     <div className="space-y-1.5">
-                      <h2 className="text-xl font-bold blobbi-text">
-                        {readOnly ? blobbiData.name : (currentPet ? getBlobbiDisplayName(currentPet) : 'Blobbi')}
-                      </h2>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline" className="blobbi-badge text-xs">
                           {blobbiData.stage} • Gen {blobbiData.generation}
                         </Badge>
@@ -507,8 +507,8 @@ export function BlobbiInfoModal({
 
                   {/* Coins Display - Only show in non-read-only mode */}
                   {!readOnly && (
-                    <div className="blobbi-card rounded-lg p-2" data-coin-hud>
-                      <div className="flex items-center justify-center gap-2 text-sm font-bold text-purple-700 dark:text-purple-300">
+                    <div className={PANEL} data-coin-hud>
+                      <div className="flex items-center justify-center gap-2 text-sm font-bold text-island-purple">
                         {economyEntry.phase === 'checking' ||
                         economyEntry.phase === 'applying' ||
                         coinBalance.isLoading ? (
@@ -538,7 +538,7 @@ export function BlobbiInfoModal({
 
                   {/* Urgent Care Alert */}
                   {careStatus?.urgentNeed && careStatus.urgency !== 'none' && (
-                    <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-700 dark:text-red-300">
+                    <div role="status" className="rounded-xl border border-island-danger/30 bg-island-danger/10 p-2.5 text-xs text-island-danger">
                       <div className="flex items-center gap-2">
                         <span className="text-base">⚠️</span>
                         <span className="font-medium">Urgent:</span>
@@ -548,11 +548,9 @@ export function BlobbiInfoModal({
                   )}
 
                   {/* Stats Grid */}
-                  <div className="blobbi-card rounded-lg">
-                    <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                      <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
-                        Core Stats
-                      </h3>
+                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
+                    <div className="border-b border-island-wood/20 px-3 py-2">
+                      <h3 className={SECTION_HEAD}>Core Stats</h3>
                     </div>
                     <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <StatDisplay
@@ -585,9 +583,9 @@ export function BlobbiInfoModal({
                   </div>
 
                   {/* Care Status */}
-                  <div className="blobbi-card rounded-lg">
-                    <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                      <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
+                    <div className="p-2 border-b border-island-wood/20">
+                      <h3 className="text-sm font-bold text-center text-island-purple">
                         Care Status
                       </h3>
                     </div>
@@ -615,9 +613,9 @@ export function BlobbiInfoModal({
                   </div>
 
                   {/* Progress */}
-                  <div className="blobbi-card rounded-lg">
-                    <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                      <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
+                    <div className="p-2 border-b border-island-wood/20">
+                      <h3 className="text-sm font-bold text-center text-island-purple">
                         Progress
                       </h3>
                     </div>
@@ -648,9 +646,9 @@ export function BlobbiInfoModal({
 
                   {/* Special Traits */}
                   {(blobbiData.personality || blobbiData.trait || blobbiData.mood) && (
-                    <div className="blobbi-card rounded-lg">
-                      <div className="p-2 border-b border-purple-200/60 dark:border-purple-800/60">
-                        <h3 className="text-sm font-bold text-center text-purple-700 dark:text-purple-300">
+                    <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
+                      <div className="p-2 border-b border-island-wood/20">
+                        <h3 className="text-sm font-bold text-center text-island-purple">
                           Personality
                         </h3>
                       </div>
@@ -730,9 +728,7 @@ export function BlobbiInfoModal({
               </div>
             </Tabs>
           </div>
-        </div>
       </div>
-
-    </div>
+    </BlobbiModal>
   );
 }

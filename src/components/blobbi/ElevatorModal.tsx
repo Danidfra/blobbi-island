@@ -1,14 +1,6 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  inFrameDialogPanelClass,
-} from '@/components/ui/dialog';
-import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { SettingsRow } from '@/components/ui/settings-row';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
 
@@ -50,8 +42,7 @@ const floors: FloorOption[] = [
 ];
 
 export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
-  const stageOverlayHost = useStageOverlayHost();
-  const { setCurrentLocation } = useLocation();
+  const { setCurrentLocation, currentLocation } = useLocation();
 
   const handleFloorSelect = (location: string) => {
     setCurrentLocation(location as LocationId);
@@ -59,59 +50,33 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        /* Contained in the game window, like every other arcade surface, and
-           sized against the STAGE rather than the viewport — see
-           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
-           dialog moved here must bring its own padding and side margins. */
-        container={stageOverlayHost}
-        inFrame
-        className={cn(
-          inFrameDialogPanelClass,
-          'blobbi-card-xl rounded-panel border-2 border-island-wood/30',
-        )}
-      >
-        <DialogHeader>
-          <DialogTitle className="mb-4 text-center text-2xl font-bold text-island-ink">
-            🛗 Select Floor
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <p className="mb-6 text-center text-island-ink-soft">
-            Choose which floor you want to visit:
-          </p>
-
-          <div className="space-y-3">
-            {floors.map((floor) => (
-              <Button
-                key={floor.id}
-                onClick={() => handleFloorSelect(floor.location)}
-                variant="soft"
-                className="flex h-auto min-h-[44px] w-full justify-between rounded-xl p-4 text-left"
-              >
-                <div className="flex items-center space-x-4">
-                  <div aria-hidden className="text-2xl">{floor.icon}</div>
-                  <div className="flex-1">
-                    <div className="font-bold text-island-ink">{floor.name}</div>
-                    <div className="text-sm text-island-ink-soft">{floor.description}</div>
-                  </div>
-                </div>
-                <div aria-hidden className="text-island-purple">→</div>
-              </Button>
-            ))}
-          </div>
-
-          <Button
-            variant="soft"
-            onClick={onClose}
-            className="mt-4 min-h-[44px] w-full justify-center rounded-xl"
-          >
-            Cancel
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <BlobbiModal
+      open={isOpen}
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="sm"
+      title="Select floor"
+      description="Choose which floor you want to visit."
+      icon="🛗"
+    >
+      {/*
+        A plain list of actions, deliberately not a radiogroup: choosing a
+        floor travels and closes the window, so nothing here stays "selected"
+        for the player to change their mind about. The floor they are already
+        on is marked with `aria-current` by the row itself.
+      */}
+      <div className="space-y-1">
+        {floors.map((floor) => (
+          <SettingsRow
+            key={floor.id}
+            icon={floor.icon}
+            label={floor.name}
+            description={floor.description}
+            selected={floor.location === currentLocation}
+            onClick={() => handleFloorSelect(floor.location)}
+          />
+        ))}
+      </div>
+    </BlobbiModal>
   );
 }

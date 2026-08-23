@@ -45,7 +45,14 @@ export interface SettingsRowProps {
   href?: string;
   /** Renders in the danger colour — log out, delete, leave. */
   tone?: "default" | "danger";
-  /** Marks the row as the current choice in a list. */
+  /**
+   * Marks the row as the current one in a list.
+   *
+   * Emits `aria-current` as well as the tint, so the state is not colour-only.
+   * `aria-current` is the right attribute for a list of destinations or
+   * settings; a list of mutually exclusive OPTIONS wants radio semantics
+   * instead, which is a different control — see ThemePicker.
+   */
   selected?: boolean;
   disabled?: boolean;
   className?: string;
@@ -136,7 +143,7 @@ export function SettingsRow({
 
   if (href && !disabled) {
     return (
-      <a href={href} className={shell}>
+      <a href={href} aria-current={selected || undefined} className={shell}>
         {content}
       </a>
     );
@@ -144,7 +151,13 @@ export function SettingsRow({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} disabled={disabled} className={shell}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-current={selected || undefined}
+        className={shell}
+      >
         {content}
       </button>
     );
