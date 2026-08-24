@@ -330,6 +330,31 @@ export function BlobbiInfoModal({
       onOpenChange={(next) => !next && onClose()}
       presentation="in-frame"
       size="full"
+      /*
+        THE WINDOW HAS AN IDEAL SIZE, AND STOPS THERE.
+
+        `size="full"` alone is `calc(100% - 1.5rem)` of the stage host in BOTH
+        axes — the window grew with the game frame and, on a large desktop,
+        occupied almost the whole game window. It stopped reading as a window
+        INSIDE Blobbi Island. The caps below are derived from the Blobbi tab —
+        the reference screen — not picked as a viewport fraction:
+
+          • 58rem wide: at the stage's stable `lg:w-[30%]` column this gives
+            the 2:3 stage ~267px of width and the content pane ~600px — room
+            for the pet card, and for the wardrobe grid beside its detail rail.
+          • 36rem tall: header band + tab strip + mood, five needs,
+            progression, traits and the coins/scene footer fit WITHOUT the
+            body scroller engaging, with breathing room, and the stage cap
+            below (25rem ≈ 1.5 × the column width) keeps the 2:3 portrait
+            un-cropped at exactly this size.
+
+        Below the ideal the window still shrinks responsively (`min()` against
+        the host), so laptops and small frames behave as before. `md:` scopes
+        the caps to the desktop dialog: below `md` this modal is a sheet
+        (useIsMobile's 768px), whose sizing stays untouched. All three tabs
+        share this ONE outer contract — nothing below sizes per tab.
+      */
+      className="md:w-[min(calc(100%-1.5rem),58rem)] md:h-[min(calc(100%-1.5rem),36rem)]"
       title={readOnly ? blobbiData.name : (currentPet ? getBlobbiDisplayName(currentPet) : 'Blobbi')}
       description={
         readOnly
@@ -385,10 +410,17 @@ export function BlobbiInfoModal({
               narrow container — and the parent's `overflow-hidden` is the
               backstop.
             */}
+            {/* `max-h-[25rem]` is the stage's own stop: height-driven as
+                documented above, the box now grows with the modal only until
+                400px — 1.5 × the ~267px the `lg:w-[30%]` column gives it at
+                the window's 58rem ideal, so at full size the 2:3 portrait is
+                exactly as wide as its column and never cropped. Any spare
+                column height simply centers the stage (`items-center` on the
+                column); the artwork is never stretched to fill it. */}
             <div
               data-testid="blobbi-stage"
               style={{ aspectRatio: STAGE_ASPECT_RATIO }}
-              className="relative h-full max-w-full overflow-hidden rounded-panel border-2 border-island-wood/30 bg-island-cream-2 shadow-cozy-frame"
+              className="relative h-full max-w-full max-h-[25rem] overflow-hidden rounded-panel border-2 border-island-wood/30 bg-island-cream-2 shadow-cozy-frame"
             >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">

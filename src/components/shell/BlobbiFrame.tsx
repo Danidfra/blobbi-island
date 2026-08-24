@@ -72,13 +72,28 @@ export function BlobbiFrame({
   //   • Large desktop → pinned to the ideal max width, centered.
   //   • Narrow window → width is the binding constraint, shrinks responsively.
   //   • Short height  → height is binding, shrinks proportionally (3:2 kept).
-  // Frame and canvas always resize as one unit. Never overflows / no scroll.
+  // Frame and canvas always resize as one unit. When width-bound the frame
+  // intentionally bleeds a few pixels past the viewport's left/right edges so
+  // the game meets the browser cleanly; the shell root (`fixed inset-0
+  // overflow-hidden`) clips that excess, so the document never scrolls.
   return (
     <div
       className={cn(
         immersive
           ? "relative h-full w-full overflow-hidden bg-island-ink"
-          : "flex h-full w-full items-center justify-center p-4 sm:p-6",
+          : // Vertical padding only. The old `p-4 sm:p-6` also padded the sides,
+            // which left a thin exposed gutter of page background at the LEFT
+            // and RIGHT edges whenever the frame was width-bound — the frame
+            // looked detached from the browser. The container is now slightly
+            // WIDER than the band (`calc(100% + 1.5rem)`, centered by the
+            // matching negative margins) so a width-bound frame bleeds ~12px
+            // past each viewport edge — just enough to clip the wood border's
+            // rounded flanks — and the shell root's `overflow-hidden` clips the
+            // excess. The frame keeps its aspect ratio, its 1040px ideal cap
+            // and its height model: on wide monitors nothing bleeds and the
+            // window stays centered exactly as before. This is edge polish,
+            // NOT fullscreen.
+            "flex h-full w-[calc(100%+1.5rem)] -mx-3 items-center justify-center py-4 sm:py-6",
         className,
       )}
     >
