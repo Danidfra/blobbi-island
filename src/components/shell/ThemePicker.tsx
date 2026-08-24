@@ -12,7 +12,6 @@ import { islandThemeDeclarations, type IslandTheme } from "@/lib/island-themes";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { useCommunityThemes, useMyThemes } from "@/hooks/useNostrThemes";
 import { contrastFailures } from "@/lib/island-theme-adapter";
-import type { CoreThemeColors, NostrThemeDefinition } from "@/lib/nostr-theme";
 import { ThemeCreateDialog } from "@/components/shell/ThemeCreateDialog";
 
 /**
@@ -185,20 +184,12 @@ export function ThemePicker({
   const mine = useMyThemes();
   const [createOpen, setCreateOpen] = useState(false);
 
-  /**
-   * Apply a Nostr theme.
-   *
-   * The definition's ORIGINAL three colours are handed along so the published
-   * selection carries the author's values rather than Island's derivation of
-   * them — a round trip through sixteen and back to three would drift the
-   * theme a little every time it was chosen.
-   */
-  const selectNostr = (theme: IslandTheme, definitions: Map<string, NostrThemeDefinition>) => {
-    const colors: CoreThemeColors | undefined = theme.address
-      ? definitions.get(theme.address)?.colors
-      : undefined;
-    selectTheme(theme, colors);
-  };
+  /*
+    Applying a Nostr theme needs nothing extra any more: a parsed theme carries
+    its own interoperable `config` — the author's colours, font and background —
+    so `selectTheme` republishes exactly what arrived rather than a
+    re-derivation of Island's derivation of it.
+  */
 
   // The player's own themes are excluded from the community list — they are
   // already in "Yours" above it, and the same card twice reads as a duplicate.
@@ -282,7 +273,7 @@ export function ThemePicker({
                       key={t.id}
                       theme={t}
                       selected={t.id === themeId}
-                      onSelect={() => selectNostr(t, mine.data!.definitions)}
+                      onSelect={() => selectTheme(t)}
                     />
                   ))}
                 </div>
@@ -313,7 +304,7 @@ export function ThemePicker({
                     key={t.id}
                     theme={t}
                     selected={t.id === themeId}
-                    onSelect={() => selectNostr(t, community.data!.definitions)}
+                    onSelect={() => selectTheme(t)}
                   />
                 ))}
               </div>

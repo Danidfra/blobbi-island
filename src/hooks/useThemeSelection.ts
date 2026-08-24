@@ -3,8 +3,8 @@ import { useCallback } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useSelectedNostrTheme } from '@/hooks/useNostrThemes';
 import { usePublishThemeSelection } from '@/hooks/useThemePublish';
+import { themeConfigFromIslandTheme } from '@/lib/island-theme-adapter';
 import type { IslandTheme } from '@/lib/island-themes';
-import type { CoreThemeColors } from '@/lib/nostr-theme';
 
 /**
  * `useTheme` plus everything that needs a relay.
@@ -14,8 +14,8 @@ import type { CoreThemeColors } from '@/lib/nostr-theme';
  * and that row should not pull a signer, a mutation and a subscription into its
  * dependency graph. THIS hook is for the one surface that actually chooses a
  * theme: it adds the live definition read (so a community theme's edits show
- * up), the loading/unavailable states that read implies, and the kind:16767
- * publish that carries the choice to the player's other devices.
+ * up), the loading/unavailable states that read implies, and the two publishes
+ * that carry the choice to the player's other devices and to Ditto.
  */
 export interface UseThemeSelectionResult extends ReturnType<typeof useTheme> {
   /** True while the selected Nostr theme's definition is being fetched. */
@@ -26,15 +26,15 @@ export interface UseThemeSelectionResult extends ReturnType<typeof useTheme> {
    */
   isUnavailable: boolean;
   /**
-   * Choose a theme. Applies and stores it, then publishes the selection.
+   * Choose a theme. Applies and stores it, then publishes the selection to both
+   * channels (kind:16767 and Ditto's encrypted settings).
    *
-   * `sourceColors` is the theme's ORIGINAL three colours when it came from a
-   * kind:36767 definition, so the published selection carries the author's
-   * values rather than a re-derivation of Island's derivation of them — a round
-   * trip through sixteen and back to three would drift the theme a little every
-   * time it was chosen.
+   * The INTEROPERABLE config travels rather than the derived palette: for a
+   * theme that came from Nostr that is the author's own colours, font and
+   * background, so a hop through the island costs nothing. For a built-in it is
+   * the three colours plus the name — a complete, valid Ditto theme.
    */
-  selectTheme: (theme: IslandTheme, sourceColors?: CoreThemeColors) => void;
+  selectTheme: (theme: IslandTheme) => void;
 }
 
 export function useThemeSelection(): UseThemeSelectionResult {
@@ -48,9 +48,9 @@ export function useThemeSelection(): UseThemeSelectionResult {
   const theme = selected.data && selected.data.id === base.themeId ? selected.data : base.theme;
 
   const selectTheme = useCallback(
-    (next: IslandTheme, sourceColors?: CoreThemeColors) => {
+    (next: IslandTheme) => {
       base.setTheme(next);
-      publishSelection(next, sourceColors);
+      publishSelection(next, themeConfigFromIslandTheme(next));
     },
     [base, publishSelection],
   );

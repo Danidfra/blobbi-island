@@ -16,26 +16,47 @@
  * which is why `identifier` is an explicit parameter and only defaults to a
  * slug of the title when there is genuinely no existing theme.
  *
- * ## Why the selection is published at all
+ * ## A selection is published TWICE, to two different channels
  *
- * Because a theme that only lives in this browser's localStorage is not a
- * preference, it is a browser setting. kind:16767 is the same event Ditto uses
- * for "my active theme", so a selection made on the island survives a new
- * device — and shows up in Ditto, which is the point of using their protocol
- * instead of inventing one.
+ * This is the correction at the heart of this phase. Ditto keeps two separate
+ * pieces of state and Island has to write both:
  *
- * It is a debounced, best-effort write: a player flipping through themes must
- * not publish six events, and a failed publish must not undo their choice. The
- * local selection is the source of truth for what they are looking at; this
- * write is how it travels.
+ * ```
+ *   kind:16767            PUBLIC. "here is my palette" — what Ditto renders on
+ *                         your profile page, and what it pulls into
+ *                         `customTheme` on pageload.
+ *   kind:30078 (NIP-78)   PRIVATE. `d = "ditto/metadata"`, NIP-44 to self.
+ *                         Holds `theme` and `customTheme` — the ONLY state that
+ *                         decides which theme Ditto actually renders.
+ * ```
+ *
+ * Publishing only 16767 (what the previous phase did) leaves a Ditto account
+ * on `theme: 'light'` looking exactly as it did: `NostrSync` imports the
+ * palette into `customTheme` and then, in its own comment, does "NOT change the
+ * `theme` value". The mode has to be set to `'custom'`, and the mode lives in
+ * the encrypted blob.
+ *
+ * Both writes are debounced and best-effort: a player flipping through themes
+ * must not publish twelve events, and a failed publish must not undo their
+ * choice. The local selection is what they are looking at; these writes are how
+ * it travels.
  */
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostr } from '@/hooks/useNostr';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
-import { coreColorsFromPalette } from '@/lib/island-theme-adapter';
+import { nextReplaceableCreatedAt, serializeByKey } from '@/lib/replaceable-write';
+import {
+  NIP78_KIND,
+  dittoSettingsFilter,
+  dittoSettingsTags,
+  mergeDittoThemeSettings,
+  newestSettingsEvent,
+  parseDittoThemeSettings,
+} from '@/lib/ditto-settings';
 import type { IslandTheme } from '@/lib/island-themes';
 import {
   ACTIVE_THEME_KIND,
@@ -44,7 +65,7 @@ import {
   buildThemeDefinitionTags,
   nostrThemeId,
   titleToSlug,
-  type CoreThemeColors,
+  type ThemeConfig,
 } from '@/lib/nostr-theme';
 
 /** How long a rapid run of selections is collapsed into one publish. */
@@ -53,7 +74,8 @@ const SELECTION_PUBLISH_DEBOUNCE_MS = 2000;
 export interface PublishThemeInput {
   title: string;
   description?: string;
-  colors: CoreThemeColors;
+  /** The complete interoperable theme: colours, and any font or background. */
+  config: ThemeConfig;
   /** Set when editing: the existing `d`. Omitted, a slug of the title is used. */
   identifier?: string;
 }
@@ -85,7 +107,7 @@ export function usePublishTheme() {
         tags: buildThemeDefinitionTags({
           identifier,
           title,
-          colors: input.colors,
+          config: { ...input.config, title },
           description: input.description,
         }),
       });
@@ -112,34 +134,126 @@ export function usePublishTheme() {
  */
 export function usePublishThemeSelection() {
   const { user } = useCurrentUser();
+  const { nostr } = useNostr();
   const { mutateAsync: createEvent } = useNostrPublish();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const signer = user?.signer;
+  const pubkey = user?.pubkey;
+
+  /**
+   * Publish the PUBLIC half: kind:16767.
+   *
+   * `created_at` is monotonic against whatever is already on the relay
+   * (`nextReplaceableCreatedAt`). A replaceable event with the same second as
+   * its predecessor is resolved by NIP-01 on the LOWER id, which has nothing to
+   * do with which one the player chose — so selecting A and then B inside one
+   * second could leave A winning. Island already had this primitive for
+   * inventory and pet state; the theme writer had been missing it.
+   */
+  const publishActiveTheme = useCallback(
+    async (theme: IslandTheme, config: ThemeConfig) => {
+      if (!pubkey) return;
+
+      let previousCreatedAt = 0;
+      try {
+        const existing = await nostr.query(
+          [{ kinds: [ACTIVE_THEME_KIND], authors: [pubkey], limit: 1 }],
+          { signal: AbortSignal.timeout(3000) },
+        );
+        previousCreatedAt = Math.max(0, ...existing.map((e) => e.created_at));
+      } catch {
+        // An unreadable relay is not a reason to skip the write; it only means
+        // the tie-break falls back to wall-clock, which is the old behaviour.
+      }
+
+      const [, sourceAuthor, ...rest] = (theme.address ?? '').split(':');
+      const sourceIdentifier = rest.join(':');
+
+      await createEvent({
+        kind: ACTIVE_THEME_KIND,
+        content: '',
+        created_at: nextReplaceableCreatedAt(Date.now(), previousCreatedAt),
+        tags: buildActiveThemeTags({
+          config,
+          ...(theme.address && sourceAuthor && sourceIdentifier
+            ? { sourceAuthor, sourceIdentifier }
+            : {}),
+          islandThemeId: theme.id,
+        }),
+      });
+    },
+    [pubkey, nostr, createEvent],
+  );
+
+  /**
+   * Publish the PRIVATE half: Ditto's encrypted settings.
+   *
+   * `theme: 'custom'` plus the config under `customTheme`, which is precisely
+   * what Ditto's own `applyCustomTheme` writes. Everything else in the blob is
+   * carried through untouched, and the write is ABANDONED — not attempted with
+   * a fresh object — when the existing blob cannot be read, because publishing
+   * a settings event containing only a theme would erase the user's feed
+   * settings, filters and relay preferences.
+   */
+  const publishDittoSettings = useCallback(
+    async (config: ThemeConfig) => {
+      if (!pubkey || !signer?.nip44) return;
+
+      const events = await nostr.query([dittoSettingsFilter(pubkey)], {
+        signal: AbortSignal.timeout(4000),
+      });
+      const existingEvent = newestSettingsEvent(events);
+
+      let existing: Record<string, unknown> = {};
+      if (existingEvent) {
+        let decrypted: string;
+        try {
+          decrypted = await signer.nip44.decrypt(pubkey, existingEvent.content);
+        } catch {
+          // Could not read it — so we do not know what is in it, so we must not
+          // replace it. Silence here costs cross-app sync for this write; the
+          // alternative costs the user their settings.
+          return;
+        }
+        const parsed = parseDittoThemeSettings(decrypted);
+        if (!parsed) return;
+        existing = parsed.raw;
+      }
+
+      const merged = mergeDittoThemeSettings(existing, {
+        theme: 'custom',
+        customTheme: config,
+        nowMs: Date.now(),
+      });
+
+      await createEvent({
+        kind: NIP78_KIND,
+        content: await signer.nip44.encrypt(pubkey, JSON.stringify(merged)),
+        created_at: nextReplaceableCreatedAt(Date.now(), existingEvent?.created_at ?? 0),
+        tags: dittoSettingsTags(),
+      });
+    },
+    [pubkey, signer, nostr, createEvent],
+  );
+
   return useCallback(
-    (theme: IslandTheme, sourceColors?: CoreThemeColors) => {
-      if (!user?.pubkey) return;
+    (theme: IslandTheme, config: ThemeConfig) => {
+      if (!pubkey) return;
 
       clearTimeout(timer.current);
       timer.current = setTimeout(() => {
-        createEvent({
-          kind: ACTIVE_THEME_KIND,
-          content: '',
-          tags: buildActiveThemeTags({
-            colors: sourceColors ?? coreColorsFromPalette(theme.palette),
-            title: theme.name,
-            sourceAddress: theme.address ?? null,
-            islandThemeId: theme.id,
-          }),
-        }).catch(() => {
-          // Best-effort by design. The player's selection is already applied
-          // and already stored locally; a relay that would not take the event
-          // must not undo it, and there is nothing for them to act on.
+        // Serialised per account so two rapid selections cannot interleave
+        // their read-modify-write of the settings blob.
+        void serializeByKey(`theme-selection:${pubkey}`, async () => {
+          await publishActiveTheme(theme, config).catch(() => {});
+          await publishDittoSettings(config).catch(() => {});
         });
       }, SELECTION_PUBLISH_DEBOUNCE_MS);
     },
-    [user?.pubkey, createEvent],
+    [pubkey, publishActiveTheme, publishDittoSettings],
   );
 }
 

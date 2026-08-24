@@ -56,10 +56,12 @@ import {
   parseHslTriplet,
   type CoreThemeColors,
 } from '@/lib/nostr-theme';
+import type { ThemeConfig } from '@/lib/nostr-theme';
 import {
   DEFAULT_ISLAND_THEME_ID,
   resolveIslandTheme,
   type IslandPalette,
+  type IslandTheme,
 } from '@/lib/island-themes';
 
 type Hsl = { h: number; s: number; l: number };
@@ -419,4 +421,19 @@ export function contrastReport(palette: IslandPalette): ContrastFinding[] {
 /** The pairings a palette fails. Empty means it clears the whole contract. */
 export function contrastFailures(palette: IslandPalette): ContrastFinding[] {
   return contrastReport(palette).filter((f) => !f.passes);
+}
+
+/**
+ * The interoperable theme a BUILT-IN Island theme publishes as.
+ *
+ * A built-in has no font and no background media — it is authored art
+ * direction, and the island's own type is part of that — so the config is the
+ * three colours plus the name. That is a complete, valid Ditto theme: it is
+ * exactly what Ditto's own presets look like on the wire.
+ */
+export function themeConfigFromIslandTheme(theme: IslandTheme): ThemeConfig {
+  // A theme that CAME from Nostr republishes what it arrived with, so a hop
+  // through the island never costs its author's font or wallpaper.
+  if (theme.config) return theme.config;
+  return { title: theme.name, colors: coreColorsFromPalette(theme.palette) };
 }

@@ -16,23 +16,26 @@ import {
   THEME_DESCRIPTION_MAX,
   THEME_TITLE_MAX,
   hexToHslTriplet,
-  hslTripletToHex,
   isValidHexColor,
+  sanitizeCssIdentifier,
+  sanitizeThemeUrl,
   titleToSlug,
   type CoreThemeColors,
+  type ThemeConfig,
 } from "@/lib/nostr-theme";
 
 /**
  * ThemeCreateDialog — "Create a theme".
  *
- * ## Three colours, not sixteen
+ * ## The interoperable schema, not Island's internals
  *
- * The form edits exactly what the public protocol carries: `background`, `text`
- * and `primary`. Island's other thirteen palette roles are an implementation
- * detail of this client — derived, deterministic, never published — and putting
- * them in this form would produce themes only Blobbi Island could read, which
- * is the opposite of the point. A theme made here is a plain kind:36767 event
- * that Ditto renders as its author intended.
+ * The form edits exactly what the public protocol carries: three colours, an
+ * optional body font, and an optional background image. Island's other thirteen
+ * palette roles are an implementation detail of this client — derived,
+ * deterministic, never published — and putting them in this form would produce
+ * themes only Blobbi Island could read, which is the opposite of the point. A
+ * theme made here is a plain kind:36767 event that Ditto renders as its author
+ * intended, font and wallpaper included.
  *
  * ## The preview is the real thing, scoped
  *
@@ -55,6 +58,12 @@ const DEFAULT_DRAFT = {
   text: '#3a2a1a',
   primary: '#6b4fd6',
 };
+
+/** Background display modes, as Ditto defines them. */
+const BACKGROUND_MODES = [
+  { value: 'cover' as const, label: 'Cover' },
+  { value: 'tile' as const, label: 'Tile' },
+];
 
 function ColorField({
   id,
@@ -110,6 +119,12 @@ export function ThemeCreateDialog({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [draft, setDraft] = useState(DEFAULT_DRAFT);
+  /** Ditto's `font.family` — a CSS family name, not a stylesheet URL. */
+  const [fontFamily, setFontFamily] = useState('');
+  /** Ditto's `font.url` — a direct link to a font FILE, https only. */
+  const [fontUrl, setFontUrl] = useState('');
+  const [backgroundUrl, setBackgroundUrl] = useState('');
+  const [backgroundMode, setBackgroundMode] = useState<'cover' | 'tile'>('cover');
 
   /**
    * The draft as core colours, with each field falling back to the default when
@@ -131,6 +146,26 @@ export function ThemeCreateDialog({
     }),
     [draft],
   );
+
+  /**
+   * The draft as the interoperable `ThemeConfig` that gets published.
+   *
+   * Font and background are included only when they are USABLE: an https URL,
+   * a family that survives the CSS allowlist. A half-typed value simply is not
+   * in the config yet, which is also why the preview never flickers through an
+   * invalid state.
+   */
+  const config: ThemeConfig = useMemo(() => {
+    const next: ThemeConfig = { title: title.trim() || undefined, colors };
+    const family = sanitizeCssIdentifier(fontFamily);
+    if (family) {
+      const url = sanitizeThemeUrl(fontUrl);
+      next.font = url ? { family, url } : { family };
+    }
+    const bg = sanitizeThemeUrl(backgroundUrl);
+    if (bg) next.background = { url: bg, mode: backgroundMode };
+    return next;
+  }, [title, colors, fontFamily, fontUrl, backgroundUrl, backgroundMode]);
 
   const palette = useMemo(() => paletteFromCoreColors(colors), [colors]);
   const findings = useMemo(() => contrastReport(palette), [palette]);
@@ -156,7 +191,7 @@ export function ThemeCreateDialog({
 
   const handlePublish = async () => {
     try {
-      const result = await publish.mutateAsync({ title, description, colors });
+      const result = await publish.mutateAsync({ title, description, config });
       // Apply it immediately — the player just designed this island, showing it
       // to them is the entire point, and the selection publish carries the
       // ORIGINAL three colours rather than a re-derivation.
@@ -167,8 +202,8 @@ export function ThemeCreateDialog({
           title: title.trim(),
           description,
           palette,
+          config,
         }),
-        colors,
       );
       toast({
         title: 'Theme published',
@@ -178,6 +213,10 @@ export function ThemeCreateDialog({
       setTitle('');
       setDescription('');
       setDraft(DEFAULT_DRAFT);
+      setFontFamily('');
+      setFontUrl('');
+      setBackgroundUrl('');
+      setBackgroundMode('cover');
     } catch (error) {
       toast({
         title: 'Could not publish',
@@ -266,6 +305,77 @@ export function ThemeCreateDialog({
             value={draft.primary}
             onChange={(primary) => setDraft((d) => ({ ...d, primary }))}
           />
+
+          {/*
+            Font and background are the other two fields the protocol carries.
+            Both are optional, both are published exactly as Ditto publishes
+            them, and both are validated before they enter the config — an
+            unusable value is simply absent rather than silently broken.
+          */}
+          <div className="space-y-1.5">
+            <Label htmlFor="theme-font-family" className="text-xs font-semibold text-island-ink">
+              Font <span className="font-normal text-island-ink-soft">(optional)</span>
+            </Label>
+            <Input
+              id="theme-font-family"
+              value={fontFamily}
+              maxLength={64}
+              placeholder="Playfair Display"
+              onChange={(e) => setFontFamily(e.target.value)}
+            />
+            <Input
+              aria-label="Font file URL"
+              value={fontUrl}
+              maxLength={512}
+              placeholder="https://…/font.woff2"
+              spellCheck={false}
+              onChange={(e) => setFontUrl(e.target.value)}
+              className="font-mono text-xs"
+            />
+            <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
+              A CSS family name, and a direct https link to a font file (.woff2, .ttf, .otf) — not
+              a stylesheet. Without a link the font only shows for people who have it installed.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="theme-bg-url" className="text-xs font-semibold text-island-ink">
+              Background image <span className="font-normal text-island-ink-soft">(optional)</span>
+            </Label>
+            <Input
+              id="theme-bg-url"
+              value={backgroundUrl}
+              maxLength={512}
+              placeholder="https://…/wallpaper.jpg"
+              spellCheck={false}
+              onChange={(e) => setBackgroundUrl(e.target.value)}
+              className="font-mono text-xs"
+            />
+            <div role="radiogroup" aria-label="Background mode" className="flex gap-1.5">
+              {BACKGROUND_MODES.map((mode) => (
+                <button
+                  key={mode.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={backgroundMode === mode.value}
+                  onClick={() => setBackgroundMode(mode.value)}
+                  className={cn(
+                    'rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    backgroundMode === mode.value
+                      ? 'border-island-purple bg-island-purple/10 text-island-ink'
+                      : 'border-island-wood/30 text-island-ink-soft hover:border-island-wood/50',
+                  )}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
+              https only. On the island it dresses the page around the game window — the world
+              keeps its own art.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -323,9 +433,10 @@ export function ThemeCreateDialog({
           )}
 
           <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
-            Published as a Nostr theme (kind 36767), so Ditto and any other client that reads them
-            can use it too. Colours are stored as{' '}
-            <code className="font-mono">{hslTripletToHex(colors.primary)}</code>-style hex.
+            Published as a Nostr theme (kind 36767) — colours as hex, the font as an{' '}
+            <code className="font-mono">f</code> tag and the image as a{' '}
+            <code className="font-mono">bg</code> tag, exactly as Ditto writes them. Any client
+            that reads Nostr themes can use it.
           </p>
         </div>
       </div>

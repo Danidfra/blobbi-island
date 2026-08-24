@@ -216,6 +216,39 @@ img {
   body {
     @apply bg-background text-foreground theme-transition;
   }
+
+  /* ---- Theme font ---------------------------------------------------------
+     A Nostr theme may carry a FONT (Ditto's `f` tag). `--island-font` defaults
+     to the island's own type and is overwritten by `island-theme-media.ts`
+     with a sanitised family plus this same stack as its fallback — so a theme
+     font that never loads leaves the game in Comfortaa rather than in whatever
+     the browser would otherwise pick. */
+  :root {
+    --island-font: Comfortaa, system-ui, sans-serif;
+  }
+
+  html {
+    font-family: var(--island-font);
+  }
+
+  /* ---- Theme background media ---------------------------------------------
+     A Nostr theme may also carry a BACKGROUND IMAGE. Ditto puts it on `body`,
+     which is right for a feed scrolling over it; the island is a drawn world,
+     so it goes on the page BEHIND the wood frame and nowhere else. Town, Beach,
+     Mine and the Arcade keep their own art at every viewport size — a theme may
+     dress the room the game sits in, never the game.
+
+     `data-theme-background` is set by `applyThemeBackground` alongside the
+     variables, so the rule matches on an attribute rather than sniffing an
+     inline style string. It is absent for every built-in theme and for every
+     theme without a `bg` tag, which makes this rule inert by default. */
+  html[data-theme-background] body {
+    background-image: var(--island-theme-bg-image);
+    background-size: var(--island-theme-bg-size, cover);
+    background-repeat: var(--island-theme-bg-repeat, no-repeat);
+    background-position: var(--island-theme-bg-position, center);
+    background-attachment: var(--island-theme-bg-attachment, fixed);
+  }
 }
 
 @layer components {

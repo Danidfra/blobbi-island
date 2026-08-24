@@ -44,6 +44,8 @@ import {
   type IslandTheme,
 } from '@/lib/island-themes';
 import { parseHslTriplet, sanitizeThemeText, THEME_TITLE_MAX } from '@/lib/nostr-theme';
+import type { ThemeConfig } from '@/lib/nostr-theme';
+import { parseDittoThemeSettings } from '@/lib/ditto-settings';
 
 /**
  * localStorage key.
@@ -62,6 +64,15 @@ export interface CachedIslandTheme {
   name: string;
   description: string;
   palette: IslandPalette;
+  /**
+   * The interoperable source — Ditto's `ThemeConfig`.
+   *
+   * Cached alongside the derived palette because it is what gets REPUBLISHED.
+   * Without it, an offline boot followed by a re-selection would publish a
+   * re-derivation of a derivation and quietly drop the theme's font and
+   * wallpaper. Optional so a cache written before this field still loads.
+   */
+  config?: ThemeConfig;
 }
 
 /**
@@ -86,12 +97,32 @@ export function parseCachedIslandTheme(value: unknown): CachedIslandTheme | null
     palette[key] = channel;
   }
 
-  return {
+  const cached: CachedIslandTheme = {
     id: record.id,
     name: sanitizeThemeText(record.name, THEME_TITLE_MAX) || 'Theme',
     description: sanitizeThemeText(record.description, 200),
     palette,
   };
+
+  // Re-validated through the same reader the settings blob uses, so a tampered
+  // cache cannot smuggle a `javascript:` font URL past the media layer.
+  const config = readCachedConfig(record.config);
+  if (config) cached.config = config;
+  return cached;
+}
+
+/**
+ * Validate a cached `ThemeConfig`.
+ *
+ * Deliberately re-uses `themeConfigFromDittoSettings`' sibling reader rather
+ * than trusting the value: localStorage is writable by anything running on the
+ * origin, and this config feeds a `@font-face` src and a `url()`.
+ */
+function readCachedConfig(value: unknown): ThemeConfig | undefined {
+  const settings = parseDittoThemeSettings(
+    JSON.stringify({ theme: 'custom', customTheme: value ?? null }),
+  );
+  return settings?.customTheme;
 }
 
 /** Read the cached theme, or `null` if there is none or it is unusable. */
@@ -106,6 +137,39 @@ export function readIslandThemeCache(): CachedIslandTheme | null {
   }
 }
 
+/**
+ * Fired after every cache write.
+ *
+ * The reserved id {@link DITTO_ACTIVE_THEME_ID} names "whatever theme this
+ * account is currently using", so its CONTENT changes while its id does not —
+ * which means a consumer memoising on the id alone would never repaint. This is
+ * how they find out. A plain DOM event rather than a store because the cache is
+ * a module-level side effect on `localStorage`, not React state.
+ */
+export const ISLAND_THEME_CACHE_EVENT = 'island:theme-cache';
+
+/** Subscribe to cache writes. Returns an unsubscribe function. */
+export function subscribeToIslandThemeCache(listener: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(ISLAND_THEME_CACHE_EVENT, listener);
+  return () => window.removeEventListener(ISLAND_THEME_CACHE_EVENT, listener);
+}
+
+/** A value that changes whenever the cache does — the snapshot for a store. */
+export function islandThemeCacheVersion(): string {
+  if (typeof localStorage === 'undefined') return '';
+  try {
+    return localStorage.getItem(ISLAND_THEME_CACHE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function announce(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(ISLAND_THEME_CACHE_EVENT));
+}
+
 /** Write the cached theme. Silent on failure — a full quota is not an error here. */
 export function writeIslandThemeCache(theme: IslandTheme): void {
   if (typeof localStorage === 'undefined') return;
@@ -115,8 +179,10 @@ export function writeIslandThemeCache(theme: IslandTheme): void {
       name: theme.name,
       description: theme.description,
       palette: theme.palette,
+      ...(theme.config ? { config: theme.config } : {}),
     };
     localStorage.setItem(ISLAND_THEME_CACHE_KEY, JSON.stringify(entry));
+    announce();
   } catch {
     // Ignored. The cache is an optimisation; the selection is elsewhere.
   }
@@ -127,6 +193,7 @@ export function clearIslandThemeCache(): void {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.removeItem(ISLAND_THEME_CACHE_KEY);
+    announce();
   } catch {
     // Ignored, as above.
   }

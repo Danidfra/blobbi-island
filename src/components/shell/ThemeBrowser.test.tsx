@@ -18,8 +18,10 @@ import {
   ACTIVE_THEME_KIND,
   ISLAND_THEME_TAG,
   THEME_DEFINITION_KIND,
+  hexToHslTriplet,
 } from '@/lib/nostr-theme';
 import { ISLAND_THEME_CACHE_KEY } from '@/lib/island-theme-cache';
+import { DITTO_SETTINGS_D, NIP78_KIND } from '@/lib/ditto-settings';
 
 const AUTHOR = 'a'.repeat(64);
 const ME = 'f'.repeat(64);
@@ -31,7 +33,24 @@ const ME = 'f'.repeat(64);
  * and the pool here is the fake below, which records instead of publishing. No
  * key material and no relay is involved anywhere in this file.
  */
-function fakeUser(pubkey: string) {
+/**
+ * A reversible stand-in for NIP-44, so the settings blob is inspectable.
+ *
+ * Not encryption and not pretending to be — the point of these tests is WHICH
+ * events are published and WHAT is in them, and a real cipher would only make
+ * the assertions unreadable. No key material and no relay is involved anywhere
+ * in this file.
+ */
+const FAKE_PREFIX = 'fake44:';
+function encryptFake(plaintext: string) {
+  return FAKE_PREFIX + plaintext;
+}
+function decryptFake(ciphertext: string) {
+  if (!ciphertext.startsWith(FAKE_PREFIX)) throw new Error('not our ciphertext');
+  return ciphertext.slice(FAKE_PREFIX.length);
+}
+
+function fakeUser(pubkey: string, opts: { decryptFails?: boolean } = {}) {
   return {
     pubkey,
     signer: {
@@ -42,6 +61,13 @@ function fakeUser(pubkey: string) {
         pubkey,
         sig: '0'.repeat(128),
       }),
+      nip44: {
+        encrypt: async (_pk: string, plaintext: string) => encryptFake(plaintext),
+        decrypt: async (_pk: string, ciphertext: string) => {
+          if (opts.decryptFails) throw new Error('cannot decrypt');
+          return decryptFake(ciphertext);
+        },
+      },
     },
   } as unknown as { pubkey: string };
 }
@@ -54,9 +80,11 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 /** Events the fake relay serves, and events the app tried to publish. */
 let stored: NostrEvent[] = [];
-let published: Array<Pick<NostrEvent, 'kind' | 'tags' | 'content'>> = [];
+let published: Array<Pick<NostrEvent, 'kind' | 'tags' | 'content' | 'created_at'>> = [];
 /** Set to make every read behave like an unreachable relay. */
 let relayDown = false;
+/** The account's existing Ditto settings, served as a kind:30078 event. */
+let settingsBlob: Record<string, unknown> | null = null;
 
 function matches(event: NostrEvent, filter: NostrFilter): boolean {
   if (filter.kinds && !filter.kinds.includes(event.kind)) return false;
@@ -77,7 +105,9 @@ vi.mock('@nostrify/react', async () => {
       nostr: {
         query: async (filters: NostrFilter[]) => {
           if (relayDown) return [];
-          return stored.filter((e) => filters.some((f) => matches(e, f)));
+          return [...stored, ...settingsEvents()].filter((e) =>
+            filters.some((f) => matches(e, f)),
+          );
         },
         /**
          * `req` is what `relay-read.ts` uses to tell a real empty from an
@@ -89,13 +119,19 @@ vi.mock('@nostrify/react', async () => {
             await new Promise(() => {});
             return;
           }
-          for (const event of stored.filter((e) => filters.some((f) => matches(e, f)))) {
+          const all = [...stored, ...settingsEvents()];
+          for (const event of all.filter((e) => filters.some((f) => matches(e, f)))) {
             yield ['EVENT', 'sub', event];
           }
           yield ['EOSE', 'sub'];
         },
         event: async (event: NostrEvent) => {
-          published.push({ kind: event.kind, tags: event.tags, content: event.content });
+          published.push({
+            kind: event.kind,
+            tags: event.tags,
+            content: event.content,
+            created_at: event.created_at,
+          });
         },
       },
     }),
@@ -125,6 +161,22 @@ function themeEvent(
   } as NostrEvent;
 }
 
+/** The account's Ditto settings as a relay would serve them. */
+function settingsEvents(): NostrEvent[] {
+  if (!settingsBlob) return [];
+  return [
+    {
+      id: '7'.repeat(64),
+      pubkey: ME,
+      created_at: 1_700_000_000,
+      kind: NIP78_KIND,
+      content: encryptFake(JSON.stringify(settingsBlob)),
+      sig: '',
+      tags: [['d', DITTO_SETTINGS_D]],
+    } as NostrEvent,
+  ];
+}
+
 function Harness() {
   const [open, setOpen] = useState(true);
   return <ThemePicker open={open} onOpenChange={setOpen} />;
@@ -148,6 +200,7 @@ beforeEach(() => {
   published = [];
   relayDown = false;
   currentUser = undefined;
+  settingsBlob = { theme: 'dark', feedSettings: { showReplies: false }, contentFilters: [{ id: 'spam' }] };
   vi.useRealTimers();
 });
 
@@ -257,6 +310,106 @@ describe('selecting a community theme', () => {
     // …and the ORIGINAL three colours are published, not a re-derivation of
     // Island's derivation of them.
     expect(selection.tags.filter(([n]) => n === 'c')).toHaveLength(3);
+    vi.useRealTimers();
+  });
+
+  it('also writes the channel Ditto actually renders from', async () => {
+    /*
+      The Island → Ditto fix.
+
+      A 16767 alone is imported by Ditto into `customTheme` and then ignored,
+      because `NostrSync` does not touch the `theme` mode — so the account has
+      to be told `theme: 'custom'`, and that lives in the NIP-78 blob.
+    */
+    vi.useFakeTimers();
+    currentUser = fakeUser(ME);
+    stored = [themeEvent({ d: 'harbour-dusk', title: 'Harbour Dusk', id: '1'.repeat(64) })];
+
+    render(
+      <TestApp>
+        <Harness />
+      </TestApp>,
+    );
+    await vi.advanceTimersByTimeAsync(50);
+
+    const group = screen.getByRole('radiogroup', { name: 'Community themes' });
+    fireEvent.click(within(group).getByRole('radio', { name: /Harbour Dusk/ }));
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const settings = published.find((e) => e.kind === NIP78_KIND)!;
+    expect(settings, 'no encrypted settings event was published').toBeDefined();
+    expect(settings.tags).toContainEqual(['d', DITTO_SETTINGS_D]);
+
+    const blob = JSON.parse(decryptFake(settings.content));
+    expect(blob.theme).toBe('custom');
+    // The definition's own hex, converted once at the protocol boundary.
+    expect(blob.customTheme.colors.background).toBe(hexToHslTriplet('#141a24'));
+    // Everything the account already had survives the write.
+    expect(blob.feedSettings).toEqual({ showReplies: false });
+    expect(blob.contentFilters).toEqual([{ id: 'spam' }]);
+    vi.useRealTimers();
+  });
+
+  it('does not clobber settings it could not read', async () => {
+    // A decrypt failure means we do not know what is in the blob, so we must
+    // not replace it — a theme-only settings event would erase the account's
+    // feed settings, filters and relay preferences.
+    vi.useFakeTimers();
+    currentUser = fakeUser(ME, { decryptFails: true });
+    settingsBlob = { theme: 'dark', feedSettings: { showReplies: false } };
+
+    render(
+      <TestApp>
+        <Harness />
+      </TestApp>,
+    );
+    await vi.advanceTimersByTimeAsync(50);
+    fireEvent.click(
+      within(screen.getByRole('radiogroup', { name: 'Built-in themes' })).getByRole('radio', {
+        name: /Lantern Night/,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(published.some((e) => e.kind === NIP78_KIND)).toBe(false);
+    // The public half still went out — it has nothing to clobber.
+    expect(published.some((e) => e.kind === ACTIVE_THEME_KIND)).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('breaks a same-second tie in favour of the LATER selection', async () => {
+    /*
+      Replaceable events carry second-resolution timestamps, and NIP-01 breaks a
+      tie between two of them on the lower event id — which has nothing to do
+      with which one the player chose. Selecting A then B inside one second
+      could therefore leave A winning. `nextReplaceableCreatedAt` makes every
+      revision strictly newer than the one it replaces.
+    */
+    vi.useFakeTimers();
+    currentUser = fakeUser(ME);
+    stored = [
+      {
+        ...themeEvent({ d: 'x', title: 'x', id: '9'.repeat(64) }),
+        kind: ACTIVE_THEME_KIND,
+        created_at: Math.floor(Date.now() / 1000),
+      } as NostrEvent,
+    ];
+
+    render(
+      <TestApp>
+        <Harness />
+      </TestApp>,
+    );
+    await vi.advanceTimersByTimeAsync(50);
+    fireEvent.click(
+      within(screen.getByRole('radiogroup', { name: 'Built-in themes' })).getByRole('radio', {
+        name: /Lantern Night/,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const selection = published.find((e) => e.kind === ACTIVE_THEME_KIND)!;
+    expect(selection.created_at).toBeGreaterThan(stored[0].created_at);
     vi.useRealTimers();
   });
 

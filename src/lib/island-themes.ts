@@ -48,6 +48,8 @@
  * theme through the unknown-id fallback below.
  */
 
+import type { ThemeConfig } from '@/lib/nostr-theme';
+
 /** The palette a theme owns. Values are bare HSL channels, e.g. `27 40% 54%`. */
 export interface IslandPalette {
   /** Page behind the wood frame. */
@@ -134,7 +136,11 @@ export const ISLAND_PALETTE_KEYS = [
 export type IslandThemeSource = 'builtin' | 'nostr';
 
 export interface IslandTheme {
-  /** Bare slug for a built-in; `nostr:36767:<pubkey>:<d>` for a Nostr theme. */
+  /**
+   * Bare slug for a built-in; `nostr:36767:<pubkey>:<d>` for a named Nostr
+   * definition; {@link DITTO_ACTIVE_THEME_ID} for a self-contained theme that
+   * arrived from the account rather than from a named definition.
+   */
   id: string;
   /** Shown in the picker. */
   name: string;
@@ -148,7 +154,29 @@ export interface IslandTheme {
   authorPubkey?: string;
   /** `36767:<pubkey>:<d>`, for a Nostr theme. */
   address?: string;
+  /**
+   * The INTEROPERABLE source this theme was derived from — Ditto's
+   * `ThemeConfig`: three colours, optional fonts, optional background media.
+   *
+   * Present for every theme that came from Nostr, and it is what gets
+   * re-published when the theme is selected. Publishing a re-derivation of the
+   * derived palette instead would drift the theme a little on every hop and
+   * would silently drop the author's font and wallpaper.
+   */
+  config?: ThemeConfig;
 }
+
+/**
+ * The id for a self-contained theme belonging to the account.
+ *
+ * Ditto's own model has no name for the theme you are using — its mode is
+ * literally `'custom'`, with the colours in `customTheme`. There is nothing to
+ * address, because there is no definition. Island mirrors that with one
+ * reserved id: what it points at lives in the palette cache and changes
+ * whenever the account's theme changes, which is exactly the semantics Ditto
+ * has.
+ */
+export const DITTO_ACTIVE_THEME_ID = 'ditto:active';
 
 /**
  * The default theme.
@@ -306,9 +334,11 @@ export function islandThemeFromNostr(definition: {
   title: string;
   description: string;
   palette: IslandPalette;
+  config?: ThemeConfig;
 }): IslandTheme {
   return {
     id: `nostr:${definition.address}`,
+    ...(definition.config ? { config: definition.config } : {}),
     name: definition.title,
     description: definition.description,
     // One mark for every community theme. A per-theme emoji is not part of the

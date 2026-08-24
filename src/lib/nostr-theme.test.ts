@@ -77,9 +77,9 @@ describe('reading a Ditto theme', () => {
     expect(parsed!.title).toBe('Harbour Dusk');
     expect(parsed!.description).toBe('Cold water at the end of the day.');
     // Hex on the wire, HSL channels in memory.
-    expect(hslTripletToHex(parsed!.colors.background)).toBe('#141a24');
-    expect(hslTripletToHex(parsed!.colors.text)).toBe('#f2f5fa');
-    expect(hslTripletToHex(parsed!.colors.primary)).toBe('#5b8cff');
+    expect(hslTripletToHex(parsed!.config.colors.background)).toBe('#141a24');
+    expect(hslTripletToHex(parsed!.config.colors.text)).toBe('#f2f5fa');
+    expect(hslTripletToHex(parsed!.config.colors.primary)).toBe('#5b8cff');
   });
 
   it('uses the ADDRESS as identity, never the event id', () => {
@@ -99,7 +99,7 @@ describe('reading a Ditto theme', () => {
       tags: [['d', 'old'], ['title', 'Old One']],
       content: JSON.stringify({ background: '228 20% 10%', text: '210 40% 98%', primary: '258 70% 60%' }),
     });
-    expect(parseThemeDefinition(legacy)?.colors.primary).toBe('258 70% 60%');
+    expect(parseThemeDefinition(legacy)?.config.colors.primary).toBe('258 70% 60%');
 
     // The original nineteen-token blob called it `foreground`.
     const ancient = event({
@@ -107,7 +107,7 @@ describe('reading a Ditto theme', () => {
       tags: [['d', 'ancient'], ['title', 'Ancient']],
       content: JSON.stringify({ background: '0 0% 100%', foreground: '0 0% 4%', primary: '210 40% 50%', card: 'x' }),
     });
-    expect(parseThemeDefinition(ancient)?.colors.text).toBe('0 0% 4%');
+    expect(parseThemeDefinition(ancient)?.config.colors.text).toBe('0 0% 4%');
   });
 
   it('rejects events that are not usable themes', () => {
@@ -145,7 +145,7 @@ describe('writing a theme Ditto can read', () => {
     const tags = buildThemeDefinitionTags({
       identifier: 'harbour-dusk',
       title: 'Harbour Dusk',
-      colors,
+      config: { colors },
       description: 'Cold water at the end of the day.',
     });
 
@@ -165,9 +165,9 @@ describe('writing a theme Ditto can read', () => {
   });
 
   it('round-trips through its own parser without drift', () => {
-    const tags = buildThemeDefinitionTags({ identifier: 'x', title: 'X', colors });
+    const tags = buildThemeDefinitionTags({ identifier: 'x', title: 'X', config: { colors } });
     const parsed = parseThemeDefinition(event({ kind: THEME_DEFINITION_KIND, tags }))!;
-    expect(parsed.colors).toEqual(colors);
+    expect(parsed.config.colors).toEqual(colors);
   });
 
   it('slugs a title the way Ditto does — so editing REPLACES', () => {
@@ -197,24 +197,27 @@ describe('the active theme (kind:16767)', () => {
 
   it('carries the colours, the source address, and Island\'s own id', () => {
     const tags = buildActiveThemeTags({
-      colors,
-      title: 'Harbour Dusk',
-      sourceAddress: `36767:${OTHER}:harbour-dusk`,
+      config: { ...{ colors }, title: 'Harbour Dusk' },
+      sourceAuthor: OTHER,
+      sourceIdentifier: 'harbour-dusk',
       islandThemeId: `nostr:36767:${OTHER}:harbour-dusk`,
     });
     const parsed = parseActiveTheme(event({ kind: ACTIVE_THEME_KIND, tags }))!;
 
-    expect(parsed.colors).toEqual(colors);
+    expect(parsed.config.colors).toEqual(colors);
     expect(parsed.sourceAddress).toBe(`36767:${OTHER}:harbour-dusk`);
     expect(parsed.islandThemeId).toBe(`nostr:36767:${OTHER}:harbour-dusk`);
-    expect(parsed.title).toBe('Harbour Dusk');
+    expect(parsed.config.title).toBe('Harbour Dusk');
   });
 
   it('stays a valid Ditto event when it names a BUILT-IN Island theme', () => {
     // A built-in has no address, and its sixteen authored colours do not fit in
     // three — so Island adds one extra tag Ditto ignores. Everything Ditto
     // reads must still be there and still be correct.
-    const tags = buildActiveThemeTags({ colors, title: 'Cozy Day', islandThemeId: 'cozy-day' });
+    const tags = buildActiveThemeTags({
+      config: { colors, title: 'Cozy Day' },
+      islandThemeId: 'cozy-day',
+    });
 
     const roles = tags.filter(([n]) => n === 'c').map((t) => t[2]);
     expect(roles).toEqual(['background', 'text', 'primary']);
@@ -332,7 +335,7 @@ describe('untrusted input', () => {
 
     // And a legitimate colour comes out as three plain numbers.
     const parsed = parseThemeDefinition(dittoTheme())!;
-    for (const channel of Object.values(parsed.colors)) {
+    for (const channel of Object.values(parsed.config.colors)) {
       expect(channel).toMatch(/^-?[\d.]+ -?[\d.]+% -?[\d.]+%$/);
       expect(parseHslTriplet(channel)).not.toBeNull();
     }

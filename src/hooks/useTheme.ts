@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { useAppContext } from "@/hooks/useAppContext";
 import {
@@ -10,7 +10,9 @@ import {
 } from "@/lib/island-themes";
 import {
   clearIslandThemeCache,
+  islandThemeCacheVersion,
   readIslandThemeCache,
+  subscribeToIslandThemeCache,
   writeIslandThemeCache,
 } from "@/lib/island-theme-cache";
 
@@ -30,7 +32,17 @@ import {
  * A selected Nostr theme is refreshed from its live definition afterwards, by
  * `IslandThemeSync`, which lives below the Nostr providers where a relay exists.
  */
-export function resolveIslandThemeOffline(id: string | undefined): IslandTheme {
+export function resolveIslandThemeOffline(
+  id: string | undefined,
+  /**
+   * The serialised cache entry, when the caller is tracking it.
+   *
+   * Only a cache-busting key: the value is re-read from storage either way, and
+   * passing it makes the dependency visible to a memo instead of hidden behind
+   * a side effect. Callers that do not track cache writes omit it.
+   */
+  _cacheVersion?: string,
+): IslandTheme {
   if (isBuiltinThemeId(id)) return resolveIslandTheme(id);
 
   const cached = readIslandThemeCache();
@@ -42,6 +54,9 @@ export function resolveIslandThemeOffline(id: string | undefined): IslandTheme {
       emoji: '✨',
       palette: cached.palette,
       source: 'nostr',
+      // The interoperable source, so a re-selection republishes the theme's own
+      // font and wallpaper instead of a colours-only reduction of it.
+      ...(cached.config ? { config: cached.config } : {}),
     };
   }
 
@@ -102,7 +117,28 @@ export function useTheme(): UseThemeResult {
   const { config, updateConfig } = useAppContext();
   const storedId = config.theme;
 
-  const theme = useMemo(() => resolveIslandThemeOffline(storedId), [storedId]);
+  /*
+    The cache is part of the input, not just a boot optimisation.
+
+    `ditto:active` names "whatever theme this account is using", so `IslandThemeSync`
+    can replace its CONTENT without the id changing. Memoising on the id alone
+    would leave the island painted with the previous theme until something else
+    happened to re-render. Subscribing to the cache is what makes an adoption
+    visible immediately.
+  */
+  const cacheVersion = useSyncExternalStore(
+    subscribeToIslandThemeCache,
+    islandThemeCacheVersion,
+    () => '',
+  );
+
+  // `cacheVersion` is the serialised cache entry, so passing it THROUGH the
+  // resolver rather than only as a dependency keeps the lint rule honest: it is
+  // a real input, not a hidden one.
+  const theme = useMemo(
+    () => resolveIslandThemeOffline(storedId, cacheVersion),
+    [storedId, cacheVersion],
+  );
 
   const setTheme = useCallback(
     (next: IslandTheme) => {

@@ -63,7 +63,10 @@ export function themeFromDefinition(definition: NostrThemeDefinition): IslandThe
     pubkey: definition.pubkey,
     title: definition.title,
     description: definition.description,
-    palette: paletteFromCoreColors(definition.colors),
+    palette: paletteFromCoreColors(definition.config.colors),
+    // The interoperable source travels WITH the theme, so re-publishing it
+    // carries the author's font and wallpaper rather than only its colours.
+    config: definition.config,
   });
 }
 

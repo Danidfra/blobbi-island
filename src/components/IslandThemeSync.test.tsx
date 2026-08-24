@@ -19,6 +19,7 @@ import {
   THEME_DEFINITION_KIND,
 } from '@/lib/nostr-theme';
 import { ISLAND_THEME_CACHE_KEY } from '@/lib/island-theme-cache';
+import { DITTO_ACTIVE_THEME_ID } from '@/lib/island-themes';
 
 const ME = 'f'.repeat(64);
 const AUTHOR = 'a'.repeat(64);
@@ -208,9 +209,17 @@ describe('refusing to adopt', () => {
     expect(storedTheme()).toBe('lantern-night');
   });
 
-  it('ignores an id it cannot resolve', async () => {
-    // A theme id from a future build, or a malformed tag. Adopting it would
-    // trade a working island for the fallback one.
+  it('falls back to the colours when the NAME cannot be resolved', async () => {
+    /*
+      Corrected in the interop phase.
+
+      This used to assert "do nothing", which was wrong twice over. An active
+      theme event is SELF-CONTAINED — it carries the colours regardless of
+      whether it also names a definition — so an id this build cannot resolve
+      is a reason to ignore the NAME, not the event. Leaving the player on a
+      theme their account is not using, while holding a perfectly applicable
+      palette, was the shape of the Ditto → Island bug.
+    */
     seedTheme('lantern-night');
     stored = [activeThemeEvent([[ISLAND_THEME_TAG, 'a-theme-from-2027']])];
 
@@ -219,8 +228,7 @@ describe('refusing to adopt', () => {
         <IslandThemeSync />
       </TestApp>,
     );
-    await new Promise((r) => setTimeout(r, 50));
-    expect(storedTheme()).toBe('lantern-night');
+    await waitFor(() => expect(storedTheme()).toBe(DITTO_ACTIVE_THEME_ID));
   });
 
   it('does nothing at all when signed out', async () => {

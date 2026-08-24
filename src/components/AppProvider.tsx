@@ -4,6 +4,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, type AppConfig, type AppContextType } from '@/contexts/AppContext';
 import { DEFAULT_ISLAND_THEME_ID, applyIslandTheme } from '@/lib/island-themes';
 import { resolveIslandThemeOffline } from '@/hooks/useTheme';
+import { applyThemeBackground, applyThemeFont } from '@/lib/island-theme-media';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -99,6 +100,18 @@ export function AppProvider(props: AppProviderProps) {
  */
 function useApplyIslandTheme(themeId: string) {
   useLayoutEffect(() => {
-    applyIslandTheme(resolveIslandThemeOffline(themeId), document.documentElement);
+    const theme = resolveIslandThemeOffline(themeId);
+    applyIslandTheme(theme, document.documentElement);
+    /*
+      The two fields that are not colours.
+
+      A Nostr theme may carry a FONT and BACKGROUND MEDIA (Ditto's `f` and `bg`
+      tags). They are applied here, from the same resolved theme, so there is
+      exactly one place a theme becomes visible — and cleared here too, since
+      `theme.config` is absent for every built-in and switching to one must take
+      the previous theme's wallpaper with it.
+    */
+    applyThemeFont(theme.config?.font);
+    applyThemeBackground(theme.config?.background, document.documentElement);
   }, [themeId]);
 }

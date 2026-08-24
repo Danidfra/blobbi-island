@@ -45,10 +45,19 @@
  * `description`, and `["a", "36767:<pubkey>:<d>"]` when a definition was
  * selected. Empty tags means "cleared".
  *
- * Ditto also defines `f` (font family + URL + body/title role) and `bg`
- * (an imeta-style background media tag). Island **reads neither and writes
- * neither** — see {@link ThemeCompatibilityNote} at the bottom of this file for
- * exactly what that costs.
+ * Ditto also defines `f` (font family + URL, with a body/title role) and `bg`
+ * (an imeta-style background media tag). Island reads and writes BOTH — see
+ * {@link ThemeCompatibilityNote} at the bottom of this file for what happens to
+ * each once it is inside the island.
+ *
+ * ## What this file is NOT
+ *
+ * It is not "the theme this user is using in Ditto". That lives in NIP-78
+ * kind:30078 under `d = "ditto/metadata"`, encrypted to self — see
+ * `ditto-settings.ts`. Kind 16767 is a PUBLIC advertisement of a palette, read
+ * by Ditto's ProfilePage and FollowPage to decorate somebody's profile, and
+ * pulled back on pageload into `customTheme`. Treating it as the app-level
+ * selection is precisely the mistake that made the first interop attempt fail.
  *
  * ## Colours on the wire are HEX; colours in memory are HSL channels
  *
@@ -101,6 +110,86 @@ export interface CoreThemeColors {
 }
 
 const CORE_ROLES = ['background', 'text', 'primary'] as const;
+
+/**
+ * A font reference, exactly as Ditto models it: a CSS family name and an
+ * optional URL to a font FILE.
+ *
+ * Not a CSS declaration, not a stylesheet link, not a Google Fonts embed URL —
+ * a `.woff2`/`.ttf`/`.otf` that goes in a single `src: url(...)`. Anything else
+ * in these fields is data Island refuses rather than interprets.
+ */
+export interface ThemeFont {
+  family: string;
+  url?: string;
+}
+
+/** Background media, as Ditto models it. */
+export interface ThemeBackground {
+  /** https only. */
+  url: string;
+  /** `cover` (fixed, centred) or `tile` (repeat). Ditto defaults to `cover`. */
+  mode?: 'cover' | 'tile';
+  dimensions?: string;
+  mimeType?: string;
+  blurhash?: string;
+}
+
+/**
+ * The complete interoperable theme — Ditto's `ThemeConfig`, field for field.
+ *
+ * This is the unit that travels: it is what a kind:36767 definition holds, what
+ * a kind:16767 active theme holds, and what lives under `customTheme` in
+ * Ditto's encrypted settings. Island derives its sixteen-colour palette FROM
+ * this and never publishes the palette.
+ */
+export interface ThemeConfig {
+  /** Display name. Present on events and in settings; optional in both. */
+  title?: string;
+  colors: CoreThemeColors;
+  /** Body font. */
+  font?: ThemeFont;
+  /** Title/display-name font. */
+  titleFont?: ThemeFont;
+  background?: ThemeBackground;
+}
+
+/**
+ * Validate a URL that arrived from an event.
+ *
+ * **https only**, reproducing Ditto's `sanitizeUrl`. Returning the parsed
+ * `href` rather than the input is the point: the URL is re-serialised by the
+ * URL parser, which percent-encodes quotes and backslashes, so a value that
+ * later lands inside `url("…")` in a stylesheet cannot break out of the string.
+ * `http:`, `data:`, `blob:` and `javascript:` are all refused.
+ */
+export function sanitizeThemeUrl(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'https:') return undefined;
+    return parsed.href;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Allowlist-sanitise a string destined for a quoted CSS value.
+ *
+ * Ditto's `sanitizeCssString`, reproduced: Unicode letters and numbers, space,
+ * underscore, hyphen, apostrophe and period survive; everything else — quotes,
+ * braces, semicolons, parentheses, backslashes — is removed. A font family is
+ * the one event-sourced string that has to reach a stylesheet, and this is what
+ * makes that safe.
+ */
+export function sanitizeCssIdentifier(value: string): string {
+  return value.replace(/[^\p{L}\p{N} _\-'.]/gu, '').trim().slice(0, 64);
+}
+
+/** Longest a font family or media URL may be before Island refuses it. */
+const URL_MAX = 512;
+
 
 // ─── Colour conversion ───────────────────────────────────────────────────────
 
@@ -286,6 +375,126 @@ function buildColorTags(colors: CoreThemeColors): string[][] {
   return CORE_ROLES.map((role) => ['c', hslTripletToHex(colors[role]), role]);
 }
 
+// ─── `f` tags (fonts) ────────────────────────────────────────────────────────
+
+/**
+ * Read the body and title fonts.
+ *
+ * Shape: `['f', family, url, role]` where role is `'body'` or `'title'`. A tag
+ * with NO role is legacy and counts as the body font — Ditto's rule, and
+ * dropping those would lose every font published before the role was added.
+ * First tag per role wins, so a later duplicate cannot override.
+ *
+ * The URL is https-validated here rather than at the point of use, so an
+ * unusable one becomes a family with no URL — which still renders correctly if
+ * the family happens to be installed, instead of discarding the font entirely.
+ */
+function parseFontTags(tags: string[][]): { font?: ThemeFont; titleFont?: ThemeFont } {
+  let font: ThemeFont | undefined;
+  let titleFont: ThemeFont | undefined;
+
+  for (const tag of tags) {
+    if (tag[0] !== 'f' || typeof tag[1] !== 'string' || !tag[1]) continue;
+    const family = sanitizeThemeText(tag[1], 64);
+    if (!family) continue;
+
+    const parsed: ThemeFont = { family };
+    const url = tag[2] && tag[2].length <= URL_MAX ? sanitizeThemeUrl(tag[2]) : undefined;
+    if (url) parsed.url = url;
+
+    if (tag[3] === 'title') {
+      if (!titleFont) titleFont = parsed;
+    } else {
+      // 'body', or absent (legacy).
+      if (!font) font = parsed;
+    }
+  }
+
+  return { font, titleFont };
+}
+
+/**
+ * Emit `f` tags. Body before title, and an absent URL is written as `''` —
+ * both are Ditto's shape, and the empty string is load-bearing because the role
+ * is the FOURTH element.
+ */
+function buildFontTags(font?: ThemeFont, titleFont?: ThemeFont): string[][] {
+  const tags: string[][] = [];
+  if (font?.family) tags.push(['f', font.family, font.url ?? '', 'body']);
+  if (titleFont?.family) tags.push(['f', titleFont.family, titleFont.url ?? '', 'title']);
+  return tags;
+}
+
+// ─── `bg` tag (background media) ─────────────────────────────────────────────
+
+/**
+ * Read the background media tag.
+ *
+ * Shape: one variadic tag of `key value` strings, imeta-style —
+ * `['bg', 'url https://…', 'mode cover', 'm image/jpeg', 'dim 1920x1080',
+ * 'blurhash …']`. The key is everything before the FIRST space, so a value may
+ * itself contain spaces.
+ *
+ * A background whose URL is not https is dropped whole: a wallpaper is not
+ * worth a mixed-content request or a `javascript:` evaluation, and half a
+ * background (a blurhash with nothing behind it) is not a background.
+ */
+function parseBackgroundTag(tags: string[][]): ThemeBackground | undefined {
+  const tag = tags.find(([name]) => name === 'bg');
+  if (!tag) return undefined;
+
+  const kv = new Map<string, string>();
+  for (let i = 1; i < tag.length; i += 1) {
+    const entry = tag[i];
+    if (typeof entry !== 'string') continue;
+    const space = entry.indexOf(' ');
+    if (space === -1) continue;
+    kv.set(entry.slice(0, space), entry.slice(space + 1));
+  }
+
+  const raw = kv.get('url');
+  const url = raw && raw.length <= URL_MAX ? sanitizeThemeUrl(raw) : undefined;
+  if (!url) return undefined;
+
+  const background: ThemeBackground = { url };
+  const mode = kv.get('mode');
+  if (mode === 'cover' || mode === 'tile') background.mode = mode;
+  const mimeType = sanitizeThemeText(kv.get('m'), 64);
+  if (mimeType) background.mimeType = mimeType;
+  const dimensions = sanitizeThemeText(kv.get('dim'), 32);
+  if (dimensions) background.dimensions = dimensions;
+  const blurhash = sanitizeThemeText(kv.get('blurhash'), 128);
+  if (blurhash) background.blurhash = blurhash;
+  return background;
+}
+
+/** Emit the `bg` tag, in Ditto's key order. */
+function buildBackgroundTag(background?: ThemeBackground): string[][] {
+  if (!background?.url) return [];
+  const entries: string[] = ['bg', `url ${background.url}`];
+  if (background.mode) entries.push(`mode ${background.mode}`);
+  if (background.mimeType) entries.push(`m ${background.mimeType}`);
+  if (background.dimensions) entries.push(`dim ${background.dimensions}`);
+  if (background.blurhash) entries.push(`blurhash ${background.blurhash}`);
+  return [entries];
+}
+
+/** Assemble the interoperable theme carried by a 36767 or 16767 event. */
+function parseThemeConfig(event: NostrEvent, colors: CoreThemeColors): ThemeConfig {
+  const { font, titleFont } = parseFontTags(event.tags);
+  const config: ThemeConfig = { colors };
+  const title = sanitizeThemeText(
+    event.tags.find(([n]) => n === 'title')?.[1],
+    THEME_TITLE_MAX,
+  );
+  if (title) config.title = title;
+  if (font) config.font = font;
+  if (titleFont) config.titleFont = titleFont;
+  const background = parseBackgroundTag(event.tags);
+  if (background) config.background = background;
+  return config;
+}
+
 /**
  * Ditto's legacy format: the colours as JSON in `content`.
  *
@@ -328,7 +537,8 @@ export interface NostrThemeDefinition {
   pubkey: string;
   title: string;
   description: string;
-  colors: CoreThemeColors;
+  /** The complete interoperable theme: colours, fonts, background media. */
+  config: ThemeConfig;
   /** `36767:<pubkey>:<d>` — stable across republishes, unlike the event id. */
   address: string;
   /** For deterministic newest-wins resolution. */
@@ -393,7 +603,7 @@ export function parseThemeDefinition(event: NostrEvent): NostrThemeDefinition | 
       event.tags.find(([n]) => n === 'description')?.[1],
       THEME_DESCRIPTION_MAX,
     ),
-    colors,
+    config: parseThemeConfig(event, colors),
     address: `${THEME_DEFINITION_KIND}:${event.pubkey}:${identifier}`,
     createdAt: event.created_at,
     eventId: event.id,
@@ -403,20 +613,23 @@ export function parseThemeDefinition(event: NostrEvent): NostrThemeDefinition | 
 /**
  * Tags for a kind:36767 theme definition.
  *
- * Byte-compatible with Ditto's `buildThemeDefinitionTags` for a theme with no
- * font and no background media, which is every theme Island publishes: same
- * tags, same order, same `alt` wording, same `t` topic.
+ * Byte-compatible with Ditto's `buildThemeDefinitionTags`: same tags, same
+ * order (`d`, colours, fonts, background, title, alt, `t`, description), same
+ * `alt` wording, same topic. `ditto-interop.test.ts` compares the two builders
+ * directly rather than trusting this comment.
  */
 export function buildThemeDefinitionTags(input: {
   identifier: string;
   title: string;
-  colors: CoreThemeColors;
+  config: ThemeConfig;
   description?: string;
 }): string[][] {
   const title = sanitizeThemeText(input.title, THEME_TITLE_MAX);
   const tags: string[][] = [
     ['d', input.identifier],
-    ...buildColorTags(input.colors),
+    ...buildColorTags(input.config.colors),
+    ...buildFontTags(input.config.font, input.config.titleFont),
+    ...buildBackgroundTag(input.config.background),
     ['title', title],
     ['alt', `Custom theme: ${title}`],
     ['t', 'theme'],
@@ -464,12 +677,20 @@ export function titleToSlug(title: string): string {
 export const ISLAND_THEME_TAG = 'island-theme';
 
 export interface ActiveThemeSelection {
-  colors: CoreThemeColors;
+  /**
+   * The complete theme, SELF-CONTAINED.
+   *
+   * This is the field that matters, and the one the first implementation did
+   * not have. Ditto publishes a self-contained active theme for every selection
+   * that did not come from a definition — a preset, an edited palette, a colour
+   * nudge — so an event with no `a` tag is the COMMON case, not a degenerate
+   * one. It is applied from these values alone.
+   */
+  config: ThemeConfig;
   /** `36767:<pubkey>:<d>` of the source definition, when there was one. */
   sourceAddress: string | null;
   /** Island's own theme id, when the event was written by Island. */
   islandThemeId: string | null;
-  title: string;
   createdAt: number;
 }
 
@@ -484,31 +705,51 @@ export function parseActiveTheme(event: NostrEvent): ActiveThemeSelection | null
   const islandRaw = event.tags.find(([n]) => n === ISLAND_THEME_TAG)?.[1];
 
   return {
-    colors,
+    config: parseThemeConfig(event, colors),
     sourceAddress:
       typeof sourceAddress === 'string' &&
       sourceAddress.startsWith(`${THEME_DEFINITION_KIND}:`)
         ? sourceAddress
         : null,
     islandThemeId: sanitizeThemeText(islandRaw, 128) || null,
-    title: sanitizeThemeText(event.tags.find(([n]) => n === 'title')?.[1], THEME_TITLE_MAX),
     createdAt: event.created_at,
   };
 }
 
-/** Tags for a kind:16767 active-theme event. */
+/**
+ * Tags for a kind:16767 active-theme event.
+ *
+ * The order is Ditto's, exactly: colours, fonts, background, `alt`, `title`,
+ * `description`, `a`. Island's own `island-theme` tag is appended LAST, so
+ * everything before it is byte-identical to what Ditto's builder produces for
+ * the same input — which is what `ditto-interop.test.ts` asserts.
+ *
+ * `sourceAuthor` + `sourceIdentifier` rather than a pre-built address, again
+ * matching Ditto: the `a` tag is emitted only when BOTH are present, so a
+ * half-known reference can never produce a malformed one.
+ */
 export function buildActiveThemeTags(input: {
-  colors: CoreThemeColors;
-  title?: string;
-  /** `36767:<pubkey>:<d>` when the selection came from a definition. */
-  sourceAddress?: string | null;
-  /** Island's own id for the selection. */
+  config: ThemeConfig;
+  sourceAuthor?: string;
+  sourceIdentifier?: string;
+  description?: string;
+  /** Island's own id for the selection. Additive; Ditto ignores it. */
   islandThemeId?: string;
 }): string[][] {
-  const tags: string[][] = [...buildColorTags(input.colors), ['alt', 'Active profile theme']];
-  const title = sanitizeThemeText(input.title, THEME_TITLE_MAX);
+  const { config } = input;
+  const tags: string[][] = [
+    ...buildColorTags(config.colors),
+    ...buildFontTags(config.font, config.titleFont),
+    ...buildBackgroundTag(config.background),
+    ['alt', 'Active profile theme'],
+  ];
+  const title = sanitizeThemeText(config.title, THEME_TITLE_MAX);
   if (title) tags.push(['title', title]);
-  if (input.sourceAddress) tags.push(['a', input.sourceAddress]);
+  const description = sanitizeThemeText(input.description, THEME_DESCRIPTION_MAX);
+  if (description) tags.push(['description', description]);
+  if (input.sourceAuthor && input.sourceIdentifier) {
+    tags.push(['a', `${THEME_DEFINITION_KIND}:${input.sourceAuthor}:${input.sourceIdentifier}`]);
+  }
   if (input.islandThemeId) tags.push([ISLAND_THEME_TAG, input.islandThemeId]);
   return tags;
 }
