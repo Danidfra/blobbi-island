@@ -118,15 +118,14 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
   for arbitrary user colours; wrong for authored art direction. See §2.
 - **`light` / `dark` / `system` / `custom` as theme identities.** The island has
   named themes, full stop.
-- **Ditto's encrypted-settings sync and `autoShareTheme`.** Island publishes its
-  selection unconditionally when signed in, because there is no second theme to
-  keep separate here — Ditto's toggle exists so a user can show one theme on
-  their profile and use another in the app.
-- **Font (`f`) and background-media (`bg`) tags.** Ditto's themes can carry a
-  remote font file and a background photo, which suits a social feed. Island
-  fetches neither: a font file on a stranger's say-so is a request nobody asked
-  for, and the island already has a background — it is a drawn world, and a
-  photograph behind the wood frame would fight the art.
+- **`autoShareTheme` as a user-facing toggle.** Island publishes its selection
+  unconditionally when signed in, because there is no second theme to keep
+  separate here — Ditto's toggle exists so a user can show one theme on their
+  profile and use another in the app. Island's selection *is* both.
+- **`titleFont` rendering.** Read, cached and republished; not applied. See the
+  scope table in §5b.
+- **`blurhash` / `dimensions` / `mimeType`.** Read and republished; not used.
+  Island has no progressive-load placeholder to spend them on.
 - **Ditto's own palettes.** Borrowing its violet-on-near-black for a BUILT-IN
   would make the island look like a Ditto skin. What was borrowed is the
   discipline — and, now, the protocol.
@@ -141,10 +140,20 @@ the short version.
 | Kind | Class | Question |
 | --- | --- | --- |
 | `36767` | Addressable | "Here is a theme." `36767:<pubkey>:<d>` |
-| `16767` | Replaceable | "This is the theme I am using." |
+| `16767` | Replaceable | "Here is the palette I show publicly." |
+| `30078` | Addressable | "Here is the theme I am **using**." NIP-78, encrypted |
 
-A theme is three colours: `background`, `text`, `primary`, hex-encoded in `c`
-tags with a role marker. `island-theme-adapter.ts` expands them into the island's
+> **Correction.** An earlier version of this document, and Island's first
+> implementation, treated kind 16767 as "the theme this user has selected". It is
+> not. In Ditto, 16767 is read by `ProfilePage` and `FollowPage` to decorate a
+> profile; the theme Ditto *renders* is `theme` + `customTheme` inside the
+> NIP-78 blob at `d = "ditto/metadata"`. Publishing only a 16767 leaves a Ditto
+> account looking exactly as it did — which is precisely what happened. Island
+> now writes both, and reads the blob first.
+
+A theme is three colours — `background`, `text`, `primary`, hex-encoded in `c`
+tags with a role marker — plus an optional **font** (`f`) and **background
+image** (`bg`). Island reads and republishes all of them. `island-theme-adapter.ts` expands them into the island's
 sixteen, **solving** every role that carries text against the surfaces it sits on
 until it clears its WCAG threshold — so a community theme is held to the same
 contrast contract as a built-in one (`island-theme-adapter.test.ts` runs it
@@ -162,12 +171,27 @@ field holds both without ambiguity — and built-ins were deliberately NOT renam
 to `builtin:*`, because every stored preference in the wild is a bare slug and a
 rename would have reset every player on a non-default theme.
 
-**Trust.** A theme is a stranger's data colouring the whole UI. No string from an
-event reaches CSS: a colour must match `#rgb`/`#rrggbb` and is then parsed into
-numbers and re-emitted from those numbers. Free text is stripped of control
-characters and capped. Contrast is *reported*, never enforced — the picker and
-the create form both say which pairing is short — because blocking would mean
-refusing themes Ditto happily renders.
+**Trust.** A theme is a stranger's data colouring the whole UI. A colour must
+match `#rgb`/`#rrggbb` and is then parsed into numbers and re-emitted from those
+numbers, so it cannot carry a payload. The two fields that *are* strings reaching
+a stylesheet — a font family and a media URL — get their own module
+(`island-theme-media.ts`): https-only URLs re-serialised by the URL parser, and
+families through a Unicode allowlist. Free text is stripped of control characters
+and capped. No arbitrary CSS from an event ever enters a `<style>` element.
+
+Contrast is *reported*, never enforced — the picker and the create form both say
+which pairing is short — because blocking would mean refusing themes Ditto
+happily renders.
+
+### Font and background scope
+
+| Field | Island behaviour |
+| --- | --- |
+| `colors` | Expanded into the sixteen-colour palette by the adapter. |
+| `font` (body) | **Applied**, via `--island-font`, with the island's own Comfortaa stack as the fallback and `font-display: swap` — a dead font host leaves the game readable. |
+| `titleFont` | **Read, cached and republished, not rendered.** It styles a profile display name in Ditto; the island has no such surface, and inventing one would be guessing. Preserving it means editing a theme in Island does not silently delete it. |
+| `background` | **Applied to the page around the game window only.** Ditto puts it on `body`, which suits a feed scrolling over it. Town, Beach, Mine and the Arcade are drawn art — a theme may dress the room the game sits in, never the game. Both of Ditto's modes (`cover`, `tile`) are honoured. |
+| `dimensions`, `mimeType`, `blurhash` | Read and republished; not used for rendering. Island has no progressive-load placeholder to spend a blurhash on. |
 
 ## 6. Implementation
 
@@ -177,6 +201,9 @@ refusing themes Ditto happily renders.
 | Default palette, in CSS, for a no-JS render | `:root` in `src/index.css` |
 | Pre-paint application | `public/island-theme.js`, blocking in `index.html` |
 | Persistence + runtime application | `src/components/AppProvider.tsx` |
+| Ditto's encrypted settings (kind 30078) | `src/lib/ditto-settings.ts` |
+| Reading those settings | `src/hooks/useDittoThemeSettings.ts` |
+| Font + background application | `src/lib/island-theme-media.ts` |
 | Read/set hook (relay-free) | `src/hooks/useTheme.ts` |
 | Read/set + discovery + publish | `src/hooks/useThemeSelection.ts` |
 | Ditto protocol (parse/build/validate) | `src/lib/nostr-theme.ts` |
@@ -201,13 +228,32 @@ which only the picker uses.
 ```
   pre-paint boot script   config id → built-in table → palette cache
        ↓
-  AppProvider             the same offline resolution, authoritatively
+  AppProvider             the same offline resolution, authoritatively;
+                          also applies the theme's font and background
        ↓
-  IslandThemeSync         refreshes the cache from the live kind:36767,
-                          and adopts a kind:16767 selection made on another
-                          device — ONCE per session, never on an unusable
-                          read, never for an id it cannot resolve
+  IslandThemeSync         refreshes the cache from the live kind:36767, and
+                          adopts the ACCOUNT's selection — once per session,
+                          never on an unusable read
 ```
+
+Within that last step, the account is asked in this order:
+
+```
+  kind:30078  theme === 'custom' ? customTheme : (a built-in mode — nothing to adopt)
+       ↓  unreadable (no NIP-44 signer, or a relay carrying only public events)
+  kind:16767  the self-contained config it carries
+```
+
+A NAMED theme — one the event points at with an `a` tag, or one Island tagged
+itself — is adopted by name, so the island follows the author's later edits. A
+name this build cannot resolve falls through to the colours rather than
+abandoning the event: an active-theme event is self-contained, and refusing to
+use it was the Ditto → Island bug.
+
+**Same-second selections.** Both writes use `nextReplaceableCreatedAt`, so a
+revision is always strictly newer than the one it replaces. Without it, NIP-01
+breaks a tie between two replaceable events on the lower event id — which has
+nothing to do with which one the player chose.
 
 The stored id is never overwritten by a failed read. A community theme survives
 an offline boot from its cached palette; only a selection that is BOTH unreadable
@@ -273,6 +319,40 @@ For **each theme** (`cozy-day`, `lantern-night`):
 
 Viewports: desktop, mobile portrait, mobile landscape.
 
+### Cross-app, same Nostr account
+
+The one thing automated tests cannot prove. `cross-app-theme.test.ts` pins the
+resolution on both sides, but only two real apps against a real relay show
+whether it works.
+
+**Ditto → Island**
+
+| Step | Expected |
+| --- | --- |
+| Select a built-in Ditto theme (light/dark), reload Island | Island adopts it as `ditto:active` |
+| Select a Ditto preset / edited palette, reload Island | same — this is the self-contained case |
+| Select a community 36767 in Ditto, reload Island | Island shows that named theme, checked in the picker |
+| Select a theme with a custom font | Island's body type changes |
+| Select a theme with a background image | image dresses the page around the frame, world art intact |
+
+**Island → Ditto**
+
+| Step | Expected |
+| --- | --- |
+| Select a community theme in Island, reload Ditto | Ditto renders it (mode flips to `custom`) |
+| Select an Island built-in, reload Ditto | Ditto renders its three colours under its name |
+| Create + publish a theme in Island, reload Ditto | colours, font and background all present |
+| Check Ditto's other settings afterwards | feed settings, filters, relays unchanged |
+
+**Resilience**
+
+| Condition | Expected |
+| --- | --- |
+| Relay offline at boot | last theme still painted, selection remembered |
+| Corrupt palette cache | default palette, selection remembered |
+| Selected definition deleted | cached palette retained, notice only if never cached |
+| Signer without NIP-44 | 16767 still written; settings channel skipped silently |
+
 ### Nostr themes and stage backgrounds
 
 Automated tests cover the protocol both directions, discovery (replacement,
@@ -288,6 +368,8 @@ adapter's contrast contract. What still needs eyes:
 | Create a theme | preview tracks the colour pickers; app behind it does NOT change |
 | Publish | appears under "Yours" and applies; republishing the same name replaces |
 | A theme published from Ditto | appears in the community list and renders |
+| A theme with a font | body type changes; a dead font URL leaves Comfortaa |
+| A theme with a background image | dresses the page around the frame; the world art is untouched |
 | Stage background | picker lists both; switching does not remount the world |
 | Bag shortcut (🎒) | opens My Blobbi on Inventory, not a second window |
 
