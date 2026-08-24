@@ -58,6 +58,15 @@ export function presenceExpirationOf(event: NostrEvent): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * The island every player is on.
+ *
+ * A constant rather than a literal in two places: it scopes presence and
+ * communication subscriptions, and it is recorded on a safety report, so the
+ * three must agree.
+ */
+export const DEFAULT_ISLAND_ID = '1';
+
 /** Default movement speed in pixels per second */
 export const DEFAULT_SPEED_PX = 120;
 

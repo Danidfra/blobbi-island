@@ -48,6 +48,7 @@ import { getBlobbiInitialPosition } from '@/lib/location-initial-position';
 import { wireCenterToGround } from '@/lib/presence-ground';
 import { LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { isOccupiableSeat } from '@/lib/theater-seats-config';
+import { isBlocked, subscribeRelationships } from '@/player-safety';
 
 // ============================================================================
 // Types
@@ -442,6 +443,21 @@ const animatePlayers = useCallback(() => {
 
   const processPresenceEvent = useCallback(async (event: NostrEvent) => {
     try {
+      // BLOCK, enforced before anything else.
+      //
+      // First because it is the cheapest check in the function — a lookup
+      // against a small local map, against a JSON.parse and a tag scan — and
+      // because it is the one that must not be reachable around. A blocked
+      // player's presence never becomes application state at all: no entry in
+      // the players map, no actor, no anchor for a bubble to portal into, no
+      // gaze target, and nothing left behind when they stop publishing.
+      //
+      // Filtering at render instead would leave all of that in place and hide
+      // the last step, which is how a "hidden" player still steals focus, still
+      // blocks a walk target, and still reappears the moment some other code
+      // path reads the map.
+      if (isBlocked(event.pubkey)) return;
+
       if (DEBUG_MP) console.debug('[blobbi][mp] EVENT raw', {
         kind: event.kind,
         pubkey: event.pubkey,
@@ -743,6 +759,44 @@ const animatePlayers = useCallback(() => {
   // ============================================================================
   // Subscription Management
   // ============================================================================
+
+  // ============================================================================
+  // Block eviction
+  // ============================================================================
+
+  /**
+   * Blocking someone who is ALREADY on screen removes them now.
+   *
+   * The ingest gate above only stops the next event. Without this, a blocked
+   * player would linger until their presence expired — up to
+   * `EXP_SECONDS + 5` — which is 40 seconds of standing next to someone the
+   * player just said they did not want to see. Waiting out a timeout is not a
+   * safety control.
+   *
+   * Subscribed rather than derived so it also fires when the block happens in
+   * ANOTHER TAB: the store's `storage` listener makes that a normal change here.
+   */
+  useEffect(() => {
+    const prune = () => {
+      setPlayers((prev) => {
+        let changed = false;
+        const next = new Map(prev);
+        for (const [key, player] of prev) {
+          if (!isBlocked(player.pubkey)) continue;
+          next.delete(key);
+          // The live-position map is read by the gaze loop outside React, so a
+          // stale entry there would keep other Blobbis looking at a player who
+          // is no longer drawn.
+          opts.livePositionsRef?.current.delete(key);
+          changed = true;
+        }
+        return changed ? next : prev;
+      });
+    };
+
+    prune();
+    return subscribeRelationships(prune);
+  }, [opts.livePositionsRef]);
 
   const startSubscription = useCallback(() => {
     if (subscriptionRef.current) {

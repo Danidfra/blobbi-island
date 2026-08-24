@@ -84,6 +84,16 @@ interface BlobbiInfoModalProps {
     isSleeping?: boolean;
   };
   externalVisual?: BlobbiVisual;
+  /**
+   * Action area for the window, used by the read-only card another player's
+   * Blobbi opens into: it carries the Mute / Block / Report row.
+   *
+   * A slot rather than the actions themselves, because this component knows
+   * about a Blobbi and nothing about the person behind it — the pubkey, the
+   * room and the report context all live in `PlayingView`, which is also where
+   * the card is closed when a block makes it stale.
+   */
+  footer?: React.ReactNode;
 }
 
 
@@ -96,7 +106,8 @@ export function BlobbiInfoModal({
   readOnly = false,
   previewKey = 'self',
   externalBlobbiData,
-  externalVisual
+  externalVisual,
+  footer
 }: BlobbiInfoModalProps) {
   const currentPet = useCurrentPet();
   // The HUD balance is the canonical inventory Coin; the legacy profile value
@@ -362,6 +373,7 @@ export function BlobbiInfoModal({
           : 'Stats, equipment and effects'
       }
       icon={<PawPrint />}
+      footer={footer}
       /* The body owns its own layout and its inner panes scroll independently,
          so the frame's default padding and single scroller are handed back.
 

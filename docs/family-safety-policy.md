@@ -341,7 +341,12 @@ audit-roadmap order:
 | `strangerAuthoredNames`, `ownFreeTextNaming` | the name substitution and the word-pick composer |
 | `detailedPresence` | the coarse presence shape |
 
-Not modelled at all, because they are **missing features rather than capability
-restrictions**: blocking, muting and reporting. A child today has no recourse but
-to close the tab (audit C-2). They remain the highest-severity open finding, and
-they need building, not a policy field.
+Still not modelled as capabilities, and now built: **blocking, muting and
+reporting** shipped in Phase C. They deliberately did NOT become policy fields.
+
+A `canBlock` capability would imply a profile in which blocking could be switched
+*off*, which is not a decision anyone should be able to make. Capabilities
+describe what an experience may **do**; these describe what a player may
+**protect themselves from**. Both gates run on the same ingest paths and neither
+depends on the other — see
+[`player-safety-controls.md`](./player-safety-controls.md) §10.

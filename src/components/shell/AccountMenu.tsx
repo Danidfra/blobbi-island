@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   LogOut,
+  Shield,
   UserIcon,
   UserPlus,
   PawPrint,
@@ -39,6 +40,8 @@ import { useDebugOverlays } from "@/contexts/DebugOverlaysContext";
 import { setIslandSkyDev, useIslandSkyDev } from "@/lib/island-sky-dev";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { ThemePicker } from "@/components/shell/ThemePicker";
+import { SafetySettingsDialog } from "@/components/blobbi/player-safety/SafetySettingsDialog";
+import { usePlayerSafetyEntries } from "@/player-safety";
 import { SettingsRow, SettingsSection } from "@/components/ui/settings-row";
 import { useTheme } from "@/hooks/useTheme";
 import { genUserName } from "@/lib/genUserName";
@@ -81,6 +84,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const portalContainer = useFullscreenPortalContainer();
 
   // Logged out: reuse the stable LoginArea login button unchanged.
@@ -106,6 +110,11 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
   // The picker is its own modal, so the menu gets out of its way first —
   // otherwise the dropdown's outside-click handling and the modal's focus trap
   // fight over the same pointer events.
+  const handleOpenSafety = () => {
+    closeModal();
+    setSafetyOpen(true);
+  };
+
   const handleOpenThemePicker = () => {
     closeModal();
     setThemePickerOpen(true);
@@ -128,6 +137,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
       onAddAccount={handleAddAccount}
       onSwitchBlobbi={handleSwitchBlobbi}
       onOpenThemePicker={handleOpenThemePicker}
+      onOpenSafety={handleOpenSafety}
       variant={variant}
     />
   );
@@ -196,6 +206,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
       />
       <SignupDialog isOpen={signupDialogOpen} onClose={() => setSignupDialogOpen(false)} />
       <ThemePicker open={themePickerOpen} onOpenChange={setThemePickerOpen} />
+      <SafetySettingsDialog open={safetyOpen} onOpenChange={setSafetyOpen} />
     </>
   );
 }
@@ -209,6 +220,7 @@ function AccountMenuBody({
   onAddAccount,
   onSwitchBlobbi,
   onOpenThemePicker,
+  onOpenSafety,
   variant,
 }: {
   currentUser: Account;
@@ -219,12 +231,14 @@ function AccountMenuBody({
   onAddAccount: () => void;
   onSwitchBlobbi: () => void;
   onOpenThemePicker: () => void;
+  onOpenSafety: () => void;
   variant: "dropdown" | "modal";
 }) {
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
   const { isDevMode, showDebugOverlays, setShowDebugOverlays } = useDebugOverlays();
   const { theme } = useTheme();
+  const safetyCount = usePlayerSafetyEntries().length;
   const skyDev = useIslandSkyDev();
   const currentCompanionId = profile?.currentCompanion;
   const currentBlobbi = currentCompanionId
@@ -287,6 +301,22 @@ function AccountMenuBody({
           description="Switch Blobbi"
           onClick={onSwitchBlobbi}
           trailing={<PawPrint aria-hidden className="size-4 text-island-purple" />}
+        />
+      </SettingsSection>
+
+      <SettingsSection label="Safety" icon={<Shield />}>
+        <SettingsRow
+          icon={<Shield />}
+          label="Blocked and muted"
+          /* The count IS the description: a player opening this row is almost
+             always here to undo something, and "2 players" tells them there is
+             something to undo before they tap. */
+          description={
+            safetyCount === 0
+              ? "Nobody is blocked or muted"
+              : `${safetyCount} ${safetyCount === 1 ? "player" : "players"}`
+          }
+          onClick={onOpenSafety}
         />
       </SettingsSection>
 

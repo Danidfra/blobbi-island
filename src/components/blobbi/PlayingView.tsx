@@ -35,6 +35,9 @@ import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { DOCK_EVENTS } from '@/components/shell/dock-events';
 import { CommunicationPanel } from './communication/CommunicationPanel';
 import type { IslandMessage } from '@/communication';
+import { PlayerSafetyActions } from './player-safety/PlayerSafetyActions';
+import { isBlocked, subscribeRelationships } from '@/player-safety';
+import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 
 interface PlayingViewProps {
   selectedBlobbi: Blobbi | null;
@@ -107,6 +110,14 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     isSleeping?: boolean;
   } | null>(null);
 
+  /**
+   * Whose card is open, when it is another player's.
+   *
+   * Held in state rather than only in `currentRemoteRef` because the safety
+   * actions and the block-eviction effect below both need to re-render on it —
+   * a ref would leave the card showing someone who is no longer in the world.
+   */
+  const [readOnlyPubkey, setReadOnlyPubkey] = useState<string | null>(null);
   const [externalVisual, setExternalVisual] = useState<BlobbiVisual | null>(null);
   const [remotePreviewKey, setRemotePreviewKey] = useState<string | null>(null);
 
@@ -244,6 +255,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     });
 
     currentRemoteRef.current = { pubkey: playerPubkey, d: blobbiD };
+    setReadOnlyPubkey(playerPubkey);
     if (fetchAbortRef.current) {
       dbg('[blobbi-debug][fetch] Aborting previous fetch request');
       fetchAbortRef.current.abort();
@@ -437,6 +449,42 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
       // Keep basic data if fetch fails
     }
   };
+
+  /**
+   * Close the other-player card and forget everything derived from it.
+   *
+   * Shared by the modal's own close handler and by the block path, so a card
+   * dismissed because its subject was blocked leaves exactly the same state
+   * behind as one the player closed themselves.
+   */
+  const closeRemoteCard = useCallback(() => {
+    setIsBlobbiInfoOpen(false);
+    setReadOnlyBlobbiData(null);
+    setExternalVisual(null);
+    setRemotePreviewKey(null);
+    setReadOnlyPubkey(null);
+    currentRemoteRef.current = null;
+    if (fetchAbortRef.current) {
+      fetchAbortRef.current.abort();
+      fetchAbortRef.current = null;
+    }
+  }, []);
+
+  /**
+   * A card open onto a player who has just been blocked must not stay open.
+   *
+   * Blocking removes them from the world; leaving their card up would be the
+   * stale interaction the block was meant to end, and it would offer actions
+   * against someone no longer present. Subscribed rather than derived so a block
+   * performed in another tab closes this one too.
+   */
+  useEffect(() => {
+    const closeIfBlocked = () => {
+      const pubkey = currentRemoteRef.current?.pubkey;
+      if (pubkey && isBlocked(pubkey)) closeRemoteCard();
+    };
+    return subscribeRelationships(closeIfBlocked);
+  }, [closeRemoteCard]);
 
   const handleSendMessage = useCallback(async (message: IslandMessage) => {
     // Before the world has mounted there is nothing to publish through; that is
@@ -653,11 +701,23 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
             fetchAbortRef.current = null;
           }
           setRemotePreviewKey(null);
+          setReadOnlyPubkey(null);
         }}
         readOnly={!!readOnlyBlobbiData}
         externalBlobbiData={readOnlyBlobbiData || undefined}
         externalVisual={externalVisual || undefined}
         previewKey={remotePreviewKey ?? 'self'}
+        footer={
+          readOnlyBlobbiData && readOnlyPubkey ? (
+            <PlayerSafetyActions
+              pubkey={readOnlyPubkey}
+              islandId={DEFAULT_ISLAND_ID}
+              location={currentLocation}
+              reporterPubkey={user?.pubkey ?? null}
+              onBlocked={closeRemoteCard}
+            />
+          ) : undefined
+        }
       />
 
       {/* Social Share Modal */}

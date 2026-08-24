@@ -130,6 +130,37 @@ export function useChatBubbles() {
     });
   }, []);
 
+  /**
+   * Drop everything currently on screen (or waiting to be) from one player.
+   *
+   * Used when a player is muted or blocked. Without it a hostile message stays
+   * up for the rest of its four-second life AFTER the player pressed the button
+   * to make it stop — which is the moment the control most needs to look like it
+   * worked.
+   *
+   * Bubble keys are `<pubkey>:<sessionId>` or `<pubkey>:pending`, so the match is
+   * on the pubkey prefix: a player with two sessions, or a message still queued
+   * waiting for its anchor, is covered by the same call.
+   */
+  const removeBubblesForPubkey = useCallback((pubkey: string) => {
+    if (!pubkey) return;
+    const prefix = `${pubkey}:`;
+    setBubbles(prev => {
+      let changed = false;
+      const updated = new Map(prev);
+      for (const [id, bubble] of prev) {
+        if (!bubble.playerKey.startsWith(prefix)) continue;
+        updated.delete(id);
+        changed = true;
+      }
+      return changed ? updated : prev;
+    });
+    setQueuedBubbles(prev => {
+      const filtered = prev.filter(b => !b.playerKey.startsWith(prefix));
+      return filtered.length !== prev.length ? filtered : prev;
+    });
+  }, []);
+
   // Dedupe messages by a key for a short window
   const isDuplicate = useCallback((dedupeKey: string, windowMs: number = 2000): boolean => {
     const now = Date.now();
@@ -192,6 +223,7 @@ export function useChatBubbles() {
     processQueuedBubbles,
     clearBubbles,
     removeBubble,
+    removeBubblesForPubkey,
     isDuplicate,
   };
 }

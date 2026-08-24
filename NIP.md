@@ -9,6 +9,16 @@ tags when republishing replaceable/addressable events.
 All custom kinds include a NIP-31 `alt` tag where applicable to provide a
 human-readable description for clients that do not understand the kind.
 
+> **Before adding anything to this document, check whether Nostr already has it.**
+> An existing NIP is preferred over a Blobbi-specific convention even at some cost
+> in fit. Ask, in order: does a current NIP cover this; does it fit without
+> distortion; are its privacy properties acceptable for a product children use.
+> Record the answers — a standard that fits but publishes something a child should
+> not publish is one we decline *with a reason*, not one we skipped. The worked
+> example is [`docs/player-safety-controls.md`](docs/player-safety-controls.md)
+> §3, where NIP-51 mute lists and NIP-56 reports were both evaluated and
+> deliberately left unpublished, and no custom kind was created.
+
 > **Canonical registry.** The machine-checked inventory of every kind, every
 > official kind:31632 item definition, every canonical address, the issuer, the
 > definition relays and the recovery boundary lives in

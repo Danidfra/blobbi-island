@@ -52,7 +52,15 @@ import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
+import {
+  clearRecentMessages,
+  forgetMessagesFrom,
+  isCommunicationSilenced,
+  rememberMessage,
+  subscribeRelationships,
+} from '@/player-safety';
 import {
   SEND_COOLDOWN_MS,
   buildMessagePayload,
@@ -331,7 +339,7 @@ export function MultiplayerLayer({
   containerRef,
   currentBlobbiD,
   startPosition,
-  islandId = '1',
+  islandId = DEFAULT_ISLAND_ID,
   className,
   onMyPositionChange,
   disabled = false,
@@ -488,8 +496,15 @@ export function MultiplayerLayer({
     queueBubble,
     processQueuedBubbles,
     clearBubbles,
+    removeBubblesForPubkey,
     isDuplicate,
   } = useChatBubbles();
+
+  // Mirror of the live bubble map, so the mute/block eviction effect can read
+  // what is currently on screen without listing `bubbles` as a dependency and
+  // re-subscribing to the safety store on every bubble change.
+  const bubblesRef = useRef(bubbles);
+  bubblesRef.current = bubbles;
 
   // Create navigation API for walkable area checking
   const navApi = useMemo(() => {
@@ -839,6 +854,18 @@ export function MultiplayerLayer({
       // Skip own events
       if (event.pubkey === user?.pubkey) return;
 
+      // MUTE / BLOCK, before anything is parsed.
+      //
+      // Placed here for two reasons. It is the cheapest check available — a
+      // local map lookup against parsing an arbitrary attacker-supplied payload
+      // — so a blocked sender's flood costs almost nothing to discard. And it is
+      // sender-level, which is a different question from the capability gate
+      // further down: that one asks "may this KIND of message be shown", this
+      // one asks "may THIS PERSON be heard". Blocking implies muting, and the
+      // precedence lives in `isCommunicationSilenced` so the two bits can never
+      // be combined differently in two places.
+      if (isCommunicationSilenced(event.pubkey)) return;
+
       const now = Date.now();
       const nowSec = Math.floor(now / 1000);
 
@@ -900,6 +927,17 @@ export function MultiplayerLayer({
       const bubble = renderMessage(parsed.message);
       if (!bubble) return;
 
+      // Evidence for a possible report, remembered at the moment the message is
+      // accepted. Kind 21201 expires in ~10 s, so by the time a player opens the
+      // card and picks Report the event is gone from everywhere else. Memory
+      // only, one message per sender — see `recent-messages.ts`.
+      rememberMessage(event.pubkey, {
+        event,
+        messageClass: parsed.message.type,
+        renderedText: bubbleTextEquivalent(bubble),
+        receivedAt: now,
+      });
+
       const expiresAt = expirationTag ? parseInt(expirationTag) * 1000 : (now + CHAT_EVICT_MS);
       queueBubble(`${event.pubkey}:pending`, bubble, expiresAt);
     } catch (error) {
@@ -946,10 +984,42 @@ export function MultiplayerLayer({
     processQueuedBubbles(isPlayerVisible);
   }, [players, queuedBubbles, processQueuedBubbles]);
 
-  // Clear bubbles when location changes
+  // Clear bubbles when location changes. The evidence buffer goes with them:
+  // context from a room the player has left is not context they need, and
+  // keeping it would turn a per-room buffer into a session log by accident.
   useEffect(() => {
     clearBubbles();
+    clearRecentMessages();
   }, [currentLocation, clearBubbles]);
+
+  /**
+   * Muting or blocking removes what that player already said.
+   *
+   * The ingest gate stops the next message; this takes down the one still on
+   * screen. Leaving it up for the rest of its four-second life after the player
+   * pressed Mute would make the control look broken at exactly the wrong moment.
+   *
+   * Subscribed rather than derived so a mute performed in another tab clears
+   * this tab too.
+   */
+  useEffect(() => {
+    const evict = () => {
+      for (const key of anchorIndexRef.current.keys()) {
+        if (isCommunicationSilenced(key)) {
+          removeBubblesForPubkey(key);
+          forgetMessagesFrom(key);
+        }
+      }
+      for (const bubble of bubblesRef.current.values()) {
+        const [pubkey] = bubble.playerKey.split(':');
+        if (pubkey && isCommunicationSilenced(pubkey)) {
+          removeBubblesForPubkey(pubkey);
+          forgetMessagesFrom(pubkey);
+        }
+      }
+    };
+    return subscribeRelationships(evict);
+  }, [removeBubblesForPubkey]);
 
   // Expose the single send entry point to the parent.
   useEffect(() => {

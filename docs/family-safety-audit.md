@@ -53,6 +53,33 @@ inference rather than something the repo proves, it is marked **[inference]**.
 >
 > Details: [`communication-v2.md`](./communication-v2.md).
 
+> **Status update (2026-08-24) — Phase C shipped (player safety controls).**
+> Mute, Block and Report now exist, in Standard and Family alike. Blocked
+> presence is discarded before it becomes application state; muted and blocked
+> communication is discarded before it is parsed; an already-visible player is
+> evicted immediately rather than at presence expiry. Relationships persist
+> locally and propagate across tabs. **No new Nostr kind was created** — NIP-51
+> kind 10000 and NIP-56 kind 1984 were both evaluated and deliberately not
+> published (a child's block list and abuse reports are public, permanent records
+> under their own key); the standards record is in
+> [`player-safety-controls.md`](./player-safety-controls.md) §3. Effect on the
+> findings below:
+>
+> - **C-2 (no blocking, muting or reporting)** — **resolved for the local half.**
+>   A harassed player now has recourse that works instantly and survives a reload.
+>   What remains is that nothing consumes reports, which is stated in the UI
+>   rather than papered over.
+> - **H-2 (a stranger can follow a player room to room)** — **half addressed.**
+>   A blocked player is gone from this client entirely, but presence is still
+>   published island-wide, so a determined modified client can still track someone.
+>   The remaining half is relay-side.
+> - **Scenario 12 (a child blocks someone)** — now possible.
+> - **Scenario 13 (a blocked player changes key)** — unchanged and documented:
+>   block is an identity-level control, never a person-level ban. This is why
+>   Family's capability restrictions remain load-bearing.
+> - **C-3 (open YouTube catalog)** and the external-egress findings remain
+>   untouched.
+
 ---
 
 ## 1. Executive verdict
