@@ -401,30 +401,41 @@ export function BlobbiInfoModal({
               </div>
 
               {/*
-                THE BLOBBI, and the size fix.
+                THE BLOBBI, and the size fix — the second one, because the
+                first fixed the wrong number.
 
-                Its box is a FRACTION OF THE STAGE (`h-[46%]` of a 2:3 scene, so
-                ~69% of its width) rather than a fixed 128px. It used to be
-                `size="xl"` — 128 real pixels inside a ~540px-tall desktop stage,
-                which is under a quarter of the height: the backdrop was the
-                subject and the Blobbi was a detail in it. A fraction also means
-                one rule covers every viewport, with no breakpoint: the
-                protagonist is the same size relative to its scene on a phone and
-                on a desktop.
+                The box is a FRACTION OF THE STAGE rather than a fixed 128px,
+                and everything the renderer paints is a percentage OF the box —
+                accessory x/y, accessory base size, every effect shape — so the
+                Blobbi and everything on it scale as ONE unit. `size="xl"` is
+                still passed: it is the token the renderer reports; only the
+                box is overridden.
 
-                Safe because everything the renderer paints is already expressed
-                in percentages OF this box — accessory x/y, accessory base size,
-                every effect shape — so the Blobbi and everything on it scale as
-                ONE unit. `size="xl"` is still passed: it is the token the
-                renderer reports and the fallback text sizes from, and only the
-                BOX is overridden.
+                WHY 68% AND NOT 46%. At `h-[46%]` of a 2:3 stage the box was
+                ~69% of the stage's WIDTH — mathematically "two thirds", and it
+                still read small, because the box is not the Blobbi. The body
+                artwork occupies only part of its square viewBox — measured
+                from the SVG sources: the adult body spans ~55% of the box's
+                width, the baby ~68% — the rest being the coordinate space
+                accessories and effects overflow into. So the VISIBLE adult was
+                0.69 × 0.55 ≈ 38% of the banner. At `h-[68%]` the box is ~102%
+                of the stage width (the invisible 1% per side clips harmlessly
+                at the stage's own overflow-hidden), which puts the visible
+                body at ≈56% (adult) and ≈69% (baby) of the banner width — the
+                protagonist, in both forms, with no form-specific override.
 
-                `stageRef` is this element, which now IS the renderer box rather
-                than a shrink-wrap around it — so the placement overlay's
-                percentage space is still exactly the box, by construction.
+                The bottom padding drops 7% → 3% in the same move: the body's
+                feet sit above the box's own bottom whitespace (12.5% adult,
+                20% baby of box height), and a bigger box grows that gap in
+                absolute terms — 3% keeps the feet at roughly the distance from
+                the floor they had before.
+
+                `stageRef` is this element, which IS the renderer box — so the
+                placement overlay's percentage space is still exactly the box,
+                by construction.
               */}
-              <div className="absolute inset-0 z-10 flex items-end justify-center pb-[7%]">
-                <div ref={stageRef} className="relative aspect-square h-[46%]">
+              <div className="absolute inset-0 z-10 flex items-end justify-center pb-[3%]">
+                <div ref={stageRef} className="relative aspect-square h-[68%]">
                   <CurrentBlobbiPreview
                     key={`preview:${previewKey}`}
                     size="xl"

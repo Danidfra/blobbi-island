@@ -180,9 +180,10 @@ fixed pixels** (`size="xl"`) inside a stage roughly 540px tall — under a quart
 of the height. The previous pass had made the stage bigger to fix a crop bug and
 the Blobbi had not grown with it.
 
-The box is now a **fraction of the stage** (`h-[46%]` of a 2:3 scene, so about
-69% of its width), which also removes the need for a viewport breakpoint: the
-protagonist is the same size relative to its scene on a phone and on a desktop.
+The box is now a **fraction of the stage**, which also removes the need for a
+viewport breakpoint: the protagonist is the same size relative to its scene on
+a phone and on a desktop. (First `h-[46%]`; raised to `h-[68%]` by the focused
+pass below, once the box/visible-body distinction was measured.)
 
 This is safe because *everything the renderer paints is already a percentage of
 that box* — accessory x/y, accessory base size (`ACCESSORY_BASE_RATIO`), every
@@ -227,8 +228,8 @@ Manual review of the density pass found four regressions, each now a contract:
   `sm:w-[32%]` / `lg:w-[30%]` — with no conditional and no width transition.
   Items pays for the stability by owning the full width of its own pane (it has
   no detail sidebar), not by shrinking the protagonist.
-- **One tile geometry per page** (`CollectionTile`): a fixed art box, exactly
-  one truncated name line, quantity as a corner overlay, and worn/active/
+- **One tile geometry per page** (`CollectionTile`): a fixed art box, a
+  reserved title zone, quantity as a corner overlay, and worn/active/
   previewing state as an overlay pill over the art — never a text row that
   makes one card taller than its neighbour. Items, Wardrobe clothing and
   Effects all use it. The shop keeps plain `ItemTile`, where every tile shares
@@ -250,6 +251,30 @@ progression strip (not three bordered boxes), a labelled Personality chip row,
 and a shadowless utility strip for coins + scene. The content is ~360px in a
 ~525px desktop budget; it never needed cramming, it needed hierarchy.
 
+### The focused pass (pinned tile geometry, a visibly large Blobbi)
+
+Manual review found the two headline fixes had not actually landed on screen:
+
+- **"Ball" still rendered a smaller card than "Calcium Supplement"** even with
+  identical class strings, because the geometry was implicit — every zone
+  content-sized, and the tile's `height: 100%` resolving through a class-less
+  wrapper whose height existed only by grid stretch (the circular
+  percentage-resolution case engines settle differently). `CollectionTile` now
+  owns an EXPLICIT geometry: a fixed `h-16` art zone and a fixed `h-8`
+  two-line title zone (`line-clamp-2` at `leading-4`), both `shrink-0 grow-0`
+  — 118px for every item at every breakpoint. "Ball" holds the two-line zone
+  open; "Calcium Supplement" wraps into it; nothing gets a third line. The
+  grid adds `auto-rows-fr` and stretches tiles by grid alignment instead of
+  percentage heights.
+- **The Blobbi still read small**, because `h-[46%]` sized the BOX to ~69% of
+  the stage width while the drawn adult body fills only ~55% of its square
+  box (x 45→155 in a 200-wide viewBox; the margin is the coordinate space
+  accessories overflow into). Visible body ≈ 38% of the banner. The box is now
+  `h-[68%]` (~102% of the stage width) with `pb-[3%]`, putting the VISIBLE
+  body at ≈56% (adult) / ≈69% (baby) of the banner — the asked-for two
+  thirds, for both forms, with one shared scale and no per-accessory
+  compensation. The stage's own contract is untouched.
+
 ### Why it fits now
 
 The height budget, measured rather than guessed:
@@ -269,8 +294,8 @@ background.
 
 Collections were unbounded — twelve tiles is three rows ≈ 350px before any
 detail panel — so they are paged instead. Page size is **8**, recalculated once
-the tile contract became explicit (every tile is the same fixed geometry,
-~104px + a 10px gap): the grids run four columns from `sm` up — Items keeps
+the tile contract became explicit (every tile is the same pinned geometry,
+118px + a 10px gap): the grids run four columns from `sm` up — Items keeps
 four at every width now that it has no detail sidebar, the Wardrobe drops to
 three only beside its 15rem detail — so eight is **two full rows** in the most
 common view and three bounded rows (3/3/2) on a phone. One page size for every
@@ -309,8 +334,10 @@ Switch `Blobbi → Wardrobe → Items → Blobbi`, watching only the left side:
 ### One tile geometry
 
 On any page of Items, Wardrobe clothing or Effects: every card is the same
-width and height; a long name truncates to one line; a quantity badge and a
-Worn/Active pill overlay the card without making it taller.
+width and height — compare **"Ball" against "Calcium Supplement"** side by
+side, the pair that used to differ. A long name wraps into a reserved two-line
+zone and clamps there; a one-word name holds the same zone open; a quantity
+badge and a Worn/Active pill overlay the card without making it taller.
 
 ### Desktop
 

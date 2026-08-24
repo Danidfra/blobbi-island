@@ -14,6 +14,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 import { TestApp } from '@/test/TestApp';
@@ -39,6 +41,8 @@ vi.mock('@/inventory', async (importOriginal) => {
 vi.mock('@/hooks/useOptimizedStatus', () => ({
   useOptimizedStatus: () => mockUseOptimizedStatus(),
 }));
+
+const ROOT = resolve(__dirname, '../../../..');
 
 const APPLE = itemIdToAddress('food_apple')!;
 const VITAMINS = itemIdToAddress('med_vitamins')!;
@@ -103,38 +107,97 @@ describe('the Items surface is a pure game inventory', () => {
 });
 
 describe('one tile geometry for every item on a page', () => {
-  it('gives a long-named item the same structure as a short-named one', async () => {
-    withItems([[APPLE, 3], [VITAMINS, 12]]);
-    await screen.findByText('Apple');
+  /*
+    THE regression: on a real screen, "Ball" rendered a visibly smaller card
+    than "Calcium Supplement" even though their class strings were identical —
+    the geometry was implicit (content-sized zones, a `height: 100%` resolving
+    through a class-less wrapper), so it was at the mercy of engine layout
+    subtleties jsdom cannot see. These tests assert the EXPLICIT contract that
+    replaced it: every dimension pinned by a class, so no engine has a decision
+    left to make.
+  */
+  const BALL = itemIdToAddress('toy_ball')!;
+  const CALCIUM = itemIdToAddress('med_calcium')!;
 
-    const apple = screen.getByTestId(`item-${APPLE}`);
-    const vitamins = screen.getByTestId(`item-${VITAMINS}`);
+  it('renders Ball and Calcium Supplement with the identical pinned geometry', async () => {
+    withItems([[BALL, 1], [CALCIUM, 2]]);
+    await screen.findByText('Ball');
 
-    /*
-      jsdom cannot measure height, so the contract is asserted structurally:
-      the name is a single truncated line (cannot wrap into a second one), the
-      quantity badge is absolutely positioned (out of flow), and neither tile
-      carries a flow footnote row the other lacks.
-    */
-    for (const tile of [apple, vitamins]) {
-      const name = tile.querySelector('span.truncate')!;
-      expect(name.className).toContain('truncate');
-      // Same flow children in the same order: art box, then name. Anything
-      // else (badge, state pill) must be position:absolute.
+    const ball = screen.getByTestId(`item-${BALL}`);
+    const calcium = screen.getByTestId(`item-${CALCIUM}`);
+
+    // The shells carry the same class string — nothing per-item.
+    expect(ball.className).toBe(calcium.className);
+
+    for (const tile of [ball, calcium]) {
+      // Fixed art zone: h-16, cannot shrink, cannot grow, clips overflow.
+      const art = tile.querySelector('[data-item-art]')!;
+      expect(art.className).toContain('h-16');
+      expect(art.className).toContain('shrink-0');
+      expect(art.className).toContain('grow-0');
+      expect(art.className).toContain('overflow-hidden');
+
+      // Fixed TWO-LINE title zone: h-8 reserved whether the name uses one
+      // line (Ball) or two (Calcium Supplement), clamped so a third cannot
+      // exist. A one-word name does not collapse it; a long one cannot grow it.
+      const titleZone = tile.querySelector('[data-tile-title]')!;
+      expect(titleZone.className).toContain('h-8');
+      expect(titleZone.className).toContain('shrink-0');
+      expect(titleZone.className).toContain('grow-0');
+      expect(titleZone.className).toContain('overflow-hidden');
+      expect(titleZone.firstElementChild!.className).toContain('line-clamp-2');
+      expect(titleZone.firstElementChild!.className).toContain('leading-4');
+
+      // Only those two zones are in flow; badges and pills are overlays.
       const flowChildren = Array.from(tile.children).filter(
         (child) => !child.className.includes('absolute'),
       );
       expect(flowChildren).toHaveLength(2);
-      expect(flowChildren[0]).toHaveAttribute('data-item-art');
     }
   });
 
   it('keeps the quantity as an overlay badge, never a flow row', async () => {
-    withItems([[APPLE, 3]]);
-    await screen.findByText('Apple');
+    withItems([[BALL, 3]]);
+    await screen.findByText('Ball');
 
-    const badge = screen.getByTestId(`item-${APPLE}`).querySelector('.absolute')!;
+    const badge = screen.getByTestId(`item-${BALL}`).querySelector('.absolute')!;
     expect(badge.textContent).toContain('3');
+  });
+
+  it('stretches every tile to its grid cell without percentage heights', async () => {
+    /*
+      The wrapper is `display: grid`, so the tile fills the cell by grid
+      STRETCH — default alignment — rather than by `height: 100%` resolving
+      against a stretch-derived height, which is the circular case engines
+      settle differently. The rows themselves are equalised by `auto-rows-fr`.
+    */
+    withItems([[BALL, 1], [CALCIUM, 2]]);
+    await screen.findByText('Ball');
+
+    const grid = screen.getByTestId('collection-grid');
+    expect(grid.className).toContain('auto-rows-fr');
+    for (const tile of [BALL, CALCIUM]) {
+      const wrapper = screen.getByTestId(`item-${tile}`).parentElement!;
+      expect(wrapper.className).toContain('grid');
+      expect(screen.getByTestId(`item-${tile}`).className).not.toContain('h-full');
+    }
+  });
+
+  it('pins the contract in the source: no content-driven height channel', () => {
+    // A source assertion, so the contract cannot erode one class at a time.
+    const tile = readFileSync(
+      join(ROOT, 'src/components/blobbi/inventory/CollectionTile.tsx'),
+      'utf8',
+    );
+    expect(tile).toMatch(/h-16 w-full shrink-0 grow-0/);
+    expect(tile).toMatch(/h-8 w-full shrink-0 grow-0/);
+    expect(tile).toMatch(/line-clamp-2/);
+    // No footnote, no price, no percentage height — the channels that made
+    // height vary. Comments are stripped first (the docblock legitimately
+    // EXPLAINS the removal), and `max-h-full` is exempt: it CLAMPS artwork
+    // inside the fixed art zone, the opposite of a content-driven height.
+    const code = tile.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/footnote|price|(?<!max-)h-full/);
   });
 });
 

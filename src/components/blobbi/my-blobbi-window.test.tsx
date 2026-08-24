@@ -132,15 +132,24 @@ describe('what lives where', () => {
 });
 
 describe('the Blobbi owns its stage', () => {
-  it('sizes the renderer box as a fraction of the stage, not in pixels', () => {
+  it('sizes the renderer box so the VISIBLE body dominates the banner', () => {
     /*
-      THE FIX. It was `size="xl"` — 128 real pixels inside a ~540px-tall desktop
-      stage, under a quarter of the height, so the backdrop read as the subject.
-      A fraction also removes the need for a viewport breakpoint: the same rule
-      holds on a phone and on a desktop.
+      Two fixes, because the first fixed the wrong number. `size="xl"` was 128
+      real pixels — under a quarter of the stage. `h-[46%]` made the BOX ~69%
+      of the stage width, and it still read small, because the drawn body only
+      fills ~55% (adult) / ~68% (baby) of its square box — the rest is the
+      coordinate space accessories overflow into. `h-[68%]` puts the box at
+      ~102% of the stage width and the visible body at ≈56% / ≈69% of the
+      banner — about the two thirds asked for, for BOTH forms, with no
+      form-specific override.
     */
-    expect(modal).toMatch(/ref=\{stageRef\}\s+className="relative aspect-square h-\[46%\]"/);
+    expect(modal).toMatch(/ref=\{stageRef\}\s+className="relative aspect-square h-\[68%\]"/);
     expect(modal).toMatch(/boxClassName="h-full w-full"/);
+
+    // Preview-only, and shared by both forms: nothing in the modal branches
+    // the box or a scale on the Blobbi's stage/form.
+    const stageBlock = modal.slice(modal.indexOf('items-end justify-center pb-'), modal.indexOf('PlacementOverlay'));
+    expect(stageBlock).not.toMatch(/stage ===|form ===|isBaby|scale-/);
   });
 
   it('keeps the overlay measuring the same element the renderer fills', () => {

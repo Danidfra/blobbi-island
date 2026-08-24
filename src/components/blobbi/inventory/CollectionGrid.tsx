@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
  * ## Where the page size comes from
  *
  * Recalculated after the tile contract became explicit (every tile is now the
- * same fixed geometry: padded 64px art box + one clamped name line ≈ 104px,
- * with a 10px grid gap). The grids run at **four columns** from `sm` up — the
+ * same PINNED geometry: 64px art zone + a reserved two-line title zone =
+ * 118px, with a 10px grid gap). The grids run at **four columns** from `sm` up — the
  * Items surface keeps four all the way, the Wardrobe drops to three only while
  * its detail sidebar is beside it — and at three columns on a phone.
  *
@@ -127,11 +127,26 @@ export function CollectionGrid<T>({
           `content-start` keeps a short page packed to the top rather than
           spreading its rows, so page 3-of-3 with two tiles reads as a partial
           page of the same grid instead of a different layout.
+
+          `auto-rows-fr` is the row-level half of the equal-geometry contract:
+          every row is the same `1fr` track, so all rows resolve to one shared
+          height even if some tile somehow computed taller. The tile-level half
+          lives in `CollectionTile`, whose zones are explicitly fixed.
         */
-        className={cn('grid content-start gap-2.5', gridClassName)}
+        className={cn('grid auto-rows-fr content-start gap-2.5', gridClassName)}
       >
         {visible.map((item) => (
-          <div key={keyOf(item)}>{renderItem(item)}</div>
+          /*
+            The wrapper is itself `display: grid`, so the tile fills the cell
+            by GRID STRETCH — the default alignment of a grid item — rather
+            than by `height: 100%`. A percentage height here would have to
+            resolve against a height this wrapper only acquires by being
+            stretched, which is the circular case engines settle differently;
+            stretch alignment has no such ambiguity.
+          */
+          <div key={keyOf(item)} className="grid min-w-0">
+            {renderItem(item)}
+          </div>
         ))}
       </div>
 
