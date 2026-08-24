@@ -217,6 +217,39 @@ outcome.
 
 There is exactly **one** `overflow-y-auto` in the window, and a test asserts it.
 
+### The corrective pass (stable stage, one tile geometry, direct use)
+
+Manual review of the density pass found four regressions, each now a contract:
+
+- **The stage never changes size.** The density pass stepped it down on Items
+  (24%/22%, 18dvh) and switching tabs visibly squashed the Blobbi into the
+  corner. One static class set now covers all three tabs — `h-[26dvh]` /
+  `sm:w-[32%]` / `lg:w-[30%]` — with no conditional and no width transition.
+  Items pays for the stability by owning the full width of its own pane (it has
+  no detail sidebar), not by shrinking the protagonist.
+- **One tile geometry per page** (`CollectionTile`): a fixed art box, exactly
+  one truncated name line, quantity as a corner overlay, and worn/active/
+  previewing state as an overlay pill over the art — never a text row that
+  makes one card taller than its neighbour. Items, Wardrobe clothing and
+  Effects all use it. The shop keeps plain `ItemTile`, where every tile shares
+  a content shape anyway.
+- **Consumables open the consume dialog on the first click.** The
+  select → read a card → press "Use it" chain was friction dressed as
+  consistency; the dialog already shows the item's art, effects and quantity.
+  The Items tab therefore has **no detail column at all** — chips, grid,
+  pager — and its grid is a `group` of action buttons rather than a `listbox`
+  pretending at a selection model. Currency tiles have no handler: a coin does
+  nothing here, so nothing looks pressable.
+- **Wearables keep selection** (several verbs, a stage feedback loop), so the
+  Wardrobe keeps its reserved-height detail panel and the Adjust disclosure,
+  and Effects keep select → Preview / Activate / Remove.
+
+The Blobbi tab was also recomposed from packed side-by-side blocks into one
+column with four levels of loudness — mood hero, unboxed meters, ONE
+progression strip (not three bordered boxes), a labelled Personality chip row,
+and a shadowless utility strip for coins + scene. The content is ~360px in a
+~525px desktop budget; it never needed cramming, it needed hierarchy.
+
 ### Why it fits now
 
 The height budget, measured rather than guessed:
@@ -235,11 +268,12 @@ mood across the top, needs beside progression + traits, coins beside the stage
 background.
 
 Collections were unbounded — twelve tiles is three rows ≈ 350px before any
-detail panel — so they are paged instead. Page size is **9**, derived from the
-tightest real layout: an `ItemTile` is ~118px tall with a 10px gap, the
-narrowest column count any breakpoint uses is 3 (mobile, and desktop again once
-the 15rem detail panel sits beside the grid), and the shortest budget that must
-hold a grid *and* a detail panel is about 3 rows. One page size for every
+detail panel — so they are paged instead. Page size is **8**, recalculated once
+the tile contract became explicit (every tile is the same fixed geometry,
+~104px + a 10px gap): the grids run four columns from `sm` up — Items keeps
+four at every width now that it has no detail sidebar, the Wardrobe drops to
+three only beside its 15rem detail — so eight is **two full rows** in the most
+common view and three bounded rows (3/3/2) on a phone. One page size for every
 viewport, deliberately — deriving it from the live column count would renumber
 the pages under the player on a resize.
 
@@ -265,16 +299,31 @@ been performed. One question runs through all of them:
 
 > **Can I use this whole window without scrolling it like a web page?**
 
+### The stage is stable — check this FIRST
+
+Switch `Blobbi → Wardrobe → Items → Blobbi`, watching only the left side:
+
+> the stage does **not** change size, jump, or ease between widths — the window
+> reads as one game screen whose right-hand content changes.
+
+### One tile geometry
+
+On any page of Items, Wardrobe clothing or Effects: every card is the same
+width and height; a long name truncates to one line; a quantity badge and a
+Worn/Active pill overlay the card without making it taller.
+
 ### Desktop
 
 | Check | Expect |
 | --- | --- |
-| Blobbi tab | mood, five needs, three trophies, traits, coins and background **all visible at once**, no scrollbar |
+| Blobbi tab | mood, five needs, one progression strip, labelled traits, coins and background **all visible at once**, no scrollbar — and clearly in that order of loudness |
 | Blobbi tab at 1440×800 | still no scrollbar (this is the size the old layout failed at) |
 | Wardrobe | stage + clothing page + detail panel all visible |
 | Wardrobe → Effects | effect page + selected detail visible |
-| Items | category chips + page + detail visible |
-| Select an item anywhere | the panel does **not** get taller; the detail swaps in place |
+| Items | category chips + full-width page + pager — **no detail column** |
+| Click a food/care item | the Use-item dialog opens on the FIRST click, no card between |
+| A coin/ticket tile | not pressable; nothing happens on click |
+| Select a wearable/effect | the detail swaps into its reserved box; the panel does **not** get taller |
 | Select a worn hat → Adjust | sliders appear; Done puts them away; nothing below moves |
 | Resize the window narrower | page count stays the same (page size is viewport-independent) |
 
@@ -285,7 +334,7 @@ been performed. One question runs through all of them:
 | Blobbi tab | ideally one screen on a modern phone; a very short device may still clip the footer row |
 | Wardrobe | strip + page + detail without a long scroll |
 | Items | grid page usable; arrows reachable with a thumb |
-| Tap an item | the document does **not** grow |
+| Tap a consumable | the Use-item dialog opens directly; the document does **not** grow |
 
 ### Mobile landscape
 
@@ -298,8 +347,8 @@ Walk each of these in **Items** and in **Wardrobe → Clothing**:
 | Size | Expect |
 | --- | --- |
 | 3 items | no pagination chrome at all |
-| exactly 9 | no pagination chrome |
-| 10 | arrows appear, "1–9 of 10", second page holds one tile |
+| exactly 8 | no pagination chrome |
+| 9 | arrows appear, "1–8 of 9", second page holds one tile |
 | 20+ | three pages; last page short; window height identical throughout |
 | use up the last item on the last page | lands on a real page, never an empty grid |
 

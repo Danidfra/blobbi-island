@@ -101,12 +101,12 @@ export function MoodHero({
       data-testid="mood-hero"
       data-tone={mood.tone}
       className={cn(
-        'flex items-center gap-2.5 rounded-panel border px-3 py-2 shadow-cozy-soft',
+        'flex items-center gap-3 rounded-panel border px-3.5 py-2.5 shadow-cozy-soft',
         TONE_STYLES[mood.tone],
         className,
       )}
     >
-      <span aria-hidden className="text-2xl leading-none">
+      <span aria-hidden className="text-3xl leading-none drop-shadow-sm">
         {mood.emoji}
       </span>
       <div className="min-w-0">
@@ -136,47 +136,62 @@ function NeedMeter({
   emoji,
   label,
   value,
+  className,
 }: {
   emoji: string;
   label: string;
   value: number;
+  className?: string;
 }) {
   const pct = Math.max(0, Math.min(100, value));
   const level = needLevel(pct);
 
   return (
-    <div className="space-y-0.5">
-      <div className="flex items-baseline gap-1.5">
-        <span aria-hidden className="text-sm leading-none">
-          {emoji}
-        </span>
-        <span className="text-xs font-semibold text-island-ink">{label}</span>
-        <span
-          className={cn(
-            'ml-auto text-[0.6875rem] tabular-nums',
-            level === 'good' ? 'text-island-ink-soft' : 'font-bold text-island-danger',
-          )}
-        >
-          {Math.round(pct)}
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label={label}
-        aria-valuenow={Math.round(pct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="h-2 overflow-hidden rounded-full border border-island-wood/20 bg-island-cream-2"
+    /*
+      Icon chip + track on ONE row. The icon sits in its own little rounded
+      square — the tactile game treatment — and doubles as the row's anchor, so
+      the five meters read as a set of gauges rather than five form fields with
+      captions. The label rides ABOVE the track, small, inside the row.
+    */
+    <div className={cn('flex items-center gap-2', className)}>
+      <span
+        aria-hidden
+        className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-island-wood/15 bg-island-cream text-base leading-none shadow-cozy-soft"
       >
+        {emoji}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[0.6875rem] font-bold text-island-ink">{label}</span>
+          <span
+            className={cn(
+              'text-[0.6875rem] tabular-nums',
+              level === 'good' ? 'text-island-ink-soft' : 'font-bold text-island-danger',
+            )}
+          >
+            {Math.round(pct)}
+          </span>
+        </div>
         <div
-          className={cn(
-            'h-full rounded-full transition-[width] duration-300 ease-cozy motion-reduce:transition-none',
-            level === 'good' && 'bg-island-grass',
-            level === 'low' && 'bg-island-warn',
-            level === 'critical' && 'bg-island-danger',
-          )}
-          style={{ width: `${pct}%` }}
-        />
+          role="progressbar"
+          aria-label={label}
+          aria-valuenow={Math.round(pct)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          /* Borderless, inset-shadowed: a groove the fill sits in, not an
+             outlined form control. */
+          className="mt-0.5 h-2.5 overflow-hidden rounded-full bg-island-cream-2 shadow-cozy-inset"
+        >
+          <div
+            className={cn(
+              'h-full rounded-full transition-[width] duration-300 ease-cozy motion-reduce:transition-none',
+              level === 'good' && 'bg-island-grass',
+              level === 'low' && 'bg-island-warn',
+              level === 'critical' && 'bg-island-danger',
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -187,14 +202,17 @@ export function NeedMeters({ stats, className }: { stats: PetCardStats; classNam
   return (
     <div
       data-testid="need-meters"
-      className={cn('grid grid-cols-2 gap-x-3 gap-y-2', className)}
+      className={cn('grid grid-cols-2 gap-x-4 gap-y-2.5', className)}
     >
-      {BLOBBI_NEEDS.map((need) => (
+      {BLOBBI_NEEDS.map((need, index) => (
         <NeedMeter
           key={need.key}
           emoji={need.emoji}
           label={need.label}
           value={stats[need.key as BlobbiNeedKey]}
+          /* Five meters in a two-column grid: the odd one out spans the row
+             rather than leaving a hole beside it. */
+          className={index === BLOBBI_NEEDS.length - 1 ? 'col-span-2' : undefined}
         />
       ))}
     </div>
@@ -211,7 +229,19 @@ export function NeedMeters({ stats, className }: { stats: PetCardStats; classNam
  */
 export function ProgressionStrip({ stats, className }: { stats: PetCardStats; className?: string }) {
   return (
-    <div data-testid="progression" className={cn('grid grid-cols-3 gap-1.5', className)}>
+    /*
+      ONE strip, not three boxes. Three independent bordered cards for three
+      short numbers was the strongest "card inside card" offender on the tab —
+      the trophies now share a single panel and are separated by hairlines,
+      which is how a game HUD groups readouts that belong together.
+    */
+    <div
+      data-testid="progression"
+      className={cn(
+        'flex items-stretch divide-x divide-island-wood/15 rounded-panel border border-island-wood/20 bg-island-cream py-1.5 shadow-cozy-soft',
+        className,
+      )}
+    >
       <Trophy icon={Sparkles} value={stats.experience.toLocaleString()} label="XP earned" />
       <Trophy
         icon={Flame}
@@ -233,9 +263,13 @@ function Trophy({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-panel border border-island-wood/20 bg-island-cream px-1.5 py-1.5 text-center shadow-cozy-soft">
-      <Icon aria-hidden className="size-3.5 text-island-purple" />
-      <span className="island-display text-sm font-bold leading-none text-island-ink">{value}</span>
+    <div className="flex flex-1 flex-col items-center justify-center gap-0.5 px-2 text-center">
+      <span className="flex items-center gap-1">
+        <Icon aria-hidden className="size-3.5 text-island-purple" />
+        <span className="island-display text-sm font-bold leading-none text-island-ink">
+          {value}
+        </span>
+      </span>
       <span className="text-[0.625rem] capitalize leading-tight text-island-ink-soft">{label}</span>
     </div>
   );
@@ -275,10 +309,21 @@ export function TraitChips({ stats, className }: { stats: PetCardStats; classNam
   if (chips.length === 0) return null;
 
   return (
-    <div data-testid="trait-chips" className={cn('flex flex-wrap gap-1.5', className)}>
-      {chips.map((chip, i) => (
-        <TraitChip key={`${chip.value}-${i}`} emoji={chip.emoji} value={chip.value} />
-      ))}
+    /*
+      A NAMED group. A bare row of pills floating between two panels read as
+      debris; a tiny "Personality" eyebrow ties them to the pet without
+      reverting to database-field styling — the values stay chips, the label
+      stays whisper-quiet.
+    */
+    <div data-testid="trait-chips" className={cn('space-y-1', className)}>
+      <p className="island-display text-[0.625rem] font-bold uppercase tracking-wider text-island-ink-soft">
+        Personality
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {chips.map((chip, i) => (
+          <TraitChip key={`${chip.value}-${i}`} emoji={chip.emoji} value={chip.value} />
+        ))}
+      </div>
     </div>
   );
 }

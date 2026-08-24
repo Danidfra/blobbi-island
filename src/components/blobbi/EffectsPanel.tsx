@@ -36,7 +36,7 @@ import type { BlobbiEffectSlot } from '@blobbi/react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ItemTile } from '@/components/ui/item-tile';
+import { CollectionTile } from './inventory/CollectionTile';
 import { cn } from '@/lib/utils';
 import { CollectionGrid } from './inventory/CollectionGrid';
 
@@ -162,7 +162,11 @@ export function EffectsPanel({
               const previewing = previewingEffectId === item.registration.effectId;
               const name = item.definition?.name ?? item.registration.name;
               return (
-                <ItemTile
+                /* The SAME tile contract as clothing and items: fixed
+                   geometry, state as an overlay pill rather than a text row
+                   that would make an active effect's card taller than its
+                   neighbour's. */
+                <CollectionTile
                   role="option"
                   aria-selected={selectedAddress === item.address}
                   data-testid={`effect-card-${item.registration.effectId}`}
@@ -190,13 +194,8 @@ export function EffectsPanel({
                     isActive && 'border-island-grass-dark/50',
                     previewing && 'ring-2 ring-island-purple/60',
                   )}
-                  footnote={
-                    isActive ? (
-                      <span className="font-semibold text-island-grass-dark">Active</span>
-                    ) : previewing ? (
-                      <span className="font-semibold text-island-purple">Previewing</span>
-                    ) : undefined
-                  }
+                  stateLabel={isActive ? 'Active' : previewing ? 'Previewing' : undefined}
+                  stateTone={isActive ? 'positive' : 'accent'}
                 />
               );
             }}

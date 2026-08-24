@@ -15,23 +15,25 @@ import { cn } from '@/lib/utils';
  *
  * ## Where the page size comes from
  *
- * Not a round number — the tightest real layout. An `ItemTile` is about 118px
- * tall (16 padding + 64 artwork + 4 gap + ~20 name + ~14 footnote) and the grid
- * gap is 10px. The narrowest column count any breakpoint uses is **3** (mobile,
- * and desktop again once the detail panel takes its 15rem beside the grid), and
- * the shortest content budget that has to hold a grid plus a detail panel is
- * about 3 rows.
+ * Recalculated after the tile contract became explicit (every tile is now the
+ * same fixed geometry: padded 64px art box + one clamped name line ≈ 104px,
+ * with a 10px grid gap). The grids run at **four columns** from `sm` up — the
+ * Items surface keeps four all the way, the Wardrobe drops to three only while
+ * its detail sidebar is beside it — and at three columns on a phone.
  *
- *     3 columns × 3 rows = 9
+ *     4 columns × 2 rows = 8       ← two FULL rows in the four-column grids
+ *     3 columns → 3 rows (3/3/2)   ← ~330px, bounded on a phone
  *
- * One page size for every viewport, deliberately: deriving it from the live
- * column count would make "Page 2 of 3" mean something different after a
- * resize, and a page that renumbers under the player is worse than a page with
- * a short last row.
+ * Eight, not nine: nine fills three ragged rows of a four-column grid and
+ * leaves the most common view (Items, full width) permanently ragged. Eight
+ * fills it exactly. The number stays viewport-independent, deliberately:
+ * deriving it from the live column count would make "9–16 of 20" renumber
+ * itself when the window is resized, and a page that renumbers under the
+ * player is worse than a short last row.
  *
  * ## What it guarantees
  *
- * - the grid reserves the same height whether it holds 1 item or 9, so nothing
+ * - the grid reserves the same height whether it holds 1 item or 8, so nothing
  *   below it moves when the page changes;
  * - the controls disappear entirely for a single-page collection — a player
  *   with four items never sees pagination chrome;
@@ -53,12 +55,25 @@ export interface CollectionGridProps<T> {
   resetKey?: string;
   /** Announced to screen readers, and used to label the controls. */
   label: string;
+  /**
+   * Container semantics. The Wardrobe and Effects grids are selection lists
+   * (`listbox`, with `option` tiles); the Items grid is a row of plain action
+   * buttons, where a listbox would promise a selection model that does not
+   * exist.
+   */
+  role?: 'listbox' | 'group';
+  /**
+   * Column classes. The default matches a grid with a detail sidebar from
+   * `lg` (which is why it drops back to three columns there); a full-width
+   * surface passes its own.
+   */
+  gridClassName?: string;
   emptySlot?: React.ReactNode;
   className?: string;
 }
 
 /** Items per page. See the header for the derivation. */
-export const COLLECTION_PAGE_SIZE = 9;
+export const COLLECTION_PAGE_SIZE = 8;
 
 export function CollectionGrid<T>({
   items,
@@ -66,6 +81,8 @@ export function CollectionGrid<T>({
   renderItem,
   resetKey,
   label,
+  role = 'listbox',
+  gridClassName = 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4',
   className,
 }: CollectionGridProps<T>) {
   const [page, setPage] = useState(0);
@@ -101,19 +118,17 @@ export function CollectionGrid<T>({
   return (
     <div className={cn('flex min-h-0 flex-col gap-2', className)}>
       <div
-        role="listbox"
+        role={role}
         aria-label={label}
         data-testid="collection-grid"
         data-page={safePage + 1}
         data-page-count={pageCount}
         /*
-          `auto-rows` plus a three-row minimum reserves the grid's height, so a
-          short page does not let the detail panel below it jump upward. It is a
-          MINIMUM rather than a fixed height: a wider breakpoint fits the same
-          nine items in fewer rows and the grid simply gets shorter, which never
-          pushes anything off screen.
+          `content-start` keeps a short page packed to the top rather than
+          spreading its rows, so page 3-of-3 with two tiles reads as a partial
+          page of the same grid instead of a different layout.
         */
-        className="grid grid-cols-3 content-start gap-2.5 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4"
+        className={cn('grid content-start gap-2.5', gridClassName)}
       >
         {visible.map((item) => (
           <div key={keyOf(item)}>{renderItem(item)}</div>

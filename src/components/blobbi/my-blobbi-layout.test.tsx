@@ -68,17 +68,28 @@ beforeEach(() => {
   });
 });
 
-describe('the Blobbi tab fits, because it stopped being a column', () => {
-  it('composes needs and progression side by side', () => {
+describe('the Blobbi tab fits, and reads as a hierarchy', () => {
+  it('orders the four levels: mood, needs, progression, utilities', () => {
     /*
-      It was six blocks in one column with `space-y-4` — 386px of content
-      carrying 80px of pure gap, inside a pane about 650px WIDE and, on a
-      1440×800 laptop, about 478px tall. It overflowed, so a player scrolled to
-      find out their Blobbi was hungry.
+      The density pass proved the content fits (~360px in a ~525px budget) and
+      then squandered the win by packing it into side-by-side blocks that read
+      as six equally loud widgets. The corrective pass keeps the fit and adds
+      the order: one column, loudest first, quietest last — and the utility
+      strip is the ONLY two-column row left, because coins and the scene picker
+      genuinely are peers.
     */
-    expect(modal).toMatch(/<div className="grid gap-2\.5 sm:grid-cols-2">\s*<NeedMeters/);
-    // Coins and the stage background share the footer row rather than stacking.
-    expect(modal).toMatch(/data-testid="open-stage-background-picker"/);
+    const primary = modal.slice(
+      modal.indexOf('value="primary"'),
+      modal.indexOf('Wardrobe — everything'),
+    );
+    const order = ['<MoodHero', '<NeedMeters', '<ProgressionStrip', '<TraitChips', 'data-coin-hud']
+      .map((marker) => primary.indexOf(marker));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(order.every((index) => index >= 0)).toBe(true);
+
+    // Coins and the stage background share the one footer row.
+    expect(primary).toMatch(/grid grid-cols-2 gap-2\.5/);
+    expect(primary).toMatch(/data-testid="open-stage-background-picker"/);
     expect(modal).not.toMatch(/TabsContent value="primary"[^>]*space-y-4/);
   });
 
@@ -138,13 +149,15 @@ describe('collections are bounded, so the window cannot grow', () => {
     expect(shown.length).toBeLessThanOrEqual(COLLECTION_PAGE_SIZE);
   });
 
-  it('reserves the detail area so selecting swaps rather than adds', async () => {
+  it('reserves the wardrobe detail area, and gives Items none at all', async () => {
     /*
-      Selecting used to append a ~150px panel beneath the grid on a phone, which
-      is exactly the difference between fitting and scrolling. The prompt and
-      the panel now occupy the same reserved box.
+      The detail box is reserved height on WEARABLE surfaces (the prompt and
+      the panel share one box, so selecting swaps rather than adds) and absent
+      on the Items surface, where a consumable's click opens the consume dialog
+      directly and a master-detail column would be dead chrome.
     */
     expect(browser).toMatch(/min-h-\[7\.5rem\] shrink-0 lg:min-h-0/);
+    expect(browser).toMatch(/\{selectable && \(/);
 
     let inv = buildEmptyInventory('owner');
     inv = addInventoryItemQuantity(inv, itemIdToAddress('food_apple')!, 3);
@@ -152,15 +165,22 @@ describe('collections are bounded, so the window cannot grow', () => {
 
     render(
       <TestApp>
-        <InventoryBrowser characterId="blobbi-1" onEquip={() => {}} onUnequip={() => {}} />
+        <InventoryBrowser
+          characterId="blobbi-1"
+          categories={['food', 'toy', 'care', 'currency']}
+          onEquip={() => {}}
+          onUnequip={() => {}}
+        />
       </TestApp>,
     );
 
-    // Before: the prompt occupies the box. After: the detail does. One box.
-    expect(await screen.findByText(/pick something to see what it does/i)).toBeInTheDocument();
+    await screen.findByText('Apple');
+    expect(screen.queryByText(/pick something/i)).toBeNull();
+    // Clicking a consumable opens the dialog — it does not grow the tab with a
+    // detail card first.
     fireEvent.click(screen.getByTestId(`item-${itemIdToAddress('food_apple')}`));
-    expect(screen.getByTestId('item-detail')).toBeInTheDocument();
-    expect(screen.queryByText(/pick something to see what it does/i)).toBeNull();
+    expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();
+    expect(screen.queryByTestId('item-detail')).toBeNull();
   });
 });
 

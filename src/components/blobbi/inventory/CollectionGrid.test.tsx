@@ -45,22 +45,22 @@ describe('paging', () => {
 
   it('moves forward and back', () => {
     renderGrid(20);
-    expect(screen.getByTestId('page-status')).toHaveTextContent('1–9 of 20');
+    expect(screen.getByTestId('page-status')).toHaveTextContent('1–8 of 20');
 
     fireEvent.click(screen.getByTestId('page-next'));
-    expect(screen.getByTestId('page-status')).toHaveTextContent('10–18 of 20');
-    expect(screen.getByTestId('tile-i9')).toBeInTheDocument();
+    expect(screen.getByTestId('page-status')).toHaveTextContent('9–16 of 20');
+    expect(screen.getByTestId('tile-i8')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('page-previous'));
-    expect(screen.getByTestId('page-status')).toHaveTextContent('1–9 of 20');
+    expect(screen.getByTestId('page-status')).toHaveTextContent('1–8 of 20');
   });
 
   it('shows a short last page rather than padding it', () => {
     renderGrid(20);
     fireEvent.click(screen.getByTestId('page-next'));
     fireEvent.click(screen.getByTestId('page-next'));
-    expect(tiles()).toHaveLength(2);
-    expect(screen.getByTestId('page-status')).toHaveTextContent('19–20 of 20');
+    expect(tiles()).toHaveLength(4);
+    expect(screen.getByTestId('page-status')).toHaveTextContent('17–20 of 20');
   });
 
   it('stops at both ends rather than wrapping', () => {
@@ -118,11 +118,11 @@ describe('the page index survives the collection changing', () => {
     render(<Harness />);
 
     fireEvent.click(screen.getByTestId('page-next'));
-    expect(screen.getByTestId('page-status')).toHaveTextContent('10–18 of 20');
+    expect(screen.getByTestId('page-status')).toHaveTextContent('9–16 of 20');
 
     // Landing on page 2 of something you just opened is disorienting.
     fireEvent.click(screen.getByText('switch'));
-    expect(screen.getByTestId('page-status')).toHaveTextContent('1–9 of 20');
+    expect(screen.getByTestId('page-status')).toHaveTextContent('1–8 of 20');
   });
 
   it('clamps to the last real page when the collection shrinks', () => {

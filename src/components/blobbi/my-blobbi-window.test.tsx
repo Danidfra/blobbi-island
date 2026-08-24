@@ -171,15 +171,25 @@ describe('the Blobbi owns its stage', () => {
     expect(overlay).toMatch(/rect\.height\) \* 100/);
   });
 
-  it('keeps the stage portrait, and gives it less of the window than before', () => {
+  it('keeps the stage portrait, and STABLE across every tab', () => {
     const stage = modal.match(/data-testid="blobbi-stage"[\s\S]{0,400}?>/)![0];
     expect(stage).toMatch(/aspectRatio: STAGE_ASPECT_RATIO/);
     expect(stage).not.toMatch(/aspect-square/);
 
-    // Narrower than the previous pass, and narrower still on Items, where a
-    // grid of things you can eat gains nothing from a large portrait.
-    expect(modal).toMatch(/sm:w-\[32%\] lg:w-\[30%\]/);
-    expect(modal).toMatch(/sm:w-\[24%\] lg:w-\[22%\]/);
+    /*
+      ONE size, every tab. The density pass stepped the stage down on Items
+      (24%/22%, 18dvh) and manual review showed what that looks like: switching
+      tabs visibly squashes the Blobbi into the corner. The stage column now
+      carries a single static class string — no conditional on the selected
+      tab, and no width/height transition, because a stage that eases between
+      sizes is a stage that changes size.
+    */
+    const column = modal.match(/data-testid="blobbi-stage-column"[\s\S]{0,1600}?className=("[^"]*"|\{[\s\S]*?\})\n/)![1];
+    expect(column).toMatch(/sm:w-\[32%\] lg:w-\[30%\]/);
+    expect(column).toMatch(/h-\[26dvh\]/);
+    expect(column).not.toMatch(/selectedTab/);
+    expect(column).not.toMatch(/transition-\[width/);
+    expect(modal).not.toMatch(/sm:w-\[24%\]|lg:w-\[22%\]|h-\[18dvh\]/);
   });
 
   it('does not touch the world renderer', () => {

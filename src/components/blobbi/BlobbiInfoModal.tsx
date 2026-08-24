@@ -46,8 +46,6 @@ const TAB_TRIGGER =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
   'focus-visible:ring-offset-1 focus-visible:ring-offset-island-cream-2 sm:text-sm';
 
-const PANEL = 'rounded-panel border border-island-wood/20 bg-island-cream p-2 shadow-cozy-soft';
-
 /**
  * What the Items tab is responsible for: everything you can USE or spend.
  *
@@ -354,28 +352,22 @@ export function BlobbiInfoModal({
           <div
             data-testid="blobbi-stage-column"
             /*
-              The stage frames the Blobbi; it does not compete with it.
+              THE STAGE IS STABLE. One size, every tab, no transition.
 
-              NARROWER than it was (38%→32% at `sm`, 36%→30% at `lg`), and on a
-              phone a quarter of the height rather than a third. Both changes
-              are the same decision from two directions: the previous pass made
-              the stage bigger to fix a crop bug, and the Blobbi inside it did
-              not grow with it — so the backdrop became the subject. Now the
-              Blobbi is a fraction of the stage, so shrinking the stage does not
-              shrink the protagonist relative to its scene; it just gives the
-              content beside it more room.
+              The previous pass stepped it down on Items (24%/22% instead of
+              32%/30%, 18dvh instead of 26dvh) on the theory that a grid of
+              food gains nothing from a large portrait. Manual review showed
+              what that actually looks like: switching to Items visibly
+              SQUASHES the Blobbi into the corner, and the window stops reading
+              as one game screen whose right-hand content changes. The Items
+              grid pays for that stability by owning the full width of its pane
+              (it has no detail sidebar), not by shrinking the protagonist.
 
-              On the ITEMS tab the stage steps down further: a grid of things you
-              can eat gains nothing from a large portrait, and the extra width is
-              worth more there than the picture is.
+              No `transition-[width]` either — there is nothing left to
+              animate, and a stage that eases between sizes is a stage that
+              changes size.
             */
-            className={cn(
-              'flex min-h-0 shrink-0 items-center justify-center transition-[width,height] duration-200 ease-cozy',
-              'motion-reduce:transition-none',
-              selectedTab === 'items'
-                ? 'h-[18dvh] sm:h-auto sm:w-[24%] lg:w-[22%]'
-                : 'h-[26dvh] sm:h-auto sm:w-[32%] lg:w-[30%]',
-            )}
+            className="flex h-[26dvh] min-h-0 shrink-0 items-center justify-center sm:h-auto sm:w-[32%] lg:w-[30%]"
           >
             {/*
               THE STAGE BOX, and the geometry fix.
@@ -541,37 +533,45 @@ export function BlobbiInfoModal({
                 */}
                 <TabsContent
                   value="primary"
-                  className="mt-2.5 flex flex-col gap-2.5 pb-1 focus-visible:outline-none"
+                  className="mt-3 flex flex-col gap-3 pb-1 focus-visible:outline-none"
                 >
                   {/*
-                    HORIZONTAL composition, because the information is finite.
+                    ONE column, FOUR levels of importance.
 
-                    It was one column of six blocks separated by `space-y-4` —
-                    386px of content carrying 80px of pure gap, in a pane about
-                    650px WIDE. On a 1440×800 laptop that overflowed, so a player
-                    scrolled to find out their Blobbi was hungry.
+                    The previous pass packed this into side-by-side blocks to
+                    guarantee it fit, and the result read as six equally loud
+                    widgets jostling for a pane. The content is ~360px in a
+                    ~525px budget, so it never needed the cramming — it needed a
+                    hierarchy:
 
-                    Now: the mood spans the top, needs and progression share the
-                    middle row, and coins + appearance are one footer strip. Same
-                    content, roughly half the height, and nothing hidden behind a
-                    click — the brief's one hard constraint.
+                      1  how my Blobbi feels        the mood hero
+                      2  what my Blobbi needs       five meters, unboxed
+                      3  progression + identity     one HUD strip, one chip row
+                      4  secondary controls         coins + scene, one light strip
+
+                    Levels 2–4 get progressively lighter treatment — the meters
+                    are bare shapes, the progression is one shared panel instead
+                    of three bordered boxes, and the utility strip drops the
+                    shadow entirely — so the eye lands on the pet first and the
+                    plumbing last.
                   */}
                   <MoodHero care={careStatus} stats={blobbiData} />
 
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                    <NeedMeters stats={blobbiData} />
-                    <div className="flex flex-col gap-2.5">
-                      <ProgressionStrip stats={blobbiData} />
-                      <TraitChips stats={blobbiData} />
-                    </div>
-                  </div>
+                  <NeedMeters stats={blobbiData} />
+
+                  <ProgressionStrip stats={blobbiData} />
+
+                  <TraitChips stats={blobbiData} />
 
                   {!readOnly && (
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      {/* The Coin balance sits with progression rather than in
-                          its own panel — it is a number you have earned. */}
-                      <div className="flex items-center justify-between rounded-panel border border-island-wood/20 bg-island-cream px-3 py-2 shadow-cozy-soft">
-                        <span className="text-xs font-semibold text-island-ink-soft">Coins</span>
+                    <div className="mt-auto grid grid-cols-2 gap-2.5">
+                      {/* Level 4: quietly present. No shadow, muted surface —
+                          a coin count and a scene picker must not compete with
+                          hunger. */}
+                      <div className="flex items-center justify-between rounded-panel border border-island-wood/15 bg-island-cream-2/60 px-2.5 py-2">
+                        <span className="text-[0.6875rem] font-semibold text-island-ink-soft">
+                          Coins
+                        </span>
                         <span data-coin-hud>
                           {economyEntry.phase === 'checking' ||
                           economyEntry.phase === 'applying' ||
@@ -605,29 +605,26 @@ export function BlobbiInfoModal({
                         data-testid="open-stage-background-picker"
                         onClick={() => setBackgroundPickerOpen(true)}
                         className={cn(
-                          PANEL,
-                          'flex w-full items-center gap-2.5 p-2 text-left',
-                          'transition-transform duration-150 ease-cozy hover:-translate-y-0.5 active:scale-[0.99]',
-                          'motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
+                          'flex w-full items-center gap-2 rounded-panel border border-island-wood/15 bg-island-cream-2/60 px-2.5 py-2 text-left',
+                          'transition-colors duration-150 hover:border-island-wood/35',
                           'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-island-cream',
                         )}
                       >
-                        {/* w-7, not w-10: the swatch is 2:3, so its WIDTH sets
-                            the row's height. Ten became sixty pixels of row for
-                            a thumbnail. */}
+                        {/* The swatch is 2:3, so its WIDTH sets the row height
+                            — w-6 keeps this the same height as the coin row. */}
                         <span
                           aria-hidden
-                          className="block w-7 shrink-0 overflow-hidden rounded border border-island-wood/25"
+                          className="block w-6 shrink-0 overflow-hidden rounded border border-island-wood/25"
                           style={{ aspectRatio: STAGE_ASPECT_RATIO }}
                         >
                           <StageBackgroundSwatch background={background} />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-xs font-bold text-island-ink">
-                            Stage background
+                          <span className="block truncate text-[0.6875rem] font-semibold text-island-ink-soft">
+                            Background
                           </span>
-                          <span className="block truncate text-[0.6875rem] text-island-ink-soft">
-                            {background.emoji} {background.name}
+                          <span className="block truncate text-xs font-semibold text-island-ink">
+                            {background.name}
                           </span>
                         </span>
                         <ChevronRight aria-hidden className="size-4 shrink-0 text-island-ink-soft" />

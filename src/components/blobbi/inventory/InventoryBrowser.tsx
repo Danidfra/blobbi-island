@@ -3,7 +3,6 @@ import { AlertTriangle, Coins, Cookie, HeartPulse, PackageOpen, Shirt, ToyBrick 
 import type { AccessorySlot } from '@blobbi/react';
 
 import { Button } from '@/components/ui/button';
-import { ItemTile } from '@/components/ui/item-tile';
 import { Slider } from '@/components/ui/slider';
 import { StateCard } from '@/components/ui/state-card';
 import { cn } from '@/lib/utils';
@@ -17,6 +16,7 @@ import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 import { ConsumeItemModal } from '../ConsumeItemModal';
 import { CollectionGrid } from './CollectionGrid';
+import { CollectionTile } from './CollectionTile';
 import { ItemArt } from './ItemArt';
 import {
   CATEGORY_LABELS,
@@ -55,12 +55,25 @@ import {
  * into a sidebar, which is the one place a desktop-first classic would have got
  * it wrong.
  *
- * ## One collection language, two verbs
+ * ## One collection language, two INTERACTIONS
  *
- * Cosmetics and consumables look alike and behave differently. That is the
- * point: they are all *my things*, and what changes is the verb — **Wear** /
- * **Take off** versus **Use**. The verb lives in the detail panel, where there
- * is room to say what it will do, rather than on every tile.
+ * Cosmetics and consumables look alike and behave differently — but the
+ * difference is now in the CLICK, not in a shared detail panel:
+ *
+ * ```
+ *   consumable   click → the consume dialog opens immediately
+ *   wearable     click → select → Wear / Take off / Adjust in the detail
+ *   currency     display only — there is nothing to do with it here
+ * ```
+ *
+ * The intermediate "select a sandwich, read a card, press Use it" step was
+ * friction dressed as consistency: a consumable has exactly one thing it can
+ * do, and the consume dialog already shows its art, name, effects and
+ * quantity. Wearables keep selection because dressing genuinely has several
+ * verbs and a feedback loop on the stage.
+ *
+ * The detail column therefore exists only on surfaces that can hold
+ * wearables. The Items tab is a pure game inventory: chips, grid, pager.
  *
  * ## What this does NOT decide
  *
@@ -149,7 +162,14 @@ export function InventoryBrowser({
 
   const [category, setCategory] = useState<CollectionCategory | 'all'>('all');
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-  const [consumeOpen, setConsumeOpen] = useState(false);
+  /**
+   * The consumable whose consume dialog is open, or `null`.
+   *
+   * Deliberately NOT the selection: a consumable is never "selected" — its
+   * click IS the action — so closing the dialog leaves no stale highlighted
+   * tile behind.
+   */
+  const [useEntry, setUseEntry] = useState<CollectionEntry | null>(null);
 
   const { status } = useOptimizedStatus();
   const { mutate: consumeItem, isPending: isConsuming } = useUseItem();
@@ -167,6 +187,15 @@ export function InventoryBrowser({
     () => collection.entries.find((e) => e.address === selectedAddress) ?? null,
     [collection.entries, selectedAddress],
   );
+
+  /**
+   * Whether this surface selects things at all.
+   *
+   * Only wearables have a selection model (several verbs, a stage feedback
+   * loop). A surface whose categories exclude them — the Items tab — is a pure
+   * game inventory: no detail column, no aria-selected, direct actions.
+   */
+  const selectable = !allowed || allowed.includes('wearable');
 
   /** What the grid and its page controls are called, for assistive tech. */
   const gridLabel =
@@ -210,6 +239,17 @@ export function InventoryBrowser({
     onSelectSlot?.(null);
   };
 
+  /** What a click on a tile does, decided by what the item IS. */
+  const activate = (entry: CollectionEntry) => {
+    if (entry.action === 'use') {
+      // Straight to the dialog. One thing can happen to a sandwich.
+      setUseEntry(entry);
+      return;
+    }
+    // Wearables select; currency never reaches here (its tile has no onClick).
+    select(entry);
+  };
+
   /**
    * Use a consumable. Lifted verbatim from the panel this replaced — the
    * redesign changes where the action is offered, never what it does.
@@ -238,7 +278,7 @@ export function InventoryBrowser({
               status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'
             }.${result.warning ? ` (${result.warning})` : ''}`,
           });
-          setConsumeOpen(false);
+          setUseEntry(null);
         },
         onError: (error) => {
           toast({
@@ -325,21 +365,39 @@ export function InventoryBrowser({
           </div>
           )}
 
-          <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:items-start">
+          <div
+            className={cn(
+              'flex min-h-0 flex-col gap-3',
+              selectable && 'lg:flex-row lg:items-start',
+            )}
+          >
             {/* ── The grid ──────────────────────────────────────────────────
                 BOUNDED and paged. Owning more hats must not make the window
-                taller — the window is a character card, not a document. See
-                `CollectionGrid` for where the page size comes from. */}
+                taller — the window is a character card, not a document. Every
+                tile is the same `CollectionTile` geometry: a page must read as
+                a uniform grid of slots, and a long name or a worn marker must
+                never make one card taller than its neighbour. */}
             <CollectionGrid
               className="min-w-0 flex-1"
               items={visible}
               keyOf={(entry) => entry.address}
               resetKey={category}
               label={gridLabel}
+              role={selectable ? 'listbox' : 'group'}
+              gridClassName={
+                selectable
+                  ? // Drops to three columns at `lg`, where the detail sidebar
+                    // takes its 15rem beside the grid.
+                    'grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4'
+                  : // Full-width surface: four columns from `sm` up, so a page
+                    // of eight is two full rows.
+                    'grid-cols-3 sm:grid-cols-4'
+              }
               renderItem={(entry) => (
-                <ItemTile
-                  role="option"
-                  aria-selected={entry.address === selectedAddress}
+                <CollectionTile
+                  {...(selectable
+                    ? { role: 'option', 'aria-selected': entry.address === selectedAddress }
+                    : {})}
                   data-testid={`item-${entry.address}`}
                   {...(entry.equipped ? { 'data-equipped': entry.slot } : {})}
                   {...(entry.category === 'currency'
@@ -347,8 +405,11 @@ export function InventoryBrowser({
                     : {})}
                   name={entry.definition.name}
                   quantity={entry.quantity}
-                  selected={entry.address === selectedAddress}
-                  onClick={() => select(entry)}
+                  selected={selectable && entry.address === selectedAddress}
+                  /* Currency gets NO handler at all: `ItemTile` renders a plain
+                     <div> without one, so there is no dead button pretending a
+                     coin does something. */
+                  onClick={entry.action === 'none' ? undefined : () => activate(entry)}
                   art={<ItemArt definition={entry.definition} />}
                   className={cn(
                     /* Rarity as a RIM, never a fill: a saturated card
@@ -358,44 +419,41 @@ export function InventoryBrowser({
                     entry.definition.rarity === 'epic' && 'ring-1 ring-island-purple/50',
                     entry.equipped && 'border-island-grass-dark/50',
                   )}
-                  footnote={
-                    entry.equipped ? (
-                      <span className="font-semibold text-island-grass-dark">Worn</span>
-                    ) : undefined
-                  }
+                  stateLabel={entry.equipped ? 'Worn' : undefined}
                 />
               )}
             />
 
             {/* ── Detail ────────────────────────────────────────────────────
-                Beneath the grid on a phone, beside it from `lg` up. A squeezed
-                sidebar on a 375px sheet is the one thing the desktop-first
-                classics got wrong for touch.
+                WEARABLE surfaces only. Dressing has several verbs and a stage
+                feedback loop, so it earns a panel; a consumable's click IS its
+                action, so the Items tab has no detail column and the grid gets
+                the whole width.
 
-                RESERVED HEIGHT. The prompt and the panel occupy the same box,
-                so choosing an item swaps its contents rather than making the
-                tab 150px taller — which on a phone is the difference between
-                fitting and scrolling. */}
-            <div className="min-h-[7.5rem] shrink-0 lg:min-h-0 lg:w-[15rem] xl:w-[17rem]">
-              {selected ? (
-                <ItemDetail
-                  entry={selected}
-                  isPublishing={isPublishing}
-                  adjusting={!!selected.slot && selectedSlot === selected.slot}
-                  onAdjust={(slot) => onSelectSlot?.(slot)}
-                  pendingUpdates={pendingUpdates}
-                  onTransformChange={onTransformChange}
-                  onSaveTransforms={onSaveTransforms}
-                  onEquip={onEquip}
-                  onUnequip={onUnequip}
-                  onUse={() => setConsumeOpen(true)}
-                />
-              ) : (
-                <p className="rounded-panel border border-dashed border-island-wood/30 p-4 text-center text-xs text-island-ink-soft">
-                  Pick something to see what it does.
-                </p>
-              )}
-            </div>
+                RESERVED HEIGHT below `lg`: the prompt and the panel occupy the
+                same box, so choosing an item swaps its contents rather than
+                making the tab taller. */}
+            {selectable && (
+              <div className="min-h-[7.5rem] shrink-0 lg:min-h-0 lg:w-[15rem] xl:w-[17rem]">
+                {selected ? (
+                  <ItemDetail
+                    entry={selected}
+                    isPublishing={isPublishing}
+                    adjusting={!!selected.slot && selectedSlot === selected.slot}
+                    onAdjust={(slot) => onSelectSlot?.(slot)}
+                    pendingUpdates={pendingUpdates}
+                    onTransformChange={onTransformChange}
+                    onSaveTransforms={onSaveTransforms}
+                    onEquip={onEquip}
+                    onUnequip={onUnequip}
+                  />
+                ) : (
+                  <p className="rounded-panel border border-dashed border-island-wood/30 p-4 text-center text-xs text-island-ink-soft">
+                    Pick something to try it on.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -441,13 +499,13 @@ export function InventoryBrowser({
         </details>
       )}
 
-      {selected?.islandEntry && selected.action === 'use' && (
+      {useEntry && (
         <ConsumeItemModal
-          isOpen={consumeOpen}
-          onClose={() => setConsumeOpen(false)}
-          definition={selected.definition}
-          maxQuantity={selected.quantity}
-          onUseItem={(quantity) => handleUse(selected, quantity)}
+          isOpen
+          onClose={() => setUseEntry(null)}
+          definition={useEntry.definition}
+          maxQuantity={useEntry.quantity}
+          onUseItem={(quantity) => handleUse(useEntry, quantity)}
           isLoading={isConsuming}
           loadingText="Using..."
         />
@@ -501,7 +559,6 @@ function ItemDetail({
   onSaveTransforms,
   onEquip,
   onUnequip,
-  onUse,
 }: {
   entry: CollectionEntry;
   isPublishing: boolean;
@@ -513,7 +570,6 @@ function ItemDetail({
   onSaveTransforms?: () => void;
   onEquip: (address: string, slot: AccessorySlot) => void;
   onUnequip: (slot: AccessorySlot) => void;
-  onUse: () => void;
 }) {
   const { definition } = entry;
   const patch = entry.slot ? (pendingUpdates[entry.slot] ?? {}) : {};
@@ -644,22 +700,6 @@ function ItemDetail({
         </div>
       )}
 
-      {entry.action === 'use' && (
-        <Button
-          className="w-full"
-          size="sm"
-          data-testid={`use-${entry.address}`}
-          onClick={onUse}
-        >
-          Use it
-        </Button>
-      )}
-
-      {entry.action === 'none' && (
-        <p className="text-xs text-island-ink-soft">
-          Spend it in the shop, it is not something your Blobbi can use directly.
-        </p>
-      )}
     </div>
   );
 }

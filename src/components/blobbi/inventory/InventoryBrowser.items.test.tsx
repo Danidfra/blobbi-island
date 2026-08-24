@@ -44,13 +44,18 @@ const TICKET = dTagToAddress(ARCADE_TICKET_D)!;
 function browser() {
   return (
     <TestApp>
-      <InventoryBrowser characterId="blobbi-1" onEquip={() => {}} onUnequip={() => {}} />
+      <InventoryBrowser
+        characterId="blobbi-1"
+        categories={['food', 'toy', 'care', 'currency']}
+        onEquip={() => {}}
+        onUnequip={() => {}}
+      />
     </TestApp>
   );
 }
 
-/** Select a tile by its visible name, revealing its detail panel. */
-function select(name: string) {
+/** Click a tile by its visible name. For a consumable, that IS the action. */
+function clickTile(name: string) {
   fireEvent.click(screen.getByText(name).closest('button')!);
 }
 
@@ -82,18 +87,42 @@ describe('carried items are reachable', () => {
     expect(screen.queryByRole('tablist', { name: 'Item categories' })).toBeNull();
   });
 
-  it('opens the consume modal from the selected item', async () => {
+  it('opens the consume modal DIRECTLY from a click', async () => {
     let inv = buildEmptyInventory('owner');
     inv = addInventoryItemQuantity(inv, itemIdToAddress('med_vitamins')!, 2);
     mockUseIslandInventory.mockReturnValue({ data: inv, isLoading: false });
 
     render(browser());
 
-    // Selection reveals detail; the verb lives there, not on every tile.
-    select(await screen.findByText('Vitamins').then(() => 'Vitamins'));
-    fireEvent.click(screen.getByTestId(`use-${itemIdToAddress('med_vitamins')}`));
-
+    /*
+      One click. The intermediate "select → read a card → press Use it" step is
+      gone: a consumable has exactly one thing it can do, and the consume
+      dialog already shows everything the card showed.
+    */
+    clickTile(await screen.findByText('Vitamins').then(() => 'Vitamins'));
     expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();
+    // No intermediate detail card, and no "Use it" button anywhere.
+    expect(screen.queryByTestId('item-detail')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Use it' })).toBeNull();
+  });
+
+  it('leaves no stale selection behind when the dialog closes', async () => {
+    let inv = buildEmptyInventory('owner');
+    inv = addInventoryItemQuantity(inv, itemIdToAddress('food_apple')!, 3);
+    mockUseIslandInventory.mockReturnValue({ data: inv, isLoading: false });
+
+    render(browser());
+    clickTile(await screen.findByText('Apple').then(() => 'Apple'));
+    expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+
+    // A consumable is never "selected" — its click is the action — so closing
+    // the dialog must not leave a highlighted tile pretending otherwise.
+    expect(screen.queryByRole('dialog', { name: 'Use item' })).toBeNull();
+    const tile = screen.getByTestId(`item-${itemIdToAddress('food_apple')}`);
+    expect(tile).not.toHaveAttribute('aria-selected');
+    expect(tile).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('shows an empty state when the bag has no items', async () => {
@@ -160,12 +189,12 @@ describe('currency', () => {
   it('offers NO consumable action for the ticket', async () => {
     renderWithTickets(7);
 
-    select(await screen.findByText('Arcade Ticket').then(() => 'Arcade Ticket'));
+    // Currency is DISPLAY ONLY: not a button, so there is nothing to click and
+    // no dead affordance pretending a coin does something.
+    const label = await screen.findByText('Arcade Ticket');
+    expect(label.closest('button')).toBeNull();
 
-    // No verb, and an explanation instead.
-    expect(screen.queryByTestId(`use-${TICKET}`)).toBeNull();
-    expect(screen.getByTestId('item-detail')).toHaveTextContent(/spend it in the shop/i);
-    // And no way into the consume flow, which is the invariant that matters.
+    fireEvent.click(label);
     expect(screen.queryByRole('dialog', { name: 'Use item' })).toBeNull();
     expect(mockUseUseItem().mutate).not.toHaveBeenCalled();
   });
@@ -190,8 +219,7 @@ describe('currency', () => {
       expect(await screen.findByText(name)).toBeInTheDocument();
     }
 
-    select('Apple');
-    fireEvent.click(screen.getByTestId(`use-${itemIdToAddress('food_apple')}`));
+    clickTile('Apple');
     expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();
   });
 
