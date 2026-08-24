@@ -72,28 +72,24 @@ export function BlobbiFrame({
   //   • Large desktop → pinned to the ideal max width, centered.
   //   • Narrow window → width is the binding constraint, shrinks responsively.
   //   • Short height  → height is binding, shrinks proportionally (3:2 kept).
-  // Frame and canvas always resize as one unit. When width-bound the frame
-  // intentionally bleeds a few pixels past the viewport's left/right edges so
-  // the game meets the browser cleanly; the shell root (`fixed inset-0
-  // overflow-hidden`) clips that excess, so the document never scrolls.
+  // Frame and canvas always resize as one unit. Never overflows / no scroll:
+  // the frame fits inside the band minus the minimum gutter padding.
   return (
     <div
       className={cn(
         immersive
           ? "relative h-full w-full overflow-hidden bg-island-ink"
-          : // Vertical padding only. The old `p-4 sm:p-6` also padded the sides,
-            // which left a thin exposed gutter of page background at the LEFT
-            // and RIGHT edges whenever the frame was width-bound — the frame
-            // looked detached from the browser. The container is now slightly
-            // WIDER than the band (`calc(100% + 1.5rem)`, centered by the
-            // matching negative margins) so a width-bound frame bleeds ~12px
-            // past each viewport edge — just enough to clip the wood border's
-            // rounded flanks — and the shell root's `overflow-hidden` clips the
-            // excess. The frame keeps its aspect ratio, its 1040px ideal cap
-            // and its height model: on wide monitors nothing bleeds and the
-            // window stays centered exactly as before. This is edge polish,
-            // NOT fullscreen.
-            "flex h-full w-[calc(100%+1.5rem)] -mx-3 items-center justify-center py-4 sm:py-6",
+          : // The padding is the window's MINIMUM external gutter: on desktop
+            // the whole decorated frame — wood border, rounded corners, shadow
+            // — always keeps at least 16px (24px from `sm`) of page visible at
+            // the left and right, however narrow the browser gets before the
+            // immersive mode takes over. A previous pass replaced this with a
+            // deliberate horizontal bleed past the viewport, which clipped the
+            // wood border's flanks; that misread the feedback — the offending
+            // gap was INSIDE the frame (see the bezel padding below), and the
+            // external margin is wanted. Height-bound frames get naturally
+            // larger side margins; this is only the floor.
+            "flex h-full w-full items-center justify-center p-4 sm:p-6",
         className,
       )}
     >
@@ -116,7 +112,16 @@ export function BlobbiFrame({
             !immersive && [
               "rounded-[1.75rem]",
               "bg-island-wood",
-              "p-2 sm:p-3",
+              // Side padding = WORLD_ASPECT × vertical padding (12/8 and 18/12
+              // ≈ 1046/697), NOT uniform. The aspect lock above includes this
+              // border, so a uniform border left the bezel interior slightly
+              // WIDER than the world's ratio — and VirtualWorld contain-scales
+              // the fixed 1046×697 world into it, which letterboxed a ~4–6px
+              // strip of blurred backdrop between the bezel and the wallpaper
+              // on the left and right. Matching the padding to the ratio makes
+              // the interior exactly world-shaped, so the wallpaper meets the
+              // bezel flush on all four sides.
+              "py-2 px-3 sm:py-3 sm:px-[1.125rem]",
               "shadow-cozy-frame",
               "ring-1 ring-island-wood-dark/40",
             ],
