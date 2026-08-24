@@ -294,6 +294,10 @@ function AccountMenuBody({
         <SettingsRow
           icon={theme.emoji}
           label="Theme"
+          /* The theme's own name, whether it is one of the two built into the
+             game or one somebody published on Nostr. The row does not say
+             which — a player picking how their island looks does not care
+             where the colours came from, and the picker labels the sections. */
           description={theme.name}
           onClick={onOpenThemePicker}
         />

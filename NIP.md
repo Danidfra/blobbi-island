@@ -32,6 +32,8 @@ human-readable description for clients that do not understand the kind.
 | `21201` | Island Chat | Ephemeral | In-world speech-bubble chat messages |
 | `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
 | `21951` | Shared Playback Command | Ephemeral | Low-latency playback commands for a watch session |
+| `36767` | Theme Definition | Addressable | A shareable UI theme. **Not an Island kind** — Ditto's, reused as-is |
+| `16767` | Active Theme | Replaceable | The theme a user is currently using. **Not an Island kind** — Ditto's |
 
 ### Legacy / superseded kinds (queried for backward compatibility, not written)
 
@@ -335,6 +337,98 @@ other signer is discarded by signature, not by UI.
 lexicographically greater event id. A command or state with `rev` less than or
 equal to the last applied revision is ignored, so a late or replayed event can
 never rewind a player.
+
+---
+
+## Kinds 36767 / 16767 — Themes (Ditto's protocol, reused)
+
+**These are not Blobbi Island kinds.** They are [Ditto](https://soapbox.pub/)'s
+theme protocol, and Island implements them so that a theme published anywhere in
+the ecosystem works everywhere in it. Nothing here was designed for this game; it
+is documented because Island both reads and writes these events and because the
+one Island-specific addition below has to be written down.
+
+| Kind | Class | Question it answers |
+|------|-------|---------------------|
+| `36767` | Addressable | "Here is a theme." Many per user, identified by `36767:<pubkey>:<d>` |
+| `16767` | Replaceable | "This is the theme I am using." One per user |
+
+The separation is load-bearing: a *definition* is a thing anyone can discover and
+apply, while an *active theme* is one person's current choice. Conflating them
+would make every selection a publication of a new theme.
+
+### Kind 36767 — Theme Definition
+
+```jsonc
+{
+  "kind": 36767,
+  "content": "",
+  "tags": [
+    ["d", "harbour-dusk"],
+    ["c", "#141a24", "background"],
+    ["c", "#f2f5fa", "text"],
+    ["c", "#5b8cff", "primary"],
+    ["title", "Harbour Dusk"],
+    ["alt", "Custom theme: Harbour Dusk"],
+    ["t", "theme"],
+    ["description", "Cold water at the end of the day."]
+  ]
+}
+```
+
+A theme is **three colours**: `background`, `text`, `primary`, each an
+`#rrggbb`/`#rgb` value in a `c` tag whose third element is the role. `content` is
+empty; a legacy format with the colours as JSON in `content` is still read, since
+themes in that shape exist on relays.
+
+Ditto also defines `f` (font family + URL + `body`/`title` role) and `bg` (an
+imeta-style background media tag). **Island reads neither and writes neither.**
+A remote font file is a fetch on a stranger's say-so, and the island already has
+a background — it is a game world. A Ditto theme carrying either renders in
+Island with its colours intact and Island's own type; a theme published from
+Island simply has no font and no background media, which is a shape Ditto already
+handles.
+
+### Kind 16767 — Active Theme
+
+The same three `c` tags, `["alt", "Active profile theme"]`, an optional `title`,
+and `["a", "36767:<pubkey>:<d>"]` when the selection came from a definition.
+Empty tags means "cleared".
+
+**Island extension: the `island-theme` tag.** Blobbi Island appends one tag Ditto
+does not read:
+
+```jsonc
+["island-theme", "cozy-day"]
+["island-theme", "nostr:36767:<pubkey>:<d>"]
+```
+
+It exists because neither the colours nor the `a` tag can express "I am using the
+built-in Cozy Day": a built-in theme has no address, and its sixteen authored
+colours do not survive a round trip through three. The tag is additive — the
+event remains a fully valid Ditto active-theme event with a fully correct colour
+triple, and a client that ignores the tag loses nothing. An absent or unknown
+value falls back to the `a` tag, and then to the default theme.
+
+### The compatibility boundary
+
+Island's palette is **sixteen** authored colours (`src/lib/island-themes.ts`);
+the protocol carries **three**. The mapping is deterministic and lives in
+`src/lib/island-theme-adapter.ts`:
+
+- **Reading.** The three colours become sixteen, with every role that carries
+  text solved against the surfaces it sits on until it clears its WCAG
+  threshold. An adapted theme is held to the same contrast contract as a
+  built-in one.
+- **Writing.** A built-in theme publishes as `page` → `background`, `ink` →
+  `text`, `purple` → `primary`. Lossy by construction, and the three chosen are
+  the three that mean the same thing in both models.
+
+Untrusted-input rules, because a theme is a stranger's data colouring the whole
+UI: a `c` value is accepted only if it matches `#rgb`/`#rrggbb`, and is then
+parsed into numbers and re-emitted from those numbers — no string from an event
+ever reaches CSS. Titles and descriptions are stripped of control characters and
+capped at 64 and 200 characters.
 
 ---
 

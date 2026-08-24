@@ -66,17 +66,32 @@ function ThemeControls() {
       <span data-testid="resolved-id">{theme.id}</span>
       <span data-testid="stored-id">{themeId}</span>
       {themes.map((t) => (
-        <button key={t.id} type="button" onClick={() => setTheme(t.id)}>
+        <button key={t.id} type="button" onClick={() => setTheme(t)}>
           {t.name}
         </button>
       ))}
-      <button type="button" onClick={() => setTheme('a-theme-that-was-removed')}>
+      <button
+        type="button"
+        onClick={() =>
+          // A theme object whose id this build cannot resolve — the runtime
+          // equivalent of a removed seasonal theme still being selected.
+          setTheme({ ...themes[0], id: 'a-theme-that-was-removed', source: 'builtin' })
+        }
+      >
         Pick a removed theme
       </button>
     </div>
   );
 }
 
+/**
+ * Deliberately bare: `AppProvider` and nothing else.
+ *
+ * That is the point of `useTheme` being relay-free. Reading and setting the
+ * theme needs no query client, no signer and no relay — the network half lives
+ * in `useThemeSelection`, which only the picker uses. If this harness ever has
+ * to grow a provider, the split has been eroded.
+ */
 function Harness() {
   return (
     <AppProvider storageKey={STORAGE_KEY} defaultConfig={defaultConfig}>

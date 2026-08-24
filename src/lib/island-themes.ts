@@ -25,10 +25,27 @@
  *   is art direction — sand is not a computed tint of cream, it is a specific
  *   warm sand — so every colour is authored. The cost is that a theme is
  *   sixteen values instead of three; the benefit is that a theme can be
- *   *designed*.
- * - **Not a Nostr event.** Theme choice is a local display preference. It is
- *   persisted in the existing `nostr:app-config` localStorage blob alongside
- *   the relay URL, and publishes nothing.
+ *   *designed*. An EXTERNAL theme does not get that luxury and does not need
+ *   it — see `island-theme-adapter.ts` for how three colours become sixteen.
+ *
+ * ## Two sources, one shape
+ *
+ * A theme is either BUILT IN — authored here, sixteen colours, in the bundle —
+ * or it comes from **Nostr**: a kind:36767 definition published by anybody,
+ * carrying the three colours Ditto's theme protocol defines, with the other
+ * thirteen derived by `island-theme-adapter.ts`. Both end up as an
+ * {@link IslandTheme}, because everything downstream — the picker, the applier,
+ * the boot cache — must not care which it is holding.
+ *
+ * ## Identity
+ *
+ * A built-in's id is a bare slug (`cozy-day`). A Nostr theme's id is
+ * `nostr:36767:<pubkey>:<d>` — the protocol address, namespaced. The two
+ * vocabularies cannot collide because a built-in slug contains no colon, and
+ * that is the whole reason built-in ids were NOT renamed to `builtin:cozy-day`
+ * when Nostr themes arrived: every stored preference in the wild is a bare
+ * slug, and a rename would have silently reset every player on a non-default
+ * theme through the unknown-id fallback below.
  */
 
 /** The palette a theme owns. Values are bare HSL channels, e.g. `27 40% 54%`. */
@@ -113,7 +130,11 @@ export const ISLAND_PALETTE_KEYS = [
   'warn',
 ] as const satisfies readonly (keyof IslandPalette)[];
 
+/** Where a theme came from. */
+export type IslandThemeSource = 'builtin' | 'nostr';
+
 export interface IslandTheme {
+  /** Bare slug for a built-in; `nostr:36767:<pubkey>:<d>` for a Nostr theme. */
   id: string;
   /** Shown in the picker. */
   name: string;
@@ -122,6 +143,11 @@ export interface IslandTheme {
   /** Shown on the theme card, and in compact pickers. */
   emoji: string;
   palette: IslandPalette;
+  source: IslandThemeSource;
+  /** The kind:36767 author, for a Nostr theme. */
+  authorPubkey?: string;
+  /** `36767:<pubkey>:<d>`, for a Nostr theme. */
+  address?: string;
 }
 
 /**
@@ -139,6 +165,7 @@ const cozyDay: IslandTheme = {
   name: 'Cozy Day',
   description: 'Warm sand, painted wood and a bright afternoon sky.',
   emoji: '🏝️',
+  source: 'builtin',
   palette: {
     page: '38 100% 96%',
     sky: '199 88% 80%',
@@ -178,6 +205,7 @@ const lanternNight: IslandTheme = {
   name: 'Lantern Night',
   description: 'The island after dusk, lit by lanterns and a low warm moon.',
   emoji: '🏮',
+  source: 'builtin',
   palette: {
     page: '256 26% 12%',
     sky: '250 40% 26%',
@@ -198,7 +226,7 @@ const lanternNight: IslandTheme = {
   },
 };
 
-/** Every theme, in picker order. */
+/** Every BUILT-IN theme, in picker order. */
 export const islandThemes: readonly IslandTheme[] = [cozyDay, lanternNight];
 
 const themesById = new Map(islandThemes.map((t) => [t.id, t]));
@@ -219,9 +247,14 @@ export function resolveIslandTheme(id: string | undefined): IslandTheme {
   return (id ? themesById.get(id) : undefined) ?? themesById.get(DEFAULT_ISLAND_THEME_ID)!;
 }
 
-/** Whether `id` names a theme in this build. */
+/** Whether `id` names a BUILT-IN theme in this build. */
 export function isKnownIslandThemeId(id: string | undefined): boolean {
   return id !== undefined && themesById.has(id);
+}
+
+/** Whether `id` is a built-in id, as opposed to a Nostr address. */
+export function isBuiltinThemeId(id: string | undefined | null): boolean {
+  return typeof id === 'string' && id.length > 0 && !id.includes(':');
 }
 
 /**
@@ -257,4 +290,33 @@ export function applyIslandTheme(theme: IslandTheme, root: HTMLElement): void {
     root.style.setProperty(prop, value);
   }
   root.setAttribute('data-island-theme', theme.id);
+}
+
+/**
+ * Build an {@link IslandTheme} from a kind:36767 definition.
+ *
+ * Lives here rather than in the adapter so there is one place that decides what
+ * an Island theme IS, whichever direction it arrived from. The palette is
+ * derived, never stored on the definition: the derivation is deterministic, so
+ * recomputing is free and there is no second copy to go stale.
+ */
+export function islandThemeFromNostr(definition: {
+  address: string;
+  pubkey: string;
+  title: string;
+  description: string;
+  palette: IslandPalette;
+}): IslandTheme {
+  return {
+    id: `nostr:${definition.address}`,
+    name: definition.title,
+    description: definition.description,
+    // One mark for every community theme. A per-theme emoji is not part of the
+    // protocol, and inventing one from the colours would be noise.
+    emoji: '✨',
+    palette: definition.palette,
+    source: 'nostr',
+    authorPubkey: definition.pubkey,
+    address: definition.address,
+  };
 }

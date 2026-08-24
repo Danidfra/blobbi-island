@@ -68,20 +68,64 @@
 
   var DEFAULT_ID = 'cozy-day';
 
+  // Must match ISLAND_PALETTE_KEYS in src/lib/island-themes.ts. Asserted by
+  // src/lib/island-theme.boot.test.ts.
+  var PALETTE_KEYS = [
+    'page', 'sky', 'ocean', 'focus', 'grass', 'grass-dark', 'sand', 'wood',
+    'wood-dark', 'cream', 'cream-2', 'purple', 'ink', 'ink-soft', 'danger', 'warn'
+  ];
+
+  /*
+   * A theme discovered on a relay cannot be in this table — it did not exist
+   * when this file was written. Its palette is cached under
+   * `nostr:island-theme-cache` by `island-theme-cache.ts` at the moment the
+   * player selects it, precisely so this script can paint it before any
+   * JavaScript module (let alone any socket) has loaded.
+   *
+   * Everything is re-validated here rather than trusted: the entry must name
+   * the selected theme, and every one of the sixteen values must be a plain
+   * `h s% l%` triplet. Anything else is ignored and the default paints instead
+   * — this script writes straight into custom properties and has nowhere to
+   * report a problem to.
+   */
+  function cachedPalette(id) {
+    var raw = localStorage.getItem('nostr:island-theme-cache');
+    if (!raw) return null;
+    var entry = JSON.parse(raw);
+    if (!entry || entry.id !== id || !entry.palette) return null;
+    var out = {};
+    for (var i = 0; i < PALETTE_KEYS.length; i++) {
+      var key = PALETTE_KEYS[i];
+      var value = entry.palette[key];
+      if (typeof value !== 'string' || !/^-?[\d.]+ -?[\d.]+% -?[\d.]+%$/.test(value)) return null;
+      out[key] = value;
+    }
+    return out;
+  }
+
   try {
     var id = DEFAULT_ID;
+    var selectedId = null;
     var raw = localStorage.getItem('nostr:app-config');
     if (raw) {
       var cfg = JSON.parse(raw);
-      // An id this build does not know (a removed theme, or one of the legacy
-      // "light"/"dark"/"system" values) falls through to the default — the same
-      // resolution `resolveIslandTheme` performs at runtime.
-      if (cfg && typeof cfg.theme === 'string' && THEMES[cfg.theme]) {
-        id = cfg.theme;
+      if (cfg && typeof cfg.theme === 'string') {
+        selectedId = cfg.theme;
+        // An id this build does not know (a removed theme, or one of the legacy
+        // "light"/"dark"/"system" values) falls through to the default — the same
+        // resolution `resolveIslandThemeOffline` performs at runtime.
+        if (THEMES[cfg.theme]) id = cfg.theme;
       }
     }
 
     var palette = THEMES[id];
+    if (id === DEFAULT_ID && selectedId && selectedId !== DEFAULT_ID) {
+      var cached = cachedPalette(selectedId);
+      if (cached) {
+        palette = cached;
+        id = selectedId;
+      }
+    }
     var root = document.documentElement;
     for (var key in palette) {
       if (Object.prototype.hasOwnProperty.call(palette, key)) {

@@ -13,6 +13,10 @@ import { islandThemes, DEFAULT_ISLAND_THEME_ID, resolveIslandTheme } from '@/lib
  * can actually perceive: which card is checked, and what happens to the
  * document when one is chosen.
  *
+ * Scoped to the BUILT-IN section. The Nostr-backed sections are covered by
+ * `nostr-themes.test.ts` (protocol + discovery) and are empty here anyway: the
+ * test relay answers nothing.
+ *
  * Nothing here asserts a colour value on a preview swatch. The previews are
  * built from the same tokens as the rest of the game and scoped with the
  * theme's own palette, so a test that pinned their computed colours would be
@@ -49,7 +53,7 @@ describe('ThemePicker', () => {
   it('offers one card per theme in the registry', async () => {
     await renderPicker();
 
-    const group = screen.getByRole('radiogroup', { name: 'Island theme' });
+    const group = screen.getByRole('radiogroup', { name: 'Built-in themes' });
     expect(within(group).getAllByRole('radio')).toHaveLength(islandThemes.length);
 
     for (const theme of islandThemes) {
@@ -60,7 +64,7 @@ describe('ThemePicker', () => {
   it('marks exactly the active theme as checked', async () => {
     await renderPicker();
 
-    const group = screen.getByRole('radiogroup', { name: 'Island theme' });
+    const group = screen.getByRole('radiogroup', { name: 'Built-in themes' });
     const checked = within(group).getAllByRole('radio').filter(
       (el) => el.getAttribute('aria-checked') === 'true',
     );
@@ -74,7 +78,7 @@ describe('ThemePicker', () => {
   it('applies a theme on click and moves the checked state', async () => {
     await renderPicker();
 
-    const group = screen.getByRole('radiogroup', { name: 'Island theme' });
+    const group = screen.getByRole('radiogroup', { name: 'Built-in themes' });
     fireEvent.click(within(group).getByRole('radio', { name: /Lantern Night/ }));
 
     expect(document.documentElement.getAttribute('data-island-theme')).toBe('lantern-night');
@@ -90,7 +94,7 @@ describe('ThemePicker', () => {
 
   it('is a dialog with an accessible name', async () => {
     await renderPicker();
-    expect(screen.getByRole('dialog')).toHaveAccessibleName('Theme');
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Themes');
   });
 
   it('describes each theme so the choice is not colour-only', async () => {

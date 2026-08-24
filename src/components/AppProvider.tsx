@@ -2,7 +2,8 @@ import { ReactNode, useLayoutEffect } from 'react';
 import { z } from 'zod';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, type AppConfig, type AppContextType } from '@/contexts/AppContext';
-import { DEFAULT_ISLAND_THEME_ID, applyIslandTheme, resolveIslandTheme } from '@/lib/island-themes';
+import { DEFAULT_ISLAND_THEME_ID, applyIslandTheme } from '@/lib/island-themes';
+import { resolveIslandThemeOffline } from '@/hooks/useTheme';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -83,6 +84,13 @@ export function AppProvider(props: AppProviderProps) {
  * this is the reconciliation — but the script is best-effort (it can be blocked,
  * or the config can change), so this is the authoritative write.
  *
+ * Resolution is deliberately OFFLINE (`resolveIslandThemeOffline`): built-in
+ * registry, then the palette cache, then the default. This provider sits above
+ * every Nostr provider — it has no relay to ask and must not acquire one, since
+ * first paint cannot wait on a socket. A selected Nostr theme is refreshed from
+ * its definition afterwards by `IslandThemeSync`, which lives below the
+ * providers where a relay exists.
+ *
  * Switching a theme is only a custom-property change on the root element. No
  * component unmounts, no context above the router changes identity, and no
  * query is invalidated — which is the reason a player can change theme mid-game
@@ -91,6 +99,6 @@ export function AppProvider(props: AppProviderProps) {
  */
 function useApplyIslandTheme(themeId: string) {
   useLayoutEffect(() => {
-    applyIslandTheme(resolveIslandTheme(themeId), document.documentElement);
+    applyIslandTheme(resolveIslandThemeOffline(themeId), document.documentElement);
   }, [themeId]);
 }

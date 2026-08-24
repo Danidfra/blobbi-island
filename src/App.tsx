@@ -13,6 +13,7 @@ import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
+import { IslandThemeSync } from '@/components/IslandThemeSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { DEFAULT_ISLAND_THEME_ID } from '@/lib/island-themes';
@@ -57,6 +58,11 @@ export function App() {
           <QueryClientProvider client={queryClient}>
             <NostrLoginProvider storageKey='nostr:login'>
               <NostrProvider>
+              {/* Renders nothing. Refreshes the selected theme's cached palette
+                  and adopts a selection made on another device. It has to be
+                  BELOW NostrProvider — AppProvider, which paints the theme, sits
+                  above it and must never wait on a relay. */}
+              <IslandThemeSync />
               <EconomyEntryController />
               <CharacterEquipmentProvider>
               <PhotoBoothProvider>
