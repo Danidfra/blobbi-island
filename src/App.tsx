@@ -13,8 +13,10 @@ import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
+import { IslandThemeSync } from '@/components/IslandThemeSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
+import { DEFAULT_ISLAND_THEME_ID } from '@/lib/island-themes';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import { IslandSafetyProvider } from '@/safety';
@@ -39,7 +41,8 @@ const queryClient = new QueryClient({
 });
 
 const defaultConfig: AppConfig = {
-  theme: "light",
+  // Island theme id — see src/lib/island-themes.ts.
+  theme: DEFAULT_ISLAND_THEME_ID,
   relayUrl: "wss://relay.ditto.pub",
 };
 
@@ -60,6 +63,11 @@ export function App() {
           <QueryClientProvider client={queryClient}>
             <NostrLoginProvider storageKey='nostr:login'>
               <NostrProvider>
+              {/* Renders nothing. Refreshes the selected theme's cached palette
+                  and adopts a selection made on another device. It has to be
+                  BELOW NostrProvider — AppProvider, which paints the theme, sits
+                  above it and must never wait on a relay. */}
+              <IslandThemeSync />
               <EconomyEntryController />
               <CharacterEquipmentProvider>
               <PhotoBoothProvider>
@@ -70,8 +78,8 @@ export function App() {
                     <Suspense fallback={
                     <div className="min-h-screen bg-background flex items-center justify-center">
                       <div className="text-center space-y-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="text-muted-foreground">Loading Blobbi Island...</p>
+                        <div className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-2 border-island-wood/25 border-t-island-ocean mx-auto"></div>
+                        <p className="text-island-ink-soft">Loading Blobbi Island...</p>
                       </div>
                     </div>
                   }>

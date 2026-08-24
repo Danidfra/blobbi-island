@@ -36,7 +36,7 @@ function FindList({ finds, emptyLabel }: { finds: readonly TreasureFindResult[];
         return (
           <li
             key={find.targetId}
-            className="flex items-center gap-1.5 rounded-full border border-island-wood/30 bg-white/60 px-3 py-1 text-sm text-island-ink"
+            className="flex items-center gap-1.5 rounded-full border border-island-wood/30 bg-island-cream/80 px-3 py-1 text-sm text-island-ink"
           >
             <span aria-hidden>{presentation.icon}</span>
             <span>{presentation.name}</span>
@@ -57,7 +57,7 @@ function RewardPanel({
   if (rewardView.phase === 'practice') {
     return (
       <p
-        className="mx-auto max-w-md rounded-2xl bg-amber-100/80 px-4 py-1.5 text-center text-xs text-island-ink"
+        className="mx-auto max-w-md rounded-2xl bg-island-warn/20 px-4 py-1.5 text-center text-xs text-island-ink"
         data-treasure-practice-notice
       >
         Practice round — no Coins were awarded.
@@ -67,7 +67,7 @@ function RewardPanel({
   if (rewardView.phase === 'ineligible') {
     return (
       <p
-        className="mx-auto max-w-md rounded-2xl bg-amber-100/80 px-4 py-1.5 text-center text-xs text-island-ink"
+        className="mx-auto max-w-md rounded-2xl bg-island-warn/20 px-4 py-1.5 text-center text-xs text-island-ink"
         data-treasure-reward-status="ineligible"
       >
         This hunt ended too quickly to earn a reward — dig at least once and
@@ -80,7 +80,7 @@ function RewardPanel({
 
   return (
     <div
-      className="mx-auto w-full max-w-md space-y-1 rounded-2xl border border-island-wood/20 bg-white/50 p-3 text-sm"
+      className="mx-auto w-full max-w-md space-y-1 rounded-2xl border border-island-wood/20 bg-island-cream/70 p-3 text-sm"
       data-treasure-reward-status={rewardView.phase}
     >
       {reward && (
@@ -105,13 +105,13 @@ function RewardPanel({
         </p>
       )}
       {rewardView.phase === 'applied' && (
-        <p role="status" className="text-center text-xs font-semibold text-emerald-700">
+        <p role="status" className="text-center text-xs font-semibold text-island-grass-dark">
           <CoinIcon className="mr-1" />
           {rewardView.reward.totalCoins} Blobbi Coins added
         </p>
       )}
       {rewardView.phase === 'ambiguous' && (
-        <p role="status" className="text-center text-xs text-amber-700">
+        <p role="status" className="text-center text-xs text-island-wood-dark">
           Your reward is being confirmed. It is safely recorded and will not be
           lost or doubled — check your balance in a moment.
         </p>
@@ -166,7 +166,7 @@ export function TreasureHuntResults({
         <FindList finds={result.valuableFinds} emptyLabel="No treasures this time. The beach keeps its secrets!" />
       </section>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl border border-island-wood/20 bg-white/40 p-3 text-sm sm:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-2xl border border-island-wood/20 bg-island-cream/70 p-3 text-sm sm:grid-cols-3">
         <div>
           <dt className="blobbi-text-muted">Digs used</dt>
           <dd className="font-semibold text-island-ink">{result.shovelUsesSpent}</dd>

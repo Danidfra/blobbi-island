@@ -1,7 +1,7 @@
 /**
  * EffectsPanel — the production visual-effect management UI (Phase 9).
  *
- * The effect sibling of `EquipmentPanel`, on the same three events:
+ * The effect sibling of the inventory's wearables, on the same three events:
  *
  *   what exists   → the trusted official effect registry (+ 31632 for display)
  *   what is owned → kind:31633 quantities
@@ -22,7 +22,7 @@
  * (`CurrentBlobbiDisplay.effectsOverride`). It publishes nothing, mutates
  * nothing, and cancelling restores the persisted view.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Eye,
@@ -32,11 +32,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { BlobbiVisualEffect } from '@blobbi/react';
-import { EFFECT_SLOT_ORDER, type BlobbiEffectSlot } from '@blobbi/react';
+import type { BlobbiEffectSlot } from '@blobbi/react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CollectionTile } from './inventory/CollectionTile';
 import { cn } from '@/lib/utils';
+import { CollectionGrid } from './inventory/CollectionGrid';
 
 import { primaryItemImageUrl } from '@/inventory/item-image-resolution';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
@@ -87,6 +89,23 @@ export function EffectsPanel({
 }: EffectsPanelProps) {
   const owned = useOwnedVisualEffects(stage);
   const { activeEffects, rejectedEffects } = useCharacterEquipmentContext();
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+
+  const selected = useMemo(
+    () => owned.available.find((item) => item.address === selectedAddress) ?? null,
+    [owned.available, selectedAddress],
+  );
+
+  /*
+    An effect can stop being available while it is selected — a life-stage
+    change, the item leaving the inventory. A detail panel describing something
+    the player can no longer act on would be worse than no panel.
+  */
+  useEffect(() => {
+    if (selectedAddress && !owned.available.some((item) => item.address === selectedAddress)) {
+      setSelectedAddress(null);
+    }
+  }, [owned.available, selectedAddress]);
 
   // slot → the ACTIVE placement in it, for equipped badges and replace warnings.
   const activeBySlot = useMemo(() => {
@@ -97,25 +116,12 @@ export function EffectsPanel({
     return map;
   }, [activeEffects]);
 
-  // Grouped by slot in canonical order, so the list reads like the Blobbi
-  // renders: aura, ground, particles, overlay.
-  const groups = useMemo(
-    () =>
-      EFFECT_SLOT_ORDER.map((slot) => ({
-        slot,
-        items: owned.available.filter(
-          (item) => item.registration.effectSlot === slot,
-        ),
-      })).filter((group) => group.items.length > 0),
-    [owned.available],
-  );
-
   const stalePlacements = rejectedEffects.filter(
     (r) => r.reason === 'not-owned',
   );
 
   return (
-    <div className={cn('space-y-3', className)} data-testid="effects-panel">
+    <div className={cn('flex min-h-0 flex-col gap-3', className)} data-testid="effects-panel">
       {publishError && (
         <div
           role="alert"
@@ -124,7 +130,7 @@ export function EffectsPanel({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
           <div>
             <p className="font-medium text-destructive">Could not save</p>
-            <p className="text-muted-foreground">{publishError}</p>
+            <p className="text-island-ink-soft">{publishError}</p>
           </div>
         </div>
       )}
@@ -140,74 +146,124 @@ export function EffectsPanel({
             : 'None of your visual effects can be used on this Blobbi right now.'}
         </EmptyState>
       ) : (
-        groups.map(({ slot, items }) => (
-          <section key={slot} aria-label={EFFECT_SLOT_LABELS[slot]}>
-            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {EFFECT_SLOT_LABELS[slot]}
-            </h4>
-            <ul className="space-y-2">
-              {items.map((item) => (
-                <EffectCard
-                  key={item.address}
-                  item={item}
-                  activeInSlot={activeBySlot.get(slot)}
-                  isPublishing={isPublishing}
-                  previewing={previewingEffectId === item.registration.effectId}
-                  onEquip={onEquip}
-                  onRemove={onRemove}
-                  onPreview={onPreview}
+        <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:items-start">
+          {/* The same bounded, paged collection the wardrobe's clothing uses.
+              Effects were a vertical list of description cards with two buttons
+              each — three of them filled the pane — which made the rest of the
+              wardrobe a scroll. They are a collection like any other. */}
+          <CollectionGrid
+            className="min-w-0 flex-1"
+            items={owned.available}
+            keyOf={(item) => item.address}
+            label="your effects"
+            renderItem={(item) => {
+              const active = activeBySlot.get(item.registration.effectSlot);
+              const isActive = active?.entry.item === item.address;
+              const previewing = previewingEffectId === item.registration.effectId;
+              const name = item.definition?.name ?? item.registration.name;
+              return (
+                /* The SAME tile contract as clothing and items: fixed
+                   geometry, state as an overlay pill rather than a text row
+                   that would make an active effect's card taller than its
+                   neighbour's. */
+                <CollectionTile
+                  role="option"
+                  aria-selected={selectedAddress === item.address}
+                  data-testid={`effect-card-${item.registration.effectId}`}
+                  {...(isActive ? { 'data-active-effect': item.registration.effectSlot } : {})}
+                  name={name}
+                  selected={selectedAddress === item.address}
+                  onClick={() =>
+                    setSelectedAddress(selectedAddress === item.address ? null : item.address)
+                  }
+                  art={
+                    item.definition && primaryItemImageUrl(item.definition) ? (
+                      <img
+                        src={primaryItemImageUrl(item.definition)}
+                        alt=""
+                        aria-hidden
+                        className="h-full w-auto object-contain"
+                      />
+                    ) : (
+                      <span role="img" aria-label={name}>
+                        {item.registration.symbol}
+                      </span>
+                    )
+                  }
+                  className={cn(
+                    isActive && 'border-island-grass-dark/50',
+                    previewing && 'ring-2 ring-island-purple/60',
+                  )}
+                  stateLabel={isActive ? 'Active' : previewing ? 'Previewing' : undefined}
+                  stateTone={isActive ? 'positive' : 'accent'}
                 />
-              ))}
-            </ul>
-          </section>
-        ))
-      )}
+              );
+            }}
+          />
 
-      {stalePlacements.length > 0 && (
-        <div className="rounded-md border border-amber-300/50 bg-amber-50/50 p-2 text-xs dark:border-amber-800/50 dark:bg-amber-950/30">
-          <p className="font-medium">
-            {stalePlacements.length} equipped effect
-            {stalePlacements.length === 1 ? ' is' : 's are'} no longer in your
-            inventory and {stalePlacements.length === 1 ? 'is' : 'are'} not
-            shown.
-          </p>
-          <ul className="mt-1 space-y-0.5 text-muted-foreground">
-            {stalePlacements.map((r) => (
-              <li key={r.registration.address}>
-                {r.registration.name} — you can remove it from its slot below or
-                leave it for when you own the item again.
-              </li>
-            ))}
-          </ul>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {stalePlacements.map((r) => (
-              <Button
-                key={r.registration.address}
-                variant="outline"
-                size="sm"
-                className="h-6 text-[10px]"
-                disabled={isPublishing}
-                data-testid={`remove-stale-${r.registration.effectSlot}`}
-                onClick={() => onRemove(r.registration.effectSlot)}
-              >
-                Remove {r.registration.name}
-              </Button>
-            ))}
+          <div className="min-h-[7.5rem] shrink-0 lg:min-h-0 lg:w-[15rem] xl:w-[17rem]">
+            {selected ? (
+              <EffectDetail
+                item={selected}
+                activeInSlot={activeBySlot.get(selected.registration.effectSlot)}
+                isPublishing={isPublishing}
+                previewing={previewingEffectId === selected.registration.effectId}
+                onEquip={onEquip}
+                onRemove={onRemove}
+                onPreview={onPreview}
+              />
+            ) : (
+              <p className="rounded-panel border border-dashed border-island-wood/30 p-4 text-center text-xs text-island-ink-soft">
+                Pick an effect to preview it.
+              </p>
+            )}
           </div>
         </div>
       )}
 
+      {stalePlacements.length > 0 && (
+        <details
+          data-testid="effect-diagnostics"
+          className="shrink-0 rounded-panel border border-island-warn/40 bg-island-warn/10 text-xs"
+        >
+          <summary className="cursor-pointer px-2.5 py-1.5 font-medium text-island-ink">
+            <AlertTriangle aria-hidden className="mr-1 inline size-3.5 text-island-warn" />
+            {stalePlacements.length} effect
+            {stalePlacements.length === 1 ? '' : 's'} you no longer own
+          </summary>
+          <div className="max-h-40 space-y-1.5 overflow-y-auto border-t border-island-warn/30 px-2.5 py-2">
+            {stalePlacements.map((r) => (
+              <div key={r.registration.address} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-island-ink-soft">
+                  {r.registration.name}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 shrink-0 px-2 text-[0.6875rem]"
+                  disabled={isPublishing}
+                  data-testid={`remove-stale-${r.registration.effectSlot}`}
+                  onClick={() => onRemove(r.registration.effectSlot)}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
       {owned.unavailable.length > 0 && (
-        <details className="rounded-md border p-2 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">
+        <details className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-2 text-xs">
+          <summary className="cursor-pointer text-island-ink-soft">
             <Lock className="mr-1 inline h-3 w-3" />
             {owned.unavailable.length} effect
             {owned.unavailable.length === 1 ? '' : 's'} not available
           </summary>
           <ul className="mt-1 space-y-1">
             {owned.unavailable.map((item) => (
-              <li key={item.address} className="text-muted-foreground">
-                <span className="font-medium">
+              <li key={item.address} className="text-island-ink-soft">
+                <span className="font-medium text-island-ink">
                   {item.definition?.name ?? item.registration.name}
                 </span>{' '}
                 — {explainEffectUnavailable(item.reason)}
@@ -220,7 +276,18 @@ export function EffectsPanel({
   );
 }
 
-function EffectCard({
+/**
+ * The selected effect's detail: what it is, and the one or two things to do.
+ *
+ * It replaced `EffectCard`, which put a description and two buttons on EVERY
+ * item — three of them filled the wardrobe pane and pushed the rest into a
+ * scroll. The information is the same; it is now shown for one effect at a time,
+ * in a reserved box that does not change the panel's height.
+ *
+ * REPLACEMENT IS STILL EXPLICIT. When activating would displace another effect,
+ * the panel names it and the button reads Replace. Nothing is silently swapped.
+ */
+function EffectDetail({
   item,
   activeInSlot,
   isPublishing,
@@ -238,93 +305,75 @@ function EffectCard({
   onPreview: (effects: readonly BlobbiVisualEffect[] | null) => void;
 }) {
   const { registration, definition } = item;
-  const isEquipped = activeInSlot?.entry.item === item.address;
-  const replaces =
-    !isEquipped && activeInSlot !== undefined
-      ? activeInSlot.registration
-      : null;
+  const isActive = activeInSlot?.entry.item === item.address;
+  const replaces = !isActive && activeInSlot !== undefined ? activeInSlot.registration : null;
   const name = definition?.name ?? registration.name;
   const rarity = definition?.rarity ?? registration.rarity;
-  const imageUrl = definition ? primaryItemImageUrl(definition) : undefined;
 
   return (
-    <li
-      className={cn(
-        'rounded-md border p-2',
-        isEquipped && 'border-primary bg-primary/5',
-        previewing && 'ring-2 ring-purple-400/60',
-      )}
-      data-testid={`effect-card-${registration.effectId}`}
+    <div
+      data-testid="effect-detail"
+      className="space-y-2 rounded-panel border border-island-wood/20 bg-island-cream-2/70 p-2.5 shadow-cozy-soft"
     >
-      <div className="flex items-start gap-2">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={name}
-            className="h-10 w-10 shrink-0 rounded object-contain"
-          />
-        ) : (
-          <span className="text-2xl">{registration.symbol}</span>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-xs font-medium">{name}</span>
-            <Badge variant="outline" className="text-[9px] capitalize">
-              {rarity}
+      <div className="min-w-0">
+        <p className="text-sm font-bold leading-tight text-island-ink">{name}</p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[0.6875rem] text-island-ink-soft">
+          <span>{EFFECT_SLOT_LABELS[registration.effectSlot]}</span>
+          <Badge variant="outline" className="text-[0.625rem] capitalize">
+            {rarity}
+          </Badge>
+          {isActive && (
+            <Badge className="bg-island-grass-dark text-[0.625rem] text-island-cream">Active</Badge>
+          )}
+          {previewing && (
+            <Badge className="bg-island-purple text-[0.625rem] text-island-cream">
+              Previewing
             </Badge>
-            {isEquipped && (
-              <Badge variant="secondary" className="text-[9px]">
-                equipped
-              </Badge>
-            )}
-            {previewing && (
-              <Badge className="bg-purple-500 text-[9px] text-white">
-                previewing
-              </Badge>
-            )}
-          </div>
-          {definition?.description && (
-            <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">
-              {definition.description}
-            </p>
           )}
-          {replaces && (
-            <p
-              className="mt-1 text-[10px] font-medium text-amber-700 dark:text-amber-400"
-              data-testid={`replace-warning-${registration.effectId}`}
-            >
-              Equipping {name} will replace {replaces.name} in the{' '}
-              {EFFECT_SLOT_LABELS[registration.effectSlot]} slot.
-            </p>
-          )}
-        </div>
+        </p>
       </div>
-      <div className="mt-1.5 flex items-center gap-1.5">
+
+      {definition?.description && (
+        <p className="line-clamp-3 text-xs leading-snug text-island-ink-soft">
+          {definition.description}
+        </p>
+      )}
+
+      {replaces && (
+        <p
+          className="text-[0.6875rem] font-medium text-island-warn"
+          data-testid={`replace-warning-${registration.effectId}`}
+        >
+          Activating {name} will replace {replaces.name} in the{' '}
+          {EFFECT_SLOT_LABELS[registration.effectSlot]} slot.
+        </p>
+      )}
+
+      <div className="flex gap-1.5">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-7 px-2 text-[11px]"
+          className="flex-1"
           aria-pressed={previewing}
           data-testid={`preview-${registration.effectId}`}
-          onClick={() =>
-            onPreview(previewing ? null : [{ id: registration.effectId }])
-          }
+          onClick={() => onPreview(previewing ? null : [{ id: registration.effectId }])}
         >
           {previewing ? (
             <>
-              <EyeOff className="mr-1 h-3 w-3" /> End preview
+              <EyeOff aria-hidden className="mr-1 size-3.5" /> End
             </>
           ) : (
             <>
-              <Eye className="mr-1 h-3 w-3" /> Preview
+              <Eye aria-hidden className="mr-1 size-3.5" /> Preview
             </>
           )}
         </Button>
-        {isEquipped ? (
+
+        {isActive ? (
           <Button
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[11px]"
+            className="flex-1"
             disabled={isPublishing}
             data-testid={`remove-${registration.effectId}`}
             onClick={() => onRemove(registration.effectSlot)}
@@ -334,16 +383,16 @@ function EffectCard({
         ) : (
           <Button
             size="sm"
-            className="h-7 px-2 text-[11px]"
+            className="flex-1"
             disabled={isPublishing}
             data-testid={`equip-${registration.effectId}`}
             onClick={() => onEquip(item.address, registration.effectSlot)}
           >
-            {isPublishing ? 'Saving…' : replaces ? 'Replace' : 'Equip'}
+            {isPublishing ? 'Saving…' : replaces ? 'Replace' : 'Activate'}
           </Button>
         )}
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -355,7 +404,7 @@ function EmptyState({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+    <div className="flex flex-col items-center gap-2 rounded-panel border border-dashed border-island-wood/30 p-4 text-center text-xs text-island-ink-soft">
       {icon}
       <p>{children}</p>
     </div>

@@ -25,7 +25,7 @@ const NotFound = () => {
         <p className="text-xl blobbi-text-muted mb-4">Oops! This island doesn't exist</p>
         <a
           href="/"
-          className="inline-block bg-island-purple hover:bg-island-purple/90 text-white px-6 py-2 rounded-full font-medium shadow-cozy-soft transition-all duration-200 hover:scale-105"
+          className="inline-block rounded-full bg-accent px-6 py-2 font-medium text-accent-foreground shadow-cozy-soft transition-[transform,filter] duration-150 ease-cozy hover:brightness-105 motion-reduce:transition-none"
         >
           Return to Home
         </a>

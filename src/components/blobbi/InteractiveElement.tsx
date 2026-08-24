@@ -113,6 +113,17 @@ export function InteractiveElement({
   // desktop hover while the Blobbi walks toward the target.
   const [isTouchActive, setIsTouchActive] = useState(false);
   const touchFeedbackTimer = useRef<number | null>(null);
+  /**
+   * The tap-pop timer.
+   *
+   * Held in a ref and cleared on unmount for the same reason
+   * `touchFeedbackTimer` is: tapping a chair and immediately changing room
+   * left a 300ms timer running against an unmounted component, which React
+   * reports as a state update after teardown. It surfaced as an intermittent
+   * post-teardown error in the chairs test, but the leak is real in the game
+   * too — every tap on a scale element scheduled a timer nothing owned.
+   */
+  const popTimer = useRef<number | null>(null);
 
   /**
    * `'door'` and `'opacity'` are pure *visibility* effects: they cross-fade a
@@ -125,6 +136,9 @@ export function InteractiveElement({
     () => () => {
       if (touchFeedbackTimer.current !== null) {
         window.clearTimeout(touchFeedbackTimer.current);
+      }
+      if (popTimer.current !== null) {
+        window.clearTimeout(popTimer.current);
       }
     },
     [],
@@ -179,7 +193,11 @@ export function InteractiveElement({
     // large overlay images ('door'/'opacity'/'slide') must not pop/jump.
     if (animated && effect === 'scale') {
       setIsAnimating(true);
-      setTimeout(() => setIsAnimating(false), 300);
+      if (popTimer.current !== null) window.clearTimeout(popTimer.current);
+      popTimer.current = window.setTimeout(() => {
+        popTimer.current = null;
+        setIsAnimating(false);
+      }, 300);
     }
 
     // Walk-to-interact: defer the action until the Blobbi reaches the target.

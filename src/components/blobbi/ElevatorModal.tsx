@@ -1,14 +1,6 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  inFrameDialogPanelClass,
-} from '@/components/ui/dialog';
-import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
+import { SettingsRow } from '@/components/ui/settings-row';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
 
@@ -50,8 +42,7 @@ const floors: FloorOption[] = [
 ];
 
 export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
-  const stageOverlayHost = useStageOverlayHost();
-  const { setCurrentLocation } = useLocation();
+  const { setCurrentLocation, currentLocation } = useLocation();
 
   const handleFloorSelect = (location: string) => {
     setCurrentLocation(location as LocationId);
@@ -59,59 +50,33 @@ export function ElevatorModal({ isOpen, onClose }: ElevatorModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        /* Contained in the game window, like every other arcade surface, and
-           sized against the STAGE rather than the viewport — see
-           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
-           dialog moved here must bring its own padding and side margins. */
-        container={stageOverlayHost}
-        inFrame
-        className={cn(
-          inFrameDialogPanelClass,
-          'bg-gradient-to-br from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-2xl',
-        )}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-blue-800 mb-4">
-            🛗 Select Floor
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <p className="text-center text-gray-700 mb-6">
-            Choose which floor you want to visit:
-          </p>
-
-          <div className="space-y-3">
-            {floors.map((floor) => (
-              <Button
-                key={floor.id}
-                onClick={() => handleFloorSelect(floor.location)}
-                className="flex min-h-[44px] justify-between w-full p-4 h-auto bg-white hover:bg-blue-50 text-left border-2 border-blue-200 hover:border-blue-400 rounded-xl transition-all duration-200"
-                variant="outline"
-              >
-                  <div className='flex items-center space-x-4'>
-                    <div className="text-2xl">{floor.icon}</div>
-                    <div className="flex-1">
-                      <div className="font-bold text-blue-800">{floor.name}</div>
-                      <div className="text-sm text-gray-600">{floor.description}</div>
-                    </div>
-                  </div>
-                  <div className="text-blue-500">→</div>
-              </Button>
-            ))}
-          </div>
-
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="min-h-[44px] w-full mt-4 rounded-xl border-2 border-gray-300 hover:bg-gray-50"
-          >
-            Cancel
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <BlobbiModal
+      open={isOpen}
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="sm"
+      title="Select floor"
+      description="Choose which floor you want to visit."
+      icon="🛗"
+    >
+      {/*
+        A plain list of actions, deliberately not a radiogroup: choosing a
+        floor travels and closes the window, so nothing here stays "selected"
+        for the player to change their mind about. The floor they are already
+        on is marked with `aria-current` by the row itself.
+      */}
+      <div className="space-y-1">
+        {floors.map((floor) => (
+          <SettingsRow
+            key={floor.id}
+            icon={floor.icon}
+            label={floor.name}
+            description={floor.description}
+            selected={floor.location === currentLocation}
+            onClick={() => handleFloorSelect(floor.location)}
+          />
+        ))}
+      </div>
+    </BlobbiModal>
   );
 }

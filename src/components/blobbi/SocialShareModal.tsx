@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Share2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { useToast } from '@/hooks/useToast';
 import {
   IconBrandTwitter,
@@ -22,24 +24,45 @@ interface SocialShareModalProps {
   _className?: string;
 }
 
+/**
+ * The share targets.
+ *
+ * Eight buttons that differed only in icon, label and footnote were eight
+ * copies of the same 6-class string. The table is the component now.
+ *
+ * `iconClass` carries BRAND colours, which are the one legitimate exception to
+ * the no-hardcoded-colour rule: Facebook blue is a fact about Facebook, not a
+ * decision this design system gets to make, and it does not follow the theme.
+ * The two that are NOT brand colours use tokens — X's mark is monochrome
+ * (`text-black` would have vanished on a dusk panel) and Copy Link is a plain
+ * utility icon.
+ */
+const SHARE_TARGETS: ReadonlyArray<{
+  id: string;
+  label: string;
+  note?: string;
+  Icon: typeof IconBrandTwitter;
+  iconClass: string;
+}> = [
+  { id: 'twitter', label: 'X (Twitter)', Icon: IconBrandTwitter, iconClass: 'text-island-ink' },
+  { id: 'facebook', label: 'Facebook', note: 'No prefilled text', Icon: IconBrandFacebook, iconClass: 'text-[#1877F2]' },
+  { id: 'instagram', label: 'Instagram', note: 'Manual upload', Icon: IconBrandInstagram, iconClass: 'text-[#E1306C]' },
+  { id: 'whatsapp', label: 'WhatsApp', Icon: IconBrandWhatsapp, iconClass: 'text-[#25D366]' },
+  { id: 'telegram', label: 'Telegram', Icon: IconBrandTelegram, iconClass: 'text-[#229ED9]' },
+  { id: 'reddit', label: 'Reddit', Icon: IconBrandReddit, iconClass: 'text-[#FF4500]' },
+  { id: 'linkedin', label: 'LinkedIn', note: 'URL only', Icon: IconBrandLinkedin, iconClass: 'text-[#0A66C2]' },
+  { id: 'copy', label: 'Copy Link', Icon: IconCopy, iconClass: 'text-island-ink-soft' },
+];
+
 export function SocialShareModal({ isOpen, onClose, title, capturedPolaroidSrc, _className }: SocialShareModalProps) {
   const { toast } = useToast();
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
-
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && isOpen) {
-      onClose();
-    }
-  };
+  /*
+    The hand-rolled `document` Escape listener and backdrop handler that used
+    to live here are gone: BlobbiModal's Radix dialog owns both, and it does
+    Escape correctly for a STACK — only the topmost surface closes. The global
+    listener fired regardless of what was above it.
+  */
 
   const handleSocialShare = async (platform: string) => {
     if (!capturedPolaroidSrc) {
@@ -146,128 +169,35 @@ export function SocialShareModal({ isOpen, onClose, title, capturedPolaroidSrc, 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
+    <BlobbiModal
+      open={isOpen}
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="lg"
+      title={title}
+      description="Pick where this goes. Some apps can only take the link."
+      icon={<Share2 />}
+      footer={
+        <Button variant="soft" onClick={onClose} className="min-h-[44px]">
+          Close
+        </Button>
+      }
     >
-      <div className="w-[95%] max-w-2xl max-h-[90vh] p-0 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-purple-200/60 dark:border-purple-800/60 overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-purple-200/60 dark:border-purple-800/60">
-          <h2 className="text-xl font-bold text-center text-purple-700 dark:text-purple-300">
-            {title}
-          </h2>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
+        {SHARE_TARGETS.map(({ id, label, note, Icon, iconClass }) => (
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute top-2 right-2 h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
+            key={id}
+            variant="soft"
+            onClick={() => handleSocialShare(id)}
+            aria-label={`Share to ${label}`}
+            className="h-auto min-h-[5.5rem] flex-col justify-center gap-1.5 rounded-panel p-3 text-center"
           >
-            <X className="h-4 w-4" />
+            <Icon aria-hidden className={cn('size-7 shrink-0', iconClass)} />
+            <span className="text-sm font-semibold text-island-ink">{label}</span>
+            {note ? <span className="text-[0.6875rem] text-island-ink-soft">{note}</span> : null}
           </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {/* Twitter/X */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('twitter')}
-                aria-label="Share to X (Twitter)"
-              >
-                <IconBrandTwitter className="w-8 h-8 text-black" />
-                <span className="text-sm font-medium">X (Twitter)</span>
-              </Button>
-
-              {/* Facebook */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('facebook')}
-                aria-label="Share to Facebook"
-              >
-                <IconBrandFacebook className="w-8 h-8 text-blue-600" />
-                <span className="text-sm font-medium">Facebook</span>
-                <span className="text-xs text-muted-foreground">No prefilled text</span>
-              </Button>
-
-              {/* Instagram */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('instagram')}
-                aria-label="Share to Instagram"
-              >
-                <IconBrandInstagram className="w-8 h-8 text-pink-600" />
-                <span className="text-sm font-medium">Instagram</span>
-                <span className="text-xs text-muted-foreground">Manual upload</span>
-              </Button>
-
-              {/* WhatsApp */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('whatsapp')}
-                aria-label="Share to WhatsApp"
-              >
-                <IconBrandWhatsapp className="w-8 h-8 text-green-600" />
-                <span className="text-sm font-medium">WhatsApp</span>
-              </Button>
-
-              {/* Telegram */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('telegram')}
-                aria-label="Share to Telegram"
-              >
-                <IconBrandTelegram className="w-8 h-8 text-blue-500" />
-                <span className="text-sm font-medium">Telegram</span>
-              </Button>
-
-              {/* Reddit */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('reddit')}
-                aria-label="Share to Reddit"
-              >
-                <IconBrandReddit className="w-8 h-8 text-orange-600" />
-                <span className="text-sm font-medium">Reddit</span>
-              </Button>
-
-              {/* LinkedIn */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('linkedin')}
-                aria-label="Share to LinkedIn"
-              >
-                <IconBrandLinkedin className="w-8 h-8 text-blue-700" />
-                <span className="text-sm font-medium">LinkedIn</span>
-                <span className="text-xs text-muted-foreground">URL only</span>
-              </Button>
-
-              {/* Copy Link */}
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center space-y-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
-                onClick={() => handleSocialShare('copy')}
-                aria-label="Copy link to clipboard"
-              >
-                <IconCopy className="w-8 h-8 text-gray-600" />
-                <span className="text-sm font-medium">Copy Link</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-purple-200/60 dark:border-purple-800/60 flex justify-end">
-          <Button variant="outline" onClick={onClose} className="border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20">
-            Close
-          </Button>
-        </div>
+        ))}
       </div>
-    </div>
+    </BlobbiModal>
   );
 }

@@ -17,7 +17,6 @@ import type { LocalActiveState, AttentionState } from '@/lib/gaze';
 import { emptyAttention } from '@/lib/gaze';
 import { RefrigeratorModal } from './RefrigeratorModal';
 import { ChestModal } from './ChestModal';
-import { ItemBagModal } from './ItemBagModal';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
 import { SocialShareModal } from './SocialShareModal';
 import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
@@ -88,7 +87,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   }, [currentLocation]);
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
-  const [isItemBagOpen, setIsItemBagOpen] = useState(false);
   const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
   const [isSocialShareOpen, setIsSocialShareOpen] = useState(false);
   const [socialShareData, setSocialShareData] = useState<{ capturedPhoto: string | null; capturedPolaroidSrc: string | null }>({ capturedPhoto: null, capturedPolaroidSrc: null });
@@ -621,16 +619,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         className="absolute top-16 right-2 sm:top-20 sm:right-4 z-20 flex items-center space-x-2"
         data-block-move
       >
-        <button
-          type="button"
-          onClick={() => setIsItemBagOpen(true)}
-          aria-label="Open item bag"
-          title="Item bag"
-          className="h-9 w-9 rounded-full bg-white/80 hover:bg-white shadow flex items-center justify-center text-lg"
-          data-block-move
-        >
-          🎒
-        </button>
         {/*
           Two DISTINCT arcade concepts, deliberately not merged (see
           `ArcadeTicketBalance`): the ticket balance is persistent kind:31633
@@ -645,9 +633,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         {currentLocation.startsWith('arcade') && <ArcadeTicketBalance showZero />}
         <ArcadePassIcon />
       </div>
-
-      <ItemBagModal isOpen={isItemBagOpen} onClose={() => setIsItemBagOpen(false)} />
-
 
 
       {/* Blobbi Info Modal */}

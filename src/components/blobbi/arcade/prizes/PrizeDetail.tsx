@@ -120,7 +120,7 @@ export function PrizeDetail({ resolved, balance, onBack }: PrizeDetailProps) {
           {shortBy > 0 && !resolved.owned && (
             <>
               <dt className="blobbi-text-muted">Tickets needed</dt>
-              <dd className="text-right font-bold text-amber-800">
+              <dd className="text-right font-bold text-island-wood-dark">
                 {shortBy} more
               </dd>
             </>

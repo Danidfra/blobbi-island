@@ -1,13 +1,5 @@
 import { useRef, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  inFrameDialogPanelClass,
-} from '@/components/ui/dialog';
-import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
-import { cn } from '@/lib/utils';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/useToast';
@@ -63,7 +55,6 @@ interface ArcadePassModalProps {
  *    would be a second value mutation for a storage problem).
  */
 export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
-  const stageOverlayHost = useStageOverlayHost();
   const { balance: coins, isLoading: isLoadingBalance, isError, refetch } = useCoinBalance();
   const { toast } = useToast();
   const { spendCoins } = useCoinWallet();
@@ -152,126 +143,100 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        /* Contained in the game window, like every other arcade surface, and
-           sized against the STAGE rather than the viewport — see
-           `inFrameDialogPanelClass`. `inFrame` supplies positioning only, so a
-           dialog moved here must bring its own padding and side margins. */
-        container={stageOverlayHost}
-        inFrame
-        className={cn(
-          inFrameDialogPanelClass,
-          'blobbi-card-xl blobbi-gradient-container border-2 border-island-wood/30 rounded-2xl theme-transition',
-        )}
-      >
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-center text-island-ink mb-4">
-            🎟️ Arcade Pass
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="blobbi-card rounded-xl p-4 mb-4">
-              <img
-                src="/assets/items/tickets/arcade-ticket.png"
-                alt=""
-                aria-hidden
-                className="w-20 h-20 mx-auto mb-2"
-              />
-              <p className="text-lg font-semibold blobbi-text">
-                Purchase an Arcade Pass for{' '}
-                <span className="icon-yellow font-bold">{ARCADE_PASS_PRICE} coins</span>
-              </p>
-            </div>
-
-            <div className="blobbi-card rounded-lg p-3 mb-4 border-island-ocean/30">
-              <p className="text-sm blobbi-text">
-                🎮 Access all arcade floors
-                <br />
-                🏢 Use the elevator freely
-                <br />
-                ⏰ Valid until you leave the arcade
-              </p>
-            </div>
-
-            {/* The balance: a skeleton while unknown, an error when unreadable,
-                a number only when it is genuinely a number. */}
-            <div className="mb-4 min-h-[1.5rem]" aria-live="polite">
-              {isLoadingBalance ? (
-                <div className="flex items-center justify-center gap-2 text-sm blobbi-text-muted">
-                  <span>Your current coins:</span>
-                  <Skeleton className="h-4 w-16" />
-                </div>
-              ) : balanceError ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-island-danger">
-                    Couldn&apos;t read your coin balance.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPurchaseError(null);
-                      refetch();
-                    }}
-                    className="rounded-full"
-                  >
-                    Try again
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm blobbi-text-muted">
-                  Your current coins:{' '}
-                  <span className="font-bold icon-yellow">{coins}</span>
-                </p>
-              )}
-            </div>
-
-            {!isLoadingBalance && !balanceError && !canAfford && (
-              <p className="mb-4 text-sm text-island-danger">
-                You need {ARCADE_PASS_PRICE} coins to buy an Arcade Pass.
-              </p>
-            )}
-
-            {purchaseError === PASS_STORAGE_FAILED ? (
-              <p role="alert" className="mb-4 text-sm text-island-danger">
-                Your coins may already have been spent, but this browser refused to
-                save the Arcade Pass. Enable site data for Blobbi Island and buy
-                again.
-              </p>
-            ) : (
-              purchaseError && (
-                <p role="alert" className="mb-4 text-sm text-island-danger">
-                  {purchaseError.startsWith(CHARGE_AMBIGUOUS_PREFIX)
-                    ? purchaseError.slice(CHARGE_AMBIGUOUS_PREFIX.length)
-                    : `${purchaseError}. No coins were deducted and no pass was issued.`}
-                </p>
-              )
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isPurchasing}
-              className="min-h-[44px] flex-1 blobbi-button rounded-full border-2 border-island-wood/40 hover:bg-island-cream-2"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePurchasePass}
-              disabled={!canPurchase}
-              className="min-h-[44px] flex-1 bg-island-purple hover:bg-island-purple/90 text-white rounded-full border-0 font-bold shadow-cozy-soft theme-transition"
-            >
-              {isPurchasing ? 'Buying…' : 'Buy Ticket'}
-            </Button>
-          </div>
+    <BlobbiModal
+      open={isOpen}
+      onOpenChange={(next) => !next && onClose()}
+      presentation="in-frame"
+      size="sm"
+      title="Arcade Pass"
+      description={`Costs ${ARCADE_PASS_PRICE} coins. Valid until you leave the arcade.`}
+      icon="🎟️"
+      footer={
+        <>
+          <Button
+            variant="soft"
+            onClick={onClose}
+            disabled={isPurchasing}
+            className="min-h-[44px]"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="accent"
+            onClick={handlePurchasePass}
+            disabled={!canPurchase}
+            className="min-h-[44px]"
+          >
+            {isPurchasing ? 'Buying…' : 'Buy Ticket'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-center">
+        <div className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-4">
+          <img
+            src="/assets/items/tickets/arcade-ticket.png"
+            alt=""
+            aria-hidden
+            className="mx-auto mb-2 size-20"
+          />
+          <p className="text-sm font-semibold text-island-ink">
+            Access every arcade floor and the elevator.
+          </p>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* The balance: a skeleton while unknown, an error when unreadable, a
+            number only when it is genuinely a number. */}
+        <div className="min-h-[1.5rem]" aria-live="polite">
+          {isLoadingBalance ? (
+            <div className="flex items-center justify-center gap-2 text-sm text-island-ink-soft">
+              <span>Your current coins:</span>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ) : balanceError ? (
+            <div className="space-y-2">
+              <p className="text-sm text-island-danger">Couldn&apos;t read your coin balance.</p>
+              <Button
+                type="button"
+                variant="soft"
+                size="sm"
+                onClick={() => {
+                  setPurchaseError(null);
+                  refetch();
+                }}
+                className="min-h-[44px] rounded-full"
+              >
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-island-ink-soft">
+              Your current coins: <span className="font-bold text-island-warn">{coins}</span>
+            </p>
+          )}
+        </div>
+
+        {!isLoadingBalance && !balanceError && !canAfford && (
+          <p className="text-sm text-island-danger">
+            You need {ARCADE_PASS_PRICE} coins to buy an Arcade Pass.
+          </p>
+        )}
+
+        {purchaseError === PASS_STORAGE_FAILED ? (
+          <p role="alert" className="text-sm text-island-danger">
+            Your coins may already have been spent, but this browser refused to save the
+            Arcade Pass. Enable site data for Blobbi Island and buy again.
+          </p>
+        ) : (
+          purchaseError && (
+            <p role="alert" className="text-sm text-island-danger">
+              {purchaseError.startsWith(CHARGE_AMBIGUOUS_PREFIX)
+                ? purchaseError.slice(CHARGE_AMBIGUOUS_PREFIX.length)
+                : `${purchaseError}. No coins were deducted and no pass was issued.`}
+            </p>
+          )
+        )}
+      </div>
+    </BlobbiModal>
   );
 }

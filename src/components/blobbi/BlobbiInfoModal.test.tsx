@@ -80,12 +80,15 @@ describe('BlobbiInfoModal', () => {
       </TestApp>
     );
 
-    // Should show the Blobbi name in the title
-    expect(await screen.findByText('Blobbi Info – Luna')).toBeInTheDocument();
+    // The window is NAMED after the Blobbi. It used to be titled
+    // "Blobbi Info – Luna", which put a category label where the subject
+    // belongs; the stage and generation moved to the header's subtitle.
+    expect(await screen.findByRole('dialog')).toHaveAccessibleName('Luna');
 
     // Should show Blobbi info
-    expect(screen.getByText('Luna')).toBeInTheDocument();
-    expect(screen.getByText('adult • Gen 2')).toBeInTheDocument();
+    // Stage and generation are a progression trophy now, not a metadata badge.
+    expect(screen.getByText('Gen 2')).toBeInTheDocument();
+    expect(screen.getByText('adult')).toBeInTheDocument();
 
     // Should not show inventory tab in read-only mode
     expect(screen.queryByText('Inventory')).not.toBeInTheDocument();

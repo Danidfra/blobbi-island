@@ -11,42 +11,85 @@ img {
 }
 
 /* ==========================================================================
-   Blobbi Island — Cozy Island Design Tokens (single source of truth)
-   Daytime, warm, toy-like. One identity, light only (dark mode removed).
-   Raw palette:
-     sky #9DDCF9  ocean #55BFEA  grass #7CCB72  sand #F6DFA6
-     wood #B9855B  wood-dark #8C6239  cream #FFF4D8  cream-2 #FBEAC2
-     purple #8E6BE8 (mascot accent)  ink #3A2A1A (text)
+   Blobbi Island — Design tokens
+   ==========================================================================
+
+   Three layers, in strict dependency order. Nothing below a layer may be
+   referenced by anything above it, and NOTHING outside this file may hardcode
+   a colour.
+
+     1. THEME PALETTE   `--island-*`   the sixteen colours a theme owns.
+                                       Redefined per theme, nothing else is.
+     2. SEMANTIC ROLES  `--card`, …    shadcn/Radix contract, DERIVED from (1)
+                                       by reference so the two can never drift.
+     3. COMPOSITES      shadows, …     built from (1) with alpha.
+
+   ## Why the palette holds bare HSL channels, not colours
+
+   `--island-wood: 27 40% 54%` rather than `#B9855B`, so Tailwind can declare
+   the colour as `hsl(var(--island-wood) / <alpha-value>)`. That single move is
+   what makes the whole app themeable: the ~650 existing
+   `text-island-ink` / `bg-island-cream` / `border-island-wood/30` call sites
+   keep working verbatim — opacity modifiers included — and start reading from
+   the active theme instead of a literal baked into tailwind.config.ts.
+
+   Adding a theme is therefore a block of channel triplets in
+   `src/lib/island-themes.ts`. It is never a component edit.
+
+   Anything in CSS that wants an actual colour writes `hsl(var(--island-x))`,
+   and anything that wants a tint writes `hsl(var(--island-x) / 0.3)`.
+
+   ## Themes are attributes, not classes
+
+   The active theme is `data-island-theme` on <html>. Tailwind's `dark:` variant
+   is still class-based and is deliberately left unused — see the note by the
+   `.dark` block below.
    ========================================================================== */
+
 :root {
-  /* Raw island palette */
-  --island-sky: #9DDCF9;
-  --island-ocean: #55BFEA;
-  --island-grass: #7CCB72;
-  --island-grass-dark: #5BAE54;
-  --island-sand: #F6DFA6;
-  --island-wood: #B9855B;
-  --island-wood-dark: #8C6239;
-  --island-cream: #FFF4D8;
-  --island-cream-2: #FBEAC2;
-  --island-purple: #8E6BE8;
-  --island-ink: #3A2A1A;
-  --island-ink-soft: #6B5742;
-  --island-danger: #E06B5E;
-  --island-warn: #E9A23B;
+  /* ---- Layer 1: theme palette --------------------------------------------
+     Defaults are the "cozy-day" theme. IslandThemeProvider overwrites these
+     at runtime; they are duplicated in `src/lib/island-themes.ts` (asserted by
+     island-themes.test.ts) so a build with JS disabled still renders correctly
+     and so the pre-paint boot script has something to fall back to. */
+  --island-page: 38 100% 96%;      /* #FFF8EC page behind the wood frame */
+  --island-sky: 199 88% 80%;       /* #9DDCF9 */
+  --island-ocean: 197 78% 63%;     /* #55BFEA the sea, informational */
+  --island-focus: 197 78% 40%;     /* deeper ocean — must clear 3:1 on every surface */
+  --island-grass: 113 46% 62%;     /* #7CCB72 success / play */
+  --island-grass-dark: 115 36% 33%;/* label text / edge on cream — not a fill */
+  --island-sand: 43 82% 81%;       /* #F6DFA6 secondary surface */
+  --island-wood: 27 40% 54%;       /* #B9855B frame / primary */
+  --island-wood-dark: 30 42% 35%;  /* frame edge, and label text on sand */
+  --island-cream: 43 100% 92%;     /* #FFF4D8 panel */
+  --island-cream-2: 42 88% 87%;    /* #FBEAC2 panel, muted */
+  --island-purple: 257 70% 56%;    /* mascot accent — readable as text AND as a surface */
+  --island-ink: 30 38% 16%;        /* #3A2A1A text */
+  --island-ink-soft: 31 24% 34%;   /* #6B5742 muted text */
+  --island-danger: 6 62% 46%;      /* destructive + error text */
+  --island-warn: 36 80% 57%;       /* #E9A23B */
 
-  /* Cozy game frame tokens */
-  --frame-wood: var(--island-wood);
-  --frame-wood-edge: var(--island-wood-dark);
-  --frame-inner-shadow: rgba(58, 42, 26, 0.18);
-  --hud-surface: var(--island-cream);
-  --dock-surface: var(--island-cream-2);
+  /* Radius scale. `--radius` is the shadcn contract (Tailwind's lg/md/sm read
+     from it); the two above it are the game surfaces — a framed modal and the
+     wood frame itself are deliberately rounder than a form control. */
+  --radius: 1rem;
+  --radius-panel: 1.25rem;
+  --radius-frame: 1.5rem;
 
-  /* Soft, toy-like shadows (no harsh dashboard shadows) */
-  --shadow-soft: 0 2px 6px rgba(58, 42, 26, 0.10);
-  --shadow-raised: 0 8px 20px rgba(58, 42, 26, 0.14);
-  --shadow-frame: 0 16px 40px rgba(58, 42, 26, 0.22);
-  --shadow-inset: inset 0 2px 8px rgba(58, 42, 26, 0.18);
+  /* ---- Layer 3: composites ------------------------------------------------
+     Every shadow is the theme's own ink at low alpha, so a theme with a cool
+     or dark ink gets a shadow that belongs to it rather than a generic black. */
+  --shadow-soft: 0 2px 6px hsl(var(--island-ink) / 0.10);
+  --shadow-raised: 0 8px 20px hsl(var(--island-ink) / 0.14);
+  --shadow-frame: 0 16px 40px hsl(var(--island-ink) / 0.22);
+  --shadow-inset: inset 0 2px 8px hsl(var(--island-ink) / 0.18);
+
+  /* Cozy game frame */
+  --frame-wood: hsl(var(--island-wood));
+  --frame-wood-edge: hsl(var(--island-wood-dark));
+  --frame-inner-shadow: hsl(var(--island-ink) / 0.18);
+  --hud-surface: hsl(var(--island-cream));
+  --dock-surface: hsl(var(--island-cream-2));
 
   /* Motion */
   --ease-cozy: cubic-bezier(0.34, 1.4, 0.5, 1);
@@ -54,113 +97,114 @@ img {
   --dur: 220ms;
   --dur-slow: 360ms;
 
-  /* ---- Legacy --blobbi-* aliases (remapped to the island palette) ----
-     Kept so existing .blobbi-* utility classes shift to the cozy look
-     without touching every call site. Will be retired as components migrate. */
-  --blobbi-border-light: rgba(185, 133, 91, 0.35);  /* soft wood edge */
-  --blobbi-border-dark:  rgba(185, 133, 91, 0.35);
+  /* ---- Legacy `--blobbi-*` aliases ---------------------------------------
+     Kept so the `.blobbi-*` utility classes below (still used across older
+     feature surfaces) inherit the active theme without touching every call
+     site. They are aliases, never a second source of truth, and retire as
+     those surfaces migrate to the primitives. */
+  --blobbi-border-light: hsl(var(--island-wood) / 0.35);
+  --blobbi-border-dark:  hsl(var(--island-wood) / 0.35);
 
-  --blobbi-bg-light: rgba(255, 244, 216, 0.9);       /* cream panel */
-  --blobbi-bg-dark:  rgba(255, 244, 216, 0.9);
+  --blobbi-bg-light: hsl(var(--island-cream) / 0.9);
+  --blobbi-bg-dark:  hsl(var(--island-cream) / 0.9);
 
-  --blobbi-text-strong-light: #3A2A1A;
-  --blobbi-text-strong-dark:  #3A2A1A;
-  --blobbi-text-muted-light:  #6B5742;
-  --blobbi-text-muted-dark:   #6B5742;
+  --blobbi-text-strong-light: hsl(var(--island-ink));
+  --blobbi-text-strong-dark:  hsl(var(--island-ink));
+  --blobbi-text-muted-light:  hsl(var(--island-ink-soft));
+  --blobbi-text-muted-dark:   hsl(var(--island-ink-soft));
 
-  --blobbi-yellow-500: #E9A23B;
-  --blobbi-yellow-600: #CA8A04;
-  --blobbi-amber-500:  #E9A23B;
-  --blobbi-pink-500:   #8E6BE8;   /* mascot accent replaces pink */
-  --blobbi-blue-500:   #55BFEA;
-  --blobbi-green-500:  #7CCB72;
-  --blobbi-purple-500: #8E6BE8;
+  --blobbi-yellow-500: hsl(var(--island-warn));
+  --blobbi-yellow-600: hsl(var(--island-warn));
+  --blobbi-amber-500:  hsl(var(--island-warn));
+  --blobbi-pink-500:   hsl(var(--island-purple));
+  --blobbi-blue-500:   hsl(var(--island-ocean));
+  --blobbi-green-500:  hsl(var(--island-grass));
+  --blobbi-purple-500: hsl(var(--island-purple));
 }
 
 
 @layer base {
+  /* ---- Layer 2: semantic roles --------------------------------------------
+     The shadcn/Radix token contract, every value a REFERENCE into the palette
+     above. This is the mapping that makes a generic <Card> or <Button> look
+     like it belongs on the island, and it is the reason a new theme needs no
+     component work: swap the palette, and `bg-card`, `text-muted-foreground`
+     and `ring-ring` all follow.
+
+     Read this as the island's semantic vocabulary:
+       surface / page ....... sand-cream behind the frame
+       panel ................ cream (card, popover)
+       panel-muted .......... cream-2
+       secondary surface .... sand
+       text / text-muted .... ink / ink-soft
+       primary .............. wood-DARK — the frame is `wood`, but a button
+                              has to carry readable text and the frame does not
+       accent ............... mascot purple — highlights, active state
+       success .............. grass
+       danger ............... soft coral
+       focus ................ a deeper ocean, contrast-checked */
   :root {
-    /* Blobbi Island — Cozy Island palette (light only) */
-    --background: 38 100% 96%; /* #FFF8EC warm cream-sand page behind the frame */
-    --foreground: 30 38% 16%; /* #3A2A1A warm ink */
+    --background: var(--island-page);
+    --foreground: var(--island-ink);
 
-    --card: 43 100% 92%; /* #FFF4D8 cream panel */
-    --card-foreground: 30 38% 16%;
+    --card: var(--island-cream);
+    --card-foreground: var(--island-ink);
 
-    --popover: 43 100% 92%; /* #FFF4D8 */
-    --popover-foreground: 30 38% 16%;
+    --popover: var(--island-cream);
+    --popover-foreground: var(--island-ink);
 
-    --primary: 27 40% 54%; /* #B9855B warm wood — default CTA */
-    --primary-foreground: 43 100% 96%; /* near-cream */
+    --primary: var(--island-wood-dark);
+    --primary-foreground: var(--island-cream);
 
-    --secondary: 43 82% 81%; /* #F6DFA6 sand */
-    --secondary-foreground: 30 38% 16%;
+    --secondary: var(--island-sand);
+    --secondary-foreground: var(--island-ink);
 
-    --muted: 42 88% 87%; /* #FBEAC2 cream-2 */
-    --muted-foreground: 31 24% 34%; /* #6B5742 ink-soft */
+    --muted: var(--island-cream-2);
+    --muted-foreground: var(--island-ink-soft);
 
-    --accent: 257 73% 66%; /* #8E6BE8 mascot purple — highlights/active */
-    --accent-foreground: 43 100% 96%;
+    --accent: var(--island-purple);
+    --accent-foreground: var(--island-cream);
 
-    --success: 113 46% 62%; /* #7CCB72 grass — play/online */
-    --success-foreground: 30 38% 16%;
+    --success: var(--island-grass);
+    --success-foreground: var(--island-ink);
 
-    --destructive: 6 68% 62%; /* #E06B5E soft danger */
-    --destructive-foreground: 43 100% 96%;
+    --destructive: var(--island-danger);
+    --destructive-foreground: var(--island-cream);
 
-    --border: 27 40% 54%; /* wood; consumed at low opacity via soft borders */
-    --input: 42 60% 80%;
-    --ring: 197 78% 63%; /* #55BFEA ocean — focus */
+    /* `--border` is consumed at low opacity almost everywhere (the global
+       `* { @apply border-border }` below is the exception, and every element
+       that shows a border sets its own alpha). */
+    --border: var(--island-wood);
+    --input: var(--island-sand);
+    --ring: var(--island-focus);
 
-    --radius: 1rem;
-
-    --sidebar-background: 43 100% 92%;
-    --sidebar-foreground: 30 38% 16%;
-    --sidebar-primary: 27 40% 54%;
-    --sidebar-primary-foreground: 43 100% 96%;
-    --sidebar-accent: 43 82% 81%;
-    --sidebar-accent-foreground: 30 38% 16%;
-    --sidebar-border: 27 40% 54%;
-    --sidebar-ring: 197 78% 63%;
+    --sidebar-background: var(--island-cream);
+    --sidebar-foreground: var(--island-ink);
+    --sidebar-primary: var(--island-wood-dark);
+    --sidebar-primary-foreground: var(--island-cream);
+    --sidebar-accent: var(--island-sand);
+    --sidebar-accent-foreground: var(--island-ink);
+    --sidebar-border: var(--island-wood);
+    --sidebar-ring: var(--island-focus);
   }
 
   /*
-   * Dark mode is intentionally NOT a separate theme in this phase.
-   * Blobbi Island commits to one cozy daytime identity. The .dark selector
-   * mirrors the light palette so any residual `dark:` class or `system`
-   * preference can't break the visual identity. A real "evening island"
-   * theme may be added later as a game feature, not a generic dark mode.
+   * `.dark` is intentionally EMPTY of colour.
+   *
+   * Blobbi Island does not have a generic light/dark mode. What a browser calls
+   * "dark mode" would flip the cozy daytime world into a grey social app, which
+   * is the one outcome this design system exists to prevent. An evening island
+   * is a THEME (a palette in `src/lib/island-themes.ts`), authored deliberately
+   * with the game's own colours — not an inversion.
+   *
+   * The selector stays so that any residual `dark:` utility, or a `system`
+   * preference reaching <html>, resolves to the active theme rather than to a
+   * stale hardcoded palette: with no declarations here, `:root` wins and the
+   * theme is preserved. Deleting the block would be equivalent; keeping it
+   * documents the decision at the place someone would look for it.
    */
   .dark {
-    --background: 38 100% 96%;
-    --foreground: 30 38% 16%;
-    --card: 43 100% 92%;
-    --card-foreground: 30 38% 16%;
-    --popover: 43 100% 92%;
-    --popover-foreground: 30 38% 16%;
-    --primary: 27 40% 54%;
-    --primary-foreground: 43 100% 96%;
-    --secondary: 43 82% 81%;
-    --secondary-foreground: 30 38% 16%;
-    --muted: 42 88% 87%;
-    --muted-foreground: 31 24% 34%;
-    --accent: 257 73% 66%;
-    --accent-foreground: 43 100% 96%;
-    --success: 113 46% 62%;
-    --success-foreground: 30 38% 16%;
-    --destructive: 6 68% 62%;
-    --destructive-foreground: 43 100% 96%;
-    --border: 27 40% 54%;
-    --input: 42 60% 80%;
-    --ring: 197 78% 63%;
-    --sidebar-background: 43 100% 92%;
-    --sidebar-foreground: 30 38% 16%;
-    --sidebar-primary: 27 40% 54%;
-    --sidebar-primary-foreground: 43 100% 96%;
-    --sidebar-accent: 43 82% 81%;
-    --sidebar-accent-foreground: 30 38% 16%;
-    --sidebar-border: 27 40% 54%;
-    --sidebar-ring: 197 78% 63%;
+    /* deliberately empty — see above */
   }
 }
 
@@ -172,9 +216,67 @@ img {
   body {
     @apply bg-background text-foreground theme-transition;
   }
+
+  /* ---- Theme fonts --------------------------------------------------------
+     A Nostr theme may carry TWO fonts (Ditto's `f` tag, body and title roles).
+     Both default to the island's own type and are overwritten by
+     `island-theme-media.ts` with a sanitised family plus this same stack as the
+     fallback — so a theme font that never loads (dead host, offline, CORS
+     refusal) leaves the game in Comfortaa rather than in whatever the browser
+     would otherwise pick.
+
+       --island-font-body      inherited by every surface, from <html>
+       --island-font-display   window titles and section headings only
+
+     `html` is the ONLY place a family is declared. Setting it per component is
+     how a themeable app stops being themeable: a single hardcoded
+     `font-family: Comfortaa` on a shared primitive would silently pin every
+     surface below it. The one deliberate exception is `.font-mono`, applied to
+     hex addresses, event ids and filenames, where a proportional face makes the
+     value harder to read — see `docs/themes.md`. */
+  :root {
+    --island-font-body: Comfortaa, system-ui, sans-serif;
+    --island-font-display: var(--island-font-body);
+  }
+
+  html {
+    font-family: var(--island-font-body);
+  }
+
+  /* ---- Theme background media ---------------------------------------------
+     A Nostr theme may also carry a BACKGROUND IMAGE. Ditto puts it on `body`,
+     which is right for a feed scrolling over it; the island is a drawn world,
+     so it goes on the page BEHIND the wood frame and nowhere else. Town, Beach,
+     Mine and the Arcade keep their own art at every viewport size — a theme may
+     dress the room the game sits in, never the game.
+
+     `data-theme-background` is set by `applyThemeBackground` alongside the
+     variables, so the rule matches on an attribute rather than sniffing an
+     inline style string. It is absent for every built-in theme and for every
+     theme without a `bg` tag, which makes this rule inert by default. */
+  html[data-theme-background] body {
+    background-image: var(--island-theme-bg-image);
+    background-size: var(--island-theme-bg-size, cover);
+    background-repeat: var(--island-theme-bg-repeat, no-repeat);
+    background-position: var(--island-theme-bg-position, center);
+    background-attachment: var(--island-theme-bg-attachment, fixed);
+  }
 }
 
 @layer components {
+  /*
+   * Display typography.
+   *
+   * The one opt-in for `--island-font-display`, so the set of surfaces a
+   * theme's title font can reach is a list of call sites rather than a guess.
+   * Applied to game-window titles and settings section headings; deliberately
+   * NOT to body copy, stat labels, button labels or the gameplay HUD, where a
+   * decorative face would cost legibility for no expressive gain.
+   */
+  .island-display {
+    font-family: var(--island-font-display);
+  }
+
   /* ------------------------------------------------------------------ *
    * Blobbi Island cozy components (light-only).
    * Legacy .blobbi-* names retained so existing call sites adopt the
@@ -186,12 +288,12 @@ img {
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--blobbi-border-light);
     background: var(--blobbi-bg-light);
-    color: var(--island-ink);
+    color: hsl(var(--island-ink));
     transition: all var(--dur) var(--ease-cozy);
   }
 
   .blobbi-card-xl {
-    background-color: var(--island-cream);
+    background-color: hsl(var(--island-cream));
     border: 1px solid var(--blobbi-border-light);
     border-radius: 1.25rem;
     box-shadow: var(--shadow-raised);
@@ -208,7 +310,7 @@ img {
   }
 
   .blobbi-muted {
-    color: var(--island-ink-soft);
+    color: hsl(var(--island-ink-soft));
   }
 
   .blobbi-hover {
@@ -229,20 +331,20 @@ img {
     font-size: 0.75rem;
     font-weight: 600;
     border: 1px solid var(--blobbi-border-light);
-    color: var(--island-wood-dark);
+    color: hsl(var(--island-wood-dark));
     border-radius: 9999px;
     background: transparent;
   }
 
   .blobbi-badge-soft-amber {
     border-color: transparent;
-    background: var(--island-sand);
-    color: var(--island-wood-dark);
+    background: hsl(var(--island-sand));
+    color: hsl(var(--island-wood-dark));
   }
 
   .blobbi-badge-baby {
-    background: var(--island-cream-2);
-    color: var(--island-wood-dark);
+    background: hsl(var(--island-cream-2));
+    color: hsl(var(--island-wood-dark));
     border: 1px solid var(--blobbi-border-light);
     font-size: 0.75rem;
     padding: 0.25rem 0.625rem;
@@ -262,13 +364,13 @@ img {
     font-size: 0.875rem;
     font-weight: 600;
     border: 1px solid var(--blobbi-border-light);
-    background: var(--island-cream);
-    color: var(--island-ink);
+    background: hsl(var(--island-cream));
+    color: hsl(var(--island-ink));
     transition: background-color var(--dur) var(--ease-cozy), transform var(--dur-fast) var(--ease-cozy);
   }
 
   .blobbi-button:hover {
-    background: var(--island-cream-2);
+    background: hsl(var(--island-cream-2));
   }
 
   .blobbi-button:active {
@@ -277,7 +379,7 @@ img {
 
   /* Soft cream/sand panels (formerly purple/pink gradients) */
   .blobbi-gradient-frame {
-    background-image: linear-gradient(to bottom right, var(--island-cream), var(--island-sand));
+    background-image: linear-gradient(to bottom right, hsl(var(--island-cream)), hsl(var(--island-sand)));
     border: 2px solid var(--blobbi-border-light);
     border-radius: 1rem;
     transition: border var(--dur) var(--ease-cozy);
@@ -288,7 +390,7 @@ img {
   }
 
   .blobbi-gradient-container {
-    background-image: linear-gradient(to bottom right, var(--island-cream), var(--island-sand));
+    background-image: linear-gradient(to bottom right, hsl(var(--island-cream)), hsl(var(--island-sand)));
     border: 2px solid var(--blobbi-border-light);
     border-radius: 1rem;
     transition: border var(--dur) var(--ease-cozy);
@@ -299,34 +401,34 @@ img {
   }
 
   /* Icon colors (remapped to island palette) */
-  .icon-yellow   { color: var(--island-warn); }
-  .icon-amber    { color: var(--island-warn); }
-  .icon-pink     { color: var(--island-purple); }
-  .icon-blue     { color: var(--island-ocean); }
-  .icon-green    { color: var(--island-grass-dark); }
-  .icon-purple   { color: var(--island-purple); }
+  .icon-yellow   { color: hsl(var(--island-warn)); }
+  .icon-amber    { color: hsl(var(--island-warn)); }
+  .icon-pink     { color: hsl(var(--island-purple)); }
+  .icon-blue     { color: hsl(var(--island-ocean)); }
+  .icon-green    { color: hsl(var(--island-grass-dark)); }
+  .icon-purple   { color: hsl(var(--island-purple)); }
 
   /* Status icons */
-  .blobbi-status-icon-yellow { color: var(--island-warn); }
-  .blobbi-status-icon-blue   { color: var(--island-ocean); }
-  .blobbi-status-icon-purple { color: var(--island-purple); }
-  .blobbi-status-icon-red    { color: var(--island-danger); }
+  .blobbi-status-icon-yellow { color: hsl(var(--island-warn)); }
+  .blobbi-status-icon-blue   { color: hsl(var(--island-ocean)); }
+  .blobbi-status-icon-purple { color: hsl(var(--island-purple)); }
+  .blobbi-status-icon-red    { color: hsl(var(--island-danger)); }
 
   /* Text styles */
   .blobbi-text {
-    color: var(--island-ink);
+    color: hsl(var(--island-ink));
   }
 
   .blobbi-text-muted {
-    color: var(--island-ink-soft);
+    color: hsl(var(--island-ink-soft));
   }
 
   .blobbi-stat-label {
-    color: var(--island-ink-soft);
+    color: hsl(var(--island-ink-soft));
   }
 
   .blobbi-stat-value {
-    color: var(--island-ink);
+    color: hsl(var(--island-ink));
     font-weight: 600;
   }
 }

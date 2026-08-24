@@ -12,7 +12,8 @@
     <meta property="og:description" content="A virtual pet adventure on the Nostr network. Care for your Blobbi companions and explore the magical Blobbi Island." />
 
     <!-- PWA -->
-    <meta name="theme-color" content="#8B5A3C" />
+    <!-- Matches the default theme's page colour (--island-page in Cozy Day). -->
+    <meta name="theme-color" content="#FFF8EC" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- iOS icons -->
@@ -67,18 +68,43 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <script defer src="/dev-cleanup.js"></script>
+
+    <!--
+      Theme, applied before first paint.
+
+      BLOCKING on purpose (no `defer`, no `type="module"`): it writes the active
+      palette onto <html> and paints the boot screen below, and both must happen
+      before the browser paints anything, or a player on a non-default theme
+      sees the default island flash first. It is a handful of property writes on
+      an element that already exists, so the parser stall is negligible.
+
+      It is also best-effort — AppProvider re-applies the palette
+      authoritatively on mount. See the file header for why the palettes are
+      duplicated there and what guards the duplication.
+    -->
+    <script src="/island-theme.js"></script>
   </head>
   <body>
     <div id="root">
-      <!-- Initial loading screen -->
-      <div style="min-height: 100vh; background: #ffffff; display: flex; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif;">
-        <div style="text-align: center; color: #64748b;">
-          <div style="width: 32px; height: 32px; border: 2px solid #e2e8f0; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+      <!--
+        Pre-React loading screen.
+
+        Its colours are the theme's, written by /island-theme.js above (it looks
+        for `id="island-boot"` and `[data-boot-spinner]`). The literals inline
+        here are the default theme's, so the markup is still correct if that
+        script never runs. React replaces this whole subtree on mount.
+      -->
+      <div id="island-boot" style="min-height: 100vh; background: hsl(38 100% 96%); color: hsl(31 24% 34%); display: flex; align-items: center; justify-content: center; font-family: Comfortaa, system-ui, -apple-system, sans-serif;">
+        <div style="text-align: center;">
+          <div data-boot-spinner style="width: 32px; height: 32px; border: 3px solid hsl(27 40% 54% / 0.25); border-top-color: hsl(197 78% 63%); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
           <p style="margin: 0; font-size: 14px;">Loading Blobbi Island...</p>
         </div>
       </div>
       <style>
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+          [data-boot-spinner] { animation: none; }
+        }
       </style>
     </div>
     <script type="module" src="/src/main.tsx"></script>

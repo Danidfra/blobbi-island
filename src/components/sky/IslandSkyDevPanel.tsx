@@ -96,7 +96,7 @@ function Chip({
       className={[
         'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors',
         active
-          ? 'bg-island-purple text-white'
+          ? 'bg-accent text-accent-foreground'
           : 'bg-island-cream-2 text-island-ink hover:bg-island-sand',
       ].join(' ')}
     >

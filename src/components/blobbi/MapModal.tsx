@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
-import { IconX } from '@tabler/icons-react';
 
 // Location data with positioning coordinates (as percentages of the island image)
 interface Location {
@@ -245,42 +245,31 @@ export function MapModal({ className }: MapModalProps) {
     setIsMapModalOpen(false);
   };
 
+  const currentName =
+    LOCATIONS.find((l) => l.id === currentLocation)?.name ?? currentLocation;
+
   return (
-    <div
-      className={cn(
-        "absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2",
-        className
-      )}
-      onClick={(e) => {
-        // Close modal when clicking on backdrop
-        if (e.target === e.currentTarget) {
-          handleCloseModal();
-        }
-      }}
+    <BlobbiModal
+      open
+      onOpenChange={(next) => !next && handleCloseModal()}
+      presentation="in-frame"
+      size="full"
+      title="Island Map"
+      description={`Tap a place to travel there. You are at ${currentName}.`}
+      icon="🏝️"
+      className={className}
+      /*
+        No body padding and no scroller: the map measures the box it is given
+        (a ResizeObserver on `stageRef` fits the largest MAP_ASPECT rectangle
+        inside it) and every marker is positioned against that measurement, so
+        the map must BE the body rather than sit in it.
+      */
+      bodyClassName="relative flex items-center justify-center overflow-hidden p-2"
     >
       <div
         ref={stageRef}
-        className="relative w-full h-full max-w-[95%] max-h-[95%] bg-transparent flex items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
+        className="relative flex h-full w-full items-center justify-center"
       >
-        {/* Close Button */}
-        <button
-          onClick={handleCloseModal}
-          className={cn(
-            "absolute top-2 right-2 z-50",
-            "bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full",
-            "h-8 w-8 shadow-lg hover:shadow-xl",
-            "transition-all duration-200 ease-out",
-            "hover:scale-105 active:scale-95",
-            "text-foreground hover:text-red-500",
-            "flex items-center justify-center"
-          )}
-          title="Close Map"
-          aria-label="Close Map"
-        >
-          <IconX className="w-3 h-3" />
-        </button>
-
 
 
         {/* Map Container — sized to the measured rendered map rect so all
@@ -360,9 +349,9 @@ export function MapModal({ className }: MapModalProps) {
               <div
                 className={cn(
                   "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
-                  "bg-black/90 text-white text-xs font-medium px-3 py-1.5 rounded-full",
-                  "transition-all duration-300 ease-out",
-                  "whitespace-nowrap border border-white/20",
+                  "rounded-full bg-island-ink/90 px-3 py-1.5 text-xs font-medium text-island-cream",
+                  "transition-all duration-300 ease-out motion-reduce:transition-none",
+                  "whitespace-nowrap border border-island-cream/20",
                   "backdrop-blur-sm",
                   hoveredLocation === location.id
                     ? "opacity-100 translate-y-0"
@@ -378,15 +367,7 @@ export function MapModal({ className }: MapModalProps) {
 
         </div>
 
-        {/* Instructions */}
-        <div className="absolute top-2 left-1 transform z-10 px-2">
-          <div className="bg-white/95 backdrop-blur-sm border border-border rounded-full px-3 sm:px-6 py-2 sm:py-3 shadow-xl max-w-[90vw]">
-            <p className="text-xs sm:text-sm text-muted-foreground text-center font-medium">
-              🏝️ Click on a location to travel there • Current location is {`${currentLocation}`}
-            </p>
-          </div>
-        </div>
       </div>
-    </div>
+    </BlobbiModal>
   );
 }

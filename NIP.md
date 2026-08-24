@@ -32,6 +32,9 @@ human-readable description for clients that do not understand the kind.
 | `21201` | Island Communication | Ephemeral | In-world speech bubbles: free text, quick phrases, phrase templates and emotes |
 | `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
 | `21951` | Shared Playback Command | Ephemeral | Low-latency playback commands for a watch session |
+| `36767` | Theme Definition | Addressable | A shareable UI theme. **Not an Island kind** — Ditto's, reused as-is |
+| `16767` | Active Profile Theme | Replaceable | The palette a user advertises publicly. **Not an Island kind** — Ditto's |
+| `30078` | App Settings (NIP-78) | Addressable | Ditto's encrypted settings, `d = "ditto/metadata"`. **Holds the theme a user is actually using** |
 
 ### Legacy / superseded kinds (queried for backward compatibility, not written)
 
@@ -366,6 +369,207 @@ other signer is discarded by signature, not by UI.
 lexicographically greater event id. A command or state with `rev` less than or
 equal to the last applied revision is ignored, so a late or replayed event can
 never rewind a player.
+
+---
+
+## Kinds 36767 / 16767 — Themes (Ditto's protocol, reused)
+
+**These are not Blobbi Island kinds.** They are [Ditto](https://soapbox.pub/)'s
+theme protocol, and Island implements them so that a theme published anywhere in
+the ecosystem works everywhere in it. Nothing here was designed for this game; it
+is documented because Island both reads and writes these events and because the
+one Island-specific addition below has to be written down.
+
+| Kind | Class | Question it answers |
+|------|-------|---------------------|
+| `36767` | Addressable | "Here is a theme." Many per user, `36767:<pubkey>:<d>` |
+| `16767` | Replaceable | "Here is the palette I am showing publicly." One per user |
+| `30078` | Addressable | "Here is the theme I am **using**." NIP-78, encrypted to self |
+
+The separation is load-bearing, and getting it wrong is what broke cross-app
+selection in Island's first attempt:
+
+- A **definition** is a thing anyone can discover and apply.
+- An **active profile theme** (16767) is a PUBLIC advertisement. In Ditto its
+  only reader is `useActiveProfileTheme`, consumed by `ProfilePage` and
+  `FollowPage` — it decorates somebody's profile with their colours. Ditto also
+  pulls its own 16767 back on pageload (when `autoShareTheme`, default `true`)
+  into `customTheme`, but explicitly does **not** change the theme *mode*.
+- The **settings blob** (30078) is what Ditto actually renders from. Publishing
+  only a 16767 therefore leaves a Ditto account looking exactly as it did.
+
+A client that wants to interoperate on *selection* has to write both.
+
+### Kind 36767 — Theme Definition
+
+```jsonc
+{
+  "kind": 36767,
+  "content": "",
+  "tags": [
+    ["d", "harbour-dusk"],
+    ["c", "#141a24", "background"],
+    ["c", "#f2f5fa", "text"],
+    ["c", "#5b8cff", "primary"],
+    ["title", "Harbour Dusk"],
+    ["alt", "Custom theme: Harbour Dusk"],
+    ["t", "theme"],
+    ["description", "Cold water at the end of the day."]
+  ]
+}
+```
+
+A theme is **three colours**: `background`, `text`, `primary`, each an
+`#rrggbb`/`#rgb` value in a `c` tag whose third element is the role. `content` is
+empty; a legacy format with the colours as JSON in `content` is still read, since
+themes in that shape exist on relays.
+
+Ditto also defines two non-colour fields, and Island reads, applies, caches and
+republishes **both**:
+
+```jsonc
+["f", "Playfair Display", "https://fonts.example/pf.woff2", "body"]
+["f", "Outfit", "https://fonts.example/outfit.woff2", "title"]
+["bg", "url https://media.example/w.jpg", "mode cover", "m image/jpeg",
+       "dim 1920x1080", "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"]
+```
+
+- **`f`** — a CSS family name and an optional direct link to a font *file*
+  (`.woff2`/`.ttf`/`.otf`), not a stylesheet. The fourth element is the role;
+  a tag with **no** role is legacy and counts as the body font.
+- **`bg`** — one variadic imeta-style tag of `key value` strings. The key is
+  everything before the first space. `mode` is `cover` (centred, fixed,
+  non-repeating) or `tile` (repeat at natural size); absent means `cover`.
+
+**Island renders the body font, the title font and the background image.** The
+title font maps to game-window titles and settings section headings — Ditto uses
+its `--title-font-family` for `<h2>` headings, sidebar labels and dialog titles,
+i.e. display typography generally rather than profile names alone.
+
+Note that a `f` tag's URL element is often **empty** in Ditto's own encrypted
+settings: Ditto bundles twenty-five curated families and only attaches a
+fontsource CDN link when *publishing*. A consuming client that treats a missing
+URL as "no font" will silently render its own type. Island keeps a mirror of that
+registry (`src/lib/theme-fonts.ts`) and fetches the file Ditto would have
+published. The wallpaper is applied to the
+page *around* the game window rather than to `body` wholesale — Town, Beach,
+Mine and the Arcade are drawn art, and a theme may dress the room the game sits
+in but not the game.
+
+### Kind 16767 — Active Profile Theme
+
+The same `c` / `f` / `bg` tags, `["alt", "Active profile theme"]`, an optional
+`title` and `description`, and `["a", "36767:<pubkey>:<d>"]` when the selection
+came from a definition. Empty tags means "cleared".
+
+**The `a` tag is optional and usually absent.** Ditto emits it only when the
+selection came from a kind:36767 definition; a preset, an edited palette or a
+colour tweak produces a fully SELF-CONTAINED event with no reference at all.
+That is the common case, and a client that requires a reference in order to
+apply an active theme will ignore most of what Ditto publishes.
+
+Tag order, matching Ditto's builder exactly: colours, fonts, background, `alt`,
+`title`, `description`, `a`.
+
+**Island extension: the `island-theme` tag.** Blobbi Island appends one tag Ditto
+does not read:
+
+```jsonc
+["island-theme", "cozy-day"]
+["island-theme", "nostr:36767:<pubkey>:<d>"]
+```
+
+It exists because neither the colours nor the `a` tag can express "I am using the
+built-in Cozy Day": a built-in theme has no address, and its sixteen authored
+colours do not survive a round trip through three. The tag is additive — the
+event remains a fully valid Ditto active-theme event with a fully correct colour
+triple, and a client that ignores the tag loses nothing. An absent or unknown
+value falls back to the `a` tag, and then to the default theme.
+
+### Kind 30078 — the theme a user is *using* (NIP-78)
+
+```jsonc
+{
+  "kind": 30078,
+  "content": "<NIP-44 encrypted to the author's own pubkey>",
+  "tags": [
+    ["d", "ditto/metadata"],
+    ["title", "Ditto Metadata"],
+    ["client", "…"]
+  ]
+}
+```
+
+The decrypted content is one JSON object holding all of Ditto's app settings.
+Two keys matter for themes:
+
+| Key | Meaning |
+|-----|---------|
+| `theme` | `"light" \| "dark" \| "system" \| "custom"`. **Only `"custom"` renders `customTheme`.** |
+| `customTheme` | A `ThemeConfig`: `{ title?, colors{background,text,primary}, font?, titleFont?, background? }`, colours as **HSL channel triplets** (not hex — that is the event encoding) |
+
+There is also a `lastSync` in **milliseconds**, which is the ordering key
+between devices and the one mechanism that disambiguates two selections inside
+the same wall-clock second.
+
+**Writing this blob is a merge, never a replacement.** Ditto validates it with a
+`z.looseObject`, so unknown keys survive its own round trip; any other client
+writing it must be at least as careful. Island reads the current event fresh,
+decrypts it, replaces only `theme`, `customTheme` and `lastSync`, and
+**abandons the write entirely if it cannot decrypt** — publishing a settings
+event containing only a theme would erase the account's feed settings, content
+filters and relay preferences.
+
+### Selecting a theme, end to end
+
+```
+  choose a theme
+       ↓
+  kind:16767   public palette          ← what other people see on your profile
+  kind:30078   theme = "custom"        ← what your own client renders
+               customTheme = <config>
+```
+
+Reading it back:
+
+```
+  kind:30078  →  theme === "custom" ? customTheme : (a built-in mode)
+       ↓ (unreadable: no NIP-44 signer, or a relay with only public events)
+  kind:16767  →  the self-contained config it carries
+       ↓ (unavailable)
+  the client's own default
+```
+
+### The compatibility boundary
+
+Island's palette is **sixteen** authored colours (`src/lib/island-themes.ts`);
+the protocol carries **three**. The mapping is deterministic and lives in
+`src/lib/island-theme-adapter.ts`:
+
+- **Reading.** The three colours become sixteen, with every role that carries
+  text solved against the surfaces it sits on until it clears its WCAG
+  threshold. An adapted theme is held to the same contrast contract as a
+  built-in one.
+- **Writing.** A built-in theme publishes as `page` → `background`, `ink` →
+  `text`, `purple` → `primary`. Lossy by construction, and the three chosen are
+  the three that mean the same thing in both models.
+
+Untrusted-input rules, because a theme is a stranger's data colouring the whole
+UI:
+
+- a `c` value is accepted only if it matches `#rgb`/`#rrggbb`, and is then
+  parsed into numbers and re-emitted from those numbers — a colour cannot carry
+  a payload because the input string is never reused;
+- URLs (`f` and `bg`) are **https only**, and are re-serialised by the URL
+  parser, which percent-encodes quotes and backslashes — so a URL cannot
+  terminate the `url("…")` string it lands in;
+- font families pass a Unicode allowlist (letters, numbers, space, underscore,
+  hyphen, apostrophe, period); braces, quotes, semicolons and parentheses are
+  removed, not escaped;
+- titles and descriptions are stripped of control characters and capped at 64
+  and 200 characters.
+
+No arbitrary CSS from an event ever enters a `<style>` element.
 
 ---
 
