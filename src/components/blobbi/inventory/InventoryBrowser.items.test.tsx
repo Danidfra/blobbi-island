@@ -175,7 +175,7 @@ describe('currency', () => {
     await screen.findByText('Apple');
 
     const names = Array.from(
-      screen.getByTestId('inventory-grid').querySelectorAll('[data-testid^="item-"]'),
+      screen.getByTestId('collection-grid').querySelectorAll('[data-testid^="item-"]'),
     ).map((el) => el.textContent ?? '');
 
     // Wearables first (none here), then food, toys, care, and coins last: a

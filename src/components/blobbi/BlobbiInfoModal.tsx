@@ -39,7 +39,7 @@ import type { BlobbiVisual } from '@/lib/multiplayer';
  * would restructure the modal, and this pass is deliberately presentation-only.
  */
 const TAB_TRIGGER =
-  'flex items-center justify-center rounded-lg py-1.5 text-xs font-semibold ' +
+  'flex items-center justify-center rounded-lg py-1 text-xs font-semibold ' +
   'text-island-ink-soft transition-colors duration-150 ' +
   'data-[state=active]:bg-island-cream data-[state=active]:text-island-ink ' +
   'data-[state=active]:shadow-cozy-soft ' +
@@ -346,7 +346,7 @@ export function BlobbiInfoModal({
          at every width, which on a 375px sheet gave the stage a 110px column —
          a Blobbi the size of a favicon next to a squeezed tab strip. Stacking
          gives the stage the sheet's full width and the tabs the rest. */
-      bodyClassName="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row sm:gap-4 lg:gap-6 lg:p-5"
+      bodyClassName="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row sm:gap-4 lg:gap-5 lg:p-4"
     >
       <div ref={modalRef} className="contents">
           {/* The stage: the backdrop, the Blobbi standing on it, and the one
@@ -500,7 +500,7 @@ export function BlobbiInfoModal({
                   inventory — the content region below is what scrolls. */}
               <TabsList
                 className={cn(
-                  'grid h-auto w-full shrink-0 gap-1 rounded-panel border border-island-wood/20 bg-island-cream-2 p-1',
+                  'grid h-auto w-full shrink-0 gap-1 rounded-panel border border-island-wood/20 bg-island-cream-2 p-0.5',
                   readOnly ? 'grid-cols-1' : 'grid-cols-3',
                 )}
               >
@@ -539,17 +539,35 @@ export function BlobbiInfoModal({
                   reading like a profile analytics panel. See `PetCard.tsx` for
                   what the reference study changed and why.
                 */}
-                <TabsContent value="primary" className="mt-3 space-y-4 pb-2 focus-visible:outline-none">
+                <TabsContent
+                  value="primary"
+                  className="mt-2.5 flex flex-col gap-2.5 pb-1 focus-visible:outline-none"
+                >
+                  {/*
+                    HORIZONTAL composition, because the information is finite.
+
+                    It was one column of six blocks separated by `space-y-4` —
+                    386px of content carrying 80px of pure gap, in a pane about
+                    650px WIDE. On a 1440×800 laptop that overflowed, so a player
+                    scrolled to find out their Blobbi was hungry.
+
+                    Now: the mood spans the top, needs and progression share the
+                    middle row, and coins + appearance are one footer strip. Same
+                    content, roughly half the height, and nothing hidden behind a
+                    click — the brief's one hard constraint.
+                  */}
                   <MoodHero care={careStatus} stats={blobbiData} />
 
-                  <NeedMeters stats={blobbiData} />
-
-                  <ProgressionStrip stats={blobbiData} />
-
-                  <TraitChips stats={blobbiData} />
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <NeedMeters stats={blobbiData} />
+                    <div className="flex flex-col gap-2.5">
+                      <ProgressionStrip stats={blobbiData} />
+                      <TraitChips stats={blobbiData} />
+                    </div>
+                  </div>
 
                   {!readOnly && (
-                    <>
+                    <div className="grid gap-2.5 sm:grid-cols-2">
                       {/* The Coin balance sits with progression rather than in
                           its own panel — it is a number you have earned. */}
                       <div className="flex items-center justify-between rounded-panel border border-island-wood/20 bg-island-cream px-3 py-2 shadow-cozy-soft">
@@ -588,15 +606,18 @@ export function BlobbiInfoModal({
                         onClick={() => setBackgroundPickerOpen(true)}
                         className={cn(
                           PANEL,
-                          'flex w-full items-center gap-3 p-2.5 text-left',
+                          'flex w-full items-center gap-2.5 p-2 text-left',
                           'transition-transform duration-150 ease-cozy hover:-translate-y-0.5 active:scale-[0.99]',
                           'motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
                           'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-island-cream',
                         )}
                       >
+                        {/* w-7, not w-10: the swatch is 2:3, so its WIDTH sets
+                            the row's height. Ten became sixty pixels of row for
+                            a thumbnail. */}
                         <span
                           aria-hidden
-                          className="block w-10 shrink-0 overflow-hidden rounded-md border border-island-wood/25"
+                          className="block w-7 shrink-0 overflow-hidden rounded border border-island-wood/25"
                           style={{ aspectRatio: STAGE_ASPECT_RATIO }}
                         >
                           <StageBackgroundSwatch background={background} />
@@ -611,7 +632,7 @@ export function BlobbiInfoModal({
                         </span>
                         <ChevronRight aria-hidden className="size-4 shrink-0 text-island-ink-soft" />
                       </button>
-                    </>
+                    </div>
                   )}
                 </TabsContent>
 

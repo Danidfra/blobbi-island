@@ -330,7 +330,9 @@ describe('the wearables in the inventory browser', () => {
       return [];
     });
     renderPanel();
-    expect(await screen.findByText(/equipment data warning/i)).toBeInTheDocument();
+    // Diagnostics moved into one compact disclosure, so a player with no
+    // problems pays no vertical space for them.
+    expect(await screen.findByTestId('inventory-diagnostics')).toHaveTextContent(/item issue/i);
   });
 
   it('hands unequip to the caller with the definition-declared slot', async () => {

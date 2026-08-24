@@ -25,6 +25,14 @@ import type { CareNeed, CareUrgency, PetCondition, SleepState } from '@/lib/blob
  *  3. **Progression as progression.** A bar, a streak, a badge — things that
  *     look like they are going somewhere.
  *
+ * ## Compact, not tiny
+ *
+ * The blocks are spaced for a window that has to hold all of them at once
+ * without scrolling. What was tightened is DEAD SPACE — a 60px-tall trophy for
+ * three short strings, a 30px emoji in a padded box, `gap-y-2.5` between bars
+ * that are 10px tall. Type sizes, bar heights and touch targets are untouched:
+ * the fix for a tall panel is not a smaller font.
+ *
  * ## What it deliberately does NOT do
  *
  * No new state, no invented thresholds, no level system. `blobbiMood` and
@@ -93,12 +101,12 @@ export function MoodHero({
       data-testid="mood-hero"
       data-tone={mood.tone}
       className={cn(
-        'flex items-center gap-3 rounded-panel border p-3 shadow-cozy-soft',
+        'flex items-center gap-2.5 rounded-panel border px-3 py-2 shadow-cozy-soft',
         TONE_STYLES[mood.tone],
         className,
       )}
     >
-      <span aria-hidden className="text-3xl leading-none">
+      <span aria-hidden className="text-2xl leading-none">
         {mood.emoji}
       </span>
       <div className="min-w-0">
@@ -137,7 +145,7 @@ function NeedMeter({
   const level = needLevel(pct);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <div className="flex items-baseline gap-1.5">
         <span aria-hidden className="text-sm leading-none">
           {emoji}
@@ -158,7 +166,7 @@ function NeedMeter({
         aria-valuenow={Math.round(pct)}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="h-2.5 overflow-hidden rounded-full border border-island-wood/20 bg-island-cream-2"
+        className="h-2 overflow-hidden rounded-full border border-island-wood/20 bg-island-cream-2"
       >
         <div
           className={cn(
@@ -179,7 +187,7 @@ export function NeedMeters({ stats, className }: { stats: PetCardStats; classNam
   return (
     <div
       data-testid="need-meters"
-      className={cn('grid grid-cols-2 gap-x-4 gap-y-2.5', className)}
+      className={cn('grid grid-cols-2 gap-x-3 gap-y-2', className)}
     >
       {BLOBBI_NEEDS.map((need) => (
         <NeedMeter
@@ -203,12 +211,12 @@ export function NeedMeters({ stats, className }: { stats: PetCardStats; classNam
  */
 export function ProgressionStrip({ stats, className }: { stats: PetCardStats; className?: string }) {
   return (
-    <div data-testid="progression" className={cn('grid grid-cols-3 gap-2', className)}>
+    <div data-testid="progression" className={cn('grid grid-cols-3 gap-1.5', className)}>
       <Trophy icon={Sparkles} value={stats.experience.toLocaleString()} label="XP earned" />
       <Trophy
         icon={Flame}
         value={String(stats.careStreak)}
-        label={stats.careStreak === 1 ? 'day streak' : 'day streak'}
+        label={stats.careStreak === 1 ? 'day streak' : 'days streak'}
       />
       <Trophy icon={Star} value={`Gen ${stats.generation}`} label={stats.stage} />
     </div>
@@ -225,8 +233,8 @@ function Trophy({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-panel border border-island-wood/20 bg-island-cream p-2 text-center shadow-cozy-soft">
-      <Icon aria-hidden className="size-4 text-island-purple" />
+    <div className="flex flex-col items-center gap-0.5 rounded-panel border border-island-wood/20 bg-island-cream px-1.5 py-1.5 text-center shadow-cozy-soft">
+      <Icon aria-hidden className="size-3.5 text-island-purple" />
       <span className="island-display text-sm font-bold leading-none text-island-ink">{value}</span>
       <span className="text-[0.625rem] capitalize leading-tight text-island-ink-soft">{label}</span>
     </div>
@@ -236,7 +244,7 @@ function Trophy({
 /** A single character descriptor. */
 function TraitChip({ emoji, value }: { emoji: string; value: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-island-purple/30 bg-island-purple/10 px-2.5 py-1 text-xs font-semibold capitalize text-island-ink">
+    <span className="inline-flex items-center gap-1 rounded-full border border-island-purple/30 bg-island-purple/10 px-2 py-0.5 text-xs font-semibold capitalize text-island-ink">
       <span aria-hidden>{emoji}</span>
       {value}
     </span>

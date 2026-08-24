@@ -16,6 +16,7 @@ import { useUseItem } from '@/inventory';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 import { ConsumeItemModal } from '../ConsumeItemModal';
+import { CollectionGrid } from './CollectionGrid';
 import { ItemArt } from './ItemArt';
 import {
   CATEGORY_LABELS,
@@ -167,6 +168,13 @@ export function InventoryBrowser({
     [collection.entries, selectedAddress],
   );
 
+  /** What the grid and its page controls are called, for assistive tech. */
+  const gridLabel =
+    category === 'all' ? 'your items' : CATEGORY_LABELS[category].toLowerCase();
+
+  // Everything the player might want explained, counted once.
+  const issueCount = collection.unavailable.length + collection.warnings.length;
+
   /*
     Keep the selection honest.
 
@@ -188,18 +196,18 @@ export function InventoryBrowser({
   }, [category, selected]);
 
   /*
-    Selecting a WORN cosmetic also selects its slot for the stage overlay, so
-    tapping a hat in the grid highlights the same hat on the Blobbi and arms the
-    drag handles. Selecting anything else clears it — the overlay must not keep
-    a slot armed for an item nobody is looking at.
+    Selecting shows an item; ADJUSTING arms its slot.
+
+    The armed slot drives the stage's drag handles and the transform sliders,
+    and it used to be armed by mere selection — so looking at a worn hat put the
+    editor on screen and 120px of controls into the layout. Now the detail
+    panel offers "Adjust", and only that arms it. Selecting anything else
+    disarms, because the overlay must never keep handles on an item nobody is
+    looking at.
   */
   const select = (entry: CollectionEntry) => {
     setSelectedAddress(entry.address === selectedAddress ? null : entry.address);
-    if (entry.address === selectedAddress) {
-      onSelectSlot?.(null);
-      return;
-    }
-    onSelectSlot?.(entry.equipped && entry.slot ? entry.slot : null);
+    onSelectSlot?.(null);
   };
 
   /**
@@ -318,16 +326,18 @@ export function InventoryBrowser({
           )}
 
           <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:items-start">
-            {/* ── The grid ──────────────────────────────────────────────── */}
-            <div
-              role="listbox"
-              aria-label="Your items"
-              data-testid="inventory-grid"
-              className="grid min-h-0 flex-1 grid-cols-3 content-start gap-2.5 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4"
-            >
-              {visible.map((entry) => (
+            {/* ── The grid ──────────────────────────────────────────────────
+                BOUNDED and paged. Owning more hats must not make the window
+                taller — the window is a character card, not a document. See
+                `CollectionGrid` for where the page size comes from. */}
+            <CollectionGrid
+              className="min-w-0 flex-1"
+              items={visible}
+              keyOf={(entry) => entry.address}
+              resetKey={category}
+              label={gridLabel}
+              renderItem={(entry) => (
                 <ItemTile
-                  key={entry.address}
                   role="option"
                   aria-selected={entry.address === selectedAddress}
                   data-testid={`item-${entry.address}`}
@@ -354,19 +364,25 @@ export function InventoryBrowser({
                     ) : undefined
                   }
                 />
-              ))}
-            </div>
+              )}
+            />
 
             {/* ── Detail ────────────────────────────────────────────────────
                 Beneath the grid on a phone, beside it from `lg` up. A squeezed
                 sidebar on a 375px sheet is the one thing the desktop-first
-                classics got wrong for touch. */}
-            <div className="shrink-0 lg:w-[15rem] xl:w-[17rem]">
+                classics got wrong for touch.
+
+                RESERVED HEIGHT. The prompt and the panel occupy the same box,
+                so choosing an item swaps its contents rather than making the
+                tab 150px taller — which on a phone is the difference between
+                fitting and scrolling. */}
+            <div className="min-h-[7.5rem] shrink-0 lg:min-h-0 lg:w-[15rem] xl:w-[17rem]">
               {selected ? (
                 <ItemDetail
                   entry={selected}
                   isPublishing={isPublishing}
-                  selectedSlot={selectedSlot ?? null}
+                  adjusting={!!selected.slot && selectedSlot === selected.slot}
+                  onAdjust={(slot) => onSelectSlot?.(slot)}
                   pendingUpdates={pendingUpdates}
                   onTransformChange={onTransformChange}
                   onSaveTransforms={onSaveTransforms}
@@ -385,40 +401,43 @@ export function InventoryBrowser({
       )}
 
       {/* ── Diagnostics ──────────────────────────────────────────────────────
-          Collapsed, and below everything. Honest about why a cosmetic cannot be
-          worn, without making that the first thing a player reads. */}
-      {collection.unavailable.length > 0 && (
-        <details className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-2 text-xs">
-          <summary className="cursor-pointer text-island-ink-soft">
-            {collection.unavailable.length} item
-            {collection.unavailable.length === 1 ? '' : 's'} you cannot wear yet
+          ONE line when there is anything to say, and zero height when there is
+          not. It used to be two stacked blocks, each with its own summary, each
+          costing vertical space in the common case where a player has no
+          problems at all. Opening it is the escape hatch the scroll policy
+          allows: the disclosure itself may scroll, the tab may not. */}
+      {issueCount > 0 && (
+        <details
+          data-testid="inventory-diagnostics"
+          className="shrink-0 rounded-panel border border-island-warn/40 bg-island-warn/10 text-xs"
+        >
+          <summary className="cursor-pointer px-2.5 py-1.5 font-medium text-island-ink">
+            <AlertTriangle aria-hidden className="mr-1 inline size-3.5 text-island-warn" />
+            {issueCount} item {issueCount === 1 ? 'issue' : 'issues'}
           </summary>
-          <ul className="mt-1 space-y-1">
-            {collection.unavailable.map((item) => (
-              <li key={item.address} className="text-island-ink-soft">
-                <span className="font-medium text-island-ink">
-                  {item.definition?.name ?? item.address}
-                </span>{' '}
-                — {explainUnavailable(item.reason)}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {collection.warnings.length > 0 && (
-        <details className="rounded-panel border border-island-warn/40 bg-island-warn/10 p-2 text-xs">
-          <summary className="cursor-pointer font-medium text-island-ink">
-            {collection.warnings.length} equipment data warning
-            {collection.warnings.length === 1 ? '' : 's'}
-          </summary>
-          <ul className="mt-1 space-y-0.5 text-island-ink-soft">
-            {collection.warnings.map((w, i) => (
-              <li key={`${w.code}-${i}`}>
-                <code>{w.code}</code> — {w.message}
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-40 overflow-y-auto border-t border-island-warn/30 px-2.5 py-2">
+            {collection.unavailable.length > 0 && (
+              <ul className="space-y-1">
+                {collection.unavailable.map((item) => (
+                  <li key={item.address} className="text-island-ink-soft">
+                    <span className="font-medium text-island-ink">
+                      {item.definition?.name ?? item.address}
+                    </span>{' '}
+                    — {explainUnavailable(item.reason)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {collection.warnings.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-island-ink-soft">
+                {collection.warnings.map((w, i) => (
+                  <li key={`${w.code}-${i}`}>
+                    <code>{w.code}</code> — {w.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </details>
       )}
 
@@ -475,7 +494,8 @@ function CategoryChip({
 function ItemDetail({
   entry,
   isPublishing,
-  selectedSlot,
+  adjusting,
+  onAdjust,
   pendingUpdates,
   onTransformChange,
   onSaveTransforms,
@@ -485,7 +505,9 @@ function ItemDetail({
 }: {
   entry: CollectionEntry;
   isPublishing: boolean;
-  selectedSlot: AccessorySlot | null;
+  /** True while this item's transform controls are open. */
+  adjusting: boolean;
+  onAdjust: (slot: AccessorySlot | null) => void;
   pendingUpdates: Record<string, PlacementTransformPatch>;
   onTransformChange?: (slot: AccessorySlot, patch: PlacementTransformPatch) => void;
   onSaveTransforms?: () => void;
@@ -543,61 +565,82 @@ function ItemDetail({
         </Button>
       )}
 
-      {entry.action === 'take-off' && entry.slot && (
-        <div className="space-y-2.5">
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-island-grass-dark">
-            Worn right now
-          </p>
-          <Button
-            className="w-full"
-            size="sm"
-            variant="outline"
-            disabled={isPublishing}
-            data-testid={`unequip-${entry.slot}`}
-            onClick={() => onUnequip(entry.slot!)}
-          >
-            Take it off
-          </Button>
-
-          {/* The transform editor, shown for the item being adjusted rather
-              than permanently mounted under a list. */}
-          {selectedSlot === entry.slot && (
-            <div
-              data-testid={`select-${entry.slot}`}
-              className="space-y-2 rounded-lg border border-island-wood/20 bg-island-cream p-2"
+      {entry.action === 'take-off' && entry.slot && !adjusting && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-island-grass-dark">Worn right now</p>
+          <div className="flex gap-1.5">
+            <Button
+              className="flex-1"
+              size="sm"
+              variant="outline"
+              disabled={isPublishing}
+              data-testid={`unequip-${entry.slot}`}
+              onClick={() => onUnequip(entry.slot!)}
             >
-              <LabelledSlider
-                label="Size"
-                value={scale}
-                min={0.25}
-                max={2}
-                step={0.05}
-                onChange={(v) => onTransformChange?.(entry.slot!, { scale: v })}
-              />
-              <LabelledSlider
-                label="Tilt"
-                value={rotation}
-                min={-45}
-                max={45}
-                step={1}
-                onChange={(v) => onTransformChange?.(entry.slot!, { rot: v })}
-              />
-              <p className="text-[0.6875rem] text-island-ink-soft">
-                Drag it on the Blobbi to move it.
-              </p>
-              {hasPendingEdits && (
-                <Button
-                  className="w-full"
-                  size="sm"
-                  disabled={isPublishing}
-                  data-testid="save-transforms"
-                  onClick={onSaveTransforms}
-                >
-                  {isPublishing ? 'Saving…' : 'Save position'}
-                </Button>
-              )}
-            </div>
-          )}
+              Take it off
+            </Button>
+            {/* PROGRESSIVE DISCLOSURE. The transform controls are three
+                controls and a paragraph — around 120px — and a player who is
+                not adjusting anything should not pay that height. */}
+            <Button
+              className="flex-1"
+              size="sm"
+              variant="secondary"
+              data-testid={`adjust-${entry.slot}`}
+              onClick={() => onAdjust(entry.slot!)}
+            >
+              Adjust
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {entry.action === 'take-off' && entry.slot && adjusting && (
+        <div
+          data-testid={`select-${entry.slot}`}
+          className="space-y-2 rounded-lg border border-island-wood/20 bg-island-cream p-2"
+        >
+          <LabelledSlider
+            label="Size"
+            value={scale}
+            min={0.25}
+            max={2}
+            step={0.05}
+            onChange={(v) => onTransformChange?.(entry.slot!, { scale: v })}
+          />
+          <LabelledSlider
+            label="Tilt"
+            value={rotation}
+            min={-45}
+            max={45}
+            step={1}
+            onChange={(v) => onTransformChange?.(entry.slot!, { rot: v })}
+          />
+          <p className="text-[0.6875rem] text-island-ink-soft">
+            Drag it on the Blobbi to move it.
+          </p>
+          <div className="flex gap-1.5">
+            <Button
+              className="flex-1"
+              size="sm"
+              variant="outline"
+              data-testid="done-adjusting"
+              onClick={() => onAdjust(null)}
+            >
+              Done
+            </Button>
+            {hasPendingEdits && (
+              <Button
+                className="flex-1"
+                size="sm"
+                disabled={isPublishing}
+                data-testid="save-transforms"
+                onClick={onSaveTransforms}
+              >
+                {isPublishing ? 'Saving…' : 'Save'}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 

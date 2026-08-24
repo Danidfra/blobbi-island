@@ -198,77 +198,115 @@ background as context, Blobbi as protagonist.
 
 ---
 
-## 5. Manual visual checklist
+## 5. Scroll policy
 
-Browser automation is unavailable in this environment, so the checks below have
-**not** been performed. They are what to walk when it is.
+The window is a character card, not a document. Manual review found it still
+scrolled like a web page, so this is now a stated contract rather than an
+outcome.
 
-### Opening the window
-
-| Step | Expect |
+| Surface | Policy |
 | --- | --- |
-| Click your own Blobbi in the world | My Blobbi opens on the **Blobbi** tab |
-| Press "My Blobbi" in the bottom dock | the same window, same tab |
-| Upper-right corner of the island | Arcade chips only — **no 🎒** |
-| Click somebody else's Blobbi | read-only: the Blobbi tab alone |
+| **The window itself** | No document scroll. The frame's own scroller is handed back; the body is a flex layout with `overflow-hidden`. |
+| **Stage** | Never scrolls. Fixed share of the window. |
+| **Tab strip** | Never scrolls. `shrink-0` — it cannot be pushed off by a long inventory. |
+| **Blobbi tab** | No scroll in a normal supported viewport. The content is finite and composed horizontally to fit. |
+| **Wardrobe** | No long scroll. Bounded, paged grid + reserved-height detail. |
+| **Items** | No long scroll. Same. |
+| **Diagnostics disclosure** | **May scroll**, bounded at `max-h-40`. The documented escape hatch. |
+| **Extraordinary content** | A very long item description clamps (`line-clamp-3`) rather than growing the panel. |
 
-### Blobbi tab — does it feel like a pet?
+There is exactly **one** `overflow-y-auto` in the window, and a test asserts it.
+
+### Why it fits now
+
+The height budget, measured rather than guessed:
+
+```
+  desktop frame     ≤1040×693   (3:2, capped at the world art's native width)
+  modal (in-frame)  ≈1016×669   (calc(100% − 1.5rem))
+  − header ~66  − body padding 32          → ~571 body
+  − tab strip ~36  − mt 10                 → ~525 content
+```
+
+The Blobbi tab was **~466px** of content in one column (386px of blocks + 80px
+of `space-y-4`), which fit only at the maximum frame size and overflowed on a
+1440×800 laptop (~478px budget). Composed horizontally it is roughly **280px**:
+mood across the top, needs beside progression + traits, coins beside the stage
+background.
+
+Collections were unbounded — twelve tiles is three rows ≈ 350px before any
+detail panel — so they are paged instead. Page size is **9**, derived from the
+tightest real layout: an `ItemTile` is ~118px tall with a 10px gap, the
+narrowest column count any breakpoint uses is 3 (mobile, and desktop again once
+the 15rem detail panel sits beside the grid), and the shortest budget that must
+hold a grid *and* a detail panel is about 3 rows. One page size for every
+viewport, deliberately — deriving it from the live column count would renumber
+the pages under the player on a resize.
+
+Three further sources of height were removed rather than shrunk:
+
+- **selection no longer adds a panel** — the prompt and the detail share one
+  reserved box, so choosing an item swaps its contents;
+- **transform controls are disclosed** — "Adjust" opens them; a player who is
+  not adjusting anything pays none of their ~120px;
+- **diagnostics collapsed to one line**, and to zero height when nothing is
+  wrong.
+
+Spacing was tightened where it was dead — a 60px trophy for three short
+strings, a 30px emoji in a padded box — and **type sizes, bar heights and touch
+targets were not touched**. The fix for a tall panel is not a smaller font.
+
+---
+
+## 6. Manual visual checklist
+
+Browser automation is unavailable in this environment, so these have **not**
+been performed. One question runs through all of them:
+
+> **Can I use this whole window without scrolling it like a web page?**
+
+### Desktop
 
 | Check | Expect |
 | --- | --- |
-| **The Blobbi dominates its stage** | roughly half the stage height, the backdrop framing it rather than dwarfing it |
-| Mood headline | one line — "Feeling great", "Hungry", "Needs a wash" — with a face, at the top |
-| A neglected Blobbi | the headline turns loud, names the need, and suggests the fix |
-| A sleeping Blobbi | "Fast asleep", and nothing else claims priority |
-| Needs | five icon-led bars, green / amber / red, numbers small |
-| Very low need | the number goes bold and red as well as the bar — never colour alone |
-| Progression | three trophies: XP, streak, generation + stage. **No fake level bar** |
-| Character | one chip per personality/trait/mood, never a comma-joined string |
-| Appearance row | backdrop thumbnail + name + chevron; opens the picker |
+| Blobbi tab | mood, five needs, three trophies, traits, coins and background **all visible at once**, no scrollbar |
+| Blobbi tab at 1440×800 | still no scrollbar (this is the size the old layout failed at) |
+| Wardrobe | stage + clothing page + detail panel all visible |
+| Wardrobe → Effects | effect page + selected detail visible |
+| Items | category chips + page + detail visible |
+| Select an item anywhere | the panel does **not** get taller; the detail swaps in place |
+| Select a worn hat → Adjust | sliders appear; Done puts them away; nothing below moves |
+| Resize the window narrower | page count stays the same (page size is viewport-independent) |
 
-### Wardrobe
-
-| Check | Expect |
-| --- | --- |
-| Clothing / Effects strip | two buttons, one selected, no nested tab chrome |
-| Blobbi visible beside it | yes, at full size |
-| Select a wearable | detail panel: slot, count, description, **Wear it** |
-| Wear it | the Blobbi changes on the stage **immediately** |
-| The worn tile | gains a "Worn" mark and a green rim |
-| Select the worn item | **Take it off**, plus Size / Tilt |
-| Drag it on the Blobbi | it follows; Save publishes once |
-| **Hat / glasses / necklace alignment** | unchanged at the new larger size — nothing drifts, detaches or floats |
-| Effects half | preview draws on the real Blobbi; Activate / Remove |
-| Leave Effects | the preview ends and the persisted look returns |
-| No food, no coins anywhere in the Wardrobe | correct |
-
-### Items
+### Mobile portrait
 
 | Check | Expect |
 | --- | --- |
-| Grid | food, toys, care, coins — **no wearables** |
-| Chips | only appear when more than one category is owned |
-| Stage | visibly smaller here than on the other tabs, and does not jump jarringly |
-| Select a food item | description, quantity, **Use it** → consume dialog |
-| Select a coin/ticket | no verb, an explanation |
+| Blobbi tab | ideally one screen on a modern phone; a very short device may still clip the footer row |
+| Wardrobe | strip + page + detail without a long scroll |
+| Items | grid page usable; arrows reachable with a thumb |
+| Tap an item | the document does **not** grow |
 
-### Responsive
+### Mobile landscape
 
-| Viewport | Expect |
+Stage and content side by side; no unnecessary vertical scroll.
+
+### Inventory sizes
+
+Walk each of these in **Items** and in **Wardrobe → Clothing**:
+
+| Size | Expect |
 | --- | --- |
-| Desktop | stage left (~30%), tabs right; detail beside the grid from `lg` |
-| Mobile portrait | stage ~26dvh on top and **not clipped**; tabs immediately reachable; Blobbi still large enough to read |
-| Mobile portrait, Items | stage drops to ~18dvh; the grid gets the room |
-| Mobile landscape | stage and content side by side; no horizontal scroll |
-| All | one scroll region; the tab strip never scrolls away |
+| 3 items | no pagination chrome at all |
+| exactly 9 | no pagination chrome |
+| 10 | arrows appear, "1–9 of 10", second page holds one tile |
+| 20+ | three pages; last page short; window height identical throughout |
+| use up the last item on the last page | lands on a real page, never an empty grid |
 
-### Forms, art and themes
+### Blobbi and themes
 
-Walk the Blobbi and Wardrobe tabs for:
-
-- a **baby** Blobbi and an **adult** one — both should fill the stage similarly;
-- with a wearable on, and with an effect active;
-- the **default** stage background and **Island Sky**;
-- **Cozy Day**, **Lantern Night**, and one community theme with a custom font —
-  every frame, chip, meter and trophy follows the palette; the window title and
-  the mood headline pick up the display font.
+Still worth re-checking after the spacing pass: a **baby** and an **adult**
+Blobbi both filling the stage; a wearable on; an effect active; the default
+background and Island Sky; **Cozy Day**, **Lantern Night** and one community
+theme with a custom font — a taller font must not be what pushes the Blobbi tab
+into a scroll.

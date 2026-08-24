@@ -116,6 +116,18 @@ beforeEach(() => {
   handlers.onPreview.mockClear();
 });
 
+/**
+ * Select an effect's tile, revealing its detail panel.
+ *
+ * The panel became a paged tile grid with a detail area, so the verbs moved out
+ * of every card and into the one selected item — the same selection→detail
+ * pattern the rest of the wardrobe uses. Every assertion below is the same;
+ * they just have to pick something up before acting on it.
+ */
+function selectEffect(effectId: string) {
+  fireEvent.click(screen.getByTestId(`effect-card-${effectId}`));
+}
+
 function renderPanel(options: {
   owned: { address: string; quantity: number }[];
   active?: ActiveEffectPlacement[];
@@ -164,15 +176,20 @@ describe('what is actionable', () => {
   it('shows owned effects with image, name, rarity and description; unowned ones are locked', () => {
     renderPanel({ owned: [{ address: AURA.address, quantity: 1 }] });
 
-    // Owned: full card with the published metadata.
+    // Owned: an art-first tile carrying the artwork and the name…
     const card = screen.getByTestId('effect-card-celestial-aura');
     expect(card).toHaveTextContent('Celestial Aura');
-    expect(card).toHaveTextContent('legendary');
-    expect(card).toHaveTextContent(/celestial halo/);
     expect(card.querySelector('img')).toHaveAttribute(
       'src',
       expect.stringContaining('blossom.primal.net'),
     );
+
+    // …and the rest on selection, in the detail panel.
+    selectEffect('celestial-aura');
+    const detail = screen.getByTestId('effect-detail');
+    expect(detail).toHaveTextContent('Celestial Aura');
+    expect(detail).toHaveTextContent('legendary');
+    expect(detail).toHaveTextContent(/celestial halo/);
     expect(screen.getByTestId('equip-celestial-aura')).toBeInTheDocument();
 
     // Unowned: no card, no equip control — only the locked list names it.
@@ -200,6 +217,7 @@ describe('what is actionable', () => {
 describe('equip, replace, remove', () => {
   it('equips an owned effect into its registered slot', () => {
     renderPanel({ owned: [{ address: AURA.address, quantity: 1 }] });
+    selectEffect('celestial-aura');
     fireEvent.click(screen.getByTestId('equip-celestial-aura'));
     expect(handlers.onEquip).toHaveBeenCalledWith(AURA.address, 'aura');
   });
@@ -212,10 +230,13 @@ describe('equip, replace, remove', () => {
       ],
       active: [activePlacement(AURA)],
     });
+    selectEffect('solar-radiance');
     expect(
       screen.getByTestId('replace-warning-solar-radiance'),
     ).toHaveTextContent(
-      'Equipping Solar Radiance will replace Celestial Aura in the Aura slot.',
+      // "Activating", since the tile grid replaced the card list — the verb on
+      // the button is Replace either way.
+      'Activating Solar Radiance will replace Celestial Aura in the Aura slot.',
     );
     const button = screen.getByTestId('equip-solar-radiance');
     expect(button).toHaveTextContent('Replace');
@@ -232,9 +253,8 @@ describe('equip, replace, remove', () => {
       active: [activePlacement(AURA)],
     });
     expect(screen.queryByTestId('replace-warning-golden-sparkles')).toBeNull();
-    expect(screen.getByTestId('equip-golden-sparkles')).toHaveTextContent(
-      'Equip',
-    );
+    selectEffect('golden-sparkles');
+    expect(screen.getByTestId('equip-golden-sparkles')).toHaveTextContent('Activate');
   });
 
   it('shows the equipped state and removes by slot only', () => {
@@ -243,7 +263,7 @@ describe('equip, replace, remove', () => {
       active: [activePlacement(AURA)],
     });
     expect(
-      screen.getByTestId('effect-card-celestial-aura'),
+      (selectEffect('celestial-aura'), screen.getByTestId('effect-detail')),
     // The badge reads "Active" since the polish pass — "equipped" is what a
     // developer calls it, "Active" is what the effect IS to a player.
     ).toHaveTextContent('Active');
@@ -256,6 +276,7 @@ describe('equip, replace, remove', () => {
 describe('preview', () => {
   it('starts a preview with plain serializable data and publishes nothing', () => {
     renderPanel({ owned: [{ address: AURA.address, quantity: 1 }] });
+    selectEffect('celestial-aura');
     fireEvent.click(screen.getByTestId('preview-celestial-aura'));
     expect(handlers.onPreview).toHaveBeenCalledWith([{ id: 'celestial-aura' }]);
     const payload = handlers.onPreview.mock.calls[0]![0];
@@ -269,7 +290,8 @@ describe('preview', () => {
       owned: [{ address: AURA.address, quantity: 1 }],
       previewingEffectId: 'celestial-aura',
     });
-    expect(screen.getByTestId('effect-card-celestial-aura')).toHaveTextContent(
+    selectEffect('celestial-aura');
+    expect(screen.getByTestId('effect-detail')).toHaveTextContent(
       'Previewing',
     );
     fireEvent.click(screen.getByTestId('preview-celestial-aura'));
@@ -287,7 +309,9 @@ describe('pending publish', () => {
       active: [activePlacement(AURA)],
       isPublishing: true,
     });
+    selectEffect('celestial-aura');
     expect(screen.getByTestId('remove-celestial-aura')).toBeDisabled();
+    selectEffect('golden-sparkles');
     expect(screen.getByTestId('equip-golden-sparkles')).toBeDisabled();
     fireEvent.click(screen.getByTestId('equip-golden-sparkles'));
     expect(handlers.onEquip).not.toHaveBeenCalled();
@@ -329,9 +353,12 @@ describe('stale placements', () => {
         </CharacterEquipmentContext.Provider>
       </QueryClientProvider>,
     );
-    expect(
-      screen.getByText(/no longer in your inventory/),
-    ).toBeInTheDocument();
+    // Stale placements moved into the compact disclosure, so a player with no
+    // problems pays no vertical space for them. The remove action is still
+    // there, inside it.
+    expect(screen.getByTestId('effect-diagnostics')).toHaveTextContent(
+      /effects? you no longer own/i,
+    );
     fireEvent.click(screen.getByTestId('remove-stale-aura'));
     expect(handlers.onRemove).toHaveBeenCalledWith('aura');
   });
