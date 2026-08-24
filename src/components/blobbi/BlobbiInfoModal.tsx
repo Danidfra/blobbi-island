@@ -4,13 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint } from 'lucide-react';
+import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint, Shirt } from 'lucide-react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BackgroundLayer } from './BackgroundLayer';
 import { EquipmentPanel } from './EquipmentPanel';
 import { EffectsPanel } from './EffectsPanel';
+import { InventoryPanel } from './InventoryPanel';
 import { PlacementOverlay } from './PlacementOverlay';
 import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
@@ -27,6 +28,8 @@ import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
 import { dbg } from '@/lib/debug';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
+import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
+import type { BlobbiVisual } from '@/lib/multiplayer';
 
 /**
  * Three repeated treatments, named once.
@@ -44,14 +47,47 @@ const PANEL = 'rounded-xl border border-island-wood/20 bg-island-cream p-2 shado
 
 const SECTION_HEAD =
   'text-center text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft';
-import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
-import type { BlobbiVisual } from '@/lib/multiplayer';
 
+/**
+ * A titled block inside a tab.
+ *
+ * The Inventory tab now holds two of these — what your Blobbi can WEAR and what
+ * you are CARRYING — and without a shared heading treatment they read as two
+ * unrelated widgets stacked by accident. The header carries an icon and an
+ * optional count so a glance answers "how much is in here" before any
+ * scrolling.
+ */
+function TabSection({
+  icon: Icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-baseline gap-2 px-0.5">
+        <Icon aria-hidden className="size-3.5 shrink-0 translate-y-0.5 text-island-wood-dark" />
+        <h3 className="text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+          {title}
+        </h3>
+        {hint ? (
+          <span className="ml-auto truncate text-[0.6875rem] text-island-ink-soft/80">{hint}</span>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 interface BlobbiInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   backgroundKey?: string;
-  defaultTab?: 'primary' | 'inventory';
+  defaultTab?: 'primary' | 'inventory' | 'effects';
   readOnly?: boolean;
   previewKey?: string;
   externalBlobbiData?: {
@@ -689,9 +725,20 @@ export function BlobbiInfoModal({
                   )}
                 </TabsContent>
 
-                {/* Inventory Tab Content */}
-                <TabsContent value="inventory" className="mt-2 pb-2 focus-visible:outline-none flex flex-col">
-                  <div>
+                {/*
+                  Inventory Tab — the CANONICAL inventory, and the whole of it.
+
+                  Two sections, because a player owns two different kinds of
+                  thing and they answer different questions: what this Blobbi can
+                  WEAR (kind:31634 placement over owned cosmetics) and what you
+                  are CARRYING (kind:31633 consumables and currency). Both used
+                  to exist, in two different windows, both called inventory —
+                  the wearables here, and the carried items behind a separate 🎒
+                  button. Neither has lost anything; they are simply in the same
+                  place now, and there is no second inventory UI to keep in sync.
+                */}
+                <TabsContent value="inventory" className="mt-2 flex flex-col gap-5 pb-2 focus-visible:outline-none">
+                  <TabSection icon={Shirt} title="Wearables" hint="Tap to wear · drag on the stage to place">
                     <EquipmentPanel
                       characterId={characterId}
                       form={currentPet?.stage}
@@ -705,8 +752,11 @@ export function BlobbiInfoModal({
                       publishError={publishError}
                       isPublishing={equipmentMutation.isPending}
                     />
-                  </div>
+                  </TabSection>
 
+                  <TabSection icon={Package} title="Items" hint="Tap to use on your Blobbi">
+                    <InventoryPanel />
+                  </TabSection>
                 </TabsContent>
 
                 {/* Effects Tab Content */}

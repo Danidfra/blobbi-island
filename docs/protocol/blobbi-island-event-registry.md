@@ -622,7 +622,7 @@ Earned by playing games at the Blobbi Island Arcade. Exchange it for exclusive p
 - **Image:** `https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp`
 - **Topics:** `currency`, `arcade`
 - **Stackable:** yes
-- **Referenced by:** `src/components/blobbi/ArcadeTicketBalance.tsx`, `src/components/blobbi/ItemBagModal.tsx`
+- **Referenced by:** `src/components/blobbi/ArcadeTicketBalance.tsx`, `src/components/blobbi/InventoryPanel.tsx`
 
 ### Blobbi Coin — `blobbi:currency:coin`
 

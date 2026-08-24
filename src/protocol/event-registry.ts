@@ -1065,7 +1065,7 @@ export const OFFICIAL_ITEM_DEFINITIONS: readonly OfficialItemDefinition[] = [
     stackable: true,
     sourceFiles: [
       'src/components/blobbi/ArcadeTicketBalance.tsx',
-      'src/components/blobbi/ItemBagModal.tsx',
+      'src/components/blobbi/InventoryPanel.tsx',
     ],
   },
   {

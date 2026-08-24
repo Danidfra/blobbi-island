@@ -1,15 +1,15 @@
 /**
- * Reachable-UI test for the Item Bag (Q6/Q12 of the audit).
+ * Reachable-UI test for the canonical inventory panel (Q6/Q12 of the audit).
  *
  * Confirms that medicine, hygiene, and energy items — which have no dedicated
- * furniture — are visible and selectable through the shared Item Bag modal,
+ * furniture — are visible and selectable through the canonical InventoryPanel,
  * which opens the shared ConsumeItemModal for use.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
-import { ItemBagModal } from './ItemBagModal';
+import { InventoryPanel } from './InventoryPanel';
 import { buildEmptyInventory, dTagToAddress, itemIdToAddress } from '@/inventory';
 import { addInventoryItemQuantity } from '@nostr-games/inventory';
 import { ARCADE_TICKET_D } from '@/protocol/event-registry';
@@ -33,7 +33,7 @@ vi.mock('@/hooks/useOptimizedStatus', () => ({
   useOptimizedStatus: () => mockUseOptimizedStatus(),
 }));
 
-describe('ItemBagModal reachable UI', () => {
+describe('InventoryPanel reachable UI', () => {
   beforeEach(() => {
     mockUseItemCatalog.mockReturnValue({ data: undefined }); // bundled fallback
     mockUseUseItem.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -51,7 +51,7 @@ describe('ItemBagModal reachable UI', () => {
 
     render(
       <TestApp>
-        <ItemBagModal isOpen={true} onClose={() => {}} />
+        <InventoryPanel />
       </TestApp>,
     );
 
@@ -70,7 +70,7 @@ describe('ItemBagModal reachable UI', () => {
 
     render(
       <TestApp>
-        <ItemBagModal isOpen={true} onClose={() => {}} />
+        <InventoryPanel />
       </TestApp>,
     );
 
@@ -89,7 +89,7 @@ describe('ItemBagModal reachable UI', () => {
 
     render(
       <TestApp>
-        <ItemBagModal isOpen={true} onClose={() => {}} />
+        <InventoryPanel />
       </TestApp>,
     );
 
@@ -105,7 +105,7 @@ describe('ItemBagModal reachable UI', () => {
  * something you can feed to a Blobbi. These tests pin the two properties that
  * matter: it is visible, and there is no path from it into the consume flow.
  */
-describe('ItemBagModal currency section', () => {
+describe('InventoryPanel currency section', () => {
   const TICKET = dTagToAddress(ARCADE_TICKET_D)!;
 
   beforeEach(() => {
@@ -129,7 +129,7 @@ describe('ItemBagModal currency section', () => {
     mockUseIslandInventory.mockReturnValue({ data: inv, isLoading: false });
     return render(
       <TestApp>
-        <ItemBagModal isOpen={true} onClose={() => {}} />
+        <InventoryPanel />
       </TestApp>,
     );
   }

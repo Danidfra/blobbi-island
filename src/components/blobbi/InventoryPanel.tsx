@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { ItemTile } from '@/components/ui/item-tile';
 import { StateCard } from '@/components/ui/state-card';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useToast } from '@/hooks/useToast';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
+import { cn } from '@/lib/utils';
 import {
   useIslandInventory,
   useItemCatalog,
@@ -16,25 +16,19 @@ import {
   type ItemCategory,
 } from '@/inventory';
 
-interface ItemBagModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
 /**
  * An item's visual, following the catalog's documented resolution order:
  * definition PRIMARY image → `emoji`.
  *
  * "Primary" is load-bearing now that a definition may publish several `image`
- * tags: a bag row is a compact, unposed list cell, so it always wants the
- * item's default picture and never a pose-specific view — a hat's `side-left`
- * artwork in an inventory grid would misrepresent the item. See
+ * tags: an inventory cell is a compact, unposed list cell, so it always wants
+ * the item's default picture and never a pose-specific view — a hat's
+ * `side-left` artwork in an inventory grid would misrepresent the item. See
  * `docs/game-item-image-views.md`.
  *
  * Generic on purpose — it takes a resolved definition and knows nothing about
  * which item it is drawing, so every current and future item with artwork gets
- * the same treatment. Today only the Arcade Ticket has an `image`, and the 19
- * consumables keep rendering exactly the emoji they rendered before.
+ * the same treatment.
  *
  * The image is a REMOTE asset, so it can fail (host down, offline, blocked). A
  * failed load falls back to the emoji rather than leaving a broken-image glyph,
@@ -77,7 +71,7 @@ interface CategorySection {
 }
 
 /**
- * Categories shown in the bag, in display order, with section labels.
+ * Categories shown here, in display order, with section labels.
  *
  * Currency comes FIRST: it is a balance, not a thing you rummage past the
  * sandwiches to find. Everything below it is a consumable care item.
@@ -91,14 +85,33 @@ const CATEGORY_SECTIONS: CategorySection[] = [
   { category: 'energy', label: 'Energy' },
 ];
 
+export interface InventoryPanelProps {
+  className?: string;
+}
+
 /**
- * A generic "item bag" that lists ALL owned inventory (kind:31633) grouped by
- * category and lets the player use any item via the shared consume modal.
+ * InventoryPanel — the CANONICAL presentation of everything the player owns in
+ * kind:31633 that is not worn: currency and consumable care items, grouped by
+ * category, each usable through the shared consume modal.
  *
- * This provides a reachable UI path for medicine, hygiene, and energy items,
- * which have no dedicated furniture (unlike food -> fridge, toys -> chest).
+ * ## Why this is a panel and not a modal
+ *
+ * It used to be `ItemBagModal`, a second top-level window reached from a 🎒
+ * button, living alongside the "Inventory" tab of the Blobbi window — which
+ * showed something else entirely (wearable cosmetics). Two surfaces both called
+ * inventory, neither containing what the other did, is the thing that was
+ * confusing; and duplicating either one to fix it would have been worse.
+ *
+ * So there is now ONE inventory presentation, rendered inside My Blobbi →
+ * Inventory next to the wearables it belongs beside, and the 🎒 shortcut opens
+ * that destination rather than maintaining a parallel UI. Nothing was removed:
+ * every category, the use flow, the read-only currency treatment and the image
+ * resolution order are the same code, moved.
+ *
+ * This provides the reachable UI path for medicine, hygiene, and energy items,
+ * which have no dedicated furniture (unlike food → fridge, toys → chest).
  */
-export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
+export function InventoryPanel({ className }: InventoryPanelProps) {
   const { status } = useOptimizedStatus();
   const { data: inventory, isLoading } = useIslandInventory();
   const { data: catalog } = useItemCatalog();
@@ -166,68 +179,56 @@ export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
   const isEmpty = entries.length === 0;
 
   return (
-    <>
-      <BlobbiModal
-        open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
-        presentation="in-frame"
-        size="md"
-        title="Item Bag"
-        description="Tap an item to use it on your Blobbi. Currency is shown for reference only."
-        icon="🎒"
-      >
-        {isLoading && <StateCard kind="loading" compact title="Opening your bag…" />}
+    <div className={cn('space-y-3', className)} data-testid="inventory-panel">
+      {isLoading && <StateCard kind="loading" compact title="Opening your bag…" />}
 
-        {!isLoading && isEmpty && (
-          <StateCard
-            kind="empty"
-            compact
-            title="Your bag is empty"
-            message="Buy something from the shop and it will show up here."
-          />
-        )}
+      {!isLoading && isEmpty && (
+        <StateCard
+          kind="empty"
+          compact
+          title="Your bag is empty"
+          message="Buy something from the shop and it will show up here."
+        />
+      )}
 
-        {!isLoading && !isEmpty && (
-          <div className="space-y-4">
-            {CATEGORY_SECTIONS.map((section) => {
-              const items = byCategory.get(section.category) ?? [];
-              if (items.length === 0) return null;
-              return (
-                <section key={section.category} data-bag-section={section.category}>
-                  <h3 className="mb-2 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
-                    {section.label}
-                  </h3>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {items.map((entry) => (
-                      /*
-                        One tile for both kinds. `onClick` is what makes it a
-                        button, so a read-only section renders a plain <div>
-                        with no handler and no consume flow — the same
-                        distinction the two hand-written tiles used to draw,
-                        minus the two different badge colours they drew it in.
-                      */
-                      <ItemTile
-                        key={entry.address}
-                        {...(section.readOnly
-                          ? { 'data-readonly-item': entry.address }
-                          : {
-                              onClick: () => {
-                                setSelectedEntry(entry);
-                                setIsConsumeOpen(true);
-                              },
-                            })}
-                        name={entry.definition.name}
-                        quantity={entry.quantity}
-                        art={<ItemVisual definition={entry.definition} />}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        )}
-      </BlobbiModal>
+      {!isLoading && !isEmpty && (
+        <div className="space-y-4">
+          {CATEGORY_SECTIONS.map((section) => {
+            const items = byCategory.get(section.category) ?? [];
+            if (items.length === 0) return null;
+            return (
+              <section key={section.category} data-bag-section={section.category}>
+                <h4 className="mb-2 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+                  {section.label}
+                </h4>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {items.map((entry) => (
+                    /*
+                      One tile for both kinds. `onClick` is what makes it a
+                      button, so a read-only section renders a plain <div>
+                      with no handler and no consume flow.
+                    */
+                    <ItemTile
+                      key={entry.address}
+                      {...(section.readOnly
+                        ? { 'data-readonly-item': entry.address }
+                        : {
+                            onClick: () => {
+                              setSelectedEntry(entry);
+                              setIsConsumeOpen(true);
+                            },
+                          })}
+                      name={entry.definition.name}
+                      quantity={entry.quantity}
+                      art={<ItemVisual definition={entry.definition} />}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {selectedEntry && (
         <ConsumeItemModal
@@ -243,6 +244,6 @@ export function ItemBagModal({ isOpen, onClose }: ItemBagModalProps) {
           loadingText="Using..."
         />
       )}
-    </>
+    </div>
   );
 }
