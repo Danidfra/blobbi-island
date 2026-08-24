@@ -244,7 +244,9 @@ describe('equip, replace, remove', () => {
     });
     expect(
       screen.getByTestId('effect-card-celestial-aura'),
-    ).toHaveTextContent('equipped');
+    // The badge reads "Active" since the polish pass — "equipped" is what a
+    // developer calls it, "Active" is what the effect IS to a player.
+    ).toHaveTextContent('Active');
     fireEvent.click(screen.getByTestId('remove-celestial-aura'));
     expect(handlers.onRemove).toHaveBeenCalledWith('aura');
     expect(handlers.onEquip).not.toHaveBeenCalled();
@@ -268,7 +270,7 @@ describe('preview', () => {
       previewingEffectId: 'celestial-aura',
     });
     expect(screen.getByTestId('effect-card-celestial-aura')).toHaveTextContent(
-      'previewing',
+      'Previewing',
     );
     fireEvent.click(screen.getByTestId('preview-celestial-aura'));
     expect(handlers.onPreview).toHaveBeenCalledWith(null);

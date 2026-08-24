@@ -7,7 +7,7 @@
  * *sold* and *listed* with its default picture. Showing a hat's back view in an
  * inventory grid would misrepresent the item.
  *
- * Driven through the real `InventoryPanel` and a mocked catalog — no relay, no
+ * Driven through the real `InventoryBrowser` and a mocked catalog — no relay, no
  * published definition, no inventory ownership beyond the in-memory event.
  */
 
@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { TestApp } from '@/test/TestApp';
-import { InventoryPanel } from './InventoryPanel';
+import { InventoryBrowser } from './InventoryBrowser';
 import {
   buildEmptyInventory,
   dTagToAddress,
@@ -86,7 +86,7 @@ function renderBagWith(definition: ResolvedBlobbiItemDefinition) {
 
   return render(
     <TestApp>
-      <InventoryPanel />
+      <InventoryBrowser characterId="blobbi-1" onEquip={() => {}} onUnequip={() => {}} />
     </TestApp>,
   );
 }

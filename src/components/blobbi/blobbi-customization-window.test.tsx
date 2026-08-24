@@ -2,7 +2,7 @@
  * The Blobbi customization window is the ONE customization surface.
  *
  * These are the regressions for the consolidation, not a re-test of what the
- * inventory renders — `InventoryPanel.test.tsx` already owns that. What is
+ * inventory renders — the `InventoryBrowser` suites already own that. What is
  * asserted here is structural, and each assertion corresponds to a way the
  * previous shape could come back:
  *
@@ -36,28 +36,31 @@ const ROOT = process.cwd();
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
 describe('one canonical inventory', () => {
-  it('has no second inventory window left to drift from the tab', () => {
-    // The bag modal is gone as a SURFACE. Its body lives on as `InventoryPanel`,
-    // rendered inside the Inventory tab, and nothing else may render a rival
-    // top-level inventory window.
-    expect(() => read('src/components/blobbi/ItemBagModal.tsx')).toThrow();
-
-    const playing = read('src/components/blobbi/PlayingView.tsx');
-    expect(playing).not.toMatch(/ItemBagModal/);
-    expect(playing).not.toMatch(/<InventoryPanel/);
+  it('has no second inventory surface anywhere', () => {
+    // Three shapes it has taken, all gone: the bag modal, the two panels that
+    // replaced it, and the shortcut that deep-linked past the window.
+    for (const gone of [
+      'src/components/blobbi/ItemBagModal.tsx',
+      'src/components/blobbi/InventoryPanel.tsx',
+      'src/components/blobbi/EquipmentPanel.tsx',
+    ]) {
+      expect(() => read(gone), gone).toThrow();
+    }
   });
 
   it('renders the inventory exactly once, inside the customization window', () => {
     const modal = read('src/components/blobbi/BlobbiInfoModal.tsx');
-    expect(modal.match(/<InventoryPanel\b/g) ?? []).toHaveLength(1);
-    expect(modal).toMatch(/<EquipmentPanel/);
+    expect(modal.match(/<InventoryBrowser\b/g) ?? []).toHaveLength(1);
+
+    const playing = read('src/components/blobbi/PlayingView.tsx');
+    expect(playing).not.toMatch(/InventoryBrowser|ItemBagModal/);
   });
 
   it('has removed the standalone bag shortcut from the world UI', () => {
     /*
-      The 🎒 in the upper right is gone, deliberately. My Blobbi → Inventory is
-      the canonical destination, and a second entry point to a tab of one window
-      is a second thing to keep in sync for no gain.
+      The 🎒 in the upper right is gone, deliberately. My Blobbi → Items is the
+      canonical destination, and a second entry point to a tab of one window is
+      a second thing to keep in sync for no gain.
     */
     const playing = read('src/components/blobbi/PlayingView.tsx');
     expect(playing).not.toMatch(/bag-shortcut/);
@@ -107,18 +110,18 @@ describe('customization window tabs', () => {
       </TestApp>,
     );
 
-    // Read-only (no logged-in pet) shows Primary alone — the tabs that publish
-    // must not be offered for somebody else's Blobbi.
-    expect(await screen.findByRole('tab', { name: /primary/i })).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: /inventory/i })).toBeNull();
+    // Read-only (no logged-in pet) shows the Blobbi tab alone — the tabs that
+    // publish must not be offered for somebody else's Blobbi.
+    expect(await screen.findByRole('tab', { name: /blobbi/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /items/i })).toBeNull();
     expect(screen.queryByRole('tab', { name: /effects/i })).toBeNull();
   });
 
   it('opens on the tab it was asked for', () => {
     const modal = read('src/components/blobbi/BlobbiInfoModal.tsx');
-    // `defaultTab` reaches the tab state, and Effects is a legal destination —
-    // the prop used to be typed to Primary/Inventory only while a third tab
-    // existed.
+    // `defaultTab` still reaches the tab state — nothing in production passes
+    // anything but the default now that the shortcut is gone, but the window
+    // remains addressable for a future caller and for tests.
     expect(modal).toMatch(/defaultTab\?: 'primary' \| 'inventory' \| 'effects'/);
     expect(modal).toMatch(/useState<'primary' \| 'inventory' \| 'effects'>\(readOnly \? 'primary' : defaultTab\)/);
   });
@@ -235,7 +238,7 @@ describe('stage background slot', () => {
         />
       </TestApp>,
     );
-    await screen.findByRole('tab', { name: /primary/i });
+    await screen.findByRole('tab', { name: /blobbi/i });
     expect(screen.queryByTestId('open-stage-background-picker')).toBeNull();
   });
 });
@@ -285,9 +288,11 @@ describe('tab switching', () => {
         />
       </TestApp>,
     );
-    const primary = await screen.findByRole('tab', { name: /primary/i });
+    const primary = await screen.findByRole('tab', { name: /blobbi/i });
     fireEvent.click(primary);
     expect(primary).toHaveAttribute('data-state', 'active');
-    expect(await screen.findByText(/core stats/i)).toBeInTheDocument();
+    // The stats are grouped under a plain-language heading now, not a
+    // "Core Stats" card header band.
+    expect(await screen.findByText(/how they are doing/i)).toBeInTheDocument();
   });
 });

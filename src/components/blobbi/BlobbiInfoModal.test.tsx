@@ -86,7 +86,7 @@ describe('BlobbiInfoModal', () => {
     expect(await screen.findByRole('dialog')).toHaveAccessibleName('Luna');
 
     // Should show Blobbi info
-    expect(screen.getByText('adult • Gen 2')).toBeInTheDocument();
+    expect(screen.getByText('adult · Gen 2')).toBeInTheDocument();
 
     // Should not show inventory tab in read-only mode
     expect(screen.queryByText('Inventory')).not.toBeInTheDocument();

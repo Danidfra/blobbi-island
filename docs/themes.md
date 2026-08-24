@@ -359,7 +359,7 @@ For **each theme** (`cozy-day`, `lantern-night`):
 | A dialog (Elevator, Arcade Pass, No Pass) | panel, plaque, buttons, close |
 | A bottom sheet (any modal at < 768px) | safe area, drag handle, close |
 | Shop / economy | prices, coin balance, the accent purchase button |
-| My Blobbi → Inventory | wearables + items sections, quantities, empty states |
+| My Blobbi → Items | one grid, category chips, detail panel, empty state |
 | My Blobbi stage | backdrop fills the box with no crop; the Blobbi stands on the floor |
 | Mine, Arcade, Beach | overlays over their own art |
 | Loading / empty / error | `StateCard`, `PageLoading` |
@@ -454,7 +454,7 @@ adapter's contrast contract. What still needs eyes:
 | A theme with a title font | window titles + settings headings change; body copy does not |
 | A theme with a background image | dresses the page around the frame; the world art is untouched |
 | Stage background | picker lists both; switching does not remount the world |
-| Bag shortcut (🎒) | opens My Blobbi on Inventory, not a second window |
+| Bag shortcut (🎒) | GONE — My Blobbi → Items is the only inventory |
 
 ## 7b. Manual validation — the visible-redesign pass
 

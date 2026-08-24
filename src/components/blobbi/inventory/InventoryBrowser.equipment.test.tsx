@@ -1,15 +1,21 @@
 /**
- * The production equipment UI, end to end through the real service boundary.
+ * The WEARABLE half of the inventory, end to end through the real service
+ * boundary.
  *
  * The relay is mocked; everything above it is real — `useEquippableCosmetics`,
  * `usePlacementState`, `useEquipmentMutation` and the package itself. What is
  * asserted is the behavior a player experiences AND the events that behavior
- * produces, because a panel that looks right while publishing the wrong kind
+ * produces, because a surface that looks right while publishing the wrong kind
  * would pass any purely visual test.
  *
  * Two claims run through the whole file:
  *   1. nothing is shown that is not a trusted, owned, slot-declaring cosmetic;
  *   2. equipping and unequipping never publish kind:31633.
+ *
+ * Migrated from `EquipmentPanel.test.tsx` when the two stacked inventory panels
+ * became one browser. Every policy assertion is the same; what changed is that
+ * an action now lives in the detail panel, so the tests select an item before
+ * acting on it — which is the redesign's whole point.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
@@ -76,7 +82,7 @@ import { ADDRESSED_OFFICIAL_COSMETICS, OFFICIAL_ISSUER_PUBKEY } from '@/protocol
 import { ISLAND_INVENTORY_D } from '@/inventory/constants';
 import { characterEquipmentPlacementD, placementTargetForCharacter } from '@/placement/identity';
 import { ISLAND_PLACEMENT_REFERENCE, buildEquipEntry } from '@/placement/render-model';
-import { EquipmentPanel } from './EquipmentPanel';
+import { InventoryBrowser } from './InventoryBrowser';
 
 const CAP = ADDRESSED_OFFICIAL_COSMETICS[0]!;
 const CAP_ADDRESS = CAP.address;
@@ -159,7 +165,7 @@ function relay(options: {
   });
 }
 
-function renderPanel(props: Partial<React.ComponentProps<typeof EquipmentPanel>> = {}) {
+function renderPanel(props: Partial<React.ComponentProps<typeof InventoryBrowser>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onEquip = vi.fn();
   const onUnequip = vi.fn();
@@ -167,7 +173,7 @@ function renderPanel(props: Partial<React.ComponentProps<typeof EquipmentPanel>>
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
   const utils = render(
-    <EquipmentPanel
+    <InventoryBrowser
       characterId={CHARACTER}
       form="baby"
       onEquip={onEquip}
@@ -179,9 +185,14 @@ function renderPanel(props: Partial<React.ComponentProps<typeof EquipmentPanel>>
   return { ...utils, client, onEquip, onUnequip };
 }
 
+/** Select an item in the grid, revealing its detail panel. */
+async function selectItem(address: string) {
+  fireEvent.click(await screen.findByTestId(`item-${address}`));
+}
+
 const publishedKinds = () => signEvent.mock.calls.map((c) => c[0].kind);
 
-describe('EquipmentPanel', () => {
+describe('the wearables in the inventory browser', () => {
   beforeEach(() => {
     nostrEvent.mockReset();
     nostrQuery.mockReset();
@@ -193,20 +204,24 @@ describe('EquipmentPanel', () => {
   it('offers an owned, official, slot-declaring cosmetic', async () => {
     relay({ inventory: 2 });
     renderPanel();
-    expect(await screen.findByTestId(`equip-${CAP_ADDRESS}`)).toBeInTheDocument();
+    // Art-first: the tile carries the name and the count, and nothing else.
+    expect(await screen.findByTestId(`item-${CAP_ADDRESS}`)).toBeInTheDocument();
     expect(screen.getByText(CAP.name)).toBeInTheDocument();
-    expect(screen.getByText(/headwear · ×2/)).toBeInTheDocument();
+
+    // The slot and the owned count live in the detail panel, on selection.
+    await selectItem(CAP_ADDRESS);
+    expect(screen.getByTestId('item-detail')).toHaveTextContent(/headwear/);
+    expect(screen.getByTestId('item-detail')).toHaveTextContent(/2 owned/);
+    expect(screen.getByTestId(`equip-${CAP_ADDRESS}`)).toBeInTheDocument();
   });
 
   it('does not offer a cosmetic the player does not own', async () => {
     relay({ inventory: 0 });
     renderPanel();
-    await waitFor(() =>
-      expect(
-        screen.getByText(/do not own any cosmetics this Blobbi can wear/i),
-      ).toBeInTheDocument(),
-    );
-    expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull();
+    // Owning none of it means the collection is empty — and the reason the
+    // cosmetic is not there is still stated, in the diagnostics.
+    await waitFor(() => expect(screen.getByText(/your bag is empty/i)).toBeInTheDocument());
+    expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull();
     expect(screen.getByText(/You do not own this yet\./)).toBeInTheDocument();
   });
 
@@ -215,7 +230,7 @@ describe('EquipmentPanel', () => {
     relay({ definition: null, inventory: 5 });
     renderPanel();
     await waitFor(() =>
-      expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull(),
+      expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull(),
     );
     // FOUR official cosmetics now share this state in the empty-catalog
     // harness (cap, necklace, bow tie, glasses) — at least one row shows it.
@@ -228,7 +243,7 @@ describe('EquipmentPanel', () => {
     relay({ definition: definitionEvent({ slot: 'headwear' }, 'd'.repeat(64)), inventory: 1 });
     renderPanel();
     await waitFor(() =>
-      expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull(),
+      expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull(),
     );
   });
 
@@ -238,7 +253,7 @@ describe('EquipmentPanel', () => {
     await waitFor(() =>
       expect(screen.getByText(/does not say where it is worn/i)).toBeInTheDocument(),
     );
-    expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull();
+    expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull();
   });
 
   it('does not offer a cosmetic that does not fit the current form', async () => {
@@ -253,7 +268,8 @@ describe('EquipmentPanel', () => {
     // The corrected policy: an absent optional field is not a restriction.
     relay({ definition: definitionEvent({ slot: 'headwear' }), inventory: 1 });
     renderPanel();
-    expect(await screen.findByTestId(`equip-${CAP_ADDRESS}`)).toBeInTheDocument();
+    await selectItem(CAP_ADDRESS);
+    expect(screen.getByTestId(`equip-${CAP_ADDRESS}`)).toBeInTheDocument();
   });
 
   it('refuses a cosmetic whose forms list is present but unusable', async () => {
@@ -269,19 +285,28 @@ describe('EquipmentPanel', () => {
     // Nothing is invented from local data when no cosmetic resolves.
     relay({ definition: null, inventory: 0 });
     renderPanel();
-    await waitFor(() =>
-      expect(screen.getByText(/do not own any cosmetics/i)).toBeInTheDocument(),
-    );
-    expect(screen.queryByTestId(`equip-${CAP_ADDRESS}`)).toBeNull();
+    // An empty collection, and NOT a grid populated from the bundled fallback:
+    // the registry knows these cosmetics exist, which is why this is "your bag
+    // is empty" rather than "nothing has been published".
+    await waitFor(() => expect(screen.getByText(/your bag is empty/i)).toBeInTheDocument());
+    expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull();
+    // The name still appears in the diagnostics, naming what could not be
+    // resolved — that is the honesty the test is about, not silence.
+    expect(
+      screen.getAllByText(/official definition has not been published/i).length,
+    ).toBeGreaterThan(0);
   });
 
-  it('lists what is worn, read from the kind:31634 document', async () => {
+  it('marks what is worn, read from the kind:31634 document', async () => {
     relay({ equipped: true });
-    // Opened on the worn tab: Radix unmounts inactive tab content, and driving
-    // its pointer handling in jsdom would test Radix rather than this panel.
-    renderPanel({ defaultTab: 'worn' });
-    expect(await screen.findByTestId('unequip-headwear')).toBeInTheDocument();
-    expect(screen.getByText(CAP_ADDRESS)).toBeInTheDocument();
+    renderPanel();
+    // Worn state is on the TILE — no separate list, no nested tabs.
+    const tile = await screen.findByTestId(`item-${CAP_ADDRESS}`);
+    expect(tile).toHaveAttribute('data-equipped', 'headwear');
+    expect(tile).toHaveTextContent('Worn');
+
+    await selectItem(CAP_ADDRESS);
+    expect(screen.getByTestId('unequip-headwear')).toBeInTheDocument();
   });
 
   it('surfaces a publish failure instead of swallowing it', async () => {
@@ -308,21 +333,27 @@ describe('EquipmentPanel', () => {
     expect(await screen.findByText(/equipment data warning/i)).toBeInTheDocument();
   });
 
-  it('hands equip and unequip to the caller with the definition-declared slot', async () => {
+  it('hands unequip to the caller with the definition-declared slot', async () => {
     relay({ equipped: true, inventory: 1 });
-    const { onEquip } = renderPanel();
-    fireEvent.click(await screen.findByTestId(`equip-${CAP_ADDRESS}`));
-    expect(onEquip).toHaveBeenCalledWith(CAP_ADDRESS, 'headwear');
-
-    const { onUnequip } = renderPanel({ defaultTab: 'worn' });
-    fireEvent.click(await screen.findAllByTestId('unequip-headwear').then((n) => n[0]!));
+    const { onUnequip } = renderPanel();
+    await selectItem(CAP_ADDRESS);
+    fireEvent.click(screen.getByTestId('unequip-headwear'));
     expect(onUnequip).toHaveBeenCalledWith('headwear');
   });
 
-  it('publishes nothing by itself — the panel is not a write path', async () => {
-    relay({ equipped: true, inventory: 1 });
+  it('hands equip to the caller with the definition-declared slot', async () => {
+    relay({ equipped: false, inventory: 1 });
+    const { onEquip } = renderPanel();
+    await selectItem(CAP_ADDRESS);
+    fireEvent.click(screen.getByTestId(`equip-${CAP_ADDRESS}`));
+    expect(onEquip).toHaveBeenCalledWith(CAP_ADDRESS, 'headwear');
+  });
+
+  it('publishes nothing by itself — the browser is not a write path', async () => {
+    relay({ equipped: false, inventory: 1 });
     renderPanel();
-    fireEvent.click(await screen.findByTestId(`equip-${CAP_ADDRESS}`));
+    await selectItem(CAP_ADDRESS);
+    fireEvent.click(screen.getByTestId(`equip-${CAP_ADDRESS}`));
     expect(publishedKinds()).toEqual([]);
   });
 });

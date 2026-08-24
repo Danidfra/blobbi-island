@@ -1,7 +1,7 @@
 /**
  * EffectsPanel — the production visual-effect management UI (Phase 9).
  *
- * The effect sibling of `EquipmentPanel`, on the same three events:
+ * The effect sibling of the inventory's wearables, on the same three events:
  *
  *   what exists   → the trusted official effect registry (+ 31632 for display)
  *   what is owned → kind:31633 quantities
@@ -124,7 +124,7 @@ export function EffectsPanel({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
           <div>
             <p className="font-medium text-destructive">Could not save</p>
-            <p className="text-muted-foreground">{publishError}</p>
+            <p className="text-island-ink-soft">{publishError}</p>
           </div>
         </div>
       )}
@@ -142,7 +142,7 @@ export function EffectsPanel({
       ) : (
         groups.map(({ slot, items }) => (
           <section key={slot} aria-label={EFFECT_SLOT_LABELS[slot]}>
-            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <h4 className="mb-1.5 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
               {EFFECT_SLOT_LABELS[slot]}
             </h4>
             <ul className="space-y-2">
@@ -164,14 +164,14 @@ export function EffectsPanel({
       )}
 
       {stalePlacements.length > 0 && (
-        <div className="rounded-md border border-amber-300/50 bg-amber-50/50 p-2 text-xs dark:border-amber-800/50 dark:bg-amber-950/30">
+        <div className="rounded-panel border border-island-warn/40 bg-island-warn/10 p-2.5 text-xs">
           <p className="font-medium">
             {stalePlacements.length} equipped effect
             {stalePlacements.length === 1 ? ' is' : 's are'} no longer in your
             inventory and {stalePlacements.length === 1 ? 'is' : 'are'} not
             shown.
           </p>
-          <ul className="mt-1 space-y-0.5 text-muted-foreground">
+          <ul className="mt-1 space-y-0.5 text-island-ink-soft">
             {stalePlacements.map((r) => (
               <li key={r.registration.address}>
                 {r.registration.name} — you can remove it from its slot below or
@@ -198,16 +198,16 @@ export function EffectsPanel({
       )}
 
       {owned.unavailable.length > 0 && (
-        <details className="rounded-md border p-2 text-xs">
-          <summary className="cursor-pointer text-muted-foreground">
+        <details className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-2 text-xs">
+          <summary className="cursor-pointer text-island-ink-soft">
             <Lock className="mr-1 inline h-3 w-3" />
             {owned.unavailable.length} effect
             {owned.unavailable.length === 1 ? '' : 's'} not available
           </summary>
           <ul className="mt-1 space-y-1">
             {owned.unavailable.map((item) => (
-              <li key={item.address} className="text-muted-foreground">
-                <span className="font-medium">
+              <li key={item.address} className="text-island-ink-soft">
+                <span className="font-medium text-island-ink">
                   {item.definition?.name ?? item.registration.name}
                 </span>{' '}
                 — {explainEffectUnavailable(item.reason)}
@@ -249,48 +249,56 @@ function EffectCard({
 
   return (
     <li
+      /* Four states a player must tell apart at a glance: owned, equipped,
+         previewing, unavailable. Each gets a DIFFERENT signal — a border, a
+         ring, a badge — never a colour on its own. */
       className={cn(
-        'rounded-md border p-2',
-        isEquipped && 'border-primary bg-primary/5',
-        previewing && 'ring-2 ring-purple-400/60',
+        'rounded-panel border p-2.5 transition-colors duration-150',
+        isEquipped
+          ? 'border-island-grass-dark/50 bg-island-grass/10'
+          : 'border-island-wood/20 bg-island-cream',
+        previewing && 'ring-2 ring-island-purple/60',
       )}
       data-testid={`effect-card-${registration.effectId}`}
     >
       <div className="flex items-start gap-2">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={name}
-            className="h-10 w-10 shrink-0 rounded object-contain"
-          />
-        ) : (
-          <span className="text-2xl">{registration.symbol}</span>
-        )}
+        {/* Art first, framed like an inventory tile — effects and items are
+            one collection language even though they are different tabs. */}
+        <span
+          aria-hidden
+          className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-island-wood/20 bg-island-cream-2 text-2xl"
+        >
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="h-full w-auto object-contain" />
+          ) : (
+            registration.symbol
+          )}
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
-            <span className="text-xs font-medium">{name}</span>
-            <Badge variant="outline" className="text-[9px] capitalize">
+            <span className="text-sm font-bold text-island-ink">{name}</span>
+            <Badge variant="outline" className="text-[0.625rem] capitalize">
               {rarity}
             </Badge>
             {isEquipped && (
-              <Badge variant="secondary" className="text-[9px]">
-                equipped
+              <Badge className="bg-island-grass-dark text-[0.625rem] text-island-cream">
+                Active
               </Badge>
             )}
             {previewing && (
-              <Badge className="bg-island-purple text-[9px] text-island-cream">
-                previewing
+              <Badge className="bg-island-purple text-[0.625rem] text-island-cream">
+                Previewing
               </Badge>
             )}
           </div>
           {definition?.description && (
-            <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-xs leading-snug text-island-ink-soft">
               {definition.description}
             </p>
           )}
           {replaces && (
             <p
-              className="mt-1 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+              className="mt-1.5 text-[0.6875rem] font-medium text-island-warn"
               data-testid={`replace-warning-${registration.effectId}`}
             >
               Equipping {name} will replace {replaces.name} in the{' '}
@@ -299,11 +307,11 @@ function EffectCard({
           )}
         </div>
       </div>
-      <div className="mt-1.5 flex items-center gap-1.5">
+      <div className="mt-2 flex items-center gap-1.5">
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-[11px]"
+          className="h-8 px-2.5 text-xs"
           aria-pressed={previewing}
           data-testid={`preview-${registration.effectId}`}
           onClick={() =>
@@ -324,7 +332,7 @@ function EffectCard({
           <Button
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[11px]"
+            className="h-8 px-2.5 text-xs"
             disabled={isPublishing}
             data-testid={`remove-${registration.effectId}`}
             onClick={() => onRemove(registration.effectSlot)}
@@ -334,7 +342,7 @@ function EffectCard({
         ) : (
           <Button
             size="sm"
-            className="h-7 px-2 text-[11px]"
+            className="h-8 flex-1 px-2.5 text-xs"
             disabled={isPublishing}
             data-testid={`equip-${registration.effectId}`}
             onClick={() => onEquip(item.address, registration.effectSlot)}
@@ -355,7 +363,7 @@ function EmptyState({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
+    <div className="flex flex-col items-center gap-2 rounded-panel border border-dashed border-island-wood/30 p-4 text-center text-xs text-island-ink-soft">
       {icon}
       <p>{children}</p>
     </div>

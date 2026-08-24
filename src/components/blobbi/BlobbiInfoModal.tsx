@@ -4,15 +4,27 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint, Image as ImageIcon, Shirt } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronRight,
+  Droplets,
+  Heart,
+  Image as ImageIcon,
+  Package,
+  PawPrint,
+  Shield,
+  Sparkles,
+  Star,
+  Wand2,
+  Zap,
+} from 'lucide-react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
-import { BlobbiStageBackdrop } from './BlobbiStageBackdrop';
+import { BlobbiStageBackdrop, StageBackgroundSwatch } from './BlobbiStageBackdrop';
 import { StageBackgroundPicker } from './StageBackgroundPicker';
-import { EquipmentPanel } from './EquipmentPanel';
 import { EffectsPanel } from './EffectsPanel';
-import { InventoryPanel } from './InventoryPanel';
+import { InventoryBrowser } from './inventory/InventoryBrowser';
 import { PlacementOverlay } from './PlacementOverlay';
 import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
@@ -41,14 +53,14 @@ import type { BlobbiVisual } from '@/lib/multiplayer';
  * would restructure the modal, and this pass is deliberately presentation-only.
  */
 const TAB_TRIGGER =
-  'rounded-lg text-xs font-semibold text-island-ink-soft transition-colors ' +
+  'flex items-center justify-center rounded-lg py-1.5 text-xs font-semibold ' +
+  'text-island-ink-soft transition-colors duration-150 ' +
   'data-[state=active]:bg-island-cream data-[state=active]:text-island-ink ' +
-  'data-[state=active]:shadow-cozy-soft sm:text-sm';
+  'data-[state=active]:shadow-cozy-soft ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
+  'focus-visible:ring-offset-1 focus-visible:ring-offset-island-cream-2 sm:text-sm';
 
 const PANEL = 'rounded-xl border border-island-wood/20 bg-island-cream p-2 shadow-cozy-soft';
-
-const SECTION_HEAD =
-  'text-center text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft';
 
 /**
  * A titled block inside a tab.
@@ -159,6 +171,22 @@ function StatDisplay({
         <span className="text-xs text-muted-foreground">{value}/{max}</span>
       </div>
       <Progress value={percentage} className="h-1.5" />
+    </div>
+  );
+}
+
+/**
+ * One labelled fact in the "About them" list.
+ *
+ * A `<dl>` row rather than another bordered card. The five facts it holds used
+ * to occupy two separate cards with header bands — roughly 90px of chrome for
+ * five short strings.
+ */
+function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[0.6875rem] font-medium text-island-ink-soft">{label}</dt>
+      <dd className="truncate text-xs font-semibold text-island-ink">{value}</dd>
     </div>
   );
 }
@@ -426,7 +454,12 @@ export function BlobbiInfoModal({
               control that changes the scene. */}
           <div
             data-testid="blobbi-stage-column"
-            className="flex min-h-0 shrink-0 items-center justify-center h-[32dvh] sm:h-auto sm:w-[36%] sm:flex-1 lg:w-2/5"
+            /* The stage is the centrepiece, so it gets a THIRD of a phone's
+               height and a fixed share of the width from `sm` up. It was
+               `sm:flex-1` alongside an explicit width, which let the flex
+               algorithm hand it whatever was left over and made its size depend
+               on how much content the active tab happened to have. */
+            className="flex h-[30dvh] min-h-0 shrink-0 items-center justify-center sm:h-auto sm:w-[38%] lg:w-[36%]"
           >
             {/*
               THE STAGE BOX, and the geometry fix.
@@ -447,7 +480,7 @@ export function BlobbiInfoModal({
             <div
               data-testid="blobbi-stage"
               style={{ aspectRatio: STAGE_ASPECT_RATIO }}
-              className="relative h-full max-w-full overflow-hidden rounded-panel border border-island-wood/25 bg-island-cream-2 shadow-cozy-inset"
+              className="relative h-full max-w-full overflow-hidden rounded-panel border-2 border-island-wood/30 bg-island-cream-2 shadow-cozy-frame"
             >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
@@ -507,34 +540,6 @@ export function BlobbiInfoModal({
                 </div>
               </div>
 
-              {/*
-                "Change background", anchored to the thing it changes.
-
-                Hidden while the Inventory tab is open, because that is when the
-                stage becomes a drag surface for accessory placement and a
-                floating button in the corner would compete with the drag. Also
-                hidden in read-only mode: this is somebody else's Blobbi and the
-                scene is not the viewer's to change.
-              */}
-              {!readOnly && selectedTab !== 'inventory' && (
-                <button
-                  type="button"
-                  data-testid="open-stage-background-picker"
-                  onClick={() => setBackgroundPickerOpen(true)}
-                  title={`Stage background: ${background.name}`}
-                  className={cn(
-                    'absolute bottom-2 right-2 z-30 inline-flex items-center gap-1.5 rounded-full',
-                    'border border-island-wood/30 bg-island-cream/90 px-2.5 py-1.5 backdrop-blur-sm',
-                    'text-[0.6875rem] font-semibold text-island-ink shadow-cozy-raised',
-                    'transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95',
-                    'motion-reduce:transition-none motion-reduce:active:scale-100',
-                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                  )}
-                >
-                  <ImageIcon aria-hidden className="size-3.5 text-island-wood-dark" />
-                  <span className="sr-only sm:not-sr-only">Background</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -551,77 +556,83 @@ export function BlobbiInfoModal({
               }}
               className="flex flex-col h-full"
             >
-              {/* Tabs Header - sticky at top */}
-              <div className="sticky top-0 z-20">
-                <TabsList
-                  className={cn(
-                    'grid h-auto w-full gap-1 rounded-xl border border-island-wood/20 bg-island-cream-2 p-1',
-                    readOnly ? 'grid-cols-1' : 'grid-cols-3',
-                  )}
-                >
-                  <TabsTrigger
-                    value="primary"
-                    className={TAB_TRIGGER}
-                  >
-                    <Heart className="h-4 w-4 mr-2" />
-                    Primary
+              {/* The window's primary navigation. Fixed at the top of the
+                  pane, so the tab strip never scrolls away from a long
+                  inventory — the content region below is what scrolls. */}
+              <TabsList
+                className={cn(
+                  'grid h-auto w-full shrink-0 gap-1 rounded-panel border border-island-wood/20 bg-island-cream-2 p-1',
+                  readOnly ? 'grid-cols-1' : 'grid-cols-3',
+                )}
+              >
+                <TabsTrigger value="primary" className={TAB_TRIGGER}>
+                  <PawPrint aria-hidden className="mr-1.5 size-4" />
+                  Blobbi
+                </TabsTrigger>
+                {!readOnly && (
+                  <TabsTrigger value="inventory" className={TAB_TRIGGER}>
+                    <Package aria-hidden className="mr-1.5 size-4" />
+                    Items
                   </TabsTrigger>
-                  {!readOnly && (
-                    <TabsTrigger
-                      value="inventory"
-                      className={TAB_TRIGGER}
-                    >
-                      <Package className="h-4 w-4 mr-2" />
-                      Inventory
-                    </TabsTrigger>
-                  )}
-                  {!readOnly && (
-                    <TabsTrigger
-                      value="effects"
-                      data-testid="effects-tab"
-                      className={TAB_TRIGGER}
-                    >
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Effects
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-              </div>
+                )}
+                {!readOnly && (
+                  <TabsTrigger value="effects" data-testid="effects-tab" className={TAB_TRIGGER}>
+                    <Wand2 aria-hidden className="mr-1.5 size-4" />
+                    Effects
+                  </TabsTrigger>
+                )}
+              </TabsList>
 
               {/* Tab Content - scrollable panels */}
+              {/* THE one scroll region in this window. The frame's own
+                  scroller is handed back (see `bodyClassName`), the stage does
+                  not scroll, and the tab strip above is `shrink-0` — so there
+                  is exactly one thing that moves and no two scrollers to fight
+                  each other on a phone. */}
               <div className="min-h-0 h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-track-transparent">
-                {/* Primary Tab Content */}
-                <TabsContent value="primary" className="mt-2 space-y-4 pb-2 focus-visible:outline-none">
-                  {/* Basic Info */}
-                  <div className={cn(PANEL, 'p-3')}>
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="blobbi-badge text-xs">
-                          {blobbiData.stage} • Gen {blobbiData.generation}
-                        </Badge>
-                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus?.urgency || 'none')}>
-                          {careStatus?.condition || 'Unknown'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
+                {/*
+                  Primary — the HOME tab for this Blobbi.
 
-                  {/* Coins Display - Only show in non-read-only mode */}
-                  {!readOnly && (
-                    <div className={PANEL} data-coin-hud>
-                      <div className="flex items-center justify-center gap-2 text-sm font-bold text-island-purple">
+                  Three groups, in the order a player asks the questions: who is
+                  this, how are they doing, and what is around them. It was six
+                  stacked bordered cards, each with its own header band, and
+                  four facts appeared twice: `condition` in the badge row AND in
+                  Care Status, `urgency` and `urgentNeed` in Care Status AND in
+                  the alert above it, `generation` in the badge row AND in
+                  Progress. Nothing was deleted — the duplicates were merged
+                  into the one place each fact belongs.
+                */}
+                <TabsContent value="primary" className="mt-3 space-y-4 pb-2 focus-visible:outline-none">
+                  {/* ── Overview ──────────────────────────────────────────── */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className="blobbi-badge text-xs capitalize">
+                      {blobbiData.stage} · Gen {blobbiData.generation}
+                    </Badge>
+                    <Badge
+                      className="blobbi-badge capitalize"
+                      variant={getUrgencyVariant(careStatus?.urgency || 'none')}
+                    >
+                      {careStatus?.condition || 'Unknown'}
+                    </Badge>
+                    {blobbiData.isSleeping && (
+                      <Badge variant="secondary" className="blobbi-badge">
+                        Asleep
+                      </Badge>
+                    )}
+                    {!readOnly && (
+                      <span className="ml-auto" data-coin-hud>
                         {economyEntry.phase === 'checking' ||
                         economyEntry.phase === 'applying' ||
                         coinBalance.isLoading ? (
                           <CoinAmount amount={null} loading className="text-sm" />
                         ) : economyEntry.phase === 'ambiguous' ? (
-                          <span role="status" className="text-xs font-medium blobbi-text-muted">
+                          <span role="status" className="text-xs font-medium text-island-ink-soft">
                             Confirming your Coin balance…
                           </span>
                         ) : coinBalance.isError ? (
                           <button
                             type="button"
-                            className="text-xs font-medium underline blobbi-text-muted"
+                            className="text-xs font-medium text-island-ink-soft underline"
                             onClick={() => coinBalance.refetch()}
                           >
                             Balance unavailable — tap to retry
@@ -633,47 +644,33 @@ export function BlobbiInfoModal({
                             aria-label={`${coinBalance.balance} Blobbi Coins`}
                           />
                         )}
-                      </div>
-                    </div>
-                  )}
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Urgent Care Alert */}
+                  {/* The one urgent thing, if there is one. It carries the
+                      need, so Care Status no longer restates it. */}
                   {careStatus?.urgentNeed && careStatus.urgency !== 'none' && (
-                    <div role="status" className="rounded-xl border border-island-danger/30 bg-island-danger/10 p-2.5 text-xs text-island-danger">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">⚠️</span>
-                        <span className="font-medium">Urgent:</span>
-                        <span>{readOnly ? `This Blobbi needs ${careStatus.urgentNeed}!` : `Your Blobbi needs ${careStatus.urgentNeed}!`}</span>
-                      </div>
+                    <div
+                      role="status"
+                      className="flex items-center gap-2 rounded-panel border border-island-danger/30 bg-island-danger/10 p-2.5 text-xs text-island-danger"
+                    >
+                      <AlertTriangle aria-hidden className="size-4 shrink-0" />
+                      <span>
+                        <span className="font-semibold">Needs {careStatus.urgentNeed}</span>
+                        {' — '}
+                        {readOnly ? 'this Blobbi' : 'your Blobbi'} is not feeling great.
+                      </span>
                     </div>
                   )}
 
-                  {/* Stats Grid */}
-                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
-                    <div className="border-b border-island-wood/20 px-3 py-2">
-                      <h3 className={SECTION_HEAD}>Core Stats</h3>
-                    </div>
-                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <StatDisplay
-                        label="Hunger"
-                        value={blobbiData.hunger}
-                        icon={Heart}
-                      />
-                      <StatDisplay
-                        label="Energy"
-                        value={blobbiData.energy}
-                        icon={Zap}
-                      />
-                      <StatDisplay
-                        label="Happiness"
-                        value={blobbiData.happiness}
-                        icon={Sparkles}
-                      />
-                      <StatDisplay
-                        label="Health"
-                        value={blobbiData.health}
-                        icon={Shield}
-                      />
+                  {/* ── Status ────────────────────────────────────────────── */}
+                  <TabSection icon={Heart} title="How they are doing">
+                    <div className={cn(PANEL, 'grid grid-cols-1 gap-3 p-3 sm:grid-cols-2')}>
+                      <StatDisplay label="Hunger" value={blobbiData.hunger} icon={Heart} />
+                      <StatDisplay label="Energy" value={blobbiData.energy} icon={Zap} />
+                      <StatDisplay label="Happiness" value={blobbiData.happiness} icon={Sparkles} />
+                      <StatDisplay label="Health" value={blobbiData.health} icon={Shield} />
                       <StatDisplay
                         label="Hygiene"
                         value={blobbiData.hygiene}
@@ -681,147 +678,102 @@ export function BlobbiInfoModal({
                         className="sm:col-span-2"
                       />
                     </div>
-                  </div>
+                  </TabSection>
 
-                  {/* Care Status */}
-                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
-                    <div className="p-2 border-b border-island-wood/20">
-                      <h3 className="text-sm font-bold text-center text-island-purple">
-                        Care Status
-                      </h3>
-                    </div>
-                    <div className="p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Condition</span>
-                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus?.urgency || 'none')}>
-                          {careStatus?.condition || 'Unknown'}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Urgency</span>
-                        <Badge className="blobbi-badge" variant={getUrgencyVariant(careStatus.urgency)}>
-                          {careStatus.urgency}
-                        </Badge>
-                      </div>
-                      {careStatus.urgentNeed && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-base">⚠️</span>
-                          <span className="font-medium">Needs:</span>
-                          <span>{careStatus.urgentNeed}</span>
-                        </div>
+                  {/* ── Progress & character ──────────────────────────────── */}
+                  <TabSection icon={Star} title="About them">
+                    <dl className={cn(PANEL, 'grid grid-cols-2 gap-x-3 gap-y-2 p-3')}>
+                      <Fact label="Experience" value={`${blobbiData.experience} XP`} />
+                      <Fact label="Care streak" value={`${blobbiData.careStreak} days`} />
+                      {blobbiData.personality && (
+                        <Fact
+                          label="Personality"
+                          value={
+                            Array.isArray(blobbiData.personality)
+                              ? blobbiData.personality.join(', ')
+                              : blobbiData.personality
+                          }
+                        />
                       )}
-                    </div>
-                  </div>
+                      {blobbiData.trait && (
+                        <Fact
+                          label="Trait"
+                          value={
+                            Array.isArray(blobbiData.trait)
+                              ? blobbiData.trait.join(', ')
+                              : blobbiData.trait
+                          }
+                        />
+                      )}
+                      {blobbiData.mood && <Fact label="Mood" value={blobbiData.mood} />}
+                    </dl>
+                  </TabSection>
 
-                  {/* Progress */}
-                  <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
-                    <div className="p-2 border-b border-island-wood/20">
-                      <h3 className="text-sm font-bold text-center text-island-purple">
-                        Progress
-                      </h3>
-                    </div>
-                    <div className="p-3 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Experience</span>
-                        <span className="text-xs text-muted-foreground">
-                          {blobbiData.experience} XP
+                  {/* ── Appearance ────────────────────────────────────────────
+                      The stage's scene, named as a customization rather than
+                      hidden behind a floating icon on the artwork. */}
+                  {!readOnly && (
+                    <TabSection icon={ImageIcon} title="Appearance">
+                      <button
+                        type="button"
+                        data-testid="open-stage-background-picker"
+                        onClick={() => setBackgroundPickerOpen(true)}
+                        className={cn(
+                          PANEL,
+                          'flex w-full items-center gap-3 p-2.5 text-left',
+                          'transition-transform duration-150 ease-cozy hover:-translate-y-0.5 active:scale-[0.99]',
+                          'motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100',
+                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-island-cream',
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className="block w-10 shrink-0 overflow-hidden rounded-md border border-island-wood/25"
+                          style={{ aspectRatio: STAGE_ASPECT_RATIO }}
+                        >
+                          <StageBackgroundSwatch background={background} />
                         </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Care Streak</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground">
-                            {blobbiData.careStreak} days
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-bold text-island-ink">
+                            Stage background
                           </span>
-                          <Star aria-hidden className="size-3 text-island-warn" />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Generation</span>
-                        <span className="text-xs text-muted-foreground">
-                          Gen {blobbiData.generation}
+                          <span className="block truncate text-[0.6875rem] text-island-ink-soft">
+                            {background.emoji} {background.name}
+                          </span>
                         </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Special Traits */}
-                  {(blobbiData.personality || blobbiData.trait || blobbiData.mood) && (
-                    <div className="rounded-xl border border-island-wood/20 bg-island-cream shadow-cozy-soft">
-                      <div className="p-2 border-b border-island-wood/20">
-                        <h3 className="text-sm font-bold text-center text-island-purple">
-                          Personality
-                        </h3>
-                      </div>
-                      <div className="p-3 space-y-2">
-                        {blobbiData.personality && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs">🎭</span>
-                            <span className="text-xs font-medium">Personality:</span>
-                            <span className="text-xs text-muted-foreground">
-                              {Array.isArray(blobbiData.personality)
-                                ? blobbiData.personality.join(', ')
-                                : blobbiData.personality}
-                            </span>
-                          </div>
-                        )}
-                        {blobbiData.trait && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs">✨</span>
-                            <span className="text-xs font-medium">Trait:</span>
-                            <span className="text-xs text-muted-foreground">
-                              {Array.isArray(blobbiData.trait)
-                                ? blobbiData.trait.join(', ')
-                                : blobbiData.trait}
-                            </span>
-                          </div>
-                        )}
-                        {blobbiData.mood && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs">😊</span>
-                            <span className="text-xs font-medium">Mood:</span>
-                            <span className="text-xs text-muted-foreground">
-                              {blobbiData.mood}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                        <ChevronRight aria-hidden className="size-4 shrink-0 text-island-ink-soft" />
+                      </button>
+                    </TabSection>
                   )}
                 </TabsContent>
 
                 {/*
                   Inventory Tab — the CANONICAL inventory, and the whole of it.
 
-                  Two sections, because a player owns two different kinds of
-                  thing and they answer different questions: what this Blobbi can
-                  WEAR (kind:31634 placement over owned cosmetics) and what you
-                  are CARRYING (kind:31633 consumables and currency). Both used
-                  to exist, in two different windows, both called inventory —
-                  the wearables here, and the carried items behind a separate 🎒
-                  button. Neither has lost anything; they are simply in the same
-                  place now, and there is no second inventory UI to keep in sync.
+                  ONE collection: wearables and carried items in one grid, under
+                  one category filter, with detail on selection. It used to be
+                  two stacked panels with two headers and two vocabularies,
+                  which is what you get when two windows are merged rather than
+                  designed. See `docs/blobbi-inventory-design.md` for the
+                  reference study behind the shape.
                 */}
-                <TabsContent value="inventory" className="mt-2 flex flex-col gap-5 pb-2 focus-visible:outline-none">
-                  <TabSection icon={Shirt} title="Wearables" hint="Tap to wear · drag on the stage to place">
-                    <EquipmentPanel
-                      characterId={characterId}
-                      form={currentPet?.stage}
-                      selectedSlot={selectedSlot}
-                      onSelectSlot={setSelectedSlot}
-                      pendingUpdates={pendingUpdates}
-                      onTransformChange={handleTransformChange}
-                      onSaveTransforms={handleSaveTransforms}
-                      onEquip={handleEquip}
-                      onUnequip={handleUnequip}
-                      publishError={publishError}
-                      isPublishing={equipmentMutation.isPending}
-                    />
-                  </TabSection>
-
-                  <TabSection icon={Package} title="Items" hint="Tap to use on your Blobbi">
-                    <InventoryPanel />
-                  </TabSection>
+                <TabsContent
+                  value="inventory"
+                  className="mt-3 flex min-h-0 flex-col pb-2 focus-visible:outline-none"
+                >
+                  <InventoryBrowser
+                    characterId={characterId}
+                    form={currentPet?.stage}
+                    selectedSlot={selectedSlot}
+                    onSelectSlot={setSelectedSlot}
+                    pendingUpdates={pendingUpdates}
+                    onTransformChange={handleTransformChange}
+                    onSaveTransforms={handleSaveTransforms}
+                    onEquip={handleEquip}
+                    onUnequip={handleUnequip}
+                    publishError={publishError}
+                    isPublishing={equipmentMutation.isPending}
+                  />
                 </TabsContent>
 
                 {/* Effects Tab Content */}

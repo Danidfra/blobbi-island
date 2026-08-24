@@ -42,3 +42,26 @@ export function BlobbiStageBackdrop({ background }: { background: StageBackgroun
     />
   );
 }
+
+/**
+ * The same backdrop at swatch scale, for a row that names it.
+ *
+ * Shares `StageBackground` with the stage rather than re-deriving anything, so
+ * a swatch cannot show one thing while the stage shows another. No load/error
+ * handling: a swatch that fails is a blank rounded rectangle beside the name,
+ * which is a fine thing for a 40px thumbnail to be.
+ */
+export function StageBackgroundSwatch({ background }: { background: StageBackground }) {
+  if (background.art.kind === 'gradient') {
+    return (
+      <span
+        aria-hidden
+        className="block h-full w-full"
+        style={{ backgroundImage: background.art.css }}
+      />
+    );
+  }
+  return (
+    <img src={background.art.src} alt="" aria-hidden className="h-full w-full object-cover" />
+  );
+}
