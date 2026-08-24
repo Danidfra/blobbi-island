@@ -28,16 +28,21 @@ is the one outcome this system exists to prevent. An evening island is a
 `system` preference reaching `<html>` resolves to the active theme instead of a
 stale palette. Themes do not respond to `prefers-color-scheme`.
 
-**Not derived from three core colours.** Ditto derives its nineteen tokens from
-`{background, text, primary}`, which is right for a social client where any
-user-picked colour must still produce a usable UI. The island's palette is art
-direction — sand is not a computed tint of cream, it is a specific warm sand —
-so every colour is authored. A theme costs sixteen values instead of three, and
-buys the ability to be *designed*.
+**Not derived from three core colours — when it is authored here.** Ditto
+derives its nineteen tokens from `{background, text, primary}`, which is right
+for a social client where any user-picked colour must still produce a usable UI.
+The island's BUILT-IN palettes are art direction — sand is not a computed tint of
+cream, it is a specific warm sand — so every colour is authored. A built-in theme
+costs sixteen values instead of three, and buys the ability to be *designed*.
 
-**Not a Nostr event.** Theme choice is a local display preference. It publishes
-nothing, and there is no theme kind. It rides in the existing
-`nostr:app-config` localStorage blob beside the relay URL.
+An **external** theme gets no such luxury and does not need one: it arrives with
+three colours and is expanded by `island-theme-adapter.ts`. See §5b.
+
+**Not a UI theme and a Blobbi stage background at the same time.** They are
+different customization domains and they live apart: a theme is
+Account → Appearance → Themes, and the scene behind your Blobbi is My Blobbi →
+the stage's own control (`src/lib/blobbi-stage-backgrounds.ts`). Nothing about
+one touches the other.
 
 ## 3. The themes
 
@@ -113,14 +118,56 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
   for arbitrary user colours; wrong for authored art direction. See §2.
 - **`light` / `dark` / `system` / `custom` as theme identities.** The island has
   named themes, full stop.
-- **Publishing themes to Nostr** (Ditto's kind 16767), the encrypted-settings
-  sync, and `autoShareTheme`. Theme is a local display preference here.
-- **User-authored themes, font pickers and background images.** Ditto's themes
-  can carry a font and a background photo, which suits a social feed. The island
-  is a drawn world; a photographic background behind the wood frame would fight
-  the art. Left out until there is a reason.
-- **Ditto's own palettes.** Borrowing its violet-on-near-black would make the
-  island look like a Ditto skin. What was borrowed is the discipline.
+- **Ditto's encrypted-settings sync and `autoShareTheme`.** Island publishes its
+  selection unconditionally when signed in, because there is no second theme to
+  keep separate here — Ditto's toggle exists so a user can show one theme on
+  their profile and use another in the app.
+- **Font (`f`) and background-media (`bg`) tags.** Ditto's themes can carry a
+  remote font file and a background photo, which suits a social feed. Island
+  fetches neither: a font file on a stranger's say-so is a request nobody asked
+  for, and the island already has a background — it is a drawn world, and a
+  photograph behind the wood frame would fight the art.
+- **Ditto's own palettes.** Borrowing its violet-on-near-black for a BUILT-IN
+  would make the island look like a Ditto skin. What was borrowed is the
+  discipline — and, now, the protocol.
+
+## 5b. Themes on Nostr
+
+Island reads and writes **Ditto's theme protocol**, unchanged. The full event
+schema, the tag vocabulary and the compatibility boundary are in
+[`NIP.md`](../NIP.md#kinds-36767--16767--themes-dittos-protocol-reused); this is
+the short version.
+
+| Kind | Class | Question |
+| --- | --- | --- |
+| `36767` | Addressable | "Here is a theme." `36767:<pubkey>:<d>` |
+| `16767` | Replaceable | "This is the theme I am using." |
+
+A theme is three colours: `background`, `text`, `primary`, hex-encoded in `c`
+tags with a role marker. `island-theme-adapter.ts` expands them into the island's
+sixteen, **solving** every role that carries text against the surfaces it sits on
+until it clears its WCAG threshold — so a community theme is held to the same
+contrast contract as a built-in one (`island-theme-adapter.test.ts` runs it
+against deliberately hostile palettes). Scenery blends the island's own hues a
+third of the way toward the theme's background rather than deriving from its
+primary, because a purple ocean is not a theme.
+
+Going the other way, a built-in publishes as `page → background`,
+`ink → text`, `purple → primary`. Lossy by construction; those are the three
+roles that mean the same thing in both models.
+
+**Identity.** Built-ins keep bare slugs (`cozy-day`); Nostr themes are
+`nostr:36767:<pubkey>:<d>`. A bare slug has no colon, so one `AppConfig.theme`
+field holds both without ambiguity — and built-ins were deliberately NOT renamed
+to `builtin:*`, because every stored preference in the wild is a bare slug and a
+rename would have reset every player on a non-default theme.
+
+**Trust.** A theme is a stranger's data colouring the whole UI. No string from an
+event reaches CSS: a colour must match `#rgb`/`#rrggbb` and is then parsed into
+numbers and re-emitted from those numbers. Free text is stripped of control
+characters and capped. Contrast is *reported*, never enforced — the picker and
+the create form both say which pairing is short — because blocking would mean
+refusing themes Ditto happily renders.
 
 ## 6. Implementation
 
@@ -130,11 +177,46 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
 | Default palette, in CSS, for a no-JS render | `:root` in `src/index.css` |
 | Pre-paint application | `public/island-theme.js`, blocking in `index.html` |
 | Persistence + runtime application | `src/components/AppProvider.tsx` |
-| Read/set hook | `src/hooks/useTheme.ts` |
+| Read/set hook (relay-free) | `src/hooks/useTheme.ts` |
+| Read/set + discovery + publish | `src/hooks/useThemeSelection.ts` |
+| Ditto protocol (parse/build/validate) | `src/lib/nostr-theme.ts` |
+| Three colours → sixteen | `src/lib/island-theme-adapter.ts` |
+| Last-known palette, for boot | `src/lib/island-theme-cache.ts` |
+| Discovery reads | `src/hooks/useNostrThemes.ts` |
+| Publishing | `src/hooks/useThemePublish.ts` |
+| Cross-device reconciliation | `src/components/IslandThemeSync.tsx` |
 | Picker UI | `src/components/shell/ThemePicker.tsx` |
+| Create flow | `src/components/shell/ThemeCreateDialog.tsx` |
 | Entry point | Account menu → Appearance → Theme |
 
+`useTheme` is deliberately relay-free — the account menu row that shows the
+current theme's name must not drag a signer, a mutation and a subscription into
+its dependency graph. Everything that needs a relay is in `useThemeSelection`,
+which only the picker uses.
+
 ### Persistence and fallback
+
+**Authority order.** A relay outage is never a theme change:
+
+```
+  pre-paint boot script   config id → built-in table → palette cache
+       ↓
+  AppProvider             the same offline resolution, authoritatively
+       ↓
+  IslandThemeSync         refreshes the cache from the live kind:36767,
+                          and adopts a kind:16767 selection made on another
+                          device — ONCE per session, never on an unusable
+                          read, never for an id it cannot resolve
+```
+
+The stored id is never overwritten by a failed read. A community theme survives
+an offline boot from its cached palette; only a selection that is BOTH unreadable
+and uncached shows a notice, and even then the choice is remembered.
+
+The cache lives under its own key (`nostr:island-theme-cache`), not in the config
+blob: it is a disposable derivative, and a corrupt entry there must not cost the
+player their relay. Every value is re-validated as a plain HSL triplet before it
+is applied, in both the module and the boot script.
 
 Stored as `theme` in `nostr:app-config`. `AppConfig.theme` is typed `string`,
 not a union of the current ids, because **a stored preference outlives the build
@@ -178,17 +260,36 @@ For **each theme** (`cozy-day`, `lantern-night`):
 | World / HUD / dock | frame, chips, action dock legible over the world |
 | Account menu (desktop dropdown) | rows, dividers, the Appearance row |
 | Account menu (landscape modal) | compact layout, scrolling |
-| Theme picker | both cards readable; the check mark; focus ring visible |
+| Theme browser | built-in cards readable; check mark; focus ring visible |
 | A dialog (Elevator, Arcade Pass, No Pass) | panel, plaque, buttons, close |
 | A bottom sheet (any modal at < 768px) | safe area, drag handle, close |
 | Shop / economy | prices, coin balance, the accent purchase button |
-| Inventory / item bag | item cards, quantities, empty state |
+| My Blobbi → Inventory | wearables + items sections, quantities, empty states |
+| My Blobbi stage | backdrop fills the box with no crop; the Blobbi stands on the floor |
 | Mine, Arcade, Beach | overlays over their own art |
 | Loading / empty / error | `StateCard`, `PageLoading` |
 | Focus | Tab through a dialog — the ring must be visible on every stop |
 | Reduced motion | OS setting on: no spinner spin, no card lift, states still change |
 
 Viewports: desktop, mobile portrait, mobile landscape.
+
+### Nostr themes and stage backgrounds
+
+Automated tests cover the protocol both directions, discovery (replacement,
+malformed, empty, offline), selection, publication, the palette cache, and the
+adapter's contrast contract. What still needs eyes:
+
+| Flow | Check |
+| --- | --- |
+| Themes → From the community | discovered cards render; a "Low contrast" badge where earned |
+| Apply a community theme | the whole island repaints; nothing in progress is disturbed |
+| Reload after applying one | painted from cache with no flash of Cozy Day |
+| Relay off, then reload | still the chosen theme; the notice only if never cached |
+| Create a theme | preview tracks the colour pickers; app behind it does NOT change |
+| Publish | appears under "Yours" and applies; republishing the same name replaces |
+| A theme published from Ditto | appears in the community list and renders |
+| Stage background | picker lists both; switching does not remount the world |
+| Bag shortcut (🎒) | opens My Blobbi on Inventory, not a second window |
 
 ## 7b. Manual validation — the visible-redesign pass
 

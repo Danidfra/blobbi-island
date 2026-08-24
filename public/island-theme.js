@@ -89,9 +89,17 @@
    * report a problem to.
    */
   function cachedPalette(id) {
-    var raw = localStorage.getItem('nostr:island-theme-cache');
-    if (!raw) return null;
-    var entry = JSON.parse(raw);
+    var entry;
+    try {
+      // Its OWN try, not the outer one. A corrupt cache entry must cost a
+      // fallback to the default palette, not skip the palette write entirely —
+      // which is what happened when this parse threw past the write below.
+      var raw = localStorage.getItem('nostr:island-theme-cache');
+      if (!raw) return null;
+      entry = JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
     if (!entry || entry.id !== id || !entry.palette) return null;
     var out = {};
     for (var i = 0; i < PALETTE_KEYS.length; i++) {

@@ -158,4 +158,14 @@ describe('the pre-paint script agrees with the cache', () => {
     expect(boot).toMatch(new RegExp(`DEFAULT_ID\\s*=\\s*'${DEFAULT_ISLAND_THEME_ID}'`));
     expect(boot).toMatch(/if \(cached\) \{/);
   });
+
+  it('contains the cache parse in its own try, not the outer one', () => {
+    // A corrupt entry must cost a FALLBACK, not the whole palette write. When
+    // this parse lived in the outer try, a `{bad` in storage threw past the
+    // `setProperty` loop and the boot script applied nothing at all — leaving
+    // the loading screen unpainted and `data-island-theme` unset.
+    const fn = boot.match(/function cachedPalette\(id\) \{([\s\S]*?)\n {2}\}/);
+    expect(fn, 'public/island-theme.js has no cachedPalette').toBeTruthy();
+    expect(fn![1]).toMatch(/try \{[\s\S]*JSON\.parse[\s\S]*\} catch/);
+  });
 });
