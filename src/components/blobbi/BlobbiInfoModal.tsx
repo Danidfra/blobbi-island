@@ -4,11 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint, Shirt } from 'lucide-react';
+import { Heart, Zap, Sparkles, Shield, Star, Droplets, Package, Wand2, PawPrint, Image as ImageIcon, Shirt } from 'lucide-react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
-import { BackgroundLayer } from './BackgroundLayer';
+import { BlobbiStageBackdrop } from './BlobbiStageBackdrop';
+import { StageBackgroundPicker } from './StageBackgroundPicker';
 import { EquipmentPanel } from './EquipmentPanel';
 import { EffectsPanel } from './EffectsPanel';
 import { InventoryPanel } from './InventoryPanel';
@@ -24,7 +25,8 @@ import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
 import { CoinAmount } from './CoinAmount';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
-import { getBlobbiBackground } from '@/lib/blobbi-backgrounds';
+import { STAGE_ASPECT_RATIO, resolveStageBackground } from '@/lib/blobbi-stage-backgrounds';
+import { useStageBackground } from '@/hooks/useStageBackground';
 import { dbg } from '@/lib/debug';
 import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
@@ -86,6 +88,12 @@ function TabSection({
 interface BlobbiInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Force a specific stage backdrop, by id. Left alone the player's own choice
+   * is used — see `useStageBackground`. This exists for previews and tests, and
+   * for a future "look at this Blobbi in that scene" flow; it is NOT how the
+   * player picks one.
+   */
   backgroundKey?: string;
   defaultTab?: 'primary' | 'inventory' | 'effects';
   readOnly?: boolean;
@@ -158,7 +166,7 @@ function StatDisplay({
 export function BlobbiInfoModal({
   isOpen,
   onClose,
-  backgroundKey = 'blobbi-bg-default',
+  backgroundKey,
   defaultTab = 'primary',
   readOnly = false,
   previewKey = 'self',
@@ -174,7 +182,19 @@ export function BlobbiInfoModal({
 
   // Use external data if in read-only mode, otherwise use current pet data
   const blobbiData = readOnly && externalBlobbiData ? externalBlobbiData : currentPet;
-  const backgroundSrc = getBlobbiBackground(backgroundKey);
+  /*
+    The stage backdrop.
+
+    `backgroundKey` is an OVERRIDE, not the source of truth: left undefined the
+    player's own selection is used, which is what turns the old hardcoded PNG
+    into a real slot. A read-only view of somebody else's Blobbi deliberately
+    keeps the local player's stage rather than guessing at theirs — the same
+    honesty rule the accessory preview follows.
+  */
+  const stageSelection = useStageBackground();
+  const background =
+    backgroundKey === undefined ? stageSelection.background : resolveStageBackground(backgroundKey);
+  const [backgroundPickerOpen, setBackgroundPickerOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   // Equipment editing state is keyed by SLOT, because a kind:31634 document
@@ -392,28 +412,46 @@ export function BlobbiInfoModal({
           : 'Stats, equipment and effects'
       }
       icon={<PawPrint />}
-      /* The body owns its own two-column layout and its inner panes scroll
-         independently, so the frame's default padding and single scroller are
-         handed back. */
-      bodyClassName="flex min-h-0 flex-row gap-4 overflow-hidden p-3 lg:gap-6 lg:p-5"
+      /* The body owns its own layout and its inner panes scroll independently,
+         so the frame's default padding and single scroller are handed back.
+
+         STACKED on a phone, side-by-side from `sm` up. It used to be `flex-row`
+         at every width, which on a 375px sheet gave the stage a 110px column —
+         a Blobbi the size of a favicon next to a squeezed tab strip. Stacking
+         gives the stage the sheet's full width and the tabs the rest. */
+      bodyClassName="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row sm:gap-4 lg:gap-6 lg:p-5"
     >
       <div ref={modalRef} className="contents">
-          {/* Stage - Left side with background and static Blobbi */}
-          <div className="flex flex-col w-1/3 lg:w-2/5 flex-shrink-0 min-h-0">
-            {/* Stage Container - constrained to available height on mobile landscape */}
+          {/* The stage: the backdrop, the Blobbi standing on it, and the one
+              control that changes the scene. */}
+          <div
+            data-testid="blobbi-stage-column"
+            className="flex min-h-0 shrink-0 items-center justify-center h-[32dvh] sm:h-auto sm:w-[36%] sm:flex-1 lg:w-2/5"
+          >
+            {/*
+              THE STAGE BOX, and the geometry fix.
+
+              It is sized by HEIGHT (`h-full`) with `aspect-ratio` deriving the
+              width, so the box always has the backdrop's own proportions —
+              whatever height the modal happens to have. It used to be
+              `aspect-square w-full max-h-full`: a square box for a 2:3 portrait
+              backdrop, which `object-cover` resolved by cropping a third of the
+              picture's height away (see STAGE_ASPECT_RATIO), and `max-h-full`
+              then silently broke even the square on a short viewport, because
+              clamping the height of a `w-full` box does not narrow it.
+
+              `max-w-full` is the guard for the reverse case — a very tall, very
+              narrow container — and the parent's `overflow-hidden` is the
+              backstop.
+            */}
             <div
-              className="relative mx-auto aspect-square max-h-full w-full overflow-hidden rounded-panel border border-island-wood/25 bg-island-cream-2 shadow-cozy-inset"
+              data-testid="blobbi-stage"
+              style={{ aspectRatio: STAGE_ASPECT_RATIO }}
+              className="relative h-full max-w-full overflow-hidden rounded-panel border border-island-wood/25 bg-island-cream-2 shadow-cozy-inset"
             >
               {/* Background Layer - z-0 */}
               <div className="absolute inset-0 z-0" aria-hidden="true">
-                <BackgroundLayer
-                  src={backgroundSrc}
-                  alt="Blobbi background"
-                  fit="cover"
-                  fallback={
-                    <div className="absolute inset-0 bg-gradient-to-br from-island-sky/40 to-island-sand/60" />
-                  }
-                />
+                <BlobbiStageBackdrop background={background} />
               </div>
 
               {/* Optional: Subtle vignette for text contrast */}
@@ -468,13 +506,40 @@ export function BlobbiInfoModal({
                   )}
                 </div>
               </div>
+
+              {/*
+                "Change background", anchored to the thing it changes.
+
+                Hidden while the Inventory tab is open, because that is when the
+                stage becomes a drag surface for accessory placement and a
+                floating button in the corner would compete with the drag. Also
+                hidden in read-only mode: this is somebody else's Blobbi and the
+                scene is not the viewer's to change.
+              */}
+              {!readOnly && selectedTab !== 'inventory' && (
+                <button
+                  type="button"
+                  data-testid="open-stage-background-picker"
+                  onClick={() => setBackgroundPickerOpen(true)}
+                  title={`Stage background: ${background.name}`}
+                  className={cn(
+                    'absolute bottom-2 right-2 z-30 inline-flex items-center gap-1.5 rounded-full',
+                    'border border-island-wood/30 bg-island-cream/90 px-2.5 py-1.5 backdrop-blur-sm',
+                    'text-[0.6875rem] font-semibold text-island-ink shadow-cozy-raised',
+                    'transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95',
+                    'motion-reduce:transition-none motion-reduce:active:scale-100',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                  )}
+                >
+                  <ImageIcon aria-hidden className="size-3.5 text-island-wood-dark" />
+                  <span className="sr-only sm:not-sr-only">Background</span>
+                </button>
+              )}
             </div>
-
-
           </div>
 
           {/* Sidebar - Right side with tabbed interface */}
-          <div className="w-2/3 lg:w-3/5 flex-1 min-h-0 flex flex-col">
+          <div className="flex min-h-0 w-full flex-1 flex-col sm:w-[64%] lg:w-3/5">
             <Tabs
               value={selectedTab}
               onValueChange={(value) => {
@@ -779,6 +844,11 @@ export function BlobbiInfoModal({
             </Tabs>
           </div>
       </div>
+
+      <StageBackgroundPicker
+        open={backgroundPickerOpen}
+        onOpenChange={setBackgroundPickerOpen}
+      />
     </BlobbiModal>
   );
 }
