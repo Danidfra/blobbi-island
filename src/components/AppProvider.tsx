@@ -1,10 +1,14 @@
-import { ReactNode, useLayoutEffect } from 'react';
+import { ReactNode, useLayoutEffect, useSyncExternalStore } from 'react';
 import { z } from 'zod';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AppContext, type AppConfig, type AppContextType } from '@/contexts/AppContext';
 import { DEFAULT_ISLAND_THEME_ID, applyIslandTheme } from '@/lib/island-themes';
 import { resolveIslandThemeOffline } from '@/hooks/useTheme';
-import { applyThemeBackground, applyThemeFont } from '@/lib/island-theme-media';
+import {
+  islandThemeCacheVersion,
+  subscribeToIslandThemeCache,
+} from '@/lib/island-theme-cache';
+import { applyThemeBackground, applyThemeFonts } from '@/lib/island-theme-media';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -99,8 +103,23 @@ export function AppProvider(props: AppProviderProps) {
  * world. `island-theme.test.tsx` holds that line.
  */
 function useApplyIslandTheme(themeId: string) {
+  /*
+    The palette cache is an INPUT here, not just a boot optimisation.
+
+    `ditto:active` names "whatever theme this account is using", so
+    `IslandThemeSync` replaces its CONTENT without the id ever changing. An
+    effect keyed on the id alone would leave the previous theme painted until
+    something else happened to re-render — which is exactly what a player who
+    changed their theme in Ditto and came back would see.
+  */
+  const cacheVersion = useSyncExternalStore(
+    subscribeToIslandThemeCache,
+    islandThemeCacheVersion,
+    () => '',
+  );
+
   useLayoutEffect(() => {
-    const theme = resolveIslandThemeOffline(themeId);
+    const theme = resolveIslandThemeOffline(themeId, cacheVersion);
     applyIslandTheme(theme, document.documentElement);
     /*
       The two fields that are not colours.
@@ -111,7 +130,7 @@ function useApplyIslandTheme(themeId: string) {
       `theme.config` is absent for every built-in and switching to one must take
       the previous theme's wallpaper with it.
     */
-    applyThemeFont(theme.config?.font);
+    applyThemeFonts({ body: theme.config?.font, title: theme.config?.titleFont });
     applyThemeBackground(theme.config?.background, document.documentElement);
-  }, [themeId]);
+  }, [themeId, cacheVersion]);
 }

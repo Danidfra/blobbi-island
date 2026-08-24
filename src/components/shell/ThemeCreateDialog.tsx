@@ -12,6 +12,7 @@ import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext
 import { usePublishTheme } from "@/hooks/useThemePublish";
 import { contrastReport, paletteFromCoreColors } from "@/lib/island-theme-adapter";
 import { islandThemeDeclarations, islandThemeFromNostr } from "@/lib/island-themes";
+import { previewFontStack } from "@/lib/island-theme-media";
 import {
   THEME_DESCRIPTION_MAX,
   THEME_TITLE_MAX,
@@ -170,6 +171,10 @@ export function ThemeCreateDialog({
   const palette = useMemo(() => paletteFromCoreColors(colors), [colors]);
   const findings = useMemo(() => contrastReport(palette), [palette]);
   const failures = findings.filter((f) => !f.passes);
+
+  // The draft's own type, scoped to the preview — so a font typed into the form
+  // is visible before it is published, and only inside the preview box.
+  const previewBodyFont = previewFontStack(config.font);
 
   const scope = useMemo(
     () =>
@@ -384,7 +389,7 @@ export function ThemeCreateDialog({
           </p>
           {/* Scoped, not global: designing a theme must not repaint the app. */}
           <div
-            style={scope}
+            style={{ ...scope, fontFamily: previewBodyFont }}
             data-testid="theme-draft-preview"
             className="overflow-hidden rounded-panel border-2 border-island-wood/30 bg-island-page"
           >

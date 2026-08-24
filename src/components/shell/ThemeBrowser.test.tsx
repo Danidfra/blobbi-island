@@ -463,6 +463,47 @@ describe('selecting a community theme', () => {
   });
 });
 
+describe('the theme browser previews fonts', () => {
+  it('renders each card in the theme\'s own type, without touching the app', async () => {
+    // A player could previously choose a theme with no hint that their whole UI
+    // was about to change typeface.
+    stored = [
+      {
+        ...themeEvent({ d: 'harbour-dusk', title: 'Harbour Dusk', id: '1'.repeat(64) }),
+        tags: [
+          ...themeEvent({ d: 'harbour-dusk', title: 'Harbour Dusk', id: '1'.repeat(64) }).tags,
+          ['f', 'Playfair Display', '', 'body'],
+          ['f', 'Pacifico', '', 'title'],
+        ],
+      } as NostrEvent,
+    ];
+    await renderPicker();
+
+    const id = `nostr:${THEME_DEFINITION_KIND}:${AUTHOR}:harbour-dusk`;
+    const body = await screen.findByTestId(`theme-card-body-${id}`);
+    const name = screen.getByTestId(`theme-card-name-${id}`);
+
+    expect(body.style.fontFamily).toContain('Playfair Display');
+    expect(name.style.fontFamily).toContain('Pacifico');
+
+    // The face is declared for the PREVIEW only…
+    expect(document.getElementById('island-theme-preview-faces')?.textContent).toContain(
+      'playfair-display:vf',
+    );
+    // …and the app's own font variables are untouched until something is chosen.
+    expect(document.getElementById('island-theme-font')).toBeNull();
+  });
+
+  it('falls preview text back to the island type for a theme with no font', async () => {
+    stored = [themeEvent({ d: 'plain', title: 'Plain', id: '1'.repeat(64) })];
+    await renderPicker();
+    const id = `nostr:${THEME_DEFINITION_KIND}:${AUTHOR}:plain`;
+    expect((await screen.findByTestId(`theme-card-body-${id}`)).style.fontFamily).toContain(
+      'Comfortaa',
+    );
+  });
+});
+
 describe('creating a theme', () => {
   it('publishes a kind:36767 event and applies it', async () => {
     currentUser = fakeUser(ME);

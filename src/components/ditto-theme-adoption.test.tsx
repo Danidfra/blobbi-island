@@ -21,7 +21,11 @@ import { ACTIVE_THEME_KIND, hexToHslTriplet } from '@/lib/nostr-theme';
 import { DITTO_SETTINGS_D, NIP78_KIND } from '@/lib/ditto-settings';
 import { DITTO_ACTIVE_THEME_ID, resolveIslandTheme } from '@/lib/island-themes';
 import { useTheme } from '@/hooks/useTheme';
-import { THEME_BG_IMAGE_VAR } from '@/lib/island-theme-media';
+import {
+  FONT_BODY_VAR,
+  FONT_DISPLAY_VAR,
+  THEME_BG_IMAGE_VAR,
+} from '@/lib/island-theme-media';
 
 const ME = 'f'.repeat(64);
 const CONFIG_KEY = 'test-app-config';
@@ -98,8 +102,17 @@ const DITTO_THEME = {
     text: hexToHslTriplet('#f2f5fa'),
     primary: hexToHslTriplet('#5b8cff'),
   },
-  font: { family: 'Playfair Display', url: 'https://fonts.example/pf.woff2' },
-  titleFont: { family: 'Outfit', url: 'https://fonts.example/o.woff2' },
+  /*
+    NO URL — and that is the point.
+
+    Ditto's `FontPicker.handleSelect` stores `{ family }` alone, because Ditto
+    bundles its curated fonts and loads them with `import()`. A CDN link is
+    attached only when a theme is PUBLISHED. So this is the exact shape a real
+    Ditto account's encrypted settings carry, and the shape that used to leave
+    Island silently rendering Comfortaa.
+  */
+  font: { family: 'Playfair Display' },
+  titleFont: { family: 'Outfit' },
   background: { url: 'https://media.example/w.jpg', mode: 'cover' as const },
 };
 
@@ -128,7 +141,7 @@ function selfContainedActiveTheme(): NostrEvent {
       ['c', '#141a24', 'background'],
       ['c', '#f2f5fa', 'text'],
       ['c', '#5b8cff', 'primary'],
-      ['f', 'Playfair Display', 'https://fonts.example/pf.woff2', 'body'],
+      ['f', 'Playfair Display', '', 'body'],
       ['bg', 'url https://media.example/w.jpg', 'mode cover'],
       ['alt', 'Active profile theme'],
       ['title', 'Harbour Dusk'],
@@ -196,15 +209,25 @@ describe('a Ditto account with a theme, opened in Island', () => {
     });
     expect(root().style.getPropertyValue('--island-page')).toBe(DITTO_THEME.colors.background);
 
-    // 3. …the font is declared and pointed at…
+    // 3. …the body font is declared, fetched from the file Ditto would have
+    //    published, and pointed at by the variable every surface inherits…
     await waitFor(() => {
       expect(document.getElementById('island-theme-font')?.textContent).toContain(
-        '"Playfair Display"',
+        `${FONT_BODY_VAR}: "Playfair Display"`,
       );
     });
-    expect(document.getElementById('island-theme-font-faces')?.textContent).toContain(
-      'https://fonts.example/pf.woff2',
+    const faces = document.getElementById('island-theme-font-faces')!.textContent!;
+    expect(faces).toContain(
+      'https://cdn.jsdelivr.net/fontsource/fonts/playfair-display:vf@latest/latin-wght-normal.woff2',
     );
+    // A variable face needs its weight range or every bold label is synthetic.
+    expect(faces).toContain('font-weight: 100 900');
+
+    // 3b. …and the TITLE font drives the display variable, separately.
+    expect(document.getElementById('island-theme-font')!.textContent).toContain(
+      `${FONT_DISPLAY_VAR}: "Outfit"`,
+    );
+    expect(faces).toContain('outfit:vf');
 
     // 4. …and the wallpaper is applied to the page, not to the world.
     expect(root().style.getPropertyValue(THEME_BG_IMAGE_VAR)).toBe(

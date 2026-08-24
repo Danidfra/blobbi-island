@@ -9,6 +9,7 @@ import { StateCard } from "@/components/ui/state-card";
 import { Button } from "@/components/ui/button";
 import { RelaySelector } from "@/components/RelaySelector";
 import { islandThemeDeclarations, type IslandTheme } from "@/lib/island-themes";
+import { clearPreviewFonts, previewFontStack } from "@/lib/island-theme-media";
 import { useFullscreenPortalContainer } from "@/contexts/FullscreenPortalContext";
 import { useCommunityThemes, useMyThemes } from "@/hooks/useNostrThemes";
 import { contrastFailures } from "@/lib/island-theme-adapter";
@@ -82,6 +83,17 @@ function ThemeCard({
   // to THIS theme rather than to the active one.
   const scope = Object.fromEntries(islandThemeDeclarations(theme)) as React.CSSProperties;
 
+  /*
+    The theme's own type, scoped to the card.
+
+    A player could previously choose a theme without any hint that their whole
+    UI was about to change typeface. `previewFontStack` declares the face and
+    returns a `font-family` value; nothing global moves, so looking at a theme
+    still cannot restyle the island — only choosing it can.
+  */
+  const bodyFont = previewFontStack(theme.config?.font);
+  const displayFont = previewFontStack(theme.config?.titleFont ?? theme.config?.font);
+
   // A community theme is a stranger's three colours run through the adapter.
   // The adapter solves for contrast, but a genuinely impossible palette (a
   // mid-grey everything) can still come out short — so the card says so rather
@@ -123,8 +135,18 @@ function ThemeCard({
           {theme.emoji}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-island-ink">{theme.name}</span>
-          <span className="block line-clamp-2 text-xs leading-snug text-island-ink-soft">
+          <span
+            data-testid={`theme-card-name-${theme.id}`}
+            style={{ fontFamily: displayFont }}
+            className="block truncate text-sm font-semibold text-island-ink"
+          >
+            {theme.name}
+          </span>
+          <span
+            data-testid={`theme-card-body-${theme.id}`}
+            style={{ fontFamily: bodyFont }}
+            className="block line-clamp-2 text-xs leading-snug text-island-ink-soft"
+          >
             {theme.description || (theme.source === 'nostr' ? 'A theme from Nostr.' : '')}
           </span>
           {failures.length > 0 && (
@@ -204,7 +226,12 @@ export function ThemePicker({
     <>
       <BlobbiModal
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={(next) => {
+          // Preview faces are fetched to render the cards; there is no reason
+          // to keep sixty of them declared once nobody is looking at them.
+          if (!next) clearPreviewFonts();
+          onOpenChange(next);
+        }}
         container={container}
         size="lg"
         title="Themes"

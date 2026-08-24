@@ -217,7 +217,11 @@ function Header({
       ) : null}
 
       <div className="min-w-0 flex-1">
-        <TitleSlot className="truncate text-base font-bold leading-tight text-island-ink sm:text-lg">
+        {/* `island-display` is the opt-in for a theme's TITLE font (Ditto's
+            `titleFont`). A game window's title is display typography — the one
+            place in the frame where a decorative face belongs. The description
+            below it stays in the body font so it remains readable. */}
+        <TitleSlot className="island-display truncate text-base font-bold leading-tight text-island-ink sm:text-lg">
           {title}
         </TitleSlot>
         {description ? (

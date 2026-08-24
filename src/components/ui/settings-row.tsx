@@ -188,7 +188,7 @@ export function SettingsSection({
   return (
     <section className={cn("space-y-1.5", className)}>
       {label ? (
-        <h3 className="flex items-center gap-1.5 px-1 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
+        <h3 className="island-display flex items-center gap-1.5 px-1 text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
           {icon ? (
             <span aria-hidden className="[&_svg]:size-3.5">
               {icon}

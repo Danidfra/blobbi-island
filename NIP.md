@@ -410,9 +410,17 @@ republishes **both**:
   everything before the first space. `mode` is `cover` (centred, fixed,
   non-repeating) or `tile` (repeat at natural size); absent means `cover`.
 
-**Island renders the body font and the background image; `titleFont` is read,
-preserved and republished but not rendered**, because it styles a profile
-display name and the island has no such surface. The wallpaper is applied to the
+**Island renders the body font, the title font and the background image.** The
+title font maps to game-window titles and settings section headings — Ditto uses
+its `--title-font-family` for `<h2>` headings, sidebar labels and dialog titles,
+i.e. display typography generally rather than profile names alone.
+
+Note that a `f` tag's URL element is often **empty** in Ditto's own encrypted
+settings: Ditto bundles twenty-five curated families and only attaches a
+fontsource CDN link when *publishing*. A consuming client that treats a missing
+URL as "no font" will silently render its own type. Island keeps a mirror of that
+registry (`src/lib/theme-fonts.ts`) and fetches the file Ditto would have
+published. The wallpaper is applied to the
 page *around* the game window rather than to `body` wholesale — Town, Beach,
 Mine and the Arcade are drawn art, and a theme may dress the room the game sits
 in but not the game.

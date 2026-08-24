@@ -217,18 +217,30 @@ img {
     @apply bg-background text-foreground theme-transition;
   }
 
-  /* ---- Theme font ---------------------------------------------------------
-     A Nostr theme may carry a FONT (Ditto's `f` tag). `--island-font` defaults
-     to the island's own type and is overwritten by `island-theme-media.ts`
-     with a sanitised family plus this same stack as its fallback — so a theme
-     font that never loads leaves the game in Comfortaa rather than in whatever
-     the browser would otherwise pick. */
+  /* ---- Theme fonts --------------------------------------------------------
+     A Nostr theme may carry TWO fonts (Ditto's `f` tag, body and title roles).
+     Both default to the island's own type and are overwritten by
+     `island-theme-media.ts` with a sanitised family plus this same stack as the
+     fallback — so a theme font that never loads (dead host, offline, CORS
+     refusal) leaves the game in Comfortaa rather than in whatever the browser
+     would otherwise pick.
+
+       --island-font-body      inherited by every surface, from <html>
+       --island-font-display   window titles and section headings only
+
+     `html` is the ONLY place a family is declared. Setting it per component is
+     how a themeable app stops being themeable: a single hardcoded
+     `font-family: Comfortaa` on a shared primitive would silently pin every
+     surface below it. The one deliberate exception is `.font-mono`, applied to
+     hex addresses, event ids and filenames, where a proportional face makes the
+     value harder to read — see `docs/themes.md`. */
   :root {
-    --island-font: Comfortaa, system-ui, sans-serif;
+    --island-font-body: Comfortaa, system-ui, sans-serif;
+    --island-font-display: var(--island-font-body);
   }
 
   html {
-    font-family: var(--island-font);
+    font-family: var(--island-font-body);
   }
 
   /* ---- Theme background media ---------------------------------------------
@@ -252,6 +264,19 @@ img {
 }
 
 @layer components {
+  /*
+   * Display typography.
+   *
+   * The one opt-in for `--island-font-display`, so the set of surfaces a
+   * theme's title font can reach is a list of call sites rather than a guess.
+   * Applied to game-window titles and settings section headings; deliberately
+   * NOT to body copy, stat labels, button labels or the gameplay HUD, where a
+   * decorative face would cost legibility for no expressive gain.
+   */
+  .island-display {
+    font-family: var(--island-font-display);
+  }
+
   /* ------------------------------------------------------------------ *
    * Blobbi Island cozy components (light-only).
    * Legacy .blobbi-* names retained so existing call sites adopt the

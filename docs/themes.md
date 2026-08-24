@@ -188,10 +188,59 @@ happily renders.
 | Field | Island behaviour |
 | --- | --- |
 | `colors` | Expanded into the sixteen-colour palette by the adapter. |
-| `font` (body) | **Applied**, via `--island-font`, with the island's own Comfortaa stack as the fallback and `font-display: swap` — a dead font host leaves the game readable. |
-| `titleFont` | **Read, cached and republished, not rendered.** It styles a profile display name in Ditto; the island has no such surface, and inventing one would be guessing. Preserving it means editing a theme in Island does not silently delete it. |
+| `font` (body) | **Applied**, via `--island-font-body` on `<html>`, with the island's own Comfortaa stack as the fallback and `font-display: swap` — a dead font host leaves the game readable. |
+| `titleFont` | **Applied**, via `--island-font-display`, to game-window titles and settings section headings only. |
 | `background` | **Applied to the page around the game window only.** Ditto puts it on `body`, which suits a feed scrolling over it. Town, Beach, Mine and the Arcade are drawn art — a theme may dress the room the game sits in, never the game. Both of Ditto's modes (`cover`, `tile`) are honoured. |
 | `dimensions`, `mimeType`, `blurhash` | Read and republished; not used for rendering. Island has no progressive-load placeholder to spend a blurhash on. |
+
+#### Fonts: the URL Ditto does not send
+
+Ditto **bundles** twenty-five curated families and loads them with a dynamic
+`import()`. Its `FontPicker` therefore stores the family ALONE:
+
+```ts
+applyFont({ family });   // ditto/src/components/FontPicker.tsx — handleSelect
+```
+
+A URL appears only when a theme is *published*, where `resolveFontUrl`
+substitutes the fontsource CDN link. But Island prefers kind:30078 — the channel
+Ditto renders from — and that holds the unpublished value. So Island received
+`{ family: 'Playfair Display' }`, correctly declined to invent a URL, and the
+browser fell straight through to Comfortaa because Playfair Display is not
+installed on a normal machine. **Indistinguishable from no font at all**, which
+is exactly what manual testing found.
+
+`src/lib/theme-fonts.ts` mirrors Ditto's registry and supplies the same file
+Ditto would have published. Precedence: the theme's own URL, then the registry —
+and an explicit URL that fails validation falls back to the registry rather than
+costing the theme its font.
+
+Variable faces are declared `font-weight: 100 900`. Without it a variable
+`.woff2` matches 400 only, and the island's hundreds of `font-bold` labels get a
+synthetic smear instead of the file's real bold axis.
+
+#### The font cascade
+
+One declaration site, one inherited variable:
+
+```
+  html { font-family: var(--island-font-body) }      ← the ONLY family rule
+     ↓ inherited by body, #root, every component
+  .island-display { font-family: var(--island-font-display) }   ← opt-in
+```
+
+A component that sets its own `font-family` becomes a hole a theme cannot reach,
+and nothing looks wrong until a themed player opens it. `theme-fonts.test.ts`
+fails the build on a new one. The deliberate exceptions:
+
+| Exception | Why |
+| --- | --- |
+| `.font-mono` on hex addresses, event ids, filenames | A proportional face makes those genuinely harder to read. No theme should change them. |
+| `NostrHubModal` title | A glowing monospace terminal treatment — art direction, the same category as an arcade cabinet's display. |
+| Theme preview cards and the create-theme preview | Scoped previews, which is the point of them. |
+
+`font-bold` / `font-semibold` / `font-medium` are **weight**, not family, and are
+untouched.
 
 ## 6. Implementation
 
@@ -344,10 +393,43 @@ whether it works.
 | Create + publish a theme in Island, reload Ditto | colours, font and background all present |
 | Check Ditto's other settings afterwards | feed settings, filters, relays unchanged |
 
+### Diagnosing a font that does not change
+
+Fonts are the one theme field that can fail *outside* the app — a host that
+refuses cross-origin requests is not something Island can fix. This sequence
+separates "Island did not apply it" from "the host would not serve it".
+
+With DevTools open on a theme that has a custom body font:
+
+| # | Where | Expect |
+| --- | --- | --- |
+| 1 | Elements → `<html>` → Computed → `font-family` | the theme's family FIRST, then `Comfortaa, system-ui, sans-serif` |
+| 2 | Elements → `<head>` → `<style id="island-theme-font">` | `--island-font-body: "<Family>", Comfortaa, …` |
+| 3 | `<style id="island-theme-font-faces">` | one `@font-face` with an `https://` `src` and `font-display: swap` |
+| 4 | A modal title (`.island-display`) | the TITLE font when the theme sets one, else the body font |
+| 5 | Ordinary paragraph text, an Account-menu row, a button label | all the body font — a button showing Comfortaa while `<html>` shows the theme font means something re-declared the family |
+| 6 | Network → filter `Font` | one request for the `@font-face` URL |
+| 7 | That request's **Status** | `200`. A `404` means the URL is wrong |
+| 8 | That request's response headers | `access-control-allow-origin`. Missing ⇒ the host refuses cross-origin use |
+| 9 | Console | a CORS or `downloadable font` error names the failing host |
+
+Reading the result:
+
+- **1–3 correct, 6 shows no request** → the family resolved to no URL. It is not
+  one of Ditto's curated families and the theme did not carry a link.
+- **1–3 correct, 7 is 200, but text is unchanged** → the file downloaded and the
+  browser rejected it (wrong format, corrupt). Console step 9 says so.
+- **1–3 correct, 8 missing** → the host's CORS policy. Not an Island bug; the
+  fallback is working as intended.
+- **1 shows only `Comfortaa`** → Island did not apply it. That is a bug here.
+- **1 correct but 5 shows Comfortaa on some element** → that component
+  re-declares `font-family`. `theme-fonts.test.ts` should have caught it.
+
 **Resilience**
 
 | Condition | Expected |
 | --- | --- |
+| Font host down / CORS refused | UI stays in Comfortaa and remains readable; no retry storm, no user-facing error |
 | Relay offline at boot | last theme still painted, selection remembered |
 | Corrupt palette cache | default palette, selection remembered |
 | Selected definition deleted | cached palette retained, notice only if never cached |
@@ -369,6 +451,7 @@ adapter's contrast contract. What still needs eyes:
 | Publish | appears under "Yours" and applies; republishing the same name replaces |
 | A theme published from Ditto | appears in the community list and renders |
 | A theme with a font | body type changes; a dead font URL leaves Comfortaa |
+| A theme with a title font | window titles + settings headings change; body copy does not |
 | A theme with a background image | dresses the page around the frame; the world art is untouched |
 | Stage background | picker lists both; switching does not remount the world |
 | Bag shortcut (🎒) | opens My Blobbi on Inventory, not a second window |
