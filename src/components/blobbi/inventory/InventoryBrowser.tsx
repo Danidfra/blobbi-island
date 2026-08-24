@@ -79,6 +79,21 @@ const CATEGORY_ICONS: Readonly<Record<CollectionCategory, React.ElementType>> = 
 
 export interface InventoryBrowserProps {
   characterId: string | undefined;
+  /**
+   * Which categories this browser is responsible for.
+   *
+   * The window shows wearables in the WARDROBE and everything else in ITEMS,
+   * because wearing a hat and eating a sandwich are not the same activity —
+   * one is customization with the Blobbi as feedback, the other is care. One
+   * collection model still backs both (`useInventoryCollection`); this is the
+   * lens each surface looks at it through.
+   */
+  categories?: readonly CollectionCategory[];
+  /** Hide the chip strip when the surface has only one category to show. */
+  hideCategoryStrip?: boolean;
+  /** Copy for the empty state, when the surface's own wording fits better. */
+  emptyTitle?: string;
+  emptyMessage?: string;
   /** Current Blobbi form/stage; gates form-restricted cosmetics. */
   form?: string | undefined;
   /** Blobbi id, for the consume flow. */
@@ -100,6 +115,10 @@ export interface InventoryBrowserProps {
 export function InventoryBrowser({
   characterId,
   form,
+  categories: allowed,
+  hideCategoryStrip = false,
+  emptyTitle,
+  emptyMessage,
   selectedSlot,
   onSelectSlot,
   pendingUpdates = {},
@@ -111,7 +130,22 @@ export function InventoryBrowser({
   isPublishing = false,
   className,
 }: InventoryBrowserProps) {
-  const collection = useInventoryCollection({ characterId, form });
+  const full = useInventoryCollection({ characterId, form });
+  // The collection, narrowed to what this surface is responsible for.
+  const collection = useMemo(() => {
+    if (!allowed) return full;
+    const entries = full.entries.filter((e) => allowed.includes(e.category));
+    return {
+      ...full,
+      entries,
+      categories: full.categories.filter((c) => allowed.includes(c)),
+      // The wearables surface owns the cosmetic diagnostics; the items surface
+      // has nothing to say about a hat it does not show.
+      unavailable: allowed.includes('wearable') ? full.unavailable : [],
+      warnings: allowed.includes('wearable') ? full.warnings : [],
+    };
+  }, [full, allowed]);
+
   const [category, setCategory] = useState<CollectionCategory | 'all'>('all');
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   const [consumeOpen, setConsumeOpen] = useState(false);
@@ -240,18 +274,24 @@ export function InventoryBrowser({
         <StateCard
           kind="empty"
           compact
-          title={collection.catalogIsEmpty ? 'Nothing to collect yet' : 'Your bag is empty'}
+          title={
+            emptyTitle ??
+            (collection.catalogIsEmpty ? 'Nothing to collect yet' : 'Your bag is empty')
+          }
           message={
-            collection.catalogIsEmpty
+            emptyMessage ??
+            (collection.catalogIsEmpty
               ? 'Items appear here once the official issuer publishes them — nothing is shown from local data.'
-              : 'Buy something from the shop and it will show up here.'
+              : 'Buy something from the shop and it will show up here.')
           }
         />
       ) : (
         <>
           {/* ── Category strip ─────────────────────────────────────────────
               A filter over one grid, not headings over stacked sections. A
-              category with nothing in it is not offered. */}
+              category with nothing in it is not offered, and a surface with
+              only one category does not need a filter at all. */}
+          {!hideCategoryStrip && collection.categories.length > 1 && (
           <div
             role="tablist"
             aria-label="Item categories"
@@ -275,6 +315,7 @@ export function InventoryBrowser({
               />
             ))}
           </div>
+          )}
 
           <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:items-start">
             {/* ── The grid ──────────────────────────────────────────────── */}
@@ -573,7 +614,7 @@ function ItemDetail({
 
       {entry.action === 'none' && (
         <p className="text-xs text-island-ink-soft">
-          Spend it in the shop — it is not something your Blobbi can use directly.
+          Spend it in the shop, it is not something your Blobbi can use directly.
         </p>
       )}
     </div>

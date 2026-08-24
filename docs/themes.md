@@ -359,6 +359,7 @@ For **each theme** (`cozy-day`, `lantern-night`):
 | A dialog (Elevator, Arcade Pass, No Pass) | panel, plaque, buttons, close |
 | A bottom sheet (any modal at < 768px) | safe area, drag handle, close |
 | Shop / economy | prices, coin balance, the accent purchase button |
+| My Blobbi → Wardrobe | clothing + effects, Blobbi visible beside them |
 | My Blobbi → Items | one grid, category chips, detail panel, empty state |
 | My Blobbi stage | backdrop fills the box with no crop; the Blobbi stands on the floor |
 | Mine, Arcade, Beach | overlays over their own art |

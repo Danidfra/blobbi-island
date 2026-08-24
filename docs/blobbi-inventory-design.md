@@ -119,7 +119,86 @@ Both argue against the shadcn-cards-in-a-modal look the island had.
 
 ---
 
-## 4. Manual visual checklist
+## 4. Second pass: splitting the collection
+
+The first pass consolidated two duplicate *windows* into one Items tab. Manual
+review found that it had also merged two different *activities*.
+
+**Wearing a hat is customization; eating a sandwich is care.** One has the
+Blobbi as its feedback loop and wants the pet visible beside it; the other is a
+bag you reach into. Merged, a player looking for a hat scrolled past sandwiches,
+and a player feeding a hungry Blobbi scrolled past hats.
+
+So the window is now:
+
+```
+  Blobbi      the pet — mood, needs, progression, character, scene
+  Wardrobe    everything that changes how it LOOKS: clothing + effects
+  Items       everything you can USE or spend: food, toys, care, coins
+```
+
+**Effects stopped being a top-level tab.** An effect is plainly a kind of
+appearance, and a three-tab window spending a third of its primary navigation on
+four aura slots was over-weighting them. They are the second half of the
+Wardrobe's segmented control — one strip of two buttons, not a second level of
+`<Tabs>`.
+
+`useInventoryCollection` was **not** undone: it still merges wearables and
+carried items into one model. What changed is that each surface looks at it
+through a `categories` lens. One model, two lenses, two activities.
+
+### Virtual-pet reference study (the Blobbi tab)
+
+| Reference | What works | Blobbi borrows | Blobbi does NOT copy |
+| --- | --- | --- | --- |
+| **Webkinz** | Meters sit *next to the avatar*, not in a separate panel; a small fixed set (happiness / hunger / energy) plus a care heart | Needs as icon-led meters, read beside the pet | The care-heart scoring economy, and its four-meter cap |
+| **Tamagotchi-style pets** | The pet's *state* is the interface — one glanceable mood, and everything else is secondary | One mood headline as the hero, chosen by precedence | Obscuring numbers entirely; Blobbi's owners want the values |
+| **Neopets** | Compact character descriptors as collectible flavour | Personality / trait / mood as chips | Raw stat tables and battle numbers |
+| **General game-UI guidance** | Status bars that update in real time "without cluttering the UI"; critical info above secondary detail | Bars carry the meaning, numbers are small and secondary | Equal visual weight for "starving" and "generation 2" |
+
+**Principles applied to the Blobbi tab**
+
+1. **One headline.** A pet has a mood. `blobbiMood` picks it by precedence —
+   asleep, then the urgent need, then the condition — from state that already
+   existed. No new calculation, no new threshold.
+2. **Needs are meters, not a table.** Icon, word, bar, small number. Generated
+   from one list so a need cannot be dropped or mislabelled.
+3. **Meters agree with urgency.** `needLevel` uses `getStatUrgency`'s own
+   boundaries, so a bar that looks fine while the headline says "Hungry" is
+   impossible.
+4. **Progression looks like progression** — three trophies, not a definition
+   list. And **no fake level**: the game has raw XP and no thresholds, so
+   drawing a progress bar would mean inventing a ceiling.
+5. **Character is chips**, one per value. The model stores `string | string[]`
+   and the old card joined arrays with commas — a database field printed
+   verbatim.
+
+### The Blobbi owns its stage
+
+The banner felt huge and the Blobbi small because the renderer box was **128
+fixed pixels** (`size="xl"`) inside a stage roughly 540px tall — under a quarter
+of the height. The previous pass had made the stage bigger to fix a crop bug and
+the Blobbi had not grown with it.
+
+The box is now a **fraction of the stage** (`h-[46%]` of a 2:3 scene, so about
+69% of its width), which also removes the need for a viewport breakpoint: the
+protagonist is the same size relative to its scene on a phone and on a desktop.
+
+This is safe because *everything the renderer paints is already a percentage of
+that box* — accessory x/y, accessory base size (`ACCESSORY_BASE_RATIO`), every
+effect polygon — so the Blobbi and everything on it scale as **one unit**. The
+placement overlay's drag maths is rect-relative for the same reason. No
+accessory-by-accessory compensation exists, or is needed. `size="xl"` is still
+passed: it remains the token the renderer reports; only the box is overridden,
+through the override the size table already sanctions.
+
+The stage itself got **narrower** (38%→32%, and 24% on Items where a grid of
+food gains nothing from a large portrait), so the two changes pull the same way:
+background as context, Blobbi as protagonist.
+
+---
+
+## 5. Manual visual checklist
 
 Browser automation is unavailable in this environment, so the checks below have
 **not** been performed. They are what to walk when it is.
@@ -130,56 +209,66 @@ Browser automation is unavailable in this environment, so the checks below have
 | --- | --- |
 | Click your own Blobbi in the world | My Blobbi opens on the **Blobbi** tab |
 | Press "My Blobbi" in the bottom dock | the same window, same tab |
-| Look at the upper-right corner of the island | Arcade pass / ticket chip only — **no 🎒** |
-| Click somebody else's Blobbi | read-only: the Blobbi tab alone, no Items, no Effects, no background control |
+| Upper-right corner of the island | Arcade chips only — **no 🎒** |
+| Click somebody else's Blobbi | read-only: the Blobbi tab alone |
 
-### Blobbi tab
-
-| Check | Expect |
-| --- | --- |
-| Badge row | stage · generation, condition, and Coins on the right |
-| A Blobbi that needs something | one alert naming the need — and **not** repeated below |
-| "How they are doing" | five stat bars, two columns from `sm` up |
-| "About them" | XP, streak, personality, trait, mood as a two-column list |
-| "Appearance" | a row with a backdrop thumbnail, its name, and a chevron |
-| Press it | the background picker opens; choosing one repaints the stage immediately |
-| A very long Blobbi name | truncates in the window title, never wraps the header |
-
-### Items tab
+### Blobbi tab — does it feel like a pet?
 
 | Check | Expect |
 | --- | --- |
-| First open | grid of artwork, `All` chip selected, "Pick something…" prompt |
-| Chips | only categories you actually own; counts match |
-| Tap a wearable | detail shows slot, count, description; one **Wear it** button |
-| Wear it | the Blobbi changes on the stage; the tile gains a `Worn` mark |
-| Tap the worn item | **Take it off**, plus Size/Tilt sliders and a Save button once dragged |
-| Drag it on the stage | position follows; Save publishes once |
-| Tap a food/care item | **Use it** → the shared consume dialog |
-| Tap a coin/ticket | no verb, an explanation instead |
-| Empty inventory | "Your bag is empty" |
-| Many items (20+) | grid scrolls; the tab strip and stage stay put |
+| **The Blobbi dominates its stage** | roughly half the stage height, the backdrop framing it rather than dwarfing it |
+| Mood headline | one line — "Feeling great", "Hungry", "Needs a wash" — with a face, at the top |
+| A neglected Blobbi | the headline turns loud, names the need, and suggests the fix |
+| A sleeping Blobbi | "Fast asleep", and nothing else claims priority |
+| Needs | five icon-led bars, green / amber / red, numbers small |
+| Very low need | the number goes bold and red as well as the bar — never colour alone |
+| Progression | three trophies: XP, streak, generation + stage. **No fake level bar** |
+| Character | one chip per personality/trait/mood, never a comma-joined string |
+| Appearance row | backdrop thumbnail + name + chevron; opens the picker |
 
-### Effects tab
+### Wardrobe
 
 | Check | Expect |
 | --- | --- |
-| Owned / active / previewing / unavailable | four visibly different states, none by colour alone |
-| Preview | the Blobbi changes; leaving the tab restores it |
-| Equip over an occupied slot | the card says which effect will be replaced, and the button reads **Replace** |
+| Clothing / Effects strip | two buttons, one selected, no nested tab chrome |
+| Blobbi visible beside it | yes, at full size |
+| Select a wearable | detail panel: slot, count, description, **Wear it** |
+| Wear it | the Blobbi changes on the stage **immediately** |
+| The worn tile | gains a "Worn" mark and a green rim |
+| Select the worn item | **Take it off**, plus Size / Tilt |
+| Drag it on the Blobbi | it follows; Save publishes once |
+| **Hat / glasses / necklace alignment** | unchanged at the new larger size — nothing drifts, detaches or floats |
+| Effects half | preview draws on the real Blobbi; Activate / Remove |
+| Leave Effects | the preview ends and the persisted look returns |
+| No food, no coins anywhere in the Wardrobe | correct |
+
+### Items
+
+| Check | Expect |
+| --- | --- |
+| Grid | food, toys, care, coins — **no wearables** |
+| Chips | only appear when more than one category is owned |
+| Stage | visibly smaller here than on the other tabs, and does not jump jarringly |
+| Select a food item | description, quantity, **Use it** → consume dialog |
+| Select a coin/ticket | no verb, an explanation |
 
 ### Responsive
 
 | Viewport | Expect |
 | --- | --- |
-| Desktop | stage left, tabs right; detail panel beside the grid from `lg` |
-| Mobile portrait | sheet; stage ~30dvh on top, tabs under it, detail **below** the grid |
-| Mobile landscape | stage and tabs side by side; no horizontal scroll |
-| All | one scroll region — the tab content — and the tab strip always reachable |
+| Desktop | stage left (~30%), tabs right; detail beside the grid from `lg` |
+| Mobile portrait | stage ~26dvh on top and **not clipped**; tabs immediately reachable; Blobbi still large enough to read |
+| Mobile portrait, Items | stage drops to ~18dvh; the grid gets the room |
+| Mobile landscape | stage and content side by side; no horizontal scroll |
+| All | one scroll region; the tab strip never scrolls away |
 
-### Themes
+### Forms, art and themes
 
-Walk the Items tab in **Cozy Day**, **Lantern Night**, and one community theme
-with a custom font. Item artwork is art and does not change; every frame, chip,
-badge and button must follow the palette, and the window title must pick up a
-theme's display font.
+Walk the Blobbi and Wardrobe tabs for:
+
+- a **baby** Blobbi and an **adult** one — both should fill the stage similarly;
+- with a wearable on, and with an effect active;
+- the **default** stage background and **Island Sky**;
+- **Cozy Day**, **Lantern Night**, and one community theme with a custom font —
+  every frame, chip, meter and trophy follows the palette; the window title and
+  the mood headline pick up the display font.

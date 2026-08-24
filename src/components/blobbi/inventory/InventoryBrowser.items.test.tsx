@@ -77,7 +77,9 @@ describe('carried items are reachable', () => {
     expect(await screen.findByText('Vitamins')).toBeInTheDocument();
     expect(screen.getByText('Soap')).toBeInTheDocument();
     expect(screen.getByText('Energy Drink')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Care/ })).toBeInTheDocument();
+    // All three sit under one `Care` chip — but a surface showing a SINGLE
+    // category offers no filter at all, so the strip is absent here.
+    expect(screen.queryByRole('tablist', { name: 'Item categories' })).toBeNull();
   });
 
   it('opens the consume modal from the selected item', async () => {
@@ -153,7 +155,6 @@ describe('currency', () => {
     renderWithTickets(7);
     expect(await screen.findByText('Arcade Ticket')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Coins/ })).toBeInTheDocument();
   });
 
   it('offers NO consumable action for the ticket', async () => {

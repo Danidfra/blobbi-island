@@ -1,30 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
-import {
-  AlertTriangle,
-  ChevronRight,
-  Droplets,
-  Heart,
-  Image as ImageIcon,
-  Package,
-  PawPrint,
-  Shield,
-  Sparkles,
-  Star,
-  Wand2,
-  Zap,
-} from 'lucide-react';
+import { ChevronRight, Package, PawPrint, Shirt } from 'lucide-react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
 import { BlobbiStageBackdrop, StageBackgroundSwatch } from './BlobbiStageBackdrop';
 import { StageBackgroundPicker } from './StageBackgroundPicker';
-import { EffectsPanel } from './EffectsPanel';
 import { InventoryBrowser } from './inventory/InventoryBrowser';
+import { WardrobePanel } from './inventory/WardrobePanel';
+import { MoodHero, NeedMeters, ProgressionStrip, TraitChips } from './PetCard';
 import { PlacementOverlay } from './PlacementOverlay';
 import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
@@ -38,9 +24,9 @@ import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
 import { CoinAmount } from './CoinAmount';
 import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { STAGE_ASPECT_RATIO, resolveStageBackground } from '@/lib/blobbi-stage-backgrounds';
+import type { CollectionCategory } from './inventory/useInventoryCollection';
 import { useStageBackground } from '@/hooks/useStageBackground';
 import { dbg } from '@/lib/debug';
-import type { CareUrgency } from '@/lib/blobbi-types';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import type { BlobbiVisual } from '@/lib/multiplayer';
@@ -60,43 +46,16 @@ const TAB_TRIGGER =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ' +
   'focus-visible:ring-offset-1 focus-visible:ring-offset-island-cream-2 sm:text-sm';
 
-const PANEL = 'rounded-xl border border-island-wood/20 bg-island-cream p-2 shadow-cozy-soft';
+const PANEL = 'rounded-panel border border-island-wood/20 bg-island-cream p-2 shadow-cozy-soft';
 
 /**
- * A titled block inside a tab.
+ * What the Items tab is responsible for: everything you can USE or spend.
  *
- * The Inventory tab now holds two of these — what your Blobbi can WEAR and what
- * you are CARRYING — and without a shared heading treatment they read as two
- * unrelated widgets stacked by accident. The header carries an icon and an
- * optional count so a glance answers "how much is in here" before any
- * scrolling.
+ * Wearables are deliberately absent — they live in the Wardrobe, beside the
+ * Blobbi they go on. One collection model still backs both surfaces.
  */
-function TabSection({
-  icon: Icon,
-  title,
-  hint,
-  children,
-}: {
-  icon: React.ElementType;
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-2">
-      <div className="flex items-baseline gap-2 px-0.5">
-        <Icon aria-hidden className="size-3.5 shrink-0 translate-y-0.5 text-island-wood-dark" />
-        <h3 className="text-[0.6875rem] font-bold uppercase tracking-wider text-island-ink-soft">
-          {title}
-        </h3>
-        {hint ? (
-          <span className="ml-auto truncate text-[0.6875rem] text-island-ink-soft/80">{hint}</span>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
+const ITEM_CATEGORIES: readonly CollectionCategory[] = ['food', 'toy', 'care', 'currency'];
+
 interface BlobbiInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -107,7 +66,7 @@ interface BlobbiInfoModalProps {
    * player picks one.
    */
   backgroundKey?: string;
-  defaultTab?: 'primary' | 'inventory' | 'effects';
+  defaultTab?: 'primary' | 'wardrobe' | 'items';
   readOnly?: boolean;
   previewKey?: string;
   externalBlobbiData?: {
@@ -130,66 +89,6 @@ interface BlobbiInfoModalProps {
 }
 
 
-
-function getUrgencyVariant(urgency: CareUrgency): "default" | "destructive" | "outline" | "secondary" {
-  switch (urgency) {
-    case 'critical':
-    case 'high':
-      return 'destructive';
-    case 'medium':
-      return 'secondary';
-    case 'low':
-      return 'outline';
-    case 'none':
-    default:
-      return 'default';
-  }
-}
-
-function StatDisplay({
-  label,
-  value,
-  max = 100,
-  icon: Icon,
-  className
-}: {
-  label: string;
-  value: number;
-  max?: number;
-  icon: React.ElementType;
-  className?: string;
-}) {
-  const percentage = Math.max(0, Math.min(100, (value / max) * 100));
-
-  return (
-    <div className={cn("space-y-1", className)}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <Icon className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs font-medium">{label}</span>
-        </div>
-        <span className="text-xs text-muted-foreground">{value}/{max}</span>
-      </div>
-      <Progress value={percentage} className="h-1.5" />
-    </div>
-  );
-}
-
-/**
- * One labelled fact in the "About them" list.
- *
- * A `<dl>` row rather than another bordered card. The five facts it holds used
- * to occupy two separate cards with header bands — roughly 90px of chrome for
- * five short strings.
- */
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-[0.6875rem] font-medium text-island-ink-soft">{label}</dt>
-      <dd className="truncate text-xs font-semibold text-island-ink">{value}</dd>
-    </div>
-  );
-}
 
 export function BlobbiInfoModal({
   isOpen,
@@ -236,7 +135,7 @@ export function BlobbiInfoModal({
   // The same policy-filtered accessories the world draws, so the editor and the
   // world can never disagree about what is worn.
   const { accessories, definitionsByAddress } = useCharacterEquipmentContext();
-  const [selectedTab, setSelectedTab] = useState<'primary' | 'inventory' | 'effects'>(readOnly ? 'primary' : defaultTab);
+  const [selectedTab, setSelectedTab] = useState<'primary' | 'wardrobe' | 'items'>(readOnly ? 'primary' : defaultTab);
   /**
    * Effect PREVIEW state — purely visual, never persisted. Non-null while the
    * player is previewing an effect from the Effects tab; drawn through the
@@ -454,12 +353,29 @@ export function BlobbiInfoModal({
               control that changes the scene. */}
           <div
             data-testid="blobbi-stage-column"
-            /* The stage is the centrepiece, so it gets a THIRD of a phone's
-               height and a fixed share of the width from `sm` up. It was
-               `sm:flex-1` alongside an explicit width, which let the flex
-               algorithm hand it whatever was left over and made its size depend
-               on how much content the active tab happened to have. */
-            className="flex h-[30dvh] min-h-0 shrink-0 items-center justify-center sm:h-auto sm:w-[38%] lg:w-[36%]"
+            /*
+              The stage frames the Blobbi; it does not compete with it.
+
+              NARROWER than it was (38%→32% at `sm`, 36%→30% at `lg`), and on a
+              phone a quarter of the height rather than a third. Both changes
+              are the same decision from two directions: the previous pass made
+              the stage bigger to fix a crop bug, and the Blobbi inside it did
+              not grow with it — so the backdrop became the subject. Now the
+              Blobbi is a fraction of the stage, so shrinking the stage does not
+              shrink the protagonist relative to its scene; it just gives the
+              content beside it more room.
+
+              On the ITEMS tab the stage steps down further: a grid of things you
+              can eat gains nothing from a large portrait, and the extra width is
+              worth more there than the picture is.
+            */
+            className={cn(
+              'flex min-h-0 shrink-0 items-center justify-center transition-[width,height] duration-200 ease-cozy',
+              'motion-reduce:transition-none',
+              selectedTab === 'items'
+                ? 'h-[18dvh] sm:h-auto sm:w-[24%] lg:w-[22%]'
+                : 'h-[26dvh] sm:h-auto sm:w-[32%] lg:w-[30%]',
+            )}
           >
             {/*
               THE STAGE BOX, and the geometry fix.
@@ -492,17 +408,40 @@ export function BlobbiInfoModal({
                 <div className="absolute inset-0 bg-gradient-to-t from-island-ink/10 to-transparent" />
               </div>
 
-              {/* Static Blobbi - z-10, centered horizontally, anchored to bottom */}
-              <div className="absolute inset-0 z-10 flex justify-center items-end pb-[5%]">
-                <div ref={stageRef} className="relative">
+              {/*
+                THE BLOBBI, and the size fix.
+
+                Its box is a FRACTION OF THE STAGE (`h-[46%]` of a 2:3 scene, so
+                ~69% of its width) rather than a fixed 128px. It used to be
+                `size="xl"` — 128 real pixels inside a ~540px-tall desktop stage,
+                which is under a quarter of the height: the backdrop was the
+                subject and the Blobbi was a detail in it. A fraction also means
+                one rule covers every viewport, with no breakpoint: the
+                protagonist is the same size relative to its scene on a phone and
+                on a desktop.
+
+                Safe because everything the renderer paints is already expressed
+                in percentages OF this box — accessory x/y, accessory base size,
+                every effect shape — so the Blobbi and everything on it scale as
+                ONE unit. `size="xl"` is still passed: it is the token the
+                renderer reports and the fallback text sizes from, and only the
+                BOX is overridden.
+
+                `stageRef` is this element, which now IS the renderer box rather
+                than a shrink-wrap around it — so the placement overlay's
+                percentage space is still exactly the box, by construction.
+              */}
+              <div className="absolute inset-0 z-10 flex items-end justify-center pb-[7%]">
+                <div ref={stageRef} className="relative aspect-square h-[46%]">
                   <CurrentBlobbiPreview
                     key={`preview:${previewKey}`}
                     size="xl"
+                    className="h-full w-full transform-gpu"
+                    boxClassName="h-full w-full"
                     showFallback={true}
                     isSleeping={blobbiData.isSleeping}
                     isStaticPreview={true}
-                    showAccessories={selectedTab !== 'inventory'}
-                    className="transform-gpu"
+                    showAccessories
                     /* Read-only = someone else's Blobbi. No `accessoryOverride`
                        is passed because this modal has not fetched their
                        equipment, so the honest render is a bare Blobbi. It used
@@ -525,7 +464,7 @@ export function BlobbiInfoModal({
                       exactly the preview's renderer box (its only child), so
                       the overlay's inset-0 percentage space IS the canonical
                       renderer box — the same space the world renderer uses. */}
-                  {!readOnly && selectedTab === 'inventory' && (
+                  {!readOnly && selectedTab === 'wardrobe' && (
                     <PlacementOverlay
                       className="absolute inset-0 z-20"
                       accessories={accessories}
@@ -548,11 +487,11 @@ export function BlobbiInfoModal({
             <Tabs
               value={selectedTab}
               onValueChange={(value) => {
-                setSelectedTab(value as 'primary' | 'inventory' | 'effects');
-                // Leaving the Effects tab ends any preview: the stage must
+                setSelectedTab(value as 'primary' | 'wardrobe' | 'items');
+                // Leaving the Wardrobe ends any effect preview: the stage must
                 // always show the persisted state unless the player is
                 // actively previewing.
-                if (value !== 'effects') setPreviewEffects(null);
+                if (value !== 'wardrobe') setPreviewEffects(null);
               }}
               className="flex flex-col h-full"
             >
@@ -570,15 +509,15 @@ export function BlobbiInfoModal({
                   Blobbi
                 </TabsTrigger>
                 {!readOnly && (
-                  <TabsTrigger value="inventory" className={TAB_TRIGGER}>
-                    <Package aria-hidden className="mr-1.5 size-4" />
-                    Items
+                  <TabsTrigger value="wardrobe" data-testid="wardrobe-tab" className={TAB_TRIGGER}>
+                    <Shirt aria-hidden className="mr-1.5 size-4" />
+                    Wardrobe
                   </TabsTrigger>
                 )}
                 {!readOnly && (
-                  <TabsTrigger value="effects" data-testid="effects-tab" className={TAB_TRIGGER}>
-                    <Wand2 aria-hidden className="mr-1.5 size-4" />
-                    Effects
+                  <TabsTrigger value="items" className={TAB_TRIGGER}>
+                    <Package aria-hidden className="mr-1.5 size-4" />
+                    Items
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -591,129 +530,58 @@ export function BlobbiInfoModal({
                   each other on a phone. */}
               <div className="min-h-0 h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-track-transparent">
                 {/*
-                  Primary — the HOME tab for this Blobbi.
+                  Blobbi — the pet card.
 
-                  Three groups, in the order a player asks the questions: who is
-                  this, how are they doing, and what is around them. It was six
-                  stacked bordered cards, each with its own header band, and
-                  four facts appeared twice: `condition` in the badge row AND in
-                  Care Status, `urgency` and `urgentNeed` in Care Status AND in
-                  the alert above it, `generation` in the badge row AND in
-                  Progress. Nothing was deleted — the duplicates were merged
-                  into the one place each fact belongs.
+                  One headline, five needs, three trophies, some character, and
+                  the scene control. It used to be a badge row, an alert, a
+                  five-row stat table under a heading, and a two-column
+                  definition list — every fact present, correctly grouped, and
+                  reading like a profile analytics panel. See `PetCard.tsx` for
+                  what the reference study changed and why.
                 */}
                 <TabsContent value="primary" className="mt-3 space-y-4 pb-2 focus-visible:outline-none">
-                  {/* ── Overview ──────────────────────────────────────────── */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline" className="blobbi-badge text-xs capitalize">
-                      {blobbiData.stage} · Gen {blobbiData.generation}
-                    </Badge>
-                    <Badge
-                      className="blobbi-badge capitalize"
-                      variant={getUrgencyVariant(careStatus?.urgency || 'none')}
-                    >
-                      {careStatus?.condition || 'Unknown'}
-                    </Badge>
-                    {blobbiData.isSleeping && (
-                      <Badge variant="secondary" className="blobbi-badge">
-                        Asleep
-                      </Badge>
-                    )}
-                    {!readOnly && (
-                      <span className="ml-auto" data-coin-hud>
-                        {economyEntry.phase === 'checking' ||
-                        economyEntry.phase === 'applying' ||
-                        coinBalance.isLoading ? (
-                          <CoinAmount amount={null} loading className="text-sm" />
-                        ) : economyEntry.phase === 'ambiguous' ? (
-                          <span role="status" className="text-xs font-medium text-island-ink-soft">
-                            Confirming your Coin balance…
-                          </span>
-                        ) : coinBalance.isError ? (
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-island-ink-soft underline"
-                            onClick={() => coinBalance.refetch()}
-                          >
-                            Balance unavailable — tap to retry
-                          </button>
-                        ) : (
-                          <CoinAmount
-                            amount={coinBalance.balance}
-                            className="text-sm"
-                            aria-label={`${coinBalance.balance} Blobbi Coins`}
-                          />
-                        )}
-                      </span>
-                    )}
-                  </div>
+                  <MoodHero care={careStatus} stats={blobbiData} />
 
-                  {/* The one urgent thing, if there is one. It carries the
-                      need, so Care Status no longer restates it. */}
-                  {careStatus?.urgentNeed && careStatus.urgency !== 'none' && (
-                    <div
-                      role="status"
-                      className="flex items-center gap-2 rounded-panel border border-island-danger/30 bg-island-danger/10 p-2.5 text-xs text-island-danger"
-                    >
-                      <AlertTriangle aria-hidden className="size-4 shrink-0" />
-                      <span>
-                        <span className="font-semibold">Needs {careStatus.urgentNeed}</span>
-                        {' — '}
-                        {readOnly ? 'this Blobbi' : 'your Blobbi'} is not feeling great.
-                      </span>
-                    </div>
-                  )}
+                  <NeedMeters stats={blobbiData} />
 
-                  {/* ── Status ────────────────────────────────────────────── */}
-                  <TabSection icon={Heart} title="How they are doing">
-                    <div className={cn(PANEL, 'grid grid-cols-1 gap-3 p-3 sm:grid-cols-2')}>
-                      <StatDisplay label="Hunger" value={blobbiData.hunger} icon={Heart} />
-                      <StatDisplay label="Energy" value={blobbiData.energy} icon={Zap} />
-                      <StatDisplay label="Happiness" value={blobbiData.happiness} icon={Sparkles} />
-                      <StatDisplay label="Health" value={blobbiData.health} icon={Shield} />
-                      <StatDisplay
-                        label="Hygiene"
-                        value={blobbiData.hygiene}
-                        icon={Droplets}
-                        className="sm:col-span-2"
-                      />
-                    </div>
-                  </TabSection>
+                  <ProgressionStrip stats={blobbiData} />
 
-                  {/* ── Progress & character ──────────────────────────────── */}
-                  <TabSection icon={Star} title="About them">
-                    <dl className={cn(PANEL, 'grid grid-cols-2 gap-x-3 gap-y-2 p-3')}>
-                      <Fact label="Experience" value={`${blobbiData.experience} XP`} />
-                      <Fact label="Care streak" value={`${blobbiData.careStreak} days`} />
-                      {blobbiData.personality && (
-                        <Fact
-                          label="Personality"
-                          value={
-                            Array.isArray(blobbiData.personality)
-                              ? blobbiData.personality.join(', ')
-                              : blobbiData.personality
-                          }
-                        />
-                      )}
-                      {blobbiData.trait && (
-                        <Fact
-                          label="Trait"
-                          value={
-                            Array.isArray(blobbiData.trait)
-                              ? blobbiData.trait.join(', ')
-                              : blobbiData.trait
-                          }
-                        />
-                      )}
-                      {blobbiData.mood && <Fact label="Mood" value={blobbiData.mood} />}
-                    </dl>
-                  </TabSection>
+                  <TraitChips stats={blobbiData} />
 
-                  {/* ── Appearance ────────────────────────────────────────────
-                      The stage's scene, named as a customization rather than
-                      hidden behind a floating icon on the artwork. */}
                   {!readOnly && (
-                    <TabSection icon={ImageIcon} title="Appearance">
+                    <>
+                      {/* The Coin balance sits with progression rather than in
+                          its own panel — it is a number you have earned. */}
+                      <div className="flex items-center justify-between rounded-panel border border-island-wood/20 bg-island-cream px-3 py-2 shadow-cozy-soft">
+                        <span className="text-xs font-semibold text-island-ink-soft">Coins</span>
+                        <span data-coin-hud>
+                          {economyEntry.phase === 'checking' ||
+                          economyEntry.phase === 'applying' ||
+                          coinBalance.isLoading ? (
+                            <CoinAmount amount={null} loading className="text-sm" />
+                          ) : economyEntry.phase === 'ambiguous' ? (
+                            <span role="status" className="text-xs font-medium text-island-ink-soft">
+                              Confirming your Coin balance…
+                            </span>
+                          ) : coinBalance.isError ? (
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-island-ink-soft underline"
+                              onClick={() => coinBalance.refetch()}
+                            >
+                              Balance unavailable — tap to retry
+                            </button>
+                          ) : (
+                            <CoinAmount
+                              amount={coinBalance.balance}
+                              className="text-sm"
+                              aria-label={`${coinBalance.balance} Blobbi Coins`}
+                            />
+                          )}
+                        </span>
+                      </div>
+
+                      {/* The stage's scene, named as a customization. */}
                       <button
                         type="button"
                         data-testid="open-stage-background-picker"
@@ -743,25 +611,24 @@ export function BlobbiInfoModal({
                         </span>
                         <ChevronRight aria-hidden className="size-4 shrink-0 text-island-ink-soft" />
                       </button>
-                    </TabSection>
+                    </>
                   )}
                 </TabsContent>
 
                 {/*
-                  Inventory Tab — the CANONICAL inventory, and the whole of it.
+                  Wardrobe — everything that changes how the Blobbi LOOKS.
 
-                  ONE collection: wearables and carried items in one grid, under
-                  one category filter, with detail on selection. It used to be
-                  two stacked panels with two headers and two vocabularies,
-                  which is what you get when two windows are merged rather than
-                  designed. See `docs/blobbi-inventory-design.md` for the
-                  reference study behind the shape.
+                  Wearables and effects behind one segmented control, with the
+                  Blobbi visible beside them. Effects stopped being a top-level
+                  tab because an effect is plainly a kind of appearance, and a
+                  three-tab window that spent a third of its navigation on four
+                  aura slots was over-weighting them.
                 */}
                 <TabsContent
-                  value="inventory"
+                  value="wardrobe"
                   className="mt-3 flex min-h-0 flex-col pb-2 focus-visible:outline-none"
                 >
-                  <InventoryBrowser
+                  <WardrobePanel
                     characterId={characterId}
                     form={currentPet?.stage}
                     selectedSlot={selectedSlot}
@@ -771,27 +638,39 @@ export function BlobbiInfoModal({
                     onSaveTransforms={handleSaveTransforms}
                     onEquip={handleEquip}
                     onUnequip={handleUnequip}
+                    onPreviewEffects={setPreviewEffects}
+                    previewingEffectId={
+                      previewEffects && previewEffects.length > 0 ? previewEffects[0].id : null
+                    }
+                    onSectionChange={(section) => {
+                      if (section !== 'effects') setPreviewEffects(null);
+                    }}
                     publishError={publishError}
                     isPublishing={equipmentMutation.isPending}
                   />
                 </TabsContent>
 
-                {/* Effects Tab Content */}
-                <TabsContent value="effects" className="mt-2 pb-2 focus-visible:outline-none">
-                  <EffectsPanel
-                    stage={currentPet?.stage}
+                {/*
+                  Items — the bag of usable things.
+
+                  Lighter than it was: wearables moved to the Wardrobe, so what
+                  is left is food, toys, care items and currency.
+                */}
+                <TabsContent
+                  value="items"
+                  className="mt-3 flex min-h-0 flex-col pb-2 focus-visible:outline-none"
+                >
+                  <InventoryBrowser
+                    characterId={characterId}
+                    form={currentPet?.stage}
+                    categories={ITEM_CATEGORIES}
                     onEquip={handleEquip}
-                    onRemove={handleUnequip}
-                    onPreview={setPreviewEffects}
-                    previewingEffectId={
-                      previewEffects && previewEffects.length > 0
-                        ? previewEffects[0].id
-                        : null
-                    }
+                    onUnequip={handleUnequip}
                     publishError={publishError}
                     isPublishing={equipmentMutation.isPending}
                   />
                 </TabsContent>
+
               </div>
             </Tabs>
           </div>

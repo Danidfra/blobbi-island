@@ -95,7 +95,7 @@ describe('one canonical inventory', () => {
 });
 
 describe('customization window tabs', () => {
-  it('offers Primary, Inventory and Effects, and switches between them', async () => {
+  it('offers Blobbi, Wardrobe and Items — with no top-level Effects tab', async () => {
     render(
       <TestApp>
         <BlobbiInfoModal
@@ -113,8 +113,8 @@ describe('customization window tabs', () => {
     // Read-only (no logged-in pet) shows the Blobbi tab alone — the tabs that
     // publish must not be offered for somebody else's Blobbi.
     expect(await screen.findByRole('tab', { name: /blobbi/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /wardrobe/i })).toBeNull();
     expect(screen.queryByRole('tab', { name: /items/i })).toBeNull();
-    expect(screen.queryByRole('tab', { name: /effects/i })).toBeNull();
   });
 
   it('opens on the tab it was asked for', () => {
@@ -122,8 +122,8 @@ describe('customization window tabs', () => {
     // `defaultTab` still reaches the tab state — nothing in production passes
     // anything but the default now that the shortcut is gone, but the window
     // remains addressable for a future caller and for tests.
-    expect(modal).toMatch(/defaultTab\?: 'primary' \| 'inventory' \| 'effects'/);
-    expect(modal).toMatch(/useState<'primary' \| 'inventory' \| 'effects'>\(readOnly \? 'primary' : defaultTab\)/);
+    expect(modal).toMatch(/defaultTab\?: 'primary' \| 'wardrobe' \| 'items'/);
+    expect(modal).toMatch(/useState<'primary' \| 'wardrobe' \| 'items'>\(readOnly \? 'primary' : defaultTab\)/);
   });
 });
 
@@ -132,9 +132,13 @@ describe('stage geometry', () => {
     const modal = read('src/components/blobbi/BlobbiInfoModal.tsx');
     // The bug: a 2:3 backdrop in a 1:1 box, resolved by cropping a third of it.
     expect(modal).toMatch(/aspectRatio: STAGE_ASPECT_RATIO/);
-    // (the comment explaining the old shape is allowed to say `aspect-square`;
-    // no className may still apply it)
-    expect(modal).not.toMatch(/className="[^"]*aspect-square/);
+    // The STAGE box must never be square again. `aspect-square` does appear in
+    // the file — on the Blobbi's own renderer box, which genuinely is square by
+    // contract — so the assertion is scoped to the stage element rather than
+    // banning the class outright.
+    const stage = modal.match(/data-testid="blobbi-stage"[\s\S]{0,400}?>/)![0];
+    expect(stage).not.toMatch(/aspect-square/);
+    expect(stage).toMatch(/aspectRatio: STAGE_ASPECT_RATIO/);
     // Height-driven, so the ratio survives every modal height. `max-h-full` on
     // a `w-full` box was the other half of the defect: it clamped the height
     // without narrowing the box, so the ratio broke on short viewports.
@@ -291,8 +295,8 @@ describe('tab switching', () => {
     const primary = await screen.findByRole('tab', { name: /blobbi/i });
     fireEvent.click(primary);
     expect(primary).toHaveAttribute('data-state', 'active');
-    // The stats are grouped under a plain-language heading now, not a
-    // "Core Stats" card header band.
-    expect(await screen.findByText(/how they are doing/i)).toBeInTheDocument();
+    // The needs are meters beside the pet now, not a table under a heading.
+    expect(await screen.findByTestId('need-meters')).toBeInTheDocument();
+    expect(screen.getByTestId('mood-hero')).toBeInTheDocument();
   });
 });

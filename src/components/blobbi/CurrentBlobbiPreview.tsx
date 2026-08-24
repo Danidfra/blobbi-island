@@ -8,6 +8,22 @@
  * breakpoints. The accessory editor mounts its overlay on the same box (see
  * BlobbiInfoModal), so editor placement and world placement agree by
  * construction.
+ *
+ * ## Sizing a preview to its CONTAINER
+ *
+ * `boxClassName` reaches the renderer box itself, which is the sanctioned
+ * override the size table documents (`className` wins over
+ * `BLOBBI_RENDER_SIZE_CLASSES` through tailwind-merge — the shell's account
+ * chip already passes `size-full`). The My Blobbi stage uses it to make the
+ * Blobbi a fixed FRACTION of its scene rather than a fixed pixel count, so the
+ * protagonist is the same size relative to its backdrop on a phone and on a
+ * desktop, with no viewport breakpoint anywhere.
+ *
+ * This is safe because everything the renderer paints is already expressed in
+ * percentages OF the box: accessory x/y, accessory base size
+ * (`ACCESSORY_BASE_RATIO`) and every effect shape. Resizing the box scales the
+ * Blobbi and everything on it as ONE unit — no accessory-by-accessory
+ * compensation, and saved placements keep their meaning exactly.
  */
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
@@ -19,6 +35,13 @@ interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "siz
   isStaticPreview?: boolean;
   children?: React.ReactNode;
   showAccessories?: boolean;
+  /**
+   * Classes for the RENDERER BOX itself, not the wrapper.
+   *
+   * Use it to size the box against its container (`h-full w-full` inside a
+   * sized, square parent). `className` still styles the shrink-wrap wrapper.
+   */
+  boxClassName?: string;
 }
 
 export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPreviewProps>(({
@@ -31,6 +54,7 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
   isSleeping = false,
   eyesClosed = false,
   showAccessories = true,
+  boxClassName,
   children,
   ...props
 }, ref) => {
@@ -55,7 +79,8 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
         showAccessories={showAccessories}
         className={cn(
           // For static preview, remove any hover/click effects
-          isStaticPreview && "!cursor-default !hover:scale-100 !transition-none"
+          isStaticPreview && "!cursor-default !hover:scale-100 !transition-none",
+          boxClassName,
         )}
       />
 
