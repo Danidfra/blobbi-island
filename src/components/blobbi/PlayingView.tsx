@@ -29,7 +29,6 @@ import { MultiplayerLayer } from './MultiplayerLayer';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
-import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { dbg } from '@/lib/debug';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
@@ -80,15 +79,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   }, [currentLocation]);
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
-  /**
-   * Which tab My Blobbi opens on.
-   *
-   * The 🎒 shortcut is a DEEP LINK into `My Blobbi → Inventory`, not a second
-   * inventory window: there is exactly one inventory presentation now
-   * (`InventoryPanel`, inside that tab), so the shortcut sets the landing tab
-   * and opens the same window the Blobbi itself opens.
-   */
-  const [blobbiModalTab, setBlobbiModalTab] = useState<'primary' | 'inventory'>('primary');
   const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);
   const [isSocialShareOpen, setIsSocialShareOpen] = useState(false);
   const [socialShareData, setSocialShareData] = useState<{ capturedPhoto: string | null; capturedPolaroidSrc: string | null }>({ capturedPhoto: null, capturedPolaroidSrc: null });
@@ -202,7 +192,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     onMoveComplete: setMyPosition,
   });
 
-  const handleBlobbiClick = (tab: 'primary' | 'inventory' = 'primary') => {
+  const handleBlobbiClick = () => {
     dbg('[blobbi-debug][modal] Opening own Blobbi modal - clearing currentRemoteRef:', {
       currentRemoteRefBefore: currentRemoteRef.current,
       timestamp: new Date().toISOString()
@@ -215,7 +205,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
     }
     setModalKey(`self:${Date.now()}`);
     setRemotePreviewKey(null);
-    setBlobbiModalTab(tab);
     setIsBlobbiInfoOpen(true);
     setReadOnlyBlobbiData(null); // limpa dados read-only ao abrir o seu próprio Blobbi
     setExternalVisual(null);     // garante que não vaze visual remoto
@@ -464,17 +453,12 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   }, []);
 
   // Listen for the bottom action dock's "My Blobbi" action.
-  const openMyBlobbiRef = useRef<(tab?: 'primary' | 'inventory') => void>(() => {});
+  const openMyBlobbiRef = useRef<() => void>(() => {});
   openMyBlobbiRef.current = handleBlobbiClick;
   useEffect(() => {
-    const open = () => openMyBlobbiRef.current?.('primary');
-    const openInventory = () => openMyBlobbiRef.current?.('inventory');
+    const open = () => openMyBlobbiRef.current?.();
     document.addEventListener(DOCK_EVENTS.openMyBlobbi, open);
-    document.addEventListener(DOCK_EVENTS.openMyBlobbiInventory, openInventory);
-    return () => {
-      document.removeEventListener(DOCK_EVENTS.openMyBlobbi, open);
-      document.removeEventListener(DOCK_EVENTS.openMyBlobbiInventory, openInventory);
-    };
+    return () => document.removeEventListener(DOCK_EVENTS.openMyBlobbi, open);
   }, []);
 
   // Listen for chat messages sent from the bottom action dock's chat input.
@@ -623,29 +607,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         data-block-move
       >
         {/*
-          The bag is a SHORTCUT, not a destination: it opens the canonical
-          inventory inside My Blobbi. Keeping it costs nothing (one tap from
-          anywhere on the island) and it no longer implies a second, different
-          inventory exists.
-        */}
-        <button
-          type="button"
-          data-testid="bag-shortcut"
-          onClick={() => handleBlobbiClick('inventory')}
-          aria-label="Open your inventory"
-          title="Inventory"
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-full text-lg",
-            "border border-island-wood/30 bg-island-cream-2/95 shadow-cozy-raised backdrop-blur-sm",
-            "transition-transform duration-150 ease-cozy hover:brightness-105 active:scale-95",
-            "motion-reduce:transition-none motion-reduce:active:scale-100",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          )}
-          data-block-move
-        >
-          🎒
-        </button>
-        {/*
           Two DISTINCT arcade concepts, deliberately not merged (see
           `ArcadeTicketBalance`): the ticket balance is persistent kind:31633
           currency, the pass is temporary sessionStorage floor access. Both are
@@ -680,7 +641,6 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           }
           setRemotePreviewKey(null);
         }}
-        defaultTab={blobbiModalTab}
         readOnly={!!readOnlyBlobbiData}
         externalBlobbiData={readOnlyBlobbiData || undefined}
         externalVisual={externalVisual || undefined}

@@ -2,14 +2,6 @@
 export const DOCK_EVENTS = {
   focusChat: "blobbi:focus-chat",
   openMyBlobbi: "blobbi:open-my-blobbi",
-  /**
-   * Open My Blobbi already on its Inventory tab.
-   *
-   * A DEEP LINK to a tab of the one customization window, deliberately not a
-   * separate "open the bag" event: there is no second inventory surface left
-   * to open. See `InventoryPanel`.
-   */
-  openMyBlobbiInventory: "blobbi:open-my-blobbi-inventory",
   sendChat: "blobbi:send-chat",
   /**
    * Broadcast that the local Blobbi has started walking toward a target (e.g.

@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -44,27 +44,50 @@ describe('one canonical inventory', () => {
 
     const playing = read('src/components/blobbi/PlayingView.tsx');
     expect(playing).not.toMatch(/ItemBagModal/);
-    // The panel is reached through the window, never mounted a second time
-    // alongside it.
     expect(playing).not.toMatch(/<InventoryPanel/);
   });
 
   it('renders the inventory exactly once, inside the customization window', () => {
     const modal = read('src/components/blobbi/BlobbiInfoModal.tsx');
     expect(modal.match(/<InventoryPanel\b/g) ?? []).toHaveLength(1);
-    // Both halves of what "inventory" used to mean are in the same tab.
     expect(modal).toMatch(/<EquipmentPanel/);
   });
 
-  it('routes the bag shortcut into the window rather than its own surface', () => {
+  it('has removed the standalone bag shortcut from the world UI', () => {
+    /*
+      The 🎒 in the upper right is gone, deliberately. My Blobbi → Inventory is
+      the canonical destination, and a second entry point to a tab of one window
+      is a second thing to keep in sync for no gain.
+    */
     const playing = read('src/components/blobbi/PlayingView.tsx');
-    // The button opens My Blobbi on its Inventory tab…
-    expect(playing).toMatch(/data-testid="bag-shortcut"/);
-    expect(playing).toMatch(/handleBlobbiClick\('inventory'\)/);
-    // …and so does the dock event, for any other caller that wants the same
-    // destination without reaching into PlayingView's state.
-    expect(playing).toMatch(/DOCK_EVENTS\.openMyBlobbiInventory/);
-    expect(DOCK_EVENTS.openMyBlobbiInventory).toBe('blobbi:open-my-blobbi-inventory');
+    expect(playing).not.toMatch(/bag-shortcut/);
+    expect(playing).not.toMatch(/🎒/);
+    expect(playing).not.toMatch(/Open your inventory/);
+    // …and the plumbing that existed only for it.
+    expect(playing).not.toMatch(/blobbiModalTab|openMyBlobbiInventory/);
+    expect('openMyBlobbiInventory' in DOCK_EVENTS).toBe(false);
+  });
+
+  it('leaves no 🎒 button anywhere in the production world UI', () => {
+    /*
+      A file sweep rather than one file: the shortcut could come back on the
+      HUD, the dock or a room without this suite noticing.
+
+      COMMENTS ARE STRIPPED FIRST. A comment explaining that the bag button was
+      removed is exactly the kind of note that should survive, and a sweep that
+      forbade the character outright would make the history unwritable.
+    */
+    const offenders: string[] = [];
+    for (const dir of ['src/components/blobbi', 'src/components/shell']) {
+      for (const file of readdirSync(join(ROOT, dir))) {
+        if (!/\.tsx$/.test(file) || /\.test\.tsx$/.test(file)) continue;
+        const code = read(join(dir, file))
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/^\s*\/\/.*$/gm, '');
+        if (code.includes('🎒')) offenders.push(`${dir}/${file}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -218,12 +241,14 @@ describe('stage background slot', () => {
 });
 
 describe('dock wiring', () => {
-  it('exposes My Blobbi and its Inventory deep link as distinct events', () => {
-    expect(DOCK_EVENTS.openMyBlobbi).not.toBe(DOCK_EVENTS.openMyBlobbiInventory);
+  it('opens My Blobbi from the bottom dock, and does so exactly one way', () => {
     const dock = read('src/components/shell/BlobbiActionDock.tsx');
-    // The dock's own button still opens the window plainly; the deep link is
-    // for the shortcut.
     expect(dock).toMatch(/DOCK_EVENTS\.openMyBlobbi\b/);
+    // One event, one destination. The deep-link event that existed only for the
+    // 🎒 shortcut went with it.
+    expect(Object.keys(DOCK_EVENTS).filter((k) => k.startsWith('openMyBlobbi'))).toEqual([
+      'openMyBlobbi',
+    ]);
   });
 
   it('leaves the tab switch a pure state change', () => {
