@@ -80,6 +80,32 @@ inference rather than something the repo proves, it is marked **[inference]**.
 > - **C-3 (open YouTube catalog)** and the external-egress findings remain
 >   untouched.
 
+> **Status update (2026-08-24) — Phase D shipped (external egress).** Every path
+> out of Blobbi Island now runs through one boundary that owns the capability
+> check, URL validation, the confirmation and the browser call. No Nostr protocol
+> was touched. Effect on the findings below:
+>
+> - **H-6 (no external-navigation chokepoint)** — **resolved.** `window.open` and
+>   `navigator.share` exist in exactly one module, enforced by ESLint and a
+>   boundary test; the duplicated social-share switch statements are gone.
+> - **H-4 (social popups with no confirmation)** — **resolved.** Standard now
+>   confirms before leaving, naming the destination host.
+> - **H-3 (relay switching reachable from the account menu)** — **resolved for
+>   the capability.** The gate is on `AppProvider.updateConfig`, the single
+>   writer, not on the three RelaySelector mounts.
+> - **M-3 (`NoteContent.tsx` dead code that linkifies arbitrary URLs)** —
+>   **resolved by deletion**, with a boundary test keeping it gone.
+> - **M-4 (`/tools/game-items` ships in production)** — **resolved for the
+>   capability.** The route is guarded where it mounts, so typing the path is not
+>   a way in.
+> - **New, not previously recorded:** none of the six former call sites passed
+>   `noopener`, so every opened page held a live handle able to navigate this tab.
+>   Fixed everywhere at once by centralising.
+> - **C-3 (open YouTube catalog)** remains untouched and is deliberately out of
+>   scope: a media embed's concerns are not a link's.
+>
+> Details: [`external-egress-safety.md`](./external-egress-safety.md).
+
 ---
 
 ## 1. Executive verdict

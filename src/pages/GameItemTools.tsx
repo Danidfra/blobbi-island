@@ -53,6 +53,7 @@ import {
   type PublishedDefinitionRecord,
 } from '@/tools/game-items/useItemDefinitions';
 import { useItemStudio } from '@/tools/game-items/useItemStudio';
+import { useExternalEgress } from '@/external-egress';
 
 type ToolTab = 'studio' | 'published' | 'inventory' | 'lab';
 
@@ -87,6 +88,7 @@ function coerceToolTab(tab: string): ToolTab {
 
 export function GameItemTools() {
   const { user } = useCurrentUser();
+  const { requestEgress } = useExternalEgress();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -263,14 +265,22 @@ export function GameItemTools() {
 
         <footer className="pb-6 pt-2 text-center text-[11px] text-muted-foreground">
           Vibed with{' '}
-          <a
-            href="https://soapbox.pub/mkstack"
-            target="_blank"
-            rel="noreferrer"
+          {/* A button rather than an anchor: leaving the island goes through the
+              egress boundary, which owns the capability check, the confirmation
+              and the opener isolation. */}
+          <button
+            type="button"
+            onClick={() =>
+              void requestEgress({
+                class: 'external-link',
+                url: 'https://soapbox.pub/mkstack',
+                label: 'MKStack',
+              })
+            }
             className="underline hover:text-foreground"
           >
             MKStack
-          </a>
+          </button>
         </footer>
       </div>
     </div>

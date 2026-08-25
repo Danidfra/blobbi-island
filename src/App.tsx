@@ -20,6 +20,7 @@ import { DEFAULT_ISLAND_THEME_ID } from '@/lib/island-themes';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import { IslandSafetyProvider } from '@/safety';
+import { ExternalEgressProvider } from '@/external-egress';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -73,6 +74,13 @@ export function App() {
               <PhotoBoothProvider>
                 <DebugOverlaysProvider>
                   <TooltipProvider>
+                  {/* Owns every path out of the island: the capability check,
+                      the confirmation dialog, and the only call to
+                      window.open / navigator.share. Mounted here so the dialog
+                      inherits the theme, portal and tooltip context every other
+                      surface has, while still sitting inside the safety
+                      provider whose policy it reads. */}
+                  <ExternalEgressProvider>
                     <Toaster />
                     <Sonner />
                     <Suspense fallback={
@@ -85,6 +93,7 @@ export function App() {
                   }>
                       <AppRouter />
                     </Suspense>
+                  </ExternalEgressProvider>
                   </TooltipProvider>
                 </DebugOverlaysProvider>
               </PhotoBoothProvider>

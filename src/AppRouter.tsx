@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { EgressRouteGuard } from "@/external-egress";
 
 // Lazy load pages for better performance with loading states
 const BlobbiIsland = lazy(() => import("./pages/BlobbiIsland").then(m => ({ default: m.BlobbiIsland })));
@@ -91,9 +92,20 @@ export function AppRouter() {
           </Suspense>
         } />
         <Route path="/tools/game-items" element={
-          <Suspense fallback={<PageLoading />}>
-            <GameItemTools />
-          </Suspense>
+          /*
+            Route-level, not menu-level. The tools are unlinked from the game's
+            navigation, which is discoverability rather than a boundary — the
+            path can simply be typed. An experience without `authoringTools`
+            therefore must not be able to MOUNT this, not merely fail to find it.
+          */
+          <EgressRouteGuard
+            egressClass="authoring-tool"
+            message="The Game Item tools aren't part of this experience."
+          >
+            <Suspense fallback={<PageLoading />}>
+              <GameItemTools />
+            </Suspense>
+          </EgressRouteGuard>
         } />
         {DevTheater && (
           <Route path="/dev/theater" element={

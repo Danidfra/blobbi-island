@@ -57,6 +57,7 @@ import {
 } from '@/tools/game-items/image-upload';
 
 import { Section } from './EditorPrimitives';
+import { useExternalEgress } from '@/external-egress';
 
 const CUSTOM_MARKER = '__custom__';
 /** Marker label for the UI only. The wire value is the empty string. */
@@ -297,6 +298,7 @@ function ImageRowEditor({
   probe: ImageProbe | undefined;
   actions: ItemStudioApi['images'];
 }) {
+  const { requestEgress } = useExternalEgress();
   const isKnownMarker =
     row.marker === PRIMARY_MARKER ||
     (GAME_ITEM_IMAGE_MARKERS as readonly string[]).includes(row.marker);
@@ -440,15 +442,22 @@ function ImageRowEditor({
                 <span className="text-[10px] font-semibold">URL</span>
               </IconAction>
               {url !== '' && (
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
+                /*
+                  This URL is TYPED BY THE AUTHOR — the most untrusted string in
+                  the tool. As an anchor it would happily navigate to
+                  `javascript:` or `data:`; through the egress boundary it is
+                  parsed and refused unless it is `https:`, and the confirmation
+                  names the host it actually resolves to rather than whatever was
+                  typed.
+                */
+                <button
+                  type="button"
+                  onClick={() => void requestEgress({ class: 'external-link', url })}
                   className="inline-flex h-7 w-7 items-center justify-center rounded-md border hover:bg-accent"
                   aria-label="Open image in a new tab"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                </button>
               )}
               <IconAction
                 label="Remove image"

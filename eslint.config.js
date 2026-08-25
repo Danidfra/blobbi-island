@@ -97,6 +97,44 @@ export default tseslint.config(
     },
   },
   {
+    // Leaving Blobbi Island happens in ONE place.
+    //
+    // Six components used to call `window.open` themselves, each building its
+    // own URL and none of them passing `noopener` — so an opened page kept a
+    // live handle to this tab. Centralising fixed all of that at once, and these
+    // rules are what stop it drifting back one convenient call at a time.
+    //
+    // `src/external-egress/` is exempt because it IS the boundary; tests are
+    // exempt because asserting on the browser API is what they are for.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/external-egress/**", "src/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "open",
+          message:
+            "Leaving the island goes through '@/external-egress': useExternalEgress().requestEgress({ class, ... }). It owns the capability check, the confirmation and the opener isolation.",
+        },
+        {
+          object: "navigator",
+          property: "share",
+          message:
+            "The share sheet goes through '@/external-egress': requestEgress({ class: 'native-share', data }).",
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXAttribute[name.name='target'][value.value='_blank']",
+          message:
+            "A new-tab anchor is external egress: use a button and useExternalEgress().requestEgress({ class: 'external-link', url }) so the destination is validated and the opener isolated.",
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.html"],
     plugins: {
       "@html-eslint": htmlEslint,

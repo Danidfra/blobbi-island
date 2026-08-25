@@ -328,13 +328,16 @@ while the reasoning is fresh.
 ## 9. What Phase A did *not* do
 
 Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
-`emotes` all have real call sites; the rest are still declarations. In
-audit-roadmap order:
+`emotes` have real call sites; after Phase D, so do `externalLinks`,
+`socialPlatformSharing`, `nativeShareSheet`, `relaySelection` and
+`authoringTools` — see
+[`external-egress-safety.md`](./external-egress-safety.md) §11. The rest are
+still declarations. In audit-roadmap order:
 
 | Capability | Still needs |
 |---|---|
-| `externalLinks`, `socialPlatformSharing`, `nativeShareSheet` | the single `openExternal()` egress helper; `window.open` is still called directly in two components |
-| `relaySelection`, `authoringTools` | gating `RelaySelector` and the `/tools/game-items` route |
+| ~~`externalLinks`, `socialPlatformSharing`, `nativeShareSheet`~~ | **done in Phase D** — one egress boundary owns the capability check, URL validation, the confirmation and the only `window.open` / `navigator.share` in the codebase |
+| ~~`relaySelection`, `authoringTools`~~ | **done in Phase D** — the relay gate is on `AppProvider.updateConfig` (the single writer, not the three selector mounts); the tools route is guarded where it mounts |
 | ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
 | `openMediaEntry` | the curated theater catalog, re-validated on every `set-media` |
 | `mediaUploads`, `publicNotePublishing` | gating `useUploadFile` and the ShareModal Nostr section |

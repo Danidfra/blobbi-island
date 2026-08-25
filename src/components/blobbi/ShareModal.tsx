@@ -22,6 +22,8 @@ import { useToast } from '@/hooks/useToast';
 import { useUploadFile } from '@/hooks/useUploadFile';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { canNativeShare, isSocialPlatformId, useExternalEgress } from '@/external-egress';
+import { useIslandSafetyPolicy } from '@/safety';
 import { cn } from '@/lib/utils';
 
 
@@ -37,6 +39,15 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
   const { mutateAsync: uploadFile } = useUploadFile();
   const { mutate: createEvent } = useNostrPublish();
   const { user } = useCurrentUser();
+  const { requestEgress } = useExternalEgress();
+  const policy = useIslandSafetyPolicy();
+  /*
+    What the button will actually do, rather than what the browser happens to
+    support. An experience that does not permit the share sheet should say
+    "Choose social network", because that is what pressing it will produce —
+    a label that promised a sheet nobody will see would be a lie the UI told.
+  */
+  const canUseShareSheet = policy.nativeShareSheet && canNativeShare({ files: [] });
 
   const [isSharing, setIsSharing] = useState(false);
   const [isNostrSectionExpanded, setIsNostrSectionExpanded] = useState(false);
@@ -106,32 +117,35 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
     try {
       setIsSharing(true);
 
-      // Check if Web Share API Level 2 is available (with files support)
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [] })) {
-        // Convert polaroid data URL to blob using the same approach
-        const blob = await (await fetch(capturedPolaroidSrc)).blob();
-        const file = new File([blob], 'blobbi-polaroid.png', { type: 'image/png' });
+      const blob = await (await fetch(capturedPolaroidSrc)).blob();
+      const file = new File([blob], 'blobbi-polaroid.png', { type: 'image/png' });
+      const data: ShareData = {
+        title: 'My Blobbi Polaroid! 📸',
+        text: getPrefilledCaption(),
+        files: [file],
+      };
 
-        await navigator.share({
-          title: 'My Blobbi Polaroid! 📸',
-          text: getPrefilledCaption(),
-          files: [file]
+      // The share sheet is its own egress class: unlike a social link, the
+      // destination set is whatever the operating system offers and cannot be
+      // known in advance. Capability support detection and the `navigator.share`
+      // call all live behind this one request.
+      const shared = await requestEgress({ class: 'native-share', data });
+
+      if (shared) {
+        toast({
+          title: "Photo shared! 🎉",
+          description: "Your Blobbi polaroid has been shared successfully.",
         });
-      } else {
-        // Fallback to opening social media panel
-        setIsSocialPanelOpen(true);
         return;
       }
 
-      toast({
-        title: "Photo shared! 🎉",
-        description: "Your Blobbi polaroid has been shared successfully.",
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name !== 'AbortError') {
-        // User cancelled or fallback needed
-        setIsSocialPanelOpen(true);
-      }
+      // No Web Share API, or the sheet was dismissed. Falling back to the social
+      // panel is safe: it is gated by its OWN capability, so an experience that
+      // refuses the share sheet does not get social platforms through the back
+      // door — it gets a panel whose buttons are equally refused.
+      setIsSocialPanelOpen(true);
+    } catch {
+      setIsSocialPanelOpen(true);
     } finally {
       setIsSharing(false);
     }
@@ -148,62 +162,45 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
     }
 
     const caption = getPrefilledCaption();
-    const pageUrl = window.location.href;
-    const encodedCaption = encodeURIComponent(caption);
-    const encodedUrl = encodeURIComponent(pageUrl);
 
-    let shareUrl = '';
-
-    switch (platform) {
-      case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedUrl}&hashtags=Blobbi,BlobbiIsland`;
-        break;
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-        break;
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
-        break;
-      case 'reddit':
-        shareUrl = `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedCaption}`;
-        break;
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${encodedCaption}%20${encodedUrl}`;
-        break;
-      case 'telegram':
-        shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedCaption}`;
-        break;
-      case 'instagram':
-        // Instagram doesn't support web sharing with prefilled text
-        // Download the image and instruct user
-        handleDownload();
-        toast({
-          title: "Instagram sharing",
-          description: "Image downloaded! Please open Instagram and paste the caption manually.",
-        });
-        return;
-      case 'copy':
-        try {
-          await navigator.clipboard.writeText(`${caption} ${pageUrl}`);
-          toast({
-            title: "Link copied!",
-            description: "Caption and link copied to clipboard.",
-          });
-        } catch {
-          toast({
-            title: "Copy failed",
-            description: "Could not copy to clipboard. Please try again.",
-            variant: "destructive",
-          });
-        }
-        return;
-      default:
-        return;
+    // Neither of these leaves the island: one saves a file to this device, the
+    // other writes to the clipboard. They stay outside the egress boundary.
+    if (platform === 'instagram') {
+      handleDownload();
+      toast({
+        title: "Instagram sharing",
+        description: "Image downloaded! Please open Instagram and paste the caption manually.",
+      });
+      return;
     }
 
-    // Open the share URL in a new window
-    window.open(shareUrl, '_blank', 'width=600,height=400');
-    setIsSocialPanelOpen(false);
+    if (platform === 'copy') {
+      try {
+        await navigator.clipboard.writeText(`${caption} ${window.location.href}`);
+        toast({ title: "Link copied!", description: "Caption and link copied to clipboard." });
+      } catch {
+        toast({
+          title: "Copy failed",
+          description: "Could not copy to clipboard. Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (!isSocialPlatformId(platform)) return;
+
+    const went = await requestEgress({
+      class: 'social-share',
+      platform,
+      payload: {
+        url: window.location.href,
+        text: caption,
+        hashtags: ['Blobbi', 'BlobbiIsland'],
+      },
+    });
+
+    if (went) setIsSocialPanelOpen(false);
   };
 
   const handleNostrShare = async () => {
@@ -422,7 +419,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                       <div className="text-left">
                         <div className="font-medium">Share to App</div>
                         <div className="text-sm text-muted-foreground">
-                          {typeof navigator.share !== 'undefined' && typeof navigator.canShare !== 'undefined' ? 'Use native share dialog' : 'Choose social network'}
+                          {canUseShareSheet ? 'Use native share dialog' : 'Choose social network'}
                         </div>
                       </div>
                     </div>

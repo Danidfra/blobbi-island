@@ -4,6 +4,7 @@ import { Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { useToast } from '@/hooks/useToast';
+import { isSocialPlatformId, useExternalEgress } from '@/external-egress';
 import {
   IconBrandTwitter,
   IconBrandFacebook,
@@ -14,6 +15,10 @@ import {
   IconBrandLinkedin,
   IconCopy
 } from '@tabler/icons-react';
+
+/** The caption every share carries. One definition, both share surfaces. */
+const SHARE_CAPTION = '#Blobbi #BlobbiIsland';
+const SHARE_HASHTAGS = ['Blobbi', 'BlobbiIsland'] as const;
 
 interface SocialShareModalProps {
   isOpen: boolean;
@@ -56,6 +61,7 @@ const SHARE_TARGETS: ReadonlyArray<{
 
 export function SocialShareModal({ isOpen, onClose, title, capturedPolaroidSrc, _className }: SocialShareModalProps) {
   const { toast } = useToast();
+  const { requestEgress } = useExternalEgress();
 
   /*
     The hand-rolled `document` Escape listener and backdrop handler that used
@@ -74,64 +80,44 @@ export function SocialShareModal({ isOpen, onClose, title, capturedPolaroidSrc, 
       return;
     }
 
-    const mandatoryHashtags = '#Blobbi #BlobbiIsland';
-    const caption = mandatoryHashtags;
-    const pageUrl = window.location.href;
-    const encodedCaption = encodeURIComponent(caption);
-    const encodedUrl = encodeURIComponent(pageUrl);
-
-    let shareUrl = '';
-
-    switch (platform) {
-      case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodedCaption}&url=${encodedUrl}&hashtags=Blobbi,BlobbiIsland`;
-        break;
-      case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-        break;
-      case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
-        break;
-      case 'reddit':
-        shareUrl = `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedCaption}`;
-        break;
-      case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${encodedCaption}%20${encodedUrl}`;
-        break;
-      case 'telegram':
-        shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedCaption}`;
-        break;
-      case 'instagram':
-        // Instagram doesn't support web sharing with prefilled text
-        // Download the image and instruct user
-        handleDownload();
-        toast({
-          title: "Instagram sharing",
-          description: "Image downloaded! Please open Instagram and paste the caption manually.",
-        });
-        return;
-      case 'copy':
-        try {
-          await navigator.clipboard.writeText(`${caption} ${pageUrl}`);
-          toast({
-            title: "Link copied!",
-            description: "Caption and link copied to clipboard.",
-          });
-        } catch {
-          toast({
-            title: "Copy failed",
-            description: "Could not copy to clipboard. Please try again.",
-            variant: "destructive",
-          });
-        }
-        return;
-      default:
-        return;
+    // Instagram and Copy are not egress: one saves a file to this device, the
+    // other writes to the clipboard. Neither leaves the island, so neither goes
+    // through the egress boundary.
+    if (platform === 'instagram') {
+      handleDownload();
+      toast({
+        title: "Instagram sharing",
+        description: "Image downloaded! Please open Instagram and paste the caption manually.",
+      });
+      return;
     }
 
-    // Open the share URL in a new window
-    window.open(shareUrl, '_blank', 'width=600,height=400');
-    onClose();
+    if (platform === 'copy') {
+      try {
+        await navigator.clipboard.writeText(`${SHARE_CAPTION} ${window.location.href}`);
+        toast({ title: "Link copied!", description: "Caption and link copied to clipboard." });
+      } catch {
+        toast({
+          title: "Copy failed",
+          description: "Could not copy to clipboard. Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (!isSocialPlatformId(platform)) return;
+
+    // Intent, not a URL. The egress layer builds the destination, checks the
+    // capability, shows the confirmation and makes the only call to
+    // `window.open`. This component no longer knows a browser is involved.
+    const went = await requestEgress({
+      class: 'social-share',
+      platform,
+      payload: { url: window.location.href, text: SHARE_CAPTION, hashtags: SHARE_HASHTAGS },
+    });
+
+    if (went) onClose();
   };
 
   const handleDownload = async () => {

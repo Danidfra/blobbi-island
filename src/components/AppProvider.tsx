@@ -9,6 +9,8 @@ import {
   subscribeToIslandThemeCache,
 } from '@/lib/island-theme-cache';
 import { applyThemeBackground, applyThemeFonts } from '@/lib/island-theme-media';
+import { useIslandSafetyPolicy } from '@/safety';
+import { isEgressAllowed } from '@/external-egress';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -60,9 +62,30 @@ export function AppProvider(props: AppProviderProps) {
     }
   );
 
-  // Generic config updater with callback pattern
+  const policy = useIslandSafetyPolicy();
+
+  /**
+   * Generic config updater — and the ONE place a relay change can happen.
+   *
+   * The relay gate lives here rather than on `RelaySelector` because the
+   * selector is mounted in three places (the account menu, the account switcher,
+   * the theme browser's empty state) and every one of them writes through this
+   * function. Gating the component would leave three callbacks that still work
+   * and a fourth mount away from being wrong; gating the writer makes the
+   * restriction a property of the state rather than of the UI.
+   *
+   * A refused relay change is dropped, not thrown: the rest of the update still
+   * applies, so a caller changing the theme and the relay in one go keeps the
+   * theme. `RelaySelector` is also hidden where the capability is absent — that
+   * is presentation, and this is enforcement.
+   */
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
-    setConfig(updater);
+    setConfig((currentConfig) => {
+      const next = updater(currentConfig);
+      if (next.relayUrl === currentConfig.relayUrl) return next;
+      if (isEgressAllowed(policy, 'relay-management')) return next;
+      return { ...next, relayUrl: currentConfig.relayUrl };
+    });
   };
 
   const appContextValue: AppContextType = {

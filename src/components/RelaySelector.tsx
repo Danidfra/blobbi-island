@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { useAppContext } from "@/hooks/useAppContext";
+import { useIslandSafetyPolicy } from "@/safety";
+import { isEgressAllowed } from "@/external-egress";
 
 interface RelaySelectorProps {
   className?: string;
@@ -24,6 +26,7 @@ interface RelaySelectorProps {
 export function RelaySelector(props: RelaySelectorProps) {
   const { className } = props;
   const { config, updateConfig, presetRelays = [] } = useAppContext();
+  const policy = useIslandSafetyPolicy();
   
   const selectedRelay = config.relayUrl;
   const setSelectedRelay = (relay: string) => {
@@ -32,6 +35,15 @@ export function RelaySelector(props: RelaySelectorProps) {
 
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+
+  /*
+    Presentation only. An experience that cannot change relays should not be
+    shown a relay picker — but hiding it is NOT what stops the change. The write
+    itself is gated in `AppProvider.updateConfig`, which every mount of this
+    component goes through, so the restriction holds even if this returned the
+    picker anyway.
+  */
+  if (!isEgressAllowed(policy, 'relay-management')) return null;
 
   const selectedOption = presetRelays.find((option) => option.url === selectedRelay);
 
