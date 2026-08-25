@@ -106,6 +106,31 @@ inference rather than something the repo proves, it is marked **[inference]**.
 >
 > Details: [`external-egress-safety.md`](./external-egress-safety.md).
 
+> **Status update (2026-08-24) — Phase D.5 shipped (publishing and upload
+> boundaries).** The last two declarative capabilities now have real enforcement.
+> `mediaUploads` is checked inside `useUploadFile` — the app's single Blossom
+> uploader, and audited to have no internal or trusted consumers — before the
+> uploader is constructed, so a refused upload never hands over a signer.
+> `publicNotePublishing` is checked in `usePhotoShare`, a new canonical writer
+> that owns the whole PhotoBooth sequence, so ShareModal no longer is the
+> boundary. Both are decided **before any network**, which matters because
+> Blossom is content-addressed and public: uploading first and discovering the
+> refusal afterwards would leave a permanent public blob behind for a post that
+> never happened.
+>
+> Scope was checked carefully in both directions. `publicNotePublishing` governs
+> the kind 1 social post and nothing else — presence, chat, pet state, inventory,
+> equipment and themes are game protocol and stay untouched, asserted by a
+> boundary test. Family keeps the whole local PhotoBooth: capture, preview and
+> download still work; only the upload and the public note are refused.
+>
+> **No new Nostr kind, tag or schema.** The published event is unchanged — kind 1
+> (NIP-10) with `t` hashtags and a NIP-92 `imeta` tag carrying NIP-94 fields,
+> verified against the current specs.
+>
+> Remaining declarative capabilities: `strangerAuthoredNames`, `ownFreeTextNaming`,
+> `openMediaEntry` and `detailedPresence`.
+
 ---
 
 ## 1. Executive verdict

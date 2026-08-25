@@ -331,8 +331,19 @@ Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
 `emotes` have real call sites; after Phase D, so do `externalLinks`,
 `socialPlatformSharing`, `nativeShareSheet`, `relaySelection` and
 `authoringTools` — see
-[`external-egress-safety.md`](./external-egress-safety.md) §11. The rest are
-still declarations. In audit-roadmap order:
+[`external-egress-safety.md`](./external-egress-safety.md) §11 — and after
+Phase D.5, so do `mediaUploads` and `publicNotePublishing`.
+
+**A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
+It governs the player taking something they made and posting it publicly to the
+wider Nostr network under their own key — today, exactly one surface: the
+PhotoBooth's kind 1 polaroid. It is emphatically NOT "no Nostr events": presence,
+chat, pet state, inventory, equipment, themes and the owner profile are game
+protocol, are required for the island to work, and are untouched. A boundary test
+asserts `useNostrPublish` itself carries no policy and still has many gameplay
+consumers.
+
+The rest are still declarations. In audit-roadmap order:
 
 | Capability | Still needs |
 |---|---|
@@ -340,7 +351,7 @@ still declarations. In audit-roadmap order:
 | ~~`relaySelection`, `authoringTools`~~ | **done in Phase D** — the relay gate is on `AppProvider.updateConfig` (the single writer, not the three selector mounts); the tools route is guarded where it mounts |
 | ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
 | `openMediaEntry` | the curated theater catalog, re-validated on every `set-media` |
-| `mediaUploads`, `publicNotePublishing` | gating `useUploadFile` and the ShareModal Nostr section |
+| ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5** — `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
 | `strangerAuthoredNames`, `ownFreeTextNaming` | the name substitution and the word-pick composer |
 | `detailedPresence` | the coarse presence shape |
 

@@ -19,9 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
-import { useUploadFile } from '@/hooks/useUploadFile';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { usePhotoShare } from '@/publishing';
 import { canNativeShare, isSocialPlatformId, useExternalEgress } from '@/external-egress';
 import { useIslandSafetyPolicy } from '@/safety';
 import { cn } from '@/lib/utils';
@@ -36,9 +35,8 @@ interface ShareModalProps {
 
 export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, capturedPolaroidSrc }: ShareModalProps) {
   const { toast } = useToast();
-  const { mutateAsync: uploadFile } = useUploadFile();
-  const { mutate: createEvent } = useNostrPublish();
   const { user } = useCurrentUser();
+  const { canShare, sharePhoto } = usePhotoShare();
   const { requestEgress } = useExternalEgress();
   const policy = useIslandSafetyPolicy();
   /*
@@ -223,77 +221,42 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
     }
 
     setIsPosting(true);
-    try {
-      // Convert data URL to blob (following nostrdamus pattern)
-      const blob = await (await fetch(capturedPolaroidSrc)).blob();
-      const file = new File([blob], "blobbi-polaroid.png", { type: "image/png" });
-      const uploadResult = await uploadFile(file);
-      const imageUrl = uploadResult[0][1];
+    /*
+      The whole sequence — permission, upload, note — belongs to `usePhotoShare`,
+      which decides before anything leaves the device. This component's job is to
+      turn one outcome into one message.
+    */
+    const outcome = await sharePhoto({ polaroidSrc: capturedPolaroidSrc, caption: userText });
+    setIsPosting(false);
 
-      // Create hashtags for the content
-      const mandatoryHashtags = '#Blobbi #BlobbiIsland';
-
-      // Create summary for imeta tag
-      const imetaSummary = 'blobbi_polaroid #Blobbi #BlobbiIsland';
-
-      // Create final content with image URL (following nostrdamus pattern)
-      const finalContent = userText.trim()
-        ? `${userText.trim()}\n\n${mandatoryHashtags}\n\n${imageUrl}`
-        : `${mandatoryHashtags}\n\n${imageUrl}`;
-
-      createEvent(
-        {
-          kind: 1,
-          content: finalContent,
-          tags: [
-            ["t", "Blobbi"],
-            ["t", "BlobbiIsland"],
-            [
-              "imeta",
-              `url ${imageUrl}`,
-              "m image/png",
-              `summary ${imetaSummary}`,
-              `alt A polaroid photo taken at Blobbi Island with accessories, background, and frame`
-            ]
-          ],
-        },
-        {
-          onSuccess: () => {
-            setIsPosting(false);
-            toast({
-              title: "Photo shared to Nostr! 🚀",
-              description: "Your Blobbi polaroid has been published successfully.",
-            });
-
-            // Reset form after successful share
-            setUserText('');
-
-            // Close modal after short delay
-            setTimeout(() => {
-              onClose();
-            }, 2000);
-          },
-          onError: (error) => {
-            setIsPosting(false);
-            console.error('Error sharing to Nostr:', error);
-            toast({
-              title: "Share failed",
-              description: "Failed to publish to Nostr. Please try again.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
-    } catch (error) {
-      setIsPosting(false);
-      console.error('Error sharing to Nostr:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    if (outcome.status === 'published') {
       toast({
-        title: "Share failed",
-        description: errorMessage,
-        variant: "destructive",
+        title: "Photo shared to Nostr! 🚀",
+        description: "Your Blobbi polaroid has been published successfully.",
       });
+      setUserText('');
+      setTimeout(() => onClose(), 2000);
+      return;
     }
+
+    if (outcome.status === 'denied') {
+      // A refusal is not a failure: nothing was attempted, nothing broke, and
+      // retrying will not help. Neutral copy, and nothing about who the player is.
+      toast({
+        title: "Not available",
+        description: "Sharing publicly isn't part of this experience.",
+      });
+      return;
+    }
+
+    toast({
+      title: "Share failed",
+      description:
+        outcome.stage === 'publish'
+          ? "Failed to publish to Nostr. Please try again."
+          : "Could not prepare the photo for sharing. Please try again.",
+      variant: "destructive",
+    });
   };
 
 
@@ -525,7 +488,21 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                   </DialogContent>
                 </Dialog>
 
-                {/* Post to Relay - Nostr */}
+                {/*
+                  Post to Relay — Nostr.
+
+                  Omitted entirely where the experience does not permit public
+                  sharing, rather than shown disabled: a composer the player can
+                  fill in and then be refused is a worse experience than one that
+                  was never offered, and a row of dead controls invites an
+                  explanation nobody should have to write. The local half of the
+                  PhotoBooth — capture, preview, download — is untouched.
+
+                  Presentation only. `usePhotoShare` refuses the operation and
+                  `useUploadFile` refuses the upload independently, so removing
+                  this is not what makes the restriction real.
+                */}
+                {canShare && (
                 <div className="border border-purple-200 dark:border-purple-800 rounded-lg overflow-hidden">
                   {/* Collapsible Header */}
                   <button
@@ -625,6 +602,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                   </div>
                 </div>
               </div>
+                )}
               </div>
             </div>
           </div>
