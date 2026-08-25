@@ -155,27 +155,34 @@ describe('useFirstEggAdoption', () => {
   });
 
   it('does NOT publish the profile when the baby publish is rejected', async () => {
-    nostrEvent.mockRejectedValueOnce(new Error('relay rejected'));
+    // Every attempt: one refusal is now retried, so a single rejection would
+    // simply succeed on the next try. See `useFirstEggAdoption.publish.test`.
+    nostrEvent.mockRejectedValue(new Error('relay rejected'));
 
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
     await expect(result.current.finalizeAdoption(preview, 'Puck')).rejects.toThrow();
 
-    // Only the baby publish was attempted; profile never published.
-    expect(nostrEvent).toHaveBeenCalledTimes(1);
+    // Only the baby was attempted; the profile is never touched.
+    expect(nostrEvent.mock.calls.every(([e]) => e.kind === KIND_BLOBBI_STATE)).toBe(true);
     expect(nostrEvent.mock.calls[0][0].kind).toBe(KIND_BLOBBI_STATE);
   });
 
   it('treats a TIMED-OUT baby publish as failure and does NOT publish the profile', async () => {
     const timeout = new DOMException('timed out', 'TimeoutError');
-    nostrEvent.mockRejectedValueOnce(timeout);
+    nostrEvent.mockRejectedValue(timeout);
 
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
-    await expect(result.current.finalizeAdoption(preview, 'Puck')).rejects.toBe(timeout);
-    expect(nostrEvent).toHaveBeenCalledTimes(1);
+    // The named failure carries the timeout as its cause rather than replacing
+    // it — the ceremony maps the type, diagnostics keep the reason.
+    await expect(result.current.finalizeAdoption(preview, 'Puck')).rejects.toMatchObject({
+      name: 'AdoptionPublishError',
+      kind: KIND_BLOBBI_STATE,
+      reason: timeout,
+    });
     expect(nostrEvent.mock.calls[0][0].kind).toBe(KIND_BLOBBI_STATE);
   });
 
@@ -183,7 +190,7 @@ describe('useFirstEggAdoption', () => {
     // Baby succeeds, profile fails.
     nostrEvent
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error('profile relay error'));
+      .mockRejectedValue(new Error('profile relay error'));
 
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
@@ -191,11 +198,13 @@ describe('useFirstEggAdoption', () => {
     await expect(result.current.finalizeAdoption(preview, 'Puck')).rejects.toThrow();
 
     const publishedKinds = nostrEvent.mock.calls.map(([e]) => e.kind);
-    expect(publishedKinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE]);
+    // The baby once, then the profile until it gives up.
+    expect(publishedKinds[0]).toBe(KIND_BLOBBI_STATE);
+    expect(publishedKinds.slice(1).every((kind) => kind === KIND_BLOBBONAUT_PROFILE)).toBe(true);
   });
 
   it('allows a safe retry after failure without leaving the guard stuck', async () => {
-    nostrEvent.mockRejectedValueOnce(new Error('first attempt fails'));
+    nostrEvent.mockRejectedValue(new Error('first attempt fails'));
 
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();

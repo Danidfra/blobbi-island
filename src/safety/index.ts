@@ -22,7 +22,17 @@ export { assertPolicyInvariants } from './island-safety-policy';
 export { FAMILY_POLICY, STANDARD_POLICY } from './policies';
 export { ACTIVE_EXPERIENCE_PROFILE, resolveSafetyPolicy } from './resolve';
 
-export { IslandSafetyPolicyContext, useIslandSafetyPolicy } from './island-safety-context';
+export {
+  IslandSafetyPolicyContext,
+  SafetyResolutionContext,
+  missingSafetyProviderCount,
+  resetMissingSafetyProviderCount,
+  useIslandSafetyPolicy,
+  useSafetyResolution,
+} from './island-safety-context';
+export type { SafetyResolution } from './safety-resolution';
+export { UNPROVIDED_SAFETY } from './safety-resolution';
+export { SafetyGate } from './SafetyGate';
 export { IslandSafetyProvider } from './IslandSafetyProvider';
 
 export type {

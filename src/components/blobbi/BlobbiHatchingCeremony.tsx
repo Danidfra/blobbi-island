@@ -43,7 +43,7 @@ import { Button } from '@/components/ui/button';
 import { loadBlobbiSvg } from '@blobbi/react';
 import { useTypewriter } from '@/hooks/useTypewriter';
 import { buildRevealGradient } from '@/lib/ceremony-colors';
-import { useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
+import { AdoptionPublishError, useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
 import type { BlobbiEggPreview } from '@/lib/blobbi-egg-preview';
 import { CURATED_ADJECTIVES, CURATED_NOUNS, composeCuratedName } from '@/blobbi-names';
 import { CuratedNameComposer } from './CuratedNameComposer';
@@ -285,8 +285,21 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
       // Only finish once the baby + profile are really published.
       finishCeremony(blobbiId);
     } catch (error) {
+      /*
+        The technical cause stays in diagnostics. A player who sees
+        `AggregateError: All promises were rejected` learns nothing they can
+        act on, and the sentence they need is about their connection.
+
+        Deliberately never "saved" or "almost there": the writer rejects unless
+        a relay actually accepted, so anything reassuring here would be a claim
+        the publish did not earn.
+      */
       console.error('[HatchingCeremony] Adoption publish failed:', error);
-      setHatchError("We couldn't wake your Blobbi. Please try again.");
+      setHatchError(
+        error instanceof AdoptionPublishError
+          ? "We couldn't save your Blobbi yet. Check your connection and try again."
+          : "We couldn't wake your Blobbi. Please try again.",
+      );
     } finally {
       setIsNaming(false);
     }

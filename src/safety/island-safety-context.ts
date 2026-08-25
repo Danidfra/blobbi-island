@@ -20,25 +20,42 @@
  * It is otherwise as small as a context can be: one value, no state, no effects,
  * no storage, no subscription.
  *
- * ## Why the default is Standard rather than a throw
+ * ## Why the default is still Standard, and what now stops it mattering
  *
- * A missing provider yields {@link STANDARD_POLICY}, which is exactly today's
- * behaviour — so adding this module cannot change what any existing screen or
- * any existing test does, which is the invariant this phase is built around.
+ * A missing provider yields {@link STANDARD_POLICY}. That is failing OPEN, it is
+ * the wrong long-term default, and it is kept only because hundreds of unit
+ * tests render a single component with no provider above it and would otherwise
+ * be testing their harness rather than their subject.
  *
- * The trade-off is real and worth naming: failing *open* to the permissive
- * profile is the wrong long-term default. It is acceptable only while Standard
- * IS the shipped product and Family is unreachable. The moment a profile can be
- * selected, this default has to become a deliberate resolution — the provider
- * mounted above everything that could render foreign content, and the absence of
- * one treated as a bug rather than an answer. `docs/family-safety-policy.md`
- * records that as a Phase G precondition.
+ * What changed in Phase H.0 is that the fallback can no longer be reached by
+ * anything that matters:
+ *
+ *  - it is REPORTED — {@link noteMissingSafetyProvider} logs, loudly, outside
+ *    production, so a component that lost its provider says so instead of
+ *    quietly becoming permissive;
+ *  - and the ISLAND cannot mount on it at all. `SafetyGate` renders the world
+ *    only under a `resolved` {@link SafetyResolution}, and `unprovided` is a
+ *    distinct state from `resolving` precisely so it can be refused rather than
+ *    waited for.
+ *
+ * So the invariant is enforced where a capability can actually do damage —
+ * publish, upload, admit a stranger's text — rather than by making every button
+ * in the app require a provider to render.
  */
 
 import { createContext, useContext } from 'react';
 
 import type { IslandSafetyPolicy } from './island-safety-policy';
 import { STANDARD_POLICY } from './policies';
+import { UNPROVIDED_SAFETY, type SafetyResolution } from './safety-resolution';
+
+/**
+ * Whether a profile has been resolved for this subtree, and which.
+ *
+ * Defaults to `unprovided` — the state that means "nobody has mounted a
+ * provider", which is distinct from both "still deciding" and "Standard".
+ */
+export const SafetyResolutionContext = createContext<SafetyResolution>(UNPROVIDED_SAFETY);
 
 /**
  * The policy in effect for the subtree.
@@ -62,5 +79,67 @@ export const IslandSafetyPolicyContext = createContext<IslandSafetyPolicy>(STAND
  * directly as a hook dependency without memoization.
  */
 export function useIslandSafetyPolicy(): IslandSafetyPolicy {
-  return useContext(IslandSafetyPolicyContext);
+  // Both contexts read unconditionally — hooks are not allowed to be optional,
+  // and the branch below is about which ANSWER wins, not which hook runs.
+  const resolution = useContext(SafetyResolutionContext);
+  const fallback = useContext(IslandSafetyPolicyContext);
+
+  if (resolution.status === 'resolved') return resolution.policy;
+  if (resolution.status === 'unprovided') noteMissingSafetyProvider();
+  return fallback;
+}
+
+/**
+ * How the island learns whether a profile has been chosen yet.
+ *
+ * Separate from the policy hook because they answer different questions.
+ * "Which capabilities do I have?" is asked by every feature and always needs an
+ * answer; "has anybody decided yet?" is asked by exactly one thing — the gate
+ * that mounts the world — and its whole value is being able to say "no".
+ */
+export function useSafetyResolution(): SafetyResolution {
+  return useContext(SafetyResolutionContext);
+}
+
+/**
+ * A subtree asked for a policy with no provider above it.
+ *
+ * Loud outside production, silent inside it: this is a wiring bug, and a wiring
+ * bug should stop a developer rather than a player. Counted as well as logged
+ * so a test can assert the real application tree never reaches it — which is
+ * the assertion that makes the permissive fallback tolerable.
+ */
+let missingProviderReports = 0;
+let missingProviderLogged = false;
+
+export function noteMissingSafetyProvider(): void {
+  missingProviderReports += 1;
+  /*
+    Once per session, and in every build.
+
+    Once because this runs during render, and a component that re-renders sixty
+    times a second does not need to say the same thing sixty times a second.
+
+    In every build because the alternative is reading the build mode here, and
+    the safety layer is asserted to be decidable without ambient state — a rule
+    worth more than suppressing one console line a player will never look at.
+    Nothing about the message is sensitive: it names a wiring bug.
+  */
+  if (missingProviderLogged) return;
+  missingProviderLogged = true;
+  console.error(
+    '[safety] useIslandSafetyPolicy() was called with no IslandSafetyProvider above it. ' +
+      'Falling back to Standard, which is a bug and not a profile — see src/safety/island-safety-context.ts.',
+  );
+}
+
+/** How many times the missing-provider fallback has been taken. For tests. */
+export function missingSafetyProviderCount(): number {
+  return missingProviderReports;
+}
+
+/** Reset the counter. For tests only. */
+export function resetMissingSafetyProviderCount(): void {
+  missingProviderReports = 0;
+  missingProviderLogged = false;
 }

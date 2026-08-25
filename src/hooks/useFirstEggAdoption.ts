@@ -94,6 +94,56 @@ import {
 } from '@/lib/blobbi-egg-preview';
 import { admitOwnBlobbiName } from '@/blobbi-names';
 import { useIslandSafetyPolicy } from '@/safety';
+import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
+
+/**
+ * How many times one signed adoption event is offered to the relays.
+ *
+ * Three, not one. The previous single attempt turned any momentary relay
+ * hiccup into a failed ceremony — and the first attempt is the expensive one,
+ * because it pays for opening the socket as well as for the publish.
+ *
+ * Three, not thirty: a player is watching a spinner, and a relay that has
+ * refused three times is not about to agree. Beyond that the honest answer is
+ * the retry button.
+ */
+const PUBLISH_ATTEMPTS = 3;
+
+/**
+ * The budget for one publish attempt.
+ *
+ * The first is longer because it may include a cold WebSocket handshake — the
+ * old flat 5 s covered connect, publish and the relay's OK on a mobile
+ * connection, which is not the generous window it looks like. Later attempts
+ * are shorter: the socket is warm by then, so a slow one is a bad sign rather
+ * than a slow start.
+ */
+function publishTimeoutMs(attempt: number): number {
+  return attempt === 0 ? 8000 : 5000;
+}
+
+/** The profile read's budget. Two reads at most — see the call site. */
+const PROFILE_READ_TIMEOUT_MS = 3000;
+
+/**
+ * Every relay refused, or none answered.
+ *
+ * A named error rather than the pool's `AggregateError: All promises were
+ * rejected`, which is what the ceremony used to log and which says nothing
+ * about what went wrong or what to do. The `kind` says WHICH write failed —
+ * the baby or the profile that links it in — and that distinction is what the
+ * retry path is built around.
+ */
+export class AdoptionPublishError extends Error {
+  /** What the relays actually said, for diagnostics only. Never shown. */
+  readonly reason: unknown;
+
+  constructor(readonly kind: number, reason?: unknown) {
+    super(`Adoption publish failed: no relay accepted kind ${kind}`);
+    this.name = 'AdoptionPublishError';
+    this.reason = reason;
+  }
+}
 
 export function useFirstEggAdoption() {
   const { nostr } = useNostr();
@@ -134,6 +184,17 @@ export function useFirstEggAdoption() {
         tags.push(['client', 'blobbi']);
       }
 
+      /*
+        SIGNED ONCE, published up to three times.
+
+        Signing is a separate failure from publishing and must stay separate: a
+        signer that refuses is a permanent condition (a rejected extension
+        prompt, a dead bunker) and retrying it would re-prompt the player. A
+        relay that did not answer is transient, and the SAME signed event is
+        what goes back out — same id, same signature — so a retry that lands
+        after a silent success is a duplicate the relay collapses rather than a
+        second Blobbi.
+      */
       const event = await user.signer.signEvent({
         kind: template.kind,
         content: template.content ?? '',
@@ -141,9 +202,27 @@ export function useFirstEggAdoption() {
         created_at: Math.floor(Date.now() / 1000),
       });
 
-      // Rejects on timeout/abort OR when all relays reject — no leniency here.
-      await nostr.event(event, { signal: AbortSignal.timeout(5000) });
-      return event;
+      let lastError: unknown;
+      for (let attempt = 0; attempt < PUBLISH_ATTEMPTS; attempt += 1) {
+        try {
+          // Rejects on timeout/abort OR when every relay rejects — no leniency.
+          // `NPool.event` resolves as soon as ONE relay accepts.
+          await nostr.event(event, {
+            signal: AbortSignal.timeout(publishTimeoutMs(attempt)),
+          });
+          return event;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      /*
+        Every attempt failed. Rejecting with a NAMED error rather than the
+        pool's `AggregateError: All promises were rejected` — which is what the
+        ceremony used to log and what tells a player nothing at all. The cause
+        is attached for diagnostics; the ceremony maps this to its own copy.
+      */
+      throw new AdoptionPublishError(template.kind, lastError);
     },
     [nostr, user],
   );
@@ -200,9 +279,28 @@ export function useFirstEggAdoption() {
         // ── a. Read the latest profile (canonical 11125 + legacy 31125). This
         //       runs on every attempt, so a retry always merges against the
         //       freshest known profile. ──
-        const profileEvents = await nostr.query(
+        /*
+          CONFIRMED-EMPTY, not "the query returned nothing".
+
+          `NPool.query` cannot fail: a timeout, a dead socket and a genuinely
+          new player all come back as `[]`. That difference is the whole story
+          here, because the profile this reads is the base the FINAL profile is
+          built on — an unanswered read used to look like "this player has no
+          profile", and the event published a moment later would carry a `has[]`
+          containing only the new Blobbi. Every previously adopted Blobbi would
+          be dropped from the ownership list by a slow relay.
+
+          `readRelayConfirmedOrThrow` is the repo's existing rule for exactly
+          this class of state (ownership lists, the companion profile): an empty
+          answer is read twice before it is believed, and an unusable one throws
+          instead of resolving empty. Adoption then fails and the player retries,
+          which is the correct outcome — far better than succeeding into a
+          profile that has quietly forgotten their other Blobbis.
+        */
+        const profileEvents = await readRelayConfirmedOrThrow(
+          nostr,
           [{ kinds: [...BLOBBONAUT_PROFILE_KINDS], authors: [pubkey], limit: 1 }],
-          { signal: AbortSignal.timeout(3000) },
+          { timeoutMs: PROFILE_READ_TIMEOUT_MS },
         );
         const existingProfile = profileEvents
           .filter(validateOwnerProfileEvent)

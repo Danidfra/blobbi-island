@@ -155,7 +155,7 @@ describe('on a phone', () => {
     expect(dialog.className).toContain('bottom-0');
     expect(dialog.className).toContain('inset-x-0');
     expect(dialog.className).not.toContain('max-h-[calc(100%-1.5rem)]');
-    expect(within(dialog).getByRole('button', { name: /send report/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /save report/i })).toBeInTheDocument();
   });
 
   it('still reaches every action in the block confirmation', () => {

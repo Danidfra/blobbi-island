@@ -247,6 +247,40 @@ inference rather than something the repo proves, it is marked **[inference]**.
 >
 > Details: [`presence-data-minimization.md`](./presence-data-minimization.md).
 
+> **Status update (2026-08-25) — Phase H.0 (pre-activation hardening).** Not a
+> new capability: a production regression and four correctness defects in the
+> boundaries that already existed.
+>
+> **Adoption was failing outright.** One relay, one attempt, a five-second
+> budget that included the socket handshake — and the pool's
+> `AggregateError: All promises were rejected` shown to nobody who could act on
+> it. Now three attempts of one signed event, a named error, and copy about the
+> player's connection. Found while looking for it: the adoption profile read
+> used a query that cannot fail, so a slow relay looked like "this player has no
+> profile" and the profile published a moment later would have **dropped every
+> previously adopted Blobbi from the ownership list**. That read is now
+> completion-aware.
+>
+> **Safety state was browser-wide, not account-scoped.** Two people sharing a
+> laptop shared one mute list, one block list and one pile of reports. Both
+> stores are now keyed by pubkey, signed-out state is memory-only and never
+> inherited, and switching account re-prunes a world left mounted.
+>
+> **Reports kept far more than they needed.** Evidence was the whole signed
+> event — content, tags, signature — attached automatically. It is now a pointer
+> plus the rendered text, attached only when the reporter ticks a box, and the
+> documentation no longer claims a verification nothing performs.
+>
+> **Self-mute, self-block and self-report are refused at the data boundary**, and
+> both stores now reject a schema version they do not know instead of reading it
+> as this one.
+>
+> **A missing safety provider is no longer a synonym for Standard.** Resolution
+> has three states and the island mounts only under `resolved`.
+>
+> Family is still unreachable, deliberately. Blockers listed in
+> [`family-activation-readiness.md`](./family-activation-readiness.md).
+
 ---
 
 ## 1. Executive verdict

@@ -14,6 +14,7 @@ import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
 import { IslandThemeSync } from '@/components/IslandThemeSync';
+import { PlayerSafetyAccountSync } from '@/components/PlayerSafetyAccountSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppConfig } from '@/contexts/AppContext';
 import { DEFAULT_ISLAND_THEME_ID } from '@/lib/island-themes';
@@ -68,6 +69,9 @@ export function App() {
                   and adopts a selection made on another device. It has to be
                   BELOW NostrProvider — AppProvider, which paints the theme, sits
                   above it and must never wait on a relay. */}
+              {/* Points mute/block/report at the signed-in account. Renders
+                  nothing; see PlayerSafetyAccountSync for why it is a component. */}
+              <PlayerSafetyAccountSync />
               <IslandThemeSync />
               <EconomyEntryController />
               <CharacterEquipmentProvider>

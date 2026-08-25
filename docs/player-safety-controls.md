@@ -453,3 +453,42 @@ Three changes, each at the level the problem lives at:
 **No safety behaviour changed.** Mute, unmute, block, unblock, report storage,
 report evidence and the honest copy about where reports go are all untouched;
 no new events, no network.
+
+
+---
+
+## Account scope, evidence and truthful outcomes
+
+**Added 2026-08-25 (Phase H.0).** Three corrections, all local, none of which
+changed what these controls DO.
+
+**They belong to an account, not to a browser.** Mute, block and report were
+stored under one browser-wide key, so two people sharing a laptop shared one
+list: the child's blocks applied to the parent's island and the parent could read
+the child's reports. Both stores are now keyed by the pubkey whose decisions they
+are, `PlayerSafetyAccountSync` points them at the signed-in user, and switching
+account wakes every subscriber so a world left mounted re-prunes rather than
+keeping the previous player's blocks in force. Signed out keeps an in-memory
+store that is never persisted and never inherited — the obvious alternative hands
+it to whoever signs in next, which is the leak being closed.
+
+**A report keeps a pointer, not a payload.** Evidence was the whole signed event,
+verbatim, attached automatically whenever the dialog opened on someone who had
+recently spoken. It is now five fields — event id, author, timestamp, message
+class and the rendered text — reduced at the builder so the raw event never
+reaches storage. `content`, `tags` and `sig` are gone: that was attacker-authored
+data written to a child's device because they asked for help, and nothing in this
+build verifies a signature or has a reviewer to verify one for. Attaching the
+message is now an unticked checkbox, because opening a card is not a decision
+about a message.
+
+**Self-actions are refused at the data boundary**, not by hiding a button — the
+card only ever opens on somebody else, so the only route there is a direct call.
+
+**The copy says what is true.** "Save report", never "Send report": nothing
+leaves the device, and a child who reads "Sent" reasonably believes somebody is
+now looking. Report-and-block attempts both actions independently and names a
+partial outcome precisely — blocking is what protects the player, so it is never
+skipped because the report could not be saved.
+
+Details: [`family-activation-readiness.md`](./family-activation-readiness.md).

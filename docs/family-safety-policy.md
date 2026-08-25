@@ -360,6 +360,13 @@ currently sets `false` (Phase F.1, above). After Phase G, so does
 **No capability is declarative any more.** Every one of them is decided at a
 data boundary with a test behind it.
 
+**And nothing mounts before a profile is resolved** (Phase H.0). The provider
+now reports one of three states — `unprovided`, `resolving`, `resolved` — and
+`SafetyGate` renders the island only under the last of them. The shipped path
+resolves `standard` explicitly on the first render, so production is unchanged;
+what changed is that "nobody answered" is no longer a synonym for Standard. See
+[`family-activation-readiness.md`](./family-activation-readiness.md).
+
 **A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
 It governs the player taking something they made and posting it publicly to the
 wider Nostr network under their own key — today, exactly one surface: the

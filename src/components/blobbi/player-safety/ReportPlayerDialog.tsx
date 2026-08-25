@@ -74,6 +74,19 @@ export function ReportPlayerDialog({
 }: ReportPlayerDialogProps) {
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /*
+    ATTACHING THE MESSAGE IS A CHOICE, and it starts unmade.
+
+    Opening a card and pressing Report used to attach whatever the player had
+    last said, automatically — so a report about someone standing too close
+    quietly saved a sentence they wrote about something else. The reporter is
+    the one who knows whether the message is the point.
+
+    It also keeps the free-text path deliberate: a rendered message is the only
+    unbounded, attacker-authored string a report can hold, and it is now only
+    held when somebody asked for it.
+  */
+  const [includeMessage, setIncludeMessage] = useState(false);
 
   // Read once per opening: the buffer is memory-only and its contents can be
   // evicted while the dialog is open.
@@ -91,13 +104,14 @@ export function ReportPlayerDialog({
       category,
       islandId,
       location,
-      evidence: evidence
-        ? {
-            sourceEvent: evidence.event,
-            messageClass: evidence.messageClass,
-            renderedText: evidence.renderedText,
-          }
-        : null,
+      evidence:
+        evidence && includeMessage
+          ? {
+              sourceEvent: evidence.event,
+              messageClass: evidence.messageClass,
+              renderedText: evidence.renderedText,
+            }
+          : null,
     });
 
     if (!built.ok) {
@@ -105,11 +119,36 @@ export function ReportPlayerDialog({
       return;
     }
 
-    storeReport(built.report);
-    // Blocking is local and immediate; it never waits on the report.
+    /*
+      TWO ACTIONS, ATTEMPTED INDEPENDENTLY, REPORTED HONESTLY.
+
+      They fail for different reasons and they matter differently. Blocking is
+      the one that actually protects the player, so it is never skipped because
+      the report could not be saved — and the report failing is never hidden
+      because the block worked.
+
+      Both writers read back what they wrote, so `false` here means the decision
+      is genuinely not on this device, not merely that `setItem` did not throw.
+    */
+    const saved = storeReport(built.report);
     const blocked = alsoBlock ? setPlayerBlocked(pubkey, true) : false;
 
+    if (!saved && alsoBlock && blocked) {
+      setError("They're blocked, but we couldn't save the report on this device.");
+      onFiled?.({ blocked });
+      return;
+    }
+    if (!saved) {
+      setError("We couldn't save that report on this device. Try again, or check your browser settings.");
+      return;
+    }
+    if (alsoBlock && !blocked) {
+      setError("Report saved, but we couldn't block them on this device. Try Block again.");
+      return;
+    }
+
     setCategory(null);
+    setIncludeMessage(false);
     setError(null);
     onOpenChange(false);
     onFiled?.({ blocked });
@@ -121,6 +160,7 @@ export function ReportPlayerDialog({
       onOpenChange={(next) => {
         if (!next) {
           setCategory(null);
+          setIncludeMessage(false);
           setError(null);
         }
         onOpenChange(next);
@@ -137,10 +177,12 @@ export function ReportPlayerDialog({
           </Button>
           <Button variant="soft" onClick={() => file(true)} disabled={!category}>
             <ShieldOff className="mr-1.5 size-4" aria-hidden="true" />
-            Report and block
+            Save and block
           </Button>
+          {/* "Save", never "Send": nothing leaves this device, and a child who
+              reads "Sent" reasonably believes somebody is now looking. */}
           <Button variant="playful" onClick={() => file(false)} disabled={!category}>
-            Send report
+            Save report
           </Button>
         </>
       }
@@ -184,17 +226,37 @@ export function ReportPlayerDialog({
       </fieldset>
 
       {evidence ? (
-        <div className="mt-3 rounded-xl border border-island-wood/25 bg-island-cream/60 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-island-ink-soft">
-            The last thing they said
-          </p>
-          <p className="mt-1 break-words text-sm text-island-ink" data-testid="report-evidence">
-            {evidence.renderedText}
-          </p>
-          <p className="mt-1.5 text-xs text-island-ink-soft">
-            This is saved with your report, because messages disappear after a few seconds.
-          </p>
-        </div>
+        <label
+          className={cn(
+            'mt-3 flex cursor-pointer items-start gap-3 rounded-xl border p-3',
+            'transition-colors duration-150 ease-cozy focus-within:ring-2 focus-within:ring-ring',
+            includeMessage
+              ? 'border-island-ocean bg-island-cream'
+              : 'border-island-wood/25 bg-island-cream/60 hover:bg-island-cream',
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={includeMessage}
+            onChange={(event) => setIncludeMessage(event.target.checked)}
+            className="mt-0.5 size-4 accent-island-ocean"
+            data-testid="report-include-message"
+          />
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold uppercase tracking-wide text-island-ink-soft">
+              Include the last thing they said
+            </span>
+            <span
+              className="mt-1 block break-words text-sm text-island-ink"
+              data-testid="report-evidence"
+            >
+              {evidence.renderedText}
+            </span>
+            <span className="mt-1.5 block text-xs text-island-ink-soft">
+              Messages disappear after a few seconds, so this is the only way to keep it.
+            </span>
+          </span>
+        </label>
       ) : (
         <p className="mt-3 text-xs text-island-ink-soft">
           They have not said anything recently, so this report is about the player.
@@ -203,8 +265,8 @@ export function ReportPlayerDialog({
 
       {/* Honest, and deliberately not reassuring: nothing reads these yet. */}
       <p className="mt-3 text-xs text-island-ink-soft">
-        Reports are saved on this device. Nobody reviews them yet, so if someone is bothering you,
-        block them too and tell a grown-up you trust.
+        Reports are saved on this device and are not sent anywhere. Nobody reviews them yet, so if
+        someone is bothering you, block them too and tell a grown-up you trust.
       </p>
 
       {error ? (

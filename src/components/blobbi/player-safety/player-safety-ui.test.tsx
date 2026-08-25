@@ -18,8 +18,10 @@ import {
   isMuted,
   listReports,
   rememberMessage,
+  resetSafetyAccount,
   setPlayerBlocked,
   setPlayerMuted,
+  setSafetyAccount,
 } from '@/player-safety';
 
 import { PlayerSafetyActions } from './PlayerSafetyActions';
@@ -57,6 +59,8 @@ function actions(onBlocked = vi.fn()) {
 
 beforeEach(() => {
   localStorage.clear();
+  resetSafetyAccount();
+  setSafetyAccount(ME);
   clearAllRelationships();
   clearStoredReports();
   clearRecentMessages();
@@ -64,6 +68,7 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear();
+  resetSafetyAccount();
   vi.restoreAllMocks();
 });
 
@@ -169,11 +174,11 @@ describe('report', () => {
 
   it('will not send without a category', () => {
     openReport();
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
     expect(listReports()).toHaveLength(0);
   });
 
-  it('captures the message that is about to disappear', () => {
+  it('offers the message that is about to disappear, unticked', () => {
     rememberMessage(RUDE, {
       event: messageEvent(),
       messageClass: 'text',
@@ -182,21 +187,43 @@ describe('report', () => {
     });
     openReport();
 
+    // Shown, so the reporter can see what they would be attaching — and NOT
+    // attached, because opening a card is not a decision about a message.
     expect(screen.getByTestId('report-evidence').textContent).toBe('be quiet');
+    expect(screen.getByTestId('report-include-message')).not.toBeChecked();
 
     fireEvent.click(screen.getByRole('radio', { name: /Being mean/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
 
     const [stored] = listReports();
     expect(stored.category).toBe('mean');
-    expect(stored.evidence?.sourceEvent.id).toBe('e'.repeat(64));
+    expect(stored.evidence).toBeNull();
+  });
+
+  it('keeps the message when the reporter asks for it', () => {
+    rememberMessage(RUDE, {
+      event: messageEvent(),
+      messageClass: 'text',
+      renderedText: 'be quiet',
+      receivedAt: 1,
+    });
+    openReport();
+
+    fireEvent.click(screen.getByTestId('report-include-message'));
+    fireEvent.click(screen.getByRole('radio', { name: /Being mean/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
+
+    const [stored] = listReports();
+    // A pointer and the rendered meaning — not the event.
+    expect(stored.evidence?.eventId).toBe('e'.repeat(64));
     expect(stored.evidence?.renderedText).toBe('be quiet');
+    expect(JSON.stringify(stored)).not.toContain('s'.repeat(128));
   });
 
   it('still files a report when they have not said anything', () => {
     openReport();
     fireEvent.click(screen.getByRole('radio', { name: /Spam/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
 
     const [stored] = listReports();
     expect(stored.evidence).toBeNull();
@@ -207,7 +234,7 @@ describe('report', () => {
     // reason about.
     openReport();
     fireEvent.click(screen.getByRole('radio', { name: /Being mean/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Send report' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
 
     expect(listReports()).toHaveLength(1);
     expect(isBlocked(RUDE)).toBe(false);
@@ -217,7 +244,7 @@ describe('report', () => {
     const { onBlocked } = actions();
     fireEvent.click(screen.getByRole('button', { name: 'Report' }));
     fireEvent.click(screen.getByRole('radio', { name: /Being mean/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Report and block' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and block' }));
 
     expect(listReports()).toHaveLength(1);
     expect(isBlocked(RUDE)).toBe(true);

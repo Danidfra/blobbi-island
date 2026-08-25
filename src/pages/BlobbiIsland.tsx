@@ -8,6 +8,7 @@ import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
 import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen";
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
+import { SafetyGate } from '@/safety';
 import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
 
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
@@ -302,7 +303,23 @@ export function BlobbiIsland() {
   // half-entered state the gate exists to avoid.
   const isPlaying = gameState === 'playing' && locationResume.isSettled;
 
+  /*
+    NOTHING MOUNTS UNTIL A PROFILE IS RESOLVED.
+
+    Wrapped at the outermost point of the page rather than around the world
+    alone, because the pieces below it are not inert: the location provider
+    decides where presence will be published, the shell mounts the chrome that
+    opens the theater and the photo booth, and the economy notice is already
+    reading. Every one of them would otherwise have started under whatever
+    policy happened to be in scope.
+
+    Today this never holds — the profile is a literal, so resolution is complete
+    on the first render and production mounts exactly as it always has. The gate
+    is what makes that a STATEMENT rather than an accident, and it is what a
+    guardian-owned read will hang from without a single consumer changing.
+  */
   return (
+    <SafetyGate fallback={<BlobbiLoadingScreen />}>
     <LocationProvider
       initialLocation={locationResume.isSettled ? locationResume.location : undefined}
       initialPosition={locationResume.position}
@@ -324,5 +341,6 @@ export function BlobbiIsland() {
         </Suspense>
       </BlobbiAppShell>
     </LocationProvider>
+    </SafetyGate>
   );
 }

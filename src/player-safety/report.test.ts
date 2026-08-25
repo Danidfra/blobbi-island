@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { resetSafetyAccount, setSafetyAccount } from './account-scope';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import {
@@ -57,12 +59,27 @@ const input = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/*
+  Reports are ACCOUNT-SCOPED now, so these run as a signed-in reporter. `KEY` is
+  where that reporter's store actually lives; isolation between accounts is
+  proven in `account-scope.test.ts`.
+*/
+/** Far enough apart that nothing is mistaken for a double-tap. */
+const DEDUPE_SPACING = 120_000;
+
+const KEY = `${PLAYER_REPORT_STORAGE_KEY}:${REPORTER}`;
+
 beforeEach(() => {
   localStorage.clear();
+  resetSafetyAccount();
+  setSafetyAccount(REPORTER);
   clearStoredReports();
 });
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+  resetSafetyAccount();
+});
 
 describe('what a report captures', () => {
   it('records the reported player, the category and where it happened', () => {
@@ -77,11 +94,33 @@ describe('what a report captures', () => {
     });
   });
 
-  it('keeps the signed source event, which is the verifiable part', () => {
+  it('keeps a pointer to the message, and nothing more', () => {
+    // Reduced at the builder: the id is a POINTER a future reviewer could
+    // resolve against a relay, which is worth more than a local copy of a
+    // signature nothing in this build ever verifies.
     const built = buildPlayerReport(input({ evidence: evidence() }));
-    expect(built.ok && built.report.evidence?.sourceEvent.id).toBe('e'.repeat(64));
-    expect(built.ok && built.report.evidence?.sourceEvent.sig).toBe('s'.repeat(128));
-    expect(built.ok && built.report.evidence?.sourceEvent.kind).toBe(21201);
+    if (!built.ok) throw new Error('expected a report');
+
+    expect(built.report.evidence).toEqual({
+      eventId: 'e'.repeat(64),
+      authorPubkey: REPORTED,
+      createdAt: 1_800_000_000,
+      messageClass: 'quick',
+      renderedText: 'Hi!',
+    });
+  });
+
+  it('does not keep the content, the tags or the signature', () => {
+    // The whole signed event used to be written to a child's device because
+    // they asked for help. Its absence is the feature.
+    const built = buildPlayerReport(input({ evidence: evidence() }));
+    if (!built.ok) throw new Error('expected a report');
+
+    const serialized = JSON.stringify(built.report);
+    expect(serialized).not.toContain('s'.repeat(128));
+    expect(Object.keys(built.report.evidence ?? {})).not.toContain('sourceEvent');
+    expect(serialized).not.toContain('"tags"');
+    expect(serialized).not.toContain('"sig"');
   });
 
   it('keeps the locally rendered meaning alongside it', () => {
@@ -218,13 +257,19 @@ describe('local storage', () => {
     storeReport(built.report);
 
     const [stored] = listReports();
-    expect(stored.evidence?.sourceEvent.id).toBe('e'.repeat(64));
+    expect(stored.evidence?.eventId).toBe('e'.repeat(64));
     expect(stored.evidence?.renderedText).toBe('Hi!');
   });
 
   it('is bounded, dropping the oldest', () => {
     for (let i = 0; i < MAX_STORED_REPORTS + 10; i += 1) {
-      const built = buildPlayerReport(input({ id: `report-${i}`, now: 1000 + i }));
+      // Distinct categories, spread far apart in time: identical complaints
+      // inside a minute are now collapsed as duplicates, which is a different
+      // rule and has its own tests.
+      const category = REPORT_CATEGORIES[i % REPORT_CATEGORIES.length].id;
+      const built = buildPlayerReport(
+        input({ id: `report-${i}`, now: 1000 + i * DEDUPE_SPACING, category }),
+      );
       if (built.ok) storeReport(built.report);
     }
     expect(listReports()).toHaveLength(MAX_STORED_REPORTS);
@@ -232,7 +277,7 @@ describe('local storage', () => {
   });
 
   it('tolerates a corrupt store', () => {
-    localStorage.setItem(PLAYER_REPORT_STORAGE_KEY, '{not json');
+    localStorage.setItem(KEY, '{not json');
     expect(() => listReports()).not.toThrow();
     expect(listReports()).toEqual([]);
   });

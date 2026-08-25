@@ -10,6 +10,15 @@
  * Nostr standards evaluated and the privacy reasoning behind that choice.
  */
 
+export {
+  isSelf,
+  resetSafetyAccount,
+  safetyAccount,
+  scopedSafetyKey,
+  setSafetyAccount,
+  subscribeSafetyAccount,
+} from './account-scope';
+
 export type { PlayerRelationship, PlayerSafetyEntry } from './relationships';
 export {
   MAX_TRACKED_PLAYERS,
@@ -41,6 +50,7 @@ export type {
   ReportCategory,
   ReportCategorySpec,
   ReportedMessageEvidence,
+  ReportEvidenceCandidate,
 } from './report';
 export {
   MAX_STORED_REPORTS,

@@ -129,13 +129,17 @@ describe('the own-name writer has one validator', () => {
     const body = writer.slice(writer.indexOf('const run = async ()'));
 
     const admit = body.indexOf('admitOwnBlobbiName(');
-    const query = body.indexOf('nostr.query');
+    // The profile read went through `nostr.query` and now goes through the
+    // completion-aware reader; what matters is that it happens AFTER the name
+    // has been admitted, whichever helper does it.
+    const read = body.indexOf('readRelayConfirmedOrThrow(');
     const publish = body.indexOf('strictPublish');
 
     expect(admit).toBeGreaterThan(-1);
     // Before the profile read and before any publish: a refused name costs no
     // relay round trip and never reaches a signer.
-    expect(admit).toBeLessThan(query);
+    expect(read).toBeGreaterThan(-1);
+    expect(admit).toBeLessThan(read);
     expect(admit).toBeLessThan(publish);
   });
 

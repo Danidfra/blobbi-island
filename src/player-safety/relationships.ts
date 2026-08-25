@@ -54,7 +54,24 @@
  * silently forgetting later.
  */
 
+import { isSelf, scopedSafetyKey, subscribeSafetyAccount } from './account-scope';
+
 const STORAGE_KEY = 'blobbi:safety:relationships:v1';
+
+/** The schema this build writes and the ONLY one it reads. See {@link parse}. */
+const SCHEMA_VERSION = 1;
+
+/**
+ * The signed-out store: in memory, never persisted, dropped on account change.
+ *
+ * See `account-scope.ts` for why a signed-out bucket must not be a real one.
+ */
+let memoryStore: string | null = null;
+
+/** Where this account's relationships live, or `null` for the memory store. */
+function storageKey(): string | null {
+  return scopedSafetyKey(STORAGE_KEY);
+}
 
 /**
  * Soft cap on tracked players.
@@ -114,8 +131,10 @@ let cache: { raw: string | null; map: StoredMap; entries: readonly PlayerSafetyE
   null;
 
 function readRaw(): string | null {
+  const key = storageKey();
+  if (key === null) return memoryStore;
   try {
-    return typeof localStorage === 'undefined' ? null : localStorage.getItem(STORAGE_KEY);
+    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -127,6 +146,24 @@ function parse(raw: string | null): StoredMap {
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+
+    /*
+      A VERSION WE DO NOT KNOW IS NOT THIS SCHEMA.
+
+      The version tag was written from the start and never read, so a future
+      `v: 2` — a different mute/block representation, a new field with its own
+      meaning — would have been parsed as though it were this one, and the parts
+      that happened to look familiar would have been believed. Reading a v2
+      store as v1 is how a block quietly becomes a mute.
+
+      An unknown version yields an EMPTY store rather than a throw: the player
+      sees no relationships, which is visibly wrong and recoverable, instead of
+      a subtly wrong set they would have no reason to doubt. A missing version
+      is treated as v1 — the shape that shipped before the tag was enforced.
+    */
+    const version = (parsed as { v?: unknown }).v;
+    if (version !== undefined && version !== SCHEMA_VERSION) return {};
+
     const players = (parsed as { players?: unknown }).players;
     if (!players || typeof players !== 'object' || Array.isArray(players)) return {};
 
@@ -191,14 +228,21 @@ function emit(): void {
  */
 function write(next: StoredMap): boolean {
   const before = readRaw();
-  const serialized = JSON.stringify({ v: 1, players: next });
-  try {
-    if (typeof localStorage !== 'undefined') {
-      if (Object.keys(next).length === 0) localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, serialized);
+  const serialized = JSON.stringify({ v: SCHEMA_VERSION, players: next });
+  const key = storageKey();
+  if (key === null) {
+    // Signed out: remembered for this session only, and deliberately not
+    // written anywhere an account could later inherit it from.
+    memoryStore = Object.keys(next).length === 0 ? null : serialized;
+  } else {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (Object.keys(next).length === 0) localStorage.removeItem(key);
+        else localStorage.setItem(key, serialized);
+      }
+    } catch {
+      /* fall through — the read-back decides the outcome */
     }
-  } catch {
-    /* fall through — the read-back decides the outcome */
   }
 
   const after = readRaw();
@@ -233,6 +277,16 @@ function evictIfFull(map: StoredMap, incoming: string): StoredMap {
 
 function update(pubkey: string, change: Partial<PlayerRelationship>, now: number): boolean {
   if (!PUBKEY_PATTERN.test(pubkey)) return false;
+  /*
+    You cannot mute or block yourself.
+
+    Not a UI concern: the card that offers these buttons is only ever opened on
+    somebody else, so the only way here is a direct call — a console, a future
+    surface, a bug that passes the wrong pubkey. Blocking your own account would
+    delete your own Blobbi from your own island and silence your own messages,
+    with a Settings row as the only clue.
+  */
+  if (isSelf(pubkey)) return false;
   const key = pubkey.toLowerCase();
 
   const { map } = current();
@@ -355,6 +409,28 @@ export function clearAllRelationships(): boolean {
  * so importing this module never touches `window`, and removed when the last
  * subscriber leaves.
  */
+/*
+  SWITCHING ACCOUNT SWITCHES THE ANSWERS, immediately.
+
+  The parsed snapshot is cached against the exact string it came from, and the
+  string now comes from an account-scoped key — so when the account changes,
+  the cache is stale in a way no `storage` event will ever report. Dropping it
+  and waking every subscriber is what makes B's block list take effect in a
+  world A left mounted: the presence map re-prunes, the bubbles re-check, and
+  nobody stays hidden because the previous player hid them.
+
+  The signed-out memory store is dropped at the same moment, so it can never be
+  inherited by the account that just signed in.
+
+  Registered at module load: this must hold whether or not a component happens
+  to be subscribed at the time the account changes.
+*/
+subscribeSafetyAccount(() => {
+  cache = null;
+  memoryStore = null;
+  emit();
+});
+
 export function subscribeRelationships(onChange: () => void): () => void {
   listeners.add(onChange);
 
@@ -374,7 +450,10 @@ export function subscribeRelationships(onChange: () => void): () => void {
 
 function handleStorageEvent(event: StorageEvent): void {
   // `key === null` means the whole store was cleared, which affects us too.
-  if (event.key !== null && event.key !== STORAGE_KEY) return;
+  // Otherwise only THIS account's key matters: another account's list changing
+  // in a second tab is none of this session's business, and reacting to it
+  // would wake the world layer for a decision that is not its player's.
+  if (event.key !== null && event.key !== storageKey()) return;
   cache = null;
   emit();
 }

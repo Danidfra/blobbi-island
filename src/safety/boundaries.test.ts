@@ -59,7 +59,14 @@ function importsOf(file: string): string[] {
  * Both are the delivery mechanism — a context and the provider that fills it —
  * and neither contains a capability decision.
  */
-const REACT_ALLOWED = new Set(['island-safety-context.ts', 'IslandSafetyProvider.tsx']);
+const REACT_ALLOWED = new Set([
+  'island-safety-context.ts',
+  'IslandSafetyProvider.tsx',
+  // The gate is a component by necessity: refusing to MOUNT a subtree is
+  // something only a component can do, and it contains no capability decision —
+  // it reads a resolution status and renders one branch or the other.
+  'SafetyGate.tsx',
+]);
 
 const FORBIDDEN_IN_SAFETY = [
   { pattern: /^@nostrify\//, why: 'a Nostr client' },

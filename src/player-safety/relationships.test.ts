@@ -8,6 +8,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetSafetyAccount, setSafetyAccount } from './account-scope';
+
 import {
   MAX_TRACKED_PLAYERS,
   NO_RELATIONSHIP,
@@ -30,13 +32,24 @@ const C = 'c'.repeat(64);
 
 const pubkeyAt = (index: number) => index.toString(16).padStart(64, '0');
 
+/*
+  Relationships are ACCOUNT-SCOPED now, so these run as a signed-in player.
+  `KEY` is where that player's list actually lives; the isolation between
+  accounts is proven in `account-scope.test.ts`.
+*/
+const ME = 'f'.repeat(64);
+const KEY = `${PLAYER_SAFETY_STORAGE_KEY}:${ME}`;
+
 beforeEach(() => {
   localStorage.clear();
+  resetSafetyAccount();
+  setSafetyAccount(ME);
   clearAllRelationships();
 });
 
 afterEach(() => {
   localStorage.clear();
+  resetSafetyAccount();
   vi.restoreAllMocks();
 });
 
@@ -102,7 +115,7 @@ describe('persistence', () => {
     // A reload is a fresh module read against the same storage.
     expect(isBlocked(A)).toBe(true);
     expect(isMuted(B)).toBe(true);
-    expect(localStorage.getItem(PLAYER_SAFETY_STORAGE_KEY)).toContain(A);
+    expect(localStorage.getItem(KEY)).toContain(A);
   });
 
   it('keeps an unblock unblocked', () => {
@@ -115,7 +128,7 @@ describe('persistence', () => {
   it('drops records that say nothing rather than keeping tombstones', () => {
     setPlayerMuted(A, true);
     setPlayerMuted(A, false);
-    expect(localStorage.getItem(PLAYER_SAFETY_STORAGE_KEY)).toBeNull();
+    expect(localStorage.getItem(KEY)).toBeNull();
   });
 
   it('reports a failed write instead of claiming success', () => {
@@ -137,7 +150,7 @@ describe('corruption tolerance', () => {
     ['a missing players key', '{"v":1}'],
     ['players as an array', '{"v":1,"players":[]}'],
   ])('reads %s as no relationships rather than throwing', (_label, raw) => {
-    localStorage.setItem(PLAYER_SAFETY_STORAGE_KEY, raw);
+    localStorage.setItem(KEY, raw);
     expect(() => listRelationships()).not.toThrow();
     expect(listRelationships()).toEqual([]);
     expect(isBlocked(A)).toBe(false);
@@ -145,7 +158,7 @@ describe('corruption tolerance', () => {
 
   it('ignores entries that are not pubkeys', () => {
     localStorage.setItem(
-      PLAYER_SAFETY_STORAGE_KEY,
+      KEY,
       JSON.stringify({ v: 1, players: { 'not-a-key': { b: 1 }, [A]: { b: 1 } } }),
     );
     expect(listRelationships().map((entry) => entry.pubkey)).toEqual([A]);
@@ -153,7 +166,7 @@ describe('corruption tolerance', () => {
 
   it('survives a corrupt neighbour and still blocks the valid entry', () => {
     localStorage.setItem(
-      PLAYER_SAFETY_STORAGE_KEY,
+      KEY,
       JSON.stringify({ v: 1, players: { [A]: { b: 1 }, [B]: 'garbage', [C]: { m: 1 } } }),
     );
     expect(isBlocked(A)).toBe(true);
@@ -246,10 +259,10 @@ describe('snapshots and subscriptions', () => {
     const stop = subscribeRelationships(seen);
 
     localStorage.setItem(
-      PLAYER_SAFETY_STORAGE_KEY,
+      KEY,
       JSON.stringify({ v: 1, players: { [B]: { b: 1, at: 1 } } }),
     );
-    window.dispatchEvent(new StorageEvent('storage', { key: PLAYER_SAFETY_STORAGE_KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { key: KEY }));
 
     expect(seen).toHaveBeenCalled();
     expect(isBlocked(B)).toBe(true);

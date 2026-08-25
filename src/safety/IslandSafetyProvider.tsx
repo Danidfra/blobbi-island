@@ -19,11 +19,12 @@
  * profile, so the prop cannot quietly acquire a caller.
  */
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import type { ExperienceProfile } from './experience-profile';
-import { IslandSafetyPolicyContext } from './island-safety-context';
+import { IslandSafetyPolicyContext, SafetyResolutionContext } from './island-safety-context';
 import { ACTIVE_EXPERIENCE_PROFILE, resolveSafetyPolicy } from './resolve';
+import type { SafetyResolution } from './safety-resolution';
 
 interface IslandSafetyProviderProps {
   children: ReactNode;
@@ -42,9 +43,29 @@ export function IslandSafetyProvider({
   // value is referentially stable for a given profile and needs no memo.
   const policy = resolveSafetyPolicy(profile);
 
+  /*
+    RESOLVED, and explicitly so, on the first render.
+
+    Today the profile is a literal, so there is no `resolving` frame and nothing
+    waits. Saying `resolved` out loud anyway is the point: production stops
+    being "nobody answered, so Standard" and becomes "Standard was chosen",
+    which are the same pixels and completely different guarantees.
+
+    When a guardian-owned value ships, this is the one place that grows a read —
+    and everything downstream already knows how to wait for it, because
+    `SafetyGate` is already refusing to mount the world until this says
+    `resolved`.
+  */
+  const resolution = useMemo<SafetyResolution>(
+    () => ({ status: 'resolved', profile, policy }),
+    [profile, policy],
+  );
+
   return (
-    <IslandSafetyPolicyContext.Provider value={policy}>
-      {children}
-    </IslandSafetyPolicyContext.Provider>
+    <SafetyResolutionContext.Provider value={resolution}>
+      <IslandSafetyPolicyContext.Provider value={policy}>
+        {children}
+      </IslandSafetyPolicyContext.Provider>
+    </SafetyResolutionContext.Provider>
   );
 }
