@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { THEATER_PLAYER_RECT, THEATER_Z } from '@/lib/theater-layout';
 import {
@@ -12,6 +12,14 @@ import { useTheaterPlayback } from '@/hooks/useTheaterPlayback';
 import { useSharedPlayback } from '@/hooks/useSharedPlayback';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { SharedMediaRef } from '@/lib/shared-playback';
+import type { MediaRef } from '@/lib/theater-playback';
+import { useIslandSafetyPolicy } from '@/safety';
+import {
+  APPROVED_THEATER_MEDIA,
+  admitTheaterMedia,
+  type ApprovedMedia,
+  type TheaterMediaDenial,
+} from '@/theater-media';
 import { TheaterControlCard } from './TheaterControlCard';
 import { TheaterCurtain } from './TheaterCurtain';
 import type { TheaterRole } from './TheaterControls';
@@ -33,6 +41,13 @@ interface TheaterStageProps {
    * harnesses that want to see one surface without a relay.
    */
   role?: TheaterRole;
+  /**
+   * The approved-media list, for a curated experience.
+   *
+   * Defaults to the bundled catalog. Overriding it is the test/dev seam — see
+   * the note beside `catalogRef` — not a product feature.
+   */
+  catalog?: readonly ApprovedMedia[];
   /**
    * Report which shared activity the local player is participating in, as the
    * session ADDRESS STRING and nothing else (protocol §14.2). `PlayingView`
@@ -68,6 +83,7 @@ export function TheaterStage({
   role,
   onActivityChange,
   participants = 1,
+  catalog: catalogProp,
 }: TheaterStageProps) {
   const [state, dispatch] = useReducer(theaterReducer, INITIAL_THEATER_STATE);
   const { user } = useCurrentUser();
@@ -100,11 +116,82 @@ export function TheaterStage({
     onCommand: (command) => localCommandRef.current(command),
   });
 
-  const handleRequestMedia = useCallback((media: SharedMediaRef) => {
-    // The SESSION asked for this video; the theater state machine still decides
-    // what a player is and when it exists.
-    dispatch({ type: 'submit', media: { provider: 'youtube', id: media.id } });
-  }, []);
+  const policy = useIslandSafetyPolicy();
+  // Read at call time rather than captured: admission must use the policy in
+  // force when the media arrives, not when the callback was built.
+  const policyRef = useRef(policy);
+  policyRef.current = policy;
+
+  /*
+    THE catalog seam.
+
+    Defaults to the bundled approved list and is overridable only by a caller
+    that constructs this component — which in practice means tests and the dev
+    harness. It is a prop rather than a module mock because the catalog is read
+    through default parameters deep inside pure functions, and a mocked constant
+    would not reach them.
+  */
+  const catalog = catalogProp ?? APPROVED_THEATER_MEDIA;
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
+
+  // Filled in below, once `useSharedPlayback` exists. Held in a ref because the
+  // gate is defined before the session hook and must not depend on it.
+  const leaveSessionRef = useRef<() => void>(() => {});
+
+  /** Why the last media was refused, or `null`. Drives the message on screen. */
+  const [blockedMedia, setBlockedMedia] = useState<TheaterMediaDenial | null>(null);
+
+  /**
+   * THE gate. Every path that can put media on this screen goes through here.
+   *
+   * There are four — the local input, a session `set-media`, joining a session,
+   * and the re-seat fallback — and only the first is a person typing. Checking
+   * the input alone would leave the other three open, and the one that matters
+   * most is the second: a guest joins while an approved video is playing and the
+   * host swaps it a second later.
+   *
+   * Refusal happens BEFORE `dispatch`, so unapproved media never reaches the
+   * state machine, never becomes a `request`, and therefore never causes a
+   * player to be constructed. There is no frame in which it is briefly on
+   * screen — the iframe for it is never built at all.
+   */
+  const admitAndRequestMedia = useCallback(
+    (media: MediaRef, options: { startSeconds?: number; source: 'local' | 'session' } = { source: 'local' }) => {
+      const admission = admitTheaterMedia(policyRef.current, media, catalogRef.current);
+      if (admission.admitted) {
+        dispatch({ type: 'submit', media, startSeconds: options.startSeconds });
+        setBlockedMedia(null);
+        return true;
+      }
+
+      setBlockedMedia(admission.reason);
+
+      // A session tried to show something this experience does not play.
+      //
+      // LEAVING is the deliberate choice over "keep the last approved video" or
+      // "pause and explain". The host controls the media and can change it
+      // again immediately, so staying turns a single refusal into a loop of
+      // them — and every one of those is a moment where the only thing between a
+      // child and the content is this check holding. Staying synchronised to
+      // someone who is trying to show you disallowed content is not a state
+      // worth preserving. Leaving is local and immediate; it does not end the
+      // session for anyone else.
+      if (options.source === 'session') leaveSessionRef.current();
+      return false;
+    },
+    [],
+  );
+
+  const handleRequestMedia = useCallback(
+    (media: SharedMediaRef) => {
+      // The SESSION asked for this video; the theater state machine still decides
+      // what a player is and when it exists — and admission decides whether it
+      // may be asked at all.
+      admitAndRequestMedia({ provider: 'youtube', id: media.id }, { source: 'session' });
+    },
+    [admitAndRequestMedia],
+  );
 
   const {
     shared,
@@ -114,9 +201,10 @@ export function TheaterStage({
     endSession,
     dismissError,
     onLocalCommand,
-  } = useSharedPlayback({ controller, snapshot, onRequestMedia: handleRequestMedia });
+  } = useSharedPlayback({ controller, snapshot, onRequestMedia: handleRequestMedia, catalog });
 
   localCommandRef.current = onLocalCommand;
+  leaveSessionRef.current = leaveSession;
   // Read inside the seat effect without making the session part of its
   // dependencies: sitting down is the trigger, the session is just context.
   const sharedRef = useRef(shared);
@@ -155,8 +243,10 @@ export function TheaterStage({
     // back without the viewer choosing anything. The shared layer catches the
     // new player up to the session's position when it reports ready.
     if (requestRef.current !== null) return;
-    dispatch({ type: 'submit', media: { provider: 'youtube', id: media.id } });
-  }, [seatId, shared.media?.id, shared.mode]);
+    // Restoring the session's media is still the session asking, so it is
+    // admitted like any other session-driven change.
+    admitAndRequestMedia({ provider: 'youtube', id: media.id }, { source: 'session' });
+  }, [seatId, shared.media?.id, shared.mode, admitAndRequestMedia]);
 
   // Readiness and failure are reported BY the player and consumed by the state
   // machine — the machine never assumes either.
@@ -178,9 +268,15 @@ export function TheaterStage({
     if (fatalError) dispatch({ type: 'player-error', error: fatalError });
   }, [fatalError]);
 
-  const handleSubmit = useCallback((videoId: string, startSeconds?: number) => {
-    dispatch({ type: 'submit', media: { provider: 'youtube', id: videoId }, startSeconds });
-  }, []);
+  const handleSubmit = useCallback(
+    (videoId: string, startSeconds?: number) => {
+      admitAndRequestMedia(
+        { provider: 'youtube', id: videoId },
+        { startSeconds, source: 'local' },
+      );
+    },
+    [admitAndRequestMedia],
+  );
 
   const handleChangeVideo = useCallback(() => dispatch({ type: 'change-video' }), []);
 
@@ -190,14 +286,16 @@ export function TheaterStage({
   // accepts it and the curtain would stay down over a working video.
   const handleRetryPlayer = useCallback(() => {
     if (state.request) {
-      dispatch({
-        type: 'submit',
-        media: state.request.media,
+      // Re-admitted rather than replayed: the catalog is read at admission time,
+      // so a retry after it changed must not resurrect media that is no longer
+      // approved.
+      admitAndRequestMedia(state.request.media, {
         startSeconds: state.request.startSeconds,
+        source: 'local',
       });
     }
     retry();
-  }, [state.request, retry]);
+  }, [state.request, retry, admitAndRequestMedia]);
 
   const showPlayer = isPlayerMounted(state);
   const curtainOpen = isCurtainOpen(state);
@@ -251,6 +349,8 @@ export function TheaterStage({
           fatalError={fatalError}
           onRetryPlayer={handleRetryPlayer}
           onSubmit={handleSubmit}
+          blockedMedia={blockedMedia}
+          catalog={catalog}
           onChangeVideo={handleChangeVideo}
           shared={shared}
           participants={participants}

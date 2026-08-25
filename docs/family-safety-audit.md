@@ -131,6 +131,37 @@ inference rather than something the repo proves, it is marked **[inference]**.
 > Remaining declarative capabilities: `strangerAuthoredNames`, `ownFreeTextNaming`,
 > `openMediaEntry` and `detailedPresence`.
 
+> **Status update (2026-08-25) — Phase E shipped (curated theater media).**
+> **C-3 (open YouTube catalog) is resolved for a curated experience.**
+> `openMediaEntry` is enforced by `admitTheaterMedia`, consulted by all four
+> paths that can put media on screen — the local input, a session `set-media`, a
+> join, and the re-seat fallback — plus the host's publication seam. Refusal
+> happens before the theater's state machine, so no player is ever constructed
+> for unapproved media; a test asserts against the record of every iframe built.
+> A host swapping from approved to unapproved after a guest has joined causes the
+> guest to LEAVE the session, deliberately, so repeated hostile swaps cannot
+> become a loop of refusals.
+>
+> **No new Nostr kind.** NIP-71 video events, NIP-51 curation sets, NIP-78
+> app data, NIP-32 labels and Blobbi's own kind 31632 were each evaluated and
+> rejected with reasons — 31632 explicitly *not* reused despite fitting
+> architecturally, because a film is not an inventory item. The catalog is
+> bundled, which also removes the "relay returned nothing" failure mode entirely.
+> It **ships empty**: choosing child-appropriate videos is editorial work needing
+> sign-off, and inventing a list here would be a safety claim on no evidence.
+>
+> Two changes apply to **both** experiences as privacy improvements, not Family
+> restrictions: the embed moved to `youtube-nocookie.com`, and the iframe's
+> permissions are now the thing that grants fullscreen rather than a button.
+> §10 of the new doc is explicit about what an embedded player still leaks —
+> `rel=0` no longer disables related videos, and end screens are inside the
+> iframe and beyond this origin's control.
+>
+> Remaining declarative capabilities: `strangerAuthoredNames`,
+> `ownFreeTextNaming` and `detailedPresence`.
+>
+> Details: [`theater-media-safety.md`](./theater-media-safety.md).
+
 ---
 
 ## 1. Executive verdict

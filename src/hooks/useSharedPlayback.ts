@@ -47,6 +47,8 @@ import type {
   TheaterPlaybackController,
   TheaterPlaybackSnapshot,
 } from '@/lib/theater-playback';
+import { useIslandSafetyPolicy } from '@/safety';
+import { admitTheaterMedia, type ApprovedMedia } from '@/theater-media';
 import {
   createSessionClient,
   errorForRejection,
@@ -182,6 +184,12 @@ export interface UseSharedPlaybackOptions {
    * player exists is the theater state machine's decision.
    */
   onRequestMedia: (media: SharedMediaRef) => void;
+  /**
+   * The approved-media list, for the publication seam's own admission check.
+   *
+   * Must be the same list `TheaterStage` admits against — see `catalogRef`.
+   */
+  catalog?: readonly ApprovedMedia[];
 }
 
 export interface UseSharedPlaybackResult {
@@ -221,9 +229,20 @@ export function useSharedPlayback({
   controller,
   snapshot,
   onRequestMedia,
+  catalog,
 }: UseSharedPlaybackOptions): UseSharedPlaybackResult {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  // Read at call time: the publication seam is a stable callback, so capturing
+  // the policy would freeze it at mount.
+  const policy = useIslandSafetyPolicy();
+  const policyRef = useRef(policy);
+  policyRef.current = policy;
+  // The SAME list the theater admits against. Passing it through matters: a
+  // defence-in-depth check judging by a different catalog than the primary gate
+  // would refuse media the theater had already accepted.
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
 
   const [shared, setShared] = useState<SharedWatchState>(LOCAL_STATE);
 
@@ -610,6 +629,9 @@ export function useSharedPlayback({
 
   const createSession = useCallback(
     async (media: MediaRef) => {
+      // Creating a session publishes the media as its opening state, so it is a
+      // media broadcast like any other and is admitted like one.
+      if (!admitTheaterMedia(policyRef.current, media, catalogRef.current).admitted) return;
       if (!user) return patch({ error: sharedWatchError('not-signed-in') });
       if (modeRef.current !== 'local') return;
 
@@ -861,6 +883,19 @@ export function useSharedPlayback({
     if (!publisher) return;
     const action = toSessionAction(command);
     if (!action) return;
+    // The PUBLICATION seam, and the host's half of the gate.
+    //
+    // A host's media has already passed admission on the way to its own player,
+    // so this is defence in depth rather than the primary check — but it is the
+    // one place a `set-media` becomes an event other people receive, and a
+    // caller holding this callback should not be able to broadcast media this
+    // experience would refuse to play.
+    if (
+      action.type === 'set-media' &&
+      !admitTheaterMedia(policyRef.current, action.media, catalogRef.current).admitted
+    ) {
+      return;
+    }
     // Rebuilding a player for the SAME video (a retry, a remount) re-announces
     // its media. Publishing that would burn a revision and rewind every guest to
     // zero for a video they are already watching.

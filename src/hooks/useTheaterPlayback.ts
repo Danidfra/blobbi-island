@@ -14,6 +14,8 @@ import {
 } from '@/lib/theater-playback';
 import type { PlaybackCommand, PlaybackState } from '@/lib/theater-playback';
 import type { TheaterMediaRequest } from '@/lib/theater-state';
+import { useIslandSafetyPolicy } from '@/safety';
+import { allowsTheaterFullscreen } from '@/theater-media';
 
 /** Position polling cadence. Cheap, local, and never produces network traffic. */
 const TICK_INTERVAL_MS = 250;
@@ -92,11 +94,16 @@ export function useTheaterPlayback(
   request: TheaterMediaRequest | null,
   options: UseTheaterPlaybackOptions = {},
 ): UseTheaterPlaybackResult {
+  const policy = useIslandSafetyPolicy();
   const hostRef = useRef<HTMLDivElement>(null);
   // Held in a ref so a new callback identity never rebuilds the player: a
   // rebuilt player is a black screen and a lost position.
   const onCommandRef = useRef(options.onCommand);
   onCommandRef.current = options.onCommand;
+  // Same reason as `onCommandRef`: a policy read must not be a dependency that
+  // rebuilds the player, which would black the screen and lose the position.
+  const allowFullscreenRef = useRef(allowsTheaterFullscreen(policy));
+  allowFullscreenRef.current = allowsTheaterFullscreen(policy);
   const controllerRef = useRef<LocalTheaterPlaybackController | null>(null);
   const [controller, setController] = useState<LocalTheaterPlaybackController | null>(null);
   const [snapshot, setSnapshot] = useState<TheaterPlaybackSnapshot>(IDLE_SNAPSHOT);
@@ -182,6 +189,11 @@ export function useTheaterPlayback(
       container: target,
       videoId,
       startSeconds,
+      // Read from the policy at BUILD time, so the permission is baked into the
+      // iframe rather than checked when a button is pressed. A frame that never
+      // received `allowfullscreen` cannot be talked into fullscreen by any
+      // control, including the browser's own.
+      allowFullscreen: allowFullscreenRef.current,
       events: {
         onPhaseChange,
         onPlayingChange,

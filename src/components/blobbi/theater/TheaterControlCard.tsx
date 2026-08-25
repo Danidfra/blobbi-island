@@ -5,6 +5,13 @@ import type { TheaterPlaybackController, TheaterPlaybackSnapshot } from '@/lib/t
 import type { TheaterLocalState } from '@/lib/theater-state';
 import type { MediaError } from '@/lib/youtube-player';
 import { TheaterMediaInput } from './TheaterMediaInput';
+import { TheaterMediaShelf } from './TheaterMediaShelf';
+import { useIslandSafetyPolicy } from '@/safety';
+import {
+  allowsOpenMediaEntry,
+  type ApprovedMedia,
+  type TheaterMediaDenial,
+} from '@/theater-media';
 import { TheaterSessionPanel } from './TheaterSessionPanel';
 import { GuestControls, HostControls, type TheaterRole } from './TheaterControls';
 import type { SharedWatchState } from '@/hooks/useSharedPlayback';
@@ -27,6 +34,10 @@ interface TheaterControlCardProps {
   onLeaveSession: () => void;
   onEndSession: () => void;
   onDismissSessionError: () => void;
+  /** Why the last media reference was refused, or `null`. */
+  blockedMedia: TheaterMediaDenial | null;
+  /** The approved-media list for the shelf. Defaults to the bundled catalog. */
+  catalog?: readonly ApprovedMedia[];
 }
 
 const FULLSCREEN_DENIED_MESSAGE =
@@ -59,6 +70,8 @@ export function TheaterControlCard({
   fatalError,
   onRetryPlayer,
   onSubmit,
+  blockedMedia,
+  catalog,
   onChangeVideo,
   shared,
   participants,
@@ -70,6 +83,7 @@ export function TheaterControlCard({
   onDismissSessionError,
 }: TheaterControlCardProps) {
   const [fullscreenDenied, setFullscreenDenied] = useState(false);
+  const policy = useIslandSafetyPolicy();
   const isHost = role === 'host';
 
   return (
@@ -132,7 +146,32 @@ export function TheaterControlCard({
 
       {/* Idle or failed: choose something. Host only — a guest cannot pick. */}
       {isHost && (state.status === 'seated-idle' || state.status === 'video-error') && !fatalError && (
-        <TheaterMediaInput onLoad={onSubmit} autoFocus={state.status === 'video-error'} />
+        /*
+          Which chooser exists is decided by the capability, not by disabling a
+          control: an experience without open entry has no URL box in the tree at
+          all, so there is nothing to re-enable and nothing to explain.
+
+          This is presentation. `TheaterStage` admits every media reference
+          before it dispatches, so the shelf is the convenient way to pick
+          approved media rather than the thing that makes it approved.
+        */
+        allowsOpenMediaEntry(policy) ? (
+          <TheaterMediaInput onLoad={onSubmit} autoFocus={state.status === 'video-error'} />
+        ) : (
+          <TheaterMediaShelf onSelect={(id) => onSubmit(id)} catalog={catalog} />
+        )
+      )}
+
+      {blockedMedia && (
+        /*
+          Neutral, and deliberately says nothing about who the player is: a
+          profile is an experience configuration, not an age assertion.
+        */
+        <p role="alert" className="px-1 text-xs text-white/70">
+          {blockedMedia === 'not-approved'
+            ? "That video isn't part of this experience."
+            : "That video can't be played here."}
+        </p>
       )}
 
       {!isHost && state.status === 'seated-idle' && (

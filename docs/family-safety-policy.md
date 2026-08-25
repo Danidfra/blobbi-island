@@ -185,10 +185,13 @@ publishing must also allow the upload that completes it.
 
 Recorded now rather than discovered later:
 
-- **`openMediaEntry: false` leaves the Family theater with nothing to play.** The
-  intended replacement is an issuer-signed catalog of approved videos, reusing
-  the trust pattern `useItemCatalog.ts` already applies to items. Until then,
-  Family may gather in the theater and not watch. A real gap, not papered over.
+- **`openMediaEntry: false` now selects a curated shelf rather than an input**
+  (Phase E). The approved list is bundled — not fetched, so it has no "unknown"
+  state to fail open on — and it **ships empty**: choosing videos appropriate for
+  children is editorial work needing sign-off, not something to invent alongside
+  the code. So a curated theater can still sit, host, join and watch in sync,
+  and currently has nothing on the shelf. See
+  [`theater-media-safety.md`](./theater-media-safety.md) §4.
 - **`strangerAuthoredNames: false` needs somewhere to put the substitute.**
   `genUserName` already derives a stable name per pubkey; which layer swaps it in
   (probably the kind 31124 visual parser) is undecided.
@@ -331,8 +334,12 @@ Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
 `emotes` have real call sites; after Phase D, so do `externalLinks`,
 `socialPlatformSharing`, `nativeShareSheet`, `relaySelection` and
 `authoringTools` — see
-[`external-egress-safety.md`](./external-egress-safety.md) §11 — and after
-Phase D.5, so do `mediaUploads` and `publicNotePublishing`.
+[`external-egress-safety.md`](./external-egress-safety.md) §11 — after
+Phase D.5, so do `mediaUploads` and `publicNotePublishing`, and after Phase E,
+so does `openMediaEntry`.
+
+**Two capabilities remain declarative:** `strangerAuthoredNames` and
+`ownFreeTextNaming` (audit H-1), plus `detailedPresence`.
 
 **A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
 It governs the player taking something they made and posting it publicly to the
@@ -350,7 +357,7 @@ The rest are still declarations. In audit-roadmap order:
 | ~~`externalLinks`, `socialPlatformSharing`, `nativeShareSheet`~~ | **done in Phase D** — one egress boundary owns the capability check, URL validation, the confirmation and the only `window.open` / `navigator.share` in the codebase |
 | ~~`relaySelection`, `authoringTools`~~ | **done in Phase D** — the relay gate is on `AppProvider.updateConfig` (the single writer, not the three selector mounts); the tools route is guarded where it mounts |
 | ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
-| `openMediaEntry` | the curated theater catalog, re-validated on every `set-media` |
+| ~~`openMediaEntry`~~ | **done in Phase E** — enforced in `admitTheaterMedia`, consulted by every path that can put media on screen (local input, session `set-media`, join, re-seat) and by the publication seam. Refusal happens before the state machine, so no player is ever constructed for unapproved media. It also derives the theater's fullscreen permission — see [`theater-media-safety.md`](./theater-media-safety.md) §9 |
 | ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5** — `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
 | `strangerAuthoredNames`, `ownFreeTextNaming` | the name substitution and the word-pick composer |
 | `detailedPresence` | the coarse presence shape |

@@ -67,6 +67,8 @@ interface YouTubeApi {
     element: HTMLElement | string,
     options: {
       videoId?: string;
+      /** The origin the iframe is served from. See {@link YOUTUBE_EMBED_HOST}. */
+      host?: string;
       playerVars?: Record<string, string | number>;
       events?: {
         onReady?: (event: { target: YouTubePlayer }) => void;
@@ -171,6 +173,28 @@ export const API_LOAD_ERROR: MediaError = {
 // ── API loading ────────────────────────────────────────────────────────────
 
 const IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+
+/**
+ * The origin the player iframe is served from.
+ *
+ * `youtube-nocookie.com` rather than `youtube.com`, for BOTH experiences — this
+ * is a privacy improvement, not a Family restriction. YouTube's "privacy-enhanced
+ * mode" defers the tracking cookies it would otherwise set on load, and since the
+ * theater embeds a video on behalf of a player who did not ask to be measured,
+ * deferring them is simply the better default.
+ *
+ * It is a supported option of the IFrame Player API (`host`), not a URL rewrite:
+ * the API script still loads from `www.youtube.com`, `postMessage` origin
+ * handling is the API's own, and every player method behaves identically. The
+ * CSP already allowed this host — `frame-src` names both — so nothing there
+ * changes either.
+ *
+ * What it does NOT do is stop YouTube seeing the request. The embed is still a
+ * cross-origin iframe: it receives the player's IP and User-Agent, and once a
+ * video actually plays it may set storage of its own. See
+ * `docs/theater-media-safety.md` §9 for the honest limits.
+ */
+export const YOUTUBE_EMBED_HOST = 'https://www.youtube-nocookie.com';
 
 /** How long the script may take before the loader calls it a failure. */
 export const API_LOAD_TIMEOUT_MS = 15_000;
@@ -336,6 +360,16 @@ export interface CreateYouTubeAdapterOptions {
   startSeconds?: number;
   /** Start muted so a programmatic play can survive autoplay policies. */
   startMuted?: boolean;
+  /**
+   * Whether the screen may go fullscreen.
+   *
+   * Enforced at the iframe's own permissions, not by hiding a button: `fs`
+   * removes YouTube's control, and withholding `allowfullscreen` plus the
+   * `fullscreen` Permissions-Policy token is what actually denies the
+   * capability. Hiding the button while the frame still permits it would leave
+   * the browser's own picture-in-picture and context menus as a way in.
+   */
+  allowFullscreen?: boolean;
   events: MediaPlayerEvents;
 }
 
@@ -351,6 +385,7 @@ export async function createYouTubeAdapter({
   videoId,
   startSeconds,
   startMuted = false,
+  allowFullscreen = true,
   events,
 }: CreateYouTubeAdapterOptions): Promise<MediaPlayerAdapter> {
   const YT = await loadYouTubeIframeApi();
@@ -359,6 +394,7 @@ export async function createYouTubeAdapter({
     let settled = false;
     const instance = new YT.Player(container, {
       videoId,
+      host: YOUTUBE_EMBED_HOST,
       playerVars: {
         ...(startSeconds !== undefined ? { start: Math.max(0, Math.floor(startSeconds)) } : {}),
         enablejsapi: 1,
@@ -366,7 +402,7 @@ export async function createYouTubeAdapter({
         playsinline: 1,
         rel: 0,
         modestbranding: 1,
-        fs: 1,
+        fs: allowFullscreen ? 1 : 0,
         origin: typeof window !== 'undefined' ? window.location.origin : '',
       },
       events: {
@@ -376,8 +412,18 @@ export async function createYouTubeAdapter({
           // Permissions-Policy for a cross-origin iframe; the API does not set it.
           try {
             const iframe = instance.getIframe();
-            iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture');
-            iframe.setAttribute('allowfullscreen', 'true');
+            // The Permissions-Policy for a cross-origin iframe; the API does not
+            // set it. `fullscreen` and `picture-in-picture` are BOTH withheld
+            // when fullscreen is denied — picture-in-picture is the other way a
+            // video leaves the island's frame.
+            iframe.setAttribute(
+              'allow',
+              allowFullscreen
+                ? 'autoplay; encrypted-media; fullscreen; picture-in-picture'
+                : 'autoplay; encrypted-media',
+            );
+            if (allowFullscreen) iframe.setAttribute('allowfullscreen', 'true');
+            else iframe.removeAttribute('allowfullscreen');
             iframe.setAttribute('title', 'Theater screen');
           } catch {
             // A missing iframe only costs us fullscreen/autoplay hints.
