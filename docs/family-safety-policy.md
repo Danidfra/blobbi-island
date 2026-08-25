@@ -192,9 +192,12 @@ Recorded now rather than discovered later:
   the code. So a curated theater can still sit, host, join and watch in sync,
   and currently has nothing on the shelf. See
   [`theater-media-safety.md`](./theater-media-safety.md) §4.
-- **`strangerAuthoredNames: false` needs somewhere to put the substitute.**
-  `genUserName` already derives a stable name per pubkey; which layer swaps it in
-  (probably the kind 31124 visual parser) is undecided.
+- **`strangerAuthoredNames: false` now substitutes a deterministic alias**
+  (Phase F), resolved where a stranger's kind 31124 becomes a `BlobbiVisual` —
+  the layer that guess turned out to be right about. It reuses `genUserName`
+  rather than adding a second identity-naming system, and the substitution is
+  **unconditional**: even a clean authored name becomes an alias, because a
+  filter would pass "come find me on discord".
 - **`detailedPresence: false` has no agreed coarse shape.** Dropping `hiddenIn`
   is clearly right; whether `goal` and sub-percent coordinates also coarsen is a
   protocol conversation. Note that coarsening what this client *publishes* does
@@ -338,8 +341,9 @@ Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
 Phase D.5, so do `mediaUploads` and `publicNotePublishing`, and after Phase E,
 so does `openMediaEntry`.
 
-**Two capabilities remain declarative:** `strangerAuthoredNames` and
-`ownFreeTextNaming` (audit H-1), plus `detailedPresence`.
+After Phase F, so do `strangerAuthoredNames` and `ownFreeTextNaming`.
+
+**One capability remains declarative:** `detailedPresence`.
 
 **A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
 It governs the player taking something they made and posting it publicly to the
@@ -359,7 +363,7 @@ The rest are still declarations. In audit-roadmap order:
 | ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
 | ~~`openMediaEntry`~~ | **done in Phase E** — enforced in `admitTheaterMedia`, consulted by every path that can put media on screen (local input, session `set-media`, join, re-seat) and by the publication seam. Refusal happens before the state machine, so no player is ever constructed for unapproved media. It also derives the theater's fullscreen permission — see [`theater-media-safety.md`](./theater-media-safety.md) §9 |
 | ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5** — `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
-| `strangerAuthoredNames`, `ownFreeTextNaming` | the name substitution and the word-pick composer |
+| ~~`strangerAuthoredNames`, `ownFreeTextNaming`~~ | **done in Phase F** — stranger names resolve to a deterministic alias where a stranger's kind 31124 becomes a `BlobbiVisual`, so every label, title and `aria-label` downstream is safe; own naming is validated at the adoption writer against an approved vocabulary, before anything is signed. See [`safe-user-authored-names.md`](./safe-user-authored-names.md) |
 | `detailedPresence` | the coarse presence shape |
 
 Still not modelled as capabilities, and now built: **blocking, muting and

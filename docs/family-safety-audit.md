@@ -162,6 +162,35 @@ inference rather than something the repo proves, it is marked **[inference]**.
 >
 > Details: [`theater-media-safety.md`](./theater-media-safety.md).
 
+> **Status update (2026-08-25) — Phase F shipped (safe names).** **H-1
+> (stranger-authored Blobbi names) is resolved for a curated experience.** A
+> stranger's authored name is replaced by a deterministic alias where their kind
+> 31124 becomes a `BlobbiVisual`, so every downstream surface — the hover label,
+> its `title` and `aria-label`, the actor tooltip, the read-only info modal — is
+> safe without knowing the rule exists. The substitution is unconditional: a
+> clean authored name is withheld too, because a filter would pass "come find me
+> on discord", which is the message that matters. Their event is never rewritten.
+>
+> Own naming is validated at the adoption writer — the only writer of a Blobbi
+> name, since no rename exists — against a 256-combination approved vocabulary,
+> before the profile is read and before anything is signed. The rule is
+> structural, so a clean sentence is refused too. A curated experience gets a
+> two-dropdown composer rather than a disabled text field.
+>
+> A small prohibited-text classifier was added as **defence in depth only**
+> (`src/user-text/`), with boundary-aware matching and a pinned false-positive
+> suite. It is deliberately NOT wired into chat: Communication V2 still DROPS a
+> free-text message rather than masking it, which is stronger, and three boundary
+> tests keep it that way.
+>
+> **No Nostr kind, tag or schema changed.** Existing names are not migrated: a
+> player keeps seeing their own historical name, while strangers under a curated
+> policy never see an authored name at all.
+>
+> Remaining declarative capability: `detailedPresence`.
+>
+> Details: [`safe-user-authored-names.md`](./safe-user-authored-names.md).
+
 ---
 
 ## 1. Executive verdict

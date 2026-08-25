@@ -45,6 +45,9 @@ import { useTypewriter } from '@/hooks/useTypewriter';
 import { buildRevealGradient } from '@/lib/ceremony-colors';
 import { useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
 import type { BlobbiEggPreview } from '@/lib/blobbi-egg-preview';
+import { CURATED_ADJECTIVES, CURATED_NOUNS, composeCuratedName } from '@/blobbi-names';
+import { CuratedNameComposer } from './CuratedNameComposer';
+import { useIslandSafetyPolicy } from '@/safety';
 
 const BIRTH_DIALOG: string[] = [
   'Something stirs…',
@@ -76,6 +79,11 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
   const [phase, setPhase] = useState<CeremonyPhase>('loading');
   const [preview, setPreview] = useState<BlobbiEggPreview | null>(null);
   const [name, setName] = useState('');
+  // The curated chooser's two words. Seeded with the first of each list so the
+  // composer always shows a complete, valid name rather than an empty prompt.
+  const [curatedAdjective, setCuratedAdjective] = useState(CURATED_ADJECTIVES[0]);
+  const [curatedNoun, setCuratedNoun] = useState(CURATED_NOUNS[0]);
+  const allowsFreeTextNaming = useIslandSafetyPolicy().ownFreeTextNaming;
   const [isNaming, setIsNaming] = useState(false);
   const [eggVisible, setEggVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -258,12 +266,22 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
   //   - success → finish the ceremony and enter the island
   //   - failure → surface an inline retry error and stay on the naming screen
   //     (never call onComplete, so the player can't land on an invisible egg).
+  /**
+   * The name being submitted, from whichever chooser this experience offers.
+   *
+   * One value, so `handleNameSubmit` and the writer see the same string and the
+   * two cannot drift.
+   */
+  const submittedName = allowsFreeTextNaming
+    ? name.trim()
+    : (composeCuratedName(curatedAdjective, curatedNoun) ?? '');
+
   const handleNameSubmit = useCallback(async () => {
-    if (isNaming || !name.trim() || !preview) return;
+    if (isNaming || !submittedName || !preview) return;
     setIsNaming(true);
     setHatchError(null);
     try {
-      const blobbiId = await finalizeAdoption(preview, name.trim());
+      const blobbiId = await finalizeAdoption(preview, submittedName);
       // Only finish once the baby + profile are really published.
       finishCeremony(blobbiId);
     } catch (error) {
@@ -272,7 +290,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
     } finally {
       setIsNaming(false);
     }
-  }, [name, isNaming, preview, finalizeAdoption, finishCeremony]);
+  }, [submittedName, isNaming, preview, finalizeAdoption, finishCeremony]);
 
   const isEggPhase =
     phase === 'egg' || phase === 'crack_1' || phase === 'crack_2' || phase === 'crack_3';
@@ -658,7 +676,32 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                 )}
               </p>
             </div>
-            {namingTypewriter.done && (
+            {namingTypewriter.done && !allowsFreeTextNaming && (
+              /*
+                Which chooser exists is decided by the capability, not by
+                disabling a control: an experience without free-text naming has
+                no text field in the tree at all, so there is nothing to
+                re-enable and nothing to explain.
+
+                Presentation only — `finalizeAdoption` validates the name again
+                before it signs anything.
+              */
+              <CuratedNameComposer
+                adjective={curatedAdjective}
+                noun={curatedNoun}
+                onAdjectiveChange={setCuratedAdjective}
+                onNounChange={setCuratedNoun}
+                onSubmit={handleNameSubmit}
+                submitting={isNaming}
+                submitLabel={isNaming ? 'Waking them up…' : hatchError ? 'Try again' : "That's the one."}
+              />
+            )}
+            {namingTypewriter.done && !allowsFreeTextNaming && hatchError && (
+              <p role="alert" className="text-xs text-white/70 leading-relaxed pt-1">
+                {hatchError}
+              </p>
+            )}
+            {namingTypewriter.done && allowsFreeTextNaming && (
               <div className="w-full space-y-2 animate-onboard-soft-fade-in">
                 <Input
                   ref={nameInputRef}

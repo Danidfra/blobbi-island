@@ -37,6 +37,8 @@ import { CommunicationPanel } from './communication/CommunicationPanel';
 import type { IslandMessage } from '@/communication';
 import { PlayerSafetyActions } from './player-safety/PlayerSafetyActions';
 import { isBlocked, subscribeRelationships } from '@/player-safety';
+import { resolveRemoteBlobbiDisplayName } from '@/blobbi-names';
+import { useIslandSafetyPolicy } from '@/safety';
 import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 
 interface PlayingViewProps {
@@ -74,6 +76,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const [isCommunicationOpen, setIsCommunicationOpen] = useState(false);
   const { currentLocation, previousLocation, bootstrapPosition } = useLocation();
   const { user } = useCurrentUser();
+  const policy = useIslandSafetyPolicy();
   const { nostr } = useNostr();
   const { showDebugOverlays } = useDebugOverlays();
   const [modalKey, setModalKey] = useState<string>('self');
@@ -389,11 +392,19 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         specialMark: get('special_mark') ?? get('specialMark') ?? blobbiVisual.specialMark,
         stage: normalizeStage(get('stage') ?? blobbiVisual.stage ?? 'baby'),
         adultType: get('adult_type') ?? get('adultType') ?? blobbiVisual.adultType,
-        name: getBlobbiDisplayName({
-          id: get('d') ?? blobbiD ?? '',
-          name: get('name'),
-          rawTags: event.tags,
-        }),
+        // The SECOND place a stranger's authored name becomes display text: the
+        // modal refreshes the visual from the full event after opening. Resolved
+        // through the same boundary, so the refresh cannot undo what the
+        // presence-driven parse already made safe.
+        name: resolveRemoteBlobbiDisplayName({
+          policy,
+          pubkey: playerPubkey,
+          authoredName: getBlobbiDisplayName({
+            id: get('d') ?? blobbiD ?? '',
+            name: get('name'),
+            rawTags: event.tags,
+          }),
+        }).name,
       };
 
       dbg('[blobbi-debug][setState] Setting refined externalVisual:', {

@@ -49,6 +49,7 @@ import { wireCenterToGround } from '@/lib/presence-ground';
 import { LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { isOccupiableSeat } from '@/lib/theater-seats-config';
 import { isBlocked, subscribeRelationships } from '@/player-safety';
+import { useIslandSafetyPolicy } from '@/safety';
 
 // ============================================================================
 // Types
@@ -184,6 +185,12 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // State
   const [sessionId] = useState(() => makeSessionId());
   const [players, setPlayers] = useState<Map<string, PlayerRenderState>>(new Map());
+  /*
+    The part of the policy that changes what a remote name resolves to. A
+    primitive so the effect below compares by value — the policy object is a
+    frozen singleton today, but a derived one would re-run this on every render.
+  */
+  const namingPolicyKey = useIslandSafetyPolicy().strangerAuthoredNames;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
 
@@ -797,6 +804,29 @@ const animatePlayers = useCallback(() => {
     prune();
     return subscribeRelationships(prune);
   }, [opts.livePositionsRef]);
+
+  /**
+   * A naming-policy change invalidates every cached remote visual.
+   *
+   * Remote names are resolved where a stranger's kind 31124 becomes a
+   * `BlobbiVisual` (see `MultiplayerLayer.fetchBlobbi31124`), and that result is
+   * cached per Blobbi address. Without this, changing the policy would leave
+   * already-fetched names on screen until a reload — which would make "stop
+   * showing authored names" require a page refresh, and a safety control that
+   * needs a refresh is one that did not take effect.
+   *
+   * Family is not selectable yet, so this cannot fire today. It is here so that
+   * the day it can, the architecture already behaves.
+   */
+  useEffect(() => {
+    visualCacheRef.current.clear();
+    setPlayers((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      for (const [key, player] of prev) next.set(key, { ...player, visual: undefined });
+      return next;
+    });
+  }, [namingPolicyKey]);
 
   const startSubscription = useCallback(() => {
     if (subscriptionRef.current) {

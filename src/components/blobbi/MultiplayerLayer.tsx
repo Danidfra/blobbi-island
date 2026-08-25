@@ -54,6 +54,7 @@ import { CHAT_KIND, CHAT_EVICT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
+import { resolveRemoteBlobbiDisplayName } from '@/blobbi-names';
 import {
   clearRecentMessages,
   forgetMessagesFrom,
@@ -361,6 +362,10 @@ export function MultiplayerLayer({
   // Capability set for the current experience. A frozen singleton, so it is
   // referentially stable and safe to use directly as a hook dependency.
   const safetyPolicy = useIslandSafetyPolicy();
+  // Read at call time: the visual fetcher is a stable callback, so capturing the
+  // policy would freeze the naming rule at mount and require a reload to change.
+  const policyRef = useRef(safetyPolicy);
+  policyRef.current = safetyPolicy;
   const { currentLocation } = useLocation();
   const { isPositionBlocked } = useMovementBlocker();
   const { showDebugOverlays } = useDebugOverlays();
@@ -537,13 +542,25 @@ export function MultiplayerLayer({
     // Parse visual data (simplified)
     const get = (n: string) => event.tags.find(([name]) => name === n)?.[1];
     const dTag = get('d');
-    // Resolve the user-facing name with the SAME priority used in the selection
-    // screen / cards: the real `name` tag wins; never fall back to the raw
-    // id/d-tag-derived code in user-facing labels.
-    const name = getBlobbiDisplayName({
+    // THE stranger-name boundary.
+    //
+    // This is where another player's authored text becomes `BlobbiVisual.name`,
+    // and every display of a remote name reads that field — the hover label, its
+    // `title` and `aria-label`, the actor tooltip, the read-only info modal. So
+    // the substitution happens here rather than in six components, and a seventh
+    // added later is safe without knowing this exists.
+    //
+    // The stranger's own event is untouched; their words simply never become
+    // display text in an experience that does not permit them.
+    const authoredName = getBlobbiDisplayName({
       id: dTag ?? '',
       name: get('name'),
       rawTags: event.tags,
+    });
+    const { name } = resolveRemoteBlobbiDisplayName({
+      policy: policyRef.current,
+      pubkey,
+      authoredName,
     });
     const baseColor      = get('base_color')      || get('baseColor');
     const secondaryColor = get('secondary_color') || get('secondaryColor');

@@ -92,11 +92,18 @@ import {
   previewToBabyTags,
   type BlobbiEggPreview,
 } from '@/lib/blobbi-egg-preview';
+import { admitOwnBlobbiName } from '@/blobbi-names';
+import { useIslandSafetyPolicy } from '@/safety';
 
 export function useFirstEggAdoption() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { data: authorData } = useAuthor(user?.pubkey);
+  // Read at call time: `finalizeAdoption` is a stable callback, so capturing the
+  // policy would freeze the naming rule at mount.
+  const policy = useIslandSafetyPolicy();
+  const policyRef = useRef(policy);
+  policyRef.current = policy;
 
   // Duplicate-submit guard: once finalize is in flight (or done) for this hook
   // instance, remember the promise so a second submit can't create a second
@@ -168,7 +175,27 @@ export function useFirstEggAdoption() {
       const run = async (): Promise<string> => {
         if (!user?.pubkey) throw new Error('User is not logged in');
         const pubkey = user.pubkey;
-        const finalName = name.trim() || preview.name || 'Blobbi';
+
+        /*
+          THE own-name boundary — before the profile is read, before anything is
+          signed, before anything reaches a relay.
+
+          The composer is UI. This is what stops a direct caller publishing
+          `message me on telegram` as a Blobbi name in a curated experience: a
+          clean sentence passes every filter, so the rule is structural — the
+          name must be one the approved vocabulary can express.
+
+          Under an experience that permits free-text naming this applies exactly
+          the checks the ceremony has always applied, so nothing changes.
+        */
+        const admission = admitOwnBlobbiName(
+          policyRef.current,
+          name.trim() || preview.name || 'Blobbi',
+        );
+        if (!admission.ok) {
+          throw new Error(`Blobbi name not permitted in this experience: ${admission.reason}`);
+        }
+        const finalName = admission.name;
 
         // ── a. Read the latest profile (canonical 11125 + legacy 31125). This
         //       runs on every attempt, so a retry always merges against the
