@@ -38,6 +38,16 @@ interface AppProviderProps {
  */
 const AppConfigSchema: z.ZodType<AppConfig> = z.object({
   theme: z.string().catch(DEFAULT_ISLAND_THEME_ID),
+  /*
+    Both optional and both `.catch(undefined)`: a config written before these
+    existed is the common case, and "absent" is a MEANINGFUL value here — it
+    says the selection's age is unknown, which reconciliation reads as "yield to
+    the account". A corrupt value must degrade to that same unknown rather than
+    to a confident zero, which would claim the local choice is older than
+    everything.
+  */
+  themeChosenAt: z.number().finite().optional().catch(undefined),
+  themeChosenBy: z.string().optional().catch(undefined),
   relayUrl: z.string().url().catch('wss://relay.ditto.pub'),
 });
 

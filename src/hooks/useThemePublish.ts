@@ -137,8 +137,32 @@ export function usePublishThemeSelection() {
   const { nostr } = useNostr();
   const { mutateAsync: createEvent } = useNostrPublish();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The publish the debounce is holding, if any. */
+  const pending = useRef<(() => void) | null>(null);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  /*
+    FLUSHED on unmount, not dropped.
+
+    The debounce exists so a player flipping through themes does not publish
+    twelve events — but this hook lives in the picker, and closing the picker is
+    the most ordinary thing a player does after choosing. Cancelling here meant
+    a selection made in the last two seconds before the dialog closed never
+    reached a relay at all: the choice applied locally, the account kept
+    advertising the PREVIOUS theme, and the next reconciliation had every reason
+    to believe the old one was current.
+
+    The work is a module-level async job — no state, no render — so running it
+    from a cleanup is safe.
+  */
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      const run = pending.current;
+      pending.current = null;
+      run?.();
+    },
+    [],
+  );
 
   const signer = user?.signer;
   const pubkey = user?.pubkey;
@@ -244,13 +268,20 @@ export function usePublishThemeSelection() {
       if (!pubkey) return;
 
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => {
-        // Serialised per account so two rapid selections cannot interleave
-        // their read-modify-write of the settings blob.
+      // Serialised per account so two rapid selections cannot interleave their
+      // read-modify-write of the settings blob.
+      const run = () => {
         void serializeByKey(`theme-selection:${pubkey}`, async () => {
           await publishActiveTheme(theme, config).catch(() => {});
           await publishDittoSettings(config).catch(() => {});
         });
+      };
+      // Replaces whatever the debounce was holding: only the newest selection
+      // is worth publishing, and only once.
+      pending.current = run;
+      timer.current = setTimeout(() => {
+        pending.current = null;
+        run();
       }, SELECTION_PUBLISH_DEBOUNCE_MS);
     },
     [pubkey, publishActiveTheme, publishDittoSettings],

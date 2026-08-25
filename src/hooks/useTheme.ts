@@ -88,8 +88,15 @@ export interface UseThemeResult {
    * `useThemeSelection`. This hook is used by surfaces that only read the theme
    * (the account menu's Appearance row), and a read-only surface must not drag
    * a publish path, a signer and a relay into its dependency graph.
+   *
+   * `chosenBy` is the account that made the choice, and it is a PARAMETER for
+   * the same reason: reading the signed-in user here would mean requiring a
+   * login provider above every surface that merely displays the theme's name.
+   * `useThemeSelection` — the hook every real chooser goes through — supplies
+   * it. Omitting it records an unattributed choice, which reconciliation treats
+   * as "not this account's", the safe direction.
    */
-  setTheme: (theme: IslandTheme) => void;
+  setTheme: (theme: IslandTheme, chosenBy?: string | null) => void;
 }
 
 /**
@@ -141,7 +148,7 @@ export function useTheme(): UseThemeResult {
   );
 
   const setTheme = useCallback(
-    (next: IslandTheme) => {
+    (next: IslandTheme, chosenBy?: string | null) => {
       if (next.source === 'nostr') {
         // Cached BEFORE the config write, so the next boot has the palette even
         // if the tab is closed in the same instant.
@@ -151,7 +158,26 @@ export function useTheme(): UseThemeResult {
         // later corrupt config resolve to a theme the player is not using.
         clearIslandThemeCache();
       }
-      updateConfig((current) => ({ ...current, theme: next.id }));
+      /*
+        WHEN and BY WHOM, stamped in the one place a local selection is made.
+
+        `IslandThemeSync` reconciles this browser against the account, and
+        without a time on the local side it cannot order the two: a selection
+        made a second ago and one made last month look identical to it, so the
+        relay's copy — which is stale by exactly the length of the publish
+        debounce — wins and the player watches their choice revert.
+
+        ONE update, not three. `useLocalStorage`'s setter derives the next value
+        from the state of the render it was created in, so two calls in the same
+        tick both read the pre-update config and the second silently discards
+        the first. The id and its provenance must never be able to disagree.
+      */
+      updateConfig((current) => ({
+        ...current,
+        theme: next.id,
+        themeChosenAt: Date.now(),
+        themeChosenBy: chosenBy ?? undefined,
+      }));
     },
     [updateConfig],
   );

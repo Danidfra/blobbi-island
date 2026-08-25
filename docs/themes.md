@@ -272,6 +272,12 @@ which only the picker uses.
 
 ### Persistence and fallback
 
+**Source of truth.** The selection is `AppConfig.theme` in the `nostr:app-config`
+localStorage blob, and nothing else. kind:16767 and kind:30078 are how that
+choice TRAVELS — to another device, and to Ditto — not where it is kept. A
+reload restores the theme by reading the config; if that ever depends on a relay
+answering, the feature is broken.
+
 **Authority order.** A relay outage is never a theme change:
 
 ```
@@ -282,8 +288,70 @@ which only the picker uses.
        ↓
   IslandThemeSync         refreshes the cache from the live kind:36767, and
                           adopts the ACCOUNT's selection — once per session,
-                          never on an unusable read
+                          never on an unusable read, and never over a newer
+                          local choice (below)
 ```
+
+### Which selection is newer
+
+The two sides are **not symmetric**, and forgetting that is what broke reload
+persistence once already.
+
+`AppConfig.theme` changes the instant the player clicks. The account's copy is
+published after a two-second debounce, and a reload, a closed picker or a dead
+relay can mean it never lands at all. So for a window after every selection —
+and permanently, if the write was lost — the relay is still advertising the
+theme the player just replaced. "The account says X, I say Y" is therefore **not
+evidence that X is what the player wants**.
+
+Two fields on the config make the comparison possible:
+
+| Field | Written by | Means |
+| --- | --- | --- |
+| `themeChosenAt` | `useTheme.setTheme` | when this browser recorded a choice, in ms |
+| `themeChosenBy` | `useTheme.setTheme`, via `useThemeSelection` | which account was signed in when it was made |
+
+`IslandThemeSync` adopts only when the account is genuinely the newer word:
+
+```
+  themeChosenBy !== pubkey    the local choice is not this account's → adopt
+  themeChosenAt undefined     no recorded choice here at all        → adopt
+  remoteMs > themeChosenAt    the account chose later, elsewhere    → adopt
+  otherwise                   the local choice is newer → leave it alone
+```
+
+Provenance is checked **before** recency, and that ordering is the account
+scope: `AppConfig.theme` is per-BROWSER while 16767 and 30078 are per-ACCOUNT,
+so signing in as somebody else adopts THEIR theme even though it is older than
+what is on screen. Recording who made the choice makes that fall out of one
+comparison instead of needing a second rule.
+
+`themeChosenBy` is a PARAMETER of `setTheme` rather than something it reads,
+because reading the signed-in user there would mean requiring a login provider
+above every surface that merely displays the theme's name — which is the same
+reason `useTheme` is relay-free. `useThemeSelection`, which every real chooser
+goes through, supplies it.
+
+**UNKNOWN is not absent.** Both remote reads throw on an unusable outcome rather
+than resolving empty, so reconciliation seeing nothing means "still loading" or
+"this account genuinely has no theme". Neither writes anything, and neither
+counts as having answered the question — the effect asks again when the reads
+land. A boot **never** publishes and never rewrites the selection; only an
+explicit choice does.
+
+**Reconciliation is asked once per session, and asking includes agreeing.** The
+sync effect re-runs whenever the selection changes, so a version that armed its
+guard only on the paths that WROTE would re-enter reconciliation on the player's
+very next theme change, find the relay still holding the previous selection, and
+overwrite the choice they had just made. That was the bug; the guard is now
+armed on every path that answers, including the one where the account already
+agreed.
+
+**A pending publish is flushed on unmount, not cancelled.** The debounce exists
+so flipping through themes does not publish twelve events, but the hook lives in
+the picker and closing the picker is the most ordinary thing a player does after
+choosing. Dropping the write there meant the account kept advertising the old
+theme, which is what gave reconciliation something stale to believe.
 
 Within that last step, the account is asked in this order:
 

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useTheme } from '@/hooks/useTheme';
 import { useSelectedNostrTheme } from '@/hooks/useNostrThemes';
 import { usePublishThemeSelection } from '@/hooks/useThemePublish';
@@ -39,6 +40,7 @@ export interface UseThemeSelectionResult extends ReturnType<typeof useTheme> {
 
 export function useThemeSelection(): UseThemeSelectionResult {
   const base = useTheme();
+  const { user } = useCurrentUser();
   const publishSelection = usePublishThemeSelection();
   const selected = useSelectedNostrTheme(base.themeId);
 
@@ -49,10 +51,16 @@ export function useThemeSelection(): UseThemeSelectionResult {
 
   const selectTheme = useCallback(
     (next: IslandTheme) => {
-      base.setTheme(next);
+      // THE chooser. Every surface that lets a player pick a theme comes
+      // through here, which is why the account is attached here: it is the one
+      // place that both knows who is signed in and is a deliberate choice
+      // rather than a reconciliation. `IslandThemeSync` compares it against the
+      // signed-in account to decide whether a remote selection outranks this
+      // one — see `remoteWins`.
+      base.setTheme(next, user?.pubkey ?? null);
       publishSelection(next, themeConfigFromIslandTheme(next));
     },
-    [base, publishSelection],
+    [base, publishSelection, user?.pubkey],
   );
 
   return {
