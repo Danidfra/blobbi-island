@@ -20,12 +20,14 @@ import {
   type PresenceContent,
 } from './multiplayer';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { STANDARD_POLICY } from '@/safety';
 
 const PARAMS = {
   sessionId: 'session-1',
   islandId: '1',
   location: 'town' as const,
   blobbiAddr: '31124:pk:blobbi-1',
+  policy: STANDARD_POLICY,
 };
 
 interface Published {

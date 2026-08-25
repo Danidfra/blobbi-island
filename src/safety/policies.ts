@@ -106,10 +106,13 @@ export const STANDARD_POLICY: IslandSafetyPolicy = Object.freeze({
  *   substitution and its boundary; the shipped Family policy then set the
  *   capability back to `true` while the social identity model (friends, local
  *   nicknames, alias collisions) is decided. See the note on the field itself.
- * - **`detailedPresence: false` has no agreed coarse shape yet.** Dropping
- *   `hiddenIn` is clearly right; whether `goal` and sub-percent coordinates also
- *   coarsen is a protocol conversation, and coarsening what this client
- *   *publishes* does not change what a relay will serve to a modified one.
+ * - **`detailedPresence` is enforced** (Phase G). The audit disagreed with the
+ *   guess recorded here: dropping `hiddenIn` outright would UN-HIDE a hidden
+ *   player, so its value is withheld and the fact kept; `goal` and full
+ *   coordinate precision are load-bearing for smooth motion and are published
+ *   under every policy. See `docs/presence-data-minimization.md`. Coarsening
+ *   what this client publishes still does not change what a relay will serve to
+ *   a modified one.
  * - **`authoringTools: false` is route-level.** It removes the surface from a
  *   Family build; it is not an authorization boundary, because publishing an
  *   event only ever required a signature the player already controls.

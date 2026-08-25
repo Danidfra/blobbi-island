@@ -21,6 +21,7 @@ import { EXP_SECONDS, publishPresenceLogin } from '@/lib/multiplayer';
 import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
 import { grantArcadePass, clearArcadePass, resetArcadePassSubscribers } from '@/lib/arcade-pass';
+import { STANDARD_POLICY } from '@/safety';
 
 const PLAYER = 'a'.repeat(64);
 const NOW = 1_800_000_000;
@@ -474,6 +475,7 @@ describe('LocationProvider bootstrap', () => {
             islandId: ISLAND,
             location: locationRef.current,
             blobbiAddr: `31124:${PLAYER}:pet`,
+            policy: STANDARD_POLICY,
             startPos: { x: 50, y: 80 },
             seq: 1,
           },

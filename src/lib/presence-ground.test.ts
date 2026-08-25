@@ -12,6 +12,7 @@ import { buildPresence31950, type PresenceContent } from './multiplayer';
 import { blobbiHalfHeightPercent } from './blobbi-ground';
 import { getBlobbiSizeForLocation } from './location-blobbi-sizes';
 import type { LocationId } from './location-types';
+import { STANDARD_POLICY } from '@/safety';
 
 const LOCATIONS: LocationId[] = ['home', 'town', 'stage', 'nostr-station', 'mine'];
 
@@ -60,6 +61,7 @@ describe('buildPresence31950 — the single ground→wire boundary', () => {
       islandId: '1',
       location: 'stage' as LocationId,
       blobbiAddr: '31124:pk:d',
+      policy: STANDARD_POLICY,
       content,
     });
     const wire = JSON.parse(event.content);
@@ -87,6 +89,7 @@ describe('buildPresence31950 — the single ground→wire boundary', () => {
       islandId: '1',
       location: 'town' as LocationId,
       blobbiAddr: '31124:pk:d',
+      policy: STANDARD_POLICY,
       content,
     });
     const wire = JSON.parse(event.content);

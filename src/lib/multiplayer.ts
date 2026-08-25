@@ -12,6 +12,8 @@ import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { buildBlobbiAddress } from '@blobbi-kit/core/blobbi';
 import { worldDistancePx } from '@/lib/blobbi-ground';
 import { groundToWireCenter } from '@/lib/presence-ground';
+import { projectPresenceForPolicy } from '@/lib/presence-projection';
+import type { IslandSafetyPolicy } from '@/safety';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 
 // ============================================================================
@@ -511,13 +513,33 @@ export function buildPresence31950(params: {
   location: LocationId;
   blobbiAddr: string;
   content: PresenceContent;
+  /**
+   * The capability set this presence is published under.
+   *
+   * REQUIRED, and required here rather than at each publish helper, because
+   * this builder is the one funnel every one of them passes through — login,
+   * move, hide, sit, activity and heartbeat all end up on this line. Making it
+   * a parameter of the funnel means a seventh publisher cannot be written
+   * without answering the question, and TypeScript asks on its author's behalf.
+   */
+  policy: IslandSafetyPolicy;
 }): {
   kind: number;
   content: string;
   tags: string[][];
 } {
-  const { sessionId, islandId, location, blobbiAddr, content: groundContent } = params;
+  const { sessionId, islandId, location, blobbiAddr, policy } = params;
   const expiration = (nowSec() + EXP_SECONDS).toString();
+
+  /*
+    THE DISCLOSURE BOUNDARY, before anything is serialised.
+
+    The caller hands over its complete local state and this decides what may
+    leave — see `presence-projection.ts`. It runs before the ground→wire
+    conversion below purely for legibility: the projection is a statement about
+    the game's own state, not about the wire encoding of coordinates.
+  */
+  const groundContent = projectPresenceForPolicy(policy, params.content);
 
   // GROUND→WIRE boundary (Phase 2): every publish helper funnels through this
   // builder with INTERNAL ground-point positions; the kind 31950 wire format
@@ -565,12 +587,14 @@ export async function publishPresenceLogin(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     startPos: Position;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   }
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, startPos, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, startPos, seq, policy } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -589,6 +613,7 @@ export async function publishPresenceLogin(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);
@@ -604,6 +629,8 @@ export async function publishMove(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   },
@@ -622,7 +649,7 @@ export async function publishMove(
    */
   activity?: PresenceActivity
 ): Promise<Position> {
-  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq, policy } = params;
 
   // Clamp destination to walkable area
   const clampedTo = clampToWalkable(rawClick, from, nav);
@@ -651,6 +678,7 @@ export async function publishMove(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);
@@ -671,13 +699,15 @@ export async function publishHide(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   },
   currentPos: Position,
   hidingSpotId: string
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq, policy } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -697,6 +727,7 @@ export async function publishHide(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);
@@ -720,6 +751,8 @@ export async function publishSit(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   },
@@ -727,7 +760,7 @@ export async function publishSit(
   seatId: string,
   activity?: PresenceActivity
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq, policy } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -750,6 +783,7 @@ export async function publishSit(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);
@@ -773,6 +807,8 @@ export async function publishActivity(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   },
@@ -780,7 +816,7 @@ export async function publishActivity(
   activity: PresenceActivity | null,
   seatId?: string
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq, policy } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -802,6 +838,7 @@ export async function publishActivity(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);
@@ -817,6 +854,8 @@ export async function publishHeartbeat(
     islandId: string;
     location: LocationId;
     blobbiAddr: string;
+    /** Capability set for this publish — see {@link buildPresence31950}. */
+    policy: IslandSafetyPolicy;
     /** Monotonic publish counter for this session (see {@link PresenceContent.seq}). */
     seq?: number;
   },
@@ -825,7 +864,7 @@ export async function publishHeartbeat(
   seatId?: string,
   activity?: PresenceActivity
 ): Promise<void> {
-  const { sessionId, islandId, location, blobbiAddr, seq } = params;
+  const { sessionId, islandId, location, blobbiAddr, seq, policy } = params;
 
   const content: PresenceContent = {
     state: 'idle',
@@ -853,6 +892,7 @@ export async function publishHeartbeat(
     location,
     blobbiAddr,
     content,
+    policy,
   });
 
   await publish(event);

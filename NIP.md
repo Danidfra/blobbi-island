@@ -209,6 +209,13 @@ locally rather than streaming positions.
 
   - **`hiddenIn`** — id of the hiding spot the player is hidden inside (e.g.
     `"town-bush-1"`). Remote clients suppress the Blobbi's visual entirely.
+    Readers MUST decide by PRESENCE of the field, not by resolving its value: a
+    spot id from another room, from a newer build, or the reserved value below
+    all mean the same thing — this player is hidden. The reserved value
+    **`"hidden"`** means *hidden, spot withheld*, and is what a client publishes
+    when it is configured not to disclose fine-grained presence
+    (`docs/presence-data-minimization.md`). It is not a hiding spot and no
+    configuration defines one by that name.
   - **`seatId`** — canonical id of the theater seat the player is sitting in
     (e.g. `"theater-seat-a4"`). Remote clients snap the Blobbi to that seat's
     configured anchor and draw it rear-facing, **ignoring `anchor`** for the

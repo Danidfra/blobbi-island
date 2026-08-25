@@ -219,6 +219,34 @@ inference rather than something the repo proves, it is marked **[inference]**.
 > the client's own presence was admitted as a remote actor. Fixed at the
 > presence ingest — see [`multiplayer-identity.md`](./multiplayer-identity.md).
 
+> **Status update (2026-08-25) — Phase G shipped (presence data minimization).**
+> `detailedPresence` was the last capability that was only declarative. It now
+> has one enforcement point: a pure projection between the full local runtime
+> state and the wire, applied inside the single builder every one of the six
+> presence publishers funnels through. **No capability is declarative any more.**
+>
+> The audit disagreed with the roadmap's guess, and the disagreement is the
+> finding. Dropping `hiddenIn` would have UN-HIDDEN a hidden player: a remote
+> client with no hiding claim draws the Blobbi normally, standing at the
+> coordinates they are hiding at. So the fact is kept and the identifier
+> withheld — a stock client still conceals them, and nobody learns which bush.
+> `goal` and full coordinate precision are published under every policy, because
+> removing them breaks remote movement rather than protecting anybody.
+>
+> Everything else survived the test "does any consumer need this to render or
+> synchronise?", so a coarse presence is a real multiplayer presence: movement,
+> seats, shared activities and mixed Standard/Family rooms all work, tested in
+> both directions.
+>
+> **No new kind, tag or schema.** One existing optional field gained a reserved
+> value, recorded in `NIP.md`.
+>
+> This minimizes extra detail. It does not make presence private — the pubkey,
+> the room, the Blobbi, the position and the activity are all still public, and
+> a modified client is constrained by none of it.
+>
+> Details: [`presence-data-minimization.md`](./presence-data-minimization.md).
+
 ---
 
 ## 1. Executive verdict

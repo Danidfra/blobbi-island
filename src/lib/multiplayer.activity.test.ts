@@ -27,12 +27,16 @@ import {
   type PresenceContent,
 } from './multiplayer';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { STANDARD_POLICY } from '@/safety';
 
 const PARAMS = {
   sessionId: 'session-1',
   islandId: '1',
   location: 'stage' as const,
   blobbiAddr: '31124:pk:blobbi-1',
+  // Standard: the projection is a pass-through, so these keep asserting the
+  // full wire shape exactly as before.
+  policy: STANDARD_POLICY,
 };
 
 const POS = { x: 30, y: 88 };

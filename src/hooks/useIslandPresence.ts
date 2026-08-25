@@ -191,7 +191,21 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
     primitive so the effect below compares by value — the policy object is a
     frozen singleton today, but a derived one would re-run this on every render.
   */
-  const namingPolicyKey = useIslandSafetyPolicy().strangerAuthoredNames;
+  /*
+    The capability set every publish is projected through.
+
+    Held on a ref and read at PUBLISH time, never captured. The heartbeat
+    interval is built once per location and lives for the whole visit, so a
+    policy captured by value would keep publishing at the old detail level until
+    something happened to rebuild it — which for a heartbeat is a location
+    change, and for a player standing still is never. This is the same
+    stale-closure shape the identity boundary was fixed for; it does not get to
+    come back through a different field.
+  */
+  const safetyPolicy = useIslandSafetyPolicy();
+  const policyRef = useRef(safetyPolicy);
+  policyRef.current = safetyPolicy;
+  const namingPolicyKey = safetyPolicy.strangerAuthoredNames;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>();
 
@@ -926,6 +940,7 @@ const animatePlayers = useCallback(() => {
           location,
           blobbiAddr,
           seq: nextSeq(),
+          policy: policyRef.current,
         },
         from,
         destRaw,
@@ -960,7 +975,7 @@ const animatePlayers = useCallback(() => {
       if (DEBUG_MP) console.debug('[blobbi][mp] hideAt', { pos: currentLocalPosRef.current(), hidingSpotId });
       await publishHide(
         publish,
-        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
         currentLocalPosRef.current(),
         hidingSpotId
       );
@@ -999,7 +1014,7 @@ const animatePlayers = useCallback(() => {
       if (DEBUG_MP) console.debug('[blobbi][mp] sitAt', { pos: currentLocalPosRef.current(), seatId });
       await publishSit(
         publish,
-        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
         currentLocalPosRef.current(),
         seatId,
         myActivityRef.current ?? undefined
@@ -1043,7 +1058,7 @@ const animatePlayers = useCallback(() => {
         if (DEBUG_MP) console.debug('[blobbi][mp] setActivity', { session: next?.session ?? null });
         await publishActivity(
           publish,
-          { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+          { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
           currentLocalPosRef.current(),
           next,
           mySeatIdRef.current ?? undefined,
@@ -1072,6 +1087,7 @@ const animatePlayers = useCallback(() => {
       try {
         await publishPresenceLogin(publish, {
           sessionId, islandId, location, blobbiAddr, startPos, seq: nextSeq(),
+          policy: policyRef.current,
         });
         if (DEBUG_MP) console.debug('[blobbi][mp] login presence published', { startPos, location });
         if (!mounted) return;
@@ -1081,7 +1097,7 @@ const animatePlayers = useCallback(() => {
 
         heartbeatIntervalRef.current = setInterval(() => {
           if (DEBUG_MP) console.debug('[blobbi][mp] heartbeat', { pos: myPosRef.current, location });
-          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq() }, currentLocalPosRef.current(), myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined, myActivityRef.current ?? undefined)
+          publishHeartbeat(publish, { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current }, currentLocalPosRef.current(), myHiddenInRef.current ?? undefined, mySeatIdRef.current ?? undefined, myActivityRef.current ?? undefined)
             .catch(err => {
               console.warn('Heartbeat publish failed but continuing:', err);
               // Don't treat heartbeat failures as fatal
@@ -1162,6 +1178,7 @@ const animatePlayers = useCallback(() => {
 
     publishPresenceLogin(publish, {
       sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
+      policy: policyRef.current,
     }).then(() => {
       // Swapping your Blobbi does not get you out of your chair. The login
       // presence above carries no `seatId` (by design — it is the "here I am"
@@ -1173,7 +1190,7 @@ const animatePlayers = useCallback(() => {
       if (!seatId) return;
       return publishSit(
         publish,
-        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
         currentLocalPosRef.current(),
         seatId,
       );
@@ -1185,7 +1202,7 @@ const animatePlayers = useCallback(() => {
     heartbeatIntervalRef.current = setInterval(() => {
       publishHeartbeat(
         publish,
-        { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+        { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
         currentLocalPosRef.current(),
         myHiddenInRef.current ?? undefined,
         mySeatIdRef.current ?? undefined,
@@ -1238,6 +1255,7 @@ const animatePlayers = useCallback(() => {
 
   publishPresenceLogin(publish, {
     sessionId, islandId, location, blobbiAddr, startPos: myPosRef.current, seq: nextSeq(),
+    policy: policyRef.current,
   }).catch(err => {
       console.warn('Failed to publish presence on location change but continuing:', err);
       // Don't treat location change publish failures as fatal
@@ -1250,7 +1268,7 @@ const animatePlayers = useCallback(() => {
   heartbeatIntervalRef.current = setInterval(() => {
     publishHeartbeat(
       publish,
-      { sessionId, islandId, location, blobbiAddr, seq: nextSeq() },
+      { sessionId, islandId, location, blobbiAddr, seq: nextSeq(), policy: policyRef.current },
       currentLocalPosRef.current(),
       myHiddenInRef.current ?? undefined,
       // Read at CALL time, not capture time. This interval is REBUILT on every

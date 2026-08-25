@@ -205,9 +205,13 @@ Recorded now rather than discovered later:
   real gap, recorded as one — the alternative, leaving it `false` and rendering
   authored names anyway, would make this table a lie. The boundary is in place
   and tested against a hand-built policy, so restoring it is a literal change.
-- **`detailedPresence: false` has no agreed coarse shape.** Dropping `hiddenIn`
-  is clearly right; whether `goal` and sub-percent coordinates also coarsen is a
-  protocol conversation. Note that coarsening what this client *publishes* does
+- **`detailedPresence: false` now has a coarse shape** (Phase G), and it is
+  narrower than this note guessed. Dropping `hiddenIn` turned out to be wrong —
+  a remote client with no hiding claim draws the player normally, standing at
+  the coordinates they are hiding at, so removing the field would un-hide them.
+  Its VALUE is withheld instead. `goal` and full coordinate precision stay: both
+  are load-bearing for smooth remote motion, and virtual room percentages buy no
+  privacy by being rounded. Coarsening what this client *publishes* still does
   not change what a relay will serve to a modified one.
 - **`authoringTools: false` is route-level, not an authorization boundary.**
   Publishing an event only ever required a signature the player already controls.
@@ -350,9 +354,11 @@ so does `openMediaEntry`.
 
 After Phase F, so does `ownFreeTextNaming` — and so would
 `strangerAuthoredNames`, whose enforcement exists but which no shipped profile
-currently sets `false` (Phase F.1, above).
+currently sets `false` (Phase F.1, above). After Phase G, so does
+`detailedPresence`.
 
-**One capability remains declarative:** `detailedPresence`.
+**No capability is declarative any more.** Every one of them is decided at a
+data boundary with a test behind it.
 
 **A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
 It governs the player taking something they made and posting it publicly to the
@@ -374,7 +380,7 @@ The rest are still declarations. In audit-roadmap order:
 | ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5** — `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
 | ~~`ownFreeTextNaming`~~ | **done in Phase F** — validated at the adoption writer against an approved vocabulary, before the profile is read and before anything is signed. A curated experience gets a two-dropdown composer rather than a disabled field. See [`safe-user-authored-names.md`](./safe-user-authored-names.md) |
 | `strangerAuthoredNames` | **built in Phase F, dormant since Phase F.1** — the alias substitution works and is tested, but the shipped Family policy permits authored names again while the social identity model is decided. Nothing to build; a product decision to make |
-| `detailedPresence` | the coarse presence shape |
+| ~~`detailedPresence`~~ | **done in Phase G** — one projection (`projectPresenceForPolicy`) between the local runtime state and the wire, applied inside the single builder every publisher funnels through. The audit disagreed with the guess: `hiddenIn` cannot be dropped (it would un-hide a hidden player) so its VALUE is withheld and the fact kept, while `goal` and full coordinate precision are load-bearing and published under every policy. See [`presence-data-minimization.md`](./presence-data-minimization.md) |
 
 Still not modelled as capabilities, and now built: **blocking, muting and
 reporting** shipped in Phase C. They deliberately did NOT become policy fields.

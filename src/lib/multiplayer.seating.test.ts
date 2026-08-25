@@ -31,12 +31,14 @@ import {
 } from './multiplayer';
 import { getTheaterSeat } from './theater-seats-config';
 import type { NostrEvent } from '@nostrify/nostrify';
+import { STANDARD_POLICY } from '@/safety';
 
 const PARAMS = {
   sessionId: 'session-1',
   islandId: '1',
   location: 'stage' as const,
   blobbiAddr: '31124:pk:blobbi-1',
+  policy: STANDARD_POLICY,
 };
 
 const SEAT = 'theater-seat-a4';
