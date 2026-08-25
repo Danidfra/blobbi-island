@@ -22,6 +22,26 @@
  *
  * Block confirms, because it removes a player from the world entirely and the
  * confirmation is also where the honest description of what it does belongs.
+ *
+ * ## Everything here stays inside the game window
+ *
+ * These are opened from a player's card, which is an in-world surface
+ * (`BlobbiInfoModal` is `presentation="in-frame"`). A confirmation that floats
+ * over the whole browser instead — dimming the page around the cozy frame —
+ * reads as "the website opened a dialog" rather than "the game asked you
+ * something", and on a windowed or short viewport it can end up positioned
+ * against the browser rather than the stage it belongs to. So both layers this
+ * file opens are `in-frame` too: the island's existing frame-aware portal, not
+ * a second positioning scheme invented here.
+ *
+ * ## The row owns its own width
+ *
+ * It is handed to `BlobbiModal`'s footer, which lays its children out as flex
+ * items — and a flex item is shrinkable by default. Left to that, this row
+ * collapses toward its content width and squeezes the three buttons inside it
+ * until the labels no longer fit their pills. `flex-1` makes it claim the
+ * footer row instead, and `shrink-0` on each button means the labels set the
+ * minimum rather than being the first thing sacrificed.
  */
 
 import { useState } from 'react';
@@ -79,13 +99,16 @@ export function PlayerSafetyActions({
   };
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2">
+    // Stacked and full-width on a narrow frame, a single row once there is room
+    // for one. `flex-1` claims the footer row (see the note above); `min-w-0`
+    // keeps that claim from forcing the footer wider than the window.
+    <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center">
       <Button
         variant="soft"
         size="sm"
         onClick={toggleMute}
         aria-pressed={relationship.muted}
-        className="min-h-[2.5rem]"
+        className="min-h-[2.75rem] w-full shrink-0 justify-center sm:w-auto sm:min-w-[6.5rem]"
       >
         {relationship.muted ? (
           <>
@@ -104,7 +127,7 @@ export function PlayerSafetyActions({
         variant="soft"
         size="sm"
         onClick={() => setConfirmingBlock(true)}
-        className="min-h-[2.5rem]"
+        className="min-h-[2.75rem] w-full shrink-0 justify-center sm:w-auto sm:min-w-[6.5rem]"
       >
         <ShieldOff className="mr-1.5 size-4" aria-hidden="true" />
         Block
@@ -114,14 +137,14 @@ export function PlayerSafetyActions({
         variant="soft"
         size="sm"
         onClick={() => setReporting(true)}
-        className="min-h-[2.5rem]"
+        className="min-h-[2.75rem] w-full shrink-0 justify-center sm:w-auto sm:min-w-[6.5rem]"
       >
         <Flag className="mr-1.5 size-4" aria-hidden="true" />
         Report
       </Button>
 
       {failed ? (
-        <p role="alert" className="w-full text-xs font-semibold text-island-danger">
+        <p role="alert" className="w-full basis-full text-xs font-semibold text-island-danger">
           That could not be saved on this device. Try again, or check your browser settings.
         </p>
       ) : null}
@@ -132,6 +155,7 @@ export function PlayerSafetyActions({
         title="Block this player?"
         description={playerShortId(pubkey)}
         icon={<ShieldOff />}
+        presentation="in-frame"
         size="sm"
         footer={
           <>

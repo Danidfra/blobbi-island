@@ -19,6 +19,19 @@
  * and a control that quietly does a second thing is a control the player cannot
  * reason about. The pairing children actually want is offered as its own button
  * ("Report and block") so both actions are chosen, once each.
+ *
+ * ## It opens inside the game window
+ *
+ * Reporting starts from a player's card, which is an in-world surface, so this
+ * is `in-frame`: sized and positioned against the STAGE rather than the browser
+ * viewport, which is what keeps it inside the wood frame on a windowed desktop
+ * and on a short viewport. `BlobbiModal` caps an in-frame window's height at
+ * the stage and scrolls its body, so a long category list on a small frame
+ * scrolls INSIDE the window rather than growing past it.
+ *
+ * `md` rather than `sm` because the footer carries three actions, one of them
+ * two words long. At `sm` on a small stage they have nowhere to go but into
+ * each other.
  */
 
 import { useMemo, useState } from 'react';
@@ -115,7 +128,8 @@ export function ReportPlayerDialog({
       title="Report a player"
       description={`About ${playerShortId(pubkey)}`}
       icon={<Flag />}
-      size="sm"
+      presentation="in-frame"
+      size="md"
       footer={
         <>
           <Button variant="soft" onClick={() => onOpenChange(false)}>

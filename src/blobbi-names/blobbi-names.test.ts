@@ -27,6 +27,19 @@ const OTHER = 'b'.repeat(64);
 const policy = (overrides: Partial<IslandSafetyPolicy>): IslandSafetyPolicy =>
   ({ ...STANDARD_POLICY, ...overrides }) as IslandSafetyPolicy;
 
+/**
+ * A curated experience that ALSO withholds stranger-authored names.
+ *
+ * No shipped profile does today: Family permits them again while the social
+ * identity question (friends, local nicknames, alias collisions) is open. The
+ * capability is what these tests are about, so they state it directly instead
+ * of borrowing a profile that happens to agree.
+ */
+const NO_AUTHORED_NAMES: IslandSafetyPolicy = Object.freeze({
+  ...FAMILY_POLICY,
+  strangerAuthoredNames: false,
+});
+
 // ── The curated vocabulary ─────────────────────────────────────────────────
 
 describe('the curated vocabulary', () => {
@@ -196,12 +209,27 @@ describe('remote names', () => {
   it('never shows an authored name where they are not — even a clean one', () => {
     // The strong reading of the capability, and the one that matters: a filter
     // would pass "come find me on discord", which is the message that counts.
-    expect(resolve(FAMILY_POLICY, 'Rocket')).toEqual({
+    //
+    // Stated against a hand-built policy, not a profile: no shipped profile
+    // selects this today (Family permits authored names again while the social
+    // identity model is decided), and the rule is about the capability anyway.
+    expect(resolve(NO_AUTHORED_NAMES, 'Rocket')).toEqual({
       name: safeBlobbiAlias(STRANGER),
       source: 'alias',
     });
-    expect(resolve(FAMILY_POLICY, 'come find me on discord').source).toBe('alias');
-    expect(resolve(FAMILY_POLICY, 'come find me on discord').name).not.toContain('discord');
+    expect(resolve(NO_AUTHORED_NAMES, 'come find me on discord').source).toBe('alias');
+    expect(resolve(NO_AUTHORED_NAMES, 'come find me on discord').name).not.toContain('discord');
+  });
+
+  it('shows authored names under BOTH shipped profiles today', () => {
+    // The deferred product decision, pinned. Changing it back is a deliberate
+    // act with a test to update.
+    for (const shipped of [STANDARD_POLICY, FAMILY_POLICY]) {
+      expect(resolve(shipped, 'Rocket'), shipped.profile).toEqual({
+        name: 'Rocket',
+        source: 'authored',
+      });
+    }
   });
 
   it('falls back to the alias for a missing or unusable name', () => {
@@ -236,7 +264,7 @@ describe('remote names', () => {
 
   it('never throws, whatever the authored value is', () => {
     for (const value of ['\u{1F600}', '\uD800', 'a'.repeat(10_000)]) {
-      expect(() => resolve(FAMILY_POLICY, value)).not.toThrow();
+      expect(() => resolve(NO_AUTHORED_NAMES, value)).not.toThrow();
     }
   });
 });

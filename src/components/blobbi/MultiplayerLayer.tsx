@@ -1413,8 +1413,19 @@ export function MultiplayerLayer({
   }, [players.size]);
 
   const visiblePlayers = React.useMemo(
-    () => Array.from(players.values()).filter(p => p.lastContent?.location === currentLocation),
-    [players, currentLocation]
+    () =>
+      Array.from(players.values()).filter(
+        (p) =>
+          p.lastContent?.location === currentLocation &&
+          // Defence in depth, NOT the rule. The rule lives at the presence
+          // ingest (`admitRemotePresence`), where an actor that is really us
+          // never becomes state in the first place. This is the second wall:
+          // the local player is drawn by `MovableBlobbi`, so a remote entry
+          // carrying our own key would be a visible duplicate of the player's
+          // own Blobbi, and that is worth refusing twice.
+          p.pubkey !== user?.pubkey,
+      ),
+    [players, currentLocation, user?.pubkey],
   );
 
   // ── Theater seat occupancy ──────────────────────────────────────────────

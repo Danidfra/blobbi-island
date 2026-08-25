@@ -50,6 +50,7 @@ import { LOCAL_GAZE_KEY } from '@/lib/gaze';
 import { isOccupiableSeat } from '@/lib/theater-seats-config';
 import { isBlocked, subscribeRelationships } from '@/player-safety';
 import { useIslandSafetyPolicy } from '@/safety';
+import { admitRemotePresence } from '@/lib/presence-identity';
 
 // ============================================================================
 // Types
@@ -195,6 +196,17 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const [error, setError] = useState<string>();
 
   // Refs
+  /**
+   * The local player's pubkey, READ AT CALL TIME.
+   *
+   * The presence subscription is opened once and only rebuilt on a location
+   * change, so anything the ingest closes over by value is frozen at mount.
+   * Identity is the one thing that must never be: it can resolve late, and it
+   * changes outright when the player switches account. A stale or empty answer
+   * to "is this me?" is what puts a second copy of the local Blobbi on screen.
+   */
+  const localPubkeyRef = useRef<string>(pubkey);
+  localPubkeyRef.current = pubkey;
   const myPosRef = useRef<Position>(startPos);
   /**
    * The local Blobbi's CURRENT ground position for publish purposes.
@@ -476,13 +488,27 @@ const animatePlayers = useCallback(() => {
         return;
       }
 
-      // Skip own events
-      if (event.pubkey === pubkey) {
+      const dTag = event.tags.find(([name]: string[]) => name === 'd')?.[1];
+
+      // IDENTITY ADMISSION. Before the content is parsed and before any state
+      // is written: presence is a broadcast, so our own events arrive here
+      // like everyone else's, and an actor that is really us must never become
+      // a remote player. See `admitRemotePresence` for the two invariants and
+      // why an unknown local identity admits nobody.
+      const admission = admitRemotePresence({
+        localPubkey: localPubkeyRef.current,
+        localSessionId: sessionId,
+        eventPubkey: event.pubkey,
+        eventSessionId: dTag?.startsWith('session:') ? dTag.slice('session:'.length) : null,
+      });
+      if (!admission.ok) {
+        if (DEBUG_MP) console.debug('[blobbi][mp] not a remote actor', {
+          pubkey: event.pubkey, reason: admission.reason,
+        });
         return;
       }
 
       const content: PresenceContent = JSON.parse(event.content);
-      const dTag = event.tags.find(([name]: string[]) => name === 'd')?.[1];
       const aTag = event.tags.find(([name]: string[]) => name === 'a')?.[1];
       const locTag = event.tags.find(([n, v]: string[]) => n === 't' && v?.startsWith('loc:'))?.[1];
       const tagLocation = (locTag?.split(':')[1] ?? content.location) as LocationId;
@@ -828,6 +854,18 @@ const animatePlayers = useCallback(() => {
     });
   }, [namingPolicyKey]);
 
+  /**
+   * The ingest, read at call time.
+   *
+   * The subscription below is opened once at init and rebuilt only on a
+   * location change, so passing the callback by value would pin the ingest —
+   * and everything it closes over — to whatever it was at mount. Going through
+   * a ref means the live subscription always runs the current one, which is
+   * what keeps identity, policy and player state from silently ageing.
+   */
+  const processPresenceEventRef = useRef(processPresenceEvent);
+  processPresenceEventRef.current = processPresenceEvent;
+
   const startSubscription = useCallback(() => {
     if (subscriptionRef.current) {
       subscriptionRef.current.close();
@@ -844,8 +882,8 @@ const animatePlayers = useCallback(() => {
     };
 
     if (DEBUG_MP) console.debug('[blobbi][mp][sub] start', { filter });
-    subscriptionRef.current = subscribe(filter, processPresenceEvent);
-  }, [islandId, location, subscribe, processPresenceEvent]);
+    subscriptionRef.current = subscribe(filter, (event) => processPresenceEventRef.current(event));
+  }, [islandId, location, subscribe]);
 
   // ============================================================================
   // Movement Function

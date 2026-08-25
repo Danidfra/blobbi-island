@@ -102,9 +102,10 @@ export const STANDARD_POLICY: IslandSafetyPolicy = Object.freeze({
  *   (audit Phase E), reusing the trust pattern `useItemCatalog.ts` already
  *   applies to items. Until that exists, Family may gather in the theater and
  *   not watch — a real gap, deliberately not papered over.
- * - **`strangerAuthoredNames: false` needs somewhere to put the substitute.**
- *   `genUserName` produces a stable name per pubkey, but which layer swaps it in
- *   (the kind 31124 visual parser, most likely) is a Phase F decision.
+ * - **`strangerAuthoredNames` is deferred, not unbuilt.** Phase F built the
+ *   substitution and its boundary; the shipped Family policy then set the
+ *   capability back to `true` while the social identity model (friends, local
+ *   nicknames, alias collisions) is decided. See the note on the field itself.
  * - **`detailedPresence: false` has no agreed coarse shape yet.** Dropping
  *   `hiddenIn` is clearly right; whether `goal` and sub-percent coordinates also
  *   coarsen is a protocol conversation, and coarsening what this client
@@ -124,9 +125,23 @@ export const FAMILY_POLICY: IslandSafetyPolicy = Object.freeze({
   emotes: true,
   directMessages: false,
 
-  // Social identity: nobody may put words of their own choosing on a child's
-  // screen, including as a name.
-  strangerAuthoredNames: false,
+  // Social identity.
+  //
+  // `strangerAuthoredNames` is TEMPORARILY true, and deliberately so: it is the
+  // one capability that currently distinguishes neither shipped profile. The
+  // mechanism behind it works and is tested — a policy with it false resolves
+  // every remote name to a deterministic alias (`resolveRemoteBlobbiDisplayName`)
+  // — but shipping it revealed a product question nobody has answered yet. An
+  // island where every stranger is "Sunny Fox" and two of them share the alias
+  // is not obviously better for a child than one where names are real; friends,
+  // local nicknames and relationship-aware naming all change the answer.
+  //
+  // So the capability describes reality rather than an intention: a curated
+  // player currently sees the names other players chose. The alternative —
+  // leaving this false and rendering authored names anyway — would make the
+  // matrix a lie, which is worse than an honest gap. Revisit when the social
+  // identity model is decided; the boundary is already in place to switch back.
+  strangerAuthoredNames: true,
   strangerProfileMetadata: false,
   ownFreeTextNaming: false,
 

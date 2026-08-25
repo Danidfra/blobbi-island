@@ -1,8 +1,38 @@
 # Safe user-authored names
 
-**Status:** implemented. `strangerAuthoredNames` and `ownFreeTextNaming` are
-both enforced. **No Nostr kind, tag or schema changed** — the name is still a
-plain `name` tag on kind 31124, published by the same writer.
+**Status:** built in full. **No Nostr kind, tag or schema changed** — the name
+is still a plain `name` tag on kind 31124, published by the same writer.
+
+| | Built | Selected by a shipped profile |
+|---|---|---|
+| **own naming** (`ownFreeTextNaming`) | ✅ | ✅ — Family is curated |
+| **stranger names** (`strangerAuthoredNames`) | ✅ | ❌ — **dormant**, see below |
+
+> ### Update (2026-08-25, Phase F.1): remote-name substitution is dormant
+>
+> The shipped Family policy now sets `strangerAuthoredNames: true`, so a
+> curated player currently sees the names other players chose. Everything in
+> §3, §5 and §6 below still works and is still tested — against a hand-built
+> policy rather than a profile, because no shipped profile selects that branch
+> today.
+>
+> **Why:** not a failure of the implementation, a product question underneath
+> it. An island where every stranger is "Sunny Fox", and two of them share that
+> alias because the generator's space is small, is not obviously better for a
+> child than one where names are real. Friends, local nicknames and
+> relationship-aware naming all change the answer, and none of them exist yet.
+> Alias disambiguation, pubkey suffixes and collision handling were all
+> considered and deliberately NOT built: they are answers to a question that has
+> not been asked properly.
+>
+> **What did not change:** own naming is still curated under Family and still
+> validated at the writer; free-text chat is still dropped rather than masked;
+> the classifier is still defence in depth with one consumer. The capability
+> matrix was updated to say `true` rather than leaving it `false` and rendering
+> authored names anyway — an honest gap beats a matrix that lies.
+>
+> **To restore it:** set the capability back to `false`. There is nothing to
+> rebuild.
 
 - Rationale: [`family-safety-audit.md`](./family-safety-audit.md) (finding H-1)
 - Capability model: [`family-safety-policy.md`](./family-safety-policy.md)
@@ -80,7 +110,8 @@ makes the rule true.
 
 ## 4. Standard behaviour
 
-Unchanged, deliberately.
+Unchanged, deliberately — and since Phase F.1, this is what **both** shipped
+profiles do for stranger names.
 
 - Stranger names render as authored, exactly as before.
 - Own naming keeps the free-text field, the 32-character limit, and the existing
@@ -93,6 +124,9 @@ Unchanged, deliberately.
 ## 5. Curated behaviour
 
 ### Stranger names → deterministic alias, always
+
+> Dormant since Phase F.1: no shipped profile sets this capability `false`. The
+> rule below is what happens when one does, and it is tested that way.
 
 `strangerAuthoredNames: false` means **never show an authored name**, not "show
 it if it passes a profanity check".
@@ -223,8 +257,9 @@ and drops the cached visuals, so already-visible players re-resolve.
 
 Without it, changing the policy would leave authored names on screen until a
 reload — and a safety control that needs a page refresh is one that did not take
-effect. Family is not selectable yet, so this cannot fire today; it is here so
-that the day it can, the architecture already behaves.
+effect. Family is not selectable yet, and since Phase F.1 both shipped profiles
+agree on this capability anyway, so this cannot fire today; it is here so that
+the day it can, the architecture already behaves.
 
 ## 11. UI and accessibility
 
@@ -254,8 +289,12 @@ The protections that actually hold are structural:
 
 Also unresolved, and out of scope here:
 
-- **Standard still renders whatever a stranger typed.** This phase restricts a
-  curated experience; it does not make the open one safer.
+- **Both shipped profiles render whatever a stranger typed** (Phase F.1). The
+  restriction exists and is unselected; see the status note at the top.
+- **Alias identity is unsolved, and that is why the substitution is dormant.**
+  No disambiguation, no pubkey suffix, no local nickname, no contact-aware
+  naming — deliberately unbuilt. Deciding the social identity model comes
+  first.
 - **`useThemePublish` publishes kind 36767 with a player-chosen theme name** —
   player-authored public content with no capability governing it. Recorded as a
   consumer for a future user-authored public-content pass. Blobbi-name vocabulary

@@ -250,6 +250,13 @@ function Footer({ children }: { children: React.ReactNode }) {
         // in source — ends up on TOP of the stack on a phone, nearest the
         // thumb, while still sitting on the RIGHT on desktop.
         "flex flex-col-reverse gap-2 border-t border-island-wood/20 px-4 py-3 sm:flex-row sm:justify-end sm:px-5",
+        // WRAP rather than squeeze. Flex items shrink by default, so a row of
+        // actions too wide for the window used to be compressed until the
+        // labels no longer fit their pills — worst on the narrow in-frame
+        // widths, which are a percentage of the stage rather than of the
+        // browser. `shrink-0` makes the label the minimum and `flex-wrap` gives
+        // the overflow somewhere to go: a second right-aligned line.
+        "sm:flex-wrap sm:[&>*]:shrink-0",
         "[&>*]:w-full sm:[&>*]:w-auto",
       )}
     >

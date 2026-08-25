@@ -191,6 +191,34 @@ inference rather than something the repo proves, it is marked **[inference]**.
 >
 > Details: [`safe-user-authored-names.md`](./safe-user-authored-names.md).
 
+> **Status update (2026-08-25) — Phase F.1. H-1 is REOPENED for stranger
+> names, by decision.** The shipped Family policy now sets
+> `strangerAuthoredNames: true`: a curated player sees the names other players
+> chose, exactly as a Standard player does.
+>
+> This is not a regression in the mechanism and not a bug. The Phase F boundary
+> works and stays tested — a policy with the capability `false` still resolves
+> every remote name to a deterministic alias. What shipping it revealed is a
+> product question nobody has answered: an island where every stranger is
+> "Sunny Fox", and two of them share the alias, is not obviously better for a
+> child than one where names are real. Friends, local nicknames and
+> relationship-aware naming all change the answer, and none of those exist yet.
+>
+> So the capability describes reality rather than an intention. The alternative
+> — leaving it `false` and rendering authored names anyway — would have made
+> the capability matrix a lie, which is worse than an honest gap. **H-1 should
+> be read as deferred, not resolved, for stranger-authored names.**
+>
+> **The rest of Phase F is unchanged and still enforced:** own naming stays
+> curated under Family (approved vocabulary, validated at the adoption writer
+> before anything is signed), free-text chat is still DROPPED rather than
+> masked, and the prohibited-text classifier remains defence-in-depth
+> infrastructure with a single consumer.
+>
+> Related, same pass: the local player could appear twice in multiplayer when
+> the client's own presence was admitted as a remote actor. Fixed at the
+> presence ingest — see [`multiplayer-identity.md`](./multiplayer-identity.md).
+
 ---
 
 ## 1. Executive verdict

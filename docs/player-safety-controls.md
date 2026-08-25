@@ -402,3 +402,54 @@ curation, or stranger-name replacement.
   the local half.
 - **Stranger-authored Blobbi names are still rendered in-world** (audit H-1),
   even though the safety surfaces avoid them.
+
+---
+
+## Containment: these controls stay inside the game window
+
+**Added 2026-08-25 (Phase F.1).** The island renders inside a fixed 1046×697
+stage wrapped in a wood frame, with the browser page visible around it. Mute,
+Block and Report are opened from a player's card, and that card is an in-world
+surface (`BlobbiInfoModal` is `presentation="in-frame"`).
+
+The two layers this flow opens — the Block confirmation and the Report window —
+were using `BlobbiModal`'s default `presentation="auto"`, which resolves to
+`dialog`: **app chrome**, portalled to the fullscreen root and sized in `vw` /
+`dvh`. Correct for Settings and auth; wrong here. A confirmation that dims the
+page around the frame reads as "the website opened a dialog" rather than "the
+game asked you something", and on a windowed or short viewport it positions
+itself against the browser rather than the stage it belongs to.
+
+The fix is the island's existing frame-aware portal, not a second positioning
+scheme: both now pass `presentation="in-frame"`, which portals into
+`StageOverlayContext`'s host and sizes against the stage. `overflow: hidden`
+was deliberately *not* used — it would turn an escaped dialog into a clipped
+one. An in-frame window is capped at `max-h-[calc(100%-1.5rem)]` and its body
+scrolls, so a long report form on a small frame scrolls **inside** the window.
+On a phone both resolve to the bottom sheet, which is the contained form there.
+
+`SafetySettingsDialog` deliberately stays `dialog`: it opens from the account
+menu in the shell, outside the frame, and belongs to the application.
+
+### Why the buttons were narrow and tall
+
+The safety row is handed to `BlobbiModal`'s footer, which lays its children out
+as flex items — and **a flex item shrinks by default**. The row collapsed toward
+its content width and squeezed the three buttons inside it until their labels no
+longer fit their pills. `whitespace-nowrap` on the button base meant the text
+could not reflow, so it clipped instead.
+
+Three changes, each at the level the problem lives at:
+
+- the row claims the footer (`sm:flex-1`, `min-w-0`) instead of collapsing;
+- each control is `shrink-0` with a 44px minimum target, full-width stacked on a
+  narrow frame and a row when there is space;
+- the shared footer **wraps rather than squeezes** (`sm:flex-wrap`,
+  `sm:[&>*]:shrink-0`), so a row of actions too wide for the window gets a
+  second right-aligned line. That was general: the in-frame widths are a
+  percentage of the stage, so every in-world modal with three actions was one
+  small frame away from the same squeeze.
+
+**No safety behaviour changed.** Mute, unmute, block, unblock, report storage,
+report evidence and the honest copy about where reports go are all untouched;
+no new events, no network.

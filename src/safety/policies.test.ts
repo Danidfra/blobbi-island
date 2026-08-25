@@ -72,10 +72,20 @@ describe('the Standard experience describes what ships today', () => {
 });
 
 describe('the Family experience', () => {
-  it('refuses arbitrary player-authored text, in both directions', () => {
+  it('refuses arbitrary player-authored text where the player is the author', () => {
     expect(FAMILY_POLICY.freeTextChat).toBe(false);
-    expect(FAMILY_POLICY.strangerAuthoredNames).toBe(false);
     expect(FAMILY_POLICY.ownFreeTextNaming).toBe(false);
+  });
+
+  it('currently PERMITS stranger-authored names — a deferred product decision', () => {
+    // Not an oversight, and not a regression to fix by flipping this back. The
+    // substitution mechanism exists and is tested against a hand-built policy;
+    // the shipped profile does not select it while the social identity model
+    // (friends, nicknames, alias collisions) is undecided.
+    //
+    // This assertion exists so that changing the shipped answer is a deliberate
+    // act with a test to update, rather than a quiet edit to a literal.
+    expect(FAMILY_POLICY.strangerAuthoredNames).toBe(true);
   });
 
   it('substitutes rather than silences: a communication channel remains', () => {
