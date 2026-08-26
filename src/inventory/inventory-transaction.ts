@@ -145,6 +145,23 @@ export function unwrapInventoryTransactionError(error: unknown): unknown {
     : error;
 }
 
+/**
+ * Did this write end AMBIGUOUS — possibly published, possibly not?
+ *
+ * `publish-timeout` and `publish-unknown` both mean the relay gave no usable
+ * verdict: the event MAY have landed. Callers that surface outcomes (the free
+ * shop grants, item consumption, the lab) translate this into their existing
+ * `ambiguous` vocabulary instead of reporting a definite failure — and never
+ * report success. The authoritative state is whatever the next confirmed read
+ * returns.
+ */
+export function isAmbiguousInventoryPublish(error: unknown): boolean {
+  return (
+    error instanceof InventoryTransactionError &&
+    (error.reason === 'publish-timeout' || error.reason === 'publish-unknown')
+  );
+}
+
 export interface InventoryTransactionDeps {
   readonly nostr: InventoryTransactionNostr;
   readonly user: Pick<NUser, 'pubkey' | 'signer'>;

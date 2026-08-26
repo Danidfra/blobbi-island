@@ -13,11 +13,14 @@
  * | module | role |
  * |---|---|
  * | `inventory-transaction.ts` | the ONE lock + serialize + authoritative read + monotonic `created_at` + strict publish primitive |
- * | `useInventoryMutation.ts`  | the React item-mutation hook: authoritative base read, shared per-tab chain, optimistic cache + rollback, `useNostrPublish` |
+ * | `useInventoryMutation.ts`  | the React item-mutation hook + optimistic cache; its write path runs a transaction |
  * | `coin-wallet.ts`           | Coin grants/spends — runs a transaction |
  * | `arcade-reward-writer.ts`  | Arcade Ticket grants — runs a transaction |
  * | `arcade-prize-spend-writer.ts` | Arcade Ticket spends — runs a transaction |
  *
+ * EVERY production kind:31633 writer runs inside `runInventoryTransaction` —
+ * no writer may lock, read, timestamp, sign or publish on its own, and none
+ * may publish through `useNostrPublish` (which treats a timeout as success).
  * Nothing else may build, sign or publish a kind:31633 event.
  */
 
@@ -60,8 +63,9 @@ const TEMPLATE_BUILDERS = [
   'src/inventory/inventory-transaction.ts', // the shared primitive
 ];
 
-/** Writers that must run inside a shared transaction. */
+/** EVERY production kind:31633 writer — all must run inside the transaction. */
 const TRANSACTION_WRITERS = [
+  'src/inventory/useInventoryMutation.ts',
   'src/inventory/coin-wallet.ts',
   'src/inventory/arcade-reward-writer.ts',
   'src/inventory/arcade-prize-spend-writer.ts',
@@ -91,7 +95,7 @@ describe('only the approved modules can build a kind:31633 event', () => {
   });
 });
 
-describe('every kind:31633 writer joins the shared serialization boundary', () => {
+describe('every kind:31633 writer joins the shared transaction boundary', () => {
   it.each(TRANSACTION_WRITERS)('%s runs inside runInventoryTransaction', (writer) => {
     const code = readCode(writer);
     expect(code).toMatch(/runInventoryTransaction\(/);
@@ -102,10 +106,22 @@ describe('every kind:31633 writer joins the shared serialization boundary', () =
     expect(code).not.toMatch(/created_at:/);
   });
 
-  it('useInventoryMutation serializes on the SAME per-user chain', () => {
+  it('no kind:31633 writer publishes through useNostrPublish', () => {
+    // `useNostrPublish` swallows a publish timeout and reports the event as
+    // success — acceptable for fire-and-forget kinds, never for the
+    // balance-bearing replaceable inventory. Only the transaction's STRICT
+    // publish (timeout = AMBIGUOUS) is allowed.
+    for (const writer of [...TRANSACTION_WRITERS, 'src/inventory/inventory-transaction.ts']) {
+      expect(readCode(writer), `${writer} must not use useNostrPublish`).not.toMatch(
+        /useNostrPublish/,
+      );
+    }
+  });
+
+  it('the transaction serializes every writer on ONE per-user chain', () => {
     const source = read('src/inventory/useInventoryMutation.ts');
-    expect(source).toMatch(/function serialize<T>/);
     expect(source).toMatch(/export function serializeInventoryWrite/);
+    expect(source).toMatch(/serializeByKey\(`inventory:\$\{pubkey\}`/);
     // The transaction primitive reuses that exact chain — not a second one.
     expect(read('src/inventory/inventory-transaction.ts')).toMatch(
       /serializeInventoryWrite\(pubkey,/,
@@ -147,21 +163,18 @@ describe('no writer may build on an unconfirmed empty base', () => {
   });
 
   it('every writer reads its base through the confirming read', () => {
-    // The transaction primitive (covering all three transaction writers)…
+    // The transaction primitive covers ALL writers: each one is pinned to
+    // `runInventoryTransaction` above, and the primitive's only base read is
+    // the confirming one.
     expect(read('src/inventory/inventory-transaction.ts')).toMatch(
       /readAuthoritativeInventoryBase\(nostr, pubkey\)/,
-    );
-    // …and the React item-mutation hook.
-    expect(read('src/inventory/useInventoryMutation.ts')).toMatch(
-      /readAuthoritativeInventoryBase\(/,
     );
   });
 
   it('no writer uses the raw empty-falling-back read as a publish base', () => {
     // `fetchInventory` returns an empty inventory on a resolved-empty answer.
     // It is fine for read-only guards; it must never feed a publish.
-    const writers = [...TRANSACTION_WRITERS, 'src/inventory/useInventoryMutation.ts'];
-    for (const writer of writers) {
+    for (const writer of TRANSACTION_WRITERS) {
       expect(readCode(writer), `${writer} must not build on fetchInventory`).not.toMatch(
         /\bfetchInventory\(/,
       );

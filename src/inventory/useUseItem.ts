@@ -39,6 +39,7 @@ import { buildInteractionEventTemplate } from '@blobbi-kit/core/blobbi-interacti
 import { calculateInventoryActionXP } from '@blobbi-kit/react/lib/blobbi-xp';
 import { calculateStreakUpdate } from '@blobbi-kit/react/lib/blobbi-streak';
 
+import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation, getQuantity } from './useInventoryMutation';
 import { fetchInventory, inventoryQueryKey } from './useIslandInventory';
 import type { ItemAction, ResolvedBlobbiItemDefinition } from './catalog-fallback';
@@ -84,7 +85,10 @@ export interface UseItemResult {
   quantity: number;
   action: ItemAction;
   experienceGained: number;
-  /** True when the inventory decrement also succeeded. */
+  /**
+   * True when the inventory decrement was CONFIRMED. False covers both a
+   * definite failure and an ambiguous publish (see `warning` for which).
+   */
   inventoryDecremented: boolean;
   warning?: string;
 }
@@ -135,9 +139,9 @@ export function useUseItem() {
       // quantity, using a FRESH relay read (not a possibly-stale cache/UI
       // snapshot). This prevents applying an effect for an item the player does
       // not own, and blocks double-using the final unit before the decrement
-      // settles. The subsequent decrement (Step 2) is itself serialized per-user
-      // and re-reads the newest inventory, so two rapid uses cannot both spend
-      // the same last unit.
+      // settles. The subsequent decrement (Step 2) runs as a shared inventory
+      // transaction (cross-tab lock, per-user serialization, authoritative
+      // re-read), so two rapid uses cannot both spend the same last unit.
       const freshInventory = await fetchInventory(
         nostr,
         user.pubkey,
@@ -248,8 +252,12 @@ export function useUseItem() {
         await mutateInventory({ type: 'remove', address, amount: quantity });
       } catch (err) {
         inventoryDecremented = false;
-        warning =
-          err instanceof Error
+        // An ambiguous publish MAY have landed — never describe it as a
+        // definite non-decrement; the settled-state invalidation reconciles
+        // the cache with whatever the relay actually holds.
+        warning = isAmbiguousInventoryPublish(err)
+          ? 'Effect applied; the inventory update was not confirmed and may or may not have landed.'
+          : err instanceof Error
             ? `Effect applied but inventory was not decremented: ${err.message}`
             : 'Effect applied but inventory was not decremented.';
       }

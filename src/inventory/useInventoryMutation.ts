@@ -8,31 +8,33 @@
  *
  * Concurrency model
  * -----------------
- * Every mutation reads a FRESH inventory from the relay immediately before
- * building the next event (read-modify-write against the authoritative newest
- * event), rather than trusting a possibly-stale or empty cache snapshot. This
- * prevents a missing/empty cache from clobbering an existing relay inventory
- * with an empty event, and prevents stale full-replacement.
- *
- * Mutations are serialized per-user via an in-module promise chain so two rapid
- * actions (e.g. double-consuming the final unit) cannot both read the same
- * starting quantity and both succeed. The Coin wallet and the Arcade Ticket
- * writers ride the SAME chain (see `inventory-transaction.ts`), so no two
- * kind:31633 writers in this tab can interleave their read-modify-write
- * windows.
+ * Every mutation runs as a shared inventory TRANSACTION
+ * (`runInventoryTransaction`), the same primitive the Coin wallet and the
+ * Arcade Ticket writers use. That means: the ONE queued cross-tab Web Lock all
+ * kind:31633 writers contend for, the shared per-tab write chain, an
+ * authoritative base read (a resolved-empty answer is confirmed by a second
+ * read before it may be built on), monotonic `created_at`
+ * (`max(now, previous + 1)` — no same-second ties), and a STRICT publish where
+ * a timeout throws `InventoryTransactionError('publish-timeout')` — the write
+ * is AMBIGUOUS, never assumed to have landed.
  *
  * Optimistic UI updates the canonical inventory cache immediately and rolls back
- * on signing/publication failure. There is NO relay rollback after a successful
- * publish (replaceable events cannot be un-published); a post-settlement
- * invalidation reconciles with the relay.
+ * on any rejection — definite failure and ambiguous publish alike, so the cache
+ * never retains an unconfirmed state as though it landed. There is NO relay
+ * rollback after a successful publish (replaceable events cannot be
+ * un-published); a post-settlement invalidation reconciles with the relay.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { serializeByKey } from '@/lib/replaceable-write';
+
+import {
+  runInventoryTransaction,
+  type InventoryTransactionDeps,
+} from './inventory-transaction';
 
 import {
   type GameInventory,
@@ -50,33 +52,22 @@ import {
   parseGameItemAddress,
 } from './package';
 import { getInventoryItems } from './protocol-adapter';
-import {
-  inventoryQueryKey,
-  buildEmptyInventory,
-  readAuthoritativeInventoryBase,
-} from './useIslandInventory';
+import { inventoryQueryKey, buildEmptyInventory } from './useIslandInventory';
 
 // --- Per-user serialization ------------------------------------------------
 
 /**
- * Serialize an inventory write on the shared per-user chain. Exported so the
- * Coin wallet's strict writes ride the SAME chain as ordinary inventory
- * mutations — a coin grant and a shop purchase in one tab can never
- * interleave their read-modify-write windows.
+ * Serialize an inventory write on the shared per-user chain. The transaction
+ * primitive runs every writer — the Coin wallet, the Ticket writers and this
+ * module's mutations — through this ONE chain, so no two kind:31633 writers
+ * in this tab can interleave their read-modify-write windows. The chain is the
+ * shared `serializeByKey` primitive, namespaced so inventory writes never
+ * block an unrelated domain (pet state has its own per-owner+pet key).
  */
 export function serializeInventoryWrite<T>(
   pubkey: string,
   task: () => Promise<T>,
 ): Promise<T> {
-  return serialize(pubkey, task);
-}
-
-/**
- * The chain itself is the shared `serializeByKey` primitive, namespaced so
- * inventory writes never block an unrelated domain (pet state has its own
- * per-owner+pet key).
- */
-function serialize<T>(pubkey: string, task: () => Promise<T>): Promise<T> {
   return serializeByKey(`inventory:${pubkey}`, task);
 }
 
@@ -360,23 +351,51 @@ export function applyMutation(
 }
 
 /**
+ * Apply `mutation` to the authoritative inventory and publish the replacement
+ * event as ONE shared inventory transaction.
+ *
+ * This is the write path of {@link useInventoryMutation}, exported so tests and
+ * non-hook callers can exercise it directly. Every safety property comes from
+ * `runInventoryTransaction`: the queued cross-tab lock all kind:31633 writers
+ * share, the per-tab write chain, the empty-confirmed authoritative base, the
+ * lossless canonical builder, monotonic `created_at`, and a STRICT publish —
+ * a timeout throws `InventoryTransactionError('publish-timeout')`, meaning the
+ * write is AMBIGUOUS (it MAY have landed), never success.
+ */
+export function runInventoryMutationTransaction(
+  deps: InventoryTransactionDeps,
+  mutation: InventoryMutation,
+): Promise<GameInventory> {
+  return runInventoryTransaction(deps, async (ctx) => {
+    const { inventory: base } = await ctx.readBase();
+    const next = applyMutation(base, mutation);
+    await ctx.publish(next);
+    // Return a client-side representation of the just-published state, so
+    // callers and the cache reflect it.
+    return next;
+  });
+}
+
+/**
  * The canonical inventory mutation hook.
  *
  * Returns a mutation that:
  * - snapshots + optimistically updates the canonical inventory cache;
- * - serializes per-user to avoid double-spend / stale clobbering;
- * - reads the FRESH relay inventory as the base (never a stale/empty cache);
+ * - runs the write as a shared inventory transaction (cross-tab lock, per-user
+ *   serialization, authoritative empty-confirmed base, monotonic `created_at`,
+ *   strict publish — see {@link runInventoryMutationTransaction});
  * - validates quantities via the package (rejects negative/non-integer/overflow);
- * - builds + signs + publishes a kind:31633 event through existing infra;
- * - rolls back the cache on failure;
- * - invalidates only the canonical inventory key after settlement.
+ * - rolls back the cache on failure AND on an ambiguous publish (a timeout
+ *   rejects with `InventoryTransactionError('publish-timeout')` — it is never
+ *   reported as success);
+ * - invalidates only the canonical inventory key after settlement, so the
+ *   cache reconciles with whatever actually landed.
  *
  * It does NOT publish kind:11125.
  */
 export function useInventoryMutation() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
-  const { mutateAsync: publish } = useNostrPublish();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -384,29 +403,7 @@ export function useInventoryMutation() {
       if (!user?.pubkey) {
         throw new Error('User not logged in');
       }
-      const pubkey = user.pubkey;
-
-      return serialize(pubkey, async () => {
-        // Read-modify-write against the authoritative newest relay event.
-        // The AUTHORITATIVE base. kind:31633 is REPLACEABLE, so building on a
-        // resolved-empty answer from a relay that simply does not carry the
-        // event would not lose one item — it would erase the player's whole
-        // inventory, Coins and Arcade Tickets included. The empty answer is
-        // confirmed by a second read before it may be used.
-        const { inventory: base } = await readAuthoritativeInventoryBase(
-          nostr,
-          pubkey,
-        );
-
-        const next = applyMutation(base, mutation);
-        const template = buildInventoryTemplate(next);
-
-        await publish(template);
-
-        // Return a client-side representation with the owner set, so callers
-        // and the cache reflect the just-published state.
-        return next;
-      });
+      return runInventoryMutationTransaction({ nostr, user }, mutation);
     },
     onMutate: async (mutation): Promise<{ previous?: GameInventory }> => {
       if (!user?.pubkey) return {};

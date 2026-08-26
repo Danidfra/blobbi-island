@@ -69,6 +69,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from '@/inventory/constants';
+import { isAmbiguousInventoryPublish } from '@/inventory/inventory-transaction';
 import { useIslandInventory } from '@/inventory/useIslandInventory';
 import {
   useInventoryMutation,
@@ -227,11 +228,24 @@ export function InventoryEquipmentLab() {
       }
       setPending(null);
     } catch (error) {
-      toast({
-        title: 'Write failed — nothing further was published',
-        description: error instanceof Error ? error.message : 'Publish failed.',
-        variant: 'destructive',
-      });
+      // An ambiguous inventory publish MAY have landed — say so instead of
+      // claiming nothing was published. The caches re-read the authoritative
+      // state either way.
+      toast(
+        isAmbiguousInventoryPublish(error)
+          ? {
+              title: 'Write not confirmed — it may or may not have landed',
+              description:
+                'The relay gave no verdict in time; the inventory will reconcile from the authoritative state.',
+              variant: 'destructive',
+            }
+          : {
+              title: 'Write failed — nothing further was published',
+              description:
+                error instanceof Error ? error.message : 'Publish failed.',
+              variant: 'destructive',
+            },
+      );
     }
   };
 

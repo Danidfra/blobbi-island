@@ -27,6 +27,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
+import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation } from './useInventoryMutation';
 import { useCoinWallet } from './useCoinWallet';
 import { mintCoinOpId } from './coin-wallet';
@@ -171,9 +172,18 @@ export function useBatchPurchase() {
       }));
 
       // A zero-cost cart (free items) has no coin movement, so it goes
-      // through the ordinary inventory mutation instead of a wallet no-op.
+      // through the ordinary inventory mutation (the same shared transaction)
+      // instead of a wallet no-op. An ambiguous publish is surfaced as
+      // `ambiguous`, never as success or a definite failure.
       if (totalCost === 0) {
-        await mutateInventory({ type: 'batch', lines: grantLines });
+        try {
+          await mutateInventory({ type: 'batch', lines: grantLines });
+        } catch (error) {
+          if (isAmbiguousInventoryPublish(error)) {
+            return { lines: resultLines, totalCost, outcome: 'ambiguous' };
+          }
+          throw error;
+        }
         return { lines: resultLines, totalCost, outcome: 'applied' };
       }
 

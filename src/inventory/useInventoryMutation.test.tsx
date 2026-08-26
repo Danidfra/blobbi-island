@@ -39,6 +39,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 import { useInventoryMutation } from './useInventoryMutation';
 import {
+  InventoryTransactionError,
+  isAmbiguousInventoryPublish,
+} from './inventory-transaction';
+import {
   buildEmptyInventory,
   itemIdToAddress,
   inventoryQueryKey,
@@ -148,6 +152,54 @@ describe('useInventoryMutation', () => {
     });
 
     // After rollback the cache is restored to the pre-mutation snapshot (5).
+    await waitFor(() => {
+      const cached = client.getQueryData<GameInventory>(
+        inventoryQueryKey(TEST_PUBKEY),
+      );
+      const qty = cached?.items.find((i) => i.address === APPLE)?.quantity;
+      expect(qty).toBe(5);
+    });
+  });
+
+  it('a publish timeout is AMBIGUOUS: the mutation rejects and never reports success', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const seeded = applyMutation(buildEmptyInventory(TEST_PUBKEY), {
+      type: 'add',
+      address: APPLE,
+      amount: 5,
+    });
+    client.setQueryData(inventoryQueryKey(TEST_PUBKEY), seeded);
+    nostrQuery.mockResolvedValue([inventoryToEvent(seeded)]);
+    // The relay gives no verdict in time. Before the shared transaction this
+    // path (useNostrPublish) swallowed the timeout and reported success.
+    const timeout = new Error('publish timed out');
+    timeout.name = 'TimeoutError';
+    nostrEvent.mockRejectedValue(timeout);
+
+    const { result } = renderHook(() => useInventoryMutation(), {
+      wrapper: makeWrapper(client),
+    });
+
+    let caught: unknown;
+    await act(async () => {
+      await result.current
+        .mutateAsync({ type: 'add', address: APPLE, amount: 2 })
+        .catch((err: unknown) => {
+          caught = err;
+        });
+    });
+
+    // The rejection carries the transaction's ambiguity vocabulary.
+    expect(caught).toBeInstanceOf(InventoryTransactionError);
+    expect((caught as InventoryTransactionError).reason).toBe('publish-timeout');
+    expect(isAmbiguousInventoryPublish(caught)).toBe(true);
+    // The mutation never presents a false confirmed state.
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.isSuccess).toBe(false);
+
+    // The optimistic +2 is rolled back — the cache does not retain an
+    // unconfirmed write as though it landed (the settled-state invalidation
+    // then reconciles with whatever the relay actually holds).
     await waitFor(() => {
       const cached = client.getQueryData<GameInventory>(
         inventoryQueryKey(TEST_PUBKEY),

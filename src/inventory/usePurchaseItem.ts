@@ -11,14 +11,17 @@
  * Outcomes: `applied` (published, exactly once per operation id) or
  * `ambiguous` (the publish MAY have landed — recorded durably by the wallet
  * ledger, reconciled read-only, never blindly retried). Insufficient funds
- * reject before anything is published; free items skip the wallet entirely
- * and use a plain inventory grant.
+ * reject before anything is published; free items skip the wallet (no coin
+ * movement, no op ledger) but still write through the shared inventory
+ * transaction, and an unconfirmed publish reports `ambiguous` exactly like
+ * the paid path.
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
+import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation } from './useInventoryMutation';
 import { useCoinWallet } from './useCoinWallet';
 import { mintCoinOpId } from './coin-wallet';
@@ -74,9 +77,19 @@ export function usePurchaseItem() {
       }
       const totalCost = price * units;
 
-      // Free items have no coin movement: plain inventory grant.
+      // Free items have no coin movement: a plain inventory grant through the
+      // shared transaction. An ambiguous publish (timeout — it MAY have
+      // landed) is surfaced as `ambiguous`, never as success or as a definite
+      // failure; the settled-state invalidation reconciles from the relay.
       if (totalCost === 0) {
-        await mutateInventory({ type: 'purchase', address, units });
+        try {
+          await mutateInventory({ type: 'purchase', address, units });
+        } catch (error) {
+          if (isAmbiguousInventoryPublish(error)) {
+            return { address, units, totalCost, outcome: 'ambiguous' };
+          }
+          throw error;
+        }
         return { address, units, totalCost, outcome: 'applied' };
       }
 

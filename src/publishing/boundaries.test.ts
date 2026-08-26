@@ -95,12 +95,15 @@ describe('gameplay Nostr publishing is untouched', () => {
       .filter((file) => /useNostrPublish\s*\(\s*\)/.test(code(file)))
       .map(relative);
 
-    // Presence/chat, pet state, owner profile, inventory, equipment, item use,
-    // themes, stage background — plus the photo share.
+    // Presence/chat, pet state, owner profile, item use, equipment, themes,
+    // stage background — plus the photo share. (The kind:31633 inventory
+    // writers are deliberately NOT here: they publish strictly through the
+    // shared inventory transaction, which never treats a timeout as success.)
     expect(consumers.length).toBeGreaterThan(5);
     expect(consumers).toContain('src/components/blobbi/MultiplayerLayer.tsx');
     expect(consumers).toContain('src/hooks/useBlobbiEvents.ts');
-    expect(consumers).toContain('src/inventory/useInventoryMutation.ts');
+    expect(consumers).toContain('src/inventory/useUseItem.ts');
+    expect(consumers).not.toContain('src/inventory/useInventoryMutation.ts');
   });
 
   it('does not gate the game protocol kinds', () => {
