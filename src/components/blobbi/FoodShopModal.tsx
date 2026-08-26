@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
@@ -157,7 +157,20 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     });
   };
 
+  /**
+   * Synchronous double-submit guard (the ArcadePassModal pattern).
+   *
+   * `isPending` only becomes true after React re-renders, so two confirms
+   * landing in the same tick both pass it and both start a purchase. The ref
+   * flips synchronously before the first `await` and is therefore the actual
+   * gate; the disabled button and `isPending` are UI courtesies on top of it.
+   * It is FIRST-LINE protection only — financial retry safety (one debit per
+   * logical purchase) is the spend intent's job, not this ref's.
+   */
+  const inFlightRef = useRef(false);
+
   const handleConfirmPurchase = async () => {
+    if (inFlightRef.current) return;
     if (userCoins === null) {
       toast({
         title: 'Balance unavailable',
@@ -167,7 +180,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       return;
     }
     if (isPending) {
-      // Guard against rapid double-submit.
+      // UI-state courtesy on top of the synchronous ref above.
       return;
     }
     if (selectedLines.length === 0 || totalCost === 0) {
@@ -182,6 +195,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     // ONE true multi-item purchase: a single canonical inventory event
     // carrying the total Coin deduction AND every item grant — atomic since
     // the Coin cutover.
+    inFlightRef.current = true;
     try {
       const result = await purchaseBatch({
         lines: selectedLines.map(({ address, quantity, unitPrice }) => ({
@@ -223,6 +237,12 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
         variant: 'destructive',
       });
       return;
+    } finally {
+      // Released on EVERY outcome — success, ambiguous/blocked, failure —
+      // because a deliberate later confirm must always be possible: that
+      // retry is exactly how the spend intent reconciles an unresolved
+      // operation without a second debit.
+      inFlightRef.current = false;
     }
 
     setQuantities({});
