@@ -1,10 +1,16 @@
 # The Island Safety Policy
 
-**Status: Phase B.** The capability layer exists, is tested, and now governs
-four classes of in-world communication at both the send and receive boundaries.
-Family mode is still **not** a user-facing feature: no setting, no onboarding
-step, no storage key and no URL parameter can select it. Every shipped build
-resolves to `standard`, which is the island exactly as it is today.
+**Status: closed for V1** (was last stamped "Phase B", which it long outgrew).
+Every capability in this document is enforced at a data boundary with tests
+behind it — see the per-phase notes in
+[`family-safety-audit.md`](./family-safety-audit.md).
+
+**Blobbi Island V1 ships with Standard Experience only.** Family mode is still
+**not** a user-facing feature: no setting, no onboarding step, no storage key and
+no URL parameter can select it, and a boundary test keeps it that way. Every
+shipped build resolves to `standard`, which is the island exactly as it is
+today. The decision and the backlog behind it are in
+[`family-activation-readiness.md`](./family-activation-readiness.md).
 
 Communication V2 is specified in [`communication-v2.md`](./communication-v2.md);
 this document remains the capability contract.

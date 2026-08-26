@@ -48,6 +48,11 @@ export function resolveSafetyPolicy(profile: ExperienceProfile): IslandSafetyPol
  * deterministically, and this phase is, by construction, incapable of altering
  * what any existing player sees.
  *
+ * **Deferred, not imminent.** Blobbi Island V1 ships with Standard only, and
+ * Family activation is postponed until after the core Island V1 is complete —
+ * see `docs/family-activation-readiness.md`. Nothing is waiting on this
+ * constant; when the time comes, this is where the change starts.
+ *
  * When profile SELECTION ships, this constant becomes the default rather than
  * the answer: the provider will read a stored, guardian-owned value, validate it
  * with `isExperienceProfile`, and fall back here only when there is genuinely

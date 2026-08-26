@@ -281,6 +281,20 @@ inference rather than something the repo proves, it is marked **[inference]**.
 > Family is still unreachable, deliberately. Blockers listed in
 > [`family-activation-readiness.md`](./family-activation-readiness.md).
 
+> **Workstream closed (2026-08-25) — frozen for V1.** Phases A through H.0 are
+> complete. **Blobbi Island V1 ships with Standard Experience only; the Family
+> Experience architecture is implemented but intentionally not user-selectable,
+> and activation is deferred until after the core Island V1 is complete.**
+>
+> Nothing here is abandoned. Every Family branch is implemented and tested
+> against a hand-built policy; what is missing is the one thing that would let a
+> guardian choose it. Development returns to Island V1, and the safety track
+> resumes at **H.1 — persisted experience-profile resolution**.
+>
+> The canonical statement, the completed-phase list, and the backlog split into
+> activation blockers versus ordinary debt:
+> [`family-activation-readiness.md`](./family-activation-readiness.md).
+
 ---
 
 ## 1. Executive verdict

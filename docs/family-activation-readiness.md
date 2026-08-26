@@ -1,14 +1,71 @@
 # Family activation readiness
 
-**Status:** the safety boundaries are hardened. Family is still deliberately
-unreachable, and this phase did not make it selectable.
+> ## Frozen for V1
+>
+> **Blobbi Island V1 ships with Standard Experience only. Family Experience
+> architecture is implemented but intentionally not user-selectable for V1.
+> Family activation is deferred until after the core Island V1 is complete.**
+>
+> This is the canonical statement of that decision. Everything below describes
+> work that is finished and dormant, not work in progress.
 
-Two things happened here: a production regression in Blobbi adoption was fixed,
-and the local safety boundaries were corrected so that a future activation phase
-does not inherit them.
+**Status:** the safety boundaries are hardened and the workstream is closed for
+V1. Family is deliberately unreachable, and nothing here made it selectable.
 
 - Capability model: [`family-safety-policy.md`](./family-safety-policy.md)
 - Player controls: [`player-safety-controls.md`](./player-safety-controls.md)
+- Rationale and evidence: [`family-safety-audit.md`](./family-safety-audit.md)
+
+---
+
+## The freeze, in one page
+
+### Completed phases
+
+| | Phase | What it left behind |
+|---|---|---|
+| A | Policy architecture | `ExperienceProfile`, `IslandSafetyPolicy`, the two profile literals, the resolver, the ESLint rule that keeps feature code reading capabilities rather than profiles |
+| B | Communication V2 | structured kind 21201; free text, quick phrases, templates and emotes admitted separately at both send and receive |
+| C | Mute / Block / Report | local-first, enforced at ingest; block evicts an already-visible player |
+| D | External egress | one boundary owns the capability check, URL validation, the confirmation, and the only `window.open` / `navigator.share` |
+| D.5 | Publishing and uploads | `mediaUploads` inside the one Blossom uploader; `publicNotePublishing` in the PhotoBooth's kind 1 writer |
+| E | Theater admission | `admitTheaterMedia` consulted by every path that can put media on screen, and by the publication seam |
+| F | Names | own-name admission at the adoption writer; remote-name resolution at the two visual-production sites; the prohibited-text classifier |
+| F.1 | Multiplayer identity + safety UI | `admitRemotePresence`; Mute/Block/Report contained in the game frame |
+| F.2 | Theme persistence | a stale account selection no longer reverts a newer local one |
+| G | Presence minimization | `projectPresenceForPolicy` inside the single publish funnel |
+| H.0 | Adoption + activation readiness | adoption publish repaired; three-state safety resolution; `SafetyGate`; account-scoped safety state; minimized report evidence |
+
+> The audit's own **"Phase H — Relay-side work"** is a different item with the
+> same letter: relay policy negotiated with Ditto, outside this repository. It
+> is unrelated to H.0/H.1 above.
+
+### V1 shipping state
+
+```
+  Experience   Standard, resolved explicitly on the first render
+  Family       implemented, tested, and unreachable
+```
+
+**Active in Standard V1** — every one of these runs in production today:
+Communication V2, mute/block/report, the external-egress boundary, the
+upload/public-note boundaries, theater media admission, own-name admission,
+multiplayer identity admission, presence projection, `SafetyGate`,
+account-scoped local safety state, and the hardened adoption publish path.
+
+**Built but dormant** — implemented and tested against a hand-built policy, but
+not selected by the shipped profile: the Family policy literal itself, the
+stranger-name alias substitution (`strangerAuthoredNames: false`), the curated
+own-name composer branch, the coarse presence projection, the Family theater
+admission branch, and every other capability where Family's answer differs from
+Standard's. A dormant branch is not an untested one — each has tests that state
+the rule as a CAPABILITY rather than borrowing a profile that happens to agree.
+
+### Resume after V1
+
+Start with **H.1 — persisted experience-profile resolution**, then the
+activation UI and guardian controls. This is postponed on purpose, not
+forgotten; the blockers below say exactly what H.1 has to solve.
 
 ---
 
@@ -312,22 +369,31 @@ somebody is now looking.
 
 ---
 
-## Remaining blockers before Family can be selectable
+## Post-V1 backlog
 
-1. **Nothing reads a stored profile yet.** `ACTIVE_EXPERIENCE_PROFILE` is a
-   literal. The provider is the one place that grows a read, and `SafetyGate` is
-   already waiting on it — but the read, its storage, and its validation do not
-   exist.
-2. **The fallback must never downgrade.** A device whose guardian chose Family
-   and whose storage read fails must not become Standard. Today's fallback is
-   Standard, which is correct only while Standard is the only profile.
-3. **No selector, no guardian control, no PIN.** Out of scope here by
-   instruction, and the whole of the next phase.
-4. **The permissive context default still exists.** Reported and unreachable by
-   the island, but it should become a throw once the test suite has a provider
-   where it needs one.
-5. **The theater catalog is empty**, so a curated experience can gather and not
-   watch.
-6. **Stranger-authored names are permitted in Family** by decision (Phase F.1),
-   pending the social identity model.
-7. **Reports have no destination**, and the copy says so.
+Split deliberately: not everything outstanding stops Family from being
+switched on, and calling ordinary debt a blocker is how a roadmap stops being
+believed.
+
+### Blocks Family activation
+
+| | Item | Why it blocks |
+|---|---|---|
+| 1 | **Persisted experience-profile resolution** | `ACTIVE_EXPERIENCE_PROFILE` is a literal. Nothing reads a stored choice, so there is no Family to select. The provider is the one place that grows the read, and `SafetyGate` already waits on it |
+| 2 | **Fail-safe restore semantics** | the fallback must never *downgrade*: a device whose guardian chose Family and whose storage read fails must not become Standard. Today's fallback is Standard, correct only while Standard is the only profile |
+| 3 | **Standard / Family selector** | there is no surface that chooses. Design decided in the audit (§13, option E: two named experiences, no age question) |
+| 4 | **Guardian control / optional PIN semantics** | without one, a child switches back the moment they find it. To be described honestly as a speed bump, never as a lock |
+| 5 | **Curated Theater catalog** | it ships empty, so a Family group can gather in the theater and watch nothing. A blocker only if the theater is expected to work in Family — which it is |
+
+### General technical debt
+
+Real, worth doing, and none of it stops activation.
+
+| | Item | Note |
+|---|---|---|
+| 6 | **Strict missing-provider behaviour** | the permissive context default is reported and cannot mount a world, but it should become a throw once the suite has a provider where it needs one. ~390 tests render one component in isolation today |
+| 7 | **Stranger-name product decision** | Family permits authored names by decision (F.1). The alias mechanism works and is dormant, pending friends / local nicknames / collision handling |
+| 8 | **Report destination** | there is none, and the UI says so. A product and safety limitation, not a bug — the copy is honest and local-only |
+| 9 | **Theme kind 36767 user-authored names** | a player-chosen theme name is published publicly with no capability governing it. Blobbi-name vocabulary must NOT be applied to it; different domain |
+| 10 | **Dead `EditProfileForm`** | would upload an avatar and publish a kind 0. Not routed and not reachable from any surface; review before it acquires a caller |
+| 11 | **Legacy service worker** | `public/sw.js` and `sw-register.js` exist and nothing references them. A cache-first worker left registered by an older deployment could still serve stale assets to returning players. Operational debt |

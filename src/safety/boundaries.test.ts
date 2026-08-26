@@ -129,6 +129,12 @@ describe('Family is defined and unreachable', () => {
     'ACTIVE_EXPERIENCE_PROFILE',
     'ExperienceProfile',
     'IslandSafetyPolicyContext',
+    // Added with the resolution model (H.0). Providing this context directly is
+    // a second way to hand a subtree a Family policy — one that mounts no
+    // `IslandSafetyProvider` at all, so the prop check below would never see
+    // it. Naming it here closes that route before anything takes it.
+    'SafetyResolutionContext',
+    'SafetyResolution',
   ];
 
   const outsideSafety = sourceFiles(SRC)
