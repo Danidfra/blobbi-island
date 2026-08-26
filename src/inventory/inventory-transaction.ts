@@ -169,6 +169,18 @@ export interface InventoryTransactionDeps {
   readonly now?: () => number;
 }
 
+export interface InventoryTransactionPublishOptions
+  extends BuildInventoryTemplateOptions {
+  /**
+   * Called with the signed replacement event AFTER signing and BEFORE it is
+   * sent to the relay. This is the one moment a caller can durably record
+   * which exact event is about to be (possibly) published — the evidence that
+   * lets an ambiguous outcome be reconciled by event id later. Must not
+   * throw: an exception here aborts the publish and propagates raw.
+   */
+  readonly onSigned?: (event: NostrEvent) => void;
+}
+
 /** What the transaction body is handed inside the lock. */
 export interface InventoryTransactionContext {
   readonly pubkey: string;
@@ -189,7 +201,7 @@ export interface InventoryTransactionContext {
    */
   publish(
     next: GameInventory,
-    options?: BuildInventoryTemplateOptions,
+    options?: InventoryTransactionPublishOptions,
   ): Promise<NostrEvent>;
 }
 
@@ -234,7 +246,7 @@ export async function runInventoryTransaction<T>(
 
         const publish = async (
           next: GameInventory,
-          options?: BuildInventoryTemplateOptions,
+          options?: InventoryTransactionPublishOptions,
         ): Promise<NostrEvent> => {
           // Publishing without having read the base would be exactly the
           // stale-replacement defect this primitive exists to prevent.
@@ -258,6 +270,11 @@ export async function runInventoryTransaction<T>(
               error,
             );
           }
+
+          // Give the caller the signed event's identity BEFORE the send: an
+          // ambiguous publish can then be reconciled against the exact event
+          // that may have landed.
+          options?.onSigned?.(signed);
 
           try {
             await nostr.event(signed, {

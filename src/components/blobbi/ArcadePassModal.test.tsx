@@ -18,11 +18,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { ArcadePassModal, ARCADE_PASS_PRICE } from './ArcadePassModal';
 import { clearArcadePass, hasArcadePass } from '@/lib/arcade-pass';
+import { clearSpendIntents } from '@/lib/coin-spend-intent';
 
 // ---------------------------------------------------------------------------
 // Collaborators. Nothing here touches a relay: the point is that the modal calls
 // the CANONICAL writer, not that the writer works (it has its own tests).
 // ---------------------------------------------------------------------------
+
+const TEST_PUBKEY = 'a'.repeat(64);
 
 const spendCoins = vi.fn();
 const grantCoins = vi.fn();
@@ -31,6 +34,25 @@ vi.mock('@/inventory/useCoinWallet', () => ({
   useCoinWallet: () => ({ spendCoins, grantCoins, wallet: null }),
   useCoinBalance: () => balanceState,
 }));
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({ user: { pubkey: TEST_PUBKEY } }),
+}));
+
+/**
+ * The real pass module, with a switchable `grantArcadePass` so the
+ * "charge applied but the pass write failed" shape can be driven without
+ * breaking the storage the spend intent itself needs.
+ */
+const grantPassOverride: { fn: (() => boolean) | null } = { fn: null };
+vi.mock('@/lib/arcade-pass', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/arcade-pass')>();
+  return {
+    ...actual,
+    grantArcadePass: () =>
+      grantPassOverride.fn ? grantPassOverride.fn() : actual.grantArcadePass(),
+  };
+});
 
 let balanceState: {
   balance: number | null;
@@ -56,12 +78,15 @@ beforeEach(() => {
   grantCoins.mockReset();
   refetch.mockReset();
   toast.mockReset();
+  grantPassOverride.fn = null;
   balanceState = { balance: 100, isLoading: false, isError: false, refetch };
   clearArcadePass();
+  clearSpendIntents();
 });
 
 afterEach(() => {
   clearArcadePass();
+  clearSpendIntents();
 });
 
 describe('the coin balance is never faked', () => {
@@ -225,8 +250,8 @@ describe('the purchase is a real transaction', () => {
   });
 });
 
-describe('storage failure after a successful charge', () => {
-  /** Make `sessionStorage.setItem` throw, as Safari private browsing does. */
+describe('storage failure', () => {
+  /** Make every storage write throw, as Safari private browsing does. */
   function breakStorage() {
     const setItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
@@ -241,7 +266,10 @@ describe('storage failure after a successful charge', () => {
     vi.restoreAllMocks();
   });
 
-  it('never claims the coins were safe when only the pass write failed', async () => {
+  it('with storage fully broken, NOTHING is charged: no intent record, no spend', async () => {
+    // Before the spend-intent reservation this shape charged first and lost
+    // the pass after. Now the reservation comes first, and a purchase that
+    // cannot be durably tracked is refused outright.
     const restore = breakStorage();
     const onClose = vi.fn();
     render(<ArcadePassModal isOpen onClose={onClose} />);
@@ -249,29 +277,49 @@ describe('storage failure after a successful charge', () => {
     fireEvent.click(buyButton());
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-    const alert = screen.getByRole('alert');
-
-    // The charge DID go through, so the "no coins were deducted" copy would be a
-    // lie. This is the distinction the three outcomes exist for.
-    expect(alert).not.toHaveTextContent(/no coins were deducted/i);
-    expect(alert).toHaveTextContent(/coins may already have been spent/i);
+    expect(spendCoins).not.toHaveBeenCalled();
+    expect(grantCoins).not.toHaveBeenCalled();
     expect(hasArcadePass()).toBe(false);
-    // Still open, so the player can retry once storage is available.
+    expect(screen.getByRole('alert')).toHaveTextContent(/nothing was charged/i);
     expect(onClose).not.toHaveBeenCalled();
     restore();
   });
 
-  it('attempts no compensating coin write', async () => {
-    const restore = breakStorage();
-    render(<ArcadePassModal isOpen onClose={() => {}} />);
+  it('a charge that applied with a failed PASS write keeps honest copy and attempts no refund', async () => {
+    grantPassOverride.fn = () => false; // only the pass write fails
+    const onClose = vi.fn();
+    render(<ArcadePassModal isOpen onClose={onClose} />);
 
+    fireEvent.click(buyButton());
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    const alert = screen.getByRole('alert');
+    // The charge DID go through, so the "no coins were deducted" copy would be
+    // a lie — and a refund would be a second value mutation.
+    expect(alert).not.toHaveTextContent(/no coins were deducted/i);
+    expect(alert).toHaveTextContent(/coins may already have been spent/i);
+    expect(hasArcadePass()).toBe(false);
+    expect(spendCoins).toHaveBeenCalledTimes(1);
+    expect(grantCoins).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('after a failed pass write, Buy again delivers the PAID pass under the same opId', async () => {
+    grantPassOverride.fn = () => false;
+    render(<ArcadePassModal isOpen onClose={() => {}} />);
     fireEvent.click(buyButton());
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
 
-    // A refund would be a second value mutation stacked on a storage problem.
-    expect(spendCoins).toHaveBeenCalledTimes(1);
-    expect(grantCoins).not.toHaveBeenCalled();
-    restore();
+    // Storage recovers; the wallet reports the operation already applied.
+    grantPassOverride.fn = null;
+    spendCoins.mockResolvedValue({ status: 'already-applied' });
+    fireEvent.click(buyButton());
+
+    await waitFor(() => expect(hasArcadePass()).toBe(true));
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    // The SAME operation identity both times: the retry can never be an
+    // independent second debit.
+    expect(spendCoins.mock.calls[1][0].opId).toBe(spendCoins.mock.calls[0][0].opId);
   });
 
   it('reports a failed charge and a failed pass write differently', async () => {
@@ -283,5 +331,56 @@ describe('storage failure after a successful charge', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(/no coins were deducted/i);
     expect(screen.getByRole('alert')).not.toHaveTextContent(/may already have been spent/i);
+  });
+});
+
+describe('retry safety after an ambiguous charge', () => {
+  it('Buy again reuses the SAME operation id and delivers when the charge is proven applied', async () => {
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
+    const onClose = vi.fn();
+    render(<ArcadePassModal isOpen onClose={onClose} />);
+    fireEvent.click(buyButton());
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(hasArcadePass()).toBe(false);
+
+    // The wallet reconciles the SAME opId: the earlier publish landed.
+    spendCoins.mockResolvedValue({ status: 'already-applied' });
+    fireEvent.click(buyButton());
+
+    await waitFor(() => expect(hasArcadePass()).toBe(true));
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    expect(spendCoins.mock.calls[1][0].opId).toBe(spendCoins.mock.calls[0][0].opId);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('a still-unresolved previous attempt is surfaced as blocked, with no pass and no new charge claim', async () => {
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
+    render(<ArcadePassModal isOpen onClose={() => {}} />);
+    fireEvent.click(buyButton());
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+
+    spendCoins.mockResolvedValue({ status: 'blocked', blockedBy: 'ambiguous' });
+    fireEvent.click(buyButton());
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(/still being verified/i),
+    );
+    expect(hasArcadePass()).toBe(false);
+    expect(spendCoins.mock.calls[1][0].opId).toBe(spendCoins.mock.calls[0][0].opId);
+    expect(screen.getByRole('alert')).toHaveTextContent(/nothing new was charged/i);
+  });
+
+  it('a completed purchase releases its identity: the NEXT pass purchase is a new operation', async () => {
+    const onClose = vi.fn();
+    const { unmount } = render(<ArcadePassModal isOpen onClose={onClose} />);
+    fireEvent.click(buyButton());
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    unmount();
+    clearArcadePass(); // the player left the arcade; the pass expired
+
+    render(<ArcadePassModal isOpen onClose={() => {}} />);
+    fireEvent.click(buyButton());
+    await waitFor(() => expect(spendCoins).toHaveBeenCalledTimes(2));
+    expect(spendCoins.mock.calls[1][0].opId).not.toBe(spendCoins.mock.calls[0][0].opId);
   });
 });

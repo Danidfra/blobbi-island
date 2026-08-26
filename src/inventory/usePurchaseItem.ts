@@ -8,9 +8,12 @@
  * model (item to kind:31633, coins to kind:11125) and its favor-the-user
  * partial-grant leak no longer exist; kind:11125 is never touched.
  *
- * Outcomes: `applied` (published, exactly once per operation id) or
- * `ambiguous` (the publish MAY have landed — recorded durably by the wallet
- * ledger, reconciled read-only, never blindly retried). Insufficient funds
+ * Outcomes: `applied` (published, exactly once per operation id — possibly by
+ * an earlier attempt of the same purchase), `ambiguous` (the publish MAY have
+ * landed — recorded durably by the wallet ledger and kept as an open SPEND
+ * INTENT, so confirming the same purchase again reconciles it instead of
+ * debiting independently), or `blocked` (a previous attempt is still
+ * unresolved; nothing new was charged). Insufficient funds
  * reject before anything is published; free items skip the wallet (no coin
  * movement, no op ledger) but still write through the shared inventory
  * transaction, and an unconfirmed publish reports `ambiguous` exactly like
@@ -20,6 +23,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { closeSpendIntent, openSpendIntent } from '@/lib/coin-spend-intent';
 
 import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation } from './useInventoryMutation';
@@ -40,11 +44,15 @@ export interface PurchaseResult {
   units: number;
   totalCost: number;
   /**
-   * `applied` — the single purchase event published (grant + charge
-   * together). `ambiguous` — the publish MAY have landed; recorded durably
-   * and reconciled later, never blindly retried.
+   * `applied` — the purchase definitively completed (grant + charge in one
+   * event), now or on a previous attempt of the same purchase. `ambiguous` —
+   * the publish MAY have landed; the spend intent is kept, so confirming the
+   * SAME purchase again reconciles the original operation instead of debiting
+   * independently. `blocked` — a previous attempt of this purchase is still
+   * unresolved and could not yet be proven either way; nothing new was
+   * charged.
    */
-  outcome: 'applied' | 'ambiguous';
+  outcome: 'applied' | 'ambiguous' | 'blocked';
 }
 
 /**
@@ -93,20 +101,50 @@ export function usePurchaseItem() {
         return { address, units, totalCost, outcome: 'applied' };
       }
 
+      // The durable identity of THIS logical purchase. Confirming the same
+      // purchase again reuses the same intent (and so the same wallet opId),
+      // which is what makes a retry after an ambiguous outcome reconcile the
+      // original operation instead of debiting independently.
+      const grantLines = [{ address, amount: units }];
+      const opened = openSpendIntent(
+        user.pubkey,
+        { surface: 'shop-purchase', amount: totalCost, lines: grantLines },
+        () => mintCoinOpId('shop-purchase'),
+      );
+      if (!opened) {
+        throw new Error(
+          'This browser is blocking site data, so the purchase cannot be tracked safely. Nothing was charged.',
+        );
+      }
+
       // ONE canonical wallet operation: the coin deduction and the item grant
       // in the same replacement event. The wallet performs the fresh balance
       // read and rejects insufficient funds — a rendered HUD number is never
-      // spendable truth.
+      // spendable truth. A reused opId is reconciled in-lock by the wallet:
+      // `already-applied` means the EARLIER attempt landed, and nothing was
+      // charged again.
       const outcome = await spendCoins({
-        opId: mintCoinOpId('shop-purchase'),
+        opId: opened.intent.intentId,
         amount: totalCost,
         label: 'shop-purchase',
-        grantLines: [{ address, amount: units }],
+        grantLines,
       });
       if (outcome.status === 'applied' || outcome.status === 'already-applied') {
+        // Definitively complete and delivered (items travel in the same
+        // event): close the intent so a future purchase of the same cart is a
+        // genuinely new operation.
+        closeSpendIntent(user.pubkey, 'shop-purchase', opened.intent.intentId);
         return { address, units, totalCost, outcome: 'applied' };
       }
-      return { address, units, totalCost, outcome: 'ambiguous' };
+      if (outcome.status === 'blocked') {
+        return { address, units, totalCost, outcome: 'blocked' };
+      }
+      if (outcome.status === 'ambiguous') {
+        return { address, units, totalCost, outcome: 'ambiguous' };
+      }
+      // 'skipped' cannot happen (no precondition is passed) — surface loudly
+      // rather than misreporting it as a purchase state.
+      throw new Error(`Unexpected wallet outcome: ${outcome.status}`);
     },
     onSettled: () => {
       if (!user?.pubkey) return;

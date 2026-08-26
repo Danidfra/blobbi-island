@@ -26,6 +26,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { closeSpendIntent, openSpendIntent } from '@/lib/coin-spend-intent';
 
 import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation } from './useInventoryMutation';
@@ -59,12 +60,16 @@ export interface BatchPurchaseResult {
   lines: BatchPurchaseResultLine[];
   totalCost: number;
   /**
-   * `applied`   — the single purchase event published (and the grant with it).
-   * `ambiguous` — the publish MAY have landed; recorded durably, reconciled
-   *               later, never blindly retried. The UI must not claim success
-   *               and must not re-submit the same cart operation.
+   * `applied`   — the purchase definitively completed (grant + charge in one
+   *               event), now or on a previous attempt of the same cart.
+   * `ambiguous` — the publish MAY have landed; the spend intent is kept, so
+   *               confirming the SAME cart again reconciles the original
+   *               operation instead of debiting independently. The UI must
+   *               not claim success.
+   * `blocked`   — a previous attempt of this cart is still unresolved and
+   *               could not yet be proven either way; nothing new was charged.
    */
-  outcome: 'applied' | 'ambiguous';
+  outcome: 'applied' | 'ambiguous' | 'blocked';
 }
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
@@ -187,19 +192,47 @@ export function useBatchPurchase() {
         return { lines: resultLines, totalCost, outcome: 'applied' };
       }
 
+      // The durable identity of THIS logical purchase: confirming the same
+      // cart again reuses the same intent (and so the same wallet opId), so a
+      // retry after an ambiguous outcome reconciles the original operation
+      // instead of debiting independently.
+      const opened = openSpendIntent(
+        user.pubkey,
+        { surface: 'shop-purchase', amount: totalCost, lines: grantLines },
+        () => mintCoinOpId('shop-purchase'),
+      );
+      if (!opened) {
+        throw new Error(
+          'This browser is blocking site data, so the purchase cannot be tracked safely. Nothing was charged.',
+        );
+      }
+
       // The wallet performs the fresh balance read and rejects insufficient
       // funds; the caller's rendered balance is presentation, never truth.
+      // A reused opId is reconciled in-lock: `already-applied` means the
+      // EARLIER attempt landed, and nothing was charged again.
       const outcome = await spendCoins({
-        opId: mintCoinOpId('shop-purchase'),
+        opId: opened.intent.intentId,
         amount: totalCost,
         label: 'shop-purchase',
         grantLines,
       });
 
       if (outcome.status === 'applied' || outcome.status === 'already-applied') {
+        // Definitively complete and delivered: close the intent so a future
+        // purchase of the same cart is a genuinely new operation.
+        closeSpendIntent(user.pubkey, 'shop-purchase', opened.intent.intentId);
         return { lines: resultLines, totalCost, outcome: 'applied' };
       }
-      return { lines: resultLines, totalCost, outcome: 'ambiguous' };
+      if (outcome.status === 'blocked') {
+        return { lines: resultLines, totalCost, outcome: 'blocked' };
+      }
+      if (outcome.status === 'ambiguous') {
+        return { lines: resultLines, totalCost, outcome: 'ambiguous' };
+      }
+      // 'skipped' cannot happen (no precondition is passed) — surface loudly
+      // rather than misreporting it as a purchase state.
+      throw new Error(`Unexpected wallet outcome: ${outcome.status}`);
     },
     onSettled: () => {
       if (!user?.pubkey) return;

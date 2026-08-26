@@ -197,13 +197,25 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
               title: 'Purchase Successful',
               description: `Spent ${result.totalCost} Blobbi Coins. Your items are in your inventory.`,
             }
-          : {
-              title: 'Purchase Not Confirmed',
-              description:
-                'The purchase could not be confirmed. It will be reconciled — nothing will be charged twice. Check your balance in a moment.',
-              variant: 'destructive',
-            },
+          : result.outcome === 'blocked'
+            ? {
+                title: 'Previous Purchase Still Unresolved',
+                description:
+                  'Your earlier attempt at this purchase is still being verified — nothing new was charged. Try again in a moment.',
+                variant: 'destructive',
+              }
+            : {
+                title: 'Purchase Not Confirmed',
+                description:
+                  'The purchase could not be confirmed yet. Confirming the same basket again checks this attempt first, so you cannot be charged twice for it.',
+                variant: 'destructive',
+              },
       );
+      if (result.outcome !== 'applied') {
+        // Keep the basket: confirming it again is the safe retry that reuses
+        // the same operation. Only a definitive purchase clears it.
+        return;
+      }
     } catch (err) {
       toast({
         title: 'Purchase Failed',

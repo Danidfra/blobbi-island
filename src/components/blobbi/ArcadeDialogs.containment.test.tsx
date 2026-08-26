@@ -41,6 +41,10 @@ import { StageOverlayContext } from '@/contexts/StageOverlayContext';
 // Collaborators. Nothing here touches a relay — these tests are about layout.
 // ---------------------------------------------------------------------------
 
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({ user: { pubkey: 'a'.repeat(64) } }),
+}));
+
 vi.mock('@/inventory/useCoinWallet', () => ({
   useCoinWallet: () => ({
     spendCoins: vi.fn().mockResolvedValue({ status: 'applied', balance: 80, verified: true }),

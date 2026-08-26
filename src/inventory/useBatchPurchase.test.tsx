@@ -37,6 +37,7 @@ vi.mock('./useCoinWallet', () => ({
 
 import { useBatchPurchase } from './useBatchPurchase';
 import { itemIdToAddress } from './registry';
+import { clearSpendIntents } from '@/lib/coin-spend-intent';
 
 const APPLE = itemIdToAddress('food_apple')!; // 10
 const BLOCKS = itemIdToAddress('toy_blocks')!; // 40
@@ -58,6 +59,7 @@ describe('useBatchPurchase — one atomic wallet operation per cart', () => {
     spendCoins.mockReset();
     inventoryMutate.mockResolvedValue(undefined);
     spendCoins.mockResolvedValue({ status: 'applied', balance: 900, verified: true });
+    clearSpendIntents();
   });
 
   it('a paid cart is ONE wallet spend carrying the total and every grant line', async () => {
@@ -127,6 +129,49 @@ describe('useBatchPurchase — one atomic wallet operation per cart', () => {
     });
     expect(outcome).toMatchObject({ outcome: 'ambiguous' });
     expect(spendCoins).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-confirming the SAME cart after an ambiguous outcome reuses the SAME opId', async () => {
+    const cart = { lines: [{ address: APPLE, quantity: 1, unitPrice: 10 }] };
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
+    const { result } = renderBatch();
+    await act(async () => {
+      await result.current.mutateAsync(cart);
+    });
+    spendCoins.mockResolvedValue({ status: 'already-applied' });
+    let retried;
+    await act(async () => {
+      retried = await result.current.mutateAsync(cart);
+    });
+
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    expect(spendCoins.mock.calls[1][0].opId).toBe(spendCoins.mock.calls[0][0].opId);
+    expect(retried).toMatchObject({ outcome: 'applied' });
+  });
+
+  it('a still-unresolved previous attempt surfaces as blocked', async () => {
+    spendCoins.mockResolvedValue({ status: 'blocked', blockedBy: 'ambiguous' });
+    const { result } = renderBatch();
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.mutateAsync({
+        lines: [{ address: APPLE, quantity: 1, unitPrice: 10 }],
+      });
+    });
+    expect(outcome).toMatchObject({ outcome: 'blocked' });
+  });
+
+  it('a completed cart releases its identity: the same cart later is a new operation', async () => {
+    const cart = { lines: [{ address: APPLE, quantity: 2, unitPrice: 10 }] };
+    const { result } = renderBatch();
+    await act(async () => {
+      await result.current.mutateAsync(cart);
+    });
+    await act(async () => {
+      await result.current.mutateAsync(cart);
+    });
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    expect(spendCoins.mock.calls[1][0].opId).not.toBe(spendCoins.mock.calls[0][0].opId);
   });
 
   it('invalid line quantities reject before any wallet call', async () => {

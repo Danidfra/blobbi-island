@@ -54,6 +54,15 @@ export interface CoinOpRecord {
   readonly label: string;
   /** Fresh balance read immediately before publishing, for reconciliation. */
   readonly balanceBefore: number | null;
+  /**
+   * Id of the signed replacement event this operation attempted to publish
+   * (recorded after signing, BEFORE the publish is sent). Reconciliation
+   * evidence: when the authoritative newest kind:31633 event IS this event,
+   * the operation definitively applied — a proof that survives cases where
+   * the balance alone would be inconclusive. `null`/absent on records from
+   * before this field existed, or when the attempt never reached signing.
+   */
+  readonly publishedEventId?: string | null;
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly note?: string;
@@ -80,7 +89,10 @@ function isRecord(value: unknown): value is CoinOpRecord {
     typeof record.amount === 'number' &&
     typeof record.status === 'string' &&
     STATUSES.has(record.status as CoinOpStatus) &&
-    typeof record.label === 'string'
+    typeof record.label === 'string' &&
+    (record.publishedEventId === undefined ||
+      record.publishedEventId === null ||
+      typeof record.publishedEventId === 'string')
   );
 }
 

@@ -2,10 +2,12 @@ import { useRef, useState } from 'react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useToast } from '@/hooks/useToast';
 import { useCoinBalance, useCoinWallet } from '@/inventory/useCoinWallet';
 import { mintCoinOpId, CoinWalletError } from '@/inventory/coin-wallet';
 import { grantArcadePass } from '@/lib/arcade-pass';
+import { closeSpendIntent, openSpendIntent } from '@/lib/coin-spend-intent';
 
 /** What an Arcade Pass costs, in Blobbi Coins. */
 export const ARCADE_PASS_PRICE = 20;
@@ -41,22 +43,32 @@ interface ArcadePassModalProps {
  *
  * ## Transaction boundary
  *
- * **The pass is granted only after the spend reports `applied`.** Three
- * failure shapes, each with its own copy, because they are not the same:
+ * **The pass is granted only after the spend reports `applied` (or
+ * `already-applied` — an earlier attempt of THIS purchase landed).** The
+ * purchase's identity is a durable SPEND INTENT (see
+ * `src/lib/coin-spend-intent.ts`, sessionStorage — the same tab-visit scope as
+ * the pass itself): pressing Buy again reuses the same wallet opId, so the
+ * wallet reconciles the earlier attempt instead of debiting independently.
+ * Failure shapes, each with its own copy, because they are not the same:
  *
  * 1. **the spend threw** — provably pre-publish (insufficient funds, signer
- *    refusal…): no pass, and no coins moved;
+ *    refusal…): no pass, and no coins moved. The intent is kept; reusing an
+ *    unsent opId on retry is harmless;
  * 2. **the spend is `ambiguous`** — the publish MAY have landed. No pass is
- *    granted and no retry is offered here: the durable operation record
- *    blocks a duplicate, and reconciliation resolves it on the next wallet
- *    touch. The copy never claims the coins are safe;
- * 3. **the spend applied but storing the pass failed** — the coins are gone;
- *    the copy says so honestly. No compensating grant is attempted (a refund
- *    would be a second value mutation for a storage problem).
+ *    granted; the intent is KEPT, so Buy again first checks that charge and
+ *    cannot charge twice for this pass;
+ * 3. **the spend is `blocked`** — a previous attempt is still unresolved and
+ *    unprovable for now; nothing new was charged;
+ * 4. **the spend applied but storing the pass failed** — the coins are gone;
+ *    the copy says so honestly, and the KEPT intent makes "buy again" deliver
+ *    the already-paid pass rather than charging anew. No compensating grant
+ *    is attempted (a refund would be a second value mutation for a storage
+ *    problem).
  */
 export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
   const { balance: coins, isLoading: isLoadingBalance, isError, refetch } = useCoinBalance();
   const { toast } = useToast();
+  const { user } = useCurrentUser();
   const { spendCoins } = useCoinWallet();
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -82,18 +94,39 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
     setIsPurchasing(true);
     setPurchaseError(null);
 
+    // ONE durable identity for this purchase, scoped like the pass itself
+    // (sessionStorage: survives a reload in this tab; a new tab is a new
+    // visit and a genuinely new purchase). Buy pressed again reuses the same
+    // wallet opId, so the wallet reconciles instead of re-debiting.
+    const opened = openSpendIntent(
+      user?.pubkey,
+      { surface: 'arcade-pass', amount: ARCADE_PASS_PRICE },
+      () => mintCoinOpId('arcade-pass'),
+    );
+    if (!opened) {
+      const message = user?.pubkey
+        ? 'This browser is blocking site data, so the purchase cannot be tracked safely. Nothing was charged.'
+        : 'You must be logged in to buy an Arcade Pass.';
+      setPurchaseError(message);
+      toast({ title: 'Purchase failed', description: message, variant: 'destructive' });
+      inFlightRef.current = false;
+      setIsPurchasing(false);
+      return;
+    }
+
+    let alreadyPaid = false;
     try {
       // The wallet re-reads the authoritative balance itself, so the number
       // rendered above is a display value only — never the basis for the
-      // charge. One durable operation per attempt.
+      // charge. One durable operation per logical purchase.
       const outcome = await spendCoins({
-        opId: mintCoinOpId('arcade-pass'),
+        opId: opened.intent.intentId,
         amount: ARCADE_PASS_PRICE,
         label: 'arcade-pass',
       });
-      if (outcome.status === 'ambiguous' || outcome.status === 'blocked') {
+      if (outcome.status === 'ambiguous') {
         const message =
-          'The charge could not be confirmed. It will be reconciled — no pass was issued and nothing will be charged twice.';
+          'The charge could not be confirmed yet, so no pass was issued. Press Buy again — it checks this charge first, so you cannot be charged twice for this pass.';
         setPurchaseError(`${CHARGE_AMBIGUOUS_PREFIX}${message}`);
         toast({
           title: 'Purchase not confirmed',
@@ -102,6 +135,18 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
         });
         return;
       }
+      if (outcome.status === 'blocked') {
+        const message =
+          'Your previous attempt is still being verified — nothing new was charged. Try again in a moment.';
+        setPurchaseError(`${CHARGE_AMBIGUOUS_PREFIX}${message}`);
+        toast({
+          title: 'Previous purchase still unresolved',
+          description: message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      alreadyPaid = outcome.status === 'already-applied';
     } catch (error) {
       const message =
         error instanceof CoinWalletError && error.reason === 'insufficient-funds'
@@ -123,21 +168,29 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
 
     // Storage can refuse the write. Granting is the last step and the only one
     // after the coins have (probably) moved, so its failure gets its own copy
-    // rather than being folded into "purchase failed".
+    // rather than being folded into "purchase failed". The intent stays OPEN
+    // here on purpose: Buy again then resolves as `already-applied` and
+    // delivers the paid pass without a second charge.
     if (!grantArcadePass()) {
       setPurchaseError(PASS_STORAGE_FAILED);
       toast({
         title: "Couldn't save your Arcade Pass",
         description:
-          'Your coins may already have been spent. Browser storage refused to save the pass — try enabling site data, then buy again.',
+          'Your coins may already have been spent, but the pass could not be saved. Enable site data, then press Buy again — the paid pass is delivered without a new charge.',
         variant: 'destructive',
       });
       return;
     }
 
+    // Paid AND delivered: only now is the purchase finished, so only now does
+    // the intent close (a later pass purchase is a genuinely new operation).
+    closeSpendIntent(user?.pubkey, 'arcade-pass', opened.intent.intentId);
+
     toast({
       title: 'Arcade Pass Purchased!',
-      description: 'You can now use the elevator to explore different floors.',
+      description: alreadyPaid
+        ? 'Your earlier purchase went through — no new charge was made. You can now use the elevator.'
+        : 'You can now use the elevator to explore different floors.',
     });
     onClose();
   };
@@ -225,7 +278,8 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
         {purchaseError === PASS_STORAGE_FAILED ? (
           <p role="alert" className="text-sm text-island-danger">
             Your coins may already have been spent, but this browser refused to save the
-            Arcade Pass. Enable site data for Blobbi Island and buy again.
+            Arcade Pass. Enable site data for Blobbi Island and press Buy again — the
+            paid pass is delivered without a new charge.
           </p>
         ) : (
           purchaseError && (

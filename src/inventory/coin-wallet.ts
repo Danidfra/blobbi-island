@@ -229,14 +229,38 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
     pubkey: string,
     existing: CoinOpRecord,
   ): Promise<CoinOpRecord> => {
-    if (existing.balanceBefore === null) return existing;
+    if (existing.balanceBefore === null && !existing.publishedEventId) {
+      return existing;
+    }
     const meta = await readMeta();
+
+    // Definitive proof first: the authoritative newest kind:31633 event IS
+    // the event this operation signed — the current state is the operation's
+    // own replacement event, so it applied. This survives cases the balance
+    // heuristic cannot decide (and read-back-failed `applied` verification).
+    const newestEventId = meta.inventory.event?.id ?? null;
+    if (existing.publishedEventId && newestEventId === existing.publishedEventId) {
+      const applied = record({
+        ...existing,
+        status: 'applied',
+        note: 'reconciled-by-event-id',
+        createdAt: existing.createdAt,
+      });
+      persistCoinOp(pubkey, applied);
+      return applied;
+    }
+
+    if (existing.balanceBefore === null) return existing;
     const balance = getQuantity(meta.inventory, BLOBBI_COIN_ADDRESS);
     const expected =
       existing.kind === 'grant'
         ? existing.balanceBefore + existing.amount
         : existing.balanceBefore - existing.amount;
     if (balance === expected) {
+      // HEURISTIC proof: the balance moved by exactly this operation's delta.
+      // A later unrelated Coin movement defeats it (and could in principle
+      // fake it), which is why the event-id check above is preferred when the
+      // record carries one.
       const applied = record({
         ...existing,
         status: 'applied',
@@ -246,9 +270,10 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
       persistCoinOp(pubkey, applied);
       return applied;
     }
-    // The balance neither matches "landed" nor can prove "did not land"
-    // (other operations may have moved it). Stays ambiguous; surfaced, never
-    // silently retried.
+    // The state neither matches "landed" nor can prove "did not land" —
+    // nothing short of marker-grade proof can establish non-publication (see
+    // `resolveCoinOpByAuthoritativeProof`), and a spend carries no marker.
+    // Stays ambiguous; surfaced, never silently retried.
     return existing;
   };
 
@@ -350,6 +375,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
           status: 'publishing',
           label: op.label,
           balanceBefore: balance,
+          publishedEventId: null,
         });
         if (!persistCoinOp(pubkey, publishing)) {
           throw new CoinWalletError(
@@ -360,8 +386,20 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
 
         // Build + monotonic created_at + sign + STRICT publish, all owned by
         // the shared transaction. A timeout is AMBIGUOUS, never success.
+        // `onSigned` records WHICH event may land before the send happens, so
+        // an ambiguous outcome (or a crash in the send window) can later be
+        // reconciled by event id, not just by the balance heuristic.
+        let signedEventId: string | null = null;
         try {
-          await ctx.publish(next, { extraTags: op.extraTags });
+          await ctx.publish(next, {
+            extraTags: op.extraTags,
+            onSigned: (event) => {
+              signedEventId = event.id;
+              // Same status, same `updatedAt`: passes the one-way doors as an
+              // in-place enrichment of the in-flight record.
+              persistCoinOp(pubkey, { ...publishing, publishedEventId: event.id });
+            },
+          });
         } catch (error) {
           if (error instanceof InventoryTransactionError) {
             if (error.reason === 'sign-failed') {
@@ -377,7 +415,12 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
             ) {
               persistCoinOp(
                 pubkey,
-                record({ ...publishing, status: 'ambiguous', note: error.reason }),
+                record({
+                  ...publishing,
+                  status: 'ambiguous',
+                  note: error.reason,
+                  publishedEventId: signedEventId,
+                }),
               );
               return { status: 'ambiguous', reason: error.reason };
             }
@@ -402,6 +445,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
             ...publishing,
             status: 'applied',
             note: verified ? 'read-back-verified' : 'read-back-unverified',
+            publishedEventId: signedEventId,
           }),
         );
         return { status: 'applied', balance: expected, verified };

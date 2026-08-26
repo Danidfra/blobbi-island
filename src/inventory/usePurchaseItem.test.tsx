@@ -44,6 +44,7 @@ vi.mock('./shop-catalog', async (importOriginal) => {
 
 import { usePurchaseItem } from './usePurchaseItem';
 import { itemIdToAddress } from './registry';
+import { clearSpendIntents } from '@/lib/coin-spend-intent';
 
 const APPLE = itemIdToAddress('food_apple')!; // priced 10 in the shop catalog
 
@@ -61,6 +62,7 @@ describe('usePurchaseItem — one atomic wallet operation', () => {
     spendCoins.mockReset();
     spendCoins.mockResolvedValue({ status: 'applied', balance: 90, verified: true });
     priceOverride = null;
+    clearSpendIntents();
   });
 
   it('a FREE item skips the wallet entirely and uses a plain inventory grant', async () => {
@@ -132,5 +134,46 @@ describe('usePurchaseItem — one atomic wallet operation', () => {
           result.current.mutateAsync({ address: APPLE, units: 1 }),
         ).rejects.toThrow('Insufficient coins');
       });
+  });
+
+  it('retrying the SAME purchase after an ambiguous outcome reuses the SAME opId', async () => {
+    spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
+    const { result } = renderPurchase();
+    await act(async () => {
+      await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+    spendCoins.mockResolvedValue({ status: 'already-applied' });
+    let retried;
+    await act(async () => {
+      retried = await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    expect(spendCoins.mock.calls[1][0].opId).toBe(spendCoins.mock.calls[0][0].opId);
+    // The earlier attempt landed: the purchase is complete, not re-charged.
+    expect(retried).toMatchObject({ outcome: 'applied' });
+  });
+
+  it('a completed purchase releases its identity: buying the same item again is a new operation', async () => {
+    const { result } = renderPurchase();
+    await act(async () => {
+      await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+
+    expect(spendCoins).toHaveBeenCalledTimes(2);
+    expect(spendCoins.mock.calls[1][0].opId).not.toBe(spendCoins.mock.calls[0][0].opId);
+  });
+
+  it('surfaces a still-unresolved previous attempt as blocked, charging nothing new', async () => {
+    spendCoins.mockResolvedValue({ status: 'blocked', blockedBy: 'ambiguous' });
+    const { result } = renderPurchase();
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.mutateAsync({ address: APPLE, units: 1 });
+    });
+    expect(outcome).toMatchObject({ outcome: 'blocked' });
   });
 });

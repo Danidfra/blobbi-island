@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
+import { CoinOpRecoveryController } from '@/components/CoinOpRecoveryController';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
 import { IslandThemeSync } from '@/components/IslandThemeSync';
 import { PlayerSafetyAccountSync } from '@/components/PlayerSafetyAccountSync';
@@ -74,6 +75,9 @@ export function App() {
               <PlayerSafetyAccountSync />
               <IslandThemeSync />
               <EconomyEntryController />
+              {/* Read-only reconciliation of unresolved (ambiguous) Coin
+                  operations on login. Never publishes. */}
+              <CoinOpRecoveryController />
               <CharacterEquipmentProvider>
               <PhotoBoothProvider>
                 <DebugOverlaysProvider>
