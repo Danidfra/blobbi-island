@@ -67,6 +67,51 @@ describe('EconomyEntryNotice', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  /**
+   * F-04: in the world the Coins surface lives inside a modal a player may
+   * never open, so the notice is the only thing that can reach a stranded
+   * player. It narrows to exactly that job.
+   */
+  describe('in the world', () => {
+    it('shows the failure copy and the shared retry', () => {
+      const retry = vi.fn();
+      mockStatus.mockReturnValue(statusOf({ phase: 'failed', canRetry: true }, retry));
+      render(<EconomyEntryNotice inWorld />);
+      expect(screen.getByRole('status')).toHaveTextContent(
+        "We couldn't prepare your Island Coins yet.",
+      );
+      screen.getByRole('button', { name: 'Try again' }).click();
+      expect(retry).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows immediate feedback while a retry is checking', () => {
+      mockStatus.mockReturnValue(statusOf({ phase: 'checking' }));
+      render(<EconomyEntryNotice inWorld />);
+      expect(screen.getByRole('status')).toHaveTextContent('Preparing your Island Coins…');
+      expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('leaves ambiguous to the Coins surface, and never calls it a failure', () => {
+      mockStatus.mockReturnValue(statusOf({ phase: 'ambiguous', canRetry: true }));
+      const { container } = render(<EconomyEntryNotice inWorld />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('stays silent once the allocation is applied', () => {
+      mockStatus.mockReturnValue(statusOf({ phase: 'applied' }));
+      const { container } = render(<EconomyEntryNotice inWorld />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('lifts clear of the in-world action dock', () => {
+      mockStatus.mockReturnValue(statusOf({ phase: 'failed', canRetry: true }));
+      const { container, rerender } = render(<EconomyEntryNotice inWorld />);
+      expect(container.firstElementChild).toHaveClass('bottom-24');
+      rerender(<EconomyEntryNotice />);
+      expect(container.firstElementChild).toHaveClass('bottom-4');
+    });
+  });
+
   it('never leaks protocol or migration language', () => {
     for (const phase of ['applying', 'ambiguous'] as const) {
       mockStatus.mockReturnValue(statusOf({ phase, canRetry: true }));

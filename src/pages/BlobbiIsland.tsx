@@ -331,10 +331,13 @@ export function BlobbiIsland() {
         onOpenCollection={handleSwitchBlobbi}
       >
         {renderGameContent()}
-        {/* Pre-world economy-entry status: in the world the HUD/coin chip
-            owns this; before it, the compact notice speaks only when the
-            initial allocation is applying, ambiguous, or needs a retry. */}
-        {!isPlaying && <EconomyEntryNotice />}
+        {/* Economy-entry status, in and out of the world. Before the world it
+            speaks whenever the initial allocation is applying, ambiguous or
+            needs a retry. In the world it narrows to the states the Coins
+            surface cannot reach the player with — a failed allocation and the
+            attempt that follows a retry — because that surface lives inside a
+            modal the player may never open. */}
+        <EconomyEntryNotice inWorld={isPlaying} />
         <Suspense fallback={null}>
           <SceneTransition />
           <MapModal />

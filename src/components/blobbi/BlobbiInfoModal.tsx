@@ -636,6 +636,28 @@ export function BlobbiInfoModal({
                             <span role="status" className="text-xs font-medium text-island-ink-soft">
                               Confirming your Coin balance…
                             </span>
+                          ) : economyEntry.phase === 'failed' && economyEntry.canRetry ? (
+                            /*
+                              A failed FIRST allocation, told apart from an
+                              honest empty purse: showing "0" here would read as
+                              "you have no Coins" when the truth is "your Coins
+                              never arrived". The retry is the same action the
+                              pre-world notice drives, and re-checks the durable
+                              marker before it could ever grant again.
+                            */
+                            <span className="inline-flex flex-col items-end leading-tight">
+                              <span role="status" className="text-xs font-medium text-island-ink-soft">
+                                Coins not ready yet
+                              </span>
+                              <button
+                                type="button"
+                                data-economy-entry-retry
+                                className="text-xs font-medium text-island-ink-soft underline"
+                                onClick={() => economyEntry.retry()}
+                              >
+                                Try again
+                              </button>
+                            </span>
                           ) : coinBalance.isError ? (
                             <button
                               type="button"
