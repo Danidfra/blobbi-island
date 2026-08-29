@@ -146,26 +146,16 @@ function resolveResumePosition(content: unknown, location: LocationId): Position
   return constrained;
 }
 
-/**
- * Locations that need an entitlement to be in, and where an unentitled player
- * lands instead.
+/*
+ * NOTE the deliberate absence of a pass-gated floor table.
  *
- * The only members are the two arcade floors above and below the entrance. They
- * are reachable exclusively through the elevator, and `ArcadeRoom`'s elevator is
- * Arcade-Pass gated on every floor (`handleElevatorClick`) — including the floor
- * you arrive on. So a player restored there WITHOUT a pass is stranded: the only
- * exit refuses them.
- *
- * The gate is therefore checked, not assumed. A player who still holds a
- * legitimately purchased pass resumes the exact floor they were on; one who does
- * not lands at the ungated entrance. What never happens is a pass being
- * fabricated because presence claims the player was upstairs — presence records
- * position, and position is not an entitlement.
+ * The arcade floors used to need an Arcade Pass to be in, so a player restored
+ * upstairs without one was stranded — the only exit refused them — and this
+ * policy had to land them at the entrance instead. The elevator is open to
+ * everyone now: the arcade charges for PLAYS (one Arcade Token each), not for
+ * standing in the building. With no gated floor there is nothing to check, and
+ * a resumed player simply resumes where they were.
  */
-const PASS_GATED_FLOORS: Partial<Record<LocationId, LocationId>> = {
-  'arcade-1': 'arcade',
-  'arcade-minus1': 'arcade',
-};
 
 /**
  * What the resume decision was. Distinct cases stay distinct even where several
@@ -173,17 +163,8 @@ const PASS_GATED_FLOORS: Partial<Record<LocationId, LocationId>> = {
  * reach a relay" are different facts and only one of them is knowledge.
  */
 export type LocationResumeOutcome =
-  /** Presence is alive and its location is renderable and ungated. */
+  /** Presence is alive and its location is renderable. */
   | { readonly kind: 'fresh-presence'; readonly location: LocationId }
-  /**
-   * Alive and renderable, but the player no longer holds the entitlement that
-   * location requires — resumed to the ungated entrance.
-   */
-  | {
-      readonly kind: 'gated-presence';
-      readonly presenceLocation: LocationId;
-      readonly location: LocationId;
-    }
   /** Presence exists but its NIP-40 lifetime has run out. */
   | {
       readonly kind: 'stale-presence';
@@ -308,15 +289,6 @@ export interface ResolveInitialIslandLocationInput {
   readonly now: number;
   /** The island being entered; presence for any other island is ignored. */
   readonly islandId: string;
-  /**
-   * Whether the player currently holds a valid Arcade Pass, read from the
-   * entitlement's own store at decision time.
-   *
-   * An INPUT, never an output: this policy consults the entitlement and never
-   * grants one. Presence saying "you were on floor 1" is evidence about
-   * position, not about payment.
-   */
-  readonly hasArcadePass: boolean;
 }
 
 /** Everything falls back to Town at the canonical spawn. */
@@ -326,12 +298,12 @@ function fallback(outcome: LocationResumeOutcome): LocationResumeDecision {
 
 /**
  * Decide where this session starts. Pure: no clock, no relay, no React, no
- * storage — the entitlement arrives as an argument.
+ * storage.
  */
 export function resolveInitialIslandLocation(
   input: ResolveInitialIslandLocationInput,
 ): LocationResumeDecision {
-  const { read, now, islandId, hasArcadePass } = input;
+  const { read, now, islandId } = input;
 
   if (read.status === 'unknown') {
     // Non-destructive: navigate to the default, record that we do not know. No
@@ -358,23 +330,6 @@ export function resolveInitialIslandLocation(
 
   if (!isRenderableLocation(newest.location)) {
     return fallback({ kind: 'invalid-location', value: newest.location });
-  }
-
-  const ungatedTarget = PASS_GATED_FLOORS[newest.location];
-  if (ungatedTarget && !hasArcadePass) {
-    // The player was upstairs but no longer holds the pass the elevator
-    // demands. Land them at the entrance — where they can buy one — rather
-    // than on a floor with no exit. The pass is NOT granted here.
-    return {
-      location: ungatedTarget,
-      // A position from another floor means nothing in this room.
-      position: null,
-      outcome: {
-        kind: 'gated-presence',
-        presenceLocation: newest.location,
-        location: ungatedTarget,
-      },
-    };
   }
 
   return {

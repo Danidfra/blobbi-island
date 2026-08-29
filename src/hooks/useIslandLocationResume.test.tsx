@@ -20,7 +20,6 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { EXP_SECONDS, publishPresenceLogin } from '@/lib/multiplayer';
 import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
-import { grantArcadePass, clearArcadePass, resetArcadePassSubscribers } from '@/lib/arcade-pass';
 import { STANDARD_POLICY } from '@/safety';
 
 const PLAYER = 'a'.repeat(64);
@@ -158,38 +157,20 @@ describe('useIslandLocationResume', () => {
   });
 
   describe('arcade floors', () => {
-    afterEach(() => {
-      clearArcadePass();
-      resetArcadePassSubscribers();
-    });
-
-    it('restores the exact floor for a player who still holds their pass', async () => {
-      grantArcadePass();
+    // No entitlement is consulted here any more: the elevator is open to
+    // everyone, so an arcade floor restores exactly like Town does. The hook
+    // has no pass input left to supply.
+    it.each(['arcade-1', 'arcade-minus1'] as const)('restores %s exactly', async (floor) => {
       relayScript = () => [
-        ['EVENT', 's', presenceEvent('arcade-1', NOW - 5)],
+        ['EVENT', 's', presenceEvent(floor, NOW - 5)],
         ['EOSE', 's'],
       ];
 
       const { result } = renderHook(() => useIslandLocationResume(ISLAND), { wrapper });
       await waitFor(() => expect(result.current.isSettled).toBe(true));
 
-      // Bought the pass, rode up, refreshed. No second purchase.
-      expect(result.current.location).toBe('arcade-1');
+      expect(result.current.location).toBe(floor);
       expect(result.current.outcome.kind).toBe('fresh-presence');
-    });
-
-    it('falls back to the entrance for a player without a pass', async () => {
-      clearArcadePass();
-      relayScript = () => [
-        ['EVENT', 's', presenceEvent('arcade-minus1', NOW - 5)],
-        ['EOSE', 's'],
-      ];
-
-      const { result } = renderHook(() => useIslandLocationResume(ISLAND), { wrapper });
-      await waitFor(() => expect(result.current.isSettled).toBe(true));
-
-      expect(result.current.location).toBe('arcade');
-      expect(result.current.outcome.kind).toBe('gated-presence');
     });
 
     it('restores the arcade entrance at the same position', async () => {

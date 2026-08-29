@@ -1,8 +1,6 @@
 import React, { useState, ReactNode, useRef, useEffect } from 'react';
 import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
-import { clearArcadePass } from '@/lib/arcade-pass';
-import { isArcadeLocation } from '@/lib/location-resume';
 import { LocationContext } from './LocationContextValue';
 
 interface LocationProviderProps {
@@ -89,13 +87,6 @@ export function LocationProvider({
       setPreviousLocation(currentLocation);
       setCurrentLocation(location);
 
-      // Leaving the arcade revokes the Arcade Pass — the product rule, unchanged.
-      // Routed through the store (not a raw `sessionStorage.removeItem`) so the
-      // HUD chip is notified; the direct write bypassed every subscriber.
-      if (!isArcadeLocation(location)) {
-        clearArcadePass();
-      }
-
       transitionTimeout.current = setTimeout(() => {
         setIsTransitioning(false);
         transitionTimeout.current = null;
@@ -103,21 +94,16 @@ export function LocationProvider({
     }, 500); // Fade out
   };
 
-  // NOTE: there is deliberately NO `beforeunload` handler clearing the Arcade
-  // Pass here.
+  // NOTE: this context does not touch the Arcade Pass at all, and must not.
   //
-  // One used to exist, and it is why a purchased pass vanished on refresh:
-  // `sessionStorage` survives a reload in the same tab, but the handler deleted
-  // the key on the way out, so the player came back without the pass they had
-  // just paid 20 coins for. It was defensible before location resume — a reload
-  // always landed you in Town, so you really had left the arcade — and became a
-  // double charge the moment reloads started restoring where you were.
+  // It used to revoke the pass on leaving the arcade, and a `beforeunload`
+  // handler used to revoke it on reload — which is why a pass bought for 20
+  // coins vanished on refresh once location resume started restoring where you
+  // were. Both are gone along with the visit-scoped pass itself.
   //
-  // The product rule is unchanged and lives where it belongs: the pass is
-  // revoked when the LOCATION stops being an arcade location, both on navigation
-  // (above) and on entry (`PlayingView`'s effect, which also covers a bootstrap
-  // that resumes somewhere else). A reload is not a location change, so it no
-  // longer counts as leaving. See `contexts/arcade-pass-reload.test.tsx`.
+  // The pass is now a 24-hour entitlement redeemed with Arcade Tickets. It
+  // expires on a clock, not on a location change, so navigation has no say in
+  // its lifetime. See `contexts/arcade-pass-reload.test.tsx`.
   useEffect(() => {
     return () => {
       if (transitionTimeout.current) {

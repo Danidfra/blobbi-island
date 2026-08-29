@@ -24,7 +24,6 @@ import { useBlobbiPoseController } from '@/hooks/useBlobbiPoseController';
 import { BoundaryVisualizer } from './BoundaryVisualizer';
 import { MiningGame } from './MiningGame';
 import { resolveActorSpawn } from '@/lib/location-initial-position';
-import { clearArcadePass } from '@/lib/arcade-pass';
 import { MultiplayerLayer } from './MultiplayerLayer';
 import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
@@ -83,14 +82,13 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const currentRemoteRef = useRef<{ pubkey: string; d: string } | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
-  // The Arcade Pass is valid only inside the arcade, so leaving revokes it.
-  // Routed through the shared store rather than `sessionStorage` directly, so
-  // the HUD chip learns about it from a notification instead of a 1 Hz poll.
-  React.useEffect(() => {
-    if (!currentLocation.startsWith('arcade')) {
-      clearArcadePass();
-    }
-  }, [currentLocation]);
+  // NOTE: leaving the arcade no longer revokes the Arcade Pass.
+  //
+  // The pass used to be a visit-scoped waiver bought for 20 coins, so walking
+  // out ended it. It is now a 24-HOUR entitlement redeemed with Arcade Tickets,
+  // and its only boundary is its expiry. Revoking it on the way out would
+  // destroy something the player paid a day's worth of tickets for the moment
+  // they stepped into Town.
   const [isRefrigeratorOpen, setIsRefrigeratorOpen] = useState(false);
   const [isChestOpen, setIsChestOpen] = useState(false);
   const [isBlobbiInfoOpen, setIsBlobbiInfoOpen] = useState(false);

@@ -1,20 +1,58 @@
-import { useSyncExternalStore } from 'react';
-
-import { hasArcadePass, subscribeArcadePass } from '@/lib/arcade-pass';
-
 /**
- * Subscribe to the Arcade Pass.
+ * Live view of the player's Arcade Pass entitlement.
  *
- * Replaces the 1 Hz `sessionStorage` poll that ran for the whole session in
- * every location. The store notifies on write; the single `storage` listener it
- * keeps is a safety net for writes this module did not make, NOT cross-tab
- * synchronisation — the pass is deliberately tab-scoped (see `arcade-pass.ts`).
- *
- * The snapshot is a boolean, so `useSyncExternalStore` compares by value and no
- * cached object can tear or go stale. `getServerSnapshot` returns `false`, so a
- * server render and the first client render agree and nothing hydrates
- * mismatched.
+ * Subscribes to the entitlement store rather than polling it, and re-derives
+ * on a slow tick so an expiry that passes while the player is looking at the
+ * screen actually takes effect. One minute is the right granularity: the
+ * remaining time is shown in hours and minutes, and a pass that lapses is
+ * re-checked at every game start regardless — this tick only keeps the DISPLAY
+ * honest, never the entitlement itself.
  */
-export function useArcadePass(): boolean {
-  return useSyncExternalStore(subscribeArcadePass, hasArcadePass, () => false);
+
+import { useEffect, useState } from 'react';
+
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import {
+  arcadePassRemainingMs,
+  hasActiveArcadePass,
+  subscribeArcadePassEntitlement,
+} from '@/arcade/pass/arcade-pass-entitlement';
+
+const TICK_MS = 60 * 1000;
+
+export interface ArcadePassView {
+  /** True while the pass is waiving Arcade Token costs. */
+  readonly isActive: boolean;
+  /** Milliseconds left, or `0` when there is no active pass. */
+  readonly remainingMs: number;
+}
+
+export function useArcadePass(): ArcadePassView {
+  const { user } = useCurrentUser();
+  const pubkey = user?.pubkey;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const refresh = () => setNow(Date.now());
+    const unsubscribe = subscribeArcadePassEntitlement(refresh);
+    const timer = setInterval(refresh, TICK_MS);
+    return () => {
+      unsubscribe();
+      clearInterval(timer);
+    };
+  }, []);
+
+  return {
+    isActive: hasActiveArcadePass(pubkey, now),
+    remainingMs: arcadePassRemainingMs(pubkey, now),
+  };
+}
+
+/** "18h 42m", or "under a minute" near the end. Player-facing, never exact ms. */
+export function formatPassRemaining(remainingMs: number): string {
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  if (totalMinutes < 1) return 'under a minute';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }

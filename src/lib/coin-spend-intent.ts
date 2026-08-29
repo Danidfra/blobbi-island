@@ -26,15 +26,16 @@
  *
  * ## Storage lifetime matches DELIVERY lifetime
  *
- * - `shop-purchase` intents live in **localStorage**: the items and the charge
- *   land atomically in the durable kind:31633 event, so the open question
- *   ("did my purchase land?") survives reloads and must keep its identity.
- * - `arcade-pass` intents live in **sessionStorage**: the pass itself is
- *   deliberately tab-scoped (see `src/lib/arcade-pass.ts`), so the recoverable
- *   purchase is scoped to the same visit — it survives a reload, and a NEW tab
- *   (a new visit, which starts without a pass by design) is a genuinely new
- *   purchase. The Coin-op ledger record is durable either way, so an orphaned
- *   ambiguous charge is still reconciled by the recovery pass.
+ * Intents live in **localStorage**, because what they deliver is durable: the
+ * items and the charge land atomically in the kind:31633 event, so the open
+ * question ("did my purchase land?") survives reloads and must keep its
+ * identity.
+ *
+ * There was briefly a second, sessionStorage-backed surface for the old
+ * visit-scoped Arcade Pass, whose delivery really did end with the tab. Nothing
+ * is tab-scoped any more — the Arcade Pass is a 24-hour entitlement redeemed
+ * with Arcade Tickets, not a Coin purchase — so the split is gone rather than
+ * kept warm for a hypothetical caller.
  *
  * Writes are read-back verified, like the Coin-op ledger: a caller that cannot
  * durably record the intent MUST NOT charge — an unrecorded ambiguous spend is
@@ -52,7 +53,12 @@
 
 import { readCoinOp, type CoinOpRecord } from './coin-op-ledger';
 
-export type SpendSurface = 'shop-purchase' | 'arcade-pass';
+/**
+ * Which flow a spend belongs to. One member today; kept as a named union
+ * because it namespaces intents in storage, and a second Coin surface would
+ * otherwise silently match the first one's open intents.
+ */
+export type SpendSurface = 'shop-purchase';
 
 export interface SpendIntentLine {
   readonly address: string;
@@ -65,7 +71,7 @@ export interface SpendIntent {
   readonly surface: SpendSurface;
   /** Total Coin cost of the purchase. */
   readonly amount: number;
-  /** Normalized item grants (empty for the Arcade Pass). */
+  /** Normalized item grants. */
   readonly lines: readonly SpendIntentLine[];
   readonly createdAt: number;
 }
@@ -77,7 +83,6 @@ export interface OpenSpendIntentInput {
 }
 
 const LOCAL_KEY = 'blobbi:coin:spend-intents';
-const SESSION_KEY = 'blobbi:coin:spend-intents:session';
 
 /**
  * How long a definitively-`applied` intent that its flow never closed (e.g. a
@@ -90,19 +95,12 @@ export const APPLIED_INTENT_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 
 type IntentStore = Record<string, Record<string, SpendIntent>>;
 
-function storageFor(surface: SpendSurface): Storage | null {
+function storageFor(): Storage | null {
   try {
-    if (surface === 'arcade-pass') {
-      return typeof sessionStorage === 'undefined' ? null : sessionStorage;
-    }
     return typeof localStorage === 'undefined' ? null : localStorage;
   } catch {
     return null;
   }
-}
-
-function storageKeyFor(surface: SpendSurface): string {
-  return surface === 'arcade-pass' ? SESSION_KEY : LOCAL_KEY;
 }
 
 function isLine(value: unknown): value is SpendIntentLine {
@@ -116,7 +114,7 @@ function isIntent(value: unknown): value is SpendIntent {
   const intent = value as Partial<SpendIntent>;
   return (
     typeof intent.intentId === 'string' &&
-    (intent.surface === 'shop-purchase' || intent.surface === 'arcade-pass') &&
+    intent.surface === 'shop-purchase' &&
     typeof intent.amount === 'number' &&
     Array.isArray(intent.lines) &&
     intent.lines.every(isLine) &&
@@ -126,9 +124,9 @@ function isIntent(value: unknown): value is SpendIntent {
 
 function readStore(surface: SpendSurface): IntentStore {
   try {
-    const storage = storageFor(surface);
+    const storage = storageFor();
     if (!storage) return {};
-    const raw = storage.getItem(storageKeyFor(surface));
+    const raw = storage.getItem(LOCAL_KEY);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
@@ -147,11 +145,11 @@ function readStore(surface: SpendSurface): IntentStore {
   }
 }
 
-function writeStore(surface: SpendSurface, store: IntentStore): boolean {
+function writeStore(store: IntentStore): boolean {
   try {
-    const storage = storageFor(surface);
+    const storage = storageFor();
     if (!storage) return false;
-    storage.setItem(storageKeyFor(surface), JSON.stringify(store));
+    storage.setItem(LOCAL_KEY, JSON.stringify(store));
     return true;
   } catch {
     return false;
@@ -273,7 +271,7 @@ export function openSpendIntent(
     store[pubkey] = owned;
     // Best-effort persistence of the GC; the reused record itself is already
     // durably stored, so a failed write here does not endanger the retry.
-    writeStore(surface, store);
+    writeStore(store);
     return { intent: reusable, reused: true };
   }
 
@@ -286,7 +284,7 @@ export function openSpendIntent(
   };
   owned[intent.intentId] = intent;
   store[pubkey] = owned;
-  if (!writeStore(surface, store)) return null;
+  if (!writeStore(store)) return null;
 
   // Read back: storage that silently dropped the write must refuse the charge.
   const stored = readStore(surface)[pubkey]?.[intent.intentId];
@@ -309,22 +307,22 @@ export function closeSpendIntent(
   const owned = { ...(store[pubkey] ?? {}) };
   delete owned[intentId];
   store[pubkey] = owned;
-  return writeStore(surface, store);
+  return writeStore(store);
 }
 
 /** Tests and the DEV harness only. */
 export function clearSpendIntents(pubkey?: string): void {
-  for (const surface of ['shop-purchase', 'arcade-pass'] as const) {
+  for (const surface of ['shop-purchase'] as const) {
     try {
-      const storage = storageFor(surface);
+      const storage = storageFor();
       if (!storage) continue;
       if (!pubkey) {
-        storage.removeItem(storageKeyFor(surface));
+        storage.removeItem(LOCAL_KEY);
         continue;
       }
       const store = readStore(surface);
       delete store[pubkey];
-      writeStore(surface, store);
+      writeStore(store);
     } catch {
       /* nothing to clear */
     }

@@ -127,8 +127,8 @@ const answered = (events: NostrEvent[]): RelayReadOutcome => ({
   events,
 });
 
-const resolve = (read: RelayReadOutcome, now = NOW, hasArcadePass = false) =>
-  resolveInitialIslandLocation({ read, now, islandId: ISLAND, hasArcadePass });
+const resolve = (read: RelayReadOutcome, now = NOW) =>
+  resolveInitialIslandLocation({ read, now, islandId: ISLAND });
 
 describe('resolveInitialIslandLocation', () => {
   it('restores a fresh presence location', () => {
@@ -294,54 +294,32 @@ describe('resolveInitialIslandLocation', () => {
     });
   });
 
-  describe('arcade floors are entitlement-gated, not location-gated', () => {
-    it.each(['arcade-1', 'arcade-minus1'] as const)(
-      'resumes %s exactly when the player still holds a valid pass',
+  describe('arcade floors are resumed like any other location', () => {
+    /*
+     * These floors used to be gated: the elevator demanded an Arcade Pass on
+     * every floor, so resuming a player upstairs without one stranded them, and
+     * this policy had to send them to the entrance instead.
+     *
+     * The arcade charges for PLAYS now, not for presence — one Arcade Token per
+     * game, bought at the counter on the ground floor — and the elevator is open
+     * to everyone. With no entitlement to check, an arcade floor resumes exactly
+     * like Town does.
+     */
+    it.each(['arcade-1', 'arcade-minus1', 'arcade'] as const)(
+      'resumes %s from presence',
       (location) => {
-        const read = answered([presence({ location, createdAt: NOW - 5 })]);
-
-        const withPass = resolve(read, NOW, true);
-        expect(withPass.location).toBe(location);
-        expect(withPass.outcome.kind).toBe('fresh-presence');
-        // A player who paid does not pay again because the page refreshed.
-      },
-    );
-
-    it.each(['arcade-1', 'arcade-minus1'] as const)(
-      'sends %s to the entrance when the pass is gone',
-      (location) => {
-        const decision = resolve(answered([presence({ location, createdAt: NOW - 5 })]), NOW, false);
-
-        // The elevator is pass-gated on EVERY floor, so restoring the raw
-        // location without a pass would leave the player with no exit.
-        expect(decision.location).toBe('arcade');
-        expect(decision.position).toBeNull();
-        expect(decision.outcome).toEqual({
-          kind: 'gated-presence',
-          presenceLocation: location,
-          location: 'arcade',
-        });
-      },
-    );
-
-    it('never grants a pass just because presence says the player was upstairs', () => {
-      // The policy is pure and takes the entitlement as an INPUT; there is no
-      // return channel through which it could hand one out.
-      const decision = resolve(
-        answered([presence({ location: 'arcade-1', createdAt: NOW - 5 })]),
-        NOW,
-        false,
-      );
-      expect(Object.keys(decision).sort()).toEqual(['location', 'outcome', 'position']);
-    });
-
-    it('resumes the arcade ground floor with or without a pass', () => {
-      const read = answered([presence({ location: 'arcade', createdAt: NOW - 5 })]);
-      for (const pass of [true, false]) {
-        const decision = resolve(read, NOW, pass);
-        expect(decision.location).toBe('arcade');
+        const decision = resolve(answered([presence({ location, createdAt: NOW - 5 })]));
+        expect(decision.location).toBe(location);
         expect(decision.outcome.kind).toBe('fresh-presence');
-      }
+      },
+    );
+
+    it('takes no entitlement input, so it cannot redirect on one', () => {
+      // The signature is the guarantee: there is no pass argument left to pass
+      // in, and no branch that could consult one.
+      const decision = resolve(answered([presence({ location: 'arcade-1', createdAt: NOW - 5 })]));
+      expect(Object.keys(decision).sort()).toEqual(['location', 'outcome', 'position']);
+      expect(decision.outcome).toEqual({ kind: 'fresh-presence', location: 'arcade-1' });
     });
   });
 

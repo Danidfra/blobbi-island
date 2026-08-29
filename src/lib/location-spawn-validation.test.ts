@@ -29,7 +29,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   ARCADE_DEFAULT_SPAWN,
-  ARCADE_PASS_HOLDER_SPAWN,
+  ARCADE_ELEVATOR_EXIT_SPAWN,
   EXIT_POSITIONS,
   LOCATION_INITIAL_POSITIONS,
   getBlobbiInitialPosition,
@@ -109,7 +109,7 @@ describe('location spawn validation (ground-anchor semantics)', () => {
 
   const arcadeSpawns: Array<[string, Position]> = [
     ['ARCADE_DEFAULT_SPAWN', ARCADE_DEFAULT_SPAWN],
-    ['ARCADE_PASS_HOLDER_SPAWN', ARCADE_PASS_HOLDER_SPAWN],
+    ['ARCADE_ELEVATOR_EXIT_SPAWN', ARCADE_ELEVATOR_EXIT_SPAWN],
   ];
 
   it.each(arcadeSpawns)('%s lies inside the arcade ground-floor boundary', (label, point) => {

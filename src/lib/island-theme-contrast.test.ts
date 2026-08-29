@@ -94,7 +94,7 @@ const REQUIRED: Pair[] = [
   { what: 'the destructive CTA label', fg: 'cream', bg: 'danger', min: 4.5 },
 
   // The same colours used the OTHER way round — as text on the panel. Error
-  // copy is `text-island-danger` (ArcadePassModal has four, one of them a
+  // copy is `text-island-danger` (the token counter has several, one of them a
   // `role="alert"`), and prices and ticket counts are `text-island-purple`.
   // Enforcing both directions is what stops a future palette from fixing the
   // button by breaking the label.

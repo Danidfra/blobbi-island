@@ -32,9 +32,8 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import { ArcadePassModal } from './ArcadePassModal';
+import { ArcadeTokenShopModal } from './arcade/ArcadeTokenShopModal';
 import { ElevatorModal } from './ElevatorModal';
-import { NoPassModal } from './NoPassModal';
 import { StageOverlayContext } from '@/contexts/StageOverlayContext';
 
 // ---------------------------------------------------------------------------
@@ -66,6 +65,16 @@ vi.mock('@/hooks/useOptimizedStatus', () => ({
 }));
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
+// The token counter reads a balance and spends; neither is what this file
+// measures, so both are stubbed rather than driven through a relay.
+vi.mock('@/inventory/useItemCatalog', () => ({
+  useItemCatalog: () => ({ data: undefined }),
+}));
+vi.mock('@/hooks/useArcadeTokens', () => ({
+  useArcadeTokenBalance: () => ({ balance: 3, isLoading: false }),
+  useBuyArcadeTokens: () => ({ buyTokens: vi.fn(), isBuying: false }),
+}));
+
 const setCurrentLocation = vi.fn();
 vi.mock('@/hooks/useLocation', () => ({
   useLocation: () => ({
@@ -76,11 +85,17 @@ vi.mock('@/hooks/useLocation', () => ({
   }),
 }));
 
-/** Every dialog that lives inside the game stage. */
+/**
+ * Every dialog that lives inside the game stage.
+ *
+ * Two, not the original three: `ArcadePassModal` and `NoPassModal` both existed
+ * to sell and to enforce a Coin-bought Arcade Pass, and neither survived the
+ * move to Arcade Tokens. `ArcadeTokenShopModal` is what the counter opens now,
+ * and it inherits the containment requirement unchanged.
+ */
 const DIALOGS = [
-  { name: 'ArcadePassModal', Component: ArcadePassModal, title: /arcade pass/i },
+  { name: 'ArcadeTokenShopModal', Component: ArcadeTokenShopModal, title: /token counter/i },
   { name: 'ElevatorModal', Component: ElevatorModal, title: /select floor/i },
-  { name: 'NoPassModal', Component: NoPassModal, title: /access denied/i },
 ] as const;
 
 /**
@@ -248,7 +263,7 @@ describe('without a stage', () => {
     // A unit test rendering a modal on its own has no host. `absolute` with no
     // host would resolve against the document and land somewhere arbitrary, so
     // the primitive switches to the viewport presentation instead.
-    render(<NoPassModal isOpen onClose={() => {}} />);
+    render(<ElevatorModal isOpen onClose={() => {}} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('dialog').className).toContain('fixed');
   });

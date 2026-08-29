@@ -1,29 +1,30 @@
-import { useArcadePass } from '@/hooks/useArcadePass';
+import { formatPassRemaining, useArcadePass } from '@/hooks/useArcadePass';
 
 /**
  * The Arcade Pass indicator.
  *
- * Previously this ran `setInterval(checkPass, 1000)` for the whole session, in
- * every location, because `sessionStorage` fires no event for same-tab writes.
- * It now subscribes to `src/lib/arcade-pass.ts`, where the writers notify
- * directly and a single shared `storage` listener covers the cross-tab case.
+ * Shown only while a redeemed pass is still running. It says how long is left
+ * because the pass is now a 24-hour entitlement rather than a visit-scoped
+ * flag — "you have a pass" is no longer the whole story, and a player deciding
+ * whether to redeem another one needs the number.
  *
- * The pass is NOT the Arcade Ticket — see `ArcadeTicketBalance`, which renders
- * the kind:31633 currency next to this chip. Two arcade concepts, two lifetimes,
- * deliberately not merged.
+ * The pass is NOT the Arcade Ticket, and not the Arcade Token either: Tokens
+ * are what a play costs, Tickets are what a play pays, and the pass is what
+ * makes the Tokens unnecessary for a day.
  */
 export function ArcadePassIcon() {
-  const hasPass = useArcadePass();
+  const { isActive, remainingMs } = useArcadePass();
 
-  if (!hasPass) return null;
+  if (!isActive) return null;
 
+  const remaining = formatPassRemaining(remainingMs);
   return (
-    <div className="relative">
+    <div className="relative" data-arcade-pass-active>
       <img
         src="/assets/items/tickets/arcade-ticket.png"
-        alt="Arcade Pass"
-        className="w-8 h-8 sm:w-10 sm:h-10 drop-shadow-lg animate-pulse"
-        title="You have an active Arcade Pass!"
+        alt={`Arcade Pass active — free plays for ${remaining}`}
+        className="w-8 h-8 sm:w-10 sm:h-10 drop-shadow-lg"
+        title={`Arcade Pass active — free plays for ${remaining}`}
       />
     </div>
   );

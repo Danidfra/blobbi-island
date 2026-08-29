@@ -124,13 +124,14 @@ describe('durability matches delivery lifetime', () => {
     expect(after.map((i) => i.intentId)).toEqual([first.intent.intentId]);
   });
 
-  it('shop intents live in localStorage, pass intents in sessionStorage', () => {
+  it('intents live in localStorage, and nothing is written to sessionStorage', () => {
     openSpendIntent(PUBKEY, { surface: 'shop-purchase', amount: 20, lines: [{ address: APPLE, amount: 2 }] }, mint);
-    openSpendIntent(PUBKEY, { surface: 'arcade-pass', amount: 20 }, () => 'arcade-pass:test-1');
 
     expect(localStorage.getItem('blobbi:coin:spend-intents')).toContain('shop-purchase');
-    expect(localStorage.getItem('blobbi:coin:spend-intents')).not.toContain('arcade-pass');
-    expect(sessionStorage.getItem('blobbi:coin:spend-intents:session')).toContain('arcade-pass');
+    // There used to be a sessionStorage half of this store, for the old
+    // visit-scoped Arcade Pass. Nothing a Coin buys is tab-scoped any more, and
+    // an intent that quietly vanished with the tab would strand a real charge.
+    expect(sessionStorage.getItem('blobbi:coin:spend-intents:session')).toBeNull();
   });
 });
 

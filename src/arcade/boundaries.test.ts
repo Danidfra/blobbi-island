@@ -302,16 +302,25 @@ describe('no arcade component performs an inventory or coin write except the pas
     expect(writerImports.some((s) => /useCoinsMutation|blobbi-kinds/.test(s))).toBe(false);
   });
 
-  it('leaves the ONE coin write in ArcadePassModal, through the wallet', () => {
-    // The pass purchase is the arcade's only value write, and since the Coin
-    // cutover it spends through the canonical Coin WALLET (official Blobbi
-    // Coin in kind:31633) — never the raw inventory mutation layer and never
-    // the retired kind:11125 path.
-    const specifiers = importsOf(
-      join(process.cwd(), 'src/components/blobbi/ArcadePassModal.tsx'),
-    );
+  it('leaves the ONE coin write at the Arcade Token counter, through the wallet', () => {
+    // Buying Arcade Tokens is the arcade's only COIN write. It replaced the
+    // Arcade Pass purchase, which is no longer bought with Coins at all — the
+    // pass is redeemed with Arcade Tickets at the prize counter.
+    //
+    // Like every Coin spend since the cutover it goes through the canonical
+    // Coin WALLET (official Blobbi Coin in kind:31633): never the raw inventory
+    // mutation layer, and never the retired kind:11125 path.
+    const path = join(process.cwd(), 'src/hooks/useArcadeTokens.ts');
+    const specifiers = importsOf(path);
     expect(specifiers.some((s) => /useCoinWallet/.test(s))).toBe(true);
     expect(specifiers.some((s) => /useCoinsMutation/.test(s))).toBe(false);
-    expect(specifiers.some((s) => /useInventoryMutation/.test(s))).toBe(false);
+
+    // The inventory mutation BINDING, not its module. `useInventoryMutation.ts`
+    // also exports `getQuantity`, a pure reader over an already-fetched
+    // inventory, and reading a Token balance through it is exactly right — an
+    // import-path check would have to forbid that too. What must never appear
+    // is a second writer: the wallet is the only thing that moves value here.
+    const source = readFileSync(path, 'utf8');
+    expect(source).not.toMatch(/useInventoryMutation\s*\(/);
   });
 });

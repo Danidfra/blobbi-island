@@ -12,17 +12,16 @@
  * walkable ground, it is clear of the alcove, and the straight line from it to
  * every ground-floor destination stays walkable for its whole length.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import {
   ARCADE_DEFAULT_SPAWN,
   ARCADE_ELEVATOR_ALCOVE,
-  ARCADE_PASS_HOLDER_SPAWN,
+  ARCADE_ELEVATOR_EXIT_SPAWN,
   getBlobbiInitialPosition,
 } from './location-initial-position';
 import { locationBoundaries } from './location-boundaries';
 import { constrainPosition } from './boundaries';
-import { clearArcadePass, grantArcadePass } from './arcade-pass';
 import { machineAnchorPosition } from './arcade-machines-config';
 import type { Position } from './types';
 
@@ -57,20 +56,16 @@ function firstBlockedPointOnPath(from: Position, to: Position, samples = 60): Po
   return null;
 }
 
-afterEach(() => {
-  clearArcadePass();
-});
-
 describe('arcade ground-floor spawn', () => {
-  it('lands the pass holder on walkable floor', () => {
-    expect(isWalkable(ARCADE_PASS_HOLDER_SPAWN)).toBe(true);
+  it('lands the elevator exit on walkable floor', () => {
+    expect(isWalkable(ARCADE_ELEVATOR_EXIT_SPAWN)).toBe(true);
   });
 
-  it('keeps the pass holder clear of the elevator alcove', () => {
-    expect(isInsideAlcove(ARCADE_PASS_HOLDER_SPAWN)).toBe(false);
+  it('keeps the elevator exit clear of the alcove itself', () => {
+    expect(isInsideAlcove(ARCADE_ELEVATOR_EXIT_SPAWN)).toBe(false);
     // ...with room to spare, not merely one pixel past the line. The old spawn
     // sat exactly ON the alcove's lower edge.
-    expect(ARCADE_PASS_HOLDER_SPAWN.y).toBeGreaterThan(ARCADE_ELEVATOR_ALCOVE.y[1] + 5);
+    expect(ARCADE_ELEVATOR_EXIT_SPAWN.y).toBeGreaterThan(ARCADE_ELEVATOR_ALCOVE.y[1] + 5);
   });
 
   it('confirms the old spawn really was in the alcove', () => {
@@ -78,7 +73,7 @@ describe('arcade ground-floor spawn', () => {
     expect(isInsideAlcove({ x: 50, y: 48 })).toBe(true);
   });
 
-  it('lands the pass-free spawn on walkable floor too', () => {
+  it('lands the entrance spawn on walkable floor too', () => {
     expect(isWalkable(ARCADE_DEFAULT_SPAWN)).toBe(true);
     expect(isInsideAlcove(ARCADE_DEFAULT_SPAWN)).toBe(false);
   });
@@ -95,7 +90,7 @@ describe('arcade ground-floor spawn', () => {
     };
 
     for (const [name, destination] of Object.entries(destinations)) {
-      const blocked = firstBlockedPointOnPath(ARCADE_PASS_HOLDER_SPAWN, destination);
+      const blocked = firstBlockedPointOnPath(ARCADE_ELEVATOR_EXIT_SPAWN, destination);
       expect(blocked, `path to ${name} leaves walkable floor at ${JSON.stringify(blocked)}`).toBeNull();
     }
   });
@@ -105,7 +100,7 @@ describe('arcade ground-floor spawn', () => {
     // reach the elevator, which is how the other two floors are reached at all.
     const elevatorApproach = { x: 50, y: 50 };
     expect(isWalkable(elevatorApproach)).toBe(true);
-    expect(firstBlockedPointOnPath(ARCADE_PASS_HOLDER_SPAWN, elevatorApproach)).toBeNull();
+    expect(firstBlockedPointOnPath(ARCADE_ELEVATOR_EXIT_SPAWN, elevatorApproach)).toBeNull();
 
     // Sanity: machine anchors themselves are validated in
     // arcade-machines-config.test.ts; here we only assert none of them is on
@@ -115,21 +110,23 @@ describe('arcade ground-floor spawn', () => {
 });
 
 describe('getBlobbiInitialPosition for the arcade', () => {
-  it('uses the pass-free spawn when no pass is held', () => {
-    clearArcadePass();
+  /*
+   * The split used to be pass / no pass. It is now where you came FROM, which
+   * is what the two spots always physically meant: a pass was simply the only
+   * way to be riding the elevator.
+   */
+  it('uses the entrance spawn when arriving from outside', () => {
     expect(getBlobbiInitialPosition('arcade')).toEqual(ARCADE_DEFAULT_SPAWN);
+    expect(getBlobbiInitialPosition('arcade', 'town')).toEqual(ARCADE_DEFAULT_SPAWN);
   });
 
-  it('uses the pass-holder spawn when a pass is held', () => {
-    grantArcadePass();
-    expect(getBlobbiInitialPosition('arcade')).toEqual(ARCADE_PASS_HOLDER_SPAWN);
+  it('uses the elevator-exit spawn when arriving from another arcade floor', () => {
+    expect(getBlobbiInitialPosition('arcade', 'arcade-1')).toEqual(ARCADE_ELEVATOR_EXIT_SPAWN);
+    expect(getBlobbiInitialPosition('arcade', 'arcade-minus1')).toEqual(ARCADE_ELEVATOR_EXIT_SPAWN);
   });
 
-  it('still prefers a door exit position when returning from another room', () => {
-    grantArcadePass();
-    // No arcade exit mapping exists, so the pass branch still applies…
-    expect(getBlobbiInitialPosition('arcade', 'town')).toEqual(ARCADE_PASS_HOLDER_SPAWN);
-    // …while an existing mapping (town ← arcade) is untouched.
+  it('still prefers a door exit position where one is mapped', () => {
+    // An existing mapping (town ← arcade) is untouched by any of this.
     expect(getBlobbiInitialPosition('town', 'arcade')).toEqual({ x: 32, y: 75.8 });
   });
 });

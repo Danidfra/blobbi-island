@@ -1,5 +1,4 @@
 import { LocationId } from '@/lib/location-types';
-import { hasArcadePass } from '@/lib/arcade-pass';
 
 export interface InitialPosition {
   x: number;
@@ -36,7 +35,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
  * `y ∈ [57.2, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [45.2, 57.2]` — the
  * space in front of the elevator doors.
  *
- * These two constants exist because the pass-holder spawn used to sit on the
+ * These two constants exist because the elevator-exit spawn used to sit on the
  * alcove's own boundary line. From there the Blobbi could not reach the
  * ticket counter: the walk stalled far from its target and `usePendingInteraction`
  * correctly cancelled itself (`STALL_MAX_DISTANCE_FACTOR`), so clicking the
@@ -49,10 +48,17 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
  */
 export const ARCADE_ELEVATOR_ALCOVE = { x: [45, 55], y: [45.2, 57.2] } as const;
 
-/** Where a pass holder arrives: on the open floor, below the alcove mouth. */
-export const ARCADE_PASS_HOLDER_SPAWN: InitialPosition = { x: 50, y: 67.2 };
+/**
+ * Where someone stepping OFF the elevator arrives: on the open floor, just
+ * below the alcove mouth.
+ *
+ * This used to be the pass holder's spawn, back when holding a pass was the
+ * only way to be using the elevator at all. The elevator is open to everyone
+ * now, so the spot belongs to the arrival it was always really about.
+ */
+export const ARCADE_ELEVATOR_EXIT_SPAWN: InitialPosition = { x: 50, y: 67.2 };
 
-/** Where everyone else arrives: mid-floor, within easy reach of the counter. */
+/** Where someone arriving from outside starts: mid-floor, near the counter. */
 export const ARCADE_DEFAULT_SPAWN: InitialPosition = { x: 50, y: 84.2 };
 
 /**
@@ -131,7 +137,12 @@ export function getBlobbiInitialPosition(location: string, previousLocation?: st
   const defaultPosition = LOCATION_INITIAL_POSITIONS[location as LocationId] || { x: 50, y: 75 };
 
   if (location === 'arcade') {
-    return hasArcadePass() ? ARCADE_PASS_HOLDER_SPAWN : ARCADE_DEFAULT_SPAWN;
+    // Arriving by elevator puts you at its doors; arriving from outside puts
+    // you by the counter. The split used to be pass / no pass, which happened
+    // to mean the same thing back when only a pass holder could ride.
+    return previousLocation && previousLocation.startsWith('arcade-')
+      ? ARCADE_ELEVATOR_EXIT_SPAWN
+      : ARCADE_DEFAULT_SPAWN;
   }
 
   // Handle modal backgrounds (like photo-booth-inside.png)

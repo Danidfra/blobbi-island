@@ -41,7 +41,6 @@ import { useNostr } from '@nostrify/react';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { readRelay, type RelayReader } from '@/lib/relay-read';
-import { hasArcadePass } from '@/lib/arcade-pass';
 import { nowSec } from '@/lib/multiplayer';
 import {
   DEFAULT_ISLAND_LOCATION,
@@ -100,7 +99,6 @@ export function useIslandLocationResume(islandId: string): IslandLocationResume 
         islandId,
         // Read at DECISION time, not render time. The pass is the entitlement's
         // own answer about itself; this policy only consults it.
-        hasArcadePass: hasArcadePass(),
       });
     },
     // Bootstrap, not state. Resolve once; never re-ask, never re-decide.

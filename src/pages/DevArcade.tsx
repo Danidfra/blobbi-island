@@ -13,9 +13,7 @@ import { ArcadeGameShell } from '@/components/blobbi/arcade/ArcadeGameShell';
 import { ArcadeMachinePanel } from '@/components/blobbi/arcade/ArcadeMachinePanel';
 import { ArcadeCatalogueShell } from '@/components/blobbi/arcade/ArcadeCatalogue';
 import { ArcadeDedicatedPreview } from '@/components/blobbi/arcade/ArcadeDedicatedPreview';
-import { ArcadePassModal } from '@/components/blobbi/ArcadePassModal';
 import { ElevatorModal } from '@/components/blobbi/ElevatorModal';
-import { NoPassModal } from '@/components/blobbi/NoPassModal';
 import { resolveNativeArcadeGame } from '@/components/blobbi/arcade/native-games';
 import {
   ARCADE_AIR_HOCKEY_MACHINE_ID,
@@ -43,7 +41,7 @@ import {
   machineAnchorPosition,
   type ArcadeFloorId,
 } from '@/lib/arcade-machines-config';
-import { clearArcadePass, grantArcadePass } from '@/lib/arcade-pass';
+import { clearArcadePasses, grantArcadePass } from '@/arcade/pass/arcade-pass-entitlement';
 import { useArcadePass } from '@/hooks/useArcadePass';
 
 import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
@@ -577,7 +575,7 @@ export function DevArcade() {
   const [showAnchors, setShowAnchors] = useState(false);
   const [machineId, setMachineId] = useState(arcadeMachines[0].id);
   const [lifecycle, dispatch] = useReducer(arcadeMachineReducer, INITIAL_ARCADE_MACHINE_STATE);
-  const hasPass = useArcadePass();
+  const { isActive: hasPass } = useArcadePass();
   /** Read-only. The harness never signs and never publishes; it needs the pubkey
    *  only because the claim ledger is keyed by owner. */
   const { user } = useCurrentUser();
@@ -1127,9 +1125,7 @@ export function DevArcade() {
         from a different cabinet" checkable without walking anywhere.
       */}
       {/* The REAL room dialogs, in the REAL stage overlay host. */}
-      {roomModal === 'pass' && <ArcadePassModal isOpen onClose={() => setRoomModal(null)} />}
       {roomModal === 'elevator' && <ElevatorModal isOpen onClose={() => setRoomModal(null)} />}
-      {roomModal === 'no-pass' && <NoPassModal isOpen onClose={() => setRoomModal(null)} />}
 
       {/* The REAL dedicated coming-soon screen, for whichever table is chosen. */}
       {dedicatedPreview && (
@@ -1255,8 +1251,23 @@ export function DevArcade() {
           <Chip active={showAnchors} onClick={() => setShowAnchors((v) => !v)}>
             anchors
           </Chip>
-          <Chip active={hasPass} onClick={() => (hasPass ? clearArcadePass() : grantArcadePass())}>
-            {hasPass ? 'pass: held' : 'pass: none'}
+          {/*
+            Grants the real 24h entitlement rather than a dev-only flag, so what
+            you toggle here is exactly what the arcade reads. The redemption id
+            is per-click: reusing one would make the second grant a no-op.
+          */}
+          <Chip
+            active={hasPass}
+            onClick={() =>
+              hasPass
+                ? clearArcadePasses(user?.pubkey)
+                : grantArcadePass(user?.pubkey, {
+                    redemptionId: `dev-${Date.now()}`,
+                    nowMs: Date.now(),
+                  })
+            }
+          >
+            {hasPass ? 'pass: 24h held' : 'pass: none'}
           </Chip>
         </Section>
 

@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useReducer, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 import { useLocation } from '@/hooks/useLocation';
-import { useArcadePass } from '@/hooks/useArcadePass';
 import { usePendingInteraction } from '@/hooks/usePendingInteraction';
 import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOnWorldClick';
 import type { MovableBlobbiRef } from '../MovableBlobbi';
@@ -10,7 +9,6 @@ import { BackArrow } from '../BackArrow';
 import { InteractiveElement } from '../InteractiveElement';
 import { ArcadeTokenShopModal } from './ArcadeTokenShopModal';
 import { ElevatorModal } from '../ElevatorModal';
-import { NoPassModal } from '../NoPassModal';
 import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
 import { PrizeCounter } from './prizes/PrizeCounter';
@@ -113,12 +111,10 @@ interface ArcadeRoomProps {
 
 export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: ArcadeRoomProps) {
   const { currentLocation, setCurrentLocation } = useLocation();
-  const hasPass = useArcadePass();
 
   const [isElevatorHovered, setIsElevatorHovered] = useState(false);
   const [isTokenShopOpen, setIsTokenShopOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
-  const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
   /** Which screen is up. Never a run — see the two-state-machines note above. */
   const [view, setView] = useState<ArcadeView>(ARCADE_VIEW_CLOSED);
   /**
@@ -266,10 +262,16 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
     setView(closeArcadeView());
   }, []);
 
-  const handleElevatorClick = useCallback(() => {
-    if (hasPass) setIsElevatorModalOpen(true);
-    else setIsNoPassModalOpen(true);
-  }, [hasPass]);
+  /**
+   * The elevator is open to everyone.
+   *
+   * It used to demand a Coin-bought Arcade Pass, which made the pass a
+   * TOLLGATE on the arcade itself. The redesign moves the cost to the games
+   * (one Arcade Token each) and turns the pass into a premium Ticket reward
+   * that waives that cost — so exploring the floors, reading the catalogues
+   * and browsing the prize counter are free, as they should always have been.
+   */
+  const handleElevatorClick = useCallback(() => setIsElevatorModalOpen(true), []);
 
   /** The machine the open view belongs to, for its title and its artwork. */
   const openMachine = useMemo(
@@ -455,9 +457,6 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       )}
       {isElevatorModalOpen && (
         <ElevatorModal isOpen onClose={() => setIsElevatorModalOpen(false)} />
-      )}
-      {isNoPassModalOpen && (
-        <NoPassModal isOpen onClose={() => setIsNoPassModalOpen(false)} />
       )}
 
       {/*

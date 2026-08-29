@@ -26,14 +26,13 @@ vi.mock('@/hooks/useArcadeGameEntry', () => ({
 import { ArcadeRoom } from './ArcadeRoom';
 import { arcadeMachines, type ArcadeFloorId } from '@/lib/arcade-machines-config';
 import { arcadePropsByFloor } from '@/lib/arcade-room-config';
-import { clearArcadePass, grantArcadePass } from '@/lib/arcade-pass';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 
 // ---------------------------------------------------------------------------
 // The room's collaborators are stubbed so this file tests the ROOM, not the
-// movement system (covered by usePendingInteraction) or the pass economy
-// (covered by ArcadePassModal.test.tsx).
+// movement system (covered by usePendingInteraction) or the token economy
+// (covered by the token store and entry-policy tests).
 // ---------------------------------------------------------------------------
 
 const requests: RequestInteractionOptions[] = [];
@@ -101,10 +100,6 @@ vi.mock('../ElevatorModal', () => ({
   ElevatorModal: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="elevator-modal" /> : null,
 }));
-vi.mock('../NoPassModal', () => ({
-  NoPassModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="no-pass-modal" /> : null,
-}));
 
 const SURFACE_RECT = {
   width: 1000,
@@ -165,13 +160,11 @@ const catalogue = () => document.querySelector('[data-arcade-catalogue]') as HTM
 
 beforeEach(() => {
   requests.length = 0;
-  clearArcadePass();
   setCurrentLocation.mockClear();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  clearArcadePass();
 });
 
 const GENERIC_CABINETS = [
@@ -504,27 +497,18 @@ describe('decoration is decoration', () => {
 });
 
 describe('elevator', () => {
-  it('gates on the pass and never opens both modals', () => {
+  it('opens the floor selector for everyone, with no entitlement check', () => {
+    // The elevator used to demand an Arcade Pass and open a refusal modal
+    // instead. The arcade charges for PLAYS now — one Arcade Token per game,
+    // bought at the counter — so riding it is free and the refusal modal is
+    // gone rather than merely unreachable.
     renderRoom('ground');
 
     const leftDoor = screen.getByAltText('Elevator, left door').parentElement!
       .parentElement as HTMLElement;
     expect(clickAndArrive(leftDoor)).toBe(true);
 
-    expect(screen.getByTestId('no-pass-modal')).toBeInTheDocument();
-    expect(screen.queryByTestId('elevator-modal')).toBeNull();
-  });
-
-  it('opens the floor selector once a pass is held', () => {
-    grantArcadePass();
-    renderRoom('ground');
-
-    const leftDoor = screen.getByAltText('Elevator, left door').parentElement!
-      .parentElement as HTMLElement;
-    clickAndArrive(leftDoor);
-
     expect(screen.getByTestId('elevator-modal')).toBeInTheDocument();
-    expect(screen.queryByTestId('no-pass-modal')).toBeNull();
   });
 
   it('blocks the raw world walk on the sliding doors', () => {
