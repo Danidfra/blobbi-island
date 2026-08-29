@@ -77,13 +77,14 @@ function makeDeps(options: {
 }
 
 /** Start + play + finish, without any UI. */
-function runToFinish(
+async function runToFinish(
   settlement: ReturnType<typeof makeDeps>['settlement'],
   values: { energyDelta: number; coinReward: number },
 ) {
   const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
   if (!started.ok) throw new Error('start failed');
-  expect(settlement.finalizeSession(started.sessionId, values)).toBe(true);
+  const frozen = await settlement.finalizeSession(started.sessionId, values);
+  expect(frozen.ok).toBe(true);
   return started.sessionId;
 }
 
@@ -96,7 +97,7 @@ afterEach(() => {
 describe('a complete run settles Coins first, then energy', () => {
   it('energy 100 → consumes 80, reward 37 → both applied, session settled', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps();
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -110,7 +111,7 @@ describe('a complete run settles Coins first, then energy', () => {
 
   it('settling the SAME session twice moves each side once', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps();
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     await settlement.settleSession(sessionId);
     const second = await settlement.settleSession(sessionId);
@@ -122,7 +123,7 @@ describe('a complete run settles Coins first, then energy', () => {
 
   it('a zero reward still settles the energy cost', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps();
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 0 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 0 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -131,11 +132,11 @@ describe('a complete run settles Coins first, then energy', () => {
     expect(energyCalls).toHaveLength(1);
   });
 
-  it('freezes the numbers: a second finalize cannot change them', () => {
+  it('freezes the numbers: a second finalize cannot change them', async () => {
     const { settlement } = makeDeps();
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
-    settlement.finalizeSession(sessionId, { energyDelta: 1, coinReward: 9999 });
+    await settlement.finalizeSession(sessionId, { energyDelta: 1, coinReward: 9999 });
 
     const record = readMineSession(PUBKEY, sessionId);
     expect(record?.energyDelta).toBe(80);
@@ -146,7 +147,7 @@ describe('a complete run settles Coins first, then energy', () => {
 describe('partial failure always leaves the player UP', () => {
   it('an AMBIGUOUS Coin grant does not charge energy', async () => {
     const { settlement, energyCalls } = makeDeps({ coin: 'ambiguous' });
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -158,7 +159,7 @@ describe('partial failure always leaves the player UP', () => {
 
   it('a provably-unsent Coin grant leaves the session recoverable, energy untouched', async () => {
     const { settlement, energyCalls } = makeDeps({ coin: 'throws' });
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -169,7 +170,7 @@ describe('partial failure always leaves the player UP', () => {
 
   it('Coin applied but energy failing keeps the Coins and retries energy later', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps({ energy: 'failed' });
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -185,7 +186,7 @@ describe('partial failure always leaves the player UP', () => {
 
   it('an AMBIGUOUS energy publish is never blind-retried into a second subtraction', async () => {
     const { settlement } = makeDeps({ energy: 'ambiguous' });
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
 
     const result = await settlement.settleSession(sessionId);
 
@@ -240,7 +241,7 @@ describe('recovery resumes finalized work under the original ids', () => {
   it('finishes a session left in coin-pending after a reload', async () => {
     // First attempt: the Coin grant was ambiguous.
     const first = makeDeps({ coin: 'ambiguous' });
-    const sessionId = runToFinish(first.settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(first.settlement, { energyDelta: 80, coinReward: 37 });
     await first.settlement.settleSession(sessionId);
     expect(readMineSession(PUBKEY, sessionId)?.status).toBe('coin-pending');
 
@@ -256,7 +257,7 @@ describe('recovery resumes finalized work under the original ids', () => {
 
   it('a session left in energy-pending resumes energy only', async () => {
     const first = makeDeps({ energy: 'failed' });
-    const sessionId = runToFinish(first.settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(first.settlement, { energyDelta: 80, coinReward: 37 });
     await first.settlement.settleSession(sessionId);
 
     const second = makeDeps();
@@ -270,7 +271,7 @@ describe('recovery resumes finalized work under the original ids', () => {
 
   it('settled sessions need no action', async () => {
     const { settlement } = makeDeps();
-    const sessionId = runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
+    const sessionId = await runToFinish(settlement, { energyDelta: 80, coinReward: 37 });
     await settlement.settleSession(sessionId);
 
     const again = makeDeps();

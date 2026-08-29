@@ -28,11 +28,32 @@
  * A Coin publish that may have landed stops settlement: energy is not charged
  * against an unconfirmed reward. The session stays `coin-pending` and a later
  * run reconciles it under the same operation id.
+ *
+ * ## The daily ceiling
+ *
+ * `src/mine/policy.ts` owns what a run is worth; this module is where that
+ * policy meets the durable record. Two points in the lifecycle touch it:
+ *
+ * ```
+ *   startSession    budget exhausted → refuse, BEFORE any energy is spent
+ *   finalizeSession clamp the run to what is left, and stamp the UTC window
+ * ```
+ *
+ * The budget is spent at FINALIZATION, not at payout — the same
+ * reservation-first rule the Beach applies to its slots. A finalized run holds
+ * its share of the day even while its grant is still unconfirmed, which errs
+ * toward paying the player less rather than twice. And because the clamped
+ * number is frozen into the session, recovery after a reload settles exactly
+ * what the run was worth when it ended: the policy is evaluated once, never
+ * re-derived from a budget that has since moved.
  */
 
 import type { CoinWallet } from '@/inventory/coin-wallet';
 
+import { withQueuedCrossTabLock } from '@/lib/cross-tab-op-lock';
+
 import {
+  mineAwardedCoinsInWindow,
   mineCoinOpId,
   mineEnergyOpId,
   persistMineSession,
@@ -40,6 +61,13 @@ import {
   unresolvedMineSessions,
   type MineSessionRecord,
 } from './mine-session-ledger';
+import {
+  MINE_DAILY_COIN_CAP,
+  capMineReward,
+  mineRewardBudget,
+  mineRewardWindowKey,
+  type MineRewardBudget,
+} from './policy';
 import type { EnergySettler } from './energy-settlement';
 
 export interface MineSettlementDeps {
@@ -52,7 +80,24 @@ export interface MineSettlementDeps {
 export type StartSessionResult =
   | { readonly ok: true; readonly sessionId: string }
   /** Storage refused: no durable identity, so no reward-bearing session. */
-  | { readonly ok: false; readonly reason: 'storage-unavailable' };
+  | { readonly ok: false; readonly reason: 'storage-unavailable' }
+  /**
+   * The account has already earned the day's Mine Coins. Refused BEFORE the
+   * run starts, on purpose: the alternative is charging a Blobbi's energy for
+   * a reward the policy already knows it will not pay.
+   */
+  | { readonly ok: false; readonly reason: 'daily-cap-reached' };
+
+/** Outcome of freezing a run's numbers. */
+export type FinalizeSessionResult =
+  | {
+      readonly ok: true;
+      /** The reward actually frozen — already capped to the day's budget. */
+      readonly coinReward: number;
+      /** True when the daily ceiling trimmed this run's payout. */
+      readonly capped: boolean;
+    }
+  | { readonly ok: false; readonly reason: 'unknown-session' | 'storage-unavailable' };
 
 /** What the results screen needs to know. No implementation jargon. */
 export type MineSettlementPhase =
@@ -74,12 +119,20 @@ export interface MineSettlementResult {
 }
 
 export interface MineSettlement {
+  /** The day's Mine budget for this account, for gating and for copy. */
+  rewardBudget(): MineRewardBudget;
   startSession(input: { petId: string; startEnergy: number }): StartSessionResult;
-  /** Freeze the run's numbers. Must succeed before any value-bearing write. */
+  /**
+   * Freeze the run's numbers, applying the daily ceiling.
+   *
+   * Async because the cap is read-modify-written under the shared queued
+   * cross-tab lock: two runs finishing at once must not both spend the same
+   * remaining budget. Must succeed before any value-bearing write.
+   */
   finalizeSession(
     sessionId: string,
     values: { energyDelta: number; coinReward: number },
-  ): boolean;
+  ): Promise<FinalizeSessionResult>;
   /** Settle (or resume settling) a finalized session. Safe to call repeatedly. */
   settleSession(sessionId: string): Promise<MineSettlementResult>;
   /** A run that ended without finalizing owes nothing. */
@@ -179,8 +232,20 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
   };
 
   return {
+    rewardBudget(): MineRewardBudget {
+      const nowMs = now();
+      const windowKey = mineRewardWindowKey(nowMs);
+      return mineRewardBudget(mineAwardedCoinsInWindow(pubkey, windowKey), nowMs);
+    },
+
     startSession({ petId, startEnergy }): StartSessionResult {
       const startedAt = now();
+      // Refuse before any energy is spent. A run started against an exhausted
+      // budget would cost the Blobbi its energy and pay nothing.
+      const windowKey = mineRewardWindowKey(startedAt);
+      if (mineAwardedCoinsInWindow(pubkey, windowKey) >= MINE_DAILY_COIN_CAP) {
+        return { ok: false, reason: 'daily-cap-reached' };
+      }
       const sessionId = mintMineSessionId(startedAt);
       const ok = save({
         sessionId,
@@ -195,18 +260,51 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
       return { ok: true, sessionId };
     },
 
-    finalizeSession(sessionId, { energyDelta, coinReward }): boolean {
-      const record = readMineSession(pubkey, sessionId);
-      if (!record) return false;
-      // Frozen once: a later call never re-writes the numbers.
-      if (record.status !== 'open') return true;
-      return save({
-        ...record,
-        status: 'finalized',
-        energyDelta: Math.max(0, Math.trunc(energyDelta)),
-        coinReward: Math.max(0, Math.trunc(coinReward)),
-        finishedAt: now(),
-      });
+    async finalizeSession(
+      sessionId,
+      { energyDelta, coinReward },
+    ): Promise<FinalizeSessionResult> {
+      // The day's budget is read-modify-written here, so the whole freeze runs
+      // inside the queued cross-tab lock. Without it two runs finishing
+      // together would both see the same `remaining` and both claim it.
+      const { value } = await withQueuedCrossTabLock(
+        `blobbi-mine-budget:${pubkey}`,
+        async (): Promise<FinalizeSessionResult> => {
+          const record = readMineSession(pubkey, sessionId);
+          if (!record) return { ok: false, reason: 'unknown-session' };
+
+          // Frozen once: a later call never re-writes the numbers, and never
+          // spends the budget a second time. Recovery therefore replays
+          // exactly what the run was worth when it ended.
+          if (record.status !== 'open') {
+            return {
+              ok: true,
+              coinReward: record.coinReward ?? 0,
+              capped: false,
+            };
+          }
+
+          const finishedAt = now();
+          const windowKey = mineRewardWindowKey(finishedAt);
+          const remaining = Math.max(
+            0,
+            MINE_DAILY_COIN_CAP - mineAwardedCoinsInWindow(pubkey, windowKey),
+          );
+          const capped = capMineReward(coinReward, remaining);
+
+          const stored = save({
+            ...record,
+            status: 'finalized',
+            energyDelta: Math.max(0, Math.trunc(energyDelta)),
+            coinReward: capped.coinReward,
+            windowKey,
+            finishedAt,
+          });
+          if (!stored) return { ok: false, reason: 'storage-unavailable' };
+          return { ok: true, coinReward: capped.coinReward, capped: capped.capped };
+        },
+      );
+      return value;
     },
 
     async settleSession(sessionId): Promise<MineSettlementResult> {

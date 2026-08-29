@@ -215,7 +215,10 @@ describe('MiningGame stays wired to the canonical delta path', () => {
   });
 
   it('passes the summed reward as an amount (a delta), never a balance', () => {
-    expect(source).toMatch(/coinReward: totalCoins/);
+    // The run's own gem total is what is handed to finalization; the daily
+    // ceiling may trim it there, but nothing reads a balance to build it.
+    expect(source).toMatch(/const totalCoins = mineRunReward\(/);
+    expect(source).toMatch(/coinReward: rawCoins/);
     expect(settlement).toMatch(/amount: coinReward/);
     // A balance read feeding the grant would be the absolute-write shape.
     expect(source).not.toMatch(/useCoinBalance/);

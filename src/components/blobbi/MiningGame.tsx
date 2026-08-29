@@ -7,6 +7,14 @@ import { useLocation } from '@/hooks/useLocation';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useMineSettlement } from '@/hooks/useMineSettlement';
 import { miningItemPath } from '@/lib/asset-paths';
+import {
+  MINE_ENERGY_PER_DIG,
+  MINE_MIN_ENERGY,
+  mineGem,
+  mineRunReward,
+  rollMineGem,
+  type MineGemKind,
+} from '@/mine/policy';
 
 /**
  * Settlement boundary.
@@ -26,6 +34,13 @@ import { miningItemPath } from '@/lib/asset-paths';
  * the session is abandoned on recovery. Gameplay, the drop table and the
  * energy cost per click are unchanged.
  *
+ * ## Economy numbers live in the policy, not here
+ *
+ * Gem values, drop odds, the energy a dig costs and the level a run ends at
+ * all come from `src/mine/policy.ts`, along with the daily Coin ceiling the
+ * settlement enforces. This component draws the cave and reports outcomes; it
+ * decides nothing about what a run is worth.
+ *
  * See `docs/mine-session-settlement.md`.
  */
 type MineRewardState =
@@ -36,18 +51,9 @@ type MineRewardState =
   | { phase: 'energy-pending'; amount: number }
   | { phase: 'unresolved'; amount: number };
 
-const GEM_VALUES = {
-  'stone.png': 1,
-  'gem-1.png': 10,
-  'gem-2.png': 25,
-  'gem-3.png': 50,
-};
-
-type Gem = keyof typeof GEM_VALUES;
-
 interface MinedItem {
   id: number;
-  type: Gem;
+  type: MineGemKind;
   position: { x: number; y: number };
 }
 
@@ -57,7 +63,9 @@ export function MiningGame() {
   const { settlement, settle } = useMineSettlement();
   const currentPet = status.currentPet;
 
-  const [gameState, setGameState] = useState<'instructions' | 'playing' | 'results' | 'low-energy'>('instructions');
+  const [gameState, setGameState] = useState<
+    'instructions' | 'playing' | 'results' | 'low-energy' | 'daily-cap'
+  >('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
   const [holes, setHoles] = useState<{ x: number; y: number }[]>([]);
@@ -65,6 +73,9 @@ export function MiningGame() {
   // rest of the app must not show a reduced energy until settlement lands.
   const [currentEnergy, setCurrentEnergy] = useState(currentPet?.energy || 100);
   const [reward, setReward] = useState<MineRewardState>({ phase: 'idle' });
+  // True when the day's ceiling trimmed this run's payout. Presentation only —
+  // the authoritative number is the one frozen into the session.
+  const [rewardCapped, setRewardCapped] = useState(false);
   const miningAreaRef = useRef<HTMLDivElement>(null);
   // The durable session identity, minted at Start. Both settlement operation
   // ids derive from it deterministically, so a retry never mints a new one.
@@ -104,6 +115,12 @@ export function MiningGame() {
       petId: currentPet.id,
       startEnergy: currentEnergy,
     });
+    if (started && !started.ok && started.reason === 'daily-cap-reached') {
+      // Refused before a single point of energy is spent.
+      setStartError(null);
+      setGameState('daily-cap');
+      return;
+    }
     if (settlement && (!started || !started.ok)) {
       setStartError(
         "We couldn't set up this mining trip. Please check your browser storage settings and try again.",
@@ -123,16 +140,23 @@ export function MiningGame() {
    * live in the durable session, so an unmount here does not lose them — the
    * next visit resumes under the same operation ids.
    */
-  const settleRun = async (totalCoins: number, energyDelta: number) => {
+  const settleRun = async (rawCoins: number, energyDelta: number) => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || !settlement) return; // practice run (logged out)
-    if (!settlement.finalizeSession(sessionId, { energyDelta, coinReward: totalCoins })) {
-      setReward({ phase: 'unresolved', amount: totalCoins });
+    // Finalization applies the day's ceiling and freezes the result, so the
+    // number rendered from here on is what the run actually pays.
+    const frozen = await settlement.finalizeSession(sessionId, {
+      energyDelta,
+      coinReward: rawCoins,
+    });
+    if (!frozen.ok) {
+      setReward({ phase: 'unresolved', amount: rawCoins });
       return;
     }
-    setReward({ phase: 'settling', amount: totalCoins });
+    setRewardCapped(frozen.capped);
+    setReward({ phase: 'settling', amount: frozen.coinReward });
     const outcome = await settle(sessionId);
-    setReward({ phase: outcome.phase, amount: totalCoins });
+    setReward({ phase: outcome.phase, amount: frozen.coinReward });
   };
 
   /**
@@ -145,9 +169,7 @@ export function MiningGame() {
     if (finishedRef.current) return;
     finishedRef.current = true;
 
-    const totalCoins = minedItems.reduce((acc, item) => {
-      return acc + GEM_VALUES[item.type];
-    }, 0);
+    const totalCoins = mineRunReward(minedItems.map((item) => item.type));
     // The whole run's energy cost, as one delta. Settlement subtracts it from
     // the FRESH authoritative energy, never from `startEnergyRef`.
     const energyDelta = Math.max(0, startEnergyRef.current - finalEnergy);
@@ -180,7 +202,7 @@ export function MiningGame() {
     }
 
     // Check if user has enough energy to start/continue the game
-    if (currentEnergy <= 20) {
+    if (currentEnergy <= MINE_MIN_ENERGY) {
       setGameState('low-energy');
       return;
     }
@@ -201,26 +223,16 @@ export function MiningGame() {
     // Energy is spent LOCALLY. No kind:31124 publish, no pet-query
     // invalidation, no optimistic global pet update — the whole run's cost is
     // settled once at the end as a single delta. Cost per click is unchanged.
-    const newEnergy = Math.max(0, currentEnergy - 10);
+    const newEnergy = Math.max(0, currentEnergy - MINE_ENERGY_PER_DIG);
     setCurrentEnergy(newEnergy);
 
     // End game if energy is too low after this click
-    if (newEnergy <= 20) {
+    if (newEnergy <= MINE_MIN_ENERGY) {
       finishMining(newEnergy);
       return;
     }
 
-    const random = Math.random();
-    let gem: Gem;
-    if (random < 0.05) {
-      gem = 'gem-3.png';
-    } else if (random < 0.15) {
-      gem = 'gem-2.png';
-    } else if (random < 0.3) {
-      gem = 'gem-1.png';
-    } else {
-      gem = 'stone.png';
-    }
+    const gem = rollMineGem(Math.random());
 
     setMinedItems(prev => [...prev, { id: Date.now(), type: gem, position: { x, y } }]);
   };
@@ -267,13 +279,17 @@ export function MiningGame() {
     const results = minedItems.reduce((acc, item) => {
       acc[item.type] = (acc[item.type] || 0) + 1;
       return acc;
-    }, {} as Record<Gem, number>);
+    }, {} as Partial<Record<MineGemKind, number>>);
 
-    const totalCoins = Object.entries(results).reduce((acc, [gem, count]) => {
-      return acc + (GEM_VALUES[gem as Gem] * count);
-    }, 0);
+    // What the wall gave up. `reward.amount` is what the day's budget allowed
+    // the run to actually pay, which is the same number unless it was capped.
+    const rawCoins = mineRunReward(minedItems.map((item) => item.type));
+    const creditedCoins = reward.phase === 'idle' ? rawCoins : reward.amount;
 
-    const finalEnergyStatus = currentEnergy <= 20 ? 'Your Blobbi is exhausted!' : 'Mining session complete!';
+    const finalEnergyStatus =
+      currentEnergy <= MINE_MIN_ENERGY
+        ? 'Your Blobbi is exhausted!'
+        : 'Mining session complete!';
 
     return (
       <BlobbiModal
@@ -308,14 +324,17 @@ export function MiningGame() {
               Items found
             </h4>
             <ul className="space-y-1 text-sm">
-              {Object.entries(results).map(([gem, count]) => (
-                <li key={gem} className="flex items-baseline justify-between gap-2">
-                  <span className="capitalize text-island-ink">
-                    {gem.replace('.png', '').replace('-', ' ')} × {count}
-                  </span>
-                  <PriceTag amount={GEM_VALUES[gem as Gem] * count} />
-                </li>
-              ))}
+              {Object.entries(results).map(([kind, count]) => {
+                const gem = mineGem(kind as MineGemKind);
+                return (
+                  <li key={kind} className="flex items-baseline justify-between gap-2">
+                    <span className="text-island-ink">
+                      {gem.label} × {count}
+                    </span>
+                    <PriceTag amount={gem.value * (count ?? 0)} />
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -331,9 +350,15 @@ export function MiningGame() {
           >
             <div className="flex items-baseline justify-between gap-2 border-b border-island-wood/20 pb-2">
               <span className="text-sm font-bold text-island-ink">Total earned</span>
-              <PriceTag amount={totalCoins} className="text-base" />
+              <PriceTag amount={creditedCoins} className="text-base" />
             </div>
             <div className="pt-2">
+              {rewardCapped && (
+                <p className="mb-1 text-sm text-island-ink-soft" data-mine-reward-capped>
+                  You've reached today's Mine Coins, so this trip paid{' '}
+                  {creditedCoins} of {rawCoins}. Come back tomorrow for more.
+                </p>
+              )}
               {reward.phase === 'settling' && (
                 <p className="text-sm text-island-ink-soft">Saving your mining trip…</p>
               )}
@@ -393,8 +418,44 @@ export function MiningGame() {
           <span className="font-bold tabular-nums text-island-ink">{currentEnergy}/100</span>
         </div>
         <Progress value={currentEnergy} />
-        <p className="text-xs text-island-ink-soft">Mining needs more than 20 energy.</p>
+        <p className="text-xs text-island-ink-soft">
+          Mining needs more than {MINE_MIN_ENERGY} energy.
+        </p>
       </div>
+    </BlobbiModal>
+  );
+
+  /**
+   * The day's Mine Coins are gone. Shown INSTEAD of starting a run, so no
+   * energy is spent on a trip the policy already knows pays nothing.
+   */
+  const renderDailyCap = () => (
+    <BlobbiModal
+      open
+      onOpenChange={() => {}}
+      presentation="in-frame"
+      size="sm"
+      title="The seam is quiet"
+      description="This wall has given up all it will today."
+      icon="⛏️"
+      hideClose
+      footer={
+        <Button
+          variant="accent"
+          onClick={() => setCurrentLocation('mine')}
+          className="min-h-[44px]"
+        >
+          Exit cave
+        </Button>
+      }
+    >
+      <p
+        className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3 text-sm text-island-ink"
+        data-mine-daily-cap
+      >
+        You've earned all the Mine Coins available for today. Come back
+        tomorrow — your Blobbi keeps its energy in the meantime.
+      </p>
     </BlobbiModal>
   );
 
@@ -403,6 +464,7 @@ export function MiningGame() {
       {gameState === 'instructions' && renderInstructions()}
       {gameState === 'results' && renderResults()}
       {gameState === 'low-energy' && renderLowEnergy()}
+      {gameState === 'daily-cap' && renderDailyCap()}
 
       <div
         ref={miningAreaRef}
