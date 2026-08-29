@@ -2,43 +2,74 @@
  * The Mine's economy policy — pure data and pure functions, in one place.
  *
  * Everything that decides what a mining run is WORTH lives here: the gem
- * table, the drop distribution, what a dig costs, when a run ends, and the
- * daily ceiling on rewarded output. The React component draws the cave; it
- * does not own a single balance number. Nothing here touches Nostr, the
- * wallet, storage or React — settlement remains `mine-settlement.ts`'s job
- * and the durable record remains `mine-session-ledger.ts`'s.
+ * table, the drop distribution, what a dig costs and when a run ends. The
+ * React component draws the cave; it does not own a single balance number.
+ * Nothing here touches Nostr, the wallet, storage or React — settlement
+ * remains `mine-settlement.ts`'s job and the durable record remains
+ * `mine-session-ledger.ts`'s.
  *
  * ## The Mine's economic role in V1
  *
  * ```
  *   initial allocation  one-time 200 Coins
- *   Beach               repeatable, capped: 10 rewarded hunts per UTC day
- *   Mine                ENERGY CONVERSION, capped per UTC day   ← this module
+ *   Beach               repeatable and FREE, so it is capped: 10 rewarded
+ *                       hunts per UTC day
+ *   Mine                ENERGY → COIN CONVERSION, bounded by energy   ← here
  *   shop / arcade pass  sinks
  * ```
  *
- * The Mine converts a Blobbi's energy into Coins. That is deliberately not
- * the same shape as the Beach: the Beach is free and paced by a slot count,
- * the Mine is unpaced but consumes a resource the player has to replace.
+ * The Mine has **no daily Coin cap, no cooldown and no run quota**. It does
+ * not need one, because unlike the Beach it is not free: every dig spends a
+ * Blobbi's energy, and energy is the limiting resource.
  *
- * ## Why energy alone is not the boundary
+ * ## Why energy is a real boundary
  *
  * Nothing in this client regenerates energy passively — there is no decay or
- * recovery loop, `useWakePet`'s full-energy reset is an optimistic update in
- * an unreferenced example component, and every consumable that restores
- * energy is bought with Coins at a loss (see {@link MINE_COIN_PER_ENERGY}).
- * So one Blobbi's energy really is a hard bound on one player's mining.
+ * recovery loop, and `useWakePet`'s full-energy reset is an optimistic update
+ * in an unreferenced example component that publishes nothing. The only real
+ * source of energy is a consumable bought with Coins, and every one of them
+ * loses when converted back through mining:
  *
- * What energy does NOT bound is the number of Blobbis. Pet state is public
- * Nostr data: a player can arrive holding several Blobbis created elsewhere,
- * switch companion freely, and mine a fresh energy bar with each one. Energy
- * bounds a *Blobbi*; nothing bounded the *account*. And the whole argument
- * above rests on "no regeneration exists", which is a fact about today's code
- * rather than a rule anyone wrote down.
+ * ```
+ *   a dig pays        MINE_EXPECTED_COINS_PER_DIG (7.2) for 10 energy
+ *   so energy is      0.72 Coins each
+ *   break-even needs  1.39 energy per Coin
+ *   best on offer     the Energy Drink, 35 energy for 30 Coins = 1.17
+ * ```
  *
- * {@link MINE_DAILY_COIN_CAP} is that rule, written down. It is a structural
- * backstop, not a throttle on normal play: a single-Blobbi player never
- * reaches it, because they run out of energy first.
+ * So `buy energy → mine → buy more energy` shrinks a balance rather than
+ * growing it, and it shrinks faster than that ratio suggests because energy
+ * below {@link MINE_MIN_ENERGY} cannot be dug at all — a drink bought at the
+ * floor yields three rewarded digs (~21.6 Coins) for 30. `policy.test.ts`
+ * asserts this for every purchasable item, so a price cut or an effect buff
+ * fails the build rather than quietly opening a faucet.
+ *
+ * ## Multiple Blobbis are multiple energy bars, on purpose
+ *
+ * Pet state is public Nostr data, so a player may hold several Blobbis and
+ * mine each one's energy. That is accepted as legitimate play: it is bounded
+ * by the same non-renewable resource, just more of it, and suppressing it
+ * would mean an account-wide limit that punishes ordinary collectors to deter
+ * a case that costs nothing.
+ *
+ * ## When this must be re-audited
+ *
+ * The model rests on energy being scarce and expensive. Re-audit the Mine
+ * economy if ANY of these change:
+ *
+ * - passive, free or repeatable energy regeneration is introduced (sleep,
+ *   time-based recovery, daily refills, quest rewards, anything that returns
+ *   energy without spending Coins);
+ * - an energy-restoring item's price falls or its `energy` effect rises far
+ *   enough that energy costs less than {@link MINE_COIN_PER_ENERGY} per
+ *   point — i.e. more than ~1.39 energy per Coin;
+ * - the gem table, {@link MINE_ENERGY_PER_DIG} or {@link MINE_MIN_ENERGY}
+ *   move, since all three feed that ratio;
+ * - Blobbis become cheaply or freely mintable in-app, which would turn "more
+ *   Blobbis, more energy" from collecting into farming.
+ *
+ * No speculative cap is encoded for those futures. The test suite is the
+ * tripwire; a limit should be a deliberate decision made when one is needed.
  */
 
 /** Every gem the wall can yield. `asset` is the artwork the UI draws. */
@@ -162,94 +193,7 @@ export function rewardedDigsForEnergy(startEnergy: number): number {
   return digs;
 }
 
-/** Average Coins a run starting at `startEnergy` yields, before the daily cap. */
+/** Average Coins a run starting at `startEnergy` yields. */
 export function expectedCoinsForEnergy(startEnergy: number): number {
   return rewardedDigsForEnergy(startEnergy) * MINE_EXPECTED_COINS_PER_DIG;
-}
-
-// ── The daily ceiling ──────────────────────────────────────────────────────
-
-/**
- * Most Coins the Mine will pay one account per UTC day.
- *
- * Chosen from the numbers above, not from the Beach's:
- *
- * ```
- *   full 100-energy run   7 rewarded digs x 7.2 = ~50 Coins expected
- *   MINE_DAILY_COIN_CAP   200  =  ~4 such runs
- * ```
- *
- * - **A normal session is never clipped.** One Blobbi has one energy bar, so
- *   the ordinary player earns ~50 and stops for want of energy. (Seven gem-3
- *   rolls in a row would reach 350, but that is a 1-in-1.3-billion run; the
- *   number that matters is the expected ~50.)
- * - **Two, three, four Blobbis still play unclipped**, which matters because
- *   holding several is legitimate — the cap must not punish it.
- * - **Beyond that it binds.** Twenty Blobbis is 200, not ~1000. That is the
- *   scenario energy alone could never bound.
- * - **It coexists with the Beach rather than replacing it.** The Beach pays
- *   roughly 140/day realistically (10 hunts, cap 25 each) for free; the Mine
- *   can pay more in a burst but only by consuming energy that costs Coins to
- *   replace. Different shapes, neither redundant.
- * - **It is legible.** 200 is the initial allocation: at most, a day of
- *   mining hands you your starting purse again.
- *
- * This is a client-side policy over a client-trusted balance, like every
- * other limit in this phase. It bounds honest play and accidents, not a
- * modified client.
- */
-export const MINE_DAILY_COIN_CAP = 200;
-
-/** The UTC daily window key for a timestamp: `YYYY-MM-DD`. */
-export function mineRewardWindowKey(nowMs: number): string {
-  return new Date(nowMs).toISOString().slice(0, 10);
-}
-
-/** Epoch ms of the next window reset (next UTC midnight). */
-export function mineRewardWindowResetAt(nowMs: number): number {
-  const date = new Date(nowMs);
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
-}
-
-/** What the day's budget looks like right now. */
-export interface MineRewardBudget {
-  readonly windowKey: string;
-  readonly cap: number;
-  /** Coins already committed to runs in this window. */
-  readonly awarded: number;
-  /** `cap - awarded`, never negative. */
-  readonly remaining: number;
-  readonly resetsAt: number;
-}
-
-/** Build the budget view from an already-summed awarded total. */
-export function mineRewardBudget(awarded: number, nowMs: number): MineRewardBudget {
-  const safeAwarded = Math.max(0, Math.trunc(awarded));
-  return {
-    windowKey: mineRewardWindowKey(nowMs),
-    cap: MINE_DAILY_COIN_CAP,
-    awarded: safeAwarded,
-    remaining: Math.max(0, MINE_DAILY_COIN_CAP - safeAwarded),
-    resetsAt: mineRewardWindowResetAt(nowMs),
-  };
-}
-
-export interface CappedMineReward {
-  /** What the run actually pays. Integer, `0..remaining`. */
-  readonly coinReward: number;
-  /** True when the ceiling trimmed the payout — surfaced, never hidden. */
-  readonly capped: boolean;
-}
-
-/**
- * Apply the day's ceiling to a run's raw reward.
- *
- * Trimming is honest: the results screen reports `capped` so a player is never
- * quietly paid less than the gems they are looking at.
- */
-export function capMineReward(rawReward: number, remaining: number): CappedMineReward {
-  const raw = Math.max(0, Math.trunc(rawReward));
-  const budget = Math.max(0, Math.trunc(remaining));
-  const coinReward = Math.min(raw, budget);
-  return { coinReward, capped: coinReward < raw };
 }

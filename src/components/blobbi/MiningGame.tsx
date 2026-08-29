@@ -65,7 +65,7 @@ export function MiningGame() {
   const currentPet = status.currentPet;
 
   const [gameState, setGameState] = useState<
-    'instructions' | 'playing' | 'results' | 'low-energy' | 'daily-cap' | 'in-progress'
+    'instructions' | 'playing' | 'results' | 'low-energy' | 'in-progress'
   >('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
@@ -74,9 +74,6 @@ export function MiningGame() {
   // rest of the app must not show a reduced energy until settlement lands.
   const [currentEnergy, setCurrentEnergy] = useState(currentPet?.energy || 100);
   const [reward, setReward] = useState<MineRewardState>({ phase: 'idle' });
-  // True when the day's ceiling trimmed this run's payout. Presentation only —
-  // the authoritative number is the one frozen into the session.
-  const [rewardCapped, setRewardCapped] = useState(false);
   const miningAreaRef = useRef<HTMLDivElement>(null);
   // The durable session identity, minted at Start. Both settlement operation
   // ids derive from it deterministically, so a retry never mints a new one.
@@ -124,14 +121,8 @@ export function MiningGame() {
         petId: currentPet.id,
         startEnergy: currentEnergy,
       });
-      if (started && !started.ok && started.reason === 'daily-cap-reached') {
-        // Refused before a single point of energy is spent.
-        setStartError(null);
-        setGameState('daily-cap');
-        return;
-      }
       if (started && !started.ok && started.reason === 'session-in-progress') {
-        // Another tab is mid-run. Also refused before any energy is spent.
+        // Another tab is mid-run. Refused before any energy is spent.
         setStartError(null);
         setGameState('in-progress');
         return;
@@ -161,8 +152,8 @@ export function MiningGame() {
   const settleRun = async (rawCoins: number, energyDelta: number) => {
     const sessionId = sessionIdRef.current;
     if (!sessionId || !settlement) return; // practice run (logged out)
-    // Finalization applies the day's ceiling and freezes the result, so the
-    // number rendered from here on is what the run actually pays.
+    // Finalization freezes the result, so the number rendered from here on is
+    // the one the session will actually settle.
     const frozen = await settlement.finalizeSession(sessionId, {
       energyDelta,
       coinReward: rawCoins,
@@ -171,7 +162,6 @@ export function MiningGame() {
       setReward({ phase: 'unresolved', amount: rawCoins });
       return;
     }
-    setRewardCapped(frozen.capped);
     setReward({ phase: 'settling', amount: frozen.coinReward });
     const outcome = await settle(sessionId);
     setReward({ phase: outcome.phase, amount: frozen.coinReward });
@@ -319,8 +309,8 @@ export function MiningGame() {
       return acc;
     }, {} as Partial<Record<MineGemKind, number>>);
 
-    // What the wall gave up. `reward.amount` is what the day's budget allowed
-    // the run to actually pay, which is the same number unless it was capped.
+    // What the wall gave up — and, once settlement has frozen it, the same
+    // number read back from the session.
     const rawCoins = mineRunReward(minedItems.map((item) => item.type));
     const creditedCoins = reward.phase === 'idle' ? rawCoins : reward.amount;
 
@@ -391,12 +381,6 @@ export function MiningGame() {
               <PriceTag amount={creditedCoins} className="text-base" />
             </div>
             <div className="pt-2">
-              {rewardCapped && (
-                <p className="mb-1 text-sm text-island-ink-soft" data-mine-reward-capped>
-                  You've reached today's Mine Coins, so this trip paid{' '}
-                  {creditedCoins} of {rawCoins}. Come back tomorrow for more.
-                </p>
-              )}
               {reward.phase === 'settling' && (
                 <p className="text-sm text-island-ink-soft">Saving your mining trip…</p>
               )}
@@ -464,40 +448,6 @@ export function MiningGame() {
   );
 
   /**
-   * The day's Mine Coins are gone. Shown INSTEAD of starting a run, so no
-   * energy is spent on a trip the policy already knows pays nothing.
-   */
-  const renderDailyCap = () => (
-    <BlobbiModal
-      open
-      onOpenChange={() => {}}
-      presentation="in-frame"
-      size="sm"
-      title="The seam is quiet"
-      description="This wall has given up all it will today."
-      icon="⛏️"
-      hideClose
-      footer={
-        <Button
-          variant="accent"
-          onClick={() => setCurrentLocation('mine')}
-          className="min-h-[44px]"
-        >
-          Exit cave
-        </Button>
-      }
-    >
-      <p
-        className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3 text-sm text-island-ink"
-        data-mine-daily-cap
-      >
-        You've earned all the Mine Coins available for today. Come back
-        tomorrow — your Blobbi keeps its energy in the meantime.
-      </p>
-    </BlobbiModal>
-  );
-
-  /**
    * A run is already under way for this account, in another tab. Shown
    * INSTEAD of starting, so no energy is spent on a trip whose reward the
    * other run may already have claimed.
@@ -546,7 +496,6 @@ export function MiningGame() {
       {gameState === 'instructions' && renderInstructions()}
       {gameState === 'results' && renderResults()}
       {gameState === 'low-energy' && renderLowEnergy()}
-      {gameState === 'daily-cap' && renderDailyCap()}
       {gameState === 'in-progress' && renderInProgress()}
 
       <div

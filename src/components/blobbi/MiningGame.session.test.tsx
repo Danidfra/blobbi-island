@@ -17,7 +17,6 @@ import {
   readMineSession,
   readMineSessions,
 } from '@/mine/mine-session-ledger';
-import { MINE_DAILY_COIN_CAP } from '@/mine/policy';
 import type { CoinWallet } from '@/inventory/coin-wallet';
 import type { EnergySettler } from '@/mine/energy-settlement';
 
@@ -232,82 +231,7 @@ describe('an interrupted run costs nothing', () => {
 });
 
 /**
- * F-06 — the cave respects the day's Coin ceiling.
- *
- * The important half is that the refusal happens at START: a run the policy
- * has already decided will pay nothing must not cost the Blobbi its energy.
- */
-describe('the daily Mine ceiling', () => {
-  it('refuses to start once the day is spent, without charging energy', async () => {
-    // Fill the day through the same ledger the component's settlement reads.
-    const filler = createMineSettlement({
-      pubkey: PUBKEY,
-      wallet,
-      settler,
-      now: () => 1_700_000_000_000,
-    });
-    const started = await filler.startSession({ petId: PET_ID, startEnergy: 100 });
-    if (!started.ok) throw new Error('start failed');
-    await filler.finalizeSession(started.sessionId, {
-      energyDelta: 80,
-      coinReward: MINE_DAILY_COIN_CAP,
-    });
-
-    renderMine();
-    await act(async () => {
-      fireEvent.click(screen.getByText('Start'));
-    });
-
-    expect(document.querySelector('[data-mine-daily-cap]')).not.toBeNull();
-    expect(screen.getByText(/earned all the Mine Coins available for today/i))
-      .toBeInTheDocument();
-    // No new session, so no energy settlement can ever be owed for it.
-    expect(readMineSessions(PUBKEY)).toHaveLength(1);
-    expect(energySettlements).toHaveLength(0);
-  });
-
-  it('pays and reports the trimmed amount when a run crosses the ceiling', async () => {
-    const filler = createMineSettlement({
-      pubkey: PUBKEY,
-      wallet,
-      settler,
-      now: () => 1_700_000_000_000,
-    });
-    const started = await filler.startSession({ petId: PET_ID, startEnergy: 100 });
-    if (!started.ok) throw new Error('start failed');
-    // One Coin of headroom left for the whole next run.
-    await filler.finalizeSession(started.sessionId, {
-      energyDelta: 80,
-      coinReward: MINE_DAILY_COIN_CAP - 1,
-    });
-    coinGrants.length = 0;
-
-    renderMine();
-    await playFullRun();
-
-    await waitFor(() => {
-      expect(document.querySelector('[data-mine-reward-capped]')).not.toBeNull();
-    });
-    // Whatever the wall produced, exactly one Coin was payable.
-    expect(coinGrants).toHaveLength(1);
-    expect(coinGrants[0].amount).toBe(1);
-  });
-
-  it('a normal run under the ceiling is unaffected', async () => {
-    renderMine();
-    await playFullRun();
-
-    await waitFor(() => {
-      expect(document.querySelector('[data-mine-reward-status]')).not.toBeNull();
-    });
-    expect(document.querySelector('[data-mine-reward-capped]')).toBeNull();
-    expect(coinGrants).toHaveLength(1);
-    expect(coinGrants[0].amount).toBeLessThan(MINE_DAILY_COIN_CAP);
-  });
-});
-
-/**
- * F-06.1 — the cave refuses a second concurrent trip.
+ * The cave refuses a second concurrent trip.
  *
  * The point is that the refusal happens at START: a run whose reward another
  * live run may already have claimed must not cost the Blobbi its energy.

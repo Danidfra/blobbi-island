@@ -1,11 +1,15 @@
 /**
- * The Mine policy — parity with the pre-extraction behaviour, then the
- * guardrails layered on top.
+ * The Mine policy — parity with the pre-extraction behaviour, and the economic
+ * claim the model rests on.
  *
  * The first block is the important one: it pins the numbers that used to live
  * inside `MiningGame.tsx` against a REFERENCE implementation of the original
  * cascading thresholds, reproduced verbatim below. Extraction is only safe if
  * it changed nothing, and "nothing" has to be checkable rather than asserted.
+ *
+ * The last two blocks stand in for the daily cap the Mine no longer has: with
+ * energy as the only boundary, "no refill pays for itself" is what keeps the
+ * Mine from being a faucet, so it is a test rather than a comment.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,19 +17,15 @@ import { describe, it, expect } from 'vitest';
 import { officialItemByD } from '@/protocol/event-registry';
 import { COIN_PRICES } from '@/inventory/shop-catalog';
 
+import * as policy from './policy';
 import {
   MINE_COIN_PER_ENERGY,
-  MINE_DAILY_COIN_CAP,
   MINE_ENERGY_PER_DIG,
   MINE_EXPECTED_COINS_PER_DIG,
   MINE_GEM_TABLE,
   MINE_MIN_ENERGY,
-  capMineReward,
   expectedCoinsForEnergy,
   mineGem,
-  mineRewardBudget,
-  mineRewardWindowKey,
-  mineRewardWindowResetAt,
   mineRunReward,
   rewardedDigsForEnergy,
   rollMineGem,
@@ -121,62 +121,15 @@ describe('a deterministic set of finds pays a deterministic reward', () => {
   });
 });
 
-describe('the daily ceiling', () => {
-  it('is 200 — about four full-energy runs, and never clips a normal one', () => {
-    expect(MINE_DAILY_COIN_CAP).toBe(200);
-    // One full run is far below the cap, so ordinary play never meets it.
-    expect(expectedCoinsForEnergy(100)).toBeLessThan(MINE_DAILY_COIN_CAP / 3);
-    // Even a maximally lucky full run stays under it.
-    const luckiestRun = rewardedDigsForEnergy(100) * mineGem('gem-3').value;
-    expect(luckiestRun).toBeGreaterThan(MINE_DAILY_COIN_CAP);
-    // ...though that requires seven 5% rolls in a row, so the *expected*
-    // number of runs before the cap binds is four, not one.
-    expect(MINE_DAILY_COIN_CAP / expectedCoinsForEnergy(100)).toBeGreaterThan(3.9);
-  });
-
-  it('trims a payout to what is left, and says that it did', () => {
-    expect(capMineReward(50, 200)).toEqual({ coinReward: 50, capped: false });
-    expect(capMineReward(50, 30)).toEqual({ coinReward: 30, capped: true });
-    expect(capMineReward(50, 0)).toEqual({ coinReward: 0, capped: true });
-    expect(capMineReward(0, 0)).toEqual({ coinReward: 0, capped: false });
-  });
-
-  it('never produces a negative or fractional reward', () => {
-    expect(capMineReward(-10, 100)).toEqual({ coinReward: 0, capped: false });
-    expect(capMineReward(12.9, 100).coinReward).toBe(12);
-    expect(capMineReward(100, -5)).toEqual({ coinReward: 0, capped: true });
-  });
-
-  it('reports the budget from an awarded total', () => {
-    const budget = mineRewardBudget(60, Date.UTC(2026, 7, 28, 12));
-    expect(budget).toMatchObject({ cap: 200, awarded: 60, remaining: 140 });
-    expect(mineRewardBudget(500, 0).remaining).toBe(0);
-  });
-});
-
-describe('the daily window is UTC', () => {
-  it('keys by UTC calendar day, not local time', () => {
-    // 23:30 UTC and 00:30 UTC the next day are different windows even though
-    // they are minutes apart.
-    expect(mineRewardWindowKey(Date.UTC(2026, 7, 28, 23, 30))).toBe('2026-08-28');
-    expect(mineRewardWindowKey(Date.UTC(2026, 7, 29, 0, 30))).toBe('2026-08-29');
-  });
-
-  it('resets at the next UTC midnight', () => {
-    const noon = Date.UTC(2026, 7, 28, 12);
-    expect(mineRewardWindowResetAt(noon)).toBe(Date.UTC(2026, 7, 29));
-    // The instant of reset already belongs to the new window.
-    expect(mineRewardWindowKey(mineRewardWindowResetAt(noon))).toBe('2026-08-29');
-  });
-});
-
 /**
  * The arbitrage check.
  *
  * If any purchasable item returned more Coins of mining than it cost, the Mine
- * would be an infinite faucet regardless of any daily cap — buy, mine, repeat.
- * This asserts the loop is closed at CURRENT production prices and effects,
- * and it fails if a future price cut or effect buff opens it.
+ * would be an unbounded faucet — buy, mine, buy more, repeat — and energy
+ * would stop being a boundary at all. This asserts the loop is closed at
+ * CURRENT production prices and effects, and it fails if a future price cut or
+ * effect buff opens it. That failure is the signal to re-audit the Mine, which
+ * is why no speculative cap is encoded instead.
  */
 describe('no energy refill pays for itself', () => {
   const refills = COIN_PRICES.map((entry) => {
@@ -224,5 +177,45 @@ describe('no energy refill pays for itself', () => {
     expect(rewardedDigsForEnergy(afterDrink)).toBe(3);
     expect(expectedCoinsForEnergy(afterDrink)).toBeCloseTo(21.6, 10);
     expect(expectedCoinsForEnergy(afterDrink)).toBeLessThan(30);
+  });
+});
+
+/**
+ * The Mine is bounded by energy, and by nothing else.
+ *
+ * Asserted structurally rather than as prose: if a cap, cooldown or quota is
+ * reintroduced as a policy constant, this fails and forces the decision to be
+ * made deliberately.
+ */
+describe('no daily cap, cooldown or quota exists', () => {
+  it('the policy exports nothing that limits earnings by time or count', () => {
+    const exported = Object.keys(policy);
+    const limiters = exported.filter((name) =>
+      /CAP|COOLDOWN|QUOTA|DAILY|WINDOW|BUDGET|LIMIT/i.test(name),
+    );
+    expect(limiters).toEqual([]);
+  });
+
+  it('exports only the gem table, the energy rules and their derivations', () => {
+    expect(new Set(Object.keys(policy))).toEqual(
+      new Set([
+        'MINE_GEM_TABLE',
+        'mineGem',
+        'MINE_ENERGY_PER_DIG',
+        'MINE_MIN_ENERGY',
+        'rollMineGem',
+        'mineRunReward',
+        'MINE_EXPECTED_COINS_PER_DIG',
+        'MINE_COIN_PER_ENERGY',
+        'rewardedDigsForEnergy',
+        'expectedCoinsForEnergy',
+      ]),
+    );
+  });
+
+  it('a run of any size is worth exactly its gems', () => {
+    // Nothing clamps this: 20 top gems is 1000 Coins, and that is the answer.
+    const jackpot: MineGemKind[] = Array(20).fill('gem-3');
+    expect(mineRunReward(jackpot)).toBe(1_000);
   });
 });

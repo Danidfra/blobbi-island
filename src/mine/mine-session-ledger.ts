@@ -53,15 +53,8 @@ export interface MineSessionRecord {
   readonly startEnergy: number;
   /** Frozen at finalization. Positive integer. */
   readonly energyDelta?: number;
-  /** Frozen at finalization. Non-negative integer, already capped. */
+  /** Frozen at finalization. Non-negative integer. */
   readonly coinReward?: number;
-  /**
-   * UTC day (`YYYY-MM-DD`) this run's reward counts against, stamped at
-   * finalization alongside `coinReward`. Absent on `open`/`abandoned`
-   * records and on records written before the daily cap existed — both are
-   * correct, because neither committed any Coins to a window.
-   */
-  readonly windowKey?: string;
   readonly finishedAt?: number;
   readonly coinStatus?: 'applied' | 'ambiguous' | 'failed';
   readonly energyStatus?: 'applied' | 'ambiguous' | 'failed';
@@ -187,28 +180,6 @@ export function persistMineSession(
 }
 
 /**
- * Coins already COMMITTED to `windowKey` by this account.
- *
- * Counted at finalization, not at payout: the number is frozen the moment a
- * run's reward is decided, so two runs finishing together cannot both spend
- * the same remaining budget. That deliberately errs toward under-paying — a
- * finalized run whose grant never lands still holds its share of the day —
- * which is the same reservation-first rule the Beach applies to its slots.
- *
- * `abandoned` runs never finalized, so they hold nothing.
- */
-export function mineAwardedCoinsInWindow(
-  pubkey: string | undefined,
-  windowKey: string,
-): number {
-  return readMineSessions(pubkey).reduce((total, record) => {
-    if (record.status === 'abandoned') return total;
-    if (record.windowKey !== windowKey) return total;
-    return total + Math.max(0, Math.trunc(record.coinReward ?? 0));
-  }, 0);
-}
-
-/**
  * `open` records — gameplay that was started and never finished.
  *
  * Split by liveness rather than returned raw, because the two halves mean
@@ -266,17 +237,11 @@ export function unresolvedMineSessions(
 /**
  * Drop terminal records older than the retention window. Bounds growth.
  *
- * `currentWindowKey` is retained unconditionally: a record still counting
- * toward today's Mine budget must survive, or pruning would silently hand the
- * player their daily cap back. Retention (24 h) and a UTC day are almost the
- * same length, so without this a run finalized just after midnight could be
- * pruned in the last minutes of its own day.
+ * Only `settled` and `abandoned` records are ever dropped: anything still
+ * `open`, `finalized` or mid-settlement owes a value-bearing action and is
+ * kept however old it is, so pruning can never discard a reward.
  */
-export function pruneMineSessions(
-  pubkey: string | undefined,
-  nowMs: number,
-  currentWindowKey?: string,
-): void {
+export function pruneMineSessions(pubkey: string | undefined, nowMs: number): void {
   if (!pubkey) return;
   const ledger = readLedger();
   const sessions = ledger[pubkey];
@@ -284,11 +249,7 @@ export function pruneMineSessions(
   const kept: Record<string, MineSessionRecord> = {};
   for (const [id, record] of Object.entries(sessions)) {
     const terminal = record.status === 'settled' || record.status === 'abandoned';
-    const holdsBudget =
-      currentWindowKey !== undefined && record.windowKey === currentWindowKey;
-    if (terminal && !holdsBudget && nowMs - record.updatedAt > MINE_SESSION_RETENTION_MS) {
-      continue;
-    }
+    if (terminal && nowMs - record.updatedAt > MINE_SESSION_RETENTION_MS) continue;
     kept[id] = record;
   }
   ledger[pubkey] = kept;

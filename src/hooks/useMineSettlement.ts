@@ -20,7 +20,6 @@ import {
   type MineSettlementResult,
 } from '@/mine/mine-settlement';
 import { pruneMineSessions } from '@/mine/mine-session-ledger';
-import { mineRewardWindowKey } from '@/mine/policy';
 
 export interface MineSettlementApi {
   /** `null` when logged out — the Mine then runs as an unrewarded practice run. */
@@ -80,10 +79,7 @@ export function useMineSettlement(): MineSettlementApi {
       } catch {
         // Recovery is best-effort; the records stay for the next attempt.
       } finally {
-        // Keep today's records whatever their age: they still hold this
-        // account's share of the daily Mine budget.
-        const nowMs = Date.now();
-        pruneMineSessions(pubkey, nowMs, mineRewardWindowKey(nowMs));
+        pruneMineSessions(pubkey, Date.now());
       }
     })();
     return () => {
