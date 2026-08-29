@@ -103,11 +103,18 @@ describe('game simulation stays reward-free', () => {
   // around it — and a policy bug could then break a game.
   // The reward layer itself — the per-game policies, the shared calculator and
   // the claim boundary — is exempt: it is the thing being isolated FROM.
+  //
+  // `arcade-pass-policy.ts` is exempt for the same reason. It is not
+  // simulation: it prices a Pass against what the reward tuning actually pays,
+  // and reading the live `participationFloor` is the whole point — a pricing
+  // module fed hand-copied numbers would go stale the first time the economy
+  // is tuned, which is exactly the failure it exists to prevent.
   const files = sourceFiles(ARCADE_DIR).filter(
     (f) =>
       !f.endsWith('.test.ts') &&
       !/-reward\.ts$/.test(f) &&
       !f.endsWith('reward-policy.ts') &&
+      !f.endsWith('arcade-pass-policy.ts') &&
       !f.endsWith('arcade-reward-boundary.ts'),
   );
 

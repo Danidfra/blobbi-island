@@ -20,6 +20,7 @@ import { CoinAmount } from '@/components/blobbi/CoinAmount';
 import { useToast } from '@/hooks/useToast';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { useArcadeTokenBalance, useBuyArcadeTokens } from '@/hooks/useArcadeTokens';
+import { formatPassRemaining, useArcadePass } from '@/hooks/useArcadePass';
 import {
   ARCADE_TOKEN_PURCHASE_OPTIONS,
   arcadeTokenCoinCost,
@@ -37,6 +38,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
   const { balance: tokens, isLoading: tokensLoading } = useArcadeTokenBalance();
   const { mutateAsync: buyTokens, isPending } = useBuyArcadeTokens();
   const { toast } = useToast();
+  const { isActive: hasPass, remainingMs } = useArcadePass();
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -98,6 +100,20 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
           <span className="text-island-ink-soft">Your coins</span>
           <CoinAmount amount={coins} loading={coinsLoading} />
         </div>
+
+        {/*
+          A pass holder is not being charged, and the counter is where they
+          would come to find out why. Saying nothing here reads as a bug.
+        */}
+        {hasPass && (
+          <p
+            className="rounded-panel border border-island-purple/30 bg-island-purple/10 px-3 py-2 text-sm text-island-ink"
+            data-pass-notice
+          >
+            Your Arcade Pass is active for another {formatPassRemaining(remainingMs)} — plays
+            are free until then, so you do not need tokens right now.
+          </p>
+        )}
 
         <ul className="space-y-2">
           {ARCADE_TOKEN_PURCHASE_OPTIONS.map((quantity) => {
