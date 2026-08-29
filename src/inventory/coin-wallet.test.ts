@@ -16,7 +16,7 @@ import {
   type CoinWalletNostr,
 } from './coin-wallet';
 import { BLOBBI_COIN_ADDRESS, MAX_COIN_BALANCE } from './coin';
-import { clearCoinOps, readCoinOp } from '@/lib/coin-op-ledger';
+import { clearCoinOps, readCoinOp, type CoinOpRecord } from '@/lib/coin-op-ledger';
 
 const PUBKEY = 'f'.repeat(64);
 const OTHER_ADDRESS = `31632:${'a'.repeat(64)}:blobbi:food:apple`;
@@ -339,5 +339,56 @@ describe('readBalance', () => {
     const relay = makeRelay(inventoryEvent(MAX_COIN_BALANCE + 5, 1_000));
     const { wallet } = makeWallet(relay);
     await expect(wallet.readBalance()).rejects.toBeInstanceOf(CoinWalletError);
+  });
+});
+
+/**
+ * The crash window: signed, sent, no answer yet.
+ *
+ * `onSigned` records WHICH event may land before the send happens, so an
+ * outcome the wallet never gets to write — the tab closes, the process dies —
+ * still leaves reconcilable evidence behind. Every other test observes
+ * `publishedEventId` on the TERMINAL record written after the send returns,
+ * which cannot distinguish "recorded before the send" from "recorded after".
+ * This one looks inside the send itself.
+ *
+ * It also pins a load-bearing detail: the enrichment reuses the in-flight
+ * record's status AND `updatedAt`, which is what lets it past the ledger's
+ * one-way door for a `publishing` record. Stamping a fresh timestamp there
+ * would silently drop the evidence.
+ */
+describe('reconciliation evidence exists before the relay answers', () => {
+  it('the in-flight `publishing` record already carries the signed event id', async () => {
+    const opId = mintCoinOpId('crash-window');
+    const stored = inventoryEvent(100, 1_000);
+    const observed: { record: CoinOpRecord | null; sentEventId: string | null } = {
+      record: null,
+      sentEventId: null,
+    };
+
+    const nostr: CoinWalletNostr = {
+      query: async () => [stored],
+      event: async (event) => {
+        // We are INSIDE the send: it has not returned, so nothing after it has
+        // run. Whatever the ledger holds now is what a crash here would leave.
+        observed.sentEventId = event.id;
+        observed.record = readCoinOp(PUBKEY, opId);
+      },
+    };
+
+    // An ADVANCING clock, deliberately: with a frozen one every ledger write
+    // shares a timestamp and the one-way door cannot be exercised at all.
+    let tick = 1_700_000_000_000;
+    const wallet = createCoinWallet({
+      nostr,
+      user: { pubkey: PUBKEY, signer: makeSigner() } as never,
+      now: () => (tick += 1_000),
+    });
+    await wallet.spendCoins({ opId, amount: 20, label: 'crash-window' });
+
+    expect(observed.sentEventId).toBeTruthy();
+    expect(observed.record).not.toBeNull();
+    expect(observed.record?.status).toBe('publishing');
+    expect(observed.record?.publishedEventId).toBe(observed.sentEventId);
   });
 });

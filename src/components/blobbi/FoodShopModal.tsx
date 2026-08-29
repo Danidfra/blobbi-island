@@ -115,8 +115,12 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     }, 0);
   }, [quantities, shopItems]);
 
-  // Selected cart lines (quantity > 0), used both for the confirmation summary
-  // and for the single batch purchase call.
+  // Selected cart lines (quantity > 0).
+  //
+  // `unitPrice`/`lineCost` here are for the on-screen summary ONLY. They come
+  // from the same canonical catalog the purchase hook prices against, so the
+  // numbers agree — but the hook resolves its own prices from the item
+  // addresses and never accepts these. Display value is not spendable truth.
   const selectedLines = useMemo(() => {
     return Object.entries(quantities)
       .filter(([, quantity]) => quantity > 0)
@@ -197,12 +201,10 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     // the Coin cutover.
     inFlightRef.current = true;
     try {
+      // Only what the purchase layer should trust: WHAT and HOW MANY. The
+      // price of each item is the hook's to resolve from the catalog.
       const result = await purchaseBatch({
-        lines: selectedLines.map(({ address, quantity, unitPrice }) => ({
-          address,
-          quantity,
-          unitPrice,
-        })),
+        lines: selectedLines.map(({ address, quantity }) => ({ address, quantity })),
       });
 
       toast(

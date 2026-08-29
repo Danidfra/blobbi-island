@@ -173,3 +173,40 @@ describe('the synchronous submit guard', () => {
     );
   });
 });
+
+/**
+ * F-05 — what the shop is allowed to tell the purchase layer.
+ *
+ * The modal still computes a displayed total from the canonical catalog, but
+ * the payload it submits carries WHAT and HOW MANY only. Price is a fact about
+ * the item and is resolved inside `useBatchPurchase`; a rendered number must
+ * never be able to move money.
+ */
+describe('the submitted basket', () => {
+  it('carries address and quantity only — no price of any kind', async () => {
+    purchaseBatch.mockResolvedValue({ lines: [], totalCost: 20, outcome: 'applied' });
+    const APPLE = itemIdToAddress('food_apple')!;
+    renderShop();
+    await addApple();
+    await addApple();
+
+    await act(async () => {
+      fireEvent.click(confirmButton());
+    });
+
+    expect(purchaseBatch).toHaveBeenCalledTimes(1);
+    expect(purchaseBatch.mock.calls[0][0]).toEqual({
+      lines: [{ address: APPLE, quantity: 2 }],
+    });
+  });
+
+  it('still shows the canonical price and total on screen', async () => {
+    renderShop();
+    await addApple();
+    await addApple();
+    // The apple is 10 Coins in the catalog, so the basket total is 20.
+    await waitFor(() => {
+      expect(screen.getAllByText('20').length).toBeGreaterThan(0);
+    });
+  });
+});

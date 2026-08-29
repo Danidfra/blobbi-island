@@ -5,7 +5,8 @@
  * with its own quantity. Since the Coin cutover the whole purchase is ONE
  * canonical wallet operation:
  *
- *   1. validate every line (positive integer quantity, integer unit price);
+ *   1. validate every line (positive integer quantity) and RESOLVE its price
+ *      from the canonical catalog — see the pricing boundary below;
  *   2. normalize + merge duplicate addresses into a single line each;
  *   3. compute the TOTAL cost (overflow-protected);
  *   4. `spendCoins({ amount: total, grantLines })` — the wallet reads the
@@ -20,6 +21,31 @@
  * strict publish never treats a timeout as success, and an `ambiguous`
  * outcome is surfaced to the caller instead of being retried blindly.
  *
+ * ## The pricing boundary
+ *
+ * A price is derived from the item's IDENTITY, here, and is never accepted
+ * from the caller. The hook used to take a `unitPrice` per line and charge
+ * whatever it was handed; the shop happened to pass canonical values, so
+ * nothing was ever mispriced in production, but the money-taking hook was
+ * trusting presentation-layer input. That is the wrong trust boundary twice
+ * over, because since the spend-intent work the TOTAL is also part of the
+ * durable purchase identity — a wrong price would move both the charge and
+ * the opId that makes a retry idempotent.
+ *
+ * So the contract is now `{ address, quantity }` and nothing else:
+ *
+ * ```
+ *   listed item     → canonical price from `priceForAddress`
+ *   free listed item→ canonical 0: no coin movement, still one shared
+ *                     inventory transaction
+ *   anything else   → REJECTED before a spend intent, a ledger record, a
+ *                     wallet call or an inventory grant. Unknown is not free.
+ * ```
+ *
+ * Displayed prices remain the shop's own concern — it reads the same catalog,
+ * so the number on screen matches, but a rendered total is presentation and
+ * this module never treats it as spendable truth.
+ *
  * kind:11125 is never touched.
  */
 
@@ -32,16 +58,20 @@ import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation } from './useInventoryMutation';
 import { useCoinWallet } from './useCoinWallet';
 import { mintCoinOpId } from './coin-wallet';
+import { priceForAddress } from './shop-catalog';
 import { inventoryQueryKey } from './useIslandInventory';
 
-/** One requested purchase line in the cart. */
+/**
+ * One requested purchase line in the cart.
+ *
+ * Deliberately carries NO price: what a unit costs is a fact about the item,
+ * resolved here from the canonical catalog. See "The pricing boundary" above.
+ */
 export interface PurchaseLine {
   /** Canonical kind:31632 address of the item. */
   address: string;
   /** Units to buy (positive integer). */
   quantity: number;
-  /** Price per unit in coins (non-negative integer). */
-  unitPrice: number;
 }
 
 export interface BatchPurchaseInput {
@@ -51,6 +81,7 @@ export interface BatchPurchaseInput {
 export interface BatchPurchaseResultLine {
   address: string;
   quantity: number;
+  /** The CANONICAL unit price that was charged, for display and receipts. */
   unitPrice: number;
   lineCost: number;
 }
@@ -75,9 +106,17 @@ export interface BatchPurchaseResult {
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 
 /**
- * Validate + merge duplicate addresses into a single line each, summing
- * quantities. Rejects zero/negative/non-integer/overflowing quantities and
- * non-integer/negative unit prices.
+ * Validate every line, price it from the canonical catalog, and merge
+ * duplicate addresses into a single line each with their quantities summed.
+ *
+ * Rejects an empty cart, a missing address, an item that is not for sale, and
+ * zero/negative/non-integer/overflowing quantities. Every rejection happens
+ * BEFORE the caller opens a spend intent or touches the wallet, so an invalid
+ * cart leaves no durable trace at all.
+ *
+ * Because the price comes from the address rather than the line, two lines for
+ * the same item can no longer disagree about what it costs — the merge just
+ * adds quantities and re-multiplies by the one canonical price.
  */
 export function normalizePurchaseLines(
   lines: PurchaseLine[],
@@ -105,10 +144,14 @@ export function normalizePurchaseLines(
     if (line.quantity > MAX_SAFE) {
       throw new Error('Purchase quantity is too large');
     }
-    if (!Number.isInteger(line.unitPrice) || line.unitPrice < 0) {
-      throw new Error(
-        `Unit price must be a non-negative integer (got ${line.unitPrice})`,
-      );
+
+    // THE PRICING BOUNDARY. `priceForAddress` answers `null` for anything the
+    // catalog does not list — an unknown item, a malformed address, or an
+    // official item that is simply not for sale (the Arcade Ticket). Unknown
+    // is NOT free: this is a commerce contract, not a generic grant API.
+    const unitPrice = priceForAddress(line.address);
+    if (unitPrice === null) {
+      throw new Error(`Item is not for sale: ${line.address}`);
     }
 
     const existing = merged.get(line.address);
@@ -118,16 +161,13 @@ export function normalizePurchaseLines(
         throw new Error('Merged purchase quantity overflows');
       }
       existing.quantity = sum;
-      // Keep the last-seen unit price for the address (they should match; the
-      // shop supplies a single canonical price per address).
-      existing.unitPrice = line.unitPrice;
       existing.lineCost = existing.quantity * existing.unitPrice;
     } else {
       merged.set(line.address, {
         address: line.address,
         quantity: line.quantity,
-        unitPrice: line.unitPrice,
-        lineCost: line.quantity * line.unitPrice,
+        unitPrice,
+        lineCost: line.quantity * unitPrice,
       });
     }
   }
@@ -176,10 +216,17 @@ export function useBatchPurchase() {
         amount: l.quantity,
       }));
 
-      // A zero-cost cart (free items) has no coin movement, so it goes
-      // through the ordinary inventory mutation (the same shared transaction)
-      // instead of a wallet no-op. An ambiguous publish is surfaced as
-      // `ambiguous`, never as success or a definite failure.
+      // A zero-cost cart (every line CANONICALLY free) has no coin movement,
+      // so it goes through the ordinary inventory mutation — the same shared
+      // transaction, so the F-03 guarantees hold — instead of a wallet no-op.
+      // An ambiguous publish is surfaced as `ambiguous`, never as success or
+      // a definite failure.
+      //
+      // Unreachable through the shipped catalog: `validateCoinPrices` requires
+      // every listed price to be a POSITIVE integer, so nothing is free today.
+      // The branch stays because it is the correct behaviour if that rule ever
+      // relaxes — and note it can only ever be reached by a canonical zero,
+      // never by an unpriced item, which is rejected during normalization.
       if (totalCost === 0) {
         try {
           await mutateInventory({ type: 'batch', lines: grantLines });
