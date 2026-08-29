@@ -74,6 +74,29 @@ const STORAGE_KEY = 'blobbi:mine:sessions';
 /** Settled/abandoned records are kept this long for diagnostics, then pruned. */
 export const MINE_SESSION_RETENTION_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * How often a tab playing a run refreshes its `open` record's `updatedAt`.
+ *
+ * The heartbeat is what tells other tabs the run is still being played, so
+ * "one run at a time" can be enforced without holding a Web Lock for the whole
+ * of gameplay.
+ */
+export const MINE_SESSION_HEARTBEAT_MS = 15 * 1000;
+
+/**
+ * An `open` record untouched for longer than this is not being played any
+ * more: the tab was closed, crashed, or the process was killed before it could
+ * abandon its session.
+ *
+ * Comfortably more than {@link MINE_SESSION_HEARTBEAT_MS} because background
+ * tabs have their timers throttled to roughly once a minute — a live but
+ * backgrounded run must not be mistaken for a dead one. The flip side is that
+ * a hard crash keeps the Mine closed for at most this long, which is the
+ * trade-off: an occasional short wait after a crash, versus one tab silently
+ * voiding another tab's run.
+ */
+export const MINE_ACTIVE_SESSION_TTL_MS = 90 * 1000;
+
 const STATUSES = new Set<MineSessionStatus>([
   'open',
   'finalized',
@@ -183,6 +206,48 @@ export function mineAwardedCoinsInWindow(
     if (record.windowKey !== windowKey) return total;
     return total + Math.max(0, Math.trunc(record.coinReward ?? 0));
   }, 0);
+}
+
+/**
+ * `open` records — gameplay that was started and never finished.
+ *
+ * Split by liveness rather than returned raw, because the two halves mean
+ * opposite things: a session still being heartbeaten belongs to a tab that is
+ * playing right now and must be left alone, while one that went quiet is
+ * debris and can be abandoned (it owes nothing — no reward was frozen and no
+ * energy was ever published).
+ */
+export function partitionOpenMineSessions(
+  pubkey: string | undefined,
+  nowMs: number,
+  ttlMs: number = MINE_ACTIVE_SESSION_TTL_MS,
+): { active: MineSessionRecord[]; stale: MineSessionRecord[] } {
+  const active: MineSessionRecord[] = [];
+  const stale: MineSessionRecord[] = [];
+  for (const record of readMineSessions(pubkey)) {
+    if (record.status !== 'open') continue;
+    // `updatedAt` is refreshed by the playing tab's heartbeat. A clock that
+    // jumped backwards makes the age negative, which reads as "just touched" —
+    // the safe direction, since it errs toward preserving a live run.
+    if (nowMs - record.updatedAt > ttlMs) stale.push(record);
+    else active.push(record);
+  }
+  return { active, stale };
+}
+
+/**
+ * Mark an `open` session as still being played. No-op for any other status, so
+ * a late heartbeat can never resurrect a finalized or abandoned run.
+ */
+export function touchMineSession(
+  pubkey: string | undefined,
+  sessionId: string,
+  nowMs: number,
+): void {
+  if (!pubkey) return;
+  const record = readMineSession(pubkey, sessionId);
+  if (!record || record.status !== 'open') return;
+  persistMineSession(pubkey, { ...record, updatedAt: nowMs });
 }
 
 /** Sessions that still owe a settlement action. */

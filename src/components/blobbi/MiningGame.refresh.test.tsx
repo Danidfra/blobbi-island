@@ -92,8 +92,16 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
     vi.doMock('@/hooks/useMineSettlement', () => ({
       useMineSettlement: () => ({
         settlement: {
-          startSession: () => ({ ok: true, sessionId: 's1' }),
-          finalizeSession: () => true,
+          rewardBudget: () => ({
+            windowKey: '2026-01-01',
+            cap: 200,
+            awarded: 0,
+            remaining: 200,
+            resetsAt: 0,
+          }),
+          startSession: async () => ({ ok: true, sessionId: 's1' }),
+          heartbeatSession: () => {},
+          finalizeSession: async () => ({ ok: true, coinReward: 0, capped: false }),
           abandonSession: () => {},
           settleSession: async () => ({ phase: 'settled', coinReward: 0, coinApplied: true }),
           pendingSessions: () => [],

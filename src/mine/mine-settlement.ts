@@ -39,6 +39,30 @@
  *   finalizeSession clamp the run to what is left, and stamp the UTC window
  * ```
  *
+ * ## One run at a time
+ *
+ * The cap alone made overlapping runs financially safe — two could not
+ * between them exceed the day — but the second could still spend a whole
+ * energy bar for a reward the first had already claimed. So `startSession`
+ * refuses while another run is in progress, in the SAME critical section that
+ * checks the budget and creates the record.
+ *
+ * ```
+ *   blocks a new run   open (and still heartbeating)
+ *   does NOT block     finalized / coin-pending / energy-pending  ← gameplay
+ *                      is over and its share of the day is already committed;
+ *                      blocking would shut the Mine until a relay recovers
+ *                      settled / abandoned                        ← terminal
+ *                      open but gone quiet                        ← debris
+ * ```
+ *
+ * Liveness comes from the playing tab's heartbeat on `updatedAt`, not from a
+ * held lock: gameplay holds nothing, so a crashed tab frees the Mine by
+ * falling silent rather than by being cleaned up. That is also why recovery
+ * no longer abandons every `open` record it finds — it runs whenever the cave
+ * is opened, including in a second tab, and doing so voided the run being
+ * played in the first.
+ *
  * The budget is spent at FINALIZATION, not at payout — the same
  * reservation-first rule the Beach applies to its slots. A finalized run holds
  * its share of the day even while its grant is still unconfirmed, which errs
@@ -56,8 +80,10 @@ import {
   mineAwardedCoinsInWindow,
   mineCoinOpId,
   mineEnergyOpId,
+  partitionOpenMineSessions,
   persistMineSession,
   readMineSession,
+  touchMineSession,
   unresolvedMineSessions,
   type MineSessionRecord,
 } from './mine-session-ledger';
@@ -86,7 +112,13 @@ export type StartSessionResult =
    * run starts, on purpose: the alternative is charging a Blobbi's energy for
    * a reward the policy already knows it will not pay.
    */
-  | { readonly ok: false; readonly reason: 'daily-cap-reached' };
+  | { readonly ok: false; readonly reason: 'daily-cap-reached' }
+  /**
+   * Another tab is already playing a rewarded run for this account. Refused
+   * so the Blobbi's energy is not spent on a run whose reward a concurrent
+   * one may already have claimed.
+   */
+  | { readonly ok: false; readonly reason: 'session-in-progress' };
 
 /** Outcome of freezing a run's numbers. */
 export type FinalizeSessionResult =
@@ -121,7 +153,24 @@ export interface MineSettlementResult {
 export interface MineSettlement {
   /** The day's Mine budget for this account, for gating and for copy. */
   rewardBudget(): MineRewardBudget;
-  startSession(input: { petId: string; startEnergy: number }): StartSessionResult;
+  /**
+   * Open a rewarded run, if one may be opened.
+   *
+   * Async because the whole check-and-create runs in the shared queued
+   * cross-tab critical section — see the module note. The lock is released as
+   * soon as the durable record exists; gameplay itself holds nothing.
+   */
+  startSession(input: {
+    petId: string;
+    startEnergy: number;
+  }): Promise<StartSessionResult>;
+  /**
+   * Tell the ledger this run is still being played.
+   *
+   * Cheap and idempotent; the playing tab calls it on a timer. Only an `open`
+   * record is touched, so a late beat cannot revive a finished run.
+   */
+  heartbeatSession(sessionId: string): void;
   /**
    * Freeze the run's numbers, applying the daily ceiling.
    *
@@ -238,26 +287,52 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
       return mineRewardBudget(mineAwardedCoinsInWindow(pubkey, windowKey), nowMs);
     },
 
-    startSession({ petId, startEnergy }): StartSessionResult {
-      const startedAt = now();
-      // Refuse before any energy is spent. A run started against an exhausted
-      // budget would cost the Blobbi its energy and pay nothing.
-      const windowKey = mineRewardWindowKey(startedAt);
-      if (mineAwardedCoinsInWindow(pubkey, windowKey) >= MINE_DAILY_COIN_CAP) {
-        return { ok: false, reason: 'daily-cap-reached' };
-      }
-      const sessionId = mintMineSessionId(startedAt);
-      const ok = save({
-        sessionId,
-        petId,
-        status: 'open',
-        startedAt,
-        startEnergy,
-      });
-      // No durable operation identity ⇒ no value-bearing operation. Same rule
-      // the Coin wallet applies before it publishes.
-      if (!ok) return { ok: false, reason: 'storage-unavailable' };
-      return { ok: true, sessionId };
+    async startSession({ petId, startEnergy }): Promise<StartSessionResult> {
+      // ONE critical section for the whole decision, on the SAME lock name
+      // finalization takes: two tabs cannot both see "nothing active" and both
+      // create a session, and a start queued behind a finalize sees the budget
+      // that finalize just spent.
+      const { value } = await withQueuedCrossTabLock(
+        `blobbi-mine-budget:${pubkey}`,
+        async (): Promise<StartSessionResult> => {
+          const startedAt = now();
+
+          // Debris first: an `open` record whose tab stopped heartbeating owes
+          // nothing and must not keep the Mine shut.
+          const { active, stale } = partitionOpenMineSessions(pubkey, startedAt);
+          for (const record of stale) {
+            save({ ...record, status: 'abandoned', note: 'stale-open-session' });
+          }
+          if (active.length > 0) {
+            return { ok: false, reason: 'session-in-progress' };
+          }
+
+          // Refuse before any energy is spent. A run started against an
+          // exhausted budget would cost the Blobbi its energy and pay nothing.
+          const windowKey = mineRewardWindowKey(startedAt);
+          if (mineAwardedCoinsInWindow(pubkey, windowKey) >= MINE_DAILY_COIN_CAP) {
+            return { ok: false, reason: 'daily-cap-reached' };
+          }
+
+          const sessionId = mintMineSessionId(startedAt);
+          const ok = save({
+            sessionId,
+            petId,
+            status: 'open',
+            startedAt,
+            startEnergy,
+          });
+          // No durable operation identity ⇒ no value-bearing operation. Same
+          // rule the Coin wallet applies before it publishes.
+          if (!ok) return { ok: false, reason: 'storage-unavailable' };
+          return { ok: true, sessionId };
+        },
+      );
+      return value;
+    },
+
+    heartbeatSession(sessionId): void {
+      touchMineSession(pubkey, sessionId, now());
     },
 
     async finalizeSession(
@@ -334,10 +409,16 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
 
     async recoverSessions(): Promise<MineSettlementResult[]> {
       const results: MineSettlementResult[] = [];
+      const { stale } = partitionOpenMineSessions(pubkey, now());
+      const staleIds = new Set(stale.map((record) => record.sessionId));
       for (const record of unresolvedMineSessions(pubkey)) {
         if (record.status === 'open') {
-          // Nothing was ever owed: no reward fixed, no energy spent. The
-          // player loses nothing, and we never fabricate a reward.
+          // Debris is abandoned — nothing was ever owed, so the player loses
+          // nothing and no reward is fabricated. A session still being
+          // heartbeaten is LEFT ALONE: recovery runs whenever the cave is
+          // opened, including in a second tab, and abandoning a live run there
+          // would silently void the run someone is playing in the first.
+          if (!staleIds.has(record.sessionId)) continue;
           save({ ...record, status: 'abandoned', note: 'recovered-open' });
           continue;
         }

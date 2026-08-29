@@ -19,6 +19,7 @@ import {
   persistMineSession,
   unresolvedMineSessions,
   MINE_SESSION_RETENTION_MS,
+  MINE_ACTIVE_SESSION_TTL_MS,
 } from './mine-session-ledger';
 import type { CoinWallet } from '@/inventory/coin-wallet';
 import type { EnergySettler, EnergySettlementOutcome } from './energy-settlement';
@@ -81,7 +82,7 @@ async function runToFinish(
   settlement: ReturnType<typeof makeDeps>['settlement'],
   values: { energyDelta: number; coinReward: number },
 ) {
-  const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+  const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
   if (!started.ok) throw new Error('start failed');
   const frozen = await settlement.finalizeSession(started.sessionId, values);
   expect(frozen.ok).toBe(true);
@@ -200,7 +201,7 @@ describe('partial failure always leaves the player UP', () => {
 describe('an interrupted run costs nothing', () => {
   it('abandoning an open session owes no Coins and no energy', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps();
-    const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
 
     settlement.abandonSession(started.sessionId);
@@ -212,10 +213,16 @@ describe('an interrupted run costs nothing', () => {
     expect(energyCalls).toHaveLength(0);
   });
 
-  it('recovery abandons an open session instead of inventing a reward', async () => {
+  it('recovery abandons a STALE open session instead of inventing a reward', async () => {
     const { settlement, coinCalls, energyCalls } = makeDeps();
-    const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
+    // Age it past the liveness window: the tab that owned it is gone.
+    const record = readMineSession(PUBKEY, started.sessionId)!;
+    persistMineSession(PUBKEY, {
+      ...record,
+      updatedAt: record.updatedAt - MINE_ACTIVE_SESSION_TTL_MS - 1_000,
+    });
 
     const results = await settlement.recoverSessions();
 
@@ -225,9 +232,21 @@ describe('an interrupted run costs nothing', () => {
     expect(energyCalls).toHaveLength(0);
   });
 
+  it('recovery LEAVES a live open session alone — another tab may be playing it', async () => {
+    const { settlement } = makeDeps();
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!started.ok) throw new Error('start failed');
+
+    // Opening the cave in a second tab runs recovery. Abandoning here would
+    // silently void the run someone is playing in the first tab.
+    await settlement.recoverSessions();
+
+    expect(readMineSession(PUBKEY, started.sessionId)?.status).toBe('open');
+  });
+
   it('an unfinalized session can never be settled', async () => {
     const { settlement, coinCalls } = makeDeps();
-    const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
 
     const result = await settlement.settleSession(started.sessionId);

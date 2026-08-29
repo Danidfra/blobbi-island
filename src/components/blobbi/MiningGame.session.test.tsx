@@ -12,7 +12,11 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { createMineSettlement } from '@/mine/mine-settlement';
-import { clearMineSessions, readMineSessions } from '@/mine/mine-session-ledger';
+import {
+  clearMineSessions,
+  readMineSession,
+  readMineSessions,
+} from '@/mine/mine-session-ledger';
 import { MINE_DAILY_COIN_CAP } from '@/mine/policy';
 import type { CoinWallet } from '@/inventory/coin-wallet';
 import type { EnergySettler } from '@/mine/energy-settlement';
@@ -242,7 +246,7 @@ describe('the daily Mine ceiling', () => {
       settler,
       now: () => 1_700_000_000_000,
     });
-    const started = filler.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await filler.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
     await filler.finalizeSession(started.sessionId, {
       energyDelta: 80,
@@ -269,7 +273,7 @@ describe('the daily Mine ceiling', () => {
       settler,
       now: () => 1_700_000_000_000,
     });
-    const started = filler.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await filler.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
     // One Coin of headroom left for the whole next run.
     await filler.finalizeSession(started.sessionId, {
@@ -299,5 +303,65 @@ describe('the daily Mine ceiling', () => {
     expect(document.querySelector('[data-mine-reward-capped]')).toBeNull();
     expect(coinGrants).toHaveLength(1);
     expect(coinGrants[0].amount).toBeLessThan(MINE_DAILY_COIN_CAP);
+  });
+});
+
+/**
+ * F-06.1 — the cave refuses a second concurrent trip.
+ *
+ * The point is that the refusal happens at START: a run whose reward another
+ * live run may already have claimed must not cost the Blobbi its energy.
+ */
+describe('one mining trip at a time', () => {
+  it('refuses to start while another tab is mid-run, charging no energy', async () => {
+    // Another tab's live session, written through the same durable ledger.
+    const otherTab = createMineSettlement({
+      pubkey: PUBKEY,
+      wallet,
+      settler,
+      now: () => 1_700_000_000_000,
+    });
+    const live = await otherTab.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!live.ok) throw new Error('start failed');
+
+    renderMine();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Start'));
+    });
+
+    expect(document.querySelector('[data-mine-session-in-progress]')).not.toBeNull();
+    expect(screen.getByText(/already have a mining trip in progress/i)).toBeInTheDocument();
+    // No second session, and the other tab's run is untouched.
+    expect(readMineSessions(PUBKEY).filter((r) => r.status === 'open')).toHaveLength(1);
+    expect(energySettlements).toHaveLength(0);
+    expect(coinGrants).toHaveLength(0);
+  });
+
+  it('opening the cave does not void a run in progress elsewhere', async () => {
+    const otherTab = createMineSettlement({
+      pubkey: PUBKEY,
+      wallet,
+      settler,
+      now: () => 1_700_000_000_000,
+    });
+    const live = await otherTab.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!live.ok) throw new Error('start failed');
+
+    // Mounting runs startup recovery, which used to abandon every open run.
+    renderMine();
+    await act(async () => {});
+
+    expect(readMineSession(PUBKEY, live.sessionId)?.status).toBe('open');
+  });
+
+  it('a normal solo run is unaffected', async () => {
+    renderMine();
+    await playFullRun();
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-mine-reward-status]')).not.toBeNull();
+    });
+    expect(document.querySelector('[data-mine-session-in-progress]')).toBeNull();
+    expect(coinGrants).toHaveLength(1);
   });
 });

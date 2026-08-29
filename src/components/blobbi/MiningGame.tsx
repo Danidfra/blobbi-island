@@ -15,6 +15,7 @@ import {
   rollMineGem,
   type MineGemKind,
 } from '@/mine/policy';
+import { MINE_SESSION_HEARTBEAT_MS } from '@/mine/mine-session-ledger';
 
 /**
  * Settlement boundary.
@@ -64,7 +65,7 @@ export function MiningGame() {
   const currentPet = status.currentPet;
 
   const [gameState, setGameState] = useState<
-    'instructions' | 'playing' | 'results' | 'low-energy' | 'daily-cap'
+    'instructions' | 'playing' | 'results' | 'low-energy' | 'daily-cap' | 'in-progress'
   >('instructions');
   const [clicks, setClicks] = useState(0);
   const [minedItems, setMinedItems] = useState<MinedItem[]>([]);
@@ -106,33 +107,50 @@ export function MiningGame() {
 
   const [startError, setStartError] = useState<string | null>(null);
 
-  const startGame = () => {
-    if (!currentPet) return;
-    // A durable session id BEFORE any gameplay: no durable operation identity,
-    // no value-bearing run. This is the same rule the Coin wallet applies
-    // before it publishes.
-    const started = settlement?.startSession({
-      petId: currentPet.id,
-      startEnergy: currentEnergy,
-    });
-    if (started && !started.ok && started.reason === 'daily-cap-reached') {
-      // Refused before a single point of energy is spent.
+  // Synchronous guard: opening a session is now async, so two Start presses in
+  // one tick could otherwise both reach the settlement. The cross-tab lock
+  // would still refuse the second, but this keeps the UI honest without a
+  // round trip.
+  const startingRef = useRef(false);
+
+  const startGame = async () => {
+    if (!currentPet || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      // A durable session id BEFORE any gameplay: no durable operation
+      // identity, no value-bearing run. This is the same rule the Coin wallet
+      // applies before it publishes.
+      const started = await settlement?.startSession({
+        petId: currentPet.id,
+        startEnergy: currentEnergy,
+      });
+      if (started && !started.ok && started.reason === 'daily-cap-reached') {
+        // Refused before a single point of energy is spent.
+        setStartError(null);
+        setGameState('daily-cap');
+        return;
+      }
+      if (started && !started.ok && started.reason === 'session-in-progress') {
+        // Another tab is mid-run. Also refused before any energy is spent.
+        setStartError(null);
+        setGameState('in-progress');
+        return;
+      }
+      if (settlement && (!started || !started.ok)) {
+        setStartError(
+          "We couldn't set up this mining trip. Please check your browser storage settings and try again.",
+        );
+        return;
+      }
+      sessionIdRef.current = started?.ok ? started.sessionId : null;
+      startEnergyRef.current = currentEnergy;
+      finishedRef.current = false;
       setStartError(null);
-      setGameState('daily-cap');
-      return;
+      setReward({ phase: 'idle' });
+      setGameState('playing');
+    } finally {
+      startingRef.current = false;
     }
-    if (settlement && (!started || !started.ok)) {
-      setStartError(
-        "We couldn't set up this mining trip. Please check your browser storage settings and try again.",
-      );
-      return;
-    }
-    sessionIdRef.current = started?.ok ? started.sessionId : null;
-    startEnergyRef.current = currentEnergy;
-    finishedRef.current = false;
-    setStartError(null);
-    setReward({ phase: 'idle' });
-    setGameState('playing');
   };
 
   /**
@@ -187,6 +205,21 @@ export function MiningGame() {
   // whole phase exists to remove.
   const settlementRef = useRef(settlement);
   settlementRef.current = settlement;
+
+  // While a run is being played, keep its durable record marked live. This is
+  // what lets another tab tell "someone is mining right now" from "a tab died
+  // mid-run and left debris" — without either holding a lock for the whole
+  // session or silently voiding a run in progress.
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+    settlementRef.current?.heartbeatSession(sessionId);
+    const timer = setInterval(() => {
+      settlementRef.current?.heartbeatSession(sessionId);
+    }, MINE_SESSION_HEARTBEAT_MS);
+    return () => clearInterval(timer);
+  }, [gameState]);
   useEffect(() => {
     return () => {
       const sessionId = sessionIdRef.current;
@@ -248,7 +281,12 @@ export function MiningGame() {
       icon="⛏️"
       hideClose
       footer={
-        <Button variant="accent" onClick={startGame} disabled={!currentPet} className="min-h-[44px]">
+        <Button
+          variant="accent"
+          onClick={() => void startGame()}
+          disabled={!currentPet}
+          className="min-h-[44px]"
+        >
           Start
         </Button>
       }
@@ -459,12 +497,57 @@ export function MiningGame() {
     </BlobbiModal>
   );
 
+  /**
+   * A run is already under way for this account, in another tab. Shown
+   * INSTEAD of starting, so no energy is spent on a trip whose reward the
+   * other run may already have claimed.
+   */
+  const renderInProgress = () => (
+    <BlobbiModal
+      open
+      onOpenChange={() => {}}
+      presentation="in-frame"
+      size="sm"
+      title="Already down the mine"
+      description="One mining trip at a time."
+      icon="⛏️"
+      hideClose
+      footer={
+        <>
+          <Button
+            variant="soft"
+            onClick={() => setGameState('instructions')}
+            className="min-h-[44px]"
+          >
+            Try again
+          </Button>
+          <Button
+            variant="accent"
+            onClick={() => setCurrentLocation('mine')}
+            className="min-h-[44px]"
+          >
+            Exit cave
+          </Button>
+        </>
+      }
+    >
+      <p
+        className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3 text-sm text-island-ink"
+        data-mine-session-in-progress
+      >
+        You already have a mining trip in progress. Finish it first — or if you
+        closed that window, wait a moment and try again.
+      </p>
+    </BlobbiModal>
+  );
+
   return (
     <div className="relative w-full h-full">
       {gameState === 'instructions' && renderInstructions()}
       {gameState === 'results' && renderResults()}
       {gameState === 'low-energy' && renderLowEnergy()}
       {gameState === 'daily-cap' && renderDailyCap()}
+      {gameState === 'in-progress' && renderInProgress()}
 
       <div
         ref={miningAreaRef}

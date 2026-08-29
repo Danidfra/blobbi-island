@@ -17,6 +17,8 @@ import {
   pruneMineSessions,
   persistMineSession,
   readMineSession,
+  readMineSessions,
+  MINE_ACTIVE_SESSION_TTL_MS,
 } from './mine-session-ledger';
 import { MINE_DAILY_COIN_CAP, mineRewardWindowKey } from './policy';
 import type { CoinWallet } from '@/inventory/coin-wallet';
@@ -59,7 +61,7 @@ async function mineRun(
   settlement: ReturnType<typeof makeSettlement>['settlement'],
   rawReward: number,
 ) {
-  const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+  const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
   if (!started.ok) return { started, frozen: null, sessionId: null };
   const frozen = await settlement.finalizeSession(started.sessionId, {
     energyDelta: 80,
@@ -120,7 +122,7 @@ describe('the ceiling binds', () => {
     const { settlement, coinCalls } = makeSettlement(nowRef);
 
     await mineRun(settlement, MINE_DAILY_COIN_CAP);
-    const blocked = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const blocked = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
 
     expect(blocked).toEqual({ ok: false, reason: 'daily-cap-reached' });
     // Nothing was recorded, so nothing can later charge energy for it.
@@ -160,7 +162,7 @@ describe('the frozen number survives reload and recovery', () => {
     // Fill most of the day, then finalize a run that gets trimmed but never
     // settles — the shape a crash right after finalization leaves behind.
     await mineRun(first.settlement, 190);
-    const started = first.settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await first.settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
     await first.settlement.finalizeSession(started.sessionId, {
       energyDelta: 80,
@@ -179,7 +181,7 @@ describe('the frozen number survives reload and recovery', () => {
   it('a second finalize spends no further budget', async () => {
     const nowRef = { ms: DAY_ONE };
     const { settlement } = makeSettlement(nowRef);
-    const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
 
     await settlement.finalizeSession(started.sessionId, { energyDelta: 80, coinReward: 60 });
@@ -191,7 +193,7 @@ describe('the frozen number survives reload and recovery', () => {
   it('an abandoned run holds none of the day', async () => {
     const nowRef = { ms: DAY_ONE };
     const { settlement } = makeSettlement(nowRef);
-    const started = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
 
     settlement.abandonSession(started.sessionId);
@@ -206,9 +208,22 @@ describe('concurrent settlement cannot exceed the day', () => {
     const { settlement, coinCalls } = makeSettlement(nowRef);
     await mineRun(settlement, 170); // 30 left
 
-    const a = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
-    const b = settlement.startSession({ petId: PET_ID, startEnergy: 100 });
-    if (!a.ok || !b.ok) throw new Error('start failed');
+    // Two overlapping runs can no longer be STARTED (see the start-guard
+    // suite), so they are written straight into the ledger here. The clamp at
+    // finalization is the final authority on the day's budget and must hold on
+    // its own, whatever produced the records.
+    const a = { ok: true as const, sessionId: 'concurrent-a' };
+    const b = { ok: true as const, sessionId: 'concurrent-b' };
+    for (const { sessionId } of [a, b]) {
+      persistMineSession(PUBKEY, {
+        sessionId,
+        petId: PET_ID,
+        status: 'open',
+        startedAt: DAY_ONE,
+        startEnergy: 100,
+        updatedAt: DAY_ONE,
+      });
+    }
 
     // Both finalize without awaiting in between — the interleaving the queued
     // lock exists for.
@@ -295,5 +310,123 @@ describe('the window rolls over at UTC midnight', () => {
 
     expect(mineAwardedCoinsInWindow(PUBKEY, '2026-08-28')).toBe(0);
     expect(settlement.rewardBudget().remaining).toBe(MINE_DAILY_COIN_CAP);
+  });
+});
+
+/**
+ * F-06.1 — one rewarded run at a time, per account, across tabs.
+ *
+ * The daily cap already made overlapping runs financially safe, but the second
+ * one could still spend a Blobbi's whole energy bar for a reward the first had
+ * already claimed. The guard moves that refusal to the start, before any
+ * energy is at stake.
+ */
+describe('overlapping Mine runs are prevented', () => {
+  it('a second start is refused while a run is in progress', async () => {
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+
+    const first = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const second = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+
+    expect(first.ok).toBe(true);
+    expect(second).toEqual({ ok: false, reason: 'session-in-progress' });
+    // Refused means no durable record — so no energy can ever be owed for it.
+    expect(readMineSessions(PUBKEY).filter((r) => r.status === 'open')).toHaveLength(1);
+  });
+
+  it('simultaneous starts in two tabs produce exactly ONE active session', async () => {
+    const nowRef = { ms: DAY_ONE };
+    // Two independent settlement instances = two tabs on one account.
+    const tabA = makeSettlement(nowRef);
+    const tabB = makeSettlement(nowRef);
+
+    const [a, b] = await Promise.all([
+      tabA.settlement.startSession({ petId: PET_ID, startEnergy: 100 }),
+      tabB.settlement.startSession({ petId: PET_ID, startEnergy: 100 }),
+    ]);
+
+    const accepted = [a, b].filter((r) => r.ok);
+    const refused = [a, b].filter((r) => !r.ok);
+    expect(accepted).toHaveLength(1);
+    expect(refused).toEqual([{ ok: false, reason: 'session-in-progress' }]);
+    expect(readMineSessions(PUBKEY).filter((r) => r.status === 'open')).toHaveLength(1);
+  });
+
+  it('a run left behind by a closed tab stops blocking once it goes quiet', async () => {
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+    const abandonedTab = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!abandonedTab.ok) throw new Error('start failed');
+
+    // Still heartbeating: genuinely in progress, so still blocked.
+    nowRef.ms = DAY_ONE + MINE_ACTIVE_SESSION_TTL_MS - 1_000;
+    settlement.heartbeatSession(abandonedTab.sessionId);
+    expect(await settlement.startSession({ petId: PET_ID, startEnergy: 100 })).toEqual({
+      ok: false,
+      reason: 'session-in-progress',
+    });
+
+    // The tab is gone; nothing refreshes the record any more.
+    nowRef.ms += MINE_ACTIVE_SESSION_TTL_MS + 1_000;
+    const next = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+
+    expect(next.ok).toBe(true);
+    // The debris was abandoned rather than left to accumulate.
+    expect(readMineSession(PUBKEY, abandonedTab.sessionId)?.status).toBe('abandoned');
+  });
+
+  it('an explicitly abandoned run does not block the next one', async () => {
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+    const first = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!first.ok) throw new Error('start failed');
+
+    settlement.abandonSession(first.sessionId);
+
+    expect((await settlement.startSession({ petId: PET_ID, startEnergy: 100 })).ok).toBe(true);
+  });
+
+  it('a settled run does not block the next one', async () => {
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+    await mineRun(settlement, 50);
+
+    expect((await settlement.startSession({ petId: PET_ID, startEnergy: 100 })).ok).toBe(true);
+  });
+
+  it('a finalized run still owing settlement does NOT block the next one', async () => {
+    // Gameplay is over and its share of the day is already committed, so the
+    // Mine must not stay shut while a relay problem resolves.
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!started.ok) throw new Error('start failed');
+    await settlement.finalizeSession(started.sessionId, { energyDelta: 80, coinReward: 50 });
+    expect(readMineSession(PUBKEY, started.sessionId)?.status).toBe('finalized');
+
+    const next = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+
+    expect(next.ok).toBe(true);
+    // And the unsettled reward is still owed, not discarded.
+    expect(readMineSession(PUBKEY, started.sessionId)?.coinReward).toBe(50);
+  });
+
+  it('the start guard runs BEFORE the daily-cap check', async () => {
+    // Both would refuse; the in-progress reason is the accurate one to show.
+    const nowRef = { ms: DAY_ONE };
+    const { settlement } = makeSettlement(nowRef);
+    await mineRun(settlement, MINE_DAILY_COIN_CAP);
+    const blocked = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    expect(blocked).toEqual({ ok: false, reason: 'daily-cap-reached' });
+
+    // Now with a live run as well.
+    clearMineSessions();
+    const live = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    expect(live.ok).toBe(true);
+    expect(await settlement.startSession({ petId: PET_ID, startEnergy: 100 })).toEqual({
+      ok: false,
+      reason: 'session-in-progress',
+    });
   });
 });
