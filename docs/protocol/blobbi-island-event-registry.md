@@ -329,6 +329,7 @@ Status meanings: **Active** — the issuer-signed kind:31632 event is published.
 | `blobbi:hygiene:soft-towel` | Soft Towel | hygiene | `clean` | Active |
 | `blobbi:energy:drink` | Energy Drink | energy | `boost` | Active |
 | `blobbi:currency:arcade-ticket` | Arcade Ticket | currency | — | Active |
+| `blobbi:currency:arcade-token` | Arcade Token | currency | — | Active |
 | `blobbi:currency:coin` | Blobbi Coin | currency | — | Active |
 
 ## 7. Canonical kind:31632 addresses
@@ -357,6 +358,7 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 | Soft Towel | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:soft-towel` |
 | Energy Drink | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:energy:drink` |
 | Arcade Ticket | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-ticket` |
+| Arcade Token | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-token` |
 | Blobbi Coin | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:coin` |
 
 ## 8. Item detail
@@ -623,6 +625,22 @@ Earned by playing games at the Blobbi Island Arcade. Exchange it for exclusive p
 - **Topics:** `currency`, `arcade`
 - **Stackable:** yes
 - **Referenced by:** `src/components/blobbi/ArcadeTicketBalance.tsx`, `src/components/blobbi/inventory/InventoryBrowser.tsx`
+
+### Arcade Token — `blobbi:currency:arcade-token`
+
+Buy them with Blobbi Coins and spend them to play games at the Blobbi Island Arcade.
+
+- **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-token`
+- **Status:** Active
+- **Category:** `currency` · **Type:** `currency`
+- **Action:** none — cannot be used on a Blobbi
+- **Stages:** `egg`, `baby`, `adult`
+- **Effects:** none
+- **Emoji fallback:** 🕹️
+- **Image:** — (none published; the emoji fallback is used)
+- **Topics:** `currency`, `arcade`
+- **Stackable:** yes
+- **Referenced by:** `src/arcade/tokens/arcade-token.ts`, `src/arcade/tokens/token-store.ts`
 
 ### Blobbi Coin — `blobbi:currency:coin`
 

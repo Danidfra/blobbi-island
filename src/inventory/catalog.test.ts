@@ -20,16 +20,16 @@ import {
 } from '@/protocol/event-registry';
 
 describe('official item registry', () => {
-  it('contains 21 published official items and nothing reserved', () => {
-    // All 21 definitions (19 consumables + the Arcade Ticket and Blobbi Coin
+  it('contains 22 published official items and nothing reserved', () => {
+    // All 22 definitions (19 consumables + the Arcade Ticket, Blobbi Coin
     // currencies) are published and issuer-signed. Purchasability is a
     // separate question — see shop-catalog.test.ts.
-    expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(21);
+    expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(22);
     expect(RESERVED_OFFICIAL_ITEMS).toHaveLength(0);
     expect(DEPRECATED_OFFICIAL_ITEMS).toHaveLength(0);
 
-    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(21);
-    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(21);
+    expect(OFFICIAL_ITEM_REGISTRY).toHaveLength(22);
+    expect(OFFICIAL_ITEM_ADDRESSES).toHaveLength(22);
   });
 
   it('builds every address from the official issuer', () => {
@@ -160,7 +160,7 @@ describe('emoji fallback', () => {
  * definition is actually published; a `reserved` item has no published event to
  * match against. All 20 are published as of 2026-07-28.
  */
-describe('bundled fallback exact metadata (all 20 published items)', () => {
+describe('bundled fallback exact metadata (all 22 published items)', () => {
   const EXPECTED: Record<
     string,
     {
@@ -197,10 +197,12 @@ describe('bundled fallback exact metadata (all 20 published items)', () => {
     // the 19 consumables it carries an `image` and has NO action and NO effects.
     cur_arcade_ticket: { name: 'Arcade Ticket', type: 'currency', category: 'currency', emoji: '🎟️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
     'blobbi-coin': { name: 'Blobbi Coin', type: 'currency', category: 'currency', emoji: '🪙', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'coin', 'official-currency', 'spendable', 'earnable', 'blobbi-coin'], effects: {} },
+    // The arcade's PAY-TO-PLAY currency — the opposite direction to the Ticket.
+    'arcade-token': { name: 'Arcade Token', type: 'currency', category: 'currency', emoji: '🕹️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
   };
 
-  it('covers exactly the 21 published items', () => {
-    expect(Object.keys(EXPECTED)).toHaveLength(21);
+  it('covers exactly the 22 published items', () => {
+    expect(Object.keys(EXPECTED)).toHaveLength(22);
     expect(Object.keys(EXPECTED).sort()).toEqual(
       ACTIVE_OFFICIAL_ITEMS.map((i) => i.itemId).sort(),
     );

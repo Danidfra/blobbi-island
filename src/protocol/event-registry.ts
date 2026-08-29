@@ -698,6 +698,21 @@ export const ARCADE_TICKET_IMAGE_URL =
   'https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp';
 
 /**
+ * The canonical Arcade Token identity — the arcade's PAY-TO-PLAY currency.
+ *
+ * Bought with Blobbi Coins, spent to start a game. Deliberately NOT the Arcade
+ * Ticket, which travels the opposite way: Tickets are what a game PAYS OUT and
+ * what the Prize Counter accepts. Two arcade currencies, opposite directions,
+ * and the UI must never blur them.
+ *
+ * Identity is the stable address `31632:<issuer>:blobbi:currency:arcade-token`.
+ * The published revision's event id is recorded as provenance in
+ * `src/arcade/tokens/arcade-token.ts` and is never an ownership key — quantity
+ * lives in the player's kind:31633 like every other item.
+ */
+export const ARCADE_TOKEN_D = 'blobbi:currency:arcade-token';
+
+/**
  * The canonical Blobbi Coin identity — the island's OFFICIAL currency.
  *
  * The issuer-signed kind:31632 definition is published (see
@@ -1066,6 +1081,35 @@ export const OFFICIAL_ITEM_DEFINITIONS: readonly OfficialItemDefinition[] = [
     sourceFiles: [
       'src/components/blobbi/ArcadeTicketBalance.tsx',
       'src/components/blobbi/inventory/InventoryBrowser.tsx',
+    ],
+  },
+  {
+    d: ARCADE_TOKEN_D,
+    itemId: 'arcade-token',
+    name: 'Arcade Token',
+    description:
+      'Buy them with Blobbi Coins and spend them to play games at the Blobbi Island Arcade.',
+    type: 'currency',
+    category: 'currency',
+    emoji: '🕹️',
+    // The published definition carries the official front/back artwork; the
+    // catalog fetches it from the relays and that revision wins. No bundled URL
+    // is recorded here, so nothing can drift from what was actually published —
+    // the emoji is the offline fallback.
+    image: null,
+    // Currency is never used on a Blobbi. `useUseItem` rejects a null action, so
+    // this single field is what keeps tokens out of every care flow.
+    action: null,
+    // Schema-required; carries no meaning while `action` is null.
+    stages: ['egg', 'baby', 'adult'],
+    // No care effects, by design.
+    effects: {},
+    topics: ['currency', 'arcade'],
+    status: 'active',
+    stackable: true,
+    sourceFiles: [
+      'src/arcade/tokens/arcade-token.ts',
+      'src/arcade/tokens/token-store.ts',
     ],
   },
   {
