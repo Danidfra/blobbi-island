@@ -23,8 +23,8 @@ import { useCoinWallet } from '@/inventory/useCoinWallet';
 import { getQuantity } from '@/inventory/useInventoryMutation';
 import { inventoryQueryKey, useIslandInventory } from '@/inventory/useIslandInventory';
 
-import { ARCADE_TOKEN_ADDRESS } from './arcade-token';
-import { arcadeTokenCoinCost } from './token-store';
+import { ARCADE_TOKEN_ADDRESS } from '@/arcade/tokens/arcade-token';
+import { arcadeTokenCoinCost } from '@/arcade/tokens/token-store';
 
 export interface ArcadeTokenBalanceView {
   /** Tokens held, or `null` while unknown. Never a fake zero. */

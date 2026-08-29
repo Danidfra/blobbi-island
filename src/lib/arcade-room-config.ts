@@ -216,7 +216,7 @@ export const ARCADE_TICKET_COUNTER = {
   windowSrc: `${GROUND}/ticket-out.png`,
   containerClassName: 'relative left-[20%] top-[26%]',
   /** Accessible name for the interactive window. Names the action's target. */
-  alt: 'Ticket counter — buy an Arcade Pass',
+  alt: 'Token counter — buy Arcade Tokens',
   /** Roughly under the counter (its sprite spans x ≈ 20–28 %). */
   interactionPoint: { x: 24, y: ARCADE_COUNTER_STAND_Y },
 } as const;

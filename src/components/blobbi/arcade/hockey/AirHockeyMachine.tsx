@@ -28,6 +28,11 @@ import type { HockeyOrientation } from './hockey-draw';
 import { AirHockeyTable } from './AirHockeyTable';
 import { AirHockeyPreview } from './AirHockeyPreview';
 import { AirHockeyResults } from './AirHockeyResults';
+import { arcadeEntryRefusalMessage } from '@/arcade/tokens/entry-copy';
+import {
+  FREE_ARCADE_GAME_ENTRY,
+  type ArcadeGameEntry,
+} from '@/arcade/tokens/game-entry';
 
 /**
  * Air Hockey — the controller that joins the game to the shared arcade.
@@ -78,6 +83,12 @@ export interface AirHockeyMachineProps {
   readonly onExit: () => void;
   readonly exitLabel: string;
   readonly exitAriaLabel: string;
+  /**
+   * The turnstile that charges for a run. Injected, like the reward writer:
+   * a machine rendered without one plays free, which is the safe default —
+   * charging by omission would be taking money nobody wired up.
+   */
+  readonly entry?: ArcadeGameEntry;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: HockeyAudioFactory;
   /** Substitute reward writer. Production passes nothing. */
@@ -132,6 +143,7 @@ export function AirHockeyMachine({
   targetGoals = MATCH_GOAL_TARGET,
   createMatchState,
   mintRunId = defaultMintRunId,
+  entry = FREE_ARCADE_GAME_ENTRY,
   now = Date.now,
   showDebugDetails = false,
   forceExpanded,
@@ -213,17 +225,36 @@ export function AirHockeyMachine({
     return created;
   }, [audioFactory]);
 
-  const handleStart = useCallback(() => {
-    setAbortNotice(null);
-    prepareEngine();
-    dispatch({ type: 'start', runId: mintRunId(), difficulty });
-  }, [dispatch, mintRunId, difficulty, prepareEngine]);
+  /**
+   * The commitment boundary: a Token is charged here and nowhere earlier.
+   * Opening the table, picking a difficulty and backing out are all free.
+   */
+  const beginRun = useCallback(
+    (kind: 'start' | 'replay') => {
+      setAbortNotice(null);
+      prepareEngine();
 
-  const handleReplay = useCallback(() => {
-    setAbortNotice(null);
-    prepareEngine();
-    dispatch({ type: 'replay', runId: mintRunId(), difficulty });
-  }, [dispatch, mintRunId, difficulty, prepareEngine]);
+      // A free run — or one a Pass waives — starts on this tick, with no
+      // write and no await.
+      if (entry.admitFree(gameId)) {
+        dispatch({ type: kind, runId: mintRunId(), difficulty });
+        return;
+      }
+
+      void (async () => {
+        const admitted = await entry.admit(gameId);
+        if (!admitted.ok) {
+          setAbortNotice(arcadeEntryRefusalMessage(admitted));
+          return;
+        }
+        dispatch({ type: kind, runId: mintRunId(), difficulty });
+      })();
+    },
+    [dispatch, difficulty, prepareEngine, entry, gameId, mintRunId],
+  );
+
+  const handleStart = useCallback(() => beginRun('start'), [beginRun]);
+  const handleReplay = useCallback(() => beginRun('replay'), [beginRun]);
 
   const handleFinish = useCallback(
     (finished: ArcadeGameResult) => dispatch({ type: 'finish', result: finished }),

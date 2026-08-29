@@ -27,8 +27,8 @@ vi.mock('@/inventory/useCoinWallet', async (importOriginal) => {
 });
 
 import { clearSpendIntents, openSpendIntentsFor } from '@/lib/coin-spend-intent';
-import { ARCADE_TOKEN_ADDRESS } from './arcade-token';
-import { ARCADE_TOKEN_COIN_PRICE } from './token-store';
+import { ARCADE_TOKEN_ADDRESS } from '@/arcade/tokens/arcade-token';
+import { ARCADE_TOKEN_COIN_PRICE } from '@/arcade/tokens/token-store';
 import { useBuyArcadeTokens } from './useArcadeTokens';
 
 let client: QueryClient;

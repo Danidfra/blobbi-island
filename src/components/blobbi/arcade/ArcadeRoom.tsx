@@ -8,7 +8,7 @@ import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOn
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 import { BackArrow } from '../BackArrow';
 import { InteractiveElement } from '../InteractiveElement';
-import { ArcadePassModal } from '../ArcadePassModal';
+import { ArcadeTokenShopModal } from './ArcadeTokenShopModal';
 import { ElevatorModal } from '../ElevatorModal';
 import { NoPassModal } from '../NoPassModal';
 import { ArcadeMachine } from './ArcadeMachine';
@@ -17,6 +17,7 @@ import { PrizeCounter } from './prizes/PrizeCounter';
 import { ArcadeCatalogueShell } from './ArcadeCatalogue';
 import { ArcadeDedicatedPreview } from './ArcadeDedicatedPreview';
 import { resolveNativeArcadeGame } from './native-games';
+import { NativeGameHost } from './NativeGameHost';
 
 import {
   arcadeBoundaryForFloor,
@@ -115,7 +116,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   const hasPass = useArcadePass();
 
   const [isElevatorHovered, setIsElevatorHovered] = useState(false);
-  const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [isTokenShopOpen, setIsTokenShopOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
   const [isNoPassModalOpen, setIsNoPassModalOpen] = useState(false);
   /** Which screen is up. Never a run — see the two-state-machines note above. */
@@ -417,7 +418,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
                 alt={ARCADE_TICKET_COUNTER.alt}
                 effect="opacity"
                 className="absolute"
-                onClick={() => setIsPassModalOpen(true)}
+                onClick={() => setIsTokenShopOpen(true)}
                 requestInteraction={requestInteraction}
                 walkTarget={ARCADE_TICKET_COUNTER.interactionPoint}
               />
@@ -445,12 +446,12 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       </div>
 
       {/*
-        Modals are mounted only while open. `ArcadePassModal` used to be mounted
+        Modals are mounted only while open. The pass modal used to be mounted
         unconditionally on all three floors, running two live TanStack queries
         behind a closed dialog.
       */}
-      {isPassModalOpen && (
-        <ArcadePassModal isOpen onClose={() => setIsPassModalOpen(false)} />
+      {isTokenShopOpen && (
+        <ArcadeTokenShopModal isOpen onClose={() => setIsTokenShopOpen(false)} />
       )}
       {isElevatorModalOpen && (
         <ElevatorModal isOpen onClose={() => setIsElevatorModalOpen(false)} />
@@ -485,21 +486,24 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
         The dismiss label is decided HERE, because the room is what knows where
         leaving lands.
       */}
-      {view.kind === 'game' &&
-        activeGame &&
-        lifecycle.status !== 'closed' &&
-        activeGame.render({
-          machineId: view.machineId,
-          entry: activeGame.entry,
-          lifecycle,
-          dispatch,
-          onExit: handleExitGame,
-          exitLabel: activeGame.from === 'shared-catalogue' ? 'Back to games' : 'Back to the arcade',
-          exitAriaLabel:
-            activeGame.from === 'shared-catalogue'
-              ? 'Back to the game list'
-              : 'Back to the arcade room',
-        })}
+      {view.kind === 'game' && activeGame && lifecycle.status !== 'closed' && (
+        <NativeGameHost
+          render={activeGame.render}
+          props={{
+            machineId: view.machineId,
+            entry: activeGame.entry,
+            lifecycle,
+            dispatch,
+            onExit: handleExitGame,
+            exitLabel:
+              activeGame.from === 'shared-catalogue' ? 'Back to games' : 'Back to the arcade',
+            exitAriaLabel:
+              activeGame.from === 'shared-catalogue'
+                ? 'Back to the game list'
+                : 'Back to the arcade room',
+          }}
+        />
+      )}
 
       {/*
         A dedicated machine whose game is not built: the pool table, the air

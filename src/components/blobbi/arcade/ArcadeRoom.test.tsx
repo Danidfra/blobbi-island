@@ -13,6 +13,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 
+import { FREE_ARCADE_GAME_ENTRY } from '@/arcade/tokens/game-entry';
+
+// These tests are about walking the room, opening cabinets and switching
+// views — not about the arcade economy. The turnstile reads the player's
+// inventory, so it is stubbed to free play here; what it actually charges is
+// covered by `useArcadeGameEntry.test.tsx`.
+vi.mock('@/hooks/useArcadeGameEntry', () => ({
+  useArcadeGameEntry: () => FREE_ARCADE_GAME_ENTRY,
+}));
+
 import { ArcadeRoom } from './ArcadeRoom';
 import { arcadeMachines, type ArcadeFloorId } from '@/lib/arcade-machines-config';
 import { arcadePropsByFloor } from '@/lib/arcade-room-config';
@@ -83,9 +93,9 @@ vi.mock('./prizes/PrizeCounter', () => ({
   PrizeCounter: () => <div data-prize-counter data-testid="prize-counter-surface" />,
 }));
 
-vi.mock('../ArcadePassModal', () => ({
-  ArcadePassModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="pass-modal" /> : null,
+vi.mock('./ArcadeTokenShopModal', () => ({
+  ArcadeTokenShopModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="token-shop-modal" /> : null,
 }));
 vi.mock('../ElevatorModal', () => ({
   ElevatorModal: ({ isOpen }: { isOpen: boolean }) =>
@@ -544,21 +554,21 @@ describe('elevator', () => {
   });
 });
 
-describe('ticket counter', () => {
-  it('opens the pass modal only after arrival', () => {
+describe('token counter', () => {
+  it('opens the token counter only after arrival', () => {
     renderRoom('ground');
 
-    const window_ = screen.getByAltText(/buy an Arcade Pass/i).parentElement as HTMLElement;
+    const window_ = screen.getByAltText(/buy Arcade Tokens/i).parentElement as HTMLElement;
     fireEvent.click(window_);
-    expect(screen.queryByTestId('pass-modal')).toBeNull();
+    expect(screen.queryByTestId('token-shop-modal')).toBeNull();
 
     act(() => requests[0].action());
-    expect(screen.getByTestId('pass-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('token-shop-modal')).toBeInTheDocument();
   });
 
-  it('does not mount the pass modal while it is closed', () => {
+  it('does not mount the token counter while it is closed', () => {
     renderRoom('ground');
-    expect(screen.queryByTestId('pass-modal')).toBeNull();
+    expect(screen.queryByTestId('token-shop-modal')).toBeNull();
   });
 });
 

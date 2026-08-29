@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { ArcadeEvent, ArcadeMachineState } from '@/arcade/arcade-machine-state';
+import type { ArcadeGameEntry } from '@/arcade/tokens/game-entry';
 import {
   BLOBBI_AIR_HOCKEY_GAME_ID,
   BLOBBI_DANCE_GAME_ID,
@@ -81,6 +82,14 @@ export interface NativeArcadeGameProps {
   readonly exitLabel: string;
   /** Accessible name for that control. Describes the destination. */
   readonly exitAriaLabel: string;
+  /**
+   * The turnstile that charges Arcade Tokens for a run.
+   *
+   * Passed down rather than reached for, so `src/arcade` stays a domain layer
+   * that cannot touch an inventory writer — the boundary test enforces that,
+   * and this is the seam that respects it. Omitted, every machine plays free.
+   */
+  readonly gameEntry?: ArcadeGameEntry;
 }
 
 export type NativeArcadeGameRenderer = (props: NativeArcadeGameProps) => ReactNode;
@@ -110,6 +119,7 @@ const NATIVE_ARCADE_GAMES: Readonly<Record<string, NativeArcadeGameRenderer>> = 
       onExit={props.onExit}
       exitLabel={props.exitLabel}
       exitAriaLabel={props.exitAriaLabel}
+      entry={props.gameEntry}
     />
   ),
   [BLOBBI_AIR_HOCKEY_GAME_ID]: (props: NativeArcadeGameProps) => (
@@ -122,6 +132,7 @@ const NATIVE_ARCADE_GAMES: Readonly<Record<string, NativeArcadeGameRenderer>> = 
       onExit={props.onExit}
       exitLabel={props.exitLabel}
       exitAriaLabel={props.exitAriaLabel}
+      entry={props.gameEntry}
     />
   ),
   [BLOBBI_POOL_GAME_ID]: (props: NativeArcadeGameProps) => (
@@ -134,6 +145,7 @@ const NATIVE_ARCADE_GAMES: Readonly<Record<string, NativeArcadeGameRenderer>> = 
       onExit={props.onExit}
       exitLabel={props.exitLabel}
       exitAriaLabel={props.exitAriaLabel}
+      entry={props.gameEntry}
     />
   ),
 });

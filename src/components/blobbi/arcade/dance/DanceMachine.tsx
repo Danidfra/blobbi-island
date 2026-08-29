@@ -22,6 +22,11 @@ import { ArcadeGameShell } from '../ArcadeGameShell';
 import { BlobbiDanceGame } from './BlobbiDanceGame';
 import { DancePreview } from './DancePreview';
 import { DanceResults } from './DanceResults';
+import { arcadeEntryRefusalMessage } from '@/arcade/tokens/entry-copy';
+import {
+  FREE_ARCADE_GAME_ENTRY,
+  type ArcadeGameEntry,
+} from '@/arcade/tokens/game-entry';
 
 /**
  * Blobbi Dance — the controller that joins the game to the shared arcade.
@@ -78,6 +83,12 @@ export interface DanceMachineProps {
    */
   readonly exitLabel: string;
   readonly exitAriaLabel: string;
+  /**
+   * The turnstile that charges for a run. Injected, like the reward writer:
+   * a machine rendered without one plays free, which is the safe default —
+   * charging by omission would be taking money nobody wired up.
+   */
+  readonly entry?: ArcadeGameEntry;
   /** Overridable for the DEV harness and tests. */
   readonly audioFactory?: DanceAudioFactory;
   /** Substitute reward writer. Production passes nothing. */
@@ -118,6 +129,7 @@ export function DanceMachine({
   rewardWriter,
   chart = DEFAULT_DANCE_CHART,
   mintRunId = defaultMintRunId,
+  entry = FREE_ARCADE_GAME_ENTRY,
   showDebugDetails = false,
 }: DanceMachineProps) {
   const reducedMotion = useReducedMotion();
@@ -237,19 +249,40 @@ export function DanceMachine({
     return true;
   }, [audioFactory, track]);
 
-  const handleStart = useCallback(() => {
-    if (chartProblems.length > 0) return;
-    setAbortNotice(null);
-    if (!prepareEngine()) return;
-    dispatch({ type: 'start', runId: mintRunId(), difficulty: chart.difficulty });
-  }, [chartProblems.length, dispatch, mintRunId, chart.difficulty, prepareEngine]);
+  /**
+   * The commitment boundary: a Token is charged here and nowhere earlier.
+   * A broken chart and a failed audio engine both refuse BEFORE the charge —
+   * the player must never pay for a run that cannot start.
+   */
+  const beginRun = useCallback(
+    (kind: 'start' | 'replay') => {
+      if (chartProblems.length > 0) return;
+      setAbortNotice(null);
+      // Everything that can refuse for FREE happens first: a broken chart or a
+      // dead audio engine must never cost the player a Token.
+      if (!prepareEngine()) return;
 
-  const handleReplay = useCallback(() => {
-    if (chartProblems.length > 0) return;
-    setAbortNotice(null);
-    if (!prepareEngine()) return;
-    dispatch({ type: 'replay', runId: mintRunId(), difficulty: chart.difficulty });
-  }, [chartProblems.length, dispatch, mintRunId, chart.difficulty, prepareEngine]);
+      // A free run — or one a Pass waives — starts on this tick, with no
+      // write and no await.
+      if (entry.admitFree(gameId)) {
+        dispatch({ type: kind, runId: mintRunId(), difficulty: chart.difficulty });
+        return;
+      }
+
+      void (async () => {
+        const admitted = await entry.admit(gameId);
+        if (!admitted.ok) {
+          setAbortNotice(arcadeEntryRefusalMessage(admitted));
+          return;
+        }
+        dispatch({ type: kind, runId: mintRunId(), difficulty: chart.difficulty });
+      })();
+    },
+    [chartProblems.length, dispatch, chart.difficulty, prepareEngine, entry, gameId, mintRunId],
+  );
+
+  const handleStart = useCallback(() => beginRun('start'), [beginRun]);
+  const handleReplay = useCallback(() => beginRun('replay'), [beginRun]);
 
   const handleFinish = useCallback(
     (finished: ArcadeGameResult) => dispatch({ type: 'finish', result: finished }),
