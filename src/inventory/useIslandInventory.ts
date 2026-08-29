@@ -35,6 +35,10 @@ import {
   type RelayReader,
 } from '@/lib/relay-read';
 import type { ItemCatalog } from './useItemCatalog';
+import {
+  confirmedInventoryEvent,
+  forgetSupersededInventory,
+} from './confirmed-inventory';
 
 /** Island view-model entry for a single owned item. */
 export interface IslandInventoryEntry {
@@ -236,7 +240,18 @@ export function useIslandInventory() {
         signal: c.signal,
         timeoutMs: INVENTORY_READ_TIMEOUT_MS,
       });
-      return selectNewestInventory(events, user.pubkey).inventory;
+      // Newest-event selection, extended to include an event THIS TAB has
+      // confirmed. A relay does not serve a replaceable event the moment it
+      // accepts it, so a refetch triggered by our own write can easily answer
+      // with the event we just replaced; folding the confirmed one in means a
+      // lagging answer can never roll the UI backwards. Once the relay's own
+      // answer is at least as new, the local record is dropped and the relay
+      // is authoritative again.
+      const relay = selectNewestInventory(events, user.pubkey);
+      forgetSupersededInventory(user.pubkey, relay.createdAt);
+      const local = confirmedInventoryEvent(user.pubkey);
+      if (!local || local.created_at <= relay.createdAt) return relay.inventory;
+      return selectNewestInventory([...events, local], user.pubkey).inventory;
     },
     enabled: !!user?.pubkey,
     staleTime: 15000,

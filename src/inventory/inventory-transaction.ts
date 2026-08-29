@@ -46,6 +46,12 @@
  *   → STRICT publish (a timeout is NOT success)
  * ```
  *
+ * A definite accept also records the signed event as this tab's newest known
+ * inventory (see `confirmed-inventory.ts`), which is what lets every reader
+ * show the result at once instead of waiting for the relay to serve it back.
+ * That is a READ-side convenience only: nothing here ever becomes a publish
+ * base, which is still always an authoritative in-lock relay read.
+ *
  * Idempotency, balance policy, optimistic UI and reconciliation are
  * deliberately NOT here — they differ per writer and live with their callers
  * (the Coin op ledger, the arcade claim ledger). This module only guarantees
@@ -58,6 +64,8 @@ import type { NUser } from '@nostrify/react/login';
 
 import { withQueuedCrossTabLock } from '@/lib/cross-tab-op-lock';
 import { nextReplaceableCreatedAt } from '@/lib/replaceable-write';
+
+import { recordConfirmedInventory } from './confirmed-inventory';
 
 import {
   buildInventoryTemplate,
@@ -280,6 +288,14 @@ export async function runInventoryTransaction<T>(
             await nostr.event(signed, {
               signal: AbortSignal.timeout(PUBLISH_TIMEOUT_MS),
             });
+            // THE ONE CACHE RECONCILIATION POINT. A relay accepted this exact
+            // event, so it is now the newest inventory state — more recent
+            // than anything a still-propagating relay can answer with. Every
+            // writer runs through here, so none of them needs to patch
+            // quantities itself. Recording happens only on a definite accept:
+            // a timeout is ambiguous and must leave the UI showing what is
+            // still actually known.
+            recordConfirmedInventory(pubkey, signed);
           } catch (error) {
             const isTimeout =
               error instanceof Error &&

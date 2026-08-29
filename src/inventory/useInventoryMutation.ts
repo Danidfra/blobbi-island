@@ -52,7 +52,7 @@ import {
   parseGameItemAddress,
 } from './package';
 import { getInventoryItems } from './protocol-adapter';
-import { inventoryQueryKey, buildEmptyInventory } from './useIslandInventory';
+import { inventoryQueryKey } from './useIslandInventory';
 
 // --- Per-user serialization ------------------------------------------------
 
@@ -411,10 +411,15 @@ export function useInventoryMutation() {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<GameInventory>(key);
 
-      // Optimistically apply to the current cache snapshot (or an empty base).
-      const base = previous ?? buildEmptyInventory(user.pubkey);
+      // Optimism only ever extends what is already KNOWN. A cold cache used to
+      // fall back to an empty inventory here, which rendered a real `0`
+      // balance for a player who simply had not loaded yet — an unknown
+      // balance must never be shown as an empty one. With no snapshot there is
+      // nothing honest to predict, so the cache is left alone and the
+      // confirmed write fills it in a moment later.
+      if (!previous) return {};
       try {
-        const optimistic = applyMutation(base, mutation);
+        const optimistic = applyMutation(previous, mutation);
         queryClient.setQueryData<GameInventory>(key, optimistic);
       } catch {
         // Invalid mutation (e.g. consume with zero) — leave cache untouched;

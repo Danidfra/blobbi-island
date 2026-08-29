@@ -14,6 +14,7 @@ import { AppProvider } from '@/components/AppProvider';
 import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvider';
 import { CoinOpRecoveryController } from '@/components/CoinOpRecoveryController';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
+import { InventoryCacheController } from '@/components/InventoryCacheController';
 import { IslandThemeSync } from '@/components/IslandThemeSync';
 import { PlayerSafetyAccountSync } from '@/components/PlayerSafetyAccountSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -74,6 +75,10 @@ export function App() {
                   nothing; see PlayerSafetyAccountSync for why it is a component. */}
               <PlayerSafetyAccountSync />
               <IslandThemeSync />
+              {/* One confirmed inventory write → one cache update, for every
+                  surface at once. Must sit above anything that reads Coins or
+                  items. */}
+              <InventoryCacheController />
               <EconomyEntryController />
               {/* Read-only reconciliation of unresolved (ambiguous) Coin
                   operations on login. Never publishes. */}
