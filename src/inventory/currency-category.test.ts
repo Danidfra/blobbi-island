@@ -185,7 +185,7 @@ describe('currency is not purchasable', () => {
   });
 
   it('has no price, so a purchase attempt is rejected as "not for sale"', () => {
-    // `usePurchaseItem` throws when `priceForAddress` returns null. A price of
+    // The purchase path throws when `priceForAddress` returns null. A price of
     // 0 would have meant "free", which is why the shop no longer defaults.
     expect(priceForAddress(TICKET_ADDRESS)).toBeNull();
   });

@@ -123,7 +123,7 @@ describe('unpriced official items are not purchasable', () => {
   });
 
   it('returns null rather than 0 for an unpriced official item', () => {
-    // A 0 would read as "free" to usePurchaseItem; null makes it throw
+    // A 0 would read as "free" to the purchase path; null makes it throw
     // "Item is not for sale".
     expect(priceForAddress(ticket)).toBeNull();
     expect(priceForItemId('cur_arcade_ticket')).toBeNull();

@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
@@ -51,13 +51,11 @@ describe('one canonical Coin balance', () => {
   it('legacy profile coins are never read for economic decisions', () => {
     // Parsed-profile `.coins` access — the dual-read fallback shape. Only the
     // parser and the type definition may mention the field (compat data, acted
-    // on by NOTHING); `useOptimizedStatus` is generic StatusUpdate merge
-    // plumbing. Shop PRICES named `coins:` and UI copy are not balance reads
-    // and are deliberately not matched.
+    // on by NOTHING). Shop PRICES named `coins:` and UI copy are not balance
+    // reads and are deliberately not matched.
     const allowed = new Set([
       'src/lib/blobbi-parsers.ts',
       'src/lib/blobbi-types.ts',
-      'src/hooks/useOptimizedStatus.ts', // generic StatusUpdate merge plumbing
     ]);
     const dualRead =
       /\b(owner|ownerProfile|existingProfile|mergedProfile|profile)\??\.coins\b/;
@@ -161,6 +159,29 @@ describe('one canonical Coin balance', () => {
     expect(source).not.toMatch(
       /\b(owner|ownerProfile|existingProfile|mergedProfile|profile)\??\.coins\b/,
     );
+  });
+
+  it('the retired single-item purchase hook stays deleted', () => {
+    // `useBatchPurchase` is the canonical shop path and was always the only
+    // one with a caller; `usePurchaseItem` duplicated it, drifted (it kept a
+    // price contract the live path had moved past) and had no production or
+    // dev caller. Deleting it is only durable if nothing reintroduces it.
+    expect(existsSync(join(ROOT, 'src/inventory/usePurchaseItem.ts'))).toBe(false);
+    expect(readFileSync(join(ROOT, 'src/inventory/index.ts'), 'utf8')).not.toMatch(
+      /usePurchaseItem/,
+    );
+
+    const offenders = PRODUCTION_FILES.filter((file) =>
+      /\busePurchaseItem\b/.test(readFileSync(file, 'utf8')),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it('exactly one production hook spends Coins on shop items', () => {
+    const purchaseHooks = PRODUCTION_FILES.filter((file) =>
+      /export function use\w*Purchase\w*\(/.test(readFileSync(file, 'utf8')),
+    ).map(rel);
+    expect(purchaseHooks).toEqual(['src/inventory/useBatchPurchase.ts']);
   });
 
   it('profile writers carry no coin responsibility', () => {

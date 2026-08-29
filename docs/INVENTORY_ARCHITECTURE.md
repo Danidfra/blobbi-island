@@ -64,7 +64,7 @@ compatibility/UI identifier only; the item `name` is never identity.
   separate domain, not a drifting duplicate.
 - Purchasability is separate from recognition: an official item with no price
   entry is not for sale, and `priceForAddress` returns `null` (never `0`), so
-  `usePurchaseItem` rejects it.
+  `normalizePurchaseLines` rejects it before any spend intent or wallet call.
 - Deterministic maps: `itemIdToAddress`, `addressToItemId`, `dTagToAddress`.
 - Addresses are built with the package's `buildGameItemAddress`, so they cannot
   drift from the issuer constant.
@@ -161,10 +161,10 @@ Concurrency model:
   `OwnerProfile.inventory` field + `InventoryItem` type, and the `inventory`
   carry-through in `useUpdateOwnerProfile` (`useBlobbiEvents.ts:158`). These are
   parsed but NEVER serialized (`mergeOwnerProfileTags` omits `storage`) and are
-  NOT read by any reachable production flow. The only reader of
-  `OwnerProfile.inventory` is `OptimizedStatusExample.tsx:157-161`, a dev-only
-  example component that is not imported anywhere in `src` (not routed, never
-  rendered). `parseOwnerProfile` itself is NOT dead — it is the production
+  NOT read by any reachable production flow. Its only reader used to be
+  `OptimizedStatusExample.tsx`, a dev-only example component that was never
+  imported, routed or rendered; that component has since been deleted, so the
+  field now has no reader at all. `parseOwnerProfile` itself is NOT dead — it is the production
   profile reader for current companion / owned pets (its `coins` field is
   inert legacy compat data since the economy reset) — only its
   consumable sub-branch is inert. This compatibility code is retained so a

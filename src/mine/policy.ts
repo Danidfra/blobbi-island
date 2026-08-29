@@ -25,10 +25,10 @@
  * ## Why energy is a real boundary
  *
  * Nothing in this client regenerates energy passively — there is no decay or
- * recovery loop, and `useWakePet`'s full-energy reset is an optimistic update
- * in an unreferenced example component that publishes nothing. The only real
- * source of energy is a consumable bought with Coins, and every one of them
- * loses when converted back through mining:
+ * recovery loop, and no sleep/wake reset (the one that used to exist was an
+ * optimistic update in an unreferenced example component, and both are gone).
+ * The only real source of energy is a consumable bought with Coins, and every
+ * one of them loses when converted back through mining:
  *
  * ```
  *   a dig pays        MINE_EXPECTED_COINS_PER_DIG (7.2) for 10 energy

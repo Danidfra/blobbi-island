@@ -31,9 +31,9 @@
  * ## Missing prices are `null`, never `0`
  *
  * An item with no entry is NOT FOR SALE. `priceForAddress` returns `null`, which
- * is what makes `usePurchaseItem` reject it ("Item is not for sale"). An earlier
- * shape defaulted to `0`, which would have made any unpriced official item — the
- * Arcade Ticket, for one — purchasable for free.
+ * is what makes `normalizePurchaseLines` reject it ("Item is not for sale"). An
+ * earlier shape defaulted to `0`, which would have made any unpriced official
+ * item — the Arcade Ticket, for one — purchasable for free.
  */
 
 import {

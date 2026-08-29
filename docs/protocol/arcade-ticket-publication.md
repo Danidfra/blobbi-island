@@ -124,7 +124,7 @@ and emits no `max_stack` and no `created_at`.
 | `t` tags | Single-letter, relay-indexed, so the ticket is discoverable by topic. |
 | **no `max_stack`** | No cap intended. The package's quantity helpers already guard `Number.MAX_SAFE_INTEGER`. |
 | **no transferability tag** | Transfer is not supported by the Island UI and no such tag exists in the package schema. Product intent is not expressed by inventing tags. |
-| **not in the coin shop** | `src/inventory/shop-catalog.ts` prices only consumables and *rejects* a currency price at module load. `priceForAddress` returns `null`, so `usePurchaseItem` refuses it. |
+| **not in the coin shop** | `src/inventory/shop-catalog.ts` prices only consumables and *rejects* a currency price at module load. `priceForAddress` returns `null`, so the purchase path refuses it. |
 
 ---
 

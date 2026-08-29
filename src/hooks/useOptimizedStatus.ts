@@ -296,22 +296,3 @@ export function useCleanPet() {
     updatePetBehavior(petId, { isDirty: false });
   }, [updatePetStats, updatePetCareTimestamp, updatePetBehavior]);
 }
-
-/** Hook for putting a pet to sleep with optimistic updates */
-export function usePutPetToSleep() {
-  const { updatePetBehavior } = useOptimizedStatus();
-
-  return useCallback((petId: string) => {
-    updatePetBehavior(petId, { isSleeping: true });
-  }, [updatePetBehavior]);
-}
-
-/** Hook for waking up a pet with optimistic updates */
-export function useWakePet() {
-  const { updatePetStats, updatePetBehavior } = useOptimizedStatus();
-
-  return useCallback((petId: string) => {
-    updatePetBehavior(petId, { isSleeping: false });
-    updatePetStats(petId, { energy: 100 }); // Full energy after sleep
-  }, [updatePetStats, updatePetBehavior]);
-}
