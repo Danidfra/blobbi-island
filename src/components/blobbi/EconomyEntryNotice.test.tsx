@@ -112,6 +112,18 @@ describe('EconomyEntryNotice', () => {
     });
   });
 
+  it('shows the official Coin mark, not a stand-in emoji', () => {
+    mockStatus.mockReturnValue(statusOf({ phase: 'applying' }));
+    const { container } = render(<EconomyEntryNotice />);
+
+    // The shared CoinIcon (artwork, or the published symbol when it cannot
+    // load) — the same mark every other economy surface uses.
+    expect(
+      container.querySelector('[data-coin-icon], [data-coin-icon-fallback]'),
+    ).not.toBeNull();
+    expect(container.innerHTML).not.toContain('\u{1FA99}');
+  });
+
   it('never leaks protocol or migration language', () => {
     for (const phase of ['applying', 'ambiguous'] as const) {
       mockStatus.mockReturnValue(statusOf({ phase, canRetry: true }));

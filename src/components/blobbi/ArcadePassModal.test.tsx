@@ -16,7 +16,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import { ArcadePassModal, ARCADE_PASS_PRICE } from './ArcadePassModal';
+import { ArcadePassModal } from './ArcadePassModal';
+import { ARCADE_PASS_PRICE } from '@/lib/arcade-pass';
 import { clearArcadePass, hasArcadePass } from '@/lib/arcade-pass';
 import { clearSpendIntents } from '@/lib/coin-spend-intent';
 
@@ -69,7 +70,7 @@ function renderModal() {
   return render(<ArcadePassModal isOpen onClose={() => {}} />);
 }
 
-const buyButton = () => screen.getByRole('button', { name: /buy ticket|buying/i });
+const buyButton = () => screen.getByRole('button', { name: /buy pass|buying/i });
 
 beforeEach(() => {
   spendCoins
@@ -133,7 +134,9 @@ describe('the coin balance is never faked', () => {
     renderModal();
 
     expect(buyButton()).toBeDisabled();
-    expect(screen.getByText(new RegExp(`need ${ARCADE_PASS_PRICE} coins`, 'i'))).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`need ${ARCADE_PASS_PRICE} Blobbi Coins`, 'i')),
+    ).toBeInTheDocument();
   });
 });
 

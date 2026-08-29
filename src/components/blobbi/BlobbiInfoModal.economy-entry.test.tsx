@@ -147,3 +147,72 @@ describe('the in-world Coins surface', () => {
     expect(row).toHaveTextContent('12');
   });
 });
+
+/**
+ * F-09 — the in-world Coins row uses the shared presentation.
+ *
+ * Audited rather than rewritten: it already renders through `CoinAmount` and
+ * already distinguishes unknown from zero. These pin that, so a future edit
+ * cannot quietly reintroduce a bare number.
+ */
+describe('the Coins row presentation', () => {
+  it('renders the balance through the shared CoinAmount', async () => {
+    mockEntry.mockReturnValue(entryOf({ phase: 'applied' }));
+    mockBalance.mockReturnValue(balanceOf({ balance: 137 }));
+    renderModal();
+
+    const row = await coinHud();
+    const amount = row.querySelector('[data-coin-amount]');
+    expect(amount).toHaveAttribute('data-coin-amount', '137');
+    expect(row.querySelector('[data-coin-icon], [data-coin-icon-fallback]')).not.toBeNull();
+  });
+
+  it('an unknown balance renders as unknown, never as zero', async () => {
+    mockEntry.mockReturnValue(entryOf({ phase: 'applied' }));
+    mockBalance.mockReturnValue(balanceOf({ balance: null }));
+    renderModal();
+
+    const row = await coinHud();
+    expect(row.querySelector('[data-coin-amount]')).toHaveAttribute(
+      'data-coin-amount',
+      'unknown',
+    );
+    expect(row.textContent).not.toMatch(/\b0\b/);
+  });
+
+  it('a genuine zero renders as zero', async () => {
+    // The distinction only matters if a real empty purse still reads as one.
+    mockEntry.mockReturnValue(entryOf({ phase: 'applied' }));
+    mockBalance.mockReturnValue(balanceOf({ balance: 0 }));
+    renderModal();
+
+    const row = await coinHud();
+    expect(row.querySelector('[data-coin-amount]')).toHaveAttribute('data-coin-amount', '0');
+  });
+
+  it('a freshly reconciled balance renders immediately', async () => {
+    // The inventory cache reconciliation feeds this row through useCoinBalance;
+    // a new value must render on the next pass with no extra plumbing.
+    mockEntry.mockReturnValue(entryOf({ phase: 'applied' }));
+    mockBalance.mockReturnValue(balanceOf({ balance: 100 }));
+    const { rerender } = renderModal();
+    expect((await coinHud()).querySelector('[data-coin-amount]')).toHaveAttribute(
+      'data-coin-amount',
+      '100',
+    );
+
+    mockBalance.mockReturnValue(balanceOf({ balance: 80 }));
+    rerender(
+      <TestApp>
+        <div className="relative h-screen w-full">
+          <BlobbiInfoModal isOpen onClose={() => {}} />
+        </div>
+      </TestApp>,
+    );
+
+    expect((await coinHud()).querySelector('[data-coin-amount]')).toHaveAttribute(
+      'data-coin-amount',
+      '80',
+    );
+  });
+});

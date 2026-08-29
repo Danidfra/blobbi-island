@@ -6,11 +6,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useToast } from '@/hooks/useToast';
 import { useCoinBalance, useCoinWallet } from '@/inventory/useCoinWallet';
 import { mintCoinOpId, CoinWalletError } from '@/inventory/coin-wallet';
-import { grantArcadePass } from '@/lib/arcade-pass';
+import { ARCADE_PASS_PRICE, grantArcadePass } from '@/lib/arcade-pass';
+import { CoinAmount } from './CoinAmount';
 import { closeSpendIntent, openSpendIntent } from '@/lib/coin-spend-intent';
-
-/** What an Arcade Pass costs, in Blobbi Coins. */
-export const ARCADE_PASS_PRICE = 20;
 
 /**
  * Sentinel distinguishing "the charge failed" from "the charge went through but
@@ -202,8 +200,10 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
       presentation="in-frame"
       size="sm"
       title="Arcade Pass"
-      description={`Costs ${ARCADE_PASS_PRICE} coins. Valid until you leave the arcade.`}
-      icon="🎟️"
+      description={`Costs ${ARCADE_PASS_PRICE} Blobbi Coins. Valid until you leave the arcade.`}
+      // The elevator, not a ticket: the pass is floor ACCESS, and an Arcade
+      // Ticket is the separate currency the games pay out.
+      icon="🛗"
       footer={
         <>
           <Button
@@ -220,7 +220,7 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
             disabled={!canPurchase}
             className="min-h-[44px]"
           >
-            {isPurchasing ? 'Buying…' : 'Buy Ticket'}
+            {isPurchasing ? 'Buying…' : 'Buy Pass'}
           </Button>
         </>
       }
@@ -235,6 +235,9 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
           />
           <p className="text-sm font-semibold text-island-ink">
             Access every arcade floor and the elevator.
+          </p>
+          <p className="mt-1 text-xs text-island-ink-soft">
+            This is a pass, not an Arcade Ticket — you keep your Tickets.
           </p>
         </div>
 
@@ -263,15 +266,15 @@ export function ArcadePassModal({ isOpen, onClose }: ArcadePassModalProps) {
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-island-ink-soft">
-              Your current coins: <span className="font-bold text-island-warn">{coins}</span>
+            <p className="inline-flex items-center gap-1 text-sm text-island-ink-soft">
+              Your current coins: <CoinAmount amount={coins} className="font-bold text-island-warn" />
             </p>
           )}
         </div>
 
         {!isLoadingBalance && !balanceError && !canAfford && (
           <p className="text-sm text-island-danger">
-            You need {ARCADE_PASS_PRICE} coins to buy an Arcade Pass.
+            You need {ARCADE_PASS_PRICE} Blobbi Coins to buy an Arcade Pass.
           </p>
         )}
 

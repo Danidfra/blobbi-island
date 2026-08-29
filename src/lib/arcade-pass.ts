@@ -49,10 +49,20 @@
  *
  * Storage can be unavailable or throw (Safari private browsing, a storage quota,
  * a hardened profile). A write that quietly failed while the caller believed it
- * succeeded is how a player pays 20 coins and receives nothing, so
- * {@link grantArcadePass} and {@link clearArcadePass} READ BACK and return
- * whether the value they intended is now actually stored.
+ * succeeded is how a player pays {@link ARCADE_PASS_PRICE} Coins and receives
+ * nothing, so {@link grantArcadePass} and {@link clearArcadePass} READ BACK and
+ * return whether the value they intended is now actually stored.
  */
+
+/**
+ * What an Arcade Pass costs, in Blobbi Coins.
+ *
+ * Lives here rather than in the purchase modal because more than one surface
+ * tells the player the price — the modal that sells the pass, and the notice
+ * shown when the elevator turns them away. A number written twice is a number
+ * that eventually disagrees with itself, so both read this.
+ */
+export const ARCADE_PASS_PRICE = 20;
 
 const STORAGE_KEY = 'has-arcade-pass';
 

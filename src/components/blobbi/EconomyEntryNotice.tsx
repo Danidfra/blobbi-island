@@ -28,6 +28,7 @@
 
 import { cn } from '@/lib/utils';
 import { useEconomyEntryStatus } from '@/inventory/useEconomyEntry';
+import { CoinIcon } from './CoinAmount';
 
 interface EconomyEntryNoticeProps {
   /**
@@ -75,7 +76,9 @@ export function EconomyEntryNotice({ inWorld = false }: EconomyEntryNoticeProps 
       )}
     >
       <span className="inline-flex items-center gap-2">
-        <span aria-hidden>🪙</span>
+        {/* The official Coin mark, so every economy surface shows the same
+            currency rather than a stand-in emoji. */}
+        <CoinIcon />
         {message}
         {showRetry && (
           <button
