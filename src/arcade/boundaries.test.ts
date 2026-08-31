@@ -154,12 +154,23 @@ describe('the Prize Counter keeps its boundaries', () => {
     }
   });
 
-  it('routes ticket SPENDING nowhere — the counter is preview-only since Phase 9.5', () => {
-    // The temporary V1 redemption was retired from the player-facing surface:
-    // NO arcade component may reach the spend writer OR the (dormant)
-    // redemption hook any more. The hook and writer stay in the tree for the
-    // future audited grant phase, still bound to each other — asserted last so
-    // their reunion cannot happen by accident on some other path.
+  it('routes ticket SPENDING through exactly ONE component — the Arcade Pass offer', () => {
+    /*
+     * Phase 9.5 retired the temporary V1 redemption from every arcade surface,
+     * and this assertion was `[]` for both lists.
+     *
+     * The Arcade Pass changed that, and only that. It is the first prize with
+     * a real price and a real delivery, so exactly one component may reach the
+     * redemption hook — and NONE may reach the spend writer directly, because
+     * the hook is what owns the durable ledger, the same-tick lock and the
+     * reconcile-only unresolved state. A component that held the writer could
+     * publish a spend with none of that around it.
+     *
+     * The six cosmetic prizes stay preview-only. Their shelf's write-free
+     * import graph is pinned separately and unchanged in
+     * `prize-counter-boundaries.test.ts`; the Pass reaches the counter as a
+     * rendered slot, which carries no imports into it.
+     */
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
       (f) => !/\.test\.tsx?$|\/test-/.test(f),
     );
@@ -171,13 +182,18 @@ describe('the Prize Counter keeps its boundaries', () => {
     const hookUsers = componentFiles
       .filter((file) => importsOf(file).some((s) => /useArcadePrizeRedemption/.test(s)))
       .map((f) => f.replace(`${process.cwd()}/`, ''));
-    expect(hookUsers).toEqual([]);
+    expect(hookUsers).toEqual([
+      'src/components/blobbi/arcade/prizes/ArcadePassOffer.tsx',
+    ]);
 
     const hook = importsOf(join(process.cwd(), 'src/hooks/useArcadePrizeRedemption.ts'));
     expect(hook.some((s) => /arcade-prize-spend-writer/.test(s))).toBe(true);
   });
 
   it('keeps the TEMPORARY ownership store behind the hook, out of the components', () => {
+    // Unchanged by the Arcade Pass: the Pass is NOT delivered into the
+    // ownership store. It is an expiring entitlement, so it substitutes its
+    // own delivery adapter (`arcade-pass-prize.ts`) for that store entirely.
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
       (f) => !/\.test\.tsx?$|\/test-/.test(f),
     );

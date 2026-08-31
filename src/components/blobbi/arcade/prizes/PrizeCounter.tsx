@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import type { OfficialArcadePrize } from '@/arcade/prizes/official-prize-catalog';
@@ -17,15 +17,22 @@ import {
  * card resolved from the real kind:31632 definitions, the player's real
  * kind:31633 inventory and the real kind:31634 equipment state.
  *
- * ## Redemption is not wired, deliberately
+ * ## Redemption is not wired HERE, deliberately
  *
  * This component imports NO spend writer, NO redemption hook, NO ownership
  * store and NO mutation of any kind — the reward-flow boundary test proves it
  * against the import graph. The temporary V1 redemption flow (local ownership
  * + real ticket spend) was retired from this surface; the durable grant flow
- * is a later, separately audited phase. Until then the detail panel shows an
- * honest "redemption is being prepared" state, and the ONLY interactive things
- * here are selection and the write-free preview.
+ * for the six COSMETIC prizes is a later, separately audited phase. Until then
+ * the detail panel shows an honest "redemption is being prepared" state, and
+ * the only interactive things on the shelf are selection and the write-free
+ * preview.
+ *
+ * The Arcade Pass is redeemable today, and it arrives through {@link
+ * PrizeCounterProps.featureSlot} rather than through the shelf. A `ReactNode`
+ * carries no imports, so the guarantee above survives one live redemption
+ * sitting on the same counter — see `ArcadePassOffer`, which is where the
+ * ticket spend actually lives.
  *
  * ## The two compositions
  *
@@ -45,9 +52,17 @@ const FILTER_LABELS: Record<KindFilter, string> = {
 export interface PrizeCounterProps {
   /** Substitute catalog, for tests and the dev harness. */
   readonly catalog?: readonly OfficialArcadePrize[];
+  /**
+   * Rendered above the shelf, for counter items that redeem for real.
+   *
+   * A node rather than a flag or a catalog entry: whatever goes here brings
+   * its own writes, and passing it as content keeps every one of them out of
+   * this module's import graph.
+   */
+  readonly featureSlot?: ReactNode;
 }
 
-export function PrizeCounter({ catalog }: PrizeCounterProps) {
+export function PrizeCounter({ catalog, featureSlot }: PrizeCounterProps) {
   const { prizes, balance, balanceError, isLoggedIn, isLoading } =
     useOfficialArcadePrizes(catalog);
 
@@ -103,15 +118,21 @@ export function PrizeCounter({ catalog }: PrizeCounterProps) {
             Log in to see your tickets and what you own — browsing is free.
           </p>
         )}
-        {/* The standing truth of this phase, stated on the shelf itself. */}
+        {/*
+          The standing truth of this phase, stated on the shelf itself — and
+          scoped to the SHELF, because the feature slot below it may hold
+          something that redeems for real.
+        */}
         <p
           data-prize-counter-preview-notice
           role="status"
           className="mt-1 text-xs blobbi-text-muted"
         >
-          Prize redemption is being prepared. You can preview rewards now.
+          Prize redemption is being prepared. You can preview the rewards below now.
         </p>
       </div>
+
+      {featureSlot}
 
       <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[minmax(0,1fr)_310px] md:gap-3 md:px-4 md:pb-3 md:pt-2">
         {/* ── The shelf: type tabs + grid. Hidden on mobile while a detail is open. ── */}

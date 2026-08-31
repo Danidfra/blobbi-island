@@ -12,6 +12,7 @@ import { ElevatorModal } from '../ElevatorModal';
 import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
 import { PrizeCounter } from './prizes/PrizeCounter';
+import { ArcadePassOffer } from './prizes/ArcadePassOffer';
 import { ArcadeCatalogueShell } from './ArcadeCatalogue';
 import { ArcadeDedicatedPreview } from './ArcadeDedicatedPreview';
 import { resolveNativeArcadeGame } from './native-games';
@@ -537,7 +538,12 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
           */
           contentClassName="overflow-y-auto p-0"
         >
-          <PrizeCounter />
+          {/*
+            The Pass is passed IN rather than imported by the counter, so the
+            shelf's write-free import graph stays provable while the one live
+            redemption sits on the same surface.
+          */}
+          <PrizeCounter featureSlot={<ArcadePassOffer />} />
         </ArcadeGameShell>
       )}
 
