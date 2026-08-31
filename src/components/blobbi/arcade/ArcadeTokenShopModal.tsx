@@ -20,7 +20,7 @@ import { CoinAmount } from '@/components/blobbi/CoinAmount';
 import { useToast } from '@/hooks/useToast';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { useArcadeTokenBalance, useBuyArcadeTokens } from '@/hooks/useArcadeTokens';
-import { formatPassRemaining, useArcadePass } from '@/hooks/useArcadePass';
+import { formatFreePlays, formatPassRemaining, useArcadePass } from '@/hooks/useArcadePass';
 import {
   ARCADE_TOKEN_PURCHASE_OPTIONS,
   arcadeTokenCoinCost,
@@ -38,7 +38,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
   const { balance: tokens, isLoading: tokensLoading } = useArcadeTokenBalance();
   const { mutateAsync: buyTokens, isPending } = useBuyArcadeTokens();
   const { toast } = useToast();
-  const { isActive: hasPass, remainingMs } = useArcadePass();
+  const { isActive: hasPass, isUsable: passUsable, remainingMs, remainingFreePlays } = useArcadePass();
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -104,14 +104,28 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
         {/*
           A pass holder is not being charged, and the counter is where they
           would come to find out why. Saying nothing here reads as a bug.
+
+          The two states are told apart carefully. A Pass covers a LIMITED
+          number of plays, so "you don't need tokens" is true only while the
+          allowance lasts — telling an exhausted pass holder the same thing
+          would send them away from the one counter that can help them.
         */}
-        {hasPass && (
+        {hasPass && passUsable && (
           <p
             className="rounded-panel border border-island-purple/30 bg-island-purple/10 px-3 py-2 text-sm text-island-ink"
-            data-pass-notice
+            data-pass-notice="usable"
           >
-            Your Arcade Pass is active for another {formatPassRemaining(remainingMs)} — plays
-            are free until then, so you do not need tokens right now.
+            Your Arcade Pass covers {formatFreePlays(remainingFreePlays)}, for another{' '}
+            {formatPassRemaining(remainingMs)}. Tokens are only needed once those run out.
+          </p>
+        )}
+        {hasPass && !passUsable && (
+          <p
+            className="rounded-panel border border-island-wood/30 bg-island-cream-2/60 px-3 py-2 text-sm text-island-ink"
+            data-pass-notice="exhausted"
+          >
+            Your Arcade Pass free plays are used up. Games cost Arcade Tokens again —
+            the pass itself expires in {formatPassRemaining(remainingMs)}.
           </p>
         )}
 

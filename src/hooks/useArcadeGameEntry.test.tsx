@@ -33,7 +33,13 @@ vi.mock('@/inventory/useIslandInventory', async (importOriginal) => {
 import { BLOBBI_DANCE_GAME_ID } from '@/arcade/catalogue';
 import { InventoryTransactionError } from '@/inventory/inventory-transaction';
 import { parseInventoryEvent } from '@/inventory/protocol-adapter';
-import { clearArcadePasses, grantArcadePass } from '@/arcade/pass/arcade-pass-entitlement';
+import {
+  ARCADE_PASS_FREE_PLAYS,
+  arcadePassRemainingFreePlays,
+  clearArcadePasses,
+  consumeArcadeFreePlay,
+  grantArcadePass,
+} from '@/arcade/pass/arcade-pass-entitlement';
 import { ARCADE_TOKEN_ADDRESS } from '@/arcade/tokens/arcade-token';
 import { useArcadeGameEntry } from './useArcadeGameEntry';
 
@@ -167,7 +173,7 @@ describe('nothing is charged when a run does not start', () => {
   });
 });
 
-describe('an active Pass makes a play free', () => {
+describe('an active Pass makes a play free — and spends one of its plays', () => {
   it('starts the run and writes nothing at all', async () => {
     grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
     const { result } = renderEntry();
@@ -212,5 +218,116 @@ describe('an active Pass makes a play free', () => {
       outcome = await result.current.admit(BLOBBI_DANCE_GAME_ID);
     });
     expect(outcome).toMatchObject({ ok: true, charged: 1 });
+  });
+
+  it('consumes exactly ONE free play per admitted run', async () => {
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
+    const { result } = renderEntry();
+
+    await act(async () => {
+      await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(ARCADE_PASS_FREE_PLAYS - 1);
+
+    await act(async () => {
+      await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(ARCADE_PASS_FREE_PLAYS - 2);
+  });
+
+  it('spends NEITHER currency when the run is refused', async () => {
+    // The invariant that makes the two costs symmetric: a refused admission
+    // takes nothing at all, not a play and not a Token.
+    inventoryData = { data: null, isLoading: true, isError: false };
+    const { result } = renderEntry();
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: 'unavailable' });
+    expect(mutateInventory).not.toHaveBeenCalled();
+    // No pass exists here, but the point generalises: nothing was consumed.
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(0);
+  });
+
+  it('does not consume a play when the cabinet is merely opened', async () => {
+    // `admitFree` is the only thing a browsing surface may call, and it now
+    // refuses a priced game outright rather than quietly spending a play.
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
+    const { result } = renderEntry();
+
+    expect(result.current.admitFree(BLOBBI_DANCE_GAME_ID)).toBeNull();
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(ARCADE_PASS_FREE_PLAYS);
+    expect(mutateInventory).not.toHaveBeenCalled();
+  });
+
+  it('two starts in one tick spend ONE free play, not two', async () => {
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
+    const { result } = renderEntry();
+
+    await act(async () => {
+      const a = result.current.admit(BLOBBI_DANCE_GAME_ID);
+      const b = result.current.admit(BLOBBI_DANCE_GAME_ID);
+      await Promise.all([a, b]);
+    });
+
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(ARCADE_PASS_FREE_PLAYS - 1);
+  });
+
+  it('charges Tokens again the moment the last free play is gone', async () => {
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
+    for (let i = 0; i < ARCADE_PASS_FREE_PLAYS; i += 1) {
+      await consumeArcadeFreePlay(PUBKEY, NOW);
+    }
+
+    const { result } = renderEntry();
+    // The turnstile stops advertising a waiver it can no longer honour.
+    expect(result.current.hasPass).toBe(false);
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+
+    expect(outcome).toMatchObject({ ok: true, charged: 1, waivedByPass: false });
+    expect(mutateInventory).toHaveBeenCalledTimes(1);
+  });
+
+  it('spends the LAST free play, then charges — one play, one Token, never both', async () => {
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
+    for (let i = 0; i < ARCADE_PASS_FREE_PLAYS - 1; i += 1) {
+      await consumeArcadeFreePlay(PUBKEY, NOW);
+    }
+
+    const { result } = renderEntry();
+    let last;
+    await act(async () => {
+      last = await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+    expect(last).toMatchObject({ ok: true, charged: 0, waivedByPass: true });
+    expect(mutateInventory).not.toHaveBeenCalled();
+    expect(arcadePassRemainingFreePlays(PUBKEY, NOW)).toBe(0);
+
+    let next;
+    await act(async () => {
+      next = await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+    expect(next).toMatchObject({ ok: true, charged: 1, waivedByPass: false });
+    expect(mutateInventory).toHaveBeenCalledTimes(1);
+  });
+
+  it('an expired pass charges Tokens even with plays left over', async () => {
+    // The clock wins. Unused plays are worth nothing once the window closes.
+    grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW - 25 * 60 * 60 * 1000 });
+
+    const { result } = renderEntry();
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.admit(BLOBBI_DANCE_GAME_ID);
+    });
+
+    expect(outcome).toMatchObject({ ok: true, charged: 1, waivedByPass: false });
   });
 });

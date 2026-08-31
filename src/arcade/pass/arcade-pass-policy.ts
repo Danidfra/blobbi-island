@@ -1,200 +1,207 @@
 /**
- * What the 24-hour Arcade Pass costs in Arcade Tickets.
+ * The economics behind the Arcade Pass price.
  *
- * ## The price is deliberately UNSET
+ * The terms themselves live in `arcade-pass-terms.ts`; this module is the
+ * arithmetic that says whether they hold together, and `arcade-pass-policy.test.ts`
+ * re-derives all of it from the LIVE reward policies so a rebalance moves the
+ * verdict instead of stranding it in a comment.
  *
- * {@link ARCADE_PASS_TICKET_PRICE} is `null`, and that is a finding rather than
- * an omission: with the economy as it stands, **the defensible price band is
- * empty**. Two bounds close from opposite sides and cross.
+ * ## The bound that makes a price possible
  *
- * ### The floor: ~2540 Tickets, below which the Pass funds itself
+ * An earlier Pass waived Token costs for its whole 24 hours without limit, and
+ * could not be priced. The reward policy keeps paying a participation floor
+ * after a game's daily scaled runs are used up, so Ticket income has no ceiling
+ * in TIME; a Pass that waives unlimited plays has no ceiling in VALUE either.
+ * The floor below which a Pass funded its own replacement worked out at roughly
+ * a day of grinding — above the permanent headline prize — so there was no
+ * number left to choose.
  *
- * `rewardedRunsPerGamePerDay` (6) caps the SCALED reward, not play. After the
- * sixth run of a game, every further run still pays the `participationFloor`
- * (2 Tickets), with no daily ceiling and no cooldown. At the shortest game's own
- * estimated length that is a sustained ~106 Tickets/hour
- * ({@link sustainedTicketFloorPerHour}) for as long as the player keeps going.
+ * Bounding the plays collapses both ceilings to one finite number:
  *
- * A Pass costs nothing to use, so every hour under one is pure Ticket income.
- * The loop — play → earn → redeem a Pass → play free → earn more — therefore
- * closes at {@link selfFundingThresholdTickets}: the rate times the Pass's own
- * 24-hour life, about **2540 Tickets**. Price it below that and a grinder never
- * spends another Coin on Tokens, which permanently disables the Coin → Token
- * sink the Pass sits in front of — the only Coin sink the arcade has.
+ * ```
+ *   most a Pass can ever return  =  ARCADE_PASS_FREE_PLAYS × maxTicketsPerRun
+ *                                =  15 × 8
+ *                                =  120 Tickets
+ * ```
  *
- * ### The ceiling: 2500 Tickets, the most expensive permanent prize
+ * `maxTicketsPerRun` is 8 for all three games — the same cap whatever the
+ * difficulty, and already inclusive of every first-clear, first-play and
+ * personal-best bonus, because the cap is applied last. So 120 is not a
+ * pessimistic guess: it is the arithmetic maximum, and it is reachable by a
+ * skilled player who chooses to spend every free play on a full-value run.
  *
- * The Pass shares a shelf and a currency with the prize catalog, whose headline
- * item (`celestial-aura`) is a PERMANENT cosmetic at 2500 Tickets. A consumable
- * that expires in a day cannot cost more than the permanent headline without
- * making the shelf incoherent, and in a sane ladder it would sit well below it.
+ * ## The two bounds the price sits between
  *
- * ### Floor > ceiling
+ * | bound | value | why |
+ * | --- | --- | --- |
+ * | floor | {@link maxTicketsFromPassAllowance} = 120 | at or below this the Pass buys its own replacement, and the Coin → Token sink dies |
+ * | ceiling | the permanent headline prize = 2500 | a consumable that expires in a day cannot cost more than a cosmetic you keep |
  *
- * 2540 > 2500, and that is before allowing the Pass any discount for being
- * temporary. There is no number in between, so there is no number to pick.
+ * 180 sits between them with real margin on both sides: a perfect player
+ * recovers at most two thirds of the price, and the Pass is still the cheapest
+ * thing on the counter — which is right for the only item there that expires.
  *
- * ## What has to change first
+ * ## What is deliberately NOT claimed
  *
- * The band opens as soon as one bound moves. In rough order of how much they
- * disturb the rest of the economy:
- *
- * - **Bound the Pass.** Make it N free plays within 24 hours rather than
- *   unlimited ones. Income under the Pass stops being uncapped, the floor drops
- *   away from 2540, and a price can be set against a real number. Smallest
- *   change; keeps the Pass a Ticket prize.
- * - **Bound the supply.** Add a real per-day Ticket ceiling that the
- *   participation floor also counts against. This lowers the floor directly,
- *   and fixes the same exposure on the PRIZE shelf — the 2500-Ticket headline
- *   prize is itself about a day of floor grinding today.
- * - **Move the Pass out of Tickets.** Price it in Coins, so it stays inside the
- *   sink instead of bypassing it. Cheapest to ship, but it abandons the
- *   three-layer design the Pass was introduced for.
- *
- * Until one of those lands, {@link arcadePassAvailability} reports `unpriced`
- * and no production surface offers the Pass for sale. The entitlement itself is
- * complete and correct — it is only unobtainable.
+ * That the Pass can never be earned back. It can, partly, and that is the
+ * point of a reward. The invariant is narrower and checkable: **one Pass
+ * cannot pay for the next one on its own**. Closing the remaining gap takes
+ * Token-charged play, so every Pass cycle still pulls Coins through the sink.
  */
 
-import { ARCADE_REWARD_TUNING } from '@/arcade/reward-policy';
-import { ARCADE_CATALOGUE } from '@/arcade/catalogue';
-import { ARCADE_PASS_DURATION_MS } from './arcade-pass-entitlement';
+import { ARCADE_REWARD_TUNING, arcadeRewardPolicies } from '@/arcade/reward-policy';
 import { ARCADE_TOKEN_COIN_PRICE } from '@/arcade/tokens/token-store';
+import { ARCADE_GAME_TOKEN_COSTS } from '@/arcade/tokens/game-entry-policy';
+import {
+  ARCADE_PASS_DURATION_MS,
+  ARCADE_PASS_FREE_PLAYS,
+  ARCADE_PASS_TICKET_PRICE,
+} from './arcade-pass-terms';
 
-/**
- * The Pass price in Arcade Tickets, or `null` while it is undecided.
- *
- * A number here is a product decision that must be made together with one of
- * the changes in this module's header. Setting it alone ships a Pass that is
- * either self-funding or more expensive than the permanent headline prize;
- * `arcade-pass-policy.test.ts` fails loudly with the offending number either
- * way.
- */
-export const ARCADE_PASS_TICKET_PRICE: number | null = null;
-
-/** Pass length in hours, for reasoning about the numbers above. */
+/** Pass length in hours. For copy and for reasoning about the numbers below. */
 export const ARCADE_PASS_DURATION_HOURS = ARCADE_PASS_DURATION_MS / (60 * 60 * 1000);
 
-/** Whether the Pass can currently be obtained, and why not when it cannot. */
-export type ArcadePassAvailability =
-  | { readonly kind: 'purchasable'; readonly ticketPrice: number }
-  | { readonly kind: 'unpriced'; readonly reason: string };
-
-export function arcadePassAvailability(
-  ticketPrice: number | null = ARCADE_PASS_TICKET_PRICE,
-): ArcadePassAvailability {
-  if (ticketPrice === null) {
-    return {
-      kind: 'unpriced',
-      reason:
-        'The Arcade Pass has no Ticket price yet: Ticket supply has no daily ceiling and the Pass waives unlimited plays, so every price is self-funding.',
-    };
-  }
-  return { kind: 'purchasable', ticketPrice };
+/**
+ * The highest per-run reward any game can pay.
+ *
+ * Read from the live policies rather than written down, and asserted equal
+ * across them — an economy where one game paid more per run would need this
+ * whole analysis redone against that game.
+ */
+export function maxTicketsPerRun(
+  policies: readonly { maxTicketsPerRun: number }[] = arcadeRewardPolicies,
+  hardCap: number = ARCADE_REWARD_TUNING.hardCapPerRun,
+): number {
+  const caps = policies.map((p) => Math.min(p.maxTicketsPerRun, hardCap));
+  return caps.length > 0 ? Math.max(...caps) : 0;
 }
 
 /**
- * The shortest game's estimated length, in ms.
+ * The most Tickets one Pass's free plays can produce.
  *
- * The floor rate is set by whatever a player can finish fastest, not by an
- * average across the three games — a farmer picks the quickest one.
+ * THE bound the price is set against. Every free play is assumed to be a
+ * perfect full-value run, which is the best a player can do by choice.
  */
-export function shortestGameDurationMs(
-  catalogue: readonly { estimatedDurationMs?: number }[] = ARCADE_CATALOGUE,
-): number | null {
-  const durations = catalogue
-    .map((entry) => entry.estimatedDurationMs)
-    .filter((ms): ms is number => typeof ms === 'number' && Number.isFinite(ms) && ms > 0);
-  return durations.length > 0 ? Math.min(...durations) : null;
+export function maxTicketsFromPassAllowance(
+  freePlays: number = ARCADE_PASS_FREE_PLAYS,
+  perRun: number = maxTicketsPerRun(),
+): number {
+  return Math.max(0, freePlays) * perRun;
 }
 
 /**
- * Tickets per hour a player can sustain INDEFINITELY, after every game's daily
- * scaled reward is exhausted.
+ * A realistic haul from the allowance, for describing the offer honestly.
  *
- * Uses the participation floor and the shortest game, because that is the
- * combination that has no cap on it. Deliberately optimistic about the player
- * (no break between runs) and therefore honest about the economy: this is the
- * rate the design has to survive, not the rate a typical player achieves.
+ * Uses the participation floor as the low end and the per-run cap as the high
+ * end. Not used by the invariant — the invariant uses the maximum, because a
+ * bound that only holds for average players is not a bound.
  */
-export function sustainedTicketFloorPerHour(
-  tuning: { participationFloor: number } = ARCADE_REWARD_TUNING,
-  shortestMs: number | null = shortestGameDurationMs(),
-): number | null {
-  if (shortestMs === null || shortestMs <= 0) return null;
-  const runsPerHour = (60 * 60 * 1000) / shortestMs;
-  return runsPerHour * tuning.participationFloor;
-}
-
-/**
- * The price below which a Pass pays for its own replacement.
- *
- * The sustained floor rate times the Pass's own life: a player grinding under a
- * Pass for its full 24 hours earns this many Tickets, all of it profit, because
- * the Pass waived every Token they would otherwise have bought.
- *
- * `null` when the floor rate cannot be derived (no game has an estimated
- * length), which is itself a reason not to price anything.
- */
-export function selfFundingThresholdTickets(
-  ticketsPerHour: number | null = sustainedTicketFloorPerHour(),
-  passDurationHours: number = ARCADE_PASS_DURATION_HOURS,
-): number | null {
-  if (ticketsPerHour === null || ticketsPerHour <= 0) return null;
-  return ticketsPerHour * passDurationHours;
-}
-
-/** The inputs a self-funding check needs, all injectable so tests can vary them. */
-export interface PassSelfFundingInput {
-  /** Candidate Ticket price for one 24-hour Pass. */
-  readonly ticketPrice: number;
-  /** Hours the player actually spends in the arcade during the Pass. */
-  readonly hoursPlayedPerPass: number;
-  /** Sustained Ticket floor rate; defaults to the live one. */
-  readonly ticketsPerHour?: number | null;
-}
-
-export interface PassSelfFundingResult {
-  /** True when a Pass pays for the next Pass, closing the loop. */
-  readonly selfFunding: boolean;
-  /** Tickets earned across `hoursPlayedPerPass`. */
-  readonly ticketsEarned: number;
-  /**
-   * Hours of play needed to earn one Pass back, or `null` when the floor rate
-   * is unknown.
-   */
-  readonly hoursToBreakEven: number | null;
-}
-
-/**
- * Does a Pass at this price pay for its own replacement?
- *
- * The Pass costs nothing to USE, so every hour under it is pure Ticket income.
- * If income over the hours actually played reaches the price, the player never
- * spends a Coin on Tokens again and the sink is gone.
- */
-export function isSelfFundingPassPrice(input: PassSelfFundingInput): PassSelfFundingResult {
-  const rate = input.ticketsPerHour ?? sustainedTicketFloorPerHour();
-  if (rate === null || rate <= 0) {
-    return { selfFunding: false, ticketsEarned: 0, hoursToBreakEven: null };
-  }
-  const ticketsEarned = rate * Math.max(0, input.hoursPlayedPerPass);
+export function expectedTicketsFromPassAllowance(
+  freePlays: number = ARCADE_PASS_FREE_PLAYS,
+): { readonly min: number; readonly max: number } {
   return {
-    selfFunding: ticketsEarned >= input.ticketPrice,
-    ticketsEarned,
-    hoursToBreakEven: input.ticketPrice / rate,
+    min: Math.max(0, freePlays) * ARCADE_REWARD_TUNING.participationFloor,
+    max: maxTicketsFromPassAllowance(freePlays),
   };
 }
 
 /**
- * What a Pass is worth in Coins to a player who starts `plays` games under it.
+ * What the allowance is worth in Coins.
  *
- * Unbounded by construction — which is half of why the price is unset. Exposed
- * so the eventual decision is made against a number rather than a feeling.
+ * Every included play is one the player would otherwise have bought a Token
+ * for, and every Token is bought with Coins. Finite now, which is the whole
+ * difference from the unlimited Pass.
  */
-export function passCoinValueForPlays(
-  plays: number,
-  tokenCoinPrice: number = ARCADE_TOKEN_COIN_PRICE,
+export function passCoinValue(
+  freePlays: number = ARCADE_PASS_FREE_PLAYS,
+  tokensPerPlay: number = maxTokenCostPerPlay(),
+  coinsPerToken: number = ARCADE_TOKEN_COIN_PRICE,
 ): number {
-  return Math.max(0, plays) * tokenCoinPrice;
+  return Math.max(0, freePlays) * Math.max(0, tokensPerPlay) * coinsPerToken;
+}
+
+/**
+ * The dearest game's Token price, read from the live cost table.
+ *
+ * The most a play can cost, so the most a waived play can be worth. All three
+ * games cost 1 today; taking the maximum keeps the Coin value an upper bound
+ * if one of them ever costs more.
+ */
+export function maxTokenCostPerPlay(
+  costs: Readonly<Record<string, number>> = ARCADE_GAME_TOKEN_COSTS,
+): number {
+  const values = Object.values(costs);
+  return values.length > 0 ? Math.max(...values) : 0;
+}
+
+export interface PassSelfFundingResult {
+  /** True when one Pass's own free plays can pay for the next one. */
+  readonly selfFunding: boolean;
+  /** The most those free plays can return. */
+  readonly maxTicketsReturned: number;
+  /** Tickets that must still come from Token-charged play. */
+  readonly shortfall: number;
+  /** Share of the price a perfect player recovers, `0`–`1`. */
+  readonly recoveryRatio: number;
+}
+
+/**
+ * Can a Pass at this price buy its own replacement?
+ *
+ * The one invariant that matters: if the free plays alone can reach the price,
+ * the loop closes and the player never buys another Token.
+ */
+export function evaluatePassPrice(
+  ticketPrice: number = ARCADE_PASS_TICKET_PRICE,
+  freePlays: number = ARCADE_PASS_FREE_PLAYS,
+): PassSelfFundingResult {
+  const maxTicketsReturned = maxTicketsFromPassAllowance(freePlays);
+  return {
+    selfFunding: maxTicketsReturned >= ticketPrice,
+    maxTicketsReturned,
+    shortfall: Math.max(0, ticketPrice - maxTicketsReturned),
+    recoveryRatio: ticketPrice > 0 ? maxTicketsReturned / ticketPrice : Infinity,
+  };
+}
+
+/**
+ * How many FULL-VALUE runs exist in a UTC day, across all three games.
+ *
+ * The reason the allowance stops at 15: past this, a play's worth depends on
+ * how close the redemption was to midnight UTC, which is not a thing to make a
+ * player reason about.
+ */
+export function fullValueRunsPerDay(
+  policies: readonly unknown[] = arcadeRewardPolicies,
+  perGamePerDay: number = ARCADE_REWARD_TUNING.rewardedRunsPerGamePerDay,
+): number {
+  return policies.length * perGamePerDay;
+}
+
+/** Whether the Pass can be offered, and why not when it cannot. */
+export type ArcadePassAvailability =
+  | { readonly kind: 'purchasable'; readonly ticketPrice: number; readonly freePlays: number }
+  | { readonly kind: 'unpriced'; readonly reason: string };
+
+export function arcadePassAvailability(
+  ticketPrice: number = ARCADE_PASS_TICKET_PRICE,
+  freePlays: number = ARCADE_PASS_FREE_PLAYS,
+): ArcadePassAvailability {
+  if (!Number.isInteger(freePlays) || freePlays <= 0) {
+    return {
+      kind: 'unpriced',
+      reason: 'The Arcade Pass has no finite free-play allowance, so its value cannot be bounded.',
+    };
+  }
+  if (!Number.isInteger(ticketPrice) || ticketPrice <= 0) {
+    return { kind: 'unpriced', reason: 'The Arcade Pass has no Ticket price yet.' };
+  }
+  if (evaluatePassPrice(ticketPrice, freePlays).selfFunding) {
+    return {
+      kind: 'unpriced',
+      reason:
+        'The Arcade Pass price is at or below what its own free plays can return, so it would fund its own replacement.',
+    };
+  }
+  return { kind: 'purchasable', ticketPrice, freePlays };
 }

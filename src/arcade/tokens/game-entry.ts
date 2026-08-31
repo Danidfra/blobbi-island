@@ -40,18 +40,26 @@ export type ArcadeEntryAdmitted = Extract<ArcadeEntryOutcome, { ok: true }>;
 export interface ArcadeGameEntry {
   /** Tokens held, or `null` while unknown. Never a fake zero. */
   readonly tokenBalance: number | null;
-  /** True while a Pass is waiving Token costs. */
+  /**
+   * True while a Pass will waive the NEXT start — unexpired and with at least
+   * one free play left. An expired or exhausted pass reports `false`, so a
+   * surface reading this never promises a free play that no longer exists.
+   */
   readonly hasPass: boolean;
   /** Tokens this game costs before any waiver. */
   costFor(gameId: string): number;
   /**
-   * Admit a run that costs NOTHING — a free game, or one a Pass waives.
+   * Admit a run that costs NOTHING AT ALL — a game with no Token price.
    *
-   * Synchronous on purpose. A free admission is a pure decision with no I/O,
-   * and making the caller await one would put a microtask between pressing
-   * Play and the game starting for every player holding a Pass. Returns
-   * `null` when a charge is actually required, and the caller must then await
-   * {@link admit}.
+   * Synchronous on purpose: a genuinely free admission is a pure decision with
+   * no I/O, and the DEV harness and every machine test run entirely on this
+   * path. Returns `null` whenever anything has to be consumed, and the caller
+   * must then await {@link admit}.
+   *
+   * A Pass start is NOT free in this sense. The Pass carries a finite
+   * allowance, so admitting under it decrements a stored count — a write, and
+   * one that has to be serialised against other tabs. That belongs at the same
+   * commitment boundary as the Token charge, which is {@link admit}.
    */
   admitFree(gameId: string): ArcadeEntryAdmitted | null;
   /** Charge for and admit one run of `gameId`. */
