@@ -166,10 +166,12 @@ describe('the Prize Counter keeps its boundaries', () => {
      * reconcile-only unresolved state. A component that held the writer could
      * publish a spend with none of that around it.
      *
-     * The six cosmetic prizes stay preview-only. Their shelf's write-free
+     * There are now TWO such components, and both reach the Prize Counter
+     * through slots rather than being imported by it: the Pass as a rendered
+     * node, the cosmetics as a render function. The shelf's own write-free
      * import graph is pinned separately and unchanged in
-     * `prize-counter-boundaries.test.ts`; the Pass reaches the counter as a
-     * rendered slot, which carries no imports into it.
+     * `prize-counter-boundaries.test.ts` — a list that grows here must NOT
+     * make that one grow.
      */
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
       (f) => !/\.test\.tsx?$|\/test-/.test(f),
@@ -182,7 +184,8 @@ describe('the Prize Counter keeps its boundaries', () => {
     const hookUsers = componentFiles
       .filter((file) => importsOf(file).some((s) => /useArcadePrizeRedemption/.test(s)))
       .map((f) => f.replace(`${process.cwd()}/`, ''));
-    expect(hookUsers).toEqual([
+    expect(hookUsers.sort()).toEqual([
+      'src/components/blobbi/arcade/prizes/ArcadeCosmeticRedeemAction.tsx',
       'src/components/blobbi/arcade/prizes/ArcadePassOffer.tsx',
     ]);
 
@@ -190,10 +193,12 @@ describe('the Prize Counter keeps its boundaries', () => {
     expect(hook.some((s) => /arcade-prize-spend-writer/.test(s))).toBe(true);
   });
 
-  it('keeps the TEMPORARY ownership store behind the hook, out of the components', () => {
-    // Unchanged by the Arcade Pass: the Pass is NOT delivered into the
-    // ownership store. It is an expiring entitlement, so it substitutes its
-    // own delivery adapter (`arcade-pass-prize.ts`) for that store entirely.
+  it('keeps the local reference ownership store out of the components', () => {
+    // Neither live redemption delivers into it. The Pass substitutes the
+    // entitlement adapter (`arcade-pass-prize.ts`); a cosmetic substitutes the
+    // atomic redeemer (`arcade-cosmetic-redeemer.ts`), whose delivery is the
+    // spend's own kind:31633 event. The local store is the contract's
+    // reference implementation and reaches no component at all.
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
       (f) => !/\.test\.tsx?$|\/test-/.test(f),
     );

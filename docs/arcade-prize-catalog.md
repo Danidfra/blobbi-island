@@ -1,8 +1,11 @@
-# Arcade Prize Catalog — the initial six official prizes (Phase 9.5)
+# Arcade Prize Catalog — the six official prizes
 
-The Prize Counter now shows six REAL kind:31632-backed items, browsable and
-previewable, with redemption deliberately disabled until the durable Arcade
-grant/spending flow is implemented and audited.
+The Prize Counter shows six REAL kind:31632-backed items, and all six are
+REDEEMABLE: Arcade Tickets buy them, and the item lands in the player's
+kind:31633 inventory where the ordinary wardrobe and effects panel pick it up.
+
+Every redemption is ONE replacement event carrying both the ticket debit and
+the item grant — see §7.
 
 Catalog module: `src/arcade/prizes/official-prize-catalog.ts` — the single
 source of truth for prices; rebalancing edits that one file.
@@ -68,26 +71,56 @@ their slot while other active effects stay. Previews mutate nothing — no
 kind:31633, no kind:31634, no publish, no signer (behaviour-tested with a
 recording signer mock).
 
-## 7. Redemption is disabled
+## 7. Redemption — one atomic kind:31633 event
 
-There is NO redeem control — not a disabled button, none at all. The counter
-and the detail panel say honestly: *"Prize redemption is being prepared. You
-can preview rewards now."* The counter spends no tickets, decrements no local
-balance, grants nothing, and cannot import any write path or the developer
-lab (transitively proven by `prize-counter-boundaries.test.ts` and
-`src/arcade/boundaries.test.ts`).
+Arcade Tickets and cosmetic items are quantities in the SAME replaceable
+kind:31633 event, so a cosmetic redemption does not pay first and deliver
+second. `src/inventory/arcade-cosmetic-redeemer.ts` performs both halves as
+one `set-many` mutation inside one `runInventoryTransaction`:
 
-## 8. The future grant/redemption phase
+```
+before:  { …, Arcade Ticket: 500 }
+after:   { …, Arcade Ticket: 300, Block Builder Cap: 1 }
+         └────────── ONE replacement event ──────────┘
+```
 
-The dormant machinery from the retired V1 flow is retained, tested and
-unwired for it: the pure spend state machine (`prize-redemption.ts`, with its
-never-respend-an-unresolved-outcome rule), `useArcadePrizeRedemption`, the
-strict spend writer and the temporary ownership store. The future phase
-replaces the temporary ownership store with a durable kind:31633 grant
-(delivery `{ type: 'inventory', itemAddress }` — activation then needs no new
-code: granted items equip through the existing Phase-9 path), re-audits the
-spend flow end to end, and flips catalog entries to `availability:
-'available'`.
+Consequences:
+
+- there is no state where the tickets are gone and the prize is missing;
+- delivery is a VERIFICATION, not a write — `grantPrize` reads and confirms;
+- an AMBIGUOUS publish is reconciled against the PRIZE (`reconcile-atomic`),
+  which only this redemption's own event could have granted, rather than
+  against a ticket balance every other writer also moves. Prize present ⇒
+  spent and delivered; prize absent AND balance untouched ⇒ provably nothing
+  happened, retryable; anything else ⇒ unresolved, never respent.
+
+Everything financial still runs through the hardened
+`useArcadePrizeRedemption`: durable ledger record before any publish, a
+synchronous same-tick lock, the shared cross-tab inventory lock, an
+authoritative empty-confirmed base, a strict publish (a timeout is never
+success), and the never-respend-an-unresolved-outcome rule.
+
+Uniqueness: every prize definition publishes `max_stack: 1`, so a prize is
+redeemable exactly once. The catalog refuses to build an entry whose
+definition says otherwise, the UI shows **Owned** instead of a price, and the
+authoritative refusal happens inside the write lock against the newest
+kind:31633 event — never against the rendered inventory alone.
+
+### Where the write lives
+
+`PrizeCounter` is still provably write-free. The redeem control arrives as a
+`redeemSlot` render prop (`ArcadeCosmeticRedeemAction`), exactly as the Arcade
+Pass arrives as a `featureSlot` node; neither a node nor a callback carries an
+import, so `prize-counter-boundaries.test.ts` is unchanged and still passes.
+
+## 8. The Arcade Pass is deliberately different
+
+The Pass (180 Tickets → 15 free plays within 24 hours) stays a TEMPORARY
+entitlement, not kind:31633 ownership. Its delivery genuinely is a second
+write into a local expiring store, so it keeps the two-stage
+`spent → delivering → confirmed` path, the paid-but-undelivered recovery and
+the balance-based reconciliation. One redemption architecture, two delivery
+adapters — `atomicWithSpend` is the flag that picks the reconciliation.
 
 **See also:** `docs/arcade-prize-counter.md` (the V1 counter this supersedes)
 · `docs/inventory-equipment-lab.md` · `docs/blobbi-effect-activation.md` ·

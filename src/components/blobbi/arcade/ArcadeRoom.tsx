@@ -13,6 +13,7 @@ import { ArcadeMachine } from './ArcadeMachine';
 import { ArcadeGameShell } from './ArcadeGameShell';
 import { PrizeCounter } from './prizes/PrizeCounter';
 import { ArcadePassOffer } from './prizes/ArcadePassOffer';
+import { ArcadeCosmeticRedeemAction } from './prizes/ArcadeCosmeticRedeemAction';
 import { ArcadeCatalogueShell } from './ArcadeCatalogue';
 import { ArcadeDedicatedPreview } from './ArcadeDedicatedPreview';
 import { resolveNativeArcadeGame } from './native-games';
@@ -539,11 +540,18 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
           contentClassName="overflow-y-auto p-0"
         >
           {/*
-            The Pass is passed IN rather than imported by the counter, so the
-            shelf's write-free import graph stays provable while the one live
-            redemption sits on the same surface.
+            Both live redemptions are passed IN rather than imported by the
+            counter, so the shelf's write-free import graph stays provable
+            while real ticket spending happens on the same surface: the Pass as
+            a node above the shelf, the cosmetics as a render function the
+            detail panel calls for whichever prize is selected.
           */}
-          <PrizeCounter featureSlot={<ArcadePassOffer />} />
+          <PrizeCounter
+            featureSlot={<ArcadePassOffer />}
+            redeemSlot={(resolved) => (
+              <ArcadeCosmeticRedeemAction key={resolved.prize.d} resolved={resolved} />
+            )}
+          />
         </ArcadeGameShell>
       )}
 

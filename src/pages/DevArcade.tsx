@@ -48,6 +48,7 @@ import { DanceMachine } from '@/components/blobbi/arcade/dance/DanceMachine';
 import { PoolMachine } from '@/components/blobbi/arcade/pool/PoolMachine';
 import { AirHockeyMachine } from '@/components/blobbi/arcade/hockey/AirHockeyMachine';
 import { PrizeCounter } from '@/components/blobbi/arcade/prizes/PrizeCounter';
+import { ArcadeCosmeticRedeemAction } from '@/components/blobbi/arcade/prizes/ArcadeCosmeticRedeemAction';
 import { clearRedemptions } from '@/lib/arcade-redemption-ledger';
 import { ARCADE_PRIZE_COUNTER } from '@/lib/arcade-room-config';
 import { HOCKEY_STAT_KEYS } from '@/arcade/hockey/hockey-result';
@@ -1094,7 +1095,12 @@ export function DevArcade() {
           closeAriaLabel="Close and go back to the arcade"
           contentClassName="overflow-y-auto p-0"
         >
-          <PrizeCounter />
+          {/* The real counter, with the real cosmetic redemption wired in. */}
+          <PrizeCounter
+            redeemSlot={(resolved) => (
+              <ArcadeCosmeticRedeemAction key={resolved.prize.d} resolved={resolved} />
+            )}
+          />
         </ArcadeGameShell>
       )}
 

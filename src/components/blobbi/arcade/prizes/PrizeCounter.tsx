@@ -21,18 +21,21 @@ import {
  *
  * This component imports NO spend writer, NO redemption hook, NO ownership
  * store and NO mutation of any kind — the reward-flow boundary test proves it
- * against the import graph. The temporary V1 redemption flow (local ownership
- * + real ticket spend) was retired from this surface; the durable grant flow
- * for the six COSMETIC prizes is a later, separately audited phase. Until then
- * the detail panel shows an honest "redemption is being prepared" state, and
- * the only interactive things on the shelf are selection and the write-free
- * preview.
+ * against the import graph. That guarantee has not been traded away now that
+ * the six cosmetics redeem for real: the counter still only SELECTS, RESOLVES
+ * and PREVIEWS.
  *
- * The Arcade Pass is redeemable today, and it arrives through {@link
- * PrizeCounterProps.featureSlot} rather than through the shelf. A `ReactNode`
- * carries no imports, so the guarantee above survives one live redemption
- * sitting on the same counter — see `ArcadePassOffer`, which is where the
- * ticket spend actually lives.
+ * Everything financial arrives as content, through two slots:
+ *
+ *  - {@link PrizeCounterProps.featureSlot} — a node rendered above the shelf,
+ *    where the Arcade Pass offer lives;
+ *  - {@link PrizeCounterProps.redeemSlot} — a RENDER FUNCTION the detail panel
+ *    calls with the selected prize, where the cosmetic redeem control lives.
+ *
+ * Neither a `ReactNode` nor a callback carries an import, so the shelf's
+ * write-free import graph survives intact while two live redemption paths sit
+ * on the same counter. Without a `redeemSlot` the counter is exactly what it
+ * was: browsable, previewable, and honest that redemption is not available.
  *
  * ## The two compositions
  *
@@ -60,9 +63,19 @@ export interface PrizeCounterProps {
    * this module's import graph.
    */
   readonly featureSlot?: ReactNode;
+  /**
+   * Rendered in the detail panel for the SELECTED prize, where its redeem
+   * control belongs.
+   *
+   * A function rather than a node because the control needs the prize, and a
+   * function rather than a prop-carrying component because a callback brings
+   * no imports into this module's graph. Omitted → the panel shows the honest
+   * "redemption is being prepared" notice instead.
+   */
+  readonly redeemSlot?: (resolved: ResolvedArcadePrize) => ReactNode;
 }
 
-export function PrizeCounter({ catalog, featureSlot }: PrizeCounterProps) {
+export function PrizeCounter({ catalog, featureSlot, redeemSlot }: PrizeCounterProps) {
   const { prizes, balance, balanceError, isLoggedIn, isLoading } =
     useOfficialArcadePrizes(catalog);
 
@@ -119,17 +132,19 @@ export function PrizeCounter({ catalog, featureSlot }: PrizeCounterProps) {
           </p>
         )}
         {/*
-          The standing truth of this phase, stated on the shelf itself — and
-          scoped to the SHELF, because the feature slot below it may hold
-          something that redeems for real.
+          Shown only while the shelf really is preview-only. Once a redeem slot
+          is supplied the cards below can be bought, and a standing "redemption
+          is being prepared" would be the counter lying about itself.
         */}
-        <p
-          data-prize-counter-preview-notice
-          role="status"
-          className="mt-1 text-xs blobbi-text-muted"
-        >
-          Prize redemption is being prepared. You can preview the rewards below now.
-        </p>
+        {!redeemSlot && (
+          <p
+            data-prize-counter-preview-notice
+            role="status"
+            className="mt-1 text-xs blobbi-text-muted"
+          >
+            Prize redemption is being prepared. You can preview the rewards below now.
+          </p>
+        )}
       </div>
 
       {featureSlot}
@@ -212,6 +227,7 @@ export function PrizeCounter({ catalog, featureSlot }: PrizeCounterProps) {
               resolved={selected}
               balance={balance}
               onBack={() => setSelectedAddress(null)}
+              redeemSlot={redeemSlot}
             />
           ) : (
             <p

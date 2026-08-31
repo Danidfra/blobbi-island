@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import type { ResolvedArcadePrize } from './useOfficialArcadePrizes';
@@ -8,15 +8,17 @@ import { PrizePreviewStage } from './PrizePreviewStage';
  * The detail panel for one official prize — up close, with a live preview and
  * an HONEST redemption state.
  *
- * There is deliberately NO redeem button in this phase. The durable Arcade
- * grant/spending flow is a later, separately audited phase; until it exists,
- * showing a button that "works" by mutating local state would be a fake
- * purchase. The panel says exactly what is true:
+ * This module still owns NO redemption of its own. The redeem control is
+ * rendered from {@link PrizeDetailProps.redeemSlot}, a callback the counter
+ * receives from whoever composed it, so everything that can spend a ticket
+ * stays outside the Prize Counter's import graph (see `PrizeCounter`). With no
+ * slot supplied the panel says exactly what is then true:
  *
  *   "Prize redemption is being prepared. You can preview rewards now."
  *
  * The preview goes through the real renderer path and writes nothing — see
- * `PrizePreviewStage`.
+ * `PrizePreviewStage`. Previewing is not owning: nothing on this panel changes
+ * kind:31633 or kind:31634, and "You own" reads the real inventory.
  */
 
 const SLOT_LABELS: Record<string, string> = {
@@ -38,9 +40,11 @@ interface PrizeDetailProps {
   /** Ticket balance, or `null` while unknown. */
   readonly balance: number | null;
   readonly onBack: () => void;
+  /** Renders the redeem control for this prize. See the module header. */
+  readonly redeemSlot?: (resolved: ResolvedArcadePrize) => ReactNode;
 }
 
-export function PrizeDetail({ resolved, balance, onBack }: PrizeDetailProps) {
+export function PrizeDetail({ resolved, balance, onBack, redeemSlot }: PrizeDetailProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const { prize } = resolved;
   const showImage = Boolean(resolved.image) && !imageFailed;
@@ -132,17 +136,21 @@ export function PrizeDetail({ resolved, balance, onBack }: PrizeDetailProps) {
         </div>
       </div>
 
-      {/* The honest state, where a redeem button would be. Always visible. */}
-      <p
-        data-prize-redemption-disabled
-        role="status"
-        className={cn(
-          'mt-2 shrink-0 rounded-xl border-2 border-dashed border-island-purple/40',
-          'bg-island-purple/5 px-3 py-2 text-center text-xs font-bold text-island-purple',
-        )}
-      >
-        Prize redemption is being prepared. You can preview rewards now.
-      </p>
+      {/* The redeem control, or the honest state in its place. Always visible. */}
+      {redeemSlot ? (
+        <div className="mt-2 shrink-0">{redeemSlot(resolved)}</div>
+      ) : (
+        <p
+          data-prize-redemption-disabled
+          role="status"
+          className={cn(
+            'mt-2 shrink-0 rounded-xl border-2 border-dashed border-island-purple/40',
+            'bg-island-purple/5 px-3 py-2 text-center text-xs font-bold text-island-purple',
+          )}
+        >
+          Prize redemption is being prepared. You can preview rewards now.
+        </p>
+      )}
     </div>
   );
 }

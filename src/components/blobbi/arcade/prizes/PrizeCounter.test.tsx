@@ -1,5 +1,11 @@
 /**
- * The preview-only Prize Counter (Phase 9.5), against seeded real state.
+ * The Prize Counter WITHOUT a redeem slot, against seeded real state.
+ *
+ * This is the counter's own surface — selection, resolution and preview — and
+ * it must stay write-free even now that the arcade composes it with a live
+ * redemption. Rendering `<PrizeCounter />` bare is what proves the component
+ * itself sells nothing; the redeeming composition is covered by
+ * `ArcadeCosmeticRedeemAction.test.tsx`.
  *
  * What must hold:
  *
@@ -8,8 +14,8 @@
  *  - Accessory/Effect distinction, ownership, equipped and affordability all
  *    display from the real inventory/equipment state;
  *  - the preview renders through the real renderer path and publishes nothing;
- *  - redemption is VISIBLY disabled — no redeem control exists at all, and the
- *    honest message shows instead;
+ *  - with no redeem slot there is no redeem control at all, and the honest
+ *    "being prepared" message shows instead;
  *  - nothing in the flow signs, spends or mutates anything.
  *
  * Inventory and catalog are seeded straight into the query cache; the signer
