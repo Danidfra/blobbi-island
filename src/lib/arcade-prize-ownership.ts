@@ -1,19 +1,34 @@
 /**
- * TEMPORARY prize ownership — a clearly-marked local stand-in, NOT inventory.
+ * The generic prize-DELIVERY contract, plus a local reference implementation.
  *
- * The Prize Counter's V1 ships before the official kind:31632 prize
- * definitions exist, so "you own the Neon Star Glasses" has nowhere
- * authoritative to live yet. This module is that gap, stated honestly:
+ * ## What survives, and why
+ *
+ * {@link ArcadePrizeOwnership} is the seam that lets ONE hardened redemption
+ * flow deliver two very different things. Both live implementations satisfy it:
+ *
+ *  - the six cosmetics, delivered into kind:31633 by the SPEND'S OWN event
+ *    (`src/inventory/arcade-cosmetic-redeemer.ts`, `atomicWithSpend: true`) —
+ *    there `grantPrize` writes nothing and verifies instead;
+ *  - the Arcade Pass, delivered into the expiring entitlement store
+ *    (`src/arcade/prizes/arcade-pass-prize.ts`), which genuinely is a second
+ *    write and genuinely needs the paid-but-undelivered recovery path.
+ *
+ * ## {@link createLocalPrizeOwnership} is NOT a production delivery
+ *
+ * It is the contract's reference implementation, kept for the redemption
+ * machinery's tests and for any future prize whose real home does not exist
+ * yet. NO production surface wires it: `useArcadePrizeRedemption` requires an
+ * explicit `ownership`, precisely so a delivery can never silently land in
+ * local storage. What it is, stated honestly:
  *
  *  - it is **namespaced local storage**, per owner pubkey, under a key that
  *    says `temp` out loud;
  *  - it is **not** the kind:31633 inventory, is never mixed into the ticket
  *    event, and must never be presented as authoritative — another device
  *    knows nothing about it;
- *  - it sits behind an interface (`ArcadePrizeOwnership`) precisely so the
- *    real deliveries — inventory grants, profile badges, Blobbi effects, Home
- *    furniture — can replace it writer-by-writer without the Prize Counter
- *    changing shape.
+ *  - it sits behind {@link ArcadePrizeOwnership} precisely so the real
+ *    deliveries can replace it writer-by-writer without the Prize Counter
+ *    changing shape — which is exactly what the cosmetics and the Pass did.
  *
  * ## Idempotency is PER DELIVERY ATTEMPT, not per prize
  *
@@ -53,6 +68,17 @@ export interface OwnedPrizeRecord {
  * writers (inventory, badges, effects, furniture) will not be.
  */
 export interface ArcadePrizeOwnership {
+  /**
+   * `true` when this delivery rides on the SPEND'S OWN kind:31633 event — the
+   * debit and the grant are one replacement event, so they land together or
+   * not at all (`src/inventory/arcade-cosmetic-redeemer.ts`).
+   *
+   * The redemption hook reads this to choose its reconciliation evidence: an
+   * atomic redemption is reconciled against the PRIZE, which only that event
+   * could have granted, instead of against a ticket balance other writers also
+   * move. Absent/false keeps the two-stage semantics the Arcade Pass needs.
+   */
+  readonly atomicWithSpend?: boolean;
   hasPrize(pubkey: string, prizeId: string): Promise<boolean>;
   /**
    * Was THIS delivery attempt recorded? The verification the hook runs after

@@ -120,9 +120,9 @@ describe('shape and determinism', () => {
     expect(orderedOfficialArcadePrizes(shuffled)).toEqual(ordered);
   });
 
-  it('every entry is preview-only in this phase — redemption is not offered', () => {
+  it('every entry is available — all six cosmetics redeem for real', () => {
     for (const entry of OFFICIAL_ARCADE_PRIZE_CATALOG) {
-      expect(entry.availability).toBe('preview');
+      expect(entry.availability).toBe('available');
     }
   });
 
@@ -135,7 +135,7 @@ describe('shape and determinism', () => {
       expect(Object.isFrozen(entry)).toBe(true);
     }
     expect(Object.isFrozen(OFFICIAL_ARCADE_PRIZE_CATALOG)).toBe(true);
-    expect(OFFICIAL_ARCADE_PRIZE_CATALOG_VERSION).toMatch(/preview/);
+    expect(OFFICIAL_ARCADE_PRIZE_CATALOG_VERSION).toMatch(/inventory/);
   });
 
   it('only the headline prize is featured', () => {

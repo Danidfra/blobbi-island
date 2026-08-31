@@ -27,9 +27,23 @@
  *   failed-before-spend  (retryable — provably nothing was published)
  * ```
  *
- * `delivering` is the honest name for "the tickets are spent but the temporary
- * ownership write has not completed": the redemption is NOT lost, the ledger
- * keeps the record, and delivery may be retried without spending again.
+ * `delivering` is the honest name for "the tickets are spent but the prize has
+ * not been handed over": the redemption is NOT lost, the ledger keeps the
+ * record, and delivery may be retried without spending again.
+ *
+ * ## Two kinds of delivery, one machine
+ *
+ * The lifecycle above assumes the spend and the delivery are SEPARATE writes,
+ * which is true for the Arcade Pass: tickets live in kind:31633 and an expiring
+ * allowance does not, so there is a real gap between paying and receiving.
+ *
+ * A kind:31633 COSMETIC prize is different: the ticket debit and the prize
+ * grant are the same replaceable event, so they land together or not at all.
+ * That variant reuses every state here — the record, the lock, the strict
+ * publish, the never-respend rule — and differs in exactly one place:
+ * {@link PrizeRedemptionEvent} `reconcile-atomic`, which reconciles against
+ * the PRIZE rather than against a balance other writers also move. See its
+ * doc comment for why that is both stronger and safer.
  *
  * ## What this module does not know
  *
@@ -106,6 +120,8 @@ export type PrizeSpendFailure =
   | 'sign-failed'
   | 'publish-rejected'
   | 'insufficient-tickets'
+  /** The player already holds this unique prize. Refused before any publish. */
+  | 'already-owned'
   | 'baseline-unavailable'
   | 'ledger-unavailable'
   | 'invalid-redemption'
@@ -118,6 +134,7 @@ export const RETRYABLE_SPEND_FAILURES: ReadonlySet<PrizeSpendFailure> = new Set(
   'sign-failed',
   'publish-rejected',
   'insufficient-tickets',
+  'already-owned',
   'baseline-unavailable',
   'ledger-unavailable',
   'invalid-redemption',
@@ -215,6 +232,23 @@ export type PrizeRedemptionEvent =
   | { readonly type: 'spend-failed'; readonly now: number; readonly failure: PrizeSpendFailure }
   /** Read-only reconciliation observed the current balance. Never publishes. */
   | { readonly type: 'reconcile'; readonly now: number; readonly quantityNow: number | null }
+  /**
+   * Read-only reconciliation for an ATOMIC redemption — one where the ticket
+   * debit and the prize grant ride on the SAME kind:31633 replacement event.
+   * Never publishes.
+   *
+   * `owned` is evidence about THIS redemption in a way a balance can never be:
+   * the event either landed (both halves present) or it did not (neither).
+   * `quantityNow` is the ticket balance, used only for the negative proof.
+   */
+  | {
+      readonly type: 'reconcile-atomic';
+      readonly now: number;
+      /** Does the inventory hold the prize? `false` when it could not be read. */
+      readonly owned: boolean;
+      /** Ticket balance now, or `null` when the read failed. */
+      readonly quantityNow: number | null;
+    }
   /** The spend is confirmed; the ownership write is starting. */
   | { readonly type: 'begin-delivery'; readonly now: number }
   /** The ownership write completed. */
@@ -313,6 +347,42 @@ export function advanceRedemption(
       // deferred grant/redemption protocol.
       if (event.quantityNow === baseline - redemption.price) {
         return { ...next, status: 'spent', failure: null };
+      }
+      return next;
+    }
+
+    case 'reconcile-atomic': {
+      if (redemption.status !== 'spend-unresolved') return redemption;
+      const next = {
+        ...redemption,
+        reconcileAttempts: redemption.reconcileAttempts + 1,
+        updatedAt: event.now,
+      };
+      // POSITIVE proof. The prize is granted by the spend's own event and by
+      // nothing else, so holding it means that event landed — and because it
+      // landed WHOLE, the tickets are spent and the prize is delivered. This
+      // is strictly stronger evidence than the balance rule above, which can
+      // only ever say "the number is consistent with my spend".
+      if (event.owned) return { ...next, status: 'spent', failure: null };
+
+      // NEGATIVE proof, and it needs BOTH halves to be missing. One event
+      // carries the debit and the grant together: an untouched balance beside
+      // an absent prize is the post-state of an inventory this redemption
+      // never reached, so nothing was spent and a fresh attempt is safe.
+      //
+      // A drop, a rise, or an unreadable balance all stay unresolved. The
+      // residual risk is a LATER kind:31633 write built from a stale base
+      // (another device, outside this tab's lock) that both restored the
+      // balance and removed the prize; that is the same replaceable-event
+      // hazard every writer here lives with, and it is far narrower than the
+      // balance-only rule's "some combination of writes hit the same number".
+      const baseline = redemption.quantityBefore;
+      if (
+        event.quantityNow !== null &&
+        baseline !== null &&
+        event.quantityNow === baseline
+      ) {
+        return { ...next, status: 'failed-before-spend', failure: null };
       }
       return next;
     }

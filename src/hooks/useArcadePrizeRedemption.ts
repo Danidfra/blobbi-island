@@ -17,10 +17,28 @@
  *     → persist the SPENDING record AND READ IT BACK   no record → publish NOTHING
  *     → strict spend publish                  a timeout is UNRESOLVED, not failed
  *     → read the balance again                confirmed only on EXACTLY −price
- *     → grant TEMPORARY ownership, per redemption id   (the local store, not inventory)
- *     → VERIFY the delivery was recorded
+ *     → deliver the prize, per redemption id  (the injected delivery store)
+ *     → VERIFY the delivery landed
  *     → persist the CONFIRMED record AND READ IT BACK  no record → recoverable, not "done"
  * ```
+ *
+ * ## Two deliveries, one flow
+ *
+ * The delivery step is injected ({@link UseArcadePrizeRedemptionOptions}
+ * `ownership`), which is what lets the same sequence serve prizes with very
+ * different physics:
+ *
+ *  - **Arcade Pass** — the spend writes kind:31633 and the delivery writes a
+ *    local expiring entitlement. Two writes, a real gap between them, and the
+ *    `spent`/`delivering` states plus the per-redemption-id idempotent retry
+ *    are what make that gap survivable.
+ *  - **Cosmetic prizes** — the ticket debit and the item grant are quantities
+ *    in the SAME replaceable event, published together
+ *    (`arcade-cosmetic-redeemer.ts`). The "delivery" step writes nothing: it
+ *    VERIFIES the prize arrived, because it arrived on the spend's own event.
+ *    Such a store sets `atomicWithSpend`, and this hook then reconciles an
+ *    ambiguous spend against the PRIZE — evidence only that event could have
+ *    produced — instead of against a ticket balance every other writer moves.
  *
  * ## Every persistence point, classified by consequence
  *
@@ -37,18 +55,26 @@
  * allows is "paid but not yet delivered" — which the ledger keeps as a
  * `delivering` record that `finishDelivery` can complete WITHOUT spending
  * again. The opposite order could hand out a prize whose payment then failed,
- * and there is no clawback for that.
+ * and there is no clawback for that. An ATOMIC delivery cannot reach that
+ * state at all: there is only one event, and the prize is in it.
  *
- * ## Cross-system atomicity does not exist here, and this hook does not
- * pretend it does
+ * ## Atomicity, precisely
  *
- * kind:31633 is a replaceable relay event; temporary ownership is local
- * storage. This machinery protects an honest player from application bugs
- * (double-clicks, remounts, refreshes, ambiguous publishes); it is not
- * anti-fraud and a modified client can bypass all of it.
+ * WITHIN kind:31633 it is real: an atomic delivery's debit and grant are one
+ * replacement event, so no confirmed cosmetic redemption can leave tickets
+ * spent and the prize missing.
+ *
+ * ACROSS stores it does not exist and this hook does not pretend otherwise:
+ * the Pass's entitlement is local storage, the ledger is local storage, and a
+ * relay event cannot be committed with either. That is what the `delivering`
+ * state and the recovery path are for.
+ *
+ * None of this is anti-fraud. It protects an honest player from application
+ * bugs — double-clicks, remounts, refreshes, ambiguous publishes — and a
+ * modified client can bypass all of it.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 
@@ -72,7 +98,6 @@ import {
   releaseRedemptionLock,
 } from '@/lib/arcade-redemption-ledger';
 import type { ArcadePrizeOwnership } from '@/lib/arcade-prize-ownership';
-import { createLocalPrizeOwnership } from '@/lib/arcade-prize-ownership';
 import type { ArcadePrizeSpendWriter } from '@/inventory/arcade-prize-spend-writer';
 import {
   ArcadePrizeSpendError,
@@ -135,6 +160,8 @@ const FAILURE_COPY: Readonly<Record<PrizeSpendFailure, string>> = {
   'sign-failed': 'Your signer refused the request, so nothing was spent. You can try again.',
   'publish-rejected': 'No relay accepted the spend, so nothing was saved. You can try again.',
   'insufficient-tickets': 'Your inventory does not hold enough Arcade Tickets for this prize.',
+  'already-owned':
+    'You already own this prize, so nothing was spent. Every prize on the counter is one of a kind.',
   'baseline-unavailable':
     'Your ticket balance could not be read, so nothing was spent. You can try again.',
   'ledger-unavailable':
@@ -174,6 +201,8 @@ function classifySpendError(error: unknown): PrizeSpendFailure {
         return 'publish-rejected';
       case 'insufficient-tickets':
         return 'insufficient-tickets';
+      case 'already-owned':
+        return 'already-owned';
       case 'invalid-price':
       case 'not-logged-in':
         return 'invalid-redemption';
@@ -206,9 +235,16 @@ function phaseForRedemption(redemption: ArcadePrizeRedemption): PrizeRedemptionP
 }
 
 export interface UseArcadePrizeRedemptionOptions {
-  /** Substitute writer / ownership store, for the DEV harness and tests. */
+  /** Substitute spend writer, for the DEV harness and tests. */
   readonly writer?: ArcadePrizeSpendWriter;
-  readonly ownership?: ArcadePrizeOwnership;
+  /**
+   * How a redeemed prize is DELIVERED. Required, and deliberately so: there is
+   * no default, because the only possible default would be the local reference
+   * store, and a production surface that forgot to pass one would deliver a
+   * real purchase into `localStorage`. The two live implementations are the
+   * atomic cosmetic redeemer and the Arcade Pass entitlement adapter.
+   */
+  readonly ownership: ArcadePrizeOwnership;
   readonly mintAttemptId?: () => string;
 }
 
@@ -220,12 +256,12 @@ function defaultMintAttemptId(): string {
   return `attempt-${Date.now()}-${attemptCounter}`;
 }
 
-export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOptions = {}) {
+export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOptions) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
   const [state, setState] = useState<PrizeRedemptionUiState>(IDLE);
-  /** Prize id → grant count, per the TEMPORARY store. */
+  /** Prize id → owned count, as the injected delivery store reports it. */
   const [ownedCounts, setOwnedCounts] = useState<ReadonlyMap<string, number>>(new Map());
 
   const mountedRef = useRef(true);
@@ -239,10 +275,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
-  const ownership = useMemo<ArcadePrizeOwnership>(
-    () => options.ownership ?? createLocalPrizeOwnership(),
-    [options.ownership],
-  );
+  const ownership = options.ownership;
 
   const safeSet = useCallback((next: PrizeRedemptionUiState) => {
     if (mountedRef.current) setState(next);
@@ -468,7 +501,10 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
         const reserved = createReservedRedemption(
           prize,
           optionsRef.current.mintAttemptId?.() ?? defaultMintAttemptId(),
-          ARCADE_PRIZE_CATALOGUE_VERSION,
+          // Which catalog PRICED this prize. The fixture list is the default;
+          // the official cosmetics name their own, so a record can always say
+          // where its frozen price came from.
+          prize.catalogVersion ?? ARCADE_PRIZE_CATALOGUE_VERSION,
           Date.now(),
         );
         if (!reserved.ok) {
@@ -671,12 +707,43 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
       });
 
       const quantityNow = await buildWriter().readTicketQuantity();
-      working = advanceRedemption(working, { type: 'reconcile', now: Date.now(), quantityNow });
+      if (ownership.atomicWithSpend) {
+        // ATOMIC delivery: the debit and the grant are one kind:31633 event, so
+        // the PRIZE is evidence about this redemption in a way a balance never
+        // is. A read that failed leaves `owned` false, and the machine's
+        // negative rule needs a readable balance too — so an unreadable
+        // inventory stays unresolved rather than guessing either way.
+        const owned =
+          quantityNow === null ? false : await ownership.hasPrize(pubkey, prize.id);
+        working = advanceRedemption(working, {
+          type: 'reconcile-atomic',
+          now: Date.now(),
+          owned,
+          quantityNow,
+        });
+      } else {
+        working = advanceRedemption(working, { type: 'reconcile', now: Date.now(), quantityNow });
+      }
       persistRedemption(pubkey, working);
 
       if (working.status === 'spent') {
         queryClient.invalidateQueries({ queryKey: inventoryQueryKey(pubkey) });
         return deliver(prize, working);
+      }
+
+      // The atomic negative proof — prize absent AND balance untouched — is a
+      // definitive "nothing was spent", so the record goes back to retryable
+      // and the UI must offer the redemption again rather than a dead end.
+      if (working.status === 'failed-before-spend') {
+        const cleared: PrizeRedemptionUiState = {
+          phase: 'failed',
+          prizeId: prize.id,
+          redemption: working,
+          failure: null,
+          message: 'Your tickets are untouched — that redemption never went through. You can try again.',
+        };
+        safeSet(cleared);
+        return cleared;
       }
 
       const next: PrizeRedemptionUiState = {
@@ -692,14 +759,14 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
       safeSet(next);
       return next;
     },
-    [user?.pubkey, state, deliver, hydrateForPrize, safeSet, buildWriter, queryClient],
+    [user?.pubkey, state, deliver, hydrateForPrize, safeSet, buildWriter, queryClient, ownership],
   );
 
   const reset = useCallback(() => safeSet(IDLE), [safeSet]);
 
   return {
     state,
-    /** Prize id → grant count, per the TEMPORARY local store. */
+    /** Prize id → owned count, as the injected delivery store reports it. */
     ownedCounts,
     redeem,
     checkSpendStatus,

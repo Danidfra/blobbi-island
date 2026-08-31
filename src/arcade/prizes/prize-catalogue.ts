@@ -1,17 +1,19 @@
 /**
- * The RETIRED fixture catalogue and the FUTURE redemption contract.
+ * The SHARED prize type contract, and a retired fixture catalogue.
  *
- * ## Status since Phase 9.5
+ * ## Status
  *
- * The Prize Counter no longer renders from this module: the operative catalog
- * is `official-prize-catalog.ts` (six real kind:31632-backed prizes, preview
- * only), and no production component imports these entries any more. What
- * remains load-bearing here is the TYPE contract (`ArcadePrize`, the category
- * and delivery unions) that the dormant redemption machinery
+ * The Prize Counter does not render from the ENTRIES in this module. The two
+ * live catalogs are `official-prize-catalog.ts` (the six real kind:31632
+ * cosmetics, redeemable into kind:31633) and `arcade-pass-prize.ts` (the
+ * temporary Pass entitlement); both express themselves as {@link ArcadePrize},
+ * which is what makes ONE redemption machine serve both.
+ *
+ * So the load-bearing part here is the TYPE contract (`ArcadePrize`, the
+ * category and delivery unions) that the redemption machinery
  * (`prize-redemption.ts`, `useArcadePrizeRedemption`, the spend writer, the
- * temporary ownership store) is built against — all of it retained, tested and
- * unwired, for the future separately-audited grant phase. The placeholder
- * ENTRIES below survive solely as fixtures for that machinery's tests.
+ * delivery contract) is built against. The placeholder ENTRIES below survive
+ * solely as fixtures for that machinery's tests.
  *
  * ## Why this module is pure
  *
@@ -20,11 +22,12 @@
  * graph that nothing here can reach a relay or a wallet. A catalogue that could
  * write inventory would be a shop with no checkout line.
  *
- * ## Delivery metadata is FUTURE intent, not current behaviour
+ * ## Delivery metadata
  *
- * In V1 every redeemed prize is granted through the temporary local ownership
- * store (`src/lib/arcade-prize-ownership.ts`), whatever its `delivery` says.
- * The union records where each prize will eventually go:
+ * `delivery` records where a redeemed prize goes. `inventory` is LIVE: the six
+ * official cosmetics use it, and their debit-and-grant is one kind:31633
+ * event (`src/inventory/arcade-cosmetic-redeemer.ts`). The rest are still
+ * intent:
  *
  *  - `badge` — a collectible achievement, later displayable on the profile
  *    card, the Blobbi card and arcade surfaces;
@@ -33,12 +36,13 @@
  *  - `home-furniture` — a placeable Home item. The Mini Arcade Cabinet carries
  *    `gameplayMode: 'no-rewards'`: it will open arcade games from Home, and
  *    those games will grant NO Arcade Tickets;
- *  - `inventory` — a real kind:31632 item granted into kind:31633;
- *  - `mock-ownership` — nothing beyond the temporary store, ever intended or
- *    not yet decided.
+ *  - `inventory` — a real kind:31632 item granted into kind:31633. LIVE;
+ *  - `mock-ownership` — nothing beyond a local store. The Arcade Pass carries
+ *    it because its delivery is an expiring ENTITLEMENT rather than ownership;
+ *    see `arcade-pass-prize.ts`.
  *
- * None of those future deliveries is implemented in this task, and nothing
- * here pretends otherwise.
+ * `badge`, `blobbi-effect` and `home-furniture` are not implemented, and
+ * nothing here pretends otherwise.
  */
 
 export const ARCADE_PRIZE_CATEGORIES = [
@@ -92,6 +96,16 @@ export interface ArcadePrize {
   /** May be redeemed more than once. Absent means once only. */
   readonly repeatable?: boolean;
   readonly delivery: ArcadePrizeDelivery;
+  /**
+   * Which catalog priced this prize, recorded on every redemption record.
+   *
+   * Optional because the fixture entries below are all priced by
+   * {@link ARCADE_PRIZE_CATALOGUE_VERSION}, which stays the default. A prize
+   * that comes from a DIFFERENT catalog — the six official cosmetics, priced
+   * by `official-prize-catalog.ts` — carries its own version here, so a ledger
+   * record always names the list that set its price.
+   */
+  readonly catalogVersion?: string;
 }
 
 /**

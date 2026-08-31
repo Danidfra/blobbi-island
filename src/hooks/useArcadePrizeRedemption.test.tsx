@@ -701,3 +701,203 @@ describe('logged out', () => {
     await waitFor(() => expect(result.current.isLoggedIn).toBe(false));
   });
 });
+
+// ── The ATOMIC delivery path ───────────────────────────────────────────────
+//
+// A cosmetic prize's debit and grant are one kind:31633 event. The hook's job
+// there is narrower and stricter: reconcile an ambiguous spend against the
+// PRIZE, and never against a balance other writers also move.
+
+/**
+ * A delivery store shaped like the cosmetic redeemer: the "grant" writes
+ * nothing and verifies, and ownership is a fact about the inventory rather
+ * than a ledger of delivery attempts.
+ */
+function fakeAtomicOwnership(options: { ownedFrom?: () => boolean } = {}) {
+  let grantCalls = 0;
+  const isOwned = options.ownedFrom ?? (() => false);
+  return {
+    grantCount: () => grantCalls,
+    atomicWithSpend: true as const,
+    async hasPrize() {
+      return isOwned();
+    },
+    async hasDelivery() {
+      return isOwned();
+    },
+    async grantPrize() {
+      grantCalls += 1;
+      if (!isOwned()) throw new Error('The prize is not in your inventory yet.');
+    },
+    async listOwnedPrizes() {
+      return isOwned()
+        ? [{ prizeId: GLASSES.id, count: 1, firstGrantedAt: 0, deliveredRedemptionIds: [] }]
+        : [];
+    },
+  } satisfies ArcadePrizeOwnership & { grantCount: () => number };
+}
+
+describe('atomic redemption', () => {
+  it('confirms without a second write — the grant rode on the spend event', async () => {
+    let landed = false;
+    const writer = fakeSpendWriter();
+    const spend = writer.spendTickets.bind(writer);
+    writer.spendTickets = async (r) => {
+      await spend(r);
+      landed = true; // ONE event moved both halves
+    };
+    const ownership = fakeAtomicOwnership({ ownedFrom: () => landed });
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+
+    expect(result.current.state.phase).toBe('confirmed');
+    expect(writer.spendCount()).toBe(1);
+    // The delivery step VERIFIED; it did not deliver a second time.
+    expect(ownership.grantCount()).toBe(1);
+  });
+
+  it('an ambiguous publish that DID land is settled by the prize, not the balance', async () => {
+    // The balance read back is nothing like `baseline − price`: another tab
+    // spent in between. The prize is unambiguous, and it wins.
+    const writer = fakeSpendWriter({
+      quantities: [100, 17],
+      spendError: Object.assign(new Error('timed out'), { name: 'TimeoutError' }),
+    });
+    const ownership = fakeAtomicOwnership({ ownedFrom: () => true });
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+    expect(result.current.state.phase).toBe('spend-unresolved');
+
+    await act(async () => {
+      await result.current.checkSpendStatus(GLASSES);
+    });
+    expect(result.current.state.phase).toBe('confirmed');
+    // Still exactly one publish attempt. Reconciliation reads; it never sends.
+    expect(writer.spendCount()).toBe(1);
+    expect(readRedemptions(PUBKEY)['neon-star-glasses:a-1'].attempts).toBe(1);
+  });
+
+  it('an ambiguous publish that did NOT land becomes retryable, not a dead end', async () => {
+    // Prize absent AND the balance untouched: one event carries both halves,
+    // so neither happened and a fresh attempt cannot double-charge.
+    const writer = fakeSpendWriter({
+      quantities: [100],
+      spendError: Object.assign(new Error('timed out'), { name: 'TimeoutError' }),
+    });
+    const ownership = fakeAtomicOwnership();
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+    await act(async () => {
+      await result.current.checkSpendStatus(GLASSES);
+    });
+
+    expect(result.current.state.phase).toBe('failed');
+    expect(readRedemptions(PUBKEY)['neon-star-glasses:a-1'].status).toBe(
+      'failed-before-spend',
+    );
+    expect(ownership.grantCount()).toBe(0);
+  });
+
+  it('will NOT respend while the outcome is genuinely unknown', async () => {
+    // Prize absent, balance moved — evidence of OTHER writes, not of this one.
+    // Reads: [0] the baseline, [1] the reconciliation.
+    const writer = fakeSpendWriter({
+      quantities: [100, 55],
+      spendError: Object.assign(new Error('timed out'), { name: 'TimeoutError' }),
+    });
+    const ownership = fakeAtomicOwnership();
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+    await act(async () => {
+      await result.current.checkSpendStatus(GLASSES);
+    });
+    expect(result.current.state.phase).toBe('spend-unresolved');
+
+    // A second explicit confirmation must not become a second debit.
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+    expect(writer.spendCount()).toBe(1);
+    expect(result.current.state.phase).toBe('spend-unresolved');
+  });
+
+  it('refuses an already-owned prize before publishing anything', async () => {
+    const writer = fakeSpendWriter({
+      spendError: new ArcadePrizeSpendError('already held', 'already-owned'),
+    });
+    const ownership = fakeAtomicOwnership();
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+
+    expect(result.current.state.phase).toBe('failed');
+    expect(result.current.state.failure).toBe('already-owned');
+    expect(readRedemptions(PUBKEY)['neon-star-glasses:a-1'].status).toBe(
+      'failed-before-spend',
+    );
+    expect(ownership.grantCount()).toBe(0);
+  });
+
+  it('records the catalog that priced the prize', async () => {
+    const writer = fakeSpendWriter();
+    const ownership = fakeAtomicOwnership({ ownedFrom: () => true });
+    const priced: ArcadePrize = { ...GLASSES, catalogVersion: 'official-v2-inventory' };
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(priced);
+    });
+    expect(readRedemptions(PUBKEY)['neon-star-glasses:a-1'].catalogueVersion).toBe(
+      'official-v2-inventory',
+    );
+  });
+
+  it('invalidates the shared inventory cache once the spend is confirmed', async () => {
+    const writer = fakeSpendWriter();
+    const ownership = fakeAtomicOwnership({ ownedFrom: () => true });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(
+      () => useArcadePrizeRedemption({ writer, ownership, mintAttemptId: () => 'a-1' }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.redeem(GLASSES);
+    });
+
+    // The shared cache is the UI boundary — no surface patches quantities.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: inventoryQueryKey(PUBKEY) });
+  });
+});

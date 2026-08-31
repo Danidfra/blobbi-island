@@ -364,3 +364,147 @@ describe('what blocks a new redemption of the same prize', () => {
     ).toBe(true);
   });
 });
+
+// ── Atomic reconciliation ──────────────────────────────────────────────────
+//
+// For a prize whose debit and grant are ONE kind:31633 event, the evidence
+// that settles an ambiguous publish is the PRIZE, not the balance. These tests
+// pin both directions of that, and the refusal to guess in between.
+
+/** An unresolved spend of 40 tickets against a baseline of 100. */
+function unresolved(): ArcadePrizeRedemption {
+  const spending = advanceRedemption(reserved(), {
+    type: 'begin-spend',
+    now: T0 + 1,
+    quantityBefore: 100,
+  });
+  const r = advanceRedemption(spending, {
+    type: 'spend-failed',
+    now: T0 + 2,
+    failure: 'publish-timeout',
+  });
+  expect(r.status).toBe('spend-unresolved');
+  return r;
+}
+
+describe('reconcile-atomic', () => {
+  it('holding the prize proves the event landed — and delivered', () => {
+    // The balance is deliberately WRONG for the spend. It does not matter: the
+    // prize can only have come from this redemption's own event, and that
+    // event carried the debit too.
+    const r = advanceRedemption(unresolved(), {
+      type: 'reconcile-atomic',
+      now: T0 + 3,
+      owned: true,
+      quantityNow: 12,
+    });
+    expect(r.status).toBe('spent');
+    expect(r.failure).toBeNull();
+    expect(r.reconcileAttempts).toBe(1);
+  });
+
+  it('no prize AND an untouched balance proves nothing was spent', () => {
+    const r = advanceRedemption(unresolved(), {
+      type: 'reconcile-atomic',
+      now: T0 + 3,
+      owned: false,
+      quantityNow: 100,
+    });
+    // Retryable, because one event carries both halves: neither is present.
+    expect(r.status).toBe('failed-before-spend');
+    expect(isSpendRetryable(r)).toBe(true);
+    expect(blocksNewRedemption(r)).toBe(false);
+  });
+
+  it('stays unresolved when the balance moved but the prize is absent', () => {
+    // Someone else spent tickets, or a stale-base write clobbered ours. Either
+    // way this is not proof, and a "maybe" must never become a second debit.
+    for (const quantityNow of [60, 55, 140, null]) {
+      const r = advanceRedemption(unresolved(), {
+        type: 'reconcile-atomic',
+        now: T0 + 3,
+        owned: false,
+        quantityNow,
+      });
+      expect(r.status, `balance ${quantityNow}`).toBe('spend-unresolved');
+      expect(isSpendRetryable(r)).toBe(false);
+      expect(r.reconcileAttempts).toBe(1);
+    }
+  });
+
+  it('never publishes from an unresolved record, however often it reconciles', () => {
+    let r = unresolved();
+    for (let i = 0; i < 5; i += 1) {
+      r = advanceRedemption(r, {
+        type: 'reconcile-atomic',
+        now: T0 + 10 + i,
+        owned: false,
+        quantityNow: 60,
+      });
+      // `begin-spend` from `spend-unresolved` is the transition that does not
+      // exist. Asserting it here is what keeps -40 from becoming -80.
+      const attempted = advanceRedemption(r, {
+        type: 'begin-spend',
+        now: T0 + 20,
+        quantityBefore: 60,
+      });
+      expect(attempted).toBe(r);
+    }
+    expect(r.reconcileAttempts).toBe(5);
+    expect(r.attempts).toBe(1);
+  });
+
+  it('ignores every state that is not unresolved', () => {
+    const confirmed = advanceRedemption(spent(), { type: 'delivery-complete', now: T0 + 5 });
+    for (const record of [reserved(), spent(), confirmed]) {
+      expect(
+        advanceRedemption(record, {
+          type: 'reconcile-atomic',
+          now: T0 + 9,
+          owned: true,
+          quantityNow: 60,
+        }),
+        record.status,
+      ).toBe(record);
+    }
+  });
+
+  it('keeps the ORIGINAL logical redemption — same id, same frozen price', () => {
+    const before = unresolved();
+    const after = advanceRedemption(before, {
+      type: 'reconcile-atomic',
+      now: T0 + 3,
+      owned: true,
+      quantityNow: 60,
+    });
+    expect(after.redemptionId).toBe(before.redemptionId);
+    expect(after.attemptId).toBe(before.attemptId);
+    expect(after.price).toBe(before.price);
+    expect(after.quantityBefore).toBe(before.quantityBefore);
+    // The publish counter does NOT move: reconciliation reads, it never sends.
+    expect(after.attempts).toBe(before.attempts);
+  });
+});
+
+describe('the already-owned refusal', () => {
+  it('is a provably pre-publish failure, so it is retryable and blocks nothing', () => {
+    const r = advanceRedemption(reserved(), {
+      type: 'spend-failed',
+      now: T0 + 1,
+      failure: 'already-owned',
+    });
+    expect(r.status).toBe('failed-before-spend');
+    expect(isSpendRetryable(r)).toBe(true);
+    expect(blocksNewRedemption(r)).toBe(false);
+    expect(needsDelivery(r)).toBe(false);
+  });
+
+  it('cannot downgrade a spend that may already have been published', () => {
+    const r = advanceRedemption(unresolved(), {
+      type: 'spend-failed',
+      now: T0 + 3,
+      failure: 'already-owned',
+    });
+    expect(r.status).toBe('spend-unresolved');
+  });
+});

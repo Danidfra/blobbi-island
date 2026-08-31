@@ -88,6 +88,8 @@ export class ArcadePrizeSpendError extends Error {
       | 'not-logged-in'
       | 'invalid-price'
       | 'insufficient-tickets'
+      /** The unique prize is already held. Refused inside the lock, pre-publish. */
+      | 'already-owned'
       | 'sign-failed'
       | 'publish-rejected',
   ) {

@@ -184,3 +184,45 @@ describe('holding is about the pass RUNNING, not about having bought one', () =>
     expect(await store.hasPrize(ALICE, ARCADE_PASS_PRIZE_ID)).toBe(false);
   });
 });
+
+// ── Regression: the Pass is NOT a kind:31633 cosmetic ──────────────────────
+//
+// The cosmetics became real inventory ownership in the same phase this block
+// was written. The Pass deliberately did not, and its terms did not move. The
+// existing tests above express the terms through the constants, which is right
+// for them and useless as a regression guard — a rebalance would change both
+// sides at once. These pin the LITERALS.
+
+describe('Arcade Pass regression', () => {
+  it('still costs 180 Arcade Tickets', () => {
+    expect(ARCADE_PASS_TICKET_PRICE).toBe(180);
+    expect(ARCADE_PASS_PRIZE.price).toBe(180);
+  });
+
+  it('still grants 15 free plays within 24 hours', () => {
+    expect(ARCADE_PASS_FREE_PLAYS).toBe(15);
+    expect(ARCADE_PASS_DURATION_MS).toBe(24 * 60 * 60 * 1000);
+    expect(ARCADE_PASS_PRIZE.description).toContain('15 free plays');
+    expect(ARCADE_PASS_PRIZE.description).toContain('24 hours');
+  });
+
+  it('is a TEMPORARY entitlement, not inventory ownership', () => {
+    // A `delivery.type` of `inventory` would route the Pass through the atomic
+    // cosmetic redeemer and mint it as a permanent kind:31633 item — which is
+    // exactly what an expiring allowance must never become.
+    expect(ARCADE_PASS_PRIZE.delivery.type).toBe('mock-ownership');
+    expect(ARCADE_PASS_PRIZE.delivery).not.toHaveProperty('itemAddress');
+  });
+
+  it('does not claim atomic delivery — its grant is a SECOND write', () => {
+    // The entitlement store is local, not the ticket event, so the
+    // paid-but-undelivered recovery path is load-bearing for the Pass and its
+    // reconciliation must stay balance-based.
+    const ownership = createArcadePassOwnership(() => 1_700_000_000_000);
+    expect(ownership.atomicWithSpend).toBeUndefined();
+  });
+
+  it('keeps its own catalogue version, unchanged by the official catalog', () => {
+    expect(ARCADE_PASS_PRIZE.catalogVersion).toBeUndefined();
+  });
+});
