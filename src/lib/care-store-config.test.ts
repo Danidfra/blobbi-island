@@ -98,9 +98,12 @@ describe('the Care Store is a registered location', () => {
     const back = EXIT_POSITIONS[`shop:${CARE_STORE}`];
     expect(back).toBeDefined();
     expect(onFloor(back, mallBoundary)).toBe(true);
-    // Horizontally within the facade it came out of (x ∈ 50.5–72.5 %).
-    expect(back.x).toBeGreaterThan(50.5);
-    expect(back.x).toBeLessThan(72.5);
+    // Horizontally under the facade it came out of, wherever that is: the
+    // return point is derived from the storefront, so a facade that moves
+    // without its exit moving is the failure this catches.
+    expect(back.x).toBeCloseTo(CARE_STORE_FACADE.walkTarget.x, 1);
+    // And on the MIDDLE level's walkway, not the ground floor.
+    expect(back.y).toBeCloseTo(CARE_STORE_FACADE.walkTarget.y, 1);
   });
 
   it('puts the storefront approach point on the mall floor too', () => {

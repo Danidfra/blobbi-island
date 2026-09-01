@@ -55,34 +55,36 @@ export interface CareStoreBlocker {
 /**
  * The Care Store facade on the mall's ground floor.
  *
- * Placed with the SAME conventions as the Coffee Shop it sits beside — sized by
- * width only, so the sprite's own 567×391 aspect decides its height — and fitted
- * into the bay between them, mirroring the plant → Coffee Shop → plant rhythm
- * already on that level. Nothing existing moves.
+ * It stands on the mall's MIDDLE level, in the bay the Photo Booth used to
+ * occupy — the two traded places. That is the better home for it: the facade is
+ * a full-width storefront like the Badges Store and the Clothing Store beside
+ * it, whereas the Photo Booth is a single narrow booth that reads correctly in
+ * the wide ground-floor bay. Sized by width only, so the sprite's own 567×391
+ * aspect decides its height, exactly as its neighbours are.
  *
  * ## Why this size, and not more
  *
  * The bay is bounded by real ink, not by boxes. Measured from the sprites' own
- * alpha channels: the Coffee Shop's artwork ends at x = 50.38 %, and the right
- * potted plant's begins at x = 72.70 % — 22.32 % of clear wall. The Care Store
+ * alpha channels: the left potted plant's artwork ends at x = 28.84 % and the
+ * Clothing Store's begins at x = 50.00 % — 21.16 % of clear wall. The Care Store
  * sprite carries a 1.59 % transparent margin on each side, so a box of width W
  * paints 0.968 · W and starts 0.0159 · W in from its left edge.
  *
- * `left-[50.1%] w-[22.9%]` therefore paints x = 50.46 → 72.64: 22.17 % of ink,
- * 99 % of the available wall, with a hair of clearance at both ends. Anything
- * wider starts covering a neighbour. This is the largest the facade can be and
- * still read as a storefront standing NEXT to the Coffee Shop rather than in
- * front of it.
+ * `left-[28.7%] w-[21.5%]` therefore paints x = 29.04 -> 49.86, centred in the
+ * bay with a hair of clearance at both ends. Anything wider starts covering a
+ * neighbour.
  *
- * ## Why `bottom-[10.7%]` and not the Coffee Shop's `bottom-[12%]`
+ * ## Why `bottom-[37.3%]` and not the neighbours' `bottom-[38.5%]`
  *
- * Because the two sprites are padded differently, and it is the PAINTED BASES
- * that have to line up. The Care Store sprite has 5.37 % of transparent film
- * below its artwork (the Coffee Shop has 0.26 %), which at this size is 1.28 %
- * of world height — enough to make the shop look like it is hovering just off
- * the mall floor. Dropping the anchor by that exact amount stands both
- * storefronts on one floor line. Matching the raw `bottom` values would have
- * matched the numbers and not the picture.
+ * Because the sprites are padded differently below their artwork, and it is the
+ * PAINTED BASES that have to line up. Every other storefront on this level has
+ * essentially none (Clothing Store 0 %, Badges Store 0.7 %), so their painted
+ * bases sit on the anchor itself at 38.5 %. The Care Store sprite has 5.37 % of
+ * transparent film below its artwork, which at this size is 1.19 % of world
+ * height — enough to make the shop look like it is hovering off the walkway.
+ * Dropping the anchor by exactly that amount stands them all on one line.
+ * Matching the raw `bottom` values would have matched the numbers, not the
+ * picture.
  *
  * The facade IS the door: there is no separate door overlay asset and none is
  * invented. Clicking anywhere on the storefront walks the Blobbi to
@@ -92,18 +94,21 @@ export const CARE_STORE_FACADE = {
   src: '/assets/locations/shop/care-store.webp',
   /** Names the action, not the picture: this is a way in. */
   alt: 'Care Store — go inside',
-  containerClassName: 'absolute bottom-[10.7%] left-[50.1%] z-20 w-[22.9%]',
+  containerClassName: 'absolute bottom-[37.3%] left-[28.7%] z-[15] w-[21.5%]',
   /**
    * Where the Blobbi stands to go in.
    *
    * Stated rather than derived, for the reason `arcade-room-config.ts` records:
-   * the facade is set back against the wall (its base sits at y ≈ 88 %), while
-   * the mall's ground-floor walkway is `y ∈ [90.6, 100]`. "The floor at this
-   * sprite's base" is therefore not floor at all, and clamping it only lands on
-   * the walkway's top EDGE. This point is the storefront's horizontal centre, a
-   * comfortable step onto open floor.
+   * the facade is set back against the wall (its painted base sits at y ≈ 61.5 %)
+   * while the middle level's walkable floor is the thin strip `y ∈ [62.1, 63.1]`
+   * of `shopping-mall-inside.png`. "The floor at this sprite's base" is therefore
+   * not floor at all, and clamping it only lands on the strip's top EDGE, where a
+   * walk can slide sideways without converging.
+   *
+   * This point is the storefront's horizontal centre, on the strip itself — the
+   * same walkway players already stand on to enter the Clothing Store next door.
    */
-  walkTarget: { x: 61, y: 93 } as Position,
+  walkTarget: { x: 39.4, y: 62.6 } as Position,
 } as const;
 
 // ---------------------------------------------------------------------------

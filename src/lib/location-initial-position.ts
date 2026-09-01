@@ -96,12 +96,13 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
 
   // Exiting to shop (mall) from care-store-inside.
   //
-  // The Care Store facade stands on the mall's GROUND floor beside the Coffee
-  // Shop, spanning x ≈ 50.5–72.5 % (`care-store-config.ts`). The walkable floor
-  // on that level is `y ∈ [90.6, 100]` of `shopping-mall-inside.png`, so the
-  // return point is the storefront's horizontal centre, one step onto that
-  // floor — the player comes back out where they went in.
-  'shop:care-store-inside': { x: 61, y: 92 },
+  // The Care Store facade stands on the mall's MIDDLE level, in the bay it
+  // traded with the Photo Booth, spanning x ≈ 29.0–49.9 % (`care-store-config.ts`).
+  // The walkable floor on that level is the strip `y ∈ [62.1, 63.1]` of
+  // `shopping-mall-inside.png` — the same one the Clothing Store returns onto —
+  // so the return point is the storefront's horizontal centre on that strip.
+  // The player comes back out where they went in.
+  'shop:care-store-inside': { x: 39.4, y: 62.6 },
 
   // Exiting to mine from cave-open
   'mine:cave-open': { x: 50, y: 81.3 },

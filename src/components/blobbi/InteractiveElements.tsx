@@ -17,6 +17,7 @@ import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { CareStoreRoom } from './care-store/CareStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
+import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
 import { townBushes } from '@/lib/town-bushes-config';
@@ -315,25 +316,22 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           </div>
 
           {/*
-            Care Store — right beside the Coffee Shop, on the same ground-floor
-            line and with the same bottom-anchored, width-only sizing.
-
-            The facade IS the entrance: no separate door overlay exists for it,
-            so the whole storefront is the click target. `animated={false}` keeps
-            the hover-pop off a sprite this large (the arcade Prize Counter does
-            the same); the gentle lift comes from the wrapper's own transition.
-            `walkTarget` is stated rather than derived because the facade stands
-            above the walkable floor — see `care-store-config.ts`.
+            Photo Booth — moved down to the ground floor, into the bay beside the
+            Coffee Shop. A single narrow booth reads correctly in a wide bay,
+            where a full-width storefront would not; the Care Store took its old
+            middle-level slot in return. Its door overlay is positioned inside
+            this box, so it travelled with it. See `photo-booth-config.ts`.
           */}
-          <div className={`${CARE_STORE_FACADE.containerClassName} transition-transform duration-200 ease-cozy hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}>
+          <div className={MALL_PHOTO_BOOTH.containerClassName}>
+            <img src={MALL_PHOTO_BOOTH.src} alt="Photo booth" />
             <InteractiveElement
-              src={CARE_STORE_FACADE.src}
-              alt={CARE_STORE_FACADE.alt}
-              effect="scale"
-              animated={false}
-              onClick={() => setCurrentLocation('care-store-inside')}
+              src={MALL_PHOTO_BOOTH.doorSrc}
+              alt={MALL_PHOTO_BOOTH.doorAlt}
+              effect="opacity"
+              className={MALL_PHOTO_BOOTH.doorClassName}
+              onClick={() => setIsPhotoBoothModalOpen(true)}
               requestInteraction={requestInteraction}
-              walkTarget={CARE_STORE_FACADE.walkTarget}
+              walkTarget={MALL_PHOTO_BOOTH.walkTarget}
             />
           </div>
 
@@ -355,51 +353,68 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           <img
             className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
             src="/assets/locations/shop/plant-1.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
 
           <img
             className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
             src="/assets/locations/shop/plant-1.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
           <img
             className='absolute bottom-[10.5%] left-[20.4%] z-[15] w-[7%]'
             src="/assets/locations/shop/plant-2.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
 
           <img
             className='absolute bottom-[10.5%] right-[20.4%] z-[15] w-[7%]'
             src="/assets/locations/shop/plant-2.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
           <img
             className='absolute bottom-[66.5%] left-[16%] z-[9] w-[6%]'
             src="/assets/locations/shop/plant-3.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
 
           <img
             className='absolute bottom-[66.5%] right-[16%] z-[9] w-[6%]'
             src="/assets/locations/shop/plant-3.png"
-            alt="Photo booth open"
+            alt=""
+            aria-hidden
           />
 
 
-          {/* Photo Booth */}
-          <div className='absolute bottom-[38.5%] left-[33.5%] z-[15] w-[8.5%]'>
-            <img
-              src="/assets/locations/shop/photo-booth.png"
-              alt="Photo booth open"
-              />
+          {/*
+            Care Store — on the middle level, in the bay the Photo Booth used to
+            hold, between the left plant and the Clothing Store.
+
+            The facade IS the entrance: no separate door overlay exists for it,
+            so the whole storefront is the click target. The affordance is a
+            FILTER, never a transform — a building that lifts off its own floor
+            when you point at it looks broken, so hover/focus/press only warm and
+            brighten it while it stays exactly where it stands. `animated={false}`
+            keeps `InteractiveElement`'s hover-scale and tap-pop off for the same
+            reason (the arcade Prize Counter does likewise).
+          */}
+          <div
+            data-care-store-facade
+            className={`${CARE_STORE_FACADE.containerClassName} transition-[filter] duration-200 ease-cozy hover:brightness-105 hover:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] focus-within:brightness-105 focus-within:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] active:brightness-110 motion-reduce:transition-none`}
+          >
             <InteractiveElement
-              src="/assets/locations/shop/doors/photo-booth-door.png"
-              alt="Photo booth open"
-              effect="opacity"
-              className="absolute bottom-[5.8%] right-[12.8%] w-[42.2%]"
-              onClick={() => setIsPhotoBoothModalOpen(true)}
+              src={CARE_STORE_FACADE.src}
+              alt={CARE_STORE_FACADE.alt}
+              effect="scale"
+              animated={false}
+              onClick={() => setCurrentLocation('care-store-inside')}
               requestInteraction={requestInteraction}
+              walkTarget={CARE_STORE_FACADE.walkTarget}
             />
           </div>
 

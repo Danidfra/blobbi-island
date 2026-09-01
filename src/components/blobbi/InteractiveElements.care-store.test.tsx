@@ -1,10 +1,12 @@
 /**
- * The Care Store storefront in the shopping mall.
+ * The Care Store storefront in the shopping mall — and the Photo Booth it
+ * traded places with.
  *
  * The facade is the door — there is no separate door overlay asset — so what
- * has to hold is: it is drawn from the real artwork, it stands beside the Coffee
- * Shop on the mall's ground floor rather than on top of it, and clicking it
- * walks the player to a point on the mall FLOOR before changing location.
+ * has to hold is: it is drawn from the real artwork, it stands on the middle
+ * level between the plant and the Clothing Store rather than on top of either,
+ * and clicking it walks the player onto the mall's walkway before changing
+ * location.
  *
  * That last part is the one worth guarding. The facade's own base sits above
  * the mall's walkable band, so a derived "floor at this sprite's base" target
@@ -19,6 +21,13 @@
  * `bottom-[…]` / `left-[…]` values would therefore pass while the scene looks
  * wrong — which is exactly the trap the facade's own anchor had to dodge. So
  * everything below is computed in PAINTED geometry.
+ *
+ * ## And why the facade must not MOVE
+ *
+ * A storefront that lifts off its own floor when you point at it reads as
+ * broken, not as interactive. The affordance is a filter; the tests below assert
+ * the absence of any transform rather than the presence of a particular glow,
+ * because "does not move" is the property that matters.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -30,6 +39,7 @@ import { InteractiveElements } from './InteractiveElements';
 import type { MovableBlobbiRef } from './MovableBlobbi';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
+import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { WORLD_ASPECT } from '@/lib/world-coordinates';
@@ -95,8 +105,12 @@ function pct(className: string, prefix: string): number {
 const ART = {
   care: { w: 567, h: 391, left: 0.0159, right: 0.0159, bottom: 0.0537 },
   coffee: { w: 579, h: 385, left: 0, right: 0.0052, bottom: 0.0026 },
-  /** The right potted plant the facade must not grow into. */
+  /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
+  /** The middle-level potted plant to the Care Store's left. */
+  plant1: { w: 91, h: 215, left: 0.044, right: 0.0549, bottom: 0.014 },
+  clothing: { w: 567, h: 391, left: 0, right: 0, bottom: 0 },
+  booth: { w: 223, h: 309, left: 0, right: 0.0045, bottom: 0 },
 } as const;
 
 interface Box {
@@ -132,20 +146,77 @@ function boxOf(el: HTMLElement, edge: 'left' | 'right'): Box {
 const coffeeEl = () =>
   screen.getByAltText('Shopping coffe shop').parentElement!.parentElement!;
 
-/** The right-hand potted plant on the mall's ground floor. */
-function plantEl(container: HTMLElement): HTMLElement {
+const clothingEl = () =>
+  screen.getByAltText('Shopping clothing store').parentElement!;
+
+const boothEl = () => screen.getByAltText('Photo booth').parentElement!;
+
+/** A ground-floor or middle-level potted plant, by its placement class. */
+function plantEl(container: HTMLElement, src: string, edgeClass: string): HTMLElement {
   const plant = [...container.querySelectorAll('img')].find(
     (img) =>
-      img.getAttribute('src') === '/assets/locations/shop/plant-2.png' &&
-      img.className.includes('right-[20.4%]'),
+      img.getAttribute('src') === src && img.className.includes(edgeClass),
   );
-  if (!plant) throw new Error('right ground-floor plant not found');
+  if (!plant) throw new Error(`plant ${src} ${edgeClass} not found`);
   return plant as HTMLElement;
 }
+
+const groundPlant = (c: HTMLElement) =>
+  plantEl(c, '/assets/locations/shop/plant-2.png', 'right-[20.4%]');
+const middlePlant = (c: HTMLElement) =>
+  plantEl(c, '/assets/locations/shop/plant-1.png', 'left-[26%]');
 
 beforeEach(() => {
   requests.length = 0;
   setCurrentLocation.mockReset();
+});
+
+describe('the Care Store and the Photo Booth swapped places', () => {
+  it('the Care Store now stands on the MIDDLE level, where the booth was', async () => {
+    await renderMall();
+    const care = boxOf(facade().parentElement!, 'left');
+    const clothing = boxOf(clothingEl(), 'right');
+
+    // Same level as the Clothing Store and the Badges Store, not the ground
+    // floor: the middle level's storefronts are the ones it now sits between.
+    expect(care.bottom).toBeGreaterThan(30);
+    expect(care.bottom).toBeLessThan(45);
+    expect(Math.abs(care.bottom - clothing.bottom)).toBeLessThan(2);
+  });
+
+  it('the Photo Booth now stands on the GROUND floor, where the Care Store was', async () => {
+    await renderMall();
+    const booth = boxOf(boothEl(), 'left');
+    const coffee = boxOf(coffeeEl(), 'left');
+
+    expect(booth.bottom).toBe(coffee.bottom);
+    // In the bay to the Coffee Shop's right.
+    expect(booth.left).toBeGreaterThan(coffee.left + coffee.width);
+  });
+
+  it('neither object was duplicated', async () => {
+    await renderMall();
+    expect(screen.getAllByAltText(CARE_STORE_FACADE.alt)).toHaveLength(1);
+    expect(screen.getAllByAltText('Photo booth')).toHaveLength(1);
+    // One door overlay for the booth, and none for the Care Store (the facade
+    // IS its door).
+    expect(screen.getAllByAltText(MALL_PHOTO_BOOTH.doorAlt)).toHaveLength(1);
+  });
+
+  it('neither destination changed', async () => {
+    await renderMall();
+    fireEvent.click(facade());
+    act(() => requests[0].action());
+    expect(setCurrentLocation).toHaveBeenCalledWith('care-store-inside');
+
+    // The booth still opens its own modal rather than navigating anywhere.
+    setCurrentLocation.mockReset();
+    requests.length = 0;
+    fireEvent.click(screen.getByAltText(MALL_PHOTO_BOOTH.doorAlt).parentElement!);
+    expect(requests).toHaveLength(1);
+    act(() => requests[0].action());
+    expect(setCurrentLocation).not.toHaveBeenCalled();
+  });
 });
 
 describe('the storefront is part of the mall scene', () => {
@@ -157,34 +228,51 @@ describe('the storefront is part of the mall scene', () => {
     );
   });
 
-  it('stands on the same floor line as the Coffee Shop, with no ink overlapping', async () => {
+  it('stands on the same floor line as its middle-level neighbours, with no ink overlapping', async () => {
     const { container } = await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
-    const coffee = painted(boxOf(coffeeEl(), 'left'), ART.coffee);
-    const plant = painted(boxOf(plantEl(container), 'right'), ART.plant);
+    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const plant = painted(boxOf(middlePlant(container), 'left'), ART.plant1);
 
     // ONE floor line. Comparing the raw `bottom-[…]` values would get this
     // wrong: the sprites are padded differently below their artwork.
-    expect(Math.abs(care.baseline - coffee.baseline)).toBeLessThan(0.3);
+    expect(Math.abs(care.baseline - clothing.baseline)).toBeLessThan(0.3);
 
-    // Beside the Coffee Shop, not on top of it — and not into the plant either.
-    expect(care.left).toBeGreaterThanOrEqual(coffee.right);
-    expect(care.right).toBeLessThanOrEqual(plant.left);
+    // Between the plant and the Clothing Store, touching neither.
+    expect(care.left).toBeGreaterThanOrEqual(plant.right);
+    expect(care.right).toBeLessThanOrEqual(clothing.left);
   });
 
   it('has presence: it fills the bay it stands in, without exceeding it', async () => {
     const { container } = await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
-    const coffee = painted(boxOf(coffeeEl(), 'left'), ART.coffee);
-    const plant = painted(boxOf(plantEl(container), 'right'), ART.plant);
+    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const plant = painted(boxOf(middlePlant(container), 'left'), ART.plant1);
 
-    const bay = plant.left - coffee.right;
+    const bay = clothing.left - plant.right;
     // "Slightly larger, never oversized": it uses nearly all the clear wall
     // between its neighbours, and none of theirs.
     expect(care.width / bay).toBeGreaterThan(0.95);
     expect(care.width / bay).toBeLessThanOrEqual(1);
-    // And it stays a sibling of the Coffee Shop rather than dwarfing it.
-    expect(Math.abs(care.width - coffee.width)).toBeLessThan(3);
+    // And it stays a sibling of the Clothing Store rather than dwarfing it.
+    expect(Math.abs(care.width - clothing.width)).toBeLessThan(4);
+  });
+
+  it('the Photo Booth sits clear of both its new neighbours', async () => {
+    const { container } = await renderMall();
+    const booth = painted(boxOf(boothEl(), 'left'), ART.booth);
+    const coffee = painted(boxOf(coffeeEl(), 'left'), ART.coffee);
+    const plant = painted(boxOf(groundPlant(container), 'right'), ART.plant);
+
+    expect(booth.left).toBeGreaterThanOrEqual(coffee.right);
+    expect(booth.right).toBeLessThanOrEqual(plant.left);
+    // Centred in the bay rather than stretched across it: a booth is a small
+    // object and must not pretend to be a storefront.
+    const bay = { left: coffee.right, right: plant.left };
+    const bayCentre = (bay.left + bay.right) / 2;
+    const boothCentre = (booth.left + booth.right) / 2;
+    expect(Math.abs(boothCentre - bayCentre)).toBeLessThan(0.5);
+    expect(booth.width / (bay.right - bay.left)).toBeLessThan(0.6);
   });
 
   it('keeps the facade inside the world', async () => {
@@ -216,6 +304,40 @@ describe('the storefront is part of the mall scene', () => {
     expect(facade().parentElement!.className).toContain(
       CARE_STORE_FACADE.containerClassName,
     );
+  });
+});
+
+describe('the facade never moves', () => {
+  /** Every Tailwind utility that would shift or resize the storefront. */
+  const MOVEMENT = /(^|[^\w-])(-?translate-|scale-|rotate-|skew-|animate-tap)/;
+
+  it('carries no transform utility in any state', async () => {
+    await renderMall();
+    const wrapper = facade().parentElement!;
+    for (const className of [wrapper.className, facade().className]) {
+      expect(className).not.toMatch(MOVEMENT);
+      // Nor a state-prefixed one, which is how the lift got in.
+      expect(className).not.toMatch(/hover:-?translate/);
+      expect(className).not.toMatch(/hover:scale/);
+      expect(className).not.toMatch(/active:scale/);
+    }
+  });
+
+  it('animates a FILTER instead, so the affordance costs no movement', async () => {
+    await renderMall();
+    const wrapper = facade().parentElement!;
+    expect(wrapper.className).toContain('transition-[filter]');
+    // Something visible must actually change on hover and on focus.
+    expect(wrapper.className).toMatch(/hover:(brightness|drop-shadow)/);
+    expect(wrapper.className).toMatch(/focus-within:(brightness|drop-shadow)/);
+  });
+
+  it('does not opt into `InteractiveElement`\'s own hover-scale or tap-pop', async () => {
+    await renderMall();
+    // `animated={false}` is what withholds both; the rendered class list is
+    // where that decision becomes observable.
+    expect(facade().className).not.toContain('hover:scale-110');
+    expect(facade().className).not.toContain('animate-tap');
   });
 });
 
