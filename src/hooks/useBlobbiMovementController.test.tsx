@@ -250,22 +250,93 @@ describe('useBlobbiMovementController lifecycle', () => {
     expect(pendingFrames()).toBe(0);
   });
 
-  it('colliding with a blocker mid-walk ends the walk at the collision edge', () => {
-    // Blocker between the start (x=10) and an allowed target beyond it.
-    const { result, onMoveComplete } = mount({}, { x: 20, y: 40, width: 20, height: 20 });
+  it('a blocker between start and target is WALKED AROUND, not stopped at', () => {
+    // This used to be the "ends the walk at the collision edge" test: the
+    // Blobbi met the obstacle at x=20 and gave up there, several body-lengths
+    // short of floor it could plainly have reached. It routes now.
+    const blocker = { x: 20, y: 40, width: 20, height: 20 };
+    const { result, onMoveComplete } = mount({}, blocker);
 
     act(() => {
       result.current.goTo({ x: 45, y: 50 }); // target itself is NOT blocked
     });
-
-    // Walk until a step lands inside the blocker (edge at x=20).
     runFrames(() => result.current.isMoving);
 
     expect(result.current.isMoving).toBe(false);
-    expect(result.current.position.x).toBeLessThanOrEqual(20);
-    // Historical contract: completion reports the TARGET (what the walk was
-    // for), while the position stays at the stop point.
+    // It got there, rather than halting at the blocker's near edge.
+    expect(result.current.position.x).toBeCloseTo(45, 1);
+    expect(result.current.position.y).toBeCloseTo(50, 1);
+    // Completion still reports the caller's destination, once.
     expect(onMoveComplete).toHaveBeenCalledOnce();
     expect(onMoveComplete).toHaveBeenCalledWith({ x: 45, y: 50 });
+  });
+
+  it('completes exactly once for a routed walk, not once per waypoint', () => {
+    const { result, onMoveComplete } = mount({}, { x: 20, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.goTo({ x: 45, y: 50 });
+    });
+    runFrames(() => result.current.isMoving);
+
+    // The detour corner is an internal step, not an arrival.
+    expect(onMoveComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the DESTINATION to onMoveStart, never a detour waypoint', () => {
+    const { result, onMoveStart } = mount({}, { x: 20, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.goTo({ x: 45, y: 50 });
+    });
+
+    // Presence and the pose controller are told where the player is going.
+    expect(onMoveStart).toHaveBeenCalledExactlyOnceWith({ x: 45, y: 50 });
+  });
+
+  it('refuses to set off when no route exists at all', () => {
+    // A wall of blockers with no way round inside the boundary.
+    const { result, onMoveStart } = mount({}, { x: 20, y: 0, width: 20, height: 100 });
+
+    act(() => {
+      result.current.goTo({ x: 60, y: 50 });
+    });
+
+    expect(result.current.isMoving).toBe(false);
+    expect(onMoveStart).not.toHaveBeenCalled();
+    expect(pendingFrames()).toBe(0);
+  });
+
+  it('a new destination mid-detour abandons the old route', () => {
+    const { result } = mount({}, { x: 20, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.goTo({ x: 45, y: 50 });
+    });
+    runFrames(() => result.current.isMoving, 4); // part-way round the obstacle
+
+    act(() => {
+      result.current.goTo({ x: 10, y: 90 });
+    });
+    runFrames(() => result.current.isMoving);
+
+    expect(result.current.position.x).toBeCloseTo(10, 1);
+    expect(result.current.position.y).toBeCloseTo(90, 1);
+  });
+
+  it('stop() drops the whole route, not just the leg in progress', () => {
+    const { result } = mount({}, { x: 20, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.goTo({ x: 45, y: 50 });
+    });
+    runFrames(() => result.current.isMoving, 4);
+    const stoppedAt = result.current.position;
+
+    act(() => result.current.stop());
+    runFrames(() => true, 10);
+
+    expect(result.current.isMoving).toBe(false);
+    expect(result.current.position).toEqual(stoppedAt);
   });
 });

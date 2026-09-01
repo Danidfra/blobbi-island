@@ -41,6 +41,7 @@ import {
   worldDistancePx,
 } from '@/lib/world-coordinates';
 import { MOVEMENT_SNAP_PX } from '@/lib/blobbi-ground';
+import { planRoute } from '@/lib/blobbi-route';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
 export interface MovementDirection {
@@ -99,19 +100,29 @@ export function useBlobbiMovementController({
   const positionRef = useRef(position);
   positionRef.current = position;
   const targetRef = useRef<GroundPosition>(initialPosition);
+  /**
+   * The waypoints still to walk, the LAST of which is the caller's real target.
+   *
+   * A straight walk is a one-entry route, so the ordinary case is exactly what
+   * it always was. When furniture is in the way the planner puts corner
+   * waypoints in front of it, and the loop retargets through them without ever
+   * completing — `onMoveComplete` and every pending interaction belong to the
+   * final entry alone.
+   */
+  const routeRef = useRef<GroundPosition[]>([]);
   const isMovingRef = useRef(false);
   const animationRef = useRef<number>();
   const lastTimeRef = useRef<number>();
   const justCompletedRef = useRef(false);
 
-  const { isPositionBlocked } = useMovementBlocker();
+  const { blockers, isPositionBlocked } = useMovementBlocker();
 
   // Latest-ref pattern for everything the rAF loop reads: the loop's identity
   // stays STABLE across parent re-renders and prop churn, so an in-flight walk
   // is never restarted, stalled, or double-completed by React updates — the
   // historical failure mode this controller exists to prevent.
-  const optionsRef = useRef({ movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked });
-  optionsRef.current = { movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked };
+  const optionsRef = useRef({ movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked, blockers });
+  optionsRef.current = { movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked, blockers };
 
   const cancelFrame = useCallback(() => {
     if (animationRef.current !== undefined) {
@@ -149,6 +160,14 @@ export function useBlobbiMovementController({
         const distance = worldDistancePx(currentPos, target);
 
         if (distance < MOVEMENT_SNAP_PX) {
+          // A waypoint, or the destination? Advancing keeps the walk in one
+          // continuous motion — no pause at a corner, and no completion until
+          // the route is spent.
+          if (routeRef.current.length > 1) {
+            routeRef.current = routeRef.current.slice(1);
+            targetRef.current = routeRef.current[0];
+            return target;
+          }
           reached = true;
           return target;
         }
@@ -183,6 +202,10 @@ export function useBlobbiMovementController({
         );
 
         if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
+          // Still blocked with a route in hand: the geometry moved under us
+          // (a blocker mounted mid-walk), or the clearance was not enough for
+          // this step. Stopping safely is right — but the destination is kept
+          // so the caller's pending interaction can still decide for itself.
           reached = true;
           return currentPos;
         }
@@ -201,6 +224,7 @@ export function useBlobbiMovementController({
 
       if (reached) {
         animationRef.current = undefined;
+        routeRef.current = [];
         complete(targetRef.current);
         return;
       }
@@ -225,11 +249,35 @@ export function useBlobbiMovementController({
 
   const goTo = useCallback(
     (target: GroundPosition) => {
-      if (optionsRef.current.isPositionBlocked(target.x, target.y)) return;
-      targetRef.current = target;
+      const { isPositionBlocked, boundary, blockers } = optionsRef.current;
+      // Walking into furniture is still refused outright — unchanged.
+      if (isPositionBlocked(target.x, target.y)) return;
+
+      /*
+        Plan once, here, rather than reacting frame by frame. The route is
+        `[target]` whenever the way is clear, so an unobstructed walk is
+        byte-for-byte the old behaviour; when something is in the way it is the
+        corner waypoints to walk through first. `null` means the planner found
+        no way round at all, and the honest response is not to set off: the old
+        code would have walked into the obstacle and stopped there, which looks
+        like the game ignoring the click.
+      */
+      const route = planRoute(
+        positionRef.current,
+        target,
+        boundary,
+        // The context stores `{ id, rect }`; the planner only wants geometry.
+        blockers.map((blocker) => blocker.rect),
+      );
+      if (!route) return;
+
+      routeRef.current = route;
+      targetRef.current = route[0];
       setIsMoving(true);
       isMovingRef.current = true;
       startAnimation();
+      // The caller asked for the DESTINATION, and that is what presence and the
+      // pose controller are told — never an internal waypoint.
       optionsRef.current.onMoveStart?.(target);
     },
     [startAnimation],
@@ -239,6 +287,7 @@ export function useBlobbiMovementController({
     (pose: PoseAnchor) => {
       if (optionsRef.current.isPositionBlocked(pose.x, pose.y)) return;
       cancelFrame();
+      routeRef.current = [];
       targetRef.current = pose;
       setPosition(pose);
       setIsMoving(false);
@@ -252,6 +301,9 @@ export function useBlobbiMovementController({
     cancelFrame();
     setIsMoving(false);
     isMovingRef.current = false;
+    // Drop the whole route, not just the leg in progress: a cancelled walk must
+    // not resume toward a destination the player has changed their mind about.
+    routeRef.current = [];
     targetRef.current = positionRef.current;
   }, [cancelFrame]);
 
