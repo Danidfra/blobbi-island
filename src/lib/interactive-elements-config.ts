@@ -163,25 +163,29 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   },
   {
     /*
-      Clothing Store. The room is FURNISHED now (`clothing-store-config.ts`), so
-      two coarse bands are no longer enough: the Blobbi has to pass in front of
-      some objects and behind others, and which is which depends on where each
-      object's base sits.
+      Clothing Store. Bands are DERIVED from where each object's painted base
+      sits, so they were recomputed when the room was rearranged rather than
+      kept because tests expected them.
 
-      Bands are derived from those bases — counter 85, fitting room and hat
-      shelf 89, display table 98 — read here as distance from the world's BOTTOM:
+      Object bases: checkout 82, hat shelf 89, fitting room 91, both display
+      tables 98. Read here as distance from the world's BOTTOM:
 
-        0–2   (y > 98)      in front of everything, table included   z 32
-        2–11  (y 89–98)     in front of the counter and the flanks   z 26
-        11–15 (y 85–89)     in front of the counter only             z 20
-        15+   (y < 85)      behind it all (blocked, but consistent)  z 10
+        0–2    (y > 98)     in front of everything, tables included     z 34
+        2–9    (y 91–98)    in front of the flanks, behind the tables   z 26
+        9–11   (y 89–91)    in front of the hat shelf and the counter   z 23
+        11–18  (y 82–89)    in front of the counter only                z 18
+        18+    (y < 82)     BEHIND the counter — the new back route     z 10
+
+      That last band is the one the rearrangement needed. The counter is no
+      longer a wall, so a Blobbi standing behind it must render behind it too.
     */
     backgroundFile: 'clothing-store-inside.png',
     thresholds: [
-      { minPosition: 0, maxPosition: 2, zIndex: 32 },
-      { minPosition: 2.01, maxPosition: 11, zIndex: 26 },
-      { minPosition: 11.01, maxPosition: 15, zIndex: 20 },
-      { minPosition: 15.01, maxPosition: 100, zIndex: 10 },
+      { minPosition: 0, maxPosition: 2, zIndex: 34 },
+      { minPosition: 2.01, maxPosition: 9, zIndex: 26 },
+      { minPosition: 9.01, maxPosition: 11, zIndex: 23 },
+      { minPosition: 11.01, maxPosition: 18, zIndex: 18 },
+      { minPosition: 18.01, maxPosition: 100, zIndex: 10 },
     ]
   },
   {

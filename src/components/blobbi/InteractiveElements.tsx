@@ -350,14 +350,14 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             />
           </div>
 
-        {/* Plants */}
-          <img
-            className='absolute bottom-[38.5%] left-[26%] z-[15] w-[3%]'
-            src="/assets/locations/shop/plant-1.png"
-            alt=""
-            aria-hidden
-          />
+        {/*
+          Plants.
 
+          The middle level's LEFT plant is deliberately absent: it used to fill
+          the narrow gap beside the Photo Booth, and once the Care Store took
+          that bay it only crowded the storefront's shoulder. Its mirror on the
+          right stays — it still marks the edge of the Clothing Store.
+        */}
           <img
             className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
             src="/assets/locations/shop/plant-1.png"

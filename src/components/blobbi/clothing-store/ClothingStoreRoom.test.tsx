@@ -118,6 +118,26 @@ describe('the boutique renders', () => {
     }
   });
 
+  it('renders the second display table from its own new asset', () => {
+    renderRoom();
+    const two = objectEl('clothing-store-display-table-2');
+    expect(two).toBeTruthy();
+    expect(two.getAttribute('src')).toBe(
+      '/assets/locations/clothing-store-inside/display-table-2.png',
+    );
+    // Its own object, not a re-render of the first.
+    expect(two.getAttribute('src')).not.toBe(
+      objectEl('clothing-store-display-table').getAttribute('src'),
+    );
+  });
+
+  it('registers a footprint for each table independently', () => {
+    renderRoom();
+    const registered = screen.getByTestId('blockers').textContent!.split(',');
+    expect(registered).toContain('clothing-store-display-table');
+    expect(registered).toContain('clothing-store-display-table-2');
+  });
+
   it('renders each object exactly once', () => {
     renderRoom();
     expect(

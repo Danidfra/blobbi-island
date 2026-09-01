@@ -90,130 +90,167 @@ export interface ClothingStoreObject {
  * counter, then the flanking furniture, then what sits out on the floor.
  *
  * ```
- *      [poster]      [ FASHION SHOP sign ]      [poster]
- *   [fitting                                          [hat
- *     room]          [   CHECKOUT   ]                shelf]
- *          ( rug )                    [display table]
+ *       [poster]    [ FASHION SHOP sign ]    [poster]
+ *   [hat            [   CHECKOUT   ]              [fitting
+ *   shelf]        ← walkable behind →              room]
+ *        [table 1]     ( rug )     [table 2]
  *   ─────────────────── open floor ───────────────────
  * ```
+ *
+ * The fitting room and the hat shelf traded sides, the rug moved to the middle,
+ * and the counter moved back off the wall it used to be pinned to.
  */
 export const clothingStoreObjects: readonly ClothingStoreObject[] = [
   {
     /**
-     * The rug. Floor decoration, so NO blocker — it is walked on, not around,
-     * exactly like the Care Store's.
+     * The rug, CENTRED — the room's floor anchor, with the counter behind it
+     * and a display table to either side. Floor decoration, so no blocker: it
+     * is walked on, not around.
      *
      * Sprite 1536×1024, ink margins l 1.82 % r 1.95 % t 15.43 % b 18.16 %.
-     * Paints x 24.0 → 43.3, base y 96.
+     * Paints x 39.4 → 60.6, base y 95. Its back edge tucks under the counter,
+     * which is drawn over it.
      */
     id: 'clothing-store-rug',
     src: `${ART}/rug.png`,
     alt: null,
-    className: 'absolute bottom-[0.4%] left-[23.6%] z-[2] w-[20%]',
+    className: 'absolute bottom-[1%] left-[39%] z-[2] w-[22%]',
   },
   {
     /**
      * The shop's own sign, centred on the back wall above the counter.
      *
      * Sprite 1448×1086, ink margins l/r 1.24 % t 0.83 % b 7.83 %.
-     * Paints x 39.8 → 60.2, y 30 → 51.6 — clear of the counter's top at 61.8.
+     * Paints x 43.2 → 56.8, y 33 → 47.4 — a third smaller than it was. It is
+     * still the largest wall piece by twice the posters' width, so the
+     * hierarchy is unchanged; it simply stopped dominating the wall.
      */
     id: 'clothing-store-sign',
     src: `${ART}/sign-fashion-shop.png`,
     alt: null,
-    className: 'absolute top-[29.8%] left-[39.5%] z-[5] w-[21%]',
+    className: 'absolute top-[32.9%] left-[43%] z-[5] w-[14%]',
   },
   {
     /**
      * "Dress up your Blobbi!" — back wall, left of the sign.
      *
      * Sprite 1024×1536, ink margins l 2.54 % r 2.73 % t 1.04 % b 7.1 %.
-     * Paints x 21.5 → 31.9, y 32 → 54.7: on the wall between the left pillar
-     * (ends x 17.5) and the counter, and above the fitting room's roofline.
+     * Paints x 26 → 33.1, y 34 → 49.5. Roughly a 10 % gap to the sign, matched
+     * on the other side.
      */
     id: 'clothing-store-poster-dress-up',
     src: `${ART}/poster-dress-up.png`,
     alt: null,
-    className: 'absolute top-[31.7%] left-[21.2%] z-[5] w-[11%]',
+    className: 'absolute top-[33.8%] left-[25.8%] z-[5] w-[7.5%]',
   },
   {
     /**
      * A framed picture of a Blobbi at the mirror — back wall, right of the sign.
      *
      * Sprite 1024×1536, ink margins l 5.57 % r 5.47 % t 1.95 % b 9.24 %.
-     * Paints x 69.2 → 79.0, y 32 → 54.0, mirroring the left poster.
+     * Paints x 67.3 → 74, y 34 → 49, mirroring the left poster and sitting well
+     * above the fitting room's roofline at y = 58.7.
      */
     id: 'clothing-store-poster-mirror',
     src: `${ART}/poster-fitting-mirror.png`,
     alt: null,
-    className: 'absolute top-[31.5%] left-[68.6%] z-[5] w-[11%]',
+    className: 'absolute top-[33.7%] left-[66.9%] z-[5] w-[7.5%]',
   },
   {
     /**
-     * The checkout counter — centre of the room, close to the back wall, which
-     * is where a boutique's till belongs and where a player looks for it.
+     * The checkout counter — centre of the room, and now further back, with
+     * REAL FLOOR BEHIND IT.
      *
      * Sprite 1536×1024, ink margins l 6.51 % r 6.45 % t 15.62 % b 16.21 %.
-     * Paints x 35.2 → 64.8, y 61.8 → 85.
+     * Paints x 35.2 → 64.8, y 58.8 → 82.
      *
-     * The blocker seals from the wall line (y = 77) to just past the painted
-     * base, across the counter's full width: there is no walking behind the
-     * till. Its front edge leaves y > 86 open, which is where
-     * {@link CLOTHING_STORE_CHECKOUT.standPoint} puts the player.
+     * The blocker used to seal everything from the wall line to the counter's
+     * base, which made the till a wall rather than a piece of furniture. It is
+     * now only the counter's own floor FOOTPRINT — the band of floor its body
+     * actually stands on — so `y ∈ [77.5, 80.2]` behind it is open and the
+     * player can walk round either end and along the back. The customer still
+     * stands in FRONT: see {@link CLOTHING_STORE_CHECKOUT.standPoint}.
      */
     id: 'clothing-store-checkout',
     src: `${ART}/checkout.png`,
     alt: null,
-    className: 'absolute bottom-[9.5%] left-[33%] z-[15] w-[34%]',
-    blocker: { x: 35, y: 77, width: 30, height: 9 },
+    className: 'absolute bottom-[12.5%] left-[33%] z-[15] w-[34%]',
+    blocker: { x: 35.2, y: 80.2, width: 29.6, height: 2.2 },
   },
   {
     /**
-     * The fitting room, against the left wall — the edge of the room, so it
-     * never stands between the player and the counter.
-     *
-     * Sprite 1536×1024, ink margins l 11.2 % r 10.81 % t 2.34 % b 5.37 %.
-     * Paints x 1.5 → 24.1, y 62.2 → 89. The sprite includes the plant and the
-     * stool beside the booth, so the blocker covers the whole group's footprint.
-     */
-    id: 'clothing-store-fitting-room',
-    src: `${ART}/fitting-room.png`,
-    alt: null,
-    className: 'absolute bottom-[9.4%] -left-[1.7%] z-[22] w-[29%]',
-    blocker: { x: 1.5, y: 78, width: 23, height: 12 },
-  },
-  {
-    /**
-     * The hat shelf, against the right wall — the fitting room's counterweight.
+     * The hat shelf, now against the LEFT wall.
      *
      * Sprite 1536×1024, ink margins l 14.91 % r 14.84 % t 3.03 % b 3.32 %.
-     * Paints x 79.5 → 98.5, y 63.7 → 89.
+     * Paints x 1.5 → 20.5, base y 89. Unchanged in size — it reads clearly as a
+     * merchandise wall without competing with the fitting room opposite.
+     *
+     * A shelf unit is shallow, so its footprint is a shallow band. Most of its
+     * painted width sits over the left wall's perspective wedge, which the walk
+     * boundary already excludes.
      */
     id: 'clothing-store-hat-shelf',
     src: `${ART}/hat-shelf.png`,
     alt: null,
-    className: 'absolute bottom-[10.1%] -right-[2.5%] z-[22] w-[27%]',
-    blocker: { x: 79.5, y: 78, width: 19, height: 12 },
+    className: 'absolute bottom-[10.1%] -left-[2.5%] z-[22] w-[27%]',
+    blocker: { x: 1.5, y: 84, width: 19, height: 6 },
   },
   {
     /**
-     * The accessory display table, out on the floor to the right of centre.
+     * The fitting room, now on the RIGHT and substantially bigger — 27.3 % of
+     * the world wide against the 22.6 % it was, and half again as tall.
+     *
+     * Sprite 1536×1024, ink margins l 11.2 % r 10.81 % t 2.34 % b 5.37 %.
+     * Paints x 71.7 → 99, y 58.7 → 91. It reads as an area you walk into rather
+     * than a cupboard, and it clears the counter's right edge (x 64.8) entirely.
+     *
+     * Its footprint is the booth plus the plant and stool the sprite includes.
+     * Floor stays open BEHIND it (`y < 84`), so the back of the room is a
+     * through-route rather than a dead end.
+     */
+    id: 'clothing-store-fitting-room',
+    src: `${ART}/fitting-room.png`,
+    alt: null,
+    className: 'absolute bottom-[7.1%] -right-[2.8%] z-[24] w-[35%]',
+    blocker: { x: 71.7, y: 84, width: 27.3, height: 8 },
+  },
+  {
+    /**
+     * Accessory display table — left of centre, between the hat shelf and the
+     * rug.
      *
      * Sprite 1448×1086, ink margins l 0 % r 0.07 % t 4.05 % b 4.97 %.
-     * Paints x 60 → 75, y 82.6 → 98.
+     * Paints x 21 → 38, y 80.6 → 98.
      *
-     * Deliberately NOT in the middle: it sits off the centre line so the walk
-     * from the door to the counter stays a clear corridor (x ≈ 43 → 60), and it
-     * balances the rug on the other side.
-     *
-     * Its blocker is the band of floor its legs stand on, not its whole painted
-     * height — the Blobbi walks around it, and may pass behind it.
+     * The blocker is its FEET, not its tabletop. A table on legs has floor
+     * behind it, and the previous 6.5 %-deep rectangle claimed all of it — so
+     * the Blobbi could not walk between the table and the counter even though
+     * the picture plainly says it should. Two percent of floor at the front
+     * legs is the whole of what this object physically occupies.
      */
     id: 'clothing-store-display-table',
     src: `${ART}/display-table.png`,
     alt: null,
-    className: 'absolute bottom-[1.2%] left-[60%] z-[28] w-[15%]',
-    blocker: { x: 60, y: 92, width: 15, height: 6.5 },
+    className: 'absolute bottom-[1%] left-[21%] z-[28] w-[17%]',
+    blocker: { x: 21, y: 95.8, width: 17, height: 2.2 },
+  },
+  {
+    /**
+     * Clothing display table — right of centre, the counterweight to the first.
+     *
+     * Sprite 1536×1024, ink margins l/r 6.45 % t 7.71 % b 6.45 %.
+     * Paints x 62 → 76.8, y 83.4 → 98.
+     *
+     * Not a mirror of its partner: it is a different table, a little smaller,
+     * and it overlaps the fitting room's lower corner the way a display stand
+     * in front of a booth actually would. Same feet-only footprint, so the
+     * floor behind it is walkable too.
+     */
+    id: 'clothing-store-display-table-2',
+    src: `${ART}/display-table-2.png`,
+    alt: null,
+    className: 'absolute bottom-[0.9%] left-[60.9%] z-[28] w-[17%]',
+    blocker: { x: 62, y: 95.8, width: 14.8, height: 2.2 },
   },
 ];
 
@@ -235,13 +272,17 @@ export const clothingStoreBlockers = clothingStoreObjects.flatMap((object) =>
 export const CLOTHING_STORE_CHECKOUT = {
   id: 'clothing-store-checkout-hotspot',
   label: 'Checkout counter — browse clothing',
-  /** Over the counter's painted face: x 35.2 → 64.8, y 61.8 → 85. */
-  className: 'absolute left-[35.2%] top-[61.8%] h-[23.2%] w-[29.6%] z-[16]',
+  /** Over the counter's painted face: x 35.2 → 64.8, y 58.8 → 82. */
+  className: 'absolute left-[35.2%] top-[58.8%] h-[23.2%] w-[29.6%] z-[16]',
   /**
-   * Where the player stands to be served: centred on the counter, on open floor
-   * a comfortable step clear of the counter blocker's front edge (y = 86).
+   * Where the player stands to be served: centred on the counter and IN FRONT
+   * of it, a step clear of the footprint's front edge (y = 82.4).
+   *
+   * In front, deliberately. The floor behind the till is walkable now, so a
+   * derived or lazily-chosen point could easily land back there — and being
+   * served from the staff side is not the interaction.
    */
-  standPoint: { x: 50, y: 87.5 } as Position,
+  standPoint: { x: 50, y: 84 } as Position,
 } as const;
 
 /**

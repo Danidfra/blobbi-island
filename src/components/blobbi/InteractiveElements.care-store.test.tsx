@@ -91,11 +91,14 @@ async function renderMall() {
 /** The clickable wrapper `InteractiveElement` puts around the facade sprite. */
 const facade = () => screen.getByAltText(CARE_STORE_FACADE.alt).parentElement!;
 
-/** Parse a Tailwind percentage utility like `left-[50%]`. */
+/**
+ * Parse a Tailwind percentage utility like `left-[50%]` — or `-left-[2.5%]`,
+ * which is how the Badges Store hangs off the frame's left edge.
+ */
 function pct(className: string, prefix: string): number {
-  const match = className.match(new RegExp(`(?:^| )${prefix}-\\[([\\d.]+)%\\]`));
+  const match = className.match(new RegExp(`(?:^| )(-?)${prefix}-\\[([\\d.]+)%\\]`));
   if (!match) throw new Error(`no ${prefix}-[…%] in "${className}"`);
-  return Number(match[1]);
+  return Number(match[2]) * (match[1] === '-' ? -1 : 1);
 }
 
 /**
@@ -107,9 +110,9 @@ const ART = {
   coffee: { w: 579, h: 385, left: 0, right: 0.0052, bottom: 0.0026 },
   /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
-  /** The middle-level potted plant to the Care Store's left. */
-  plant1: { w: 91, h: 215, left: 0.044, right: 0.0549, bottom: 0.014 },
   clothing: { w: 567, h: 391, left: 0, right: 0, bottom: 0 },
+  /** The Badges Store, the Care Store's other middle-level neighbour. */
+  badges: { w: 616, h: 430, left: 0, right: 0.0032, bottom: 0.007 },
   booth: { w: 223, h: 309, left: 0, right: 0.0045, bottom: 0 },
 } as const;
 
@@ -149,6 +152,9 @@ const coffeeEl = () =>
 const clothingEl = () =>
   screen.getByAltText('Shopping clothing store').parentElement!;
 
+const badgesEl = () =>
+  screen.getByAltText('Shopping badges store').parentElement!;
+
 const boothEl = () => screen.getByAltText('Photo booth').parentElement!;
 
 /** A ground-floor or middle-level potted plant, by its placement class. */
@@ -163,9 +169,6 @@ function plantEl(container: HTMLElement, src: string, edgeClass: string): HTMLEl
 
 const groundPlant = (c: HTMLElement) =>
   plantEl(c, '/assets/locations/shop/plant-2.png', 'right-[20.4%]');
-const middlePlant = (c: HTMLElement) =>
-  plantEl(c, '/assets/locations/shop/plant-1.png', 'left-[26%]');
-
 beforeEach(() => {
   requests.length = 0;
   setCurrentLocation.mockReset();
@@ -219,6 +222,41 @@ describe('the Care Store and the Photo Booth swapped places', () => {
   });
 });
 
+describe('the plant beside the Care Store is gone', () => {
+  it('the middle level keeps only its RIGHT plant', async () => {
+    const { container } = await renderMall();
+    const middlePlants = [...container.querySelectorAll('img')].filter(
+      (img) => img.getAttribute('src') === '/assets/locations/shop/plant-1.png',
+    );
+    expect(middlePlants).toHaveLength(1);
+    // The survivor is the one on the Clothing Store's side.
+    expect(middlePlants[0].className).toContain('right-[26%]');
+    expect(middlePlants[0].className).not.toContain('left-[26%]');
+  });
+
+  it("leaves the mall's other plants alone", async () => {
+    const { container } = await renderMall();
+    const count = (src: string) =>
+      [...container.querySelectorAll('img')].filter(
+        (img) => img.getAttribute('src') === src,
+      ).length;
+    // Ground floor and top level are untouched: two of each, as before.
+    expect(count('/assets/locations/shop/plant-2.png')).toBe(2);
+    expect(count('/assets/locations/shop/plant-3.png')).toBe(2);
+  });
+
+  it('the Care Store is still there and still clickable', async () => {
+    await renderMall();
+    expect(facade()).toHaveAttribute('data-block-move');
+
+    fireEvent.click(facade());
+    expect(requests).toHaveLength(1);
+    expect(requests[0].target).toEqual(CARE_STORE_FACADE.walkTarget);
+    act(() => requests[0].action());
+    expect(setCurrentLocation).toHaveBeenCalledWith('care-store-inside');
+  });
+});
+
 describe('the storefront is part of the mall scene', () => {
   it('renders the real Care Store artwork', async () => {
     await renderMall();
@@ -229,33 +267,35 @@ describe('the storefront is part of the mall scene', () => {
   });
 
   it('stands on the same floor line as its middle-level neighbours, with no ink overlapping', async () => {
-    const { container } = await renderMall();
+    await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
     const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
-    const plant = painted(boxOf(middlePlant(container), 'left'), ART.plant1);
+    const badges = painted(boxOf(badgesEl(), 'left'), ART.badges);
 
-    // ONE floor line. Comparing the raw `bottom-[…]` values would get this
-    // wrong: the sprites are padded differently below their artwork.
+    // ONE floor line, all three of them. Comparing the raw `bottom-[…]` values
+    // would get this wrong: the sprites are padded differently below their art.
     expect(Math.abs(care.baseline - clothing.baseline)).toBeLessThan(0.3);
+    expect(Math.abs(care.baseline - badges.baseline)).toBeLessThan(0.3);
 
-    // Between the plant and the Clothing Store, touching neither.
-    expect(care.left).toBeGreaterThanOrEqual(plant.right);
+    // Between the Badges Store and the Clothing Store, overlapping neither.
+    expect(care.left).toBeGreaterThanOrEqual(badges.right);
     expect(care.right).toBeLessThanOrEqual(clothing.left);
   });
 
-  it('has presence: it fills the bay it stands in, without exceeding it', async () => {
-    const { container } = await renderMall();
+  it('stays the size it was when the plant beside it was removed', async () => {
+    await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
     const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
-    const plant = painted(boxOf(middlePlant(container), 'left'), ART.plant1);
+    const badges = painted(boxOf(badgesEl(), 'left'), ART.badges);
 
-    const bay = clothing.left - plant.right;
-    // "Slightly larger, never oversized": it uses nearly all the clear wall
-    // between its neighbours, and none of theirs.
-    expect(care.width / bay).toBeGreaterThan(0.95);
-    expect(care.width / bay).toBeLessThanOrEqual(1);
-    // And it stays a sibling of the Clothing Store rather than dwarfing it.
+    // Taking the plant out left more clear wall, and the facade deliberately
+    // did NOT grow into it — a storefront's size should not be an accident of
+    // what its neighbours happen to be. It reads as a sibling of the Clothing
+    // Store, with a corridor's worth of gap on its open side.
     expect(Math.abs(care.width - clothing.width)).toBeLessThan(4);
+    const bay = clothing.left - badges.right;
+    expect(care.width).toBeLessThan(bay);
+    expect(care.left - badges.right).toBeGreaterThan(3);
   });
 
   it('the Photo Booth sits clear of both its new neighbours', async () => {

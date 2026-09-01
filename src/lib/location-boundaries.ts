@@ -206,13 +206,28 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [20, 68], // Center area of booth
     y: [72.8, 76.8], // Bottom area of booth (floor)
   },
+  /**
+   * Clothing Store.
+   *
+   * The back edge moved from 79.2 to 77.5 when the room was furnished. That is
+   * a REFINEMENT, not an expansion: probed off the artwork, the back wall meets
+   * the floor at y = 77, so 77.5 still leaves half a percent of margin and the
+   * boundary stays strictly inside painted floor. The old 79.2 was fine while
+   * the checkout was sealed against the wall; once the till became a piece of
+   * furniture with walkable floor behind it, that last inch and a half was the
+   * difference between a through-route and a 0.3 %-deep sliver.
+   *
+   * The flanking triangles follow it up, and remain conservative — the real
+   * side-wall/floor junction runs from (0, ~89.7) to (16, ~76), so the triangle
+   * edge from (0, 100) to (16, 77.5) sits well inside it at every x.
+   */
   'clothing-store-inside.png': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [16, 84], y: [79.2, 100] },
+      { type: 'rectangle', x: [16, 84], y: [77.5, 100] },
 
-      { type: 'triangle', points: [{ x: 16, y: 79.2 }, { x: 16, y: 100 }, { x: 0, y: 100 }] },
-      { type: 'triangle', points: [{ x: 84, y: 79.2 }, { x: 84, y: 100 }, { x: 100, y: 100 }] },
+      { type: 'triangle', points: [{ x: 16, y: 77.5 }, { x: 16, y: 100 }, { x: 0, y: 100 }] },
+      { type: 'triangle', points: [{ x: 84, y: 77.5 }, { x: 84, y: 100 }, { x: 100, y: 100 }] },
     ]
   },
   /**
