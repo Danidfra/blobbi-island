@@ -213,7 +213,14 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
               title: 'Purchase Successful',
               description: `Spent ${result.totalCost} Blobbi Coins. Your items are in your inventory.`,
             }
-          : result.outcome === 'blocked'
+          : result.outcome === 'stock-limit'
+            ? {
+                title: 'Already at the Limit',
+                description:
+                  'One of these items is already at its maximum — nothing was charged.',
+                variant: 'destructive',
+              }
+            : result.outcome === 'blocked'
             ? {
                 title: 'Previous Purchase Still Unresolved',
                 description:

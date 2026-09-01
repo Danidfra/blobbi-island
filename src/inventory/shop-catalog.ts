@@ -37,8 +37,10 @@
  */
 
 import {
+  ADDRESSED_OFFICIAL_COSMETICS,
   ADDRESSED_OFFICIAL_ITEMS,
   CONSUMABLE_ITEM_CATEGORIES,
+  officialCosmeticByD,
   officialItemByD,
 } from '@/protocol/event-registry';
 
@@ -181,14 +183,154 @@ const PRICE_BY_ADDRESS = new Map(
   SHOP_ENTRIES.map((entry) => [entry.address, entry.price]),
 );
 
+/**
+ * The WEARABLE coin price list — a second price domain, deliberately separate.
+ *
+ * {@link COIN_PRICES} refuses to price anything that is not a consumable, and
+ * that rule is load-bearing rather than incidental: it is what stops the Arcade
+ * Ticket becoming purchasable, and it must not be relaxed. Wearables are priced
+ * here instead, against their own validator, so a cosmetic can be sold without
+ * weakening the guarantee that protects the consumable shop.
+ *
+ * ## It is EMPTY, and that is a decision rather than an omission
+ *
+ * Every official wearable this client knows is already spoken for:
+ *
+ *   Block Builder Cap      200 Arcade Tickets   (Prize Counter)
+ *   Stargazer Glasses      500 Arcade Tickets   (Prize Counter)
+ *   Starlight Bow Tie      900 Arcade Tickets   (Prize Counter)
+ *   Celestial Seraph Necklace  — reserved for a future special acquisition
+ *                                path, deliberately NOT in the Arcade
+ *                                (`official-prize-catalog.ts`)
+ *
+ * Putting a Coin price on any of the first three would let a player buy past
+ * the ticket ladder that the Prize Counter exists to create — an Arcade economy
+ * change, not a Clothing Store one. Putting a price on the fourth would decide
+ * the "future special acquisition path" its own definition reserves. Neither is
+ * this workstream's call to make, and neither is recoverable by a code review,
+ * so the shelf ships honest and empty rather than stocked with a number nobody
+ * chose.
+ *
+ * Everything downstream is built and tested. Adding a line here is all that
+ * stocking the Clothing Store takes.
+ */
+export const WEARABLE_COIN_PRICES: readonly CoinPriceEntry[] = [];
+
+/**
+ * Validate a wearable price table against the canonical COSMETIC registry.
+ *
+ * Same shape as {@link validateCoinPrices}, different membership rule: an entry
+ * must be an official cosmetic that is actually PUBLISHED (`active`). Selling a
+ * `reserved` identity would put an item in a player's inventory that no client
+ * can resolve to a name or a picture.
+ */
+export function validateWearablePrices(
+  entries: readonly CoinPriceEntry[],
+): string[] {
+  const issues: string[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of entries) {
+    if (seen.has(entry.d)) {
+      issues.push(`duplicate wearable price entry for "${entry.d}"`);
+      continue;
+    }
+    seen.add(entry.d);
+
+    const cosmetic = officialCosmeticByD(entry.d);
+    if (!cosmetic) {
+      issues.push(`"${entry.d}" is not an official registered cosmetic`);
+      continue;
+    }
+    if (cosmetic.status !== 'active') {
+      issues.push(
+        `"${entry.d}" is ${cosmetic.status}, so its definition cannot be resolved by a buyer`,
+      );
+    }
+    if (!Number.isInteger(entry.coins) || entry.coins <= 0) {
+      issues.push(
+        `"${entry.d}" has an invalid price ${entry.coins} (expected a positive integer)`,
+      );
+    }
+  }
+
+  return issues;
+}
+
+const shippedWearableIssues = validateWearablePrices(WEARABLE_COIN_PRICES);
+if (shippedWearableIssues.length > 0) {
+  throw new CoinPriceValidationError(shippedWearableIssues);
+}
+
+const WEARABLE_COINS_BY_D = new Map(
+  WEARABLE_COIN_PRICES.map((e) => [e.d, e.coins]),
+);
+
+export interface WearableShopEntry extends ShopEntry {
+  /** How many one player may hold. Every official cosmetic publishes 1. */
+  maxStack: number;
+}
+
+/**
+ * Purchasable wearables: every official cosmetic that has a coin price, in
+ * canonical registry order.
+ */
+export const WEARABLE_SHOP_ENTRIES: readonly WearableShopEntry[] =
+  ADDRESSED_OFFICIAL_COSMETICS.flatMap((cosmetic) => {
+    const price = WEARABLE_COINS_BY_D.get(cosmetic.d);
+    return price === undefined
+      ? []
+      : [
+          {
+            address: cosmetic.address,
+            // Cosmetics have no legacy itemId; the `d` is the only non-address
+            // identifier they have ever had.
+            itemId: cosmetic.d,
+            price,
+            maxStack: cosmetic.maxStack,
+          },
+        ];
+  });
+
+const WEARABLE_PRICE_BY_ADDRESS = new Map(
+  WEARABLE_SHOP_ENTRIES.map((entry) => [entry.address, entry.price]),
+);
+
 /** Look up a price by legacy itemId. `null` when the item is not for sale. */
 export function priceForItemId(itemId: string): number | null {
   return PRICE_BY_ITEM_ID.get(itemId) ?? null;
 }
 
-/** Look up a price by canonical address. `null` when the item is not for sale. */
+/**
+ * Look up a price by canonical address. `null` when the item is not for sale.
+ *
+ * THE pricing boundary — `useBatchPurchase` resolves every charge through this
+ * one function, so both price domains have to answer here or a wearable could
+ * not be bought through the shared purchase path at all. Consulting both keeps
+ * ONE boundary rather than growing a second purchase flow beside it; the two
+ * tables stay separate underneath because their membership rules differ.
+ *
+ * An address in neither table is NOT FOR SALE, which is what makes
+ * `normalizePurchaseLines` reject it. Unknown is never free.
+ */
 export function priceForAddress(address: string): number | null {
-  return PRICE_BY_ADDRESS.get(address) ?? null;
+  return (
+    PRICE_BY_ADDRESS.get(address) ?? WEARABLE_PRICE_BY_ADDRESS.get(address) ?? null
+  );
+}
+
+/**
+ * The published stack ceiling for a purchasable address, or `null` for none.
+ *
+ * Consumables publish no `max_stack` and are unbounded; wearables publish `1`
+ * and are therefore unique. This is the ONE place a purchase asks the question,
+ * and it answers from the definition rather than from a category guess.
+ */
+export function stackLimitForAddress(address: string): number | null {
+  return (
+    WEARABLE_SHOP_ENTRIES.find((entry) => entry.address === address)?.maxStack ??
+    null
+  );
 }
 
 /** Resolve a shop entry from a legacy itemId. */

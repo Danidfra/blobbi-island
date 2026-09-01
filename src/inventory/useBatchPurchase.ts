@@ -51,14 +51,16 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { GameInventory } from './package';
+
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { closeSpendIntent, openSpendIntent } from '@/lib/coin-spend-intent';
 
 import { isAmbiguousInventoryPublish } from './inventory-transaction';
-import { useInventoryMutation } from './useInventoryMutation';
+import { getQuantity, useInventoryMutation } from './useInventoryMutation';
 import { useCoinWallet } from './useCoinWallet';
 import { mintCoinOpId } from './coin-wallet';
-import { priceForAddress } from './shop-catalog';
+import { priceForAddress, stackLimitForAddress } from './shop-catalog';
 import { inventoryQueryKey } from './useIslandInventory';
 
 /**
@@ -91,8 +93,13 @@ export interface BatchPurchaseResult {
   lines: BatchPurchaseResultLine[];
   totalCost: number;
   /**
-   * `applied`   — the purchase definitively completed (grant + charge in one
+   * `applied`     — the purchase definitively completed (grant + charge in one
    *               event), now or on a previous attempt of the same cart.
+   * `stock-limit` — a line would have pushed a holding past the item's published
+   *               `max_stack`, judged against the FRESH authoritative inventory
+   *               inside the wallet's lock. Nothing was charged and nothing was
+   *               granted. This is what makes a unique wearable un-rebuyable
+   *               even if the button that started it was stale.
    * `ambiguous` — the publish MAY have landed; the spend intent is kept, so
    *               confirming the SAME cart again reconciles the original
    *               operation instead of debiting independently. The UI must
@@ -100,7 +107,7 @@ export interface BatchPurchaseResult {
    * `blocked`   — a previous attempt of this cart is still unresolved and
    *               could not yet be proven either way; nothing new was charged.
    */
-  outcome: 'applied' | 'ambiguous' | 'blocked';
+  outcome: 'applied' | 'ambiguous' | 'blocked' | 'stock-limit';
 }
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
@@ -191,6 +198,40 @@ export function totalCostForLines(lines: BatchPurchaseResultLine[]): number {
   return total;
 }
 
+/** Compile-time proof that every wallet outcome is accounted for. */
+function assertNoUnhandledOutcome(outcome: never): never {
+  throw new Error(
+    `Unexpected wallet outcome: ${(outcome as { status?: string }).status}`,
+  );
+}
+
+/**
+ * The stack-ceiling guard, as a wallet PRECONDITION rather than a UI check.
+ *
+ * A shop can render "Owned" from a cached inventory and still be wrong: the
+ * cache can lag, two tabs can race, and a stale button can be clicked. So the
+ * question "would this push me past `max_stack`?" is asked where it can be
+ * answered truthfully — inside the wallet's lock, against the exact base the
+ * replacement event would be built from. A false answer publishes nothing,
+ * records nothing and charges nothing.
+ *
+ * Returns `undefined` when no line has a ceiling, so an ordinary consumable
+ * cart carries no precondition at all and its behaviour is unchanged.
+ */
+function stackPrecondition(
+  lines: readonly BatchPurchaseResultLine[],
+): ((inventory: GameInventory) => boolean) | undefined {
+  const limited = lines.flatMap((line) => {
+    const limit = stackLimitForAddress(line.address);
+    return limit === null ? [] : [{ address: line.address, limit, want: line.quantity }];
+  });
+  if (limited.length === 0) return undefined;
+  return (inventory) =>
+    limited.every(
+      ({ address, limit, want }) => getQuantity(inventory, address) + want <= limit,
+    );
+}
+
 /**
  * Buy multiple item types in one confirmation as ONE canonical inventory
  * event (coins spent + items granted together).
@@ -263,6 +304,7 @@ export function useBatchPurchase() {
         amount: totalCost,
         label: 'shop-purchase',
         grantLines,
+        precondition: stackPrecondition(normalized),
       });
 
       if (outcome.status === 'applied' || outcome.status === 'already-applied') {
@@ -277,9 +319,17 @@ export function useBatchPurchase() {
       if (outcome.status === 'ambiguous') {
         return { lines: resultLines, totalCost, outcome: 'ambiguous' };
       }
-      // 'skipped' cannot happen (no precondition is passed) — surface loudly
-      // rather than misreporting it as a purchase state.
-      throw new Error(`Unexpected wallet outcome: ${outcome.status}`);
+      if (outcome.status === 'skipped') {
+        // The stack precondition refused on the fresh in-lock base: nothing was
+        // published and nothing recorded. The intent is closed because this
+        // cart is finished — retrying it would only be refused again.
+        closeSpendIntent(user.pubkey, 'shop-purchase', opened.intent.intentId);
+        return { lines: resultLines, totalCost, outcome: 'stock-limit' };
+      }
+      // Exhaustive: every `CoinMutationOutcome` is handled above. A new
+      // variant added to the wallet fails the typecheck here rather than
+      // silently falling through to a wrong purchase state.
+      return assertNoUnhandledOutcome(outcome);
     },
     onSettled: () => {
       if (!user?.pubkey) return;
