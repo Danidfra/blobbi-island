@@ -207,17 +207,23 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   },
   {
     // Badges Store. Two bands, because the room has exactly one depth line that
-    // matters: both display units paint their base at y = 89 % (position 11),
+    // matters: both display units paint their base at y = 90 % (position 10),
     // and everything else in the room — shelving, checkout, rug, door — is
     // painted into the background behind the Blobbi.
     //
     // Standing in FRONT of that line the Blobbi must cover the units (z-26);
     // standing behind it, it must pass behind them AND behind the checkout
     // hotspot (z-16), which is what makes walking round the back read correctly.
+    //
+    // The line moved from 11 to 10 when the displays were scaled to 3×: the two
+    // painted bases were re-aligned onto y = 90 so a single threshold still
+    // serves both. Nothing else about the depth model needed changing — the
+    // units grew upward and outward, not forward, so the floor line they stand
+    // on is still the only place the ordering flips.
     backgroundFile: 'badges-store-inside.webp',
     thresholds: [
-      { minPosition: 0, maxPosition: 11, zIndex: 30 },    // In front of both units
-      { minPosition: 11.01, maxPosition: 100, zIndex: 14 } // Behind them
+      { minPosition: 0, maxPosition: 10, zIndex: 30 },    // In front of both units
+      { minPosition: 10.01, maxPosition: 100, zIndex: 14 } // Behind them
     ]
   }
 ];

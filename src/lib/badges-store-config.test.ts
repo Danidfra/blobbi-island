@@ -135,7 +135,51 @@ describe('the storefront in the mall', () => {
   });
 });
 
-describe('the two display units', () => {
+/**
+ * What the two units painted when the store opened.
+ *
+ * Kept as literals rather than recomputed, because the claim under test is a
+ * comparison against a PAST state: they were props, and they are furniture now.
+ * Deriving these from the current config would make the assertions tautological.
+ */
+const OPENING_SIZE = {
+  'badges-store-display-case': { width: 11.51, height: 17.0 },
+  'badges-store-display-rack': { width: 10.35, height: 18.56 },
+} as const;
+
+/** How much bigger each unit is than it opened at, linearly. */
+const TARGET_SCALE = 2;
+
+describe('the two display units are full-size shop furniture', () => {
+  it.each(['badges-store-display-case', 'badges-store-display-rack'] as const)(
+    '%s is about %s× its opening size, without distortion',
+    (id) => {
+      const ink = painted(id);
+      const was = OPENING_SIZE[id];
+      const widthScale = (ink.right - ink.left) / was.width;
+      const heightScale = (ink.base - ink.top) / was.height;
+
+      expect(widthScale).toBeGreaterThan(TARGET_SCALE * 0.9);
+      expect(widthScale).toBeLessThan(TARGET_SCALE * 1.1);
+      // Same multiplier on both axes, or the artwork is stretched.
+      expect(heightScale).toBeCloseTo(widthScale, 1);
+    },
+  );
+
+  it.each(['badges-store-display-case', 'badges-store-display-rack'] as const)(
+    '%s keeps its own aspect ratio',
+    (id) => {
+      const ink = painted(id);
+      const art = ART[id];
+      // The sprite's ink aspect, converted from image pixels into world percent.
+      const inkAspect =
+        ((art.w * (1 - art.left - art.right)) / (art.h * (1 - art.top - art.bottom))) *
+        (1 / WORLD_ASPECT);
+      const placed = (ink.right - ink.left) / (ink.base - ink.top);
+      expect(placed).toBeCloseTo(inkAspect, 1);
+    },
+  );
+
   it('puts the case on the LEFT and the rack on the RIGHT, near the front', () => {
     const caseInk = painted('badges-store-display-case');
     const rackInk = painted('badges-store-display-rack');
@@ -149,33 +193,78 @@ describe('the two display units', () => {
     expect(rackInk.base).toBeLessThan(99);
   });
 
-  it('balances the room without mirroring it', () => {
+  it('anchors the case to the LEFT wall and the rack to the RIGHT wall', () => {
+    const caseInk = painted('badges-store-display-case');
+    const rackInk = painted('badges-store-display-rack');
+    // Flush, not floating in the middle of its half of the room.
+    expect(caseInk.left).toBeLessThan(1);
+    expect(rackInk.right).toBeGreaterThan(99);
+    // And nothing clipped off the frame.
+    expect(caseInk.left).toBeGreaterThanOrEqual(0);
+    expect(rackInk.right).toBeLessThanOrEqual(100);
+  });
+
+  it('balances the room without being one object twice', () => {
     const caseInk = painted('badges-store-display-case');
     const rackInk = painted('badges-store-display-rack');
     const caseWidth = caseInk.right - caseInk.left;
     const rackWidth = rackInk.right - rackInk.left;
 
     // Comparable visual weight...
-    expect(Math.abs(caseWidth - rackWidth)).toBeLessThan(3);
-    // ...but not the same object twice: different widths, different silhouettes,
-    // and not reflections of one another about the room's centre line.
-    expect(caseWidth).not.toBeCloseTo(rackWidth, 1);
-    const caseCentre = (caseInk.left + caseInk.right) / 2;
-    const rackCentre = (rackInk.left + rackInk.right) / 2;
-    expect(Math.abs(100 - caseCentre - rackCentre)).toBeGreaterThan(1);
+    expect(Math.abs(caseWidth - rackWidth)).toBeLessThan(4);
+    // ...but different furniture. Both are now anchored to their own wall, so
+    // their POSITIONS are near-symmetric by design; what must stay distinct is
+    // the furniture — the rack is narrower and taller than the case.
+    expect(rackWidth).toBeLessThan(caseWidth);
+    expect(rackInk.base - rackInk.top).toBeGreaterThan(caseInk.base - caseInk.top);
   });
 
-  it('keeps space in front of, beside, and behind each of them', () => {
+  it('never overlap each other', () => {
+    const caseInk = painted('badges-store-display-case');
+    const rackInk = painted('badges-store-display-rack');
+    expect(caseInk.right).toBeLessThan(rackInk.left);
+  });
+
+  it('leaves a wide central corridor, front to back', () => {
+    const caseInk = painted('badges-store-display-case');
+    const rackInk = painted('badges-store-display-rack');
+    const corridor = rackInk.left - caseInk.right;
+    // Comfortably more than a passage: about half the room's width.
+    expect(corridor).toBeGreaterThan(30);
+
+    // And it is genuinely walkable from the front of the room to the checkout.
+    const centre = (caseInk.right + rackInk.left) / 2;
+    for (const y of [96, 92, 88, 84, 80, 74, 68, 62]) {
+      expect(onFloor({ x: centre, y }), `corridor at y=${y}`).toBe(true);
+      expect(isBlocked({ x: centre, y }, ALL_BLOCKERS), `corridor at y=${y}`).toBe(
+        false,
+      );
+    }
+  });
+
+  it('keeps space in front of, behind, and beside each of them', () => {
     for (const id of ['badges-store-display-case', 'badges-store-display-rack'] as const) {
+      const object = badgesStoreObjects.find((o) => o.id === id)!;
       const ink = painted(id);
       const centre = (ink.left + ink.right) / 2;
-      // In front — between the unit and the bottom of the frame.
-      expect(onFloor({ x: centre, y: ink.base + 4 })).toBe(true);
-      // Behind — the mid-floor band the unit stands at the front of.
-      expect(onFloor({ x: centre, y: ink.base - 8 })).toBe(true);
-      // Beside, on both sides.
-      expect(onFloor({ x: ink.left - 3, y: ink.base })).toBe(true);
-      expect(onFloor({ x: ink.right + 3, y: ink.base })).toBe(true);
+      const behind = { x: centre, y: object.blocker!.y - 2 };
+
+      // In front — between the unit's base and the bottom of the frame.
+      expect(onFloor({ x: centre, y: ink.base + 4 }), id).toBe(true);
+      expect(isBlocked({ x: centre, y: ink.base + 4 }, ALL_BLOCKERS), id).toBe(false);
+
+      // Behind — open floor past the footprint's back edge.
+      expect(onFloor(behind), id).toBe(true);
+      expect(isBlocked(behind, ALL_BLOCKERS), id).toBe(false);
+
+      // Beside, on the corridor side. Each unit is flush against its own wall,
+      // so only the inward side can be walkable — "where visually possible".
+      const inward =
+        id === 'badges-store-display-case'
+          ? { x: ink.right + 3, y: ink.base }
+          : { x: ink.left - 3, y: ink.base };
+      expect(onFloor(inward), id).toBe(true);
+      expect(isBlocked(inward, ALL_BLOCKERS), id).toBe(false);
     }
   });
 
@@ -186,8 +275,10 @@ describe('the two display units', () => {
       const blocker = object.blocker!;
       const paintedHeight = ink.base - ink.top;
 
-      // A shallow band, not the painted silhouette.
+      // A shallow band, not the painted silhouette — even at twice the size.
       expect(blocker.height).toBeLessThan(paintedHeight / 4);
+      // And no wider than the artwork that stands on it.
+      expect(blocker.width).toBeLessThanOrEqual(ink.right - ink.left + 0.01);
       // Sitting at the object's base rather than floating.
       expect(blocker.y + blocker.height).toBeCloseTo(ink.base, 0);
       // ...and the floor directly behind it is open.
@@ -199,8 +290,14 @@ describe('the two display units', () => {
 
   it('is walkable BEHIND both units, from the spawn point', () => {
     for (const id of ['badges-store-display-case', 'badges-store-display-rack'] as const) {
+      const object = badgesStoreObjects.find((o) => o.id === id)!;
       const ink = painted(id);
-      const behind = { x: (ink.left + ink.right) / 2, y: ink.base - 8 };
+      // Directly behind the footprint — the click that used to walk the Blobbi
+      // into the furniture and leave it there.
+      const behind = {
+        x: (ink.left + ink.right) / 2,
+        y: object.blocker!.y - 3,
+      };
       const route = reachableFromSpawn(behind);
       expect(route, `behind ${id}`).not.toBeNull();
       expect(route![route!.length - 1]).toEqual(behind);

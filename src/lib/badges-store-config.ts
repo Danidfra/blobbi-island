@@ -147,52 +147,85 @@ export interface BadgesStoreObject {
 export const badgesStoreObjects: readonly BadgesStoreObject[] = [
   {
     /**
-     * The glass display case — LEFT, near the front, on the entrance side.
+     * The glass display case — LEFT, anchored against the left wall.
      *
      * Sprite 320×333 (box aspect 0.961), ink margins l 2.50 % r 1.56 % t 4.80 %
-     * b 4.50 %. At `w-[12%]` the box is 18.74 % of world height and its painted
-     * base sits 0.84 % above the box's bottom edge, so `bottom-[10.2%]` puts that
-     * base on y = 89 % and it paints x 8.3 → 19.8 %, y 72 → 89 %.
+     * b 4.50 %. At `w-[24%]` the box is 37.48 % of world height and its painted
+     * base sits 1.69 % above the box's bottom edge, so `bottom-[8.31%]` puts that
+     * base on y = 90 % and it paints x 0 → 23 %, y 56 → 90 %.
      *
-     * y = 89 % is the rack's painted base too. Not a coincidence and not a
-     * mirror: two units standing on the same floor line is what lets ONE depth
-     * threshold decide whether the Blobbi is in front of them or behind them.
+     * ## Twice the size it opened at, and deliberately
      *
-     * Placed with room on every side: 8.3 % of floor to its left before the wall,
-     * 12 % to its right before the rug, ~11 % in front of it to the frame edge,
-     * and the whole mid-floor band behind it.
+     * It painted 11.5 × 17 % before — a prop on a shop floor rather than the
+     * shop's furniture. This is exactly 2× linear, 4× the painted area, with no
+     * compromise needed to get there: the ink lands flush with the left frame
+     * edge without a pixel clipped, and the pair still leaves a 55.8 % corridor
+     * down the middle of the room.
+     *
+     * `-left-[0.6%]` is not a nudge off-canvas: the sprite's own 2.50 % left
+     * padding is 0.6 % of world at this width, so the negative offset is exactly
+     * what puts the PAINTED edge on x = 0. Anchoring by the box would have left
+     * a visible gap between the case and the wall.
+     *
+     * y = 90 % is the rack's painted base too. Not a mirror — two units standing
+     * on the same floor line is what lets ONE depth threshold decide whether the
+     * Blobbi is drawn in front of them or behind them.
      */
     id: 'badges-store-display-case',
     src: `${ART}/badge-display-case.webp`,
     alt: 'Badge display case — browse badges',
-    className: 'absolute bottom-[10.2%] left-[8%] z-[26] w-[12%]',
+    className: 'absolute bottom-[8.31%] -left-[0.6%] z-[26] w-[24%]',
     /**
-     * The plinth's footprint, not the case. 2.4 % deep against 17 % of painted
-     * height: the glass is above the floor, and only the base stands on it.
+     * The GROUND QUAD, re-measured off the artwork rather than scaled with it.
+     *
+     * The sprite is drawn three-quarter on, so its silhouette holds full width
+     * down to 82 % of the ink and then tapers to the near-bottom corner at
+     * 100 %. That taper IS the floor the case stands on: 18 % of painted height,
+     * which at this size is 6.1 % of world. Re-measured rather than scaled with
+     * the artwork — the case grew upward and outward, not forward, so its floor
+     * quad grew far less than its silhouette did. The glass, the shelves and the
+     * badges are all above it, and the floor behind the case (y < 83.9) is open,
+     * which is what walking behind it means.
      */
-    blocker: { x: 8.3, y: 86.6, width: 11.5, height: 2.4 },
-    /** Beside it on the right, in the aisle between the case and the rug. */
-    interaction: { opens: 'badges', standPoint: { x: 23, y: 87.5 } },
+    blocker: { x: 0, y: 83.9, width: 23, height: 6.1 },
+    /**
+     * Beside its right-hand edge, at the base line — a browsing position rather
+     * than a head-on one. Standing in FRONT would put the Blobbi over the case
+     * it just walked up to look at.
+     */
+    interaction: { opens: 'badges', standPoint: { x: 26, y: 88 } },
   },
   {
     /**
-     * The A-frame badge rack — RIGHT, near the front, balancing the case.
+     * The A-frame badge rack — RIGHT, anchored against the right wall.
      *
      * Sprite 320×360 (box aspect 0.889), ink margins l 0 % r 5.94 % t 0 % b 0 %.
-     * At `w-[11%]` the box is 18.56 % of world height and the ink fills it top
-     * to bottom, so it paints x 76 → 86.4 %, y 70.4 → 89 %.
+     * At `w-[22%]` the box is 37.14 % of world height and the ink fills it top
+     * to bottom, so `bottom-[10%]` paints x 78.8 → 99.5 %, y 52.9 → 90 %.
      *
-     * Narrower and a shade taller than the case, sitting slightly further
-     * forward — the pair reads as two different fixtures rather than a mirror.
+     * Also exactly 2× its opening size (10.35 × 18.56 % before). Still narrower
+     * and taller than the case, still a different silhouette: the two are
+     * anchored the same way to opposite walls, but they are not one another
+     * reflected — the rack is 2.3 % narrower and 3.1 % taller than the case.
+     *
+     * It reaches within half a percent of the right frame edge, and its 5.94 %
+     * of right-hand padding is why the box stops short of the canvas — the ink
+     * is what is anchored, not the box.
      */
     id: 'badges-store-display-rack',
     src: `${ART}/badge-display-rack.webp`,
     alt: 'Badge rack — browse badges',
-    className: 'absolute bottom-[11%] left-[76%] z-[26] w-[11%]',
-    /** The rack's own foot: it stands flush on the floor, 2.4 % deep. */
-    blocker: { x: 76, y: 86.6, width: 10.4, height: 2.4 },
-    /** Beside it on the left, in the aisle between the rug and the rack. */
-    interaction: { opens: 'badges', standPoint: { x: 72, y: 87.5 } },
+    className: 'absolute bottom-[10%] left-[78.8%] z-[26] w-[22%]',
+    /**
+     * The GROUND QUAD, measured the same way as the case's: full width to 82 %
+     * of the ink, then a taper to the near corner at 100 %. 18 % of painted
+     * height is 6.7 % of world here. The A-frame's slope, its shelves and its
+     * badge cards are all above it, and the floor behind the rack (y < 83.3) is
+     * open.
+     */
+    blocker: { x: 78.8, y: 83.3, width: 20.7, height: 6.7 },
+    /** Beside its left-hand edge, mirroring the case's browsing position. */
+    interaction: { opens: 'badges', standPoint: { x: 75.5, y: 88 } },
   },
 ];
 
