@@ -167,6 +167,18 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
       { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Floor level
       { minPosition: 20, maxPosition: 100, zIndex: 15 } // Upper area
     ]
+  },
+  {
+    // Care Store. Every object in the room is painted into the artwork rather
+    // than being an overlaid sprite, so the Blobbi is always in FRONT of the
+    // scene; these two bands only keep it above the checkout hotspot (z-12) and
+    // give the front of the room a slightly higher band, as the other interiors
+    // do.
+    backgroundFile: 'care-store-inside.webp',
+    thresholds: [
+      { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Front floor
+      { minPosition: 20, maxPosition: 100, zIndex: 15 } // Back of the room
+    ]
   }
 ];
 

@@ -135,6 +135,7 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
   'arcade-minus1': DISABLED,
   shop: DISABLED,
   'clothing-store-inside': DISABLED,
+  'care-store-inside': DISABLED,
   stage: {
     ...DISABLED,
     note: 'Theater interior, deliberately black-backed. Owned by the theater feature.',

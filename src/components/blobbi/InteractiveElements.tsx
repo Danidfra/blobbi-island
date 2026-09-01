@@ -15,6 +15,8 @@ import { BackArrow } from './BackArrow';
 import { InteractiveElement } from './InteractiveElement';
 import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
+import { CareStoreRoom } from './care-store/CareStoreRoom';
+import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
 import { townBushes } from '@/lib/town-bushes-config';
@@ -185,6 +187,20 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
     );
   }
 
+  /*
+    Care Store — same delegation as the arcade. Its blockers, its checkout
+    hotspot and its shop modal all live in `care-store/`, so nothing about a
+    care item ever reaches this dispatcher.
+  */
+  if (backgroundFile === 'care-store-inside.webp') {
+    return (
+      <CareStoreRoom
+        blobbiRef={blobbiRef}
+        selectedBlobbiId={selectedBlobbi?.id ?? null}
+      />
+    );
+  }
+
   if (backgroundFile === 'stage-inside.png') {
     return (
       <div ref={containerRef} className="w-full h-full relative">
@@ -295,6 +311,29 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shopping coffe shop"
               effect="scale"
               animated={false}
+            />
+          </div>
+
+          {/*
+            Care Store — right beside the Coffee Shop, on the same ground-floor
+            line and with the same bottom-anchored, width-only sizing.
+
+            The facade IS the entrance: no separate door overlay exists for it,
+            so the whole storefront is the click target. `animated={false}` keeps
+            the hover-pop off a sprite this large (the arcade Prize Counter does
+            the same); the gentle lift comes from the wrapper's own transition.
+            `walkTarget` is stated rather than derived because the facade stands
+            above the walkable floor — see `care-store-config.ts`.
+          */}
+          <div className={`${CARE_STORE_FACADE.containerClassName} transition-transform duration-200 ease-cozy hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0`}>
+            <InteractiveElement
+              src={CARE_STORE_FACADE.src}
+              alt={CARE_STORE_FACADE.alt}
+              effect="scale"
+              animated={false}
+              onClick={() => setCurrentLocation('care-store-inside')}
+              requestInteraction={requestInteraction}
+              walkTarget={CARE_STORE_FACADE.walkTarget}
             />
           </div>
 

@@ -16,6 +16,7 @@ export * from './catalog-fallback';
 export * from './item-image-resolution';
 export * from './protocol-adapter';
 export * from './shop-catalog';
+export * from './care-store-catalog';
 export * from './useItemCatalog';
 export * from './useIslandInventory';
 export * from './useInventoryMutation';

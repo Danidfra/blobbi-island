@@ -28,6 +28,9 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'back-yard': { x: 50, y: 84.2 },
   'cave-open': { x: 50, y: 84.2 },
   'clothing-store-inside': { x: 50, y: 90.1 },
+  // Care Store: mid-front floor, on the open rug, clear of every blocker and a
+  // comfortable walk from the checkout counter.
+  'care-store-inside': { x: 50, y: 90 },
 };
 
 /**
@@ -90,6 +93,15 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // spawned off-floor and snapped away on the first movement frame.
   // GROUND-anchor semantics (Phase 2): the feet land on the walkway strip.
   'shop:clothing-store-inside': { x: 58, y: 62.6 },
+
+  // Exiting to shop (mall) from care-store-inside.
+  //
+  // The Care Store facade stands on the mall's GROUND floor beside the Coffee
+  // Shop, spanning x ≈ 50.5–72.5 % (`care-store-config.ts`). The walkable floor
+  // on that level is `y ∈ [90.6, 100]` of `shopping-mall-inside.png`, so the
+  // return point is the storefront's horizontal centre, one step onto that
+  // floor — the player comes back out where they went in.
+  'shop:care-store-inside': { x: 61, y: 92 },
 
   // Exiting to mine from cave-open
   'mine:cave-open': { x: 50, y: 81.3 },

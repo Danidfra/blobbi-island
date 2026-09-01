@@ -215,4 +215,36 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'triangle', points: [{ x: 84, y: 79.2 }, { x: 84, y: 100 }, { x: 100, y: 100 }] },
     ]
   },
+  /**
+   * Care Store — the floor's OUTER PERIMETER only.
+   *
+   * The room's obstacles (toy box, checkout counter, pet bed, potted plant) are
+   * `MovementBlocker` rectangles in `care-store-config.ts`, not holes punched in
+   * this boundary. That split is deliberate: a composite boundary clamps to its
+   * NEAREST area, so a hole makes the Blobbi slide around its rim, while a
+   * blocker stops the walk where the object is and lets the player choose a way
+   * round — which is what the artwork's free-standing furniture should feel like.
+   * The boundary therefore describes only where the FLOOR ends.
+   *
+   * Measured against `care-store-inside.webp` (1600×1067, the world's own 3:2),
+   * so image percentages are world percentages. The wall/floor junction sits at
+   * y ≈ 66.5–67.5 across the open room; the bands below step in with the
+   * perspective as the side furniture closes in.
+   */
+  'care-store-inside.webp': {
+    shape: 'composite',
+    areas: [
+      // Front floor: open from wall to wall, in front of every obstacle.
+      { type: 'rectangle', x: [2, 98], y: [84, 99] },
+
+      // Mid floor: past the toy box on the left and the pet bed on the right —
+      // both of which stand INSIDE this band and are blocked, not excluded.
+      { type: 'rectangle', x: [2, 93], y: [72, 84] },
+
+      // Back aisle along the shelving. Thin by design: the left shelf unit's
+      // drawer meets the floor at y ≈ 66.5 and the right display cabinet at
+      // y ≈ 67.5, so this is the whole walkable depth behind the counter line.
+      { type: 'rectangle', x: [19, 80], y: [68.5, 72] },
+    ],
+  },
 };
