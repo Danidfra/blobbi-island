@@ -164,28 +164,33 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     /*
       Clothing Store. Bands are DERIVED from where each object's painted base
-      sits, so they were recomputed when the room was rearranged rather than
+      sits, so they are recomputed whenever the room is rearranged rather than
       kept because tests expected them.
 
-      Object bases: checkout 82, hat shelf 89, fitting room 91, both display
-      tables 98. Read here as distance from the world's BOTTOM:
+      Object bases, back to front: hat shelf 80 (z-12), checkout 82 (z-15),
+      fitting room 87 (z-24), both display tables 98 (z-28). Read here as
+      distance from the world's BOTTOM:
 
-        0–2    (y > 98)     in front of everything, tables included     z 34
-        2–9    (y 91–98)    in front of the flanks, behind the tables   z 26
-        9–11   (y 89–91)    in front of the hat shelf and the counter   z 23
-        11–18  (y 82–89)    in front of the counter only                z 18
-        18+    (y < 82)     BEHIND the counter — the new back route     z 10
+        0–2    (y > 98)     in front of everything, tables included    z 34
+        2–13   (y 87–98)    in front of the booth, till and shelf      z 26
+        13–18  (y 82–87)    in front of the till and shelf, behind
+                            the booth it is standing beside            z 18
+        18–20  (y 80–82)    in front of the wall shelf only, BEHIND
+                            the till — the back-of-counter route       z 13
+        20+    (y < 80)     behind it all, shelf included              z 8
 
-      That last band is the one the rearrangement needed. The counter is no
-      longer a wall, so a Blobbi standing behind it must render behind it too.
+      The two narrow bands at the back are what the rearrangement needed: the
+      hat shelf moved to the back wall, so there is now floor both in front of
+      it and behind the counter, and a Blobbi in either place has to render
+      against the right thing.
     */
     backgroundFile: 'clothing-store-inside.png',
     thresholds: [
       { minPosition: 0, maxPosition: 2, zIndex: 34 },
-      { minPosition: 2.01, maxPosition: 9, zIndex: 26 },
-      { minPosition: 9.01, maxPosition: 11, zIndex: 23 },
-      { minPosition: 11.01, maxPosition: 18, zIndex: 18 },
-      { minPosition: 18.01, maxPosition: 100, zIndex: 10 },
+      { minPosition: 2.01, maxPosition: 13, zIndex: 26 },
+      { minPosition: 13.01, maxPosition: 18, zIndex: 18 },
+      { minPosition: 18.01, maxPosition: 20, zIndex: 13 },
+      { minPosition: 20.01, maxPosition: 100, zIndex: 8 },
     ]
   },
   {

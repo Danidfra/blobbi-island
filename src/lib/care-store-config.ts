@@ -62,29 +62,32 @@ export interface CareStoreBlocker {
  * the wide ground-floor bay. Sized by width only, so the sprite's own 567×391
  * aspect decides its height, exactly as its neighbours are.
  *
- * ## Why this size, and not more
+ * ## Why this size
  *
- * The bay is bounded by real ink, not by boxes. Measured from the sprites' own
- * alpha channels: the left potted plant's artwork ends at x = 28.84 % and the
- * Clothing Store's begins at x = 50.00 % — 21.16 % of clear wall. The Care Store
- * sprite carries a 1.59 % transparent margin on each side, so a box of width W
- * paints 0.968 · W and starts 0.0159 · W in from its left edge.
+ * The bay is bounded by real ink and real STRUCTURE, not by boxes. Measured:
+ * the mall's left structural pillar occupies x 22.2–25.4 %, and the Clothing
+ * Store's artwork begins at x = 50.00 % — 24.6 % of clear wall between them.
+ * The Care Store sprite carries a 1.59 % transparent margin on each side, so a
+ * box of width W paints 0.968 · W and starts 0.0159 · W in from its left edge.
  *
- * `left-[28.7%] w-[21.5%]` therefore paints x = 29.04 -> 49.86, centred in the
- * bay with a hair of clearance at both ends. Anything wider starts covering a
- * neighbour.
+ * `left-[25%] w-[25.3%]` therefore paints x = 25.40 -> 49.90: from the pillar's
+ * inner face to a whisker short of its neighbour. It grew into the space the
+ * middle level's left plant used to occupy — that plant is what made the
+ * earlier 21.5 % the right answer, and removing it made this one.
  *
- * ## Why `bottom-[37.3%]` and not the neighbours' `bottom-[38.5%]`
+ * ## Why the anchor is not the neighbours' `bottom-[38.5%]`
  *
  * Because the sprites are padded differently below their artwork, and it is the
  * PAINTED BASES that have to line up. Every other storefront on this level has
  * essentially none (Clothing Store 0 %, Badges Store 0.7 %), so their painted
  * bases sit on the anchor itself at 38.5 %. The Care Store sprite has 5.37 % of
- * transparent film below its artwork, which at this size is 1.19 % of world
- * height — enough to make the shop look like it is hovering off the walkway.
- * Dropping the anchor by exactly that amount stands them all on one line.
- * Matching the raw `bottom` values would have matched the numbers, not the
- * picture.
+ * transparent film below its artwork — 1.41 % of world height at this size.
+ * Dropping the anchor by exactly that stands them all on one line.
+ *
+ * Note the anchor moves WITH the width: widening the facade makes it taller,
+ * which makes that film thicker, which sinks the painted base unless the anchor
+ * follows it down. `bottom-[37.1%] = 38.5 − 0.0537 × 26.18`. Growing `w-[…]`
+ * alone would have floated the shop off the walkway.
  *
  * The facade IS the door: there is no separate door overlay asset and none is
  * invented. Clicking anywhere on the storefront walks the Blobbi to
@@ -94,7 +97,7 @@ export const CARE_STORE_FACADE = {
   src: '/assets/locations/shop/care-store.webp',
   /** Names the action, not the picture: this is a way in. */
   alt: 'Care Store — go inside',
-  containerClassName: 'absolute bottom-[37.3%] left-[28.7%] z-[15] w-[21.5%]',
+  containerClassName: 'absolute bottom-[37.1%] left-[25%] z-[15] w-[25.3%]',
   /**
    * Where the Blobbi stands to go in.
    *
@@ -108,7 +111,7 @@ export const CARE_STORE_FACADE = {
    * This point is the storefront's horizontal centre, on the strip itself — the
    * same walkway players already stand on to enter the Clothing Store next door.
    */
-  walkTarget: { x: 39.4, y: 62.6 } as Position,
+  walkTarget: { x: 37.6, y: 62.6 } as Position,
 } as const;
 
 // ---------------------------------------------------------------------------

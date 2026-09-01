@@ -21,9 +21,9 @@ import { locationBoundaries } from './location-boundaries';
 import { getBackgroundForLocation } from './location-backgrounds';
 import { LOCATION_INITIAL_POSITIONS, EXIT_POSITIONS } from './location-initial-position';
 import {
-  CLOTHING_STORE_CHECKOUT,
   CLOTHING_STORE_SHOP_BUTTON,
   clothingStoreBlockers,
+  clothingStoreInteraction,
   clothingStoreObjects,
 } from './clothing-store-config';
 import type { Position } from './types';
@@ -75,6 +75,9 @@ function walkable(from: Position, to: Position, steps = 240): boolean {
 
 const SPAWN = LOCATION_INITIAL_POSITIONS[LOCATION];
 
+/** Where the player stands to use an object. */
+const standPointOf = (id: string) => clothingStoreInteraction(id).standPoint;
+
 describe('the artwork lives where assets live', () => {
   it('every scene object points at a file that exists', () => {
     for (const object of clothingStoreObjects) {
@@ -121,23 +124,41 @@ describe('the artwork lives where assets live', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
       'clothing-store-rug',
-      'clothing-store-sign',
       'clothing-store-poster-dress-up',
+      'clothing-store-sign',
       'clothing-store-poster-mirror',
-      'clothing-store-checkout',
       'clothing-store-hat-shelf',
+      'clothing-store-checkout',
       'clothing-store-fitting-room',
       'clothing-store-display-table',
       'clothing-store-display-table-2',
     ]);
   });
 
-  it('scenery carries no accessible name, because it does nothing yet', () => {
+  it('a name and a behaviour arrive together, or neither does', () => {
     // An `alt` that CAN be wrong is how thirty arcade props ended up announcing
-    // themselves as a ticket counter. A name arrives with a behaviour.
+    // themselves as a ticket counter. So the two fields are tied: an object with
+    // an interaction MUST be named, and one without MUST NOT be.
     for (const object of clothingStoreObjects) {
-      expect(object.alt, object.id).toBeNull();
+      if (object.interaction) {
+        expect(object.alt, object.id).toBeTruthy();
+      } else {
+        expect(object.alt, object.id).toBeNull();
+      }
     }
+  });
+
+  it('the objects that do nothing are still scenery', () => {
+    const scenery = clothingStoreObjects
+      .filter((o) => !o.interaction)
+      .map((o) => o.id);
+    expect(scenery).toEqual([
+      'clothing-store-rug',
+      'clothing-store-poster-dress-up',
+      'clothing-store-sign',
+      'clothing-store-poster-mirror',
+      'clothing-store-hat-shelf',
+    ]);
   });
 
   it('is placed in world percent, never raw pixels', () => {
@@ -156,16 +177,19 @@ describe('the artwork lives where assets live', () => {
  * about ink, and asserting it on box coordinates would pass while the picture
  * disagreed — every one of these sprites carries 3–15 % transparent padding.
  */
-const ART: Record<string, { imgW: number; imgH: number; l: number; r: number; b: number }> = {
-  'clothing-store-rug': { imgW: 1536, imgH: 1024, l: 0.0182, r: 0.0195, b: 0.1816 },
-  'clothing-store-sign': { imgW: 1448, imgH: 1086, l: 0.0124, r: 0.0124, b: 0.0783 },
-  'clothing-store-poster-dress-up': { imgW: 1024, imgH: 1536, l: 0.0254, r: 0.0273, b: 0.071 },
-  'clothing-store-poster-mirror': { imgW: 1024, imgH: 1536, l: 0.0557, r: 0.0547, b: 0.0924 },
-  'clothing-store-checkout': { imgW: 1536, imgH: 1024, l: 0.0651, r: 0.0645, b: 0.1621 },
-  'clothing-store-hat-shelf': { imgW: 1536, imgH: 1024, l: 0.1491, r: 0.1484, b: 0.0332 },
-  'clothing-store-fitting-room': { imgW: 1536, imgH: 1024, l: 0.112, r: 0.1081, b: 0.0537 },
-  'clothing-store-display-table': { imgW: 1448, imgH: 1086, l: 0, r: 0.0007, b: 0.0497 },
-  'clothing-store-display-table-2': { imgW: 1536, imgH: 1024, l: 0.0645, r: 0.0645, b: 0.0645 },
+const ART: Record<
+  string,
+  { imgW: number; imgH: number; l: number; r: number; t: number; b: number }
+> = {
+  'clothing-store-rug': { imgW: 1536, imgH: 1024, l: 0.0182, r: 0.0195, t: 0.1543, b: 0.1816 },
+  'clothing-store-sign': { imgW: 1448, imgH: 1086, l: 0.0124, r: 0.0124, t: 0.0083, b: 0.0783 },
+  'clothing-store-poster-dress-up': { imgW: 1024, imgH: 1536, l: 0.0254, r: 0.0273, t: 0.0104, b: 0.071 },
+  'clothing-store-poster-mirror': { imgW: 1024, imgH: 1536, l: 0.0557, r: 0.0547, t: 0.0195, b: 0.0924 },
+  'clothing-store-checkout': { imgW: 1536, imgH: 1024, l: 0.0651, r: 0.0645, t: 0.1562, b: 0.1621 },
+  'clothing-store-hat-shelf': { imgW: 1536, imgH: 1024, l: 0.1491, r: 0.1484, t: 0.0303, b: 0.0332 },
+  'clothing-store-fitting-room': { imgW: 1536, imgH: 1024, l: 0.112, r: 0.1081, t: 0.0234, b: 0.0537 },
+  'clothing-store-display-table': { imgW: 1448, imgH: 1086, l: 0, r: 0.0007, t: 0.0405, b: 0.0497 },
+  'clothing-store-display-table-2': { imgW: 1536, imgH: 1024, l: 0.0645, r: 0.0645, t: 0.0771, b: 0.0645 },
 };
 
 const WORLD_ASPECT = 1046 / 697;
@@ -196,54 +220,108 @@ function painted(id: string) {
     ? 100 - (num(object.className, 'bottom') + boxHeight * art.b)
     : num(object.className, 'top') + boxHeight * (1 - art.b);
 
-  return { left, right, width: inkWidth, base, centre: (left + right) / 2 };
+  const inkHeight = boxHeight * (1 - art.b - (art.t ?? 0));
+  return {
+    left,
+    right,
+    width: inkWidth,
+    height: inkHeight,
+    base,
+    top: base - inkHeight,
+    centre: (left + right) / 2,
+  };
 }
 
+describe('the room is still a valid location', () => {
+  it('keeps its background, boundary and spawn', () => {
+    expect(getBackgroundForLocation(LOCATION)).toBe(BACKGROUND);
+    expect(boundary).toBeDefined();
+    expect(standable(SPAWN)).toBe(true);
+  });
+
+  it('still returns to the mall on walkable floor', () => {
+    expect(onFloor(EXIT_POSITIONS[`shop:${LOCATION}`], mallBoundary)).toBe(true);
+  });
+});
+
 describe('the room reads as a boutique', () => {
-  it('the fitting room is on the RIGHT', () => {
+  it('the fitting room is on the RIGHT and pushed back', () => {
     const fitting = painted('clothing-store-fitting-room');
     expect(fitting.centre).toBeGreaterThan(70);
     expect(fitting.right).toBeLessThanOrEqual(100);
-    // Clear of the counter, which paints to x 64.8.
-    expect(fitting.left).toBeGreaterThan(painted('clothing-store-checkout').right);
+    // Farther back than it was: its base moved from y = 91 up the room.
+    expect(fitting.base).toBeLessThan(89);
+    expect(fitting.base).toBeGreaterThan(84);
   });
 
-  it('the fitting room is substantially larger than the small one it replaced', () => {
-    // It was 22.62 % of the world wide. "Noticeably larger" is not a rounding.
+  it('the fitting room is about twice the size it was', () => {
+    // It painted 27.3 × 32.3 = 881 square percent. Doubling the AREA is what
+    // reads as "twice as big"; doubling the WIDTH would have painted 54.6
+    // across, reaching x ≈ 45 — through the checkout and most of the back wall.
     const fitting = painted('clothing-store-fitting-room');
-    expect(fitting.width).toBeGreaterThan(22.62 * 1.15);
-    // …and still a room object, not a wall.
-    expect(fitting.width).toBeLessThan(35);
+    const area = fitting.width * fitting.height;
+    expect(area / 881).toBeGreaterThan(1.7);
+    // And it stops where the room does.
+    expect(fitting.right).toBeLessThanOrEqual(100);
+    expect(fitting.top).toBeGreaterThan(24);
   });
 
-  it('the hat shelf is on the LEFT', () => {
+  it('the fitting room leaves the checkout readable', () => {
+    const fitting = painted('clothing-store-fitting-room');
+    const till = painted('clothing-store-checkout');
+    // At most a sliver of the counter's right end is behind it — and that part
+    // of the sprite is its potted plant, not the booth, whose own structure
+    // starts 6.9 % further right (measured per row).
+    const overlap = Math.max(0, till.right - fitting.left);
+    expect(overlap).toBeLessThan(till.width * 0.1);
+  });
+
+  it('the hat shelf is in the BACK-LEFT corner', () => {
     const hats = painted('clothing-store-hat-shelf');
     expect(hats.centre).toBeLessThan(30);
-    expect(hats.left).toBeGreaterThanOrEqual(0);
-    // It reads as a merchandise wall without dominating the room.
-    expect(hats.width).toBeGreaterThan(15);
-    expect(hats.width).toBeLessThan(painted('clothing-store-fitting-room').width);
-  });
-
-  it('they swapped sides — the shelf is left of the booth, not beside it', () => {
-    expect(painted('clothing-store-hat-shelf').right).toBeLessThan(
-      painted('clothing-store-fitting-room').left,
-    );
+    // Against the back wall, not down in the foreground: its base is behind
+    // every other object's.
+    for (const id of [
+      'clothing-store-checkout',
+      'clothing-store-fitting-room',
+      'clothing-store-display-table',
+      'clothing-store-display-table-2',
+    ]) {
+      expect(hats.base, id).toBeLessThan(painted(id).base);
+    }
+    // And it starts at the left pillar's inner face rather than off-frame.
+    expect(hats.left).toBeGreaterThan(16);
   });
 
   it('the rug is centred', () => {
-    const rug = painted('clothing-store-rug');
-    expect(Math.abs(rug.centre - 50)).toBeLessThan(1);
+    expect(Math.abs(painted('clothing-store-rug').centre - 50)).toBeLessThan(1);
   });
 
-  it('the two display tables sit on opposite sides of the centre line', () => {
+  it('both display tables grew a little and moved outward', () => {
     const one = painted('clothing-store-display-table');
     const two = painted('clothing-store-display-table-2');
+
+    // Modest, not another doubling: they painted 17.0 and 14.8 wide.
+    expect(one.width).toBeGreaterThan(17.0);
+    expect(one.width).toBeLessThan(17.0 * 1.35);
+    expect(two.width).toBeGreaterThan(14.8);
+    expect(two.width).toBeLessThan(14.8 * 1.35);
+
+    // Farther from the centre than they were (21 and 76.8 painted edges).
+    expect(one.left).toBeLessThan(21);
+    expect(two.right).toBeGreaterThan(76.8);
+  });
+
+  it('the tables sit on opposite sides with the rug breathing between them', () => {
+    const one = painted('clothing-store-display-table');
+    const two = painted('clothing-store-display-table-2');
+    const rug = painted('clothing-store-rug');
+
     expect(one.centre).toBeLessThan(50);
     expect(two.centre).toBeGreaterThan(50);
-    // Each outside the rug, so the central anchor stays readable.
-    expect(one.right).toBeLessThanOrEqual(painted('clothing-store-rug').left);
-    expect(two.left).toBeGreaterThanOrEqual(painted('clothing-store-rug').right);
+    // They used to crowd the rug at 1.4 % either side.
+    expect(rug.left - one.right).toBeGreaterThan(4);
+    expect(two.left - rug.right).toBeGreaterThan(4);
   });
 
   it('both tables use their own artwork', () => {
@@ -255,49 +333,45 @@ describe('the room reads as a boutique', () => {
     );
   });
 
-  it('the checkout sits further back than the furniture flanking it', () => {
-    const till = painted('clothing-store-checkout');
-    expect(till.base).toBeLessThan(painted('clothing-store-hat-shelf').base);
-    expect(till.base).toBeLessThan(painted('clothing-store-fitting-room').base);
-    // …with real floor still visible between it and the wall at y = 77.
-    expect(till.base).toBeGreaterThan(80);
-    expect(till.base).toBeLessThan(84);
-  });
-
-  it('the wall art is small enough to decorate rather than dominate', () => {
+  it('the wall art hangs lower than it did, at the same sizes', () => {
     const sign = painted('clothing-store-sign');
     const left = painted('clothing-store-poster-dress-up');
     const right = painted('clothing-store-poster-mirror');
 
-    // Each is meaningfully smaller than it was (20.48 / 10.42 / 9.79 wide).
-    expect(sign.width).toBeLessThan(20.48 * 0.8);
-    expect(left.width).toBeLessThan(10.42 * 0.8);
-    expect(right.width).toBeLessThan(9.79 * 0.8);
+    // They used to top out at y 33 / 34 / 34, up near the ceiling beam.
+    expect(sign.top).toBeGreaterThan(36);
+    expect(left.top).toBeGreaterThan(36);
+    expect(right.top).toBeGreaterThan(36);
 
-    // Hierarchy preserved: the sign is still the main piece, and still central.
+    // Lower, not bigger — the previous pass already shrank them.
+    expect(sign.width).toBeCloseTo(13.65, 0);
+    expect(left.width).toBeCloseTo(7.1, 0);
+    expect(right.width).toBeCloseTo(6.67, 0);
+  });
+
+  it('the sign is still the centred main piece', () => {
+    const sign = painted('clothing-store-sign');
+    const left = painted('clothing-store-poster-dress-up');
+    const right = painted('clothing-store-poster-mirror');
+
+    expect(Math.abs(sign.centre - 50)).toBeLessThan(1);
     expect(sign.width).toBeGreaterThan(left.width * 1.5);
     expect(sign.width).toBeGreaterThan(right.width * 1.5);
-    expect(Math.abs(sign.centre - 50)).toBeLessThan(1);
-
-    // Flanking it, and clear of everything standing on the floor.
     expect(left.right).toBeLessThan(sign.left);
     expect(right.left).toBeGreaterThan(sign.right);
-    for (const art of [sign, left, right]) {
-      expect(art.base).toBeLessThan(painted('clothing-store-checkout').base - 8);
+  });
+
+  it('the wall art clears the furniture under it', () => {
+    for (const id of [
+      'clothing-store-sign',
+      'clothing-store-poster-dress-up',
+      'clothing-store-poster-mirror',
+    ]) {
+      expect(painted(id).base, id).toBeLessThan(painted('clothing-store-checkout').top);
     }
-  });
-});
-
-describe('the room is still a valid location', () => {
-  it('keeps its background, boundary and spawn', () => {
-    expect(getBackgroundForLocation(LOCATION)).toBe(BACKGROUND);
-    expect(boundary).toBeDefined();
-    expect(standable(SPAWN)).toBe(true);
-  });
-
-  it('still returns to the mall on walkable floor', () => {
-    const back = EXIT_POSITIONS[`shop:${LOCATION}`];
-    expect(onFloor(back, mallBoundary)).toBe(true);
+    // The right poster fits beside the enlarged booth because that sprite's
+    // upper half is empty on its left — its own ink starts at x ≈ 69.9.
+    expect(painted('clothing-store-poster-mirror').right).toBeLessThan(69.9);
   });
 });
 
@@ -310,29 +384,31 @@ describe('the furniture is solid where it actually stands', () => {
 
   it('the fitting room footprint is blocked', () => {
     for (const point of [
-      { x: 73, y: 88 },
-      { x: 85, y: 90 },
-      { x: 97, y: 86 },
+      { x: 70, y: 85 },
+      { x: 80, y: 86 },
+      { x: 94, y: 84 },
     ]) {
       expect(isBlocked(point)).toBe(true);
     }
   });
 
-  it('the hat shelf footprint is blocked', () => {
-    for (const point of [
-      { x: 3, y: 87 },
-      { x: 12, y: 89 },
-      { x: 19, y: 85 },
-    ]) {
-      expect(isBlocked(point)).toBe(true);
-    }
+  it('the hat shelf blocks a SHALLOW footprint, not the floor under a wall unit', () => {
+    const shelf = clothingStoreBlockers.find(
+      (b) => b.id === 'clothing-store-hat-shelf',
+    )!;
+    // Pushed back against the wall it is a shelf, not a wardrobe. A deep
+    // rectangle under a wall fixture is an invisible wall.
+    expect(shelf.height).toBeLessThan(3);
+    expect(isBlocked({ x: 25, y: 79 })).toBe(true);
+    // …and the floor in front of it is free.
+    expect(standable({ x: 25, y: 84 })).toBe(true);
   });
 
   it('both display tables block the floor their legs stand on', () => {
-    expect(isBlocked({ x: 25, y: 97 })).toBe(true);
-    expect(isBlocked({ x: 35, y: 96.5 })).toBe(true);
-    expect(isBlocked({ x: 64, y: 97 })).toBe(true);
-    expect(isBlocked({ x: 75, y: 96.5 })).toBe(true);
+    expect(isBlocked({ x: 20, y: 97 })).toBe(true);
+    expect(isBlocked({ x: 30, y: 96.5 })).toBe(true);
+    expect(isBlocked({ x: 70, y: 97 })).toBe(true);
+    expect(isBlocked({ x: 80, y: 96.5 })).toBe(true);
   });
 
   it('a walk straight into the front of the checkout is stopped', () => {
@@ -340,8 +416,12 @@ describe('the furniture is solid where it actually stands', () => {
   });
 
   it('a walk straight into a table leg is stopped', () => {
-    expect(walkable({ x: 29, y: 99.5 }, { x: 29, y: 94 })).toBe(false);
-    expect(walkable({ x: 69, y: 99.5 }, { x: 69, y: 94 })).toBe(false);
+    expect(walkable({ x: 24, y: 99.5 }, { x: 24, y: 94 })).toBe(false);
+    expect(walkable({ x: 75, y: 99.5 }, { x: 75, y: 94 })).toBe(false);
+  });
+
+  it('a walk straight into the fitting room is stopped', () => {
+    expect(walkable({ x: 80, y: 94 }, { x: 80, y: 80 })).toBe(false);
   });
 
   it('wall art and the rug block nothing', () => {
@@ -353,7 +433,6 @@ describe('the furniture is solid where it actually stands', () => {
     ]) {
       expect(clothingStoreObjects.find((o) => o.id === id)!.blocker).toBeUndefined();
     }
-    // And the centred rug is stood on, not walked around.
     expect(standable({ x: 50, y: 90 })).toBe(true);
   });
 });
@@ -361,13 +440,16 @@ describe('the furniture is solid where it actually stands', () => {
 describe('the room is open, not maze-like', () => {
   const openFloor: [string, Position][] = [
     ['spawn', SPAWN],
-    ['the checkout stand point', CLOTHING_STORE_CHECKOUT.standPoint],
+    ['the checkout stand point', standPointOf('clothing-store-checkout')],
+    ['the fitting-room stand point', standPointOf('clothing-store-fitting-room')],
+    ['display table 1 stand point', standPointOf('clothing-store-display-table')],
+    ['display table 2 stand point', standPointOf('clothing-store-display-table-2')],
     ['front centre, on the rug', { x: 50, y: 93 }],
     ['behind the checkout', { x: 50, y: 79 }],
     ['left of the checkout', { x: 30, y: 82 }],
-    ['right of the checkout', { x: 70, y: 82 }],
-    ['behind display table 1', { x: 29, y: 92 }],
-    ['behind display table 2', { x: 69, y: 92 }],
+    ['right of the checkout', { x: 66.5, y: 79 }],
+    ['behind display table 1', { x: 24, y: 92 }],
+    ['behind display table 2', { x: 75, y: 93 }],
     ['front left corner', { x: 20, y: 99 }],
     ['front right corner', { x: 80, y: 99 }],
   ];
@@ -376,32 +458,40 @@ describe('the room is open, not maze-like', () => {
     expect(standable(point)).toBe(true);
   });
 
-  it('the spawn can reach the checkout in a straight line', () => {
-    expect(walkable(SPAWN, CLOTHING_STORE_CHECKOUT.standPoint)).toBe(true);
+  it('every configured stand point is somewhere the player can actually stand', () => {
+    for (const object of clothingStoreObjects) {
+      if (!object.interaction) continue;
+      expect(standable(object.interaction.standPoint), object.id).toBe(true);
+    }
+  });
+
+  it('the spawn can reach every interactive object in a straight line', () => {
+    for (const object of clothingStoreObjects) {
+      if (!object.interaction) continue;
+      expect(walkable(SPAWN, object.interaction.standPoint), object.id).toBe(true);
+    }
   });
 
   describe('behind the checkout', () => {
-    it('the back of the room is a through-route, wall to wall', () => {
-      // The whole point of turning the till from a wall into furniture.
-      expect(walkable({ x: 25, y: 79 }, { x: 75, y: 79 })).toBe(true);
+    it('the back of the room is a through-route', () => {
+      expect(walkable({ x: 40, y: 79 }, { x: 64, y: 79 })).toBe(true);
     });
 
     it('can be reached from the front around EITHER end of the counter', () => {
-      // Left: up the open floor beside the counter, then in behind it.
-      expect(walkable({ x: 30, y: 95 }, { x: 30, y: 79 })).toBe(true);
-      expect(walkable({ x: 30, y: 79 }, { x: 50, y: 79 })).toBe(true);
-      // Right: the mirror image.
-      expect(walkable({ x: 70, y: 95 }, { x: 70, y: 79 })).toBe(true);
-      expect(walkable({ x: 70, y: 79 }, { x: 50, y: 79 })).toBe(true);
+      // Left: up the open floor beside the counter, past the wall shelf's
+      // shallow footprint, then in behind the till.
+      expect(walkable({ x: 30, y: 95 }, { x: 30, y: 79.8 })).toBe(true);
+      expect(walkable({ x: 30, y: 79.8 }, { x: 50, y: 79.8 })).toBe(true);
+      // Right: up the lane between the till's end and the fitting room.
+      expect(walkable({ x: 66.5, y: 95 }, { x: 66.5, y: 79 })).toBe(true);
+      expect(walkable({ x: 66.5, y: 79 }, { x: 50, y: 79 })).toBe(true);
     });
 
     it('is where the SHOPKEEPER stands, not the customer', () => {
-      // The stand point stayed in front, deliberately: now that behind the till
-      // is walkable, a carelessly derived point could easily land back there.
       const counter = clothingStoreBlockers.find(
         (b) => b.id === 'clothing-store-checkout',
       )!;
-      expect(CLOTHING_STORE_CHECKOUT.standPoint.y).toBeGreaterThan(
+      expect(standPointOf('clothing-store-checkout').y).toBeGreaterThan(
         counter.y + counter.height,
       );
     });
@@ -409,40 +499,35 @@ describe('the room is open, not maze-like', () => {
 
   describe('around the display tables', () => {
     it('there is floor BEHIND each table, not just in front of it', () => {
-      // A table on legs has floor behind it, and the blocker is only its feet.
-      expect(standable({ x: 29, y: 93 })).toBe(true);
-      expect(standable({ x: 69, y: 93 })).toBe(true);
+      expect(standable({ x: 24, y: 93 })).toBe(true);
+      expect(standable({ x: 75, y: 93 })).toBe(true);
     });
 
     it('each table can be walked past on both sides', () => {
-      // Table 1 paints x 21–38: pass at x 19 and at x 39.
-      expect(walkable({ x: 19, y: 99 }, { x: 19, y: 93 })).toBe(true);
-      expect(walkable({ x: 39, y: 99 }, { x: 39, y: 93 })).toBe(true);
-      // Table 2 paints x 62–76.8.
-      expect(walkable({ x: 60, y: 99 }, { x: 60, y: 93 })).toBe(true);
-      expect(walkable({ x: 79, y: 99 }, { x: 79, y: 93 })).toBe(true);
+      // Table 1 paints x 14–33.5.
+      expect(walkable({ x: 36, y: 99 }, { x: 36, y: 93 })).toBe(true);
+      // Table 2 paints x 66.5–83.5.
+      expect(walkable({ x: 64, y: 99 }, { x: 64, y: 93 })).toBe(true);
+      expect(walkable({ x: 86, y: 99 }, { x: 86, y: 94 })).toBe(true);
     });
 
     it('the strip behind the tables joins the two sides of the room', () => {
-      // Behind the tables' feet (y < 95.8) and in front of the flanking
-      // furniture (y > 92): a clear lane across the whole room.
       expect(walkable({ x: 20, y: 94 }, { x: 80, y: 94 })).toBe(true);
     });
 
     it('neither table stands on the checkout path', () => {
-      // The straight line a player walks from spawn to the till.
-      expect(walkable({ x: 50, y: 99 }, CLOTHING_STORE_CHECKOUT.standPoint)).toBe(true);
+      expect(
+        walkable({ x: 50, y: 99 }, standPointOf('clothing-store-checkout')),
+      ).toBe(true);
     });
   });
 
-  it('the fitting-room side is reachable', () => {
-    expect(walkable({ x: 70, y: 99 }, { x: 82, y: 99 })).toBe(true);
-    expect(standable({ x: 80, y: 94 })).toBe(true);
-  });
-
-  it('the hat-shelf side is reachable', () => {
-    expect(walkable({ x: 30, y: 99 }, { x: 18, y: 99 })).toBe(true);
-    expect(standable({ x: 18, y: 94 })).toBe(true);
+  it('the fitting-room entrance is reachable from the front of the room', () => {
+    // Round display table 2's right-hand end — which is why the stand point is
+    // there rather than straight in front of the curtain.
+    expect(walkable({ x: 88, y: 99 }, standPointOf('clothing-store-fitting-room'))).toBe(
+      true,
+    );
   });
 
   it('the front of the room is one continuous walk, wall to wall', () => {
@@ -459,49 +544,55 @@ describe('the room is open, not maze-like', () => {
       const clamped = constrainPosition(point, boundary);
       expect(clamped.x).toBeGreaterThanOrEqual(0);
       expect(clamped.x).toBeLessThanOrEqual(100);
-      // The refined back edge — still half a percent inside the painted floor,
-      // whose wall junction sits at y = 77.
       expect(clamped.y).toBeGreaterThanOrEqual(77.5);
       expect(clamped.y).toBeLessThanOrEqual(100);
     }
   });
 });
 
-describe('the checkout', () => {
-  it('stands the player on open floor in FRONT of the counter', () => {
-    expect(standable(CLOTHING_STORE_CHECKOUT.standPoint)).toBe(true);
-    expect(isBlocked(CLOTHING_STORE_CHECKOUT.standPoint)).toBe(false);
+describe('what each object opens', () => {
+  it('four controls open the shop and exactly one opens the fitting room', () => {
+    const opens = (target: string) =>
+      clothingStoreObjects
+        .filter((o) => o.interaction?.opens === target)
+        .map((o) => o.id);
+
+    expect(opens('shop')).toEqual([
+      'clothing-store-checkout',
+      'clothing-store-display-table',
+      'clothing-store-display-table-2',
+    ]);
+    expect(opens('fitting-room')).toEqual(['clothing-store-fitting-room']);
   });
 
-  it('is close enough to the counter to read as being served', () => {
+  it('the checkout stand point is in FRONT of the till', () => {
     const counter = clothingStoreBlockers.find(
       (b) => b.id === 'clothing-store-checkout',
     )!;
-    const gap = CLOTHING_STORE_CHECKOUT.standPoint.y - (counter.y + counter.height);
-    expect(gap).toBeGreaterThan(0);
-    expect(gap).toBeLessThan(3);
-    expect(CLOTHING_STORE_CHECKOUT.standPoint.x).toBeGreaterThan(counter.x);
-    expect(CLOTHING_STORE_CHECKOUT.standPoint.x).toBeLessThan(counter.x + counter.width);
+    const stand = standPointOf('clothing-store-checkout');
+    expect(stand.y).toBeGreaterThan(counter.y + counter.height);
+    expect(stand.x).toBeGreaterThan(counter.x);
+    expect(stand.x).toBeLessThan(counter.x + counter.width);
   });
 
-  it('keeps its hotspot over the counter it belongs to', () => {
-    expect(CLOTHING_STORE_CHECKOUT.className).toContain('left-[35.2%]');
-    expect(CLOTHING_STORE_CHECKOUT.className).toContain('w-[29.6%]');
-    const counter = clothingStoreBlockers.find(
-      (b) => b.id === 'clothing-store-checkout',
-    )!;
-    expect(Math.abs(35.2 - counter.x)).toBeLessThan(1);
-    expect(Math.abs(35.2 + 29.6 - (counter.x + counter.width))).toBeLessThan(1);
+  it('each stand point is beside the thing it belongs to', () => {
+    for (const object of clothingStoreObjects) {
+      if (!object.interaction) continue;
+      const art = painted(object.id);
+      const stand = object.interaction.standPoint;
+      // Horizontally within arm's reach of the object's own artwork…
+      expect(stand.x, object.id).toBeGreaterThan(art.left - 6);
+      expect(stand.x, object.id).toBeLessThan(art.right + 6);
+      // …and not inside its footprint.
+      expect(isBlocked(stand), object.id).toBe(false);
+    }
   });
 
-  it('blocks only a shallow footprint, not the room behind it', () => {
-    const counter = clothingStoreBlockers.find(
-      (b) => b.id === 'clothing-store-checkout',
-    )!;
-    // It used to reach the wall line at y = 77. A counter is furniture, and
-    // furniture is a few percent of floor deep.
-    expect(counter.height).toBeLessThan(4);
-    expect(counter.y).toBeGreaterThan(78);
+  it('`clothingStoreInteraction` refuses to invent one', () => {
+    expect(() => clothingStoreInteraction('clothing-store-rug')).toThrow(
+      /No interaction configured/,
+    );
+    expect(clothingStoreInteraction('clothing-store-checkout').opens).toBe('shop');
   });
 });
 

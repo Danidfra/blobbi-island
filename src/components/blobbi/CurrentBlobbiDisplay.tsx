@@ -55,6 +55,7 @@ import {
 } from "@blobbi/react";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
 import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
+import type { ResolvedBlobbiItemDefinition } from "@/inventory/catalog-fallback";
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
@@ -116,6 +117,21 @@ export interface CurrentBlobbiDisplayProps {
    * Plain serializable data. Passing `[]` explicitly means "no effects".
    */
   effectsOverride?: readonly BlobbiVisualEffect[];
+  /**
+   * Extra `itemAddress → definition` entries for resolving accessory ARTWORK.
+   *
+   * The equipment context only carries definitions for what a Blobbi already
+   * WEARS — that is all the world stage ever needs. A preview surface asks a
+   * different question ("what would this look like on me?"), and the answer
+   * involves items the Blobbi does not wear, whose artwork the context has
+   * therefore never resolved. Without this the accessory placed correctly and
+   * drew nothing.
+   *
+   * Merged OVER the context map, so a caller can also correct the artwork for
+   * something already worn. It changes no ownership and no equipment: it says
+   * where a picture comes from, not what anybody owns.
+   */
+  definitionsOverride?: ReadonlyMap<string, ResolvedBlobbiItemDefinition>;
 }
 
 export function CurrentBlobbiDisplay({
@@ -132,6 +148,7 @@ export function CurrentBlobbiDisplay({
   visualOverride,
   accessoryOverride,
   effectsOverride,
+  definitionsOverride,
   eyeOffset,
   facing = "front",
 }: CurrentBlobbiDisplayProps) {
@@ -175,10 +192,12 @@ export function CurrentBlobbiDisplay({
   const resolveAccessorySources = useMemo(
     () =>
       createPlacementAccessorySourceResolver({
-        definitionsByAddress,
+        definitionsByAddress: definitionsOverride
+          ? new Map([...definitionsByAddress, ...definitionsOverride])
+          : definitionsByAddress,
         facing,
       }),
-    [definitionsByAddress, facing],
+    [definitionsByAddress, definitionsOverride, facing],
   );
 
   const currentBlobbi = visualOverride

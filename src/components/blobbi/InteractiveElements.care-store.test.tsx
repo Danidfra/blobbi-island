@@ -116,6 +116,14 @@ const ART = {
   booth: { w: 223, h: 309, left: 0, right: 0.0045, bottom: 0 },
 } as const;
 
+/**
+ * The mall's LEFT structural pillar, probed off `shopping-mall-inside.png`.
+ *
+ * It is what defines the open side of the Care Store's bay now that the plant
+ * beside it is gone — the facade is sized to reach it.
+ */
+const LEFT_PILLAR = { left: 22.2, right: 25.4 } as const;
+
 interface Box {
   left: number;
   width: number;
@@ -282,20 +290,42 @@ describe('the storefront is part of the mall scene', () => {
     expect(care.right).toBeLessThanOrEqual(clothing.left);
   });
 
-  it('stays the size it was when the plant beside it was removed', async () => {
+  it('reaches the structural pillar that defines its bay', async () => {
+    await renderMall();
+    const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
+
+    // With the plant gone, the pillar is the open side of the bay. The facade
+    // now runs from its inner face to the Clothing Store — the bay is the
+    // storefront, rather than the storefront sitting in the middle of it.
+    expect(care.left).toBeGreaterThanOrEqual(LEFT_PILLAR.right - 0.5);
+    expect(care.left).toBeLessThan(LEFT_PILLAR.right + 1.5);
+    // And it does not climb onto the pillar itself.
+    expect(care.left).toBeGreaterThan(LEFT_PILLAR.left);
+  });
+
+  it('grew into the freed space, and is now a sibling of the Clothing Store', async () => {
     await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
     const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
-    const badges = painted(boxOf(badgesEl(), 'left'), ART.badges);
 
-    // Taking the plant out left more clear wall, and the facade deliberately
-    // did NOT grow into it — a storefront's size should not be an accident of
-    // what its neighbours happen to be. It reads as a sibling of the Clothing
-    // Store, with a corridor's worth of gap on its open side.
-    expect(Math.abs(care.width - clothing.width)).toBeLessThan(4);
-    const bay = clothing.left - badges.right;
-    expect(care.width).toBeLessThan(bay);
-    expect(care.left - badges.right).toBeGreaterThan(3);
+    // It was 20.82 % of the world wide while the plant crowded it.
+    expect(care.width).toBeGreaterThan(20.82 * 1.1);
+    // …and it stops at its neighbour's size rather than overrunning it.
+    expect(Math.abs(care.width - clothing.width)).toBeLessThan(2);
+  });
+
+  it('sank its anchor to match, so the wider facade still stands on the floor line', async () => {
+    await renderMall();
+    const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
+    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const box = boxOf(facade().parentElement!, 'left');
+
+    // Widening the sprite makes it taller, which thickens the transparent film
+    // under its artwork, which sinks the painted base — unless the anchor
+    // follows it down. The raw anchor is therefore NOT its neighbours' 38.5 %,
+    // and the painted baselines are.
+    expect(box.bottom).toBeLessThan(38.5);
+    expect(Math.abs(care.baseline - clothing.baseline)).toBeLessThan(0.3);
   });
 
   it('the Photo Booth sits clear of both its new neighbours', async () => {
