@@ -39,6 +39,7 @@ import { InteractiveElements } from './InteractiveElements';
 import type { MovableBlobbiRef } from './MovableBlobbi';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
+import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -111,8 +112,14 @@ const ART = {
   /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
   clothing: { w: 567, h: 391, left: 0, right: 0, bottom: 0 },
-  /** The Badges Store, the Care Store's other middle-level neighbour. */
-  badges: { w: 616, h: 430, left: 0, right: 0.0032, bottom: 0.007 },
+  /**
+   * The Badges Store, the Care Store's other middle-level neighbour — now the
+   * higher-resolution `.webp`, whose padding is nothing like the old sprite's.
+   * Its 2.79 % bottom margin is why its `bottom-[…]` had to move to keep the
+   * shared floor line: the two facades sit at different box offsets and land on
+   * the same painted baseline.
+   */
+  badges: { w: 1510, h: 1041, left: 0.0139, right: 0.0139, bottom: 0.0279 },
   booth: { w: 223, h: 309, left: 0, right: 0.0045, bottom: 0 },
 } as const;
 
@@ -161,7 +168,7 @@ const clothingEl = () =>
   screen.getByAltText('Shopping clothing store').parentElement!;
 
 const badgesEl = () =>
-  screen.getByAltText('Shopping badges store').parentElement!;
+  screen.getByAltText(BADGES_STORE_FACADE.alt).parentElement!.parentElement!;
 
 const boothEl = () => screen.getByAltText('Photo booth').parentElement!;
 

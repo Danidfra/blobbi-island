@@ -40,6 +40,13 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1.2,
     finalScale: 1,
   },
+  // Badges Store. `initialScale` is the FRONT of the room (y = 99) and
+  // `finalScale` the BACK (y = 59.5) — see `resolveBlobbiScale`. At ~40 % of the
+  // world deep it is the deepest shop interior, so the ramp is the widest.
+  'badges-store-inside.webp': {
+    initialScale: 1.3,
+    finalScale: 0.9,
+  },
   // Care Store. `initialScale` is the FRONT of the room (y = 99) and
   // `finalScale` the BACK (y = 68.5) — see `resolveBlobbiScale`. The room is
   // ~30 % of the world deep, a little more than the clothing store, so the ramp

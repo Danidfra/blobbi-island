@@ -31,6 +31,9 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   // Care Store: mid-front floor, on the open rug, clear of every blocker and a
   // comfortable walk from the checkout counter.
   'care-store-inside': { x: 50, y: 90 },
+  // Badges Store: front-centre floor, on the open boards in front of the star
+  // rug, clear of both display units and a straight walk to the checkout.
+  'badges-store-inside': { x: 50, y: 92 },
 };
 
 /**
@@ -103,6 +106,14 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // so the return point is the storefront's horizontal centre on that strip.
   // The player comes back out where they went in.
   'shop:care-store-inside': { x: 37.6, y: 62.6 },
+
+  // Exiting to shop (mall) from badges-store-inside.
+  //
+  // The Badges Store facade holds the middle level's far-left bay, painting
+  // x ≈ −2.2–21.7 % (`badges-store-config.ts`). Same walkway strip as its two
+  // neighbours, at the storefront's painted centre — which is also its
+  // `walkTarget`, so going in and coming out use one point.
+  'shop:badges-store-inside': { x: 9.75, y: 62.6 },
 
   // Exiting to mine from cave-open
   'mine:cave-open': { x: 50, y: 81.3 },

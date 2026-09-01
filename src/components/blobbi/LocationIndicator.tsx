@@ -25,6 +25,7 @@ const LOCATION_NAMES: Record<LocationId, string> = {
   'back-yard': 'Back Yard',
   'cave-open': 'Mining Cave',
   'clothing-store-inside': 'Clothing Store',
+  'badges-store-inside': 'Badges Store',
   'care-store-inside': 'Care Store',
 };
 

@@ -17,7 +17,9 @@ import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { CareStoreRoom } from './care-store/CareStoreRoom';
 import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
+import { BadgesStoreRoom } from './badges-store/BadgesStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
+import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
@@ -336,17 +338,32 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             />
           </div>
 
-          {/* Badges Store */}
-          <div className='absolute bottom-[38.5%] -left-[2.5%] z-15 w-[24.5%]'>
-            <img
-              src="/assets/locations/shop/badges-store.png"
-              alt="Shopping badges store"
-              />
+          {/*
+            Badges Store — the middle level's far-left bay.
+
+            The facade IS the entrance. It used to carry a separate
+            `badges-store-door.png` overlay with NO click handler: a door-shaped
+            affordance that hovered, invited a tap and did nothing. That overlay
+            is gone rather than wired up, because the Care Store settled the
+            question next door — one storefront, one way in, and the way in is
+            the building.
+
+            Hover/focus/press are a FILTER, never a transform: `animated={false}`
+            keeps `InteractiveElement`'s hover-scale and tap-pop off so the shop
+            warms and glows without lifting off its own floor.
+          */}
+          <div
+            data-badges-store-facade
+            className={`${BADGES_STORE_FACADE.containerClassName} transition-[filter] duration-200 ease-cozy hover:brightness-105 hover:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] focus-within:brightness-105 focus-within:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] active:brightness-110 motion-reduce:transition-none`}
+          >
             <InteractiveElement
-              src="/assets/locations/shop/doors/badges-store-door.png"
-              alt="Badges store"
-              effect="opacity"
-              className="absolute -bottom-[5%] right-0 w-[29.4%]"
+              src={BADGES_STORE_FACADE.src}
+              alt={BADGES_STORE_FACADE.alt}
+              effect="scale"
+              animated={false}
+              onClick={() => setCurrentLocation('badges-store-inside')}
+              requestInteraction={requestInteraction}
+              walkTarget={BADGES_STORE_FACADE.walkTarget}
             />
           </div>
 
@@ -997,6 +1014,20 @@ if (backgroundFile === 'nostr-station-inside.png') {
 if (backgroundFile === 'clothing-store-inside.png') {
   return (
     <ClothingStoreRoom
+      blobbiRef={blobbiRef}
+      selectedBlobbiId={selectedBlobbi?.id ?? null}
+    />
+  );
+}
+
+/*
+  Badges Store — delegated for the same reason as its neighbours. The room's two
+  display units, its checkout hotspot, its collision and its shop all live in
+  `badges-store/`.
+*/
+if (backgroundFile === 'badges-store-inside.webp') {
+  return (
+    <BadgesStoreRoom
       blobbiRef={blobbiRef}
       selectedBlobbiId={selectedBlobbi?.id ?? null}
     />

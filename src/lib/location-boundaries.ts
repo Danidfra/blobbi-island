@@ -246,6 +246,42 @@ export const locationBoundaries: Record<string, Boundary> = {
    * y ≈ 66.5–67.5 across the open room; the bands below step in with the
    * perspective as the side furniture closes in.
    */
+  /**
+   * Badges Store — the floor's OUTER PERIMETER only.
+   *
+   * Like the Care Store, the room's obstacles are `MovementBlocker` rectangles
+   * (`badges-store-config.ts`) rather than holes punched in this boundary: a
+   * composite clamps to its NEAREST area, so a hole makes the Blobbi slide
+   * around its rim, while a blocker stops the walk and now — with route
+   * planning — lets it go round.
+   *
+   * `badges-store-inside.webp` is 1600×1103, aspect 1.4506 against the world's
+   * 1.5007, so `object-cover` crops it top and bottom and image percentages are
+   * NOT world percentages. Every number here was measured on the surviving crop
+   * (rows 19…1084), which is what the player actually sees.
+   *
+   * The three bands follow the artwork's own perspective. Probed: floor begins
+   * at y = 62.8 % hard against the left wall and rises to 56.5 % by x = 26 %;
+   * the checkout's base is y ≈ 58.7 %; the right-hand units run 55.1 → 57.7 %;
+   * the right wall's floor line falls back to y ≈ 63 % by x = 96 %. From y = 65 %
+   * down the floor is open wall to wall.
+   */
+  'badges-store-inside.webp': {
+    shape: 'composite',
+    areas: [
+      // Front floor: open from frame edge to frame edge, in front of everything.
+      { type: 'rectangle', x: [1, 99], y: [80, 99] },
+
+      // Mid floor: the band both display units stand in — they are blocked
+      // within it, not excluded from it, so their aisles stay walkable.
+      { type: 'rectangle', x: [4, 95], y: [64, 80] },
+
+      // Back aisle, in front of the checkout and under the shelving. Narrow by
+      // design and inset at both ends: the left shelving closes in below x = 20
+      // and the door wall below x = 86.
+      { type: 'rectangle', x: [20, 86], y: [59.5, 64] },
+    ],
+  },
   'care-store-inside.webp': {
     shape: 'composite',
     areas: [

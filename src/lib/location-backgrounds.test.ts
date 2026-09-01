@@ -20,7 +20,8 @@ const ALL_LOCATIONS = Object.keys(LOCATION_BACKGROUNDS) as LocationId[];
 
 describe('LOCATION_BACKGROUNDS', () => {
   it('resolves every canonical location to a background file', () => {
-    expect(ALL_LOCATIONS.length).toBe(17);
+    // Eighteen since the Badges Store became a real room.
+    expect(ALL_LOCATIONS.length).toBe(18);
     for (const location of ALL_LOCATIONS) {
       const background = getBackgroundForLocation(location);
       expect(background, location).toBeTruthy();
