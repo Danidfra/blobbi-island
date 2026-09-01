@@ -16,6 +16,7 @@ import { InteractiveElement } from './InteractiveElement';
 import { MineCaveEntrance } from './MineCaveEntrance';
 import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { CareStoreRoom } from './care-store/CareStoreRoom';
+import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
@@ -988,16 +989,17 @@ if (backgroundFile === 'nostr-station-inside.png') {
   );
 }
 
-// Clothing Store Inside elements
+/*
+  Clothing Store — delegated, like the arcade and the Care Store. The branch
+  used to be a bare back arrow over an empty room; the boutique's objects, its
+  collision, its checkout and its shop all live in `clothing-store/` now.
+*/
 if (backgroundFile === 'clothing-store-inside.png') {
   return (
-    <>
-      {/* Back button to return to shopping mall */}
-      <BackArrow
-        onClick={() => setCurrentLocation('shop')}
-        className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-      />
-    </>
+    <ClothingStoreRoom
+      blobbiRef={blobbiRef}
+      selectedBlobbiId={selectedBlobbi?.id ?? null}
+    />
   );
 }
 
