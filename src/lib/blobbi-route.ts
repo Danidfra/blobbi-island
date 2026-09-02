@@ -18,6 +18,26 @@
  * and outside every other blocker, and recurses — bounded — on the two halves.
  * The result is a short list of waypoints ending at the ORIGINAL target.
  *
+ * ## Furniture is an obstruction; the room's own shape is not
+ *
+ * This distinction is the whole architecture, and getting it wrong broke the
+ * shopping mall. A `MovementBlocker` is impassable: no walk may cross one, so a
+ * blocker in the way MUST be planned around or the route does not exist. A
+ * BOUNDARY is a different kind of thing entirely — it is the room's contour, and
+ * the movement loop has always followed it by clamping every step back onto the
+ * floor. That clamp is what walks a Blobbi along a wall, round a corner, and up
+ * the mall's staircase.
+ *
+ * So a leg is walkable when no BLOCKER crosses it. Leaving the walkable polygon
+ * on the way is not an error here — it is the contour-following the movement
+ * loop does, and it is how a straight line between two valid points on different
+ * mall levels resolves into a climb.
+ *
+ * The boundary still decides things, just not that one. Every detour waypoint
+ * must be somewhere the Blobbi can actually stand, and a detour whose legs stay
+ * on the floor is preferred over a shorter one that does not — see
+ * {@link OFF_FLOOR_PENALTY_PX}. Preference, not prohibition.
+ *
  * It is NOT A*, a navmesh or a graph search, because the rooms do not need one:
  * they hold two to five convex rectangles on an open floor, where the shortest
  * route around an axis-aligned box always turns at one of its corners. A
@@ -39,7 +59,8 @@
 
 import type { Position } from '@/lib/types';
 import type { Boundary } from '@/lib/boundaries';
-import { constrainPosition } from '@/lib/boundaries';
+import { areaContains, constrainPosition, constrainToArea } from '@/lib/boundaries';
+import type { WalkableArea } from '@/lib/boundaries';
 import { WORLD_HEIGHT, WORLD_WIDTH, worldDistancePx } from '@/lib/world-coordinates';
 
 /** An axis-aligned obstacle, in world percent. Matches `MovementBlocker`. */
@@ -83,6 +104,22 @@ const DEFAULT_MAX_DEPTH = 3;
 
 /** How finely a segment is checked against the walk boundary, in design px. */
 const BOUNDARY_SAMPLE_PX = 6;
+
+/**
+ * What a leg costs, in design px, for straying off the walkable polygon.
+ *
+ * Large enough that any on-floor detour beats any off-floor one — the world is
+ * 1257 px corner to corner, so a single penalty outweighs several room lengths —
+ * and finite so that "off the floor" ranks a route DOWN rather than deleting it.
+ *
+ * That finiteness is the fix for the mall. Rejecting off-floor legs outright
+ * made the planner declare every ground-to-upper-level walk impossible: the
+ * mall's floors are joined by a narrow stair column, no straight line between
+ * levels stays inside the polygon, and — with no furniture anywhere in the mall
+ * — there was no blocker to detour around, so the planner returned `null` and
+ * `goTo` refused to move at all.
+ */
+const OFF_FLOOR_PENALTY_PX = 100_000;
 
 /** Is this point inside the rectangle? Edges count, exactly as the blocker context counts them. */
 export function pointInBlocker(point: Position, blocker: RouteBlocker): boolean {
@@ -202,17 +239,20 @@ export function segmentStaysOnFloor(
   return true;
 }
 
-/** Is `a → b` walkable as one straight leg? */
+/**
+ * Is `a → b` walkable as one straight leg?
+ *
+ * Blockers only. Whether the line stays inside the room is a question of cost
+ * (see {@link legCostPx}), not of possibility — the movement loop clamps each
+ * step back onto the floor, which is how a walk follows a wall or climbs the
+ * mall's stairs.
+ */
 function legIsClear(
   a: Position,
   b: Position,
-  boundary: Boundary,
   blockers: readonly RouteBlocker[],
 ): boolean {
-  return (
-    firstBlockerOnSegment(a, b, blockers) === null &&
-    segmentStaysOnFloor(a, b, boundary)
-  );
+  return firstBlockerOnSegment(a, b, blockers) === null;
 }
 
 /** Two points the walk could not tell apart, in world percent. */
@@ -242,6 +282,133 @@ function detourCandidates(blocker: RouteBlocker, clearancePx: number): Position[
 }
 
 /**
+ * The convex pieces a boundary is built from.
+ *
+ * Convexity is the whole point: two points inside ONE area are always joined by
+ * a straight line that stays inside it, so a route expressed as a chain of areas
+ * needs no sampling to be proved on-floor. A plain rectangle boundary is its own
+ * single area; the shapes with curved edges have no pieces to reason about and
+ * get an empty list, which falls back to walking straight at the target exactly
+ * as they always have.
+ */
+function walkableAreas(boundary: Boundary): WalkableArea[] {
+  if (boundary.shape === 'composite') return boundary.areas;
+  if (boundary.shape === 'rectangle') {
+    return [{ type: 'rectangle', x: boundary.x, y: boundary.y }];
+  }
+  return [];
+}
+
+/**
+ * A point lying in BOTH areas, or `null` when they do not touch.
+ *
+ * Alternating projection: clamp into one, clamp the result into the other, and
+ * repeat. For convex sets that converges on the closest pair, so if the two
+ * meet, it lands in the intersection — including the common case here, where
+ * two rectangles share nothing but an edge and the intersection has no area at
+ * all.
+ *
+ * Seeded from `toward` so the crossing it finds is the one on the way, rather
+ * than an arbitrary corner of a shared edge: the mall's ground floor and its
+ * stair column meet along a whole 7 %-wide line, and which end of that line the
+ * walk uses is the difference between climbing the stairs and walking away from
+ * them.
+ */
+function areaConnection(
+  a: WalkableArea,
+  b: WalkableArea,
+  toward: Position,
+): Position | null {
+  let point = toward;
+  for (let i = 0; i < 24; i++) {
+    const onA = constrainToArea(point, a);
+    const onB = constrainToArea(onA, b);
+    if (worldDistancePx(onA, onB) < 1e-4) {
+      return areaContains(onB, a) ? onB : onA;
+    }
+    if (worldDistancePx(point, onB) < 1e-9) break;
+    point = onB;
+  }
+  return null;
+}
+
+/**
+ * Waypoints that walk the room's own topology from `start` to `target`.
+ *
+ * A breadth-first search over the boundary's convex pieces, returning one
+ * crossing point per area boundary traversed. This is what climbs the mall's
+ * stairs, and it is derived entirely from `locationBoundaries` — there is no
+ * staircase in this file, no mall-specific branch, and nothing to keep in sync
+ * with the artwork.
+ *
+ * Fewest AREAS wins rather than shortest distance: the pieces are the room's
+ * own description of itself, so crossing as few as possible is the route a
+ * player would call obvious, and the graph is far too small for the difference
+ * to be worth a priority queue.
+ *
+ * Returns `[]` when the two points already share an area — the straight line is
+ * then provably on-floor — and `null` when the floor is genuinely disconnected.
+ */
+function boundaryCorridor(
+  start: Position,
+  target: Position,
+  boundary: Boundary,
+): Position[] | null {
+  const areas = walkableAreas(boundary);
+  if (areas.length === 0) return [];
+
+  const startAreas = areas.flatMap((area, i) => (areaContains(start, area, 0.05) ? [i] : []));
+  const targetAreas = new Set(
+    areas.flatMap((area, i) => (areaContains(target, area, 0.05) ? [i] : [])),
+  );
+  // A point the boundary does not actually contain: nothing to plan through.
+  if (startAreas.length === 0 || targetAreas.size === 0) return [];
+  if (startAreas.some((i) => targetAreas.has(i))) return [];
+
+  const cameFrom = new Map<number, number | null>();
+  const queue: number[] = [];
+  for (const i of startAreas) {
+    cameFrom.set(i, null);
+    queue.push(i);
+  }
+
+  let goal: number | null = null;
+  for (let head = 0; head < queue.length && goal === null; head++) {
+    const current = queue[head];
+    for (let next = 0; next < areas.length; next++) {
+      if (cameFrom.has(next)) continue;
+      if (!areaConnection(areas[current], areas[next], target)) continue;
+      cameFrom.set(next, current);
+      queue.push(next);
+      if (targetAreas.has(next)) {
+        goal = next;
+        break;
+      }
+    }
+  }
+  if (goal === null) return null;
+
+  const chain: number[] = [];
+  for (let node: number | null = goal; node !== null; node = cameFrom.get(node) ?? null) {
+    chain.unshift(node);
+  }
+
+  const waypoints: Position[] = [];
+  let from = start;
+  for (let i = 0; i < chain.length - 1; i++) {
+    // Aim each crossing at the next one's area rather than at the final target,
+    // so a long chain does not bunch every waypoint at the same corner.
+    const crossing = areaConnection(areas[chain[i]], areas[chain[i + 1]], target);
+    if (!crossing) return null;
+    if (worldDistancePx(from, crossing) > 1e-6) {
+      waypoints.push(crossing);
+      from = crossing;
+    }
+  }
+  return waypoints;
+}
+
+/**
  * A walkable route from `start` to `target`, as the waypoints to walk in order.
  *
  * The last entry is always the ORIGINAL target — the caller's destination is
@@ -262,22 +429,42 @@ export function planRoute(
   const clearancePx = options.clearancePx ?? DEFAULT_CLEARANCE_PX;
   const maxDepth = options.maxDepth ?? DEFAULT_MAX_DEPTH;
 
-  // Walking INTO furniture is never a route. The caller decides what to do
-  // instead; the movement controller simply refuses the walk, which is the
-  // behaviour `goTo` has always had for a blocked destination.
+  // ENDPOINT validity is the hard requirement, and it is only about the
+  // endpoint. Walking INTO furniture is never a route, and neither is walking
+  // to somewhere outside the room — in both cases there is nowhere to arrive.
+  // The caller decides what to do instead; the movement controller simply
+  // refuses the walk, which is what `goTo` has always done for a blocked
+  // destination. Real world clicks are already clamped onto the floor by
+  // `MovableBlobbi`, so this rejects programmatic targets, not player taps.
   if (isBlocked(target, blockers)) return null;
+  if (!isOnFloor(target, boundary)) return null;
 
-  const plan = (a: Position, b: Position, depth: number): Position[] | null => {
-    if (legIsClear(a, b, boundary, blockers)) return [b];
+  /** A leg's length, plus a heavy surcharge if it strays off the floor. */
+  const legCostPx = (a: Position, b: Position): number =>
+    worldDistancePx(a, b) +
+    (segmentStaysOnFloor(a, b, boundary) ? 0 : OFF_FLOOR_PENALTY_PX);
+
+  /**
+   * Plan `a → b`, returning the waypoints and what they cost.
+   *
+   * Cost rather than a boolean is what lets the boundary rank routes without
+   * vetoing them: an off-floor leg is expensive, so a detour that keeps to the
+   * floor always wins when one exists, and a route that has no such option is
+   * still a route.
+   */
+  const plan = (
+    a: Position,
+    b: Position,
+    depth: number,
+  ): { route: Position[]; cost: number } | null => {
+    const obstacle = firstBlockerOnSegment(a, b, blockers);
+    // Nothing solid in the way: walk it. If the line leaves the room on the way,
+    // the movement loop follows the contour, exactly as it did before this
+    // planner existed.
+    if (!obstacle) return { route: [b], cost: legCostPx(a, b) };
     if (depth >= maxDepth) return null;
 
-    const obstacle = firstBlockerOnSegment(a, b, blockers);
-    // Not a blocker in the way, then — the leg leaves the floor, and no corner
-    // of any rectangle would fix that.
-    if (!obstacle) return null;
-
-    let best: Position[] | null = null;
-    let bestCost = Infinity;
+    let best: { route: Position[]; cost: number } | null = null;
 
     for (const candidate of detourCandidates(obstacle, clearancePx)) {
       // A corner the walk is already standing on, or that IS the destination,
@@ -285,27 +472,54 @@ export function planRoute(
       // still and re-plans itself forever.
       if (samePoint(candidate, a) || samePoint(candidate, b)) continue;
       if (isBlocked(candidate, blockers)) continue;
+      // A waypoint must be somewhere the Blobbi can stand. This one IS a
+      // prohibition: the clamp would silently move the waypoint elsewhere, and
+      // the walk would aim at a point it can never reach.
       if (!isOnFloor(candidate, boundary)) continue;
 
-      // The first leg must be walkable outright: allowing it to detour again
-      // is what would let the planner wander away from the target.
-      if (!legIsClear(a, candidate, boundary, blockers)) continue;
+      // The first leg must be clear of furniture outright: letting it detour
+      // again is what would send the planner wandering away from the target.
+      if (!legIsClear(a, candidate, blockers)) continue;
 
       const rest = plan(candidate, b, depth + 1);
       if (!rest) continue;
 
-      const route = [candidate, ...rest];
-      const cost = routeLengthPx(a, route);
-      if (cost < bestCost) {
-        bestCost = cost;
-        best = route;
+      const cost = legCostPx(a, candidate) + rest.cost;
+      if (!best || cost < best.cost) {
+        best = { route: [candidate, ...rest.route], cost };
       }
     }
 
     return best;
   };
 
-  return plan(start, target, 0);
+  /*
+    Two questions, answered by two different things.
+
+    ROOM TOPOLOGY first: if no straight line from here to there stays on the
+    floor, the room's own shape is what has to be navigated, and
+    `boundaryCorridor` returns the crossings that do it. Rooms where the direct
+    line is already fine — every shop interior, and most walks inside the mall's
+    own levels — skip this entirely and behave exactly as they did before.
+
+    FURNITURE second: each leg of that corridor is then planned around blockers
+    in the usual way. A corridor leg lies inside one convex area, so detouring
+    round a shelf on it cannot wander off the floor.
+  */
+  const corridor = segmentStaysOnFloor(start, target, boundary)
+    ? []
+    : boundaryCorridor(start, target, boundary);
+  if (corridor === null) return null;
+
+  const route: Position[] = [];
+  let from = start;
+  for (const waypoint of [...corridor, target]) {
+    const leg = plan(from, waypoint, 0);
+    if (!leg) return null;
+    route.push(...leg.route);
+    from = waypoint;
+  }
+  return route;
 }
 
 /** Total walking distance of a route, in design px. */

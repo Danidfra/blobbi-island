@@ -20,6 +20,7 @@ import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
 import { BadgesStoreRoom } from './badges-store/BadgesStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
+import { EXIT_POSITIONS } from '@/lib/location-initial-position';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
@@ -449,6 +450,24 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
               onClick={() => setCurrentLocation('clothing-store-inside')}
               requestInteraction={requestInteraction}
+              /*
+                An EXPLICIT walk target, as its two neighbours already have.
+
+                Without one, `InteractiveElement` derives the target from the
+                door sprite's base, which lands at y = 61 % — 1.1 % above the
+                middle level's walkway strip (`y ∈ [62.1, 63.1]`) and off the
+                mall's walkable floor altogether. `care-store-config.ts` wrote
+                down exactly this trap: a storefront is set back against the
+                wall, so "the floor at this sprite's base" is not floor.
+
+                It used to be survivable because the old walk clamped an
+                unreachable target onto the strip's top EDGE and hoped; it is
+                not survivable now that a route to a point outside the room is
+                correctly refused. The point reused here is the one the player
+                already returns onto when they come back out, so going in and
+                coming out cannot drift apart.
+              */
+              walkTarget={EXIT_POSITIONS['shop:clothing-store-inside']}
             />
           </div>
 

@@ -12,6 +12,79 @@ export type WalkableArea =
   | { type: 'triangle'; points: [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] };
 
 
+/**
+ * Is this point inside one walkable area? Edges count as inside.
+ *
+ * Exported because route planning needs to reason about the areas a composite
+ * boundary is BUILT from, not just about the union. Each area is convex, which
+ * is what makes "both endpoints in the same area" a proof that the straight line
+ * between them never leaves the floor.
+ */
+export function areaContains(point: Position, area: WalkableArea, epsilon = 1e-6): boolean {
+  if (area.type === 'rectangle') {
+    return (
+      point.x >= area.x[0] - epsilon &&
+      point.x <= area.x[1] + epsilon &&
+      point.y >= area.y[0] - epsilon &&
+      point.y <= area.y[1] + epsilon
+    );
+  }
+  if (area.type === 'circle') {
+    return Math.hypot(point.x - area.cx, point.y - area.cy) <= area.r + epsilon;
+  }
+  const clamped = constrainToArea(point, area);
+  return Math.hypot(clamped.x - point.x, clamped.y - point.y) <= epsilon;
+}
+
+/**
+ * The nearest point of one walkable area to `position`.
+ *
+ * Extracted from {@link constrainPosition}'s composite branch, which now calls
+ * it — the per-area clamp was already the interesting half, and route planning
+ * needs it on its own to find where two areas meet.
+ */
+export function constrainToArea(position: Position, area: WalkableArea): Position {
+  const { x, y } = position;
+
+  if (area.type === 'rectangle') {
+    return {
+      x: Math.max(area.x[0], Math.min(area.x[1], x)),
+      y: Math.max(area.y[0], Math.min(area.y[1], y)),
+    };
+  }
+
+  if (area.type === 'circle') {
+    const dx = x - area.cx;
+    const dy = y - area.cy;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance > area.r && distance > 0) {
+      return { x: area.cx + (dx / distance) * area.r, y: area.cy + (dy / distance) * area.r };
+    }
+    return { x, y };
+  }
+
+  if (isPointInTriangle({ x, y }, area.points)) return { x, y };
+
+  // Closest point on the triangle's edges.
+  let closestPointOnEdge = { x: 0, y: 0 };
+  let minDistanceSq = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const p1 = area.points[i];
+    const p2 = area.points[(i + 1) % 3];
+    const l2 = (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2;
+    if (l2 === 0) continue;
+    let t = ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const closest = { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+    const distSq = (x - closest.x) ** 2 + (y - closest.y) ** 2;
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      closestPointOnEdge = closest;
+    }
+  }
+  return closestPointOnEdge;
+}
+
 export function constrainPosition(position: Position, boundary: Boundary): Position {
   const x = Math.max(0, Math.min(100, position.x));
   const y = Math.max(0, Math.min(100, position.y));
@@ -28,63 +101,8 @@ export function constrainPosition(position: Position, boundary: Boundary): Posit
     let minDistance = Infinity;
 
     for (const area of boundary.areas) {
-      let clampedX, clampedY;
-
-      if (area.type === 'rectangle') {
-        clampedX = Math.max(area.x[0], Math.min(area.x[1], x));
-        clampedY = Math.max(area.y[0], Math.min(area.y[1], y));
-      } else if (area.type === 'circle') {
-        const dx = x - area.cx;
-        const dy = y - area.cy;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > area.r) {
-          clampedX = area.cx + (dx / distance) * area.r;
-          clampedY = area.cy + (dy / distance) * area.r;
-        } else {
-          clampedX = x;
-          clampedY = y;
-        }
-      } else if (area.type === 'triangle') {
-        if (isPointInTriangle({ x, y }, area.points)) {
-          clampedX = x;
-          clampedY = y;
-        } else {
-          // Find the closest point on the triangle edges
-          let closestPointOnEdge = { x: 0, y: 0 };
-          let minDistanceSq = Infinity;
-
-          for (let i = 0; i < 3; i++) {
-            const p1 = area.points[i];
-            const p2 = area.points[(i + 1) % 3];
-
-            const l2 = (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2;
-            if (l2 === 0) continue;
-
-            let t = ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / l2;
-            t = Math.max(0, Math.min(1, t));
-
-            const closest = { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
-            const dx = x - closest.x;
-            const dy = y - closest.y;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < minDistanceSq) {
-              minDistanceSq = distSq;
-              closestPointOnEdge = closest;
-            }
-          }
-          clampedX = closestPointOnEdge.x;
-          clampedY = closestPointOnEdge.y;
-        }
-      } else {
-        continue;
-      }
-
-      const point = { x: clampedX, y: clampedY };
-      const dx = x - point.x;
-      const dy = y - point.y;
-      const distance = dx * dx + dy * dy;
-
+      const point = constrainToArea({ x, y }, area);
+      const distance = (x - point.x) ** 2 + (y - point.y) ** 2;
       if (distance < minDistance) {
         minDistance = distance;
         closestPoint = point;
