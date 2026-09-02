@@ -19,6 +19,7 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
   'clothing-store-inside': 'clothing-store.webp',
   'badges-store-inside': 'badges-store-inside.webp',
   'care-store-inside': 'care-store-inside.webp',
+  'furniture-store-inside': 'furniture-store-inside.webp',
 };
 
 export function getBackgroundForLocation(location: LocationId): string {

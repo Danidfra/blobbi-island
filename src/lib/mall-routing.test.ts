@@ -46,6 +46,7 @@ import {
 import type { Position } from './types';
 import { CARE_STORE_FACADE } from './care-store-config';
 import { BADGES_STORE_FACADE } from './badges-store-config';
+import { FURNITURE_STORE_FACADE } from './furniture-store-config';
 
 const MALL: Boundary = locationBoundaries['shopping-mall-inside.png'];
 const GROUND = LOCATION_INITIAL_POSITIONS['shop'];
@@ -57,14 +58,25 @@ const LEFT_STAIR = { x: [0, 7], y: [62.1, 90.6] } as const;
 /** The right stair column that carries on from the strip to the top level. */
 const RIGHT_STAIR = { x: [93, 100], y: [32.5, 62.1] } as const;
 
-/** Where each middle-level storefront asks the player to stand. */
+/**
+ * Where each storefront asks the player to stand.
+ *
+ * The Furniture Store is on the TOP level, so reaching it is a TWO-stair route:
+ * left column up to the middle walkway, along it, right column up to the top.
+ * It is in this list precisely because it exercises the cross-floor case the
+ * rest only half-touch.
+ */
 const STOREFRONTS: { name: string; target: Position }[] = [
   { name: 'Badges Store', target: BADGES_STORE_FACADE.walkTarget },
   { name: 'Care Store', target: CARE_STORE_FACADE.walkTarget },
   // The Clothing Store passes `EXIT_POSITIONS` straight through as its walk
   // target, so this is literally the value the facade uses.
   { name: 'Clothing Store', target: EXIT_POSITIONS['shop:clothing-store-inside'] },
+  { name: 'Furniture Store', target: FURNITURE_STORE_FACADE.walkTarget },
 ];
+
+/** The top level's walkway strip, from the boundary itself. */
+const TOP_STRIP = { y: [32.5, 33.5] } as const;
 
 /** Several honest starting points on the ground floor, not one lucky one. */
 const GROUND_STARTS: Position[] = [
@@ -315,12 +327,14 @@ describe('the mall still refuses what it should', () => {
 });
 
 describe('every mall storefront asks for somewhere that exists', () => {
-  it.each(STOREFRONTS)('$name stands on the walkway strip', ({ target }) => {
+  it.each(STOREFRONTS)('$name stands on a walkway strip', ({ name, target }) => {
     // The generic guard the Clothing Store needed: a storefront's walk target
-    // has to be real floor. All three sit on the middle level's strip.
+    // has to be real floor, not the point under its sprite. Three sit on the
+    // middle level's strip; the Furniture Store sits on the top one.
     expect(isOnFloor(target, MALL)).toBe(true);
-    expect(target.y).toBeGreaterThanOrEqual(MIDDLE_STRIP.y[0]);
-    expect(target.y).toBeLessThanOrEqual(MIDDLE_STRIP.y[1]);
+    const strip = name === 'Furniture Store' ? TOP_STRIP : MIDDLE_STRIP;
+    expect(target.y).toBeGreaterThanOrEqual(strip.y[0]);
+    expect(target.y).toBeLessThanOrEqual(strip.y[1]);
   });
 
   it('a target derived from a storefront sprite base is NOT floor', () => {

@@ -60,23 +60,29 @@ const ART = '/assets/locations/badges-store-inside';
  *
  * ## Placement
  *
- * `badges-store.webp` is 1510×1041 with ink margins l/r 1.39 %, t 0 %, b 2.79 %,
- * so at `w-[24.5%]` the box is 25.35 % of world height and the painted base sits
- * 0.71 % above the box's bottom edge. The box bottom is therefore set to
- * y = 62.21 % to put the PAINTED base on y = 61.5 % — the same floor line the
- * Care Store facade stands on, measured the same way. The old `bottom-[38.5%]`
- * assumed a zero bottom margin (true of the neighbouring `.png` facades, not of
- * this one) and left the shop hovering 0.7 % above its own floor.
+ * `badges-store.webp` was REPLACED with a new render — 1536×1024 with ink
+ * margins l/r 0.78 %, t 0.39 %, b 2.93 %, where the sprite it replaced was
+ * 1510×1041 with l/r 1.39 %, b 2.79 %. Different box, different padding, so the
+ * numbers were derived again rather than carried over: at the old `w-[24.5%]`
+ * the new plate would have painted a percent wider and sat a hair low.
  *
- * Painted extent: x −2.2 → 21.7 %, base y 61.5 %. It runs off the left frame
- * edge exactly as it always has, and clears the Care Store facade (which paints
- * from x = 25.4 %) by 3.7 %.
+ * The box below reproduces the PAINTED extent the storefront already had, so
+ * nothing else on the level moves:
+ *
+ *   box width  W = 23.818 / 0.9844 = 24.2 %   → box height 24.21 %
+ *   box left     = −2.159 − 0.0078 · W = −2.35 %
+ *   box bottom   = 61.49 + 0.0293 · 24.21 = 62.2 %   (bottom-[37.8%])
+ *
+ * Painted extent: x −2.16 → 21.66 %, base y 61.5 % — the same floor line the
+ * Care Store facade stands on, measured the same way. It runs off the left
+ * frame edge exactly as it always has, and clears the Care Store facade (which
+ * paints from x = 25.4 %) by 3.7 %.
  */
 export const BADGES_STORE_FACADE = {
   src: '/assets/locations/shop/badges-store.webp',
   /** Names the action, not the picture. */
   alt: 'Badges Store — go inside',
-  containerClassName: 'absolute bottom-[37.8%] -left-[2.5%] z-[15] w-[24.5%]',
+  containerClassName: 'absolute bottom-[37.8%] -left-[2.35%] z-[15] w-[24.2%]',
   /**
    * Where the Blobbi stands to go in.
    *

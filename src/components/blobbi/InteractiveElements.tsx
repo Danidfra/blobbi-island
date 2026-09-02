@@ -18,9 +18,11 @@ import { ArcadeRoom } from './arcade/ArcadeRoom';
 import { CareStoreRoom } from './care-store/CareStoreRoom';
 import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
 import { BadgesStoreRoom } from './badges-store/BadgesStoreRoom';
+import { FurnitureStoreRoom } from './furniture-store/FurnitureStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
 import { CLOTHING_STORE_FACADE } from '@/lib/clothing-store-config';
+import { FURNITURE_STORE_FACADE } from '@/lib/furniture-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
@@ -307,12 +309,30 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
         />
        </div>
 
-          {/* Coffee Shop */}
-          <div className='absolute bottom-[12%] left-[28%] z-20 w-[22.5%]'>
-            <img
-              />
+          {/*
+            Coffee Shop — ground floor, left of the Photo Booth. Decorative: it
+            has no door, no interior and no click handler, and gains none here.
+
+            Re-placed for the REPLACEMENT artwork. The old `.png` was 579×385
+            with essentially no transparent padding, so its box was its picture;
+            `coffee-shop.webp` is a 1536×1024 box with ink margins l 2.28 %,
+            r 2.08 %, t 2.73 %, b 2.54 %, which would have shrunk the stall and
+            floated it off the floor at the old numbers.
+
+            The box below reproduces the old PAINTED extent exactly — x 28.0 →
+            50.38, base on y = 87.94 — so nothing else on the ground floor moves:
+
+              box width  W = 22.383 / 0.9564 = 23.4 %  → box height 23.41 %
+              box left     = 28.0 − 0.0228 · W = 27.47 %
+              box bottom   = 87.94 + 0.0254 · 23.41 = 88.53 %  (bottom-[11.47%])
+
+            The empty `<img />` that used to sit above the stall went with the
+            swap: it had no `src`, so it rendered a broken-image box that the
+            artwork happened to cover.
+          */}
+          <div className='absolute bottom-[11.47%] left-[27.47%] z-20 w-[23.4%]'>
             <InteractiveElement
-              src="/assets/locations/shop/coffee-shop.png"
+              src="/assets/locations/shop/coffee-shop.webp"
               alt="Shopping coffe shop"
               effect="scale"
               animated={false}
@@ -467,17 +487,34 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             />
           </div>
 
-          {/* Furniture Store */}
-          <div className='absolute top-[7.4%] left-1/2 transform -translate-x-1/2 z-15 w-[30%]'>
-            <img
-              src="/assets/locations/shop/furniture-store.png"
-              alt="Shopping furniture store"
-              />
+          {/*
+            Furniture Store — the mall's TOP level.
+
+            The facade IS the entrance, and here that is a fix rather than a
+            restatement: the old storefront carried a
+            `doors/furniture-store-door.png` overlay with NO click handler at
+            all, so the shop hovered, invited a tap and had no way in. The new
+            artwork is an open-front showroom with no door painted in it, so the
+            overlay is deleted rather than finally wired up, exactly as the
+            Badges Store's dead door was.
+
+            Hover/focus/press are a FILTER, never a transform: `animated={false}`
+            keeps `InteractiveElement`'s hover-scale and tap-pop off so the shop
+            warms and glows without lifting off its own floor, matching all
+            three storefronts on the level below.
+          */}
+          <div
+            data-furniture-store-facade
+            className={`${FURNITURE_STORE_FACADE.containerClassName} transition-[filter] duration-200 ease-cozy hover:brightness-105 hover:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] focus-within:brightness-105 focus-within:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] active:brightness-110 motion-reduce:transition-none`}
+          >
             <InteractiveElement
-              src="/assets/locations/shop/doors/furniture-store-door.png"
-              alt="Furniture store door"
-              effect="opacity"
-              className="absolute bottom-0 left-[10%] w-[35.3%]"
+              src={FURNITURE_STORE_FACADE.src}
+              alt={FURNITURE_STORE_FACADE.alt}
+              effect="scale"
+              animated={false}
+              onClick={() => setCurrentLocation('furniture-store-inside')}
+              requestInteraction={requestInteraction}
+              walkTarget={FURNITURE_STORE_FACADE.walkTarget}
             />
           </div>
 
@@ -1043,6 +1080,20 @@ if (backgroundFile === 'clothing-store.webp') {
 if (backgroundFile === 'badges-store-inside.webp') {
   return (
     <BadgesStoreRoom
+      blobbiRef={blobbiRef}
+      selectedBlobbiId={selectedBlobbi?.id ?? null}
+    />
+  );
+}
+
+/*
+  Furniture Store — delegated like every other mall interior. The showroom is
+  painted into `furniture-store-inside.webp`, so what lives in
+  `furniture-store/` is its collision, its checkout hotspot and its modal.
+*/
+if (backgroundFile === 'furniture-store-inside.webp') {
+  return (
+    <FurnitureStoreRoom
       blobbiRef={blobbiRef}
       selectedBlobbiId={selectedBlobbi?.id ?? null}
     />

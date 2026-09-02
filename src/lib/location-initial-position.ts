@@ -34,6 +34,9 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   // Badges Store: front-centre floor, on the open boards in front of the star
   // rug, clear of both display units and a straight walk to the checkout.
   'badges-store-inside': { x: 50, y: 92 },
+  // Furniture Store: front-centre of the showroom's open boards, in the mouth
+  // of the aisle that runs between the two display platforms up to the desk.
+  'furniture-store-inside': { x: 50, y: 93 },
 };
 
 /**
@@ -96,6 +99,17 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // spawned off-floor and snapped away on the first movement frame.
   // GROUND-anchor semantics (Phase 2): the feet land on the walkway strip.
   'shop:clothing-store-inside': { x: 58, y: 62.6 },
+
+  // Exiting to shop (mall) from furniture-store-inside.
+  //
+  // The Furniture Store is the mall's TOP-level store: its facade paints
+  // x 37–63 % with its base on y = 33.02 % (`furniture-store-config.ts`), and
+  // the walkable floor on that level is the strip `y ∈ [32.5, 33.5]` of
+  // `shopping-mall-inside.png`. This is the facade's own `walkTarget`, so going
+  // in and coming out cannot drift apart — and it is the far end of the mall's
+  // two-stair cross-floor route, not a point the ground floor can reach
+  // directly.
+  'shop:furniture-store-inside': { x: 50, y: 33 },
 
   // Exiting to shop (mall) from care-store-inside.
   //

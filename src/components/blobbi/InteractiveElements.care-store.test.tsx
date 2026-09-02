@@ -109,7 +109,13 @@ function pct(className: string, prefix: string): number {
  */
 const ART = {
   care: { w: 567, h: 391, left: 0.0159, right: 0.0159, bottom: 0.0537 },
-  coffee: { w: 579, h: 385, left: 0, right: 0.0052, bottom: 0.0026 },
+  /**
+   * The Coffee Shop, now the replacement `.webp`. The sprite it replaced was
+   * 579×385 with essentially no padding; this one is a 1536×1024 box with real
+   * margins, which is why its own `bottom-[…]` and `left-[…]` moved when the
+   * artwork did — it paints the same stall in the same place.
+   */
+  coffee: { w: 1536, h: 1024, left: 0.0228, right: 0.0208, bottom: 0.0254 },
   /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
   /**
@@ -121,13 +127,13 @@ const ART = {
    */
   clothing: { w: 1536, h: 1024, left: 0.0319, right: 0.0319, bottom: 0.0293 },
   /**
-   * The Badges Store, the Care Store's other middle-level neighbour — now the
-   * higher-resolution `.webp`, whose padding is nothing like the old sprite's.
-   * Its 2.79 % bottom margin is why its `bottom-[…]` had to move to keep the
-   * shared floor line: the two facades sit at different box offsets and land on
-   * the same painted baseline.
+   * The Badges Store, the Care Store's other middle-level neighbour — replaced
+   * again with a 1536×1024 render whose padding is nothing like either sprite
+   * before it. Its 2.93 % bottom margin is why its box offsets had to move to
+   * keep the shared floor line: the facades sit at different box offsets and
+   * land on the same painted baseline.
    */
-  badges: { w: 1510, h: 1041, left: 0.0139, right: 0.0139, bottom: 0.0279 },
+  badges: { w: 1536, h: 1024, left: 0.0078, right: 0.0078, bottom: 0.0293 },
   booth: { w: 223, h: 309, left: 0, right: 0.0045, bottom: 0 },
 } as const;
 
@@ -215,9 +221,13 @@ describe('the Care Store and the Photo Booth swapped places', () => {
     const booth = boxOf(boothEl(), 'left');
     const coffee = boxOf(coffeeEl(), 'left');
 
-    expect(booth.bottom).toBe(coffee.bottom);
+    // Their PAINTED bases line up, which is the claim — the boxes cannot,
+    // because the two sprites carry different transparent padding.
+    const boothInk = painted(booth, ART.booth);
+    const coffeeInk = painted(coffee, ART.coffee);
+    expect(Math.abs(boothInk.baseline - coffeeInk.baseline)).toBeLessThan(0.3);
     // In the bay to the Coffee Shop's right.
-    expect(booth.left).toBeGreaterThan(coffee.left + coffee.width);
+    expect(boothInk.left).toBeGreaterThan(coffeeInk.right);
   });
 
   it('neither object was duplicated', async () => {
@@ -242,6 +252,39 @@ describe('the Care Store and the Photo Booth swapped places', () => {
     expect(requests).toHaveLength(1);
     act(() => requests[0].action());
     expect(setCurrentLocation).not.toHaveBeenCalled();
+  });
+});
+
+describe('the replaced storefront artwork', () => {
+  it('the Coffee Shop and the Badges Store point at their new plates', async () => {
+    await renderMall();
+    expect(
+      screen.getByAltText('Shopping coffe shop').getAttribute('src'),
+    ).toBe('/assets/locations/shop/coffee-shop.webp');
+    expect(screen.getByAltText(BADGES_STORE_FACADE.alt).getAttribute('src')).toBe(
+      '/assets/locations/shop/badges-store.webp',
+    );
+  });
+
+  it('the Badges Store still stands on the shared middle-level floor line', async () => {
+    await renderMall();
+    const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
+    const badges = painted(boxOf(badgesEl(), 'left'), ART.badges);
+    // Its box moved with the new sprite's padding precisely so this did not.
+    expect(Math.abs(care.baseline - badges.baseline)).toBeLessThan(0.3);
+    expect(100 - badges.baseline).toBeCloseTo(61.5, 1);
+    // And it still clears the Care Store rather than growing into it.
+    expect(badges.right).toBeLessThanOrEqual(care.left);
+  });
+
+  it('renders no image without a source', async () => {
+    const { container } = await renderMall();
+    // The Coffee Shop carried an empty `<img />` above its stall — a broken
+    // image box the artwork happened to cover. It went with the swap.
+    const sourceless = [...container.querySelectorAll('img')].filter(
+      (img) => !img.getAttribute('src'),
+    );
+    expect(sourceless).toEqual([]);
   });
 });
 
@@ -367,11 +410,16 @@ describe('the storefront is part of the mall scene', () => {
     expect(box.left + box.width).toBeLessThanOrEqual(100);
   });
 
-  it('leaves the Coffee Shop exactly where it was', async () => {
+  it('leaves the Coffee Shop painting exactly where it was', async () => {
     await renderMall();
-    expect(coffeeEl().className).toContain('bottom-[12%]');
-    expect(coffeeEl().className).toContain('left-[28%]');
-    expect(coffeeEl().className).toContain('w-[22.5%]');
+    // The stall's artwork was REPLACED (579×385 with no padding → 1536×1024
+    // with real margins), so its box had to move to keep its picture still.
+    // The box numbers are therefore not the claim; the ink is.
+    const coffee = painted(boxOf(coffeeEl(), 'left'), ART.coffee);
+    expect(coffee.left).toBeCloseTo(28.0, 1);
+    expect(coffee.right).toBeCloseTo(50.38, 1);
+    // `baseline` is measured UP from the world's bottom edge.
+    expect(100 - coffee.baseline).toBeCloseTo(87.94, 1);
   });
 
   it('offers a click affordance and blocks a world walk-through', async () => {

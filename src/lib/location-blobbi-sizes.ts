@@ -20,6 +20,7 @@ export const LOCATION_BLOBBI_SIZES: Partial<Record<LocationId, BlobbiSize>> = {
   'clothing-store-inside': 'xl',
   'badges-store-inside': 'xl',
   'care-store-inside': 'xl',
+  'furniture-store-inside': 'xl',
 };
 
 export function getBlobbiSizeForLocation(location: LocationId): BlobbiSize {

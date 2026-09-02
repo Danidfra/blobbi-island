@@ -119,10 +119,38 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
+    /*
+      Mine. The flip line is the CAVE ARCH'S PAINTED BASE, and it has to be:
+      this is the one place in the game where a background structure is meant
+      to occlude the Blobbi, so the line where that starts is a measurement,
+      not a preference.
+
+      `mine-cave-config.ts` anchors the arch wrapper at `bottom: 24%` — so the
+      rock meets the path at y = 76, which is `positionFromBottom = 24`. Below
+      that line the Blobbi is on the path, nearer the camera than every painted
+      rock, and must be in FRONT of the arch (z-15). Above it the Blobbi is
+      inside the mouth and belongs behind the arch but in front of the tunnel
+      (z-9).
+
+      The line used to sit at 15 (y = 85), nine percent of the world too far
+      forward, which put the WHOLE walk corridor behind the arch. That was only
+      ever invisible dead centre, where the arch is transparent: the corridor is
+      `x 42–58` while the opening is barely `x 44–58` at body height and narrows
+      to `47–55` near its base, so a Blobbi at either end of the corridor —
+      standing on open path, its feet 9 % below the rock — had its head and half
+      its body cut away by the posts and the rock pile. A y-only band cannot say
+      "behind the rock only while inside the opening", so it must not try: it
+      draws the line where the rock actually stands.
+
+      The upper band is currently unreachable (the walk boundary tops out at
+      y = 79, three percent short of the arch) and is kept because it states the
+      true contract — if the corridor is ever pushed into the mouth, the reading
+      is already right.
+    */
     backgroundFile: 'mine-open.webp',
     thresholds: [
-      { minPosition: 0, maxPosition: 15, zIndex: 20 },  // Ground level
-      { minPosition: 15, maxPosition: 100, zIndex: 10 } // Cave entrance area
+      { minPosition: 0, maxPosition: 24, zIndex: 20 },   // On the path, in front of the cave
+      { minPosition: 24, maxPosition: 100, zIndex: 10 }  // Inside the mouth, behind the arch
     ]
   },
   {
@@ -187,6 +215,19 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     thresholds: [
       { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Front floor
       { minPosition: 20, maxPosition: 100, zIndex: 15 } // Back of the room
+    ]
+  },
+  {
+    // Furniture Store. Every fixture in the showroom is painted into
+    // `furniture-store-inside.webp` — the platforms, their sets, the desk — so
+    // the Blobbi is always in FRONT of the scene and no band can, or should,
+    // put a background pixel over it. These two only keep the Blobbi above the
+    // checkout hotspot (z-12) and give the front of the room a slightly higher
+    // band, as the other baked interiors do.
+    backgroundFile: 'furniture-store-inside.webp',
+    thresholds: [
+      { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Front floor
+      { minPosition: 20, maxPosition: 100, zIndex: 15 } // Up the aisle
     ]
   },
   {

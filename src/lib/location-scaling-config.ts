@@ -53,6 +53,17 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1.3,
     finalScale: 0.9,
   },
+  // Furniture Store. `initialScale` is the FRONT of the room (y = 99) and
+  // `finalScale` the BACK (y = 56) — see `resolveBlobbiScale`. At 43 % of the
+  // world deep it is the deepest interior in the game, because the showroom's
+  // aisle runs all the way from the frame's bottom edge to the checkout desk
+  // against the back wall. The ramp is set to the same slope per unit of depth
+  // the Badges Store uses, so a Blobbi at the till reads as being as far away
+  // as one at the Badges counter.
+  'furniture-store-inside.webp': {
+    initialScale: 1.3,
+    finalScale: 0.85,
+  },
   // Care Store. `initialScale` is the FRONT of the room (y = 99) and
   // `finalScale` the BACK (y = 68.5) — see `resolveBlobbiScale`. The room is
   // ~30 % of the world deep, a little more than the clothing store, so the ramp

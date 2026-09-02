@@ -192,18 +192,35 @@ describe('the composed cave structure', () => {
   it('sorts against the depth the room actually gives a Blobbi', () => {
     const { depth } = mineCaveStructure;
 
-    // Both the local Blobbi and remote players resolve their z-index from this
-    // one function, so pinning it here covers multiplayer layering too.
+    /*
+      This used to assert the opposite — that the arch sorted ABOVE a Blobbi
+      standing at the approach anchor, so it would appear to stand in the mouth.
+      That was the bug: the anchor is at y = 82.4, six percent of the world in
+      FRONT of the rock, which meets the path at y = 76. The reading only ever
+      held dead centre, where the arch happens to be transparent; a step to
+      either side of the corridor put the player's head behind solid rock.
+
+      See `mine-cave-depth.test.ts` for the full geometry. The contract now is
+      that everywhere the Blobbi can stand, it is in front of the structure.
+
+      Both the local Blobbi and remote players resolve their z-index from this
+      one function, so pinning it here covers multiplayer layering too.
+    */
     const atTheEntrance = calculateBlobbiZIndex(
       mineCaveStructure.approach.y,
       'mine-open.webp',
     );
     expect(depth.mouth).toBeLessThan(atTheEntrance);
-    expect(depth.front).toBeGreaterThan(atTheEntrance);
+    expect(depth.front).toBeLessThan(atTheEntrance);
+    expect(depth.hotspot).toBeLessThan(atTheEntrance);
 
-    // Further down the path the Blobbi is nearer the camera and must clear the
-    // whole structure.
+    // Further down the path it is nearer still, and equally clear of it.
     expect(calculateBlobbiZIndex(92, 'mine-open.webp')).toBeGreaterThan(depth.hotspot);
+
+    // The structure's own internal order is unchanged: the tunnel sits behind
+    // the arch, and the hotspot above both.
+    expect(depth.mouth).toBeLessThan(depth.front);
+    expect(depth.front).toBeLessThan(depth.hotspot);
 
     // And the arch's depth is the one the shared config records for the cave.
     const registered = getInteractiveElementsForBackground('mine-open.webp');

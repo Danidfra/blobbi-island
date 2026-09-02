@@ -273,10 +273,21 @@ export const locationBoundaries: Record<string, Boundary> = {
    * round — which is what the artwork's free-standing furniture should feel like.
    * The boundary therefore describes only where the FLOOR ends.
    *
-   * Measured against `care-store-inside.webp` (1600×1067, the world's own 3:2),
-   * so image percentages are world percentages. The wall/floor junction sits at
-   * y ≈ 66.5–67.5 across the open room; the bands below step in with the
-   * perspective as the side furniture closes in.
+   * Re-measured against the REVISED `care-store-inside.webp` (1600×1067, the
+   * world's own 3:2, so image percentages are world percentages). The artwork
+   * was redrawn rather than edited — 94 % of its pixels changed — and the room
+   * came out closer to the camera: the floor is about four percent deeper than
+   * it was and reaches the frame edges lower down.
+   *
+   * Probed on the new plate: the shelving's base runs y ≈ 64.9 (left, x 23–38)
+   * to y ≈ 66.5 (right, x 67–79); the counter's plinth meets the floor at
+   * y ≈ 70.3; and the boards run unbroken from wall to wall below y ≈ 87. The
+   * bands step back along that line.
+   *
+   * The furniture that DID NOT move is just as load-bearing a finding: the toy
+   * box (blue body x 1–18.3, y 67–83.5), the pet bed (teal x 78.2–91.6,
+   * y 68–81.5) and the corner plant (pot x 91.9–98.5, y 70–84.5) all measure
+   * within a whisker of their previous blockers, so those were left alone.
    */
   /**
    * Badges Store — the floor's OUTER PERIMETER only.
@@ -314,20 +325,70 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [20, 86], y: [59.5, 64] },
     ],
   },
+  /**
+   * Furniture Store — the floor's OUTER PERIMETER, which here is a funnel.
+   *
+   * The showroom is two RAISED display platforms either side of an aisle. They
+   * are roped off, signed "do not touch" and set on their own carpets, so they
+   * are not floor at all — which makes them the boundary's business rather than
+   * a pile of `MovementBlocker` rectangles. Excluding them by shape also gives
+   * the walk the right feel: the composite clamps to its nearest band, so a
+   * Blobbi aimed at a sofa slides along the platform's edge instead of stopping
+   * dead in front of an invisible wall.
+   *
+   * `furniture-store-inside.webp` is 1600×1067 (the world's own 3:2 to within a
+   * sub-pixel crop), so image percentages are world percentages. Every band was
+   * measured by finding, for each column, the highest row from which the
+   * floorboards run unbroken to the bottom of the frame:
+   *
+   * ```
+   *   x     0    13   25   30   35   41 | 42–61 | 65   70   75   80   100
+   *   y    89    88   83   74   64   51 |  55   | 65   77   88   88.5  88
+   *        └ left platform's front ┘ └ its edge ┘   └ right platform's edge ┘
+   * ```
+   *
+   * (x 42–61 is the checkout desk, whose plinth meets the floor at y ≈ 55.3.)
+   *
+   * The bands step back along those two diagonals, each one strictly inside the
+   * measured line, and nest so the aisle stays connected to the front floor.
+   */
+  'furniture-store-inside.webp': {
+    shape: 'composite',
+    areas: [
+      // Front floor: open frame edge to frame edge, in front of both platforms.
+      { type: 'rectangle', x: [0.5, 99.5], y: [90, 99] },
+
+      // The funnel, narrowing between the two platforms toward the checkout.
+      { type: 'rectangle', x: [27, 73], y: [84, 90] },
+      { type: 'rectangle', x: [30, 70], y: [78, 84] },
+      { type: 'rectangle', x: [33, 67], y: [72, 78] },
+      { type: 'rectangle', x: [36, 64], y: [66, 72] },
+      { type: 'rectangle', x: [39, 62], y: [60, 66] },
+
+      // The service aisle, at the desk's own base.
+      { type: 'rectangle', x: [41, 61], y: [56, 60] },
+    ],
+  },
   'care-store-inside.webp': {
     shape: 'composite',
     areas: [
-      // Front floor: open from wall to wall, in front of every obstacle.
-      { type: 'rectangle', x: [2, 98], y: [84, 99] },
+      // Front floor: open frame edge to frame edge, in front of every obstacle.
+      { type: 'rectangle', x: [1, 99], y: [86, 99] },
 
-      // Mid floor: past the toy box on the left and the pet bed on the right —
-      // both of which stand INSIDE this band and are blocked, not excluded.
-      { type: 'rectangle', x: [2, 93], y: [72, 84] },
+      // Lower-mid floor. The right wall's skirting runs down to y ≈ 84.5, so
+      // this band stops just short of it.
+      { type: 'rectangle', x: [1.5, 97], y: [80, 86] },
 
-      // Back aisle along the shelving. Thin by design: the left shelf unit's
-      // drawer meets the floor at y ≈ 66.5 and the right display cabinet at
-      // y ≈ 67.5, so this is the whole walkable depth behind the counter line.
-      { type: 'rectangle', x: [19, 80], y: [68.5, 72] },
+      // Upper-mid floor: past the toy box on the left and the pet bed on the
+      // right — both of which stand INSIDE this band and are blocked, not
+      // excluded.
+      { type: 'rectangle', x: [2, 94], y: [72, 80] },
+
+      // Back aisle along the shelving. The left shelf unit's drawer meets the
+      // floor at y ≈ 64.9 and the right display cabinet at y ≈ 66.5, so this is
+      // the whole walkable depth behind the counter line; the counter itself
+      // seals the middle of it.
+      { type: 'rectangle', x: [23, 76], y: [68, 72] },
     ],
   },
 };

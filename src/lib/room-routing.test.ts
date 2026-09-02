@@ -15,6 +15,11 @@
  *
  * No blocker geometry was rewritten to make this pass. If a room needed that, it
  * would be a finding about the room, not a reason to loosen the planner.
+ *
+ * The Furniture Store is the hardest case here: its walkable floor is a FUNNEL
+ * between two raised display platforms, so the route from the spawn to the
+ * checkout has to stay inside a corridor that narrows from the full frame width
+ * down to twenty percent of it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,6 +29,10 @@ import {
   clothingStoreBlockers,
   clothingStoreHotspots,
 } from './clothing-store-config';
+import {
+  FURNITURE_STORE_CHECKOUT,
+  furnitureStoreBlockers,
+} from './furniture-store-config';
 import {
   BADGES_STORE_CHECKOUT,
   BADGES_STORE_CHECKOUT_BLOCKER,
@@ -79,6 +88,20 @@ const ROOMS: Room[] = [
       id: hotspot.id,
       point: hotspot.standPoint,
     })),
+  },
+  {
+    name: 'Furniture Store',
+    boundary: locationBoundaries['furniture-store-inside.webp'],
+    spawn: LOCATION_INITIAL_POSITIONS['furniture-store-inside'],
+    blockers: furnitureStoreBlockers.map(({ x, y, width, height }) => ({
+      x,
+      y,
+      width,
+      height,
+    })),
+    standPoints: [
+      { id: FURNITURE_STORE_CHECKOUT.id, point: FURNITURE_STORE_CHECKOUT.standPoint },
+    ],
   },
   {
     name: 'Badges Store',

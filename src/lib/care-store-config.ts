@@ -27,6 +27,15 @@
  * toy box, the cream counter body, the pet bed) rather than eyeballed, and each
  * one records the edge it came from.
  *
+ * ## Re-measured against the revised plate
+ *
+ * The artwork was replaced with a newer render of the same room. It is not an
+ * edit — 94 % of its pixels differ — so every number here was probed again
+ * rather than carried forward. Three of the four obstacles came out within a
+ * whisker of where they were and were left alone; the checkout counter moved
+ * and its blocker, its hotspot and its stand point moved with it. The floor
+ * itself got deeper, which is in `location-boundaries.ts`.
+ *
  * ## Ground-anchor semantics
  *
  * Blockers are tested against the Blobbi's GROUND point (its feet), like every
@@ -155,20 +164,25 @@ export const careStoreBlockers: readonly CareStoreBlocker[] = [
   },
   {
     /**
-     * The checkout counter.
+     * The checkout counter — the one fixture the revised artwork moved.
      *
-     * Measured: the cream body spans x 37.5–61 %, its teal top at y ≈ 54 % and
-     * its base meeting the floor at y ≈ 71.5 %. The blocker covers the counter's
-     * FLOOR band and reaches back past the wall line, so the back aisle
-     * (`y ∈ [68.5, 72]`) is sealed across the counter's whole width — there is no
-     * slipping behind it. Its front edge leaves the floor at y = 72.4 open, which
-     * is where {@link CARE_STORE_CHECKOUT.standPoint} puts the player.
+     * Re-measured on the new plate: the teal top spans x 38.0–64.1 % and starts
+     * at y ≈ 51.7 %; the cream body runs down to the teal plinth, whose base
+     * meets the floor at y ≈ 70.3 % (70.5 with its shadow). It was x 37–61.5 %,
+     * y 54–71.5 % before — so the till slid about a percent to the right, grew
+     * two and a half percent wider, and rose a percent off the floor.
+     *
+     * The blocker covers the counter's FLOOR band and reaches back past the
+     * wall line, so the back aisle (`y ∈ [68, 72]`) is sealed across the
+     * counter's whole width — there is no slipping behind it. Its front edge
+     * leaves the floor at y = 70.5 open, which is where
+     * {@link CARE_STORE_CHECKOUT.standPoint} puts the player.
      */
     id: 'care-store-counter',
-    x: 37,
-    y: 66,
-    width: 24.5,
-    height: 6.4,
+    x: 38,
+    y: 64,
+    width: 26.1,
+    height: 6.5,
   },
   {
     /**
@@ -216,17 +230,20 @@ export const CARE_STORE_CHECKOUT = {
   /** Accessible name. Names the action's outcome, not the furniture. */
   label: 'Checkout counter — browse care items',
   /**
-   * Covers the counter's visible face: x 37–61.5 %, from the teal top at y = 54 %
-   * down to its base at y = 71.5 %.
+   * Covers the counter's visible face on the REVISED artwork: x 38–64.1 %, from
+   * the teal top at y = 51.7 % down to its base at y = 70.3 %. It tracked the
+   * counter when the plate was redrawn — a hotspot that stays where the old
+   * till was is a button over empty floor.
    */
-  className: 'absolute left-[37%] top-[54%] h-[17.5%] w-[24.5%] z-[12]',
+  className: 'absolute left-[38%] top-[51.7%] h-[18.6%] w-[26.1%] z-[12]',
   /**
-   * Where the player stands to be served: centred on the counter, on open floor
-   * just clear of the counter blocker's front edge (y = 72.4). Inside the mid
-   * floor band, and 17 world px from the counter base — well within the 40 px
-   * arrival threshold once the walk lands.
+   * Where the player stands to be served: centred on the counter's new span
+   * (x 38–64.1 → centre 51), on open floor just clear of the counter blocker's
+   * front edge (y = 70.5). Inside the upper-mid floor band, and 17 world px
+   * from the counter base — well within the 40 px arrival threshold once the
+   * walk lands.
    */
-  standPoint: { x: 49, y: 74 } as Position,
+  standPoint: { x: 51, y: 73 } as Position,
 } as const;
 
 /**

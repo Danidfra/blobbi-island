@@ -13,6 +13,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { constrainPosition, type Boundary } from './boundaries';
 import { locationBoundaries } from './location-boundaries';
@@ -138,7 +140,7 @@ describe('the furniture cannot be walked through', () => {
     expect(onFloor({ x: 28, y: 50 })).toBe(false);
     expect(onFloor({ x: 72, y: 55 })).toBe(false);
     // And a walk aimed at them is clamped short, onto the aisle, not through.
-    expect(constrainPosition({ x: 28, y: 50 }, boundary).y).toBeGreaterThanOrEqual(68.5);
+    expect(constrainPosition({ x: 28, y: 50 }, boundary).y).toBeGreaterThanOrEqual(68);
   });
 
   it('the checkout counter is solid across its whole width', () => {
@@ -147,11 +149,14 @@ describe('the furniture cannot be walked through', () => {
     }
   });
 
-  it('there is no slipping behind the counter through the back aisle', () => {
-    // The aisle band (y ∈ [68.5, 72]) is sealed everywhere the counter stands.
-    for (const y of [68.5, 70, 71.5]) {
-      expect(standable({ x: 49, y })).toBe(false);
+  it('there is no floor behind the counter to slip onto', () => {
+    // The aisle band (y ∈ [68, 72]) is sealed everywhere the counter stands,
+    // from the wall line down to the counter's own base at y = 70.5.
+    for (const y of [68, 69, 70, 70.4]) {
+      expect(standable({ x: 49, y }), `y=${y}`).toBe(false);
     }
+    // The sliver below that base is the CUSTOMER side, and is open on purpose.
+    expect(standable({ x: 49, y: 71.5 })).toBe(true);
   });
 
   it('the lower-centre-left toy box is solid', () => {
@@ -186,9 +191,9 @@ describe('the furniture cannot be walked through', () => {
       { x: 50, y: 10 }, // up in the ceiling lights
     ]) {
       const clamped = constrainPosition(point, boundary);
-      expect(clamped.x).toBeGreaterThanOrEqual(2);
-      expect(clamped.x).toBeLessThanOrEqual(98);
-      expect(clamped.y).toBeGreaterThanOrEqual(68.5);
+      expect(clamped.x).toBeGreaterThanOrEqual(1);
+      expect(clamped.x).toBeLessThanOrEqual(99);
+      expect(clamped.y).toBeGreaterThanOrEqual(68);
       expect(clamped.y).toBeLessThanOrEqual(99);
     }
   });
@@ -206,8 +211,10 @@ describe('the passages around the furniture stay open', () => {
   });
 
   it('the back aisle is a through-route on both sides of the counter', () => {
-    expect(walkable({ x: 22, y: 70 }, { x: 36, y: 70 })).toBe(true);
-    expect(walkable({ x: 64, y: 70 }, { x: 78, y: 70 })).toBe(true);
+    // Left of the till: from the aisle's left end to the counter's near corner.
+    expect(walkable({ x: 24, y: 70 }, { x: 37, y: 70 })).toBe(true);
+    // Right of it: from the counter's far corner to the aisle's right end.
+    expect(walkable({ x: 65, y: 70 }, { x: 75, y: 70 })).toBe(true);
   });
 
   it('the right-hand corner is reachable past the pet bed', () => {
@@ -229,6 +236,79 @@ describe('the checkout hotspot', () => {
     // Horizontally centred under the counter.
     expect(CARE_STORE_CHECKOUT.standPoint.x).toBeGreaterThan(counter.x);
     expect(CARE_STORE_CHECKOUT.standPoint.x).toBeLessThan(counter.x + counter.width);
+  });
+});
+
+describe('the room still matches its revised artwork', () => {
+  /** A hotspot's placement, read back out of its Tailwind class string. */
+  const placement = (className: string) => {
+    const pct = (prop: string) => {
+      const found = className.match(new RegExp(`${prop}-\\[([\\d.]+)%\\]`));
+      if (!found) throw new Error(`no ${prop} in "${className}"`);
+      return Number(found[1]);
+    };
+    const left = pct('left'), top = pct('top'), width = pct('w'), height = pct('h');
+    return { left, top, width, height, right: left + width, bottom: top + height };
+  };
+
+  it('renders the artwork the geometry was measured against', () => {
+    expect(getBackgroundForLocation(CARE_STORE)).toBe(BACKGROUND);
+    expect(existsSync(join('public/assets/world/backgrounds', BACKGROUND))).toBe(true);
+  });
+
+  it('the checkout hotspot sits over the counter the artwork paints', () => {
+    const box = placement(CARE_STORE_CHECKOUT.className);
+    // Probed on the current plate: teal top x 38.0–64.1, starting at y = 51.7;
+    // plinth base at y = 70.3.
+    expect(box.left).toBeCloseTo(38, 1);
+    expect(box.right).toBeCloseTo(64.1, 1);
+    expect(box.top).toBeCloseTo(51.7, 1);
+    expect(box.bottom).toBeCloseTo(70.3, 1);
+  });
+
+  it('the hotspot and the counter blocker describe the same counter', () => {
+    const box = placement(CARE_STORE_CHECKOUT.className);
+    const counter = careStoreBlockers.find((b) => b.id === 'care-store-counter')!;
+    // Same span left to right: a hotspot wider or narrower than the thing it
+    // blocks is a hotspot that has drifted off its artwork.
+    expect(box.left).toBeCloseTo(counter.x, 1);
+    expect(box.right).toBeCloseTo(counter.x + counter.width, 1);
+    // The hotspot covers the painted body; the blocker is only its floor band,
+    // so the hotspot must start above the blocker and end at its base.
+    expect(box.top).toBeLessThan(counter.y);
+    expect(box.bottom).toBeCloseTo(counter.y + counter.height, 0);
+  });
+
+  it('the fixtures the revision did NOT move were left alone', () => {
+    // Re-probed on the new plate: toy box blue body x 1–18.3 y 67–83.5, pet bed
+    // teal x 78.2–91.6 y 68–81.5, plant pot x 91.9–98.5 y 70–84.5. Each blocker
+    // still covers the ink it was drawn for, so none of them was churned.
+    const by = (id: string) => careStoreBlockers.find((b) => b.id === id)!;
+    const covers = (id: string, x0: number, y0: number, x1: number, y1: number) => {
+      const b = by(id);
+      expect(b.x, id).toBeLessThanOrEqual(x0);
+      expect(b.x + b.width, id).toBeGreaterThanOrEqual(x1);
+      expect(b.y, id).toBeLessThanOrEqual(y0);
+      expect(b.y + b.height, id).toBeGreaterThanOrEqual(y1);
+    };
+    covers('care-store-toy-box', 2, 71, 18, 83);
+    covers('care-store-pet-bed', 79, 69, 91, 81);
+    covers('care-store-plant', 92, 71, 98, 84);
+  });
+
+  it('the deeper floor is walkable all the way to the new shelving line', () => {
+    // The revision moved the shelving base up to y ≈ 64.9–66.5, so the aisle
+    // reaches y = 68 now rather than 68.5.
+    expect(standable({ x: 30, y: 68 })).toBe(true);
+    expect(standable({ x: 70, y: 68 })).toBe(true);
+    // And no further: the shelving itself is not floor.
+    expect(onFloor({ x: 30, y: 66 })).toBe(false);
+    expect(onFloor({ x: 70, y: 66 })).toBe(false);
+  });
+
+  it('the checkout is still reachable from the spawn', () => {
+    expect(walkable(SPAWN, CARE_STORE_CHECKOUT.standPoint)).toBe(true);
+    expect(standable(CARE_STORE_CHECKOUT.standPoint)).toBe(true);
   });
 });
 
