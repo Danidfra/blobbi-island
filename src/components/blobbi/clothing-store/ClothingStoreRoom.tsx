@@ -7,8 +7,10 @@ import { usePendingInteraction } from '@/hooks/usePendingInteraction';
 import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOnWorldClick';
 import {
   CLOTHING_STORE_SHOP_BUTTON,
-  clothingStoreObjects,
-  type ClothingStoreObject,
+  clothingStoreBlockers,
+  clothingStoreHotspots,
+  type ClothingStoreHotspot,
+  type ClothingStoreSurface,
 } from '@/lib/clothing-store-config';
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 import { BackArrow } from '../BackArrow';
@@ -19,40 +21,43 @@ import { FittingRoomModal } from './FittingRoomModal';
 /**
  * The Clothing Store interior.
  *
- * ## Objects are data; this component is the renderer
+ * ## The room is a picture; this component is what you can do to it
  *
- * Every object owns its id, artwork, placement, depth, optional floor footprint
- * and — new here — its optional INTERACTION. Whether a sprite is scenery or a
- * control is a field, not a branch: the config carries `interaction`, and the
- * room renders a `<button>` for the ones that have it and an inert `<img>` for
- * the ones that do not.
+ * `clothing-store.webp` paints the whole boutique — booths, mirror, shelving,
+ * checkout, rack, bookcase, rug. There is no scene list any more and nothing to
+ * render for it: the nine sprites this component used to compose (rug, posters,
+ * sign, hat shelf, checkout, fitting room, two display tables) drew furniture
+ * the artwork now contains, and drawing them over it would have shown the room
+ * twice.
  *
- * That matters because three objects just became interactive at once. Adding
- * the fourth is a config entry, not another copy of the walk-to-interact wiring.
+ * What is left is collision and controls. Four blocker rectangles say where the
+ * floor is occupied; three hotspots say which regions of the image are buttons.
  *
- * ## Scenery still does not pretend
- *
- * The rug, the wall art and the hat shelf render `alt="" aria-hidden` with
- * `pointer-events-none` and no cursor, because they do nothing. An affordance
- * arrives with a behaviour and not before — the arcade's thirty hover-stated,
- * handler-less props are the reason that rule exists.
- *
- * Nothing interactive TRANSFORMS on hover, either. The Care Store facade
- * settled that: a building that lifts off its own floor when you point at it
- * reads as broken, so these warm and glow and stay exactly where they stand.
- *
- * ## Two surfaces, five controls
+ * ## Four controls, two surfaces
  *
  * ```
- *   checkout ─┐
- *   table 1 ──┼─→ 'shop'         → <ClothingStoreModal>   (buys things)
- *   table 2 ──┤
- *   Shop btn ─┘
- *   fitting room → 'fitting-room' → <FittingRoomModal>    (writes nothing)
+ *   checkout ───────→ 'shop'         → <ClothingStoreModal>   (buys things)
+ *   Shop button ────↗
+ *   fitting room L ─→ 'fitting-room' → <FittingRoomModal>     (writes nothing)
+ *   fitting room R ─↗
  * ```
  *
- * ONE state names which surface is open, so the two can never stack — see
- * `openSurface` below for why that is a slot rather than a pair of booleans.
+ * TWO booths and ONE preview modal; TWO shop controls and ONE shop modal. There
+ * is exactly one `<ClothingStoreModal>` and one `<FittingRoomModal>` in this
+ * tree, and `openSurface` decides which — see below for why that is a slot
+ * rather than a pair of booleans.
+ *
+ * The three hotspots walk the Blobbi over and open on ARRIVAL; the corner Shop
+ * button opens where the player stands, because its job is convenience rather
+ * than immersion. That difference is the whole reason both exist.
+ *
+ * ## Nothing here transforms on hover
+ *
+ * The furniture is background pixels, so there is nothing to lift even if we
+ * wanted to — and the Care Store facade settled that we do not: a thing that
+ * moves off its own floor when you point at it reads as broken. The hotspots
+ * tint and ring in place instead, on hover, on focus-visible and on press
+ * alike, so pointer, keyboard and touch all get the same answer.
  *
  * ## Presentation here, money elsewhere
  *
@@ -68,18 +73,21 @@ interface ClothingStoreRoomProps {
 }
 
 /**
- * The affordance every interactive object in this room shares.
+ * The affordance every hotspot in this room shares.
  *
- * Filter and glow, never transform. `focus-visible` matters as much as hover:
- * these are real buttons in the tab order, and a keyboard user gets the same
- * indication a pointer user does.
+ * A tint and a ring rather than a filter, because a hotspot is a transparent
+ * region: there is nothing of its own to brighten, so the highlight has to be
+ * the overlay itself. It is invisible at rest — the artwork already looks like a
+ * counter and like two fitting rooms — and appears on hover, on `focus-visible`
+ * and on press. No transform, no scale, no translation: the background never
+ * moves.
  */
-const INTERACTIVE_AFFORDANCE =
-  'cursor-pointer transition-[filter] duration-200 ease-cozy ' +
-  'hover:brightness-105 hover:drop-shadow-[0_0_12px_rgba(255,236,190,0.7)] ' +
-  'focus-visible:outline-none focus-visible:brightness-105 ' +
-  'focus-visible:drop-shadow-[0_0_12px_rgba(255,236,190,0.9)] ' +
-  'active:brightness-110 motion-reduce:transition-none';
+const HOTSPOT_AFFORDANCE =
+  'cursor-pointer rounded-2xl bg-island-cream/0 ring-2 ring-inset ring-island-cream/0 ' +
+  'transition-[background-color,box-shadow] duration-200 ease-cozy ' +
+  'hover:bg-island-cream/15 hover:ring-island-cream/60 ' +
+  'focus-visible:bg-island-cream/15 focus-visible:outline-none focus-visible:ring-island-cream/80 ' +
+  'active:bg-island-cream/25 motion-reduce:transition-none';
 
 export function ClothingStoreRoom({
   blobbiRef,
@@ -90,17 +98,17 @@ export function ClothingStoreRoom({
   /**
    * WHICH surface is open, as one value rather than two booleans.
    *
-   * The requirement is that the shop and the fitting room can never stack, and
-   * a single slot makes that structural instead of guarded: there is no state
-   * in which both are set, so no ordering of clicks and arrivals can produce
-   * one. Two independent flags would have needed a guard, and a guard is a
-   * thing that can be forgotten.
+   * The requirement is that the shop and the fitting room can never stack, and a
+   * single slot makes that structural instead of guarded: there is no state in
+   * which both are set, so no ordering of clicks and arrivals can produce one.
+   * Two independent flags would have needed a guard, and a guard is a thing that
+   * can be forgotten.
    *
    * It matters because a walk OUTLIVES the click that started it: an arrival
    * callback can land after the player has opened something else, which is
    * exactly when a second dialog would have appeared underneath the first.
    */
-  const [openSurface, setOpenSurface] = useState<'shop' | 'fitting-room' | null>(
+  const [openSurface, setOpenSurface] = useState<ClothingStoreSurface | null>(
     null,
   );
   const isShopOpen = openSurface === 'shop';
@@ -114,56 +122,42 @@ export function ClothingStoreRoom({
   useCancelInteractionOnWorldClick(pendingInteraction, currentLocation);
 
   /** Open a surface, unless one is already up. First one wins. */
-  const open = useCallback((surface: 'shop' | 'fitting-room') => {
+  const open = useCallback((surface: ClothingStoreSurface) => {
     setOpenSurface((current) => current ?? surface);
   }, []);
   const close = useCallback(() => setOpenSurface(null), []);
 
   return (
     <div className="relative h-full w-full">
-      {clothingStoreObjects.map((object) =>
-        object.interaction ? (
-          <InteractiveObject
-            key={object.id}
-            object={object}
-            onArrive={() => open(object.interaction!.opens)}
-            requestInteraction={requestInteraction}
-          />
-        ) : (
-          <img
-            key={object.id}
-            data-clothing-store-object={object.id}
-            src={object.src}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className={cn(object.className, 'pointer-events-none select-none')}
-          />
-        ),
-      )}
+      {clothingStoreHotspots.map((hotspot) => (
+        <Hotspot
+          key={hotspot.id}
+          hotspot={hotspot}
+          onArrive={() => open(hotspot.opens)}
+          requestInteraction={requestInteraction}
+        />
+      ))}
 
       {/*
         Floor footprints. Registered with the shared movement context, so the
-        walk system and remote presence both see them; the red outlines only
-        appear with the developer debug-overlays switch.
+        walk system, the route planner and remote presence all see the same
+        rectangles; the red outlines only appear with the developer
+        debug-overlays switch.
       */}
-      {clothingStoreObjects.map((object) =>
-        object.blocker ? (
-          <MovementBlocker
-            key={`blocker-${object.id}`}
-            id={object.id}
-            x={object.blocker.x}
-            y={object.blocker.y}
-            width={object.blocker.width}
-            height={object.blocker.height}
-          />
-        ) : null,
-      )}
+      {clothingStoreBlockers.map((blocker) => (
+        <MovementBlocker
+          key={blocker.id}
+          id={blocker.id}
+          x={blocker.x}
+          y={blocker.y}
+          width={blocker.width}
+          height={blocker.height}
+        />
+      ))}
 
       {/*
-        The persistent shortcut. Opens where the player stands — no walk —
-        because its job is convenience, not immersion. Same state, same modal as
-        the counter and both tables.
+        The persistent shortcut. Opens where the player stands — no walk — and
+        flips the same slot the checkout does, to the same value.
       */}
       <button
         type="button"
@@ -185,30 +179,28 @@ export function ClothingStoreRoom({
         Mounted only while open, so neither surface runs its queries behind a
         closed dialog.
       */}
-      {isShopOpen && (
-        <ClothingStoreModal isOpen onClose={close} />
-      )}
-      {isFittingRoomOpen && (
-        <FittingRoomModal isOpen onClose={close} />
-      )}
+      {isShopOpen && <ClothingStoreModal isOpen onClose={close} />}
+      {isFittingRoomOpen && <FittingRoomModal isOpen onClose={close} />}
     </div>
   );
 }
 
 /**
- * One clickable piece of furniture.
+ * One clickable region of the artwork.
  *
- * A `<button>` wrapping the sprite rather than a hotspot floating over it: the
- * hit area is then the artwork itself at whatever size it is drawn, so resizing
- * an object can never leave its click target behind. `BLOCK_UI_SELECTOR` already
- * treats `button` as move-blocking, so a tap never also starts a raw world walk.
+ * A real `<button>` over the painted furniture rather than an image with a
+ * handler, because there is no image: the counter and both booths are part of
+ * the background. `BLOCK_UI_SELECTOR` already treats `button` as move-blocking,
+ * so a tap never also starts a raw world walk, and the walk it does start goes
+ * through the SAME `requestInteraction` path every door in the game uses — the
+ * surface opens on arrival, never on the click.
  */
-function InteractiveObject({
-  object,
+function Hotspot({
+  hotspot,
   onArrive,
   requestInteraction,
 }: {
-  object: ClothingStoreObject;
+  hotspot: ClothingStoreHotspot;
   onArrive: () => void;
   requestInteraction: (opts: {
     target: { x: number; y: number };
@@ -218,18 +210,13 @@ function InteractiveObject({
   return (
     <button
       type="button"
-      data-clothing-store-object={object.id}
-      data-clothing-store-interactive={object.interaction!.opens}
-      aria-label={object.alt ?? undefined}
+      data-clothing-store-hotspot={hotspot.id}
+      data-clothing-store-opens={hotspot.opens}
+      aria-label={hotspot.label}
       onClick={() =>
-        requestInteraction({
-          target: object.interaction!.standPoint,
-          action: onArrive,
-        })
+        requestInteraction({ target: hotspot.standPoint, action: onArrive })
       }
-      className={cn(object.className, INTERACTIVE_AFFORDANCE)}
-    >
-      <img src={object.src} alt="" aria-hidden draggable={false} className="w-full" />
-    </button>
+      className={cn(hotspot.className, HOTSPOT_AFFORDANCE)}
+    />
   );
 }

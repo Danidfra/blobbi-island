@@ -1,18 +1,22 @@
 /**
- * `<ClothingStoreRoom>` — the room's contract with the movement system and the
- * shop.
+ * `<ClothingStoreRoom>` — the room's contract with the movement system, the
+ * shop and the fitting room.
  *
  * The claims under test:
  *
- *  1. every configured object actually renders, from its canonical asset;
- *  2. the ones with a floor footprint reach the SHARED movement blocker context,
- *     not a private list only this component can see;
- *  3. the checkout walks the Blobbi over and opens the shop ON ARRIVAL, never on
- *     the click;
- *  4. the counter and the corner Shop button are two CONTROLS over ONE shop.
+ *  1. the room renders CONTROLS and COLLISION and nothing else — the furniture
+ *     is painted into `clothing-store.webp`, so a sprite appearing here would be
+ *     the old composition coming back;
+ *  2. every floor footprint reaches the SHARED movement blocker context, not a
+ *     private list only this component can see;
+ *  3. every hotspot walks the Blobbi over and opens its surface ON ARRIVAL,
+ *     never on the click;
+ *  4. two controls open ONE shop, two booths open ONE fitting room, and the two
+ *     surfaces can never stack.
  *
- * The shop modal is stubbed: this file is about the room, and the room importing
- * nothing financial is the point of the split.
+ * Both modals are stubbed and COUNT THEIR MOUNTS, so "one modal" is checked as
+ * one instance rather than as one visible dialog: a second controller would show
+ * up here as a second mount, which is the failure the counting is for.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -20,23 +24,28 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import {
+  CLOTHING_STORE_CHECKOUT,
+  CLOTHING_STORE_FITTING_ROOM_LEFT,
+  CLOTHING_STORE_FITTING_ROOM_RIGHT,
   CLOTHING_STORE_SHOP_BUTTON,
   clothingStoreBlockers,
-  clothingStoreInteraction,
-  clothingStoreObjects,
+  clothingStoreFittingRooms,
+  clothingStoreHotspots,
 } from '@/lib/clothing-store-config';
 import {
   MovementBlockerProvider,
   useMovementBlocker,
 } from '@/contexts/MovementBlockerContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
+import { BLOCK_UI_SELECTOR } from '@/lib/world-input';
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 
 const requests: RequestInteractionOptions[] = [];
+const cancel = vi.fn();
 vi.mock('@/hooks/usePendingInteraction', () => ({
   usePendingInteraction: () => ({
     requestInteraction: (opts: RequestInteractionOptions) => requests.push(opts),
-    cancel: () => {},
+    cancel,
     hasPending: () => requests.length > 0,
   }),
 }));
@@ -102,275 +111,278 @@ function renderRoom() {
   );
 }
 
-const objectEl = (id: string) =>
-  document.querySelector(`[data-clothing-store-object="${id}"]`) as HTMLElement;
+const hotspotEl = (id: string) =>
+  document.querySelector(`[data-clothing-store-hotspot="${id}"]`) as HTMLElement;
 
 const shopButton = () =>
   screen.getByRole('button', { name: CLOTHING_STORE_SHOP_BUTTON.label });
 
-/** Click an interactive object and let the Blobbi ARRIVE, which fires it. */
+/** Click a hotspot and let the Blobbi ARRIVE, which fires it. */
 function arriveAt(id: string) {
-  fireEvent.click(objectEl(id));
+  fireEvent.click(hotspotEl(id));
   act(() => requests[requests.length - 1].action());
 }
-
-/** Every object that opens the regular shop, plus the corner button. */
-const SHOP_OBJECTS = [
-  'clothing-store-checkout',
-  'clothing-store-display-table',
-  'clothing-store-display-table-2',
-] as const;
 
 beforeEach(() => {
   requests.length = 0;
   modalMounts.length = 0;
   fittingMounts.length = 0;
-  setCurrentLocation.mockReset();
+  cancel.mockClear();
+  setCurrentLocation.mockClear();
 });
 
-describe('the boutique renders', () => {
-  it('draws every configured object from its canonical asset', () => {
+// ---------------------------------------------------------------------------
+// The room is the artwork
+// ---------------------------------------------------------------------------
+
+describe('the room renders controls, not furniture', () => {
+  it('renders no scene sprites at all', () => {
     renderRoom();
-    for (const object of clothingStoreObjects) {
-      const el = objectEl(object.id);
-      expect(el, object.id).toBeTruthy();
-      const img = el.tagName === 'IMG' ? el : el.querySelector('img')!;
-      expect(img.getAttribute('src')).toBe(object.src);
+    // Every piece of furniture is painted into `clothing-store.webp`. Any
+    // <img> here would be the deleted composition returning.
+    expect(document.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('renders one button per hotspot, plus the shortcut and the back arrow', () => {
+    renderRoom();
+    for (const hotspot of clothingStoreHotspots) {
+      expect(hotspotEl(hotspot.id), hotspot.id).toBeTruthy();
     }
+    expect(document.querySelectorAll('[data-clothing-store-hotspot]')).toHaveLength(
+      clothingStoreHotspots.length,
+    );
+    expect(shopButton()).toBeInTheDocument();
   });
 
-  it('renders each object exactly once', () => {
+  it('leaves the room for the mall', () => {
     renderRoom();
-    expect(document.querySelectorAll('[data-clothing-store-object]').length).toBe(
-      clothingStoreObjects.length,
-    );
+    // `<BackArrow>` is a `data-block-move` div, not a button — the shared
+    // component, unchanged.
+    fireEvent.click(document.querySelector('[data-block-move]')!);
+    expect(setCurrentLocation).toHaveBeenCalledWith('shop');
   });
 
-  it('draws the second display table from its own new asset', () => {
+  it('every control is move-blocking, so a click never also walks the world', () => {
     renderRoom();
-    const two = objectEl('clothing-store-display-table-2').querySelector('img')!;
-    expect(two.getAttribute('src')).toBe(
-      '/assets/locations/clothing-store-inside/display-table-2.png',
-    );
-    expect(two.getAttribute('src')).not.toBe(
-      objectEl('clothing-store-display-table').querySelector('img')!.getAttribute('src'),
-    );
-  });
-
-  it('keeps scenery out of the accessibility tree and out of the way of clicks', () => {
-    renderRoom();
-    for (const object of clothingStoreObjects) {
-      if (object.interaction) continue;
-      const el = objectEl(object.id);
-      expect(el.tagName, object.id).toBe('IMG');
-      expect(el.getAttribute('alt')).toBe('');
-      expect(el.getAttribute('aria-hidden')).toBe('true');
-      expect(el.className).toContain('pointer-events-none');
-      expect(el.className).not.toContain('cursor-pointer');
+    const selector = BLOCK_UI_SELECTOR;
+    for (const hotspot of clothingStoreHotspots) {
+      expect(hotspotEl(hotspot.id).closest(selector), hotspot.id).not.toBeNull();
     }
-  });
-
-  it('the hat shelf is still scenery', () => {
-    renderRoom();
-    expect(objectEl('clothing-store-hat-shelf').tagName).toBe('IMG');
+    expect(shopButton().closest(selector)).not.toBeNull();
   });
 });
 
-describe('the objects that do something look like it — and do not move', () => {
-  it('each is a named button carrying its own artwork', () => {
-    renderRoom();
-    for (const object of clothingStoreObjects) {
-      if (!object.interaction) continue;
-      const el = objectEl(object.id);
-      expect(el.tagName, object.id).toBe('BUTTON');
-      expect(el.getAttribute('aria-label')).toBe(object.alt);
-      expect(el.querySelector('img')).toBeTruthy();
-    }
-  });
-
-  it('each highlights rather than moving', () => {
-    renderRoom();
-    for (const object of clothingStoreObjects) {
-      if (!object.interaction) continue;
-      const el = objectEl(object.id);
-      expect(el.className, object.id).toContain('cursor-pointer');
-      expect(el.className, object.id).toMatch(/hover:(brightness|drop-shadow)/);
-      expect(el.className, object.id).toMatch(/focus-visible:(brightness|drop-shadow)/);
-      // Furniture that jumps when you point at it reads as broken.
-      expect(el.className, object.id).not.toMatch(
-        /(^|[^\w-])(-?translate-|scale-|rotate-)/,
-      );
-    }
-  });
-});
-
-describe('collision furniture reaches the shared movement system', () => {
-  it('registers a blocker for every object that stands on the floor', () => {
+describe('collision reaches the SHARED movement context', () => {
+  it('registers every configured footprint, by id', () => {
     renderRoom();
     const registered = screen.getByTestId('blockers').textContent!.split(',');
-    expect(registered).toEqual(clothingStoreBlockers.map((b) => b.id));
+    expect(registered.sort()).toEqual(
+      clothingStoreBlockers.map((b) => b.id).sort(),
+    );
   });
 
-  it('registers nothing for the rug or the wall art', () => {
+  it('registers nothing for the fixtures painted against the walls', () => {
     renderRoom();
     const registered = screen.getByTestId('blockers').textContent!;
-    expect(registered).not.toContain('clothing-store-rug');
-    expect(registered).not.toContain('clothing-store-sign');
-    expect(registered).not.toContain('poster');
-  });
-
-  it('deregisters them when the player leaves the room', () => {
-    const { unmount } = renderRoom();
-    unmount();
-    renderRoom();
-    expect(screen.getByTestId('blockers').textContent!.split(',')).toEqual(
-      clothingStoreBlockers.map((b) => b.id),
-    );
+    for (const absent of ['rug', 'hat-shelf', 'display-table', 'poster', 'sign']) {
+      expect(registered).not.toContain(absent);
+    }
   });
 });
 
-describe('every interactive object walks the Blobbi over first', () => {
-  it.each([...SHOP_OBJECTS, 'clothing-store-fitting-room'])(
-    '%s requests its own stand point and opens nothing yet',
-    (id) => {
-      renderRoom();
-      fireEvent.click(objectEl(id));
+// ---------------------------------------------------------------------------
+// The checkout
+// ---------------------------------------------------------------------------
 
+describe('the checkout', () => {
+  it('is a real, named, keyboard-reachable button', () => {
+    renderRoom();
+    const el = screen.getByRole('button', { name: CLOTHING_STORE_CHECKOUT.label });
+    expect(el.tagName).toBe('BUTTON');
+    expect(el).toBe(hotspotEl(CLOTHING_STORE_CHECKOUT.id));
+  });
+
+  it('highlights on hover and on focus, and never moves', () => {
+    renderRoom();
+    const el = hotspotEl(CLOTHING_STORE_CHECKOUT.id);
+    expect(el.className).toContain('hover:bg-island-cream/15');
+    expect(el.className).toContain('focus-visible:bg-island-cream/15');
+    expect(el.className).toContain('hover:ring-island-cream/60');
+    // No transform of any kind: the background is a picture, and a picture that
+    // jumps when you point at it reads as broken.
+    expect(el.className).not.toMatch(/hover:(scale|translate|-translate)/);
+    expect(el.className).not.toMatch(/focus-visible:(scale|translate|-translate)/);
+    expect(el.className).not.toMatch(/\btransform\b/);
+  });
+
+  it('starts a walk to its stand point rather than opening', () => {
+    renderRoom();
+    fireEvent.click(hotspotEl(CLOTHING_STORE_CHECKOUT.id));
+    expect(requests).toHaveLength(1);
+    expect(requests[0].target).toEqual(CLOTHING_STORE_CHECKOUT.standPoint);
+    expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
+  });
+
+  it('opens the shop once the Blobbi arrives', () => {
+    renderRoom();
+    arriveAt(CLOTHING_STORE_CHECKOUT.id);
+    expect(screen.getByTestId('clothing-store-modal')).toBeInTheDocument();
+    expect(modalMounts).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The two fitting rooms
+// ---------------------------------------------------------------------------
+
+describe('the two fitting rooms', () => {
+  it('there are exactly two, and each is its own named button', () => {
+    renderRoom();
+    const booths = clothingStoreHotspots.filter((h) => h.opens === 'fitting-room');
+    expect(booths).toHaveLength(2);
+    for (const booth of booths) {
+      const el = screen.getByRole('button', { name: booth.label });
+      expect(el).toBe(hotspotEl(booth.id));
+    }
+    expect(
+      screen.getByRole('button', { name: CLOTHING_STORE_FITTING_ROOM_LEFT.label }),
+    ).not.toBe(
+      screen.getByRole('button', { name: CLOTHING_STORE_FITTING_ROOM_RIGHT.label }),
+    );
+  });
+
+  it.each(clothingStoreFittingRooms.map((b) => [b.id, b] as const))(
+    '%s highlights on hover and focus, and never moves',
+    (_id, booth) => {
+      renderRoom();
+      const el = hotspotEl(booth.id);
+      expect(el.className).toContain('hover:bg-island-cream/15');
+      expect(el.className).toContain('focus-visible:bg-island-cream/15');
+      expect(el.className).not.toMatch(/hover:(scale|translate|-translate)/);
+      expect(el.className).not.toMatch(/focus-visible:(scale|translate|-translate)/);
+      expect(el.className).not.toMatch(/\btransform\b/);
+    },
+  );
+
+  it.each(clothingStoreFittingRooms.map((b) => [b.id, b] as const))(
+    '%s walks to its OWN stand point',
+    (_id, booth) => {
+      renderRoom();
+      fireEvent.click(hotspotEl(booth.id));
       expect(requests).toHaveLength(1);
-      expect(requests[0].target).toEqual(clothingStoreInteraction(id).standPoint);
-      expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
+      expect(requests[0].target).toEqual(booth.standPoint);
       expect(screen.queryByTestId('fitting-room-modal')).toBeNull();
     },
   );
 
-  it.each(SHOP_OBJECTS)('%s opens the regular shop on ARRIVAL', (id) => {
-    renderRoom();
-    arriveAt(id);
-    expect(screen.getByTestId('clothing-store-modal')).toBeInTheDocument();
-    expect(screen.queryByTestId('fitting-room-modal')).toBeNull();
-  });
+  it.each(clothingStoreFittingRooms.map((b) => [b.id, b] as const))(
+    '%s opens the fitting room only on arrival',
+    (id) => {
+      renderRoom();
+      arriveAt(id);
+      expect(screen.getByTestId('fitting-room-modal')).toBeInTheDocument();
+      expect(fittingMounts).toHaveLength(1);
+    },
+  );
 
-  it('the fitting room opens the fitting room, never the shop', () => {
+  it('both open the SAME modal, never a second one', () => {
     renderRoom();
-    arriveAt('clothing-store-fitting-room');
-    expect(screen.getByTestId('fitting-room-modal')).toBeInTheDocument();
+    arriveAt(CLOTHING_STORE_FITTING_ROOM_LEFT.id);
+    fireEvent.click(screen.getByText('close fitting room'));
+
+    arriveAt(CLOTHING_STORE_FITTING_ROOM_RIGHT.id);
+    expect(screen.getAllByTestId('fitting-room-modal')).toHaveLength(1);
+    // Two mounts across two separate openings — never two at once.
+    expect(fittingMounts).toHaveLength(2);
     expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
   });
 
-  it('none of them changes location', () => {
+  it('never opens the shop', () => {
     renderRoom();
-    for (const id of [...SHOP_OBJECTS, 'clothing-store-fitting-room']) {
-      arriveAt(id);
-      fireEvent.click(
-        screen.getByRole('button', { name: /^close (shop|fitting room)$/ }),
-      );
+    for (const booth of clothingStoreFittingRooms) {
+      arriveAt(booth.id);
+      expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
+      fireEvent.click(screen.getByText('close fitting room'));
     }
-    expect(setCurrentLocation).not.toHaveBeenCalled();
+    expect(modalMounts).toHaveLength(0);
   });
 });
 
-describe('four controls, one shop', () => {
-  it('the corner button opens it immediately — no walk, that is the point', () => {
+// ---------------------------------------------------------------------------
+// The shortcut
+// ---------------------------------------------------------------------------
+
+describe('the lower-right Shop button', () => {
+  it('opens the shop immediately, with no walk', () => {
     renderRoom();
     fireEvent.click(shopButton());
     expect(requests).toHaveLength(0);
     expect(screen.getByTestId('clothing-store-modal')).toBeInTheDocument();
   });
 
-  it('all four reach the same one modal', () => {
-    for (const openIt of [
-      () => fireEvent.click(shopButton()),
-      () => arriveAt('clothing-store-checkout'),
-      () => arriveAt('clothing-store-display-table'),
-      () => arriveAt('clothing-store-display-table-2'),
-    ]) {
-      const view = renderRoom();
-      openIt();
-      expect(screen.getAllByTestId('clothing-store-modal')).toHaveLength(1);
-      view.unmount();
-      requests.length = 0;
-    }
-  });
-
-  it('a second control re-uses the shop the first already opened', () => {
+  it('is the SAME shop the checkout opens, not a second one', () => {
     renderRoom();
     fireEvent.click(shopButton());
-    expect(modalMounts).toHaveLength(1);
+    fireEvent.click(screen.getByText('close shop'));
 
-    arriveAt('clothing-store-display-table');
-    arriveAt('clothing-store-display-table-2');
-    // One mount, not three: four controls, one controller.
-    expect(modalMounts).toHaveLength(1);
+    arriveAt(CLOTHING_STORE_CHECKOUT.id);
     expect(screen.getAllByTestId('clothing-store-modal')).toHaveLength(1);
-  });
-
-  it('closing keeps the player in the Clothing Store, with the room intact', () => {
-    renderRoom();
-    arriveAt('clothing-store-checkout');
-    fireEvent.click(screen.getByRole('button', { name: 'close shop' }));
-
-    expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
-    expect(setCurrentLocation).not.toHaveBeenCalled();
-    expect(screen.getByTestId('blockers').textContent).not.toBe('');
-    expect(document.querySelectorAll('[data-clothing-store-object]').length).toBe(
-      clothingStoreObjects.length,
-    );
+    expect(modalMounts).toHaveLength(2);
   });
 });
 
-describe('the two surfaces never stack', () => {
-  it('the fitting room cannot open underneath the shop', () => {
-    renderRoom();
-    fireEvent.click(shopButton());
-    arriveAt('clothing-store-fitting-room');
+// ---------------------------------------------------------------------------
+// One surface at a time
+// ---------------------------------------------------------------------------
 
-    expect(screen.getAllByTestId('clothing-store-modal')).toHaveLength(1);
+describe('the shop and the fitting room cannot stack', () => {
+  it('a fitting-room arrival landing after the shop opened is ignored', () => {
+    renderRoom();
+    // Walk to a booth, then open the shop from the corner button before the
+    // Blobbi gets there — the arrival is now stale.
+    fireEvent.click(hotspotEl(CLOTHING_STORE_FITTING_ROOM_LEFT.id));
+    fireEvent.click(shopButton());
+    act(() => requests[requests.length - 1].action());
+
+    expect(screen.getByTestId('clothing-store-modal')).toBeInTheDocument();
     expect(screen.queryByTestId('fitting-room-modal')).toBeNull();
     expect(fittingMounts).toHaveLength(0);
   });
 
-  it('the shop cannot open underneath the fitting room', () => {
+  it('a checkout arrival landing after the fitting room opened is ignored', () => {
     renderRoom();
-    arriveAt('clothing-store-fitting-room');
-    fireEvent.click(shopButton());
-    arriveAt('clothing-store-checkout');
+    arriveAt(CLOTHING_STORE_FITTING_ROOM_RIGHT.id);
+    fireEvent.click(hotspotEl(CLOTHING_STORE_CHECKOUT.id));
+    act(() => requests[requests.length - 1].action());
 
-    expect(screen.getAllByTestId('fitting-room-modal')).toHaveLength(1);
+    expect(screen.getByTestId('fitting-room-modal')).toBeInTheDocument();
     expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
     expect(modalMounts).toHaveLength(0);
   });
 
-  it('an arrival that lands after the player opened something else is ignored', () => {
-    // A walk outlives the click that started it. This is the ordering that used
-    // to produce a dialog behind a dialog.
+  it('a new click replaces the pending interaction rather than queueing it', () => {
     renderRoom();
-    fireEvent.click(objectEl('clothing-store-fitting-room'));
-    fireEvent.click(shopButton());
-    act(() => requests[requests.length - 1].action());
+    fireEvent.click(hotspotEl(CLOTHING_STORE_FITTING_ROOM_LEFT.id));
+    fireEvent.click(hotspotEl(CLOTHING_STORE_CHECKOUT.id));
 
-    expect(screen.getAllByTestId('clothing-store-modal')).toHaveLength(1);
+    // `requestInteraction` replaces: the last request is the live one, and
+    // firing it opens what the player asked for LAST.
+    expect(requests[requests.length - 1].target).toEqual(
+      CLOTHING_STORE_CHECKOUT.standPoint,
+    );
+    act(() => requests[requests.length - 1].action());
+    expect(screen.getByTestId('clothing-store-modal')).toBeInTheDocument();
     expect(screen.queryByTestId('fitting-room-modal')).toBeNull();
   });
 
-  it('closing one frees the room for the other', () => {
+  it('closing one surface leaves the room able to open the other', () => {
     renderRoom();
-    arriveAt('clothing-store-fitting-room');
-    fireEvent.click(screen.getByRole('button', { name: 'close fitting room' }));
+    arriveAt(CLOTHING_STORE_CHECKOUT.id);
+    fireEvent.click(screen.getByText('close shop'));
+    expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
 
-    fireEvent.click(shopButton());
-    expect(screen.getAllByTestId('clothing-store-modal')).toHaveLength(1);
-  });
-});
-
-describe('leaving the Clothing Store', () => {
-  it('uses the same back arrow every other interior uses, and returns to the mall', () => {
-    const { container } = renderRoom();
-    const back = container
-      .querySelector('svg path[d^="M19 12H5"]')
-      ?.closest('[data-block-move]') as HTMLElement;
-    expect(back).toBeTruthy();
-    fireEvent.click(back);
-
-    expect(setCurrentLocation).toHaveBeenCalledWith('shop');
+    arriveAt(CLOTHING_STORE_FITTING_ROOM_LEFT.id);
+    expect(screen.getByTestId('fitting-room-modal')).toBeInTheDocument();
+    expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
   });
 });

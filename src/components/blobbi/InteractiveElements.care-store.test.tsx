@@ -40,6 +40,7 @@ import type { MovableBlobbiRef } from './MovableBlobbi';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
+import { CLOTHING_STORE_FACADE } from '@/lib/clothing-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -111,7 +112,14 @@ const ART = {
   coffee: { w: 579, h: 385, left: 0, right: 0.0052, bottom: 0.0026 },
   /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
-  clothing: { w: 567, h: 391, left: 0, right: 0, bottom: 0 },
+  /**
+   * The Clothing Store, the Care Store's right-hand neighbour — now the
+   * open-front `.webp` that replaced the old `.png` + door pair. Its 3.19 %
+   * side and 2.93 % bottom margins are why its box is wider and its
+   * `bottom-[…]` higher than the sprite it replaced: the two land on the same
+   * painted extent from different box offsets.
+   */
+  clothing: { w: 1536, h: 1024, left: 0.0319, right: 0.0319, bottom: 0.0293 },
   /**
    * The Badges Store, the Care Store's other middle-level neighbour — now the
    * higher-resolution `.webp`, whose padding is nothing like the old sprite's.
@@ -165,7 +173,7 @@ const coffeeEl = () =>
   screen.getByAltText('Shopping coffe shop').parentElement!.parentElement!;
 
 const clothingEl = () =>
-  screen.getByAltText('Shopping clothing store').parentElement!;
+  screen.getByAltText(CLOTHING_STORE_FACADE.alt).parentElement!.parentElement!;
 
 const badgesEl = () =>
   screen.getByAltText(BADGES_STORE_FACADE.alt).parentElement!.parentElement!;
@@ -193,7 +201,7 @@ describe('the Care Store and the Photo Booth swapped places', () => {
   it('the Care Store now stands on the MIDDLE level, where the booth was', async () => {
     await renderMall();
     const care = boxOf(facade().parentElement!, 'left');
-    const clothing = boxOf(clothingEl(), 'right');
+    const clothing = boxOf(clothingEl(), 'left');
 
     // Same level as the Clothing Store and the Badges Store, not the ground
     // floor: the middle level's storefronts are the ones it now sits between.
@@ -284,7 +292,7 @@ describe('the storefront is part of the mall scene', () => {
   it('stands on the same floor line as its middle-level neighbours, with no ink overlapping', async () => {
     await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
-    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const clothing = painted(boxOf(clothingEl(), 'left'), ART.clothing);
     const badges = painted(boxOf(badgesEl(), 'left'), ART.badges);
 
     // ONE floor line, all three of them. Comparing the raw `bottom-[…]` values
@@ -313,7 +321,7 @@ describe('the storefront is part of the mall scene', () => {
   it('grew into the freed space, and is now a sibling of the Clothing Store', async () => {
     await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
-    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const clothing = painted(boxOf(clothingEl(), 'left'), ART.clothing);
 
     // It was 20.82 % of the world wide while the plant crowded it.
     expect(care.width).toBeGreaterThan(20.82 * 1.1);
@@ -324,7 +332,7 @@ describe('the storefront is part of the mall scene', () => {
   it('sank its anchor to match, so the wider facade still stands on the floor line', async () => {
     await renderMall();
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
-    const clothing = painted(boxOf(clothingEl(), 'right'), ART.clothing);
+    const clothing = painted(boxOf(clothingEl(), 'left'), ART.clothing);
     const box = boxOf(facade().parentElement!, 'left');
 
     // Widening the sprite makes it taller, which thickens the transparent film

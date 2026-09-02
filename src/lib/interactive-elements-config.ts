@@ -162,35 +162,19 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    /*
-      Clothing Store. Bands are DERIVED from where each object's painted base
-      sits, so they are recomputed whenever the room is rearranged rather than
-      kept because tests expected them.
-
-      Object bases, back to front: hat shelf 80 (z-12), checkout 82 (z-15),
-      fitting room 87 (z-24), both display tables 98 (z-28). Read here as
-      distance from the world's BOTTOM:
-
-        0–2    (y > 98)     in front of everything, tables included    z 34
-        2–13   (y 87–98)    in front of the booth, till and shelf      z 26
-        13–18  (y 82–87)    in front of the till and shelf, behind
-                            the booth it is standing beside            z 18
-        18–20  (y 80–82)    in front of the wall shelf only, BEHIND
-                            the till — the back-of-counter route       z 13
-        20+    (y < 80)     behind it all, shelf included              z 8
-
-      The two narrow bands at the back are what the rearrangement needed: the
-      hat shelf moved to the back wall, so there is now floor both in front of
-      it and behind the counter, and a Blobbi in either place has to render
-      against the right thing.
-    */
-    backgroundFile: 'clothing-store-inside.png',
+    // Clothing Store. Every object in the room is painted into
+    // `clothing-store.webp` rather than being an overlaid sprite, so the Blobbi
+    // is always in FRONT of the scene and the five depth bands the composed
+    // version needed are gone with the sprites they were derived from.
+    //
+    // A background pixel cannot be brought in front of the Blobbi by a z-index,
+    // so there is nothing left for the bands to order. These two only keep the
+    // Blobbi above the room's three hotspots (z-12) and give the front of the
+    // room a slightly higher band, as the other baked interiors do.
+    backgroundFile: 'clothing-store.webp',
     thresholds: [
-      { minPosition: 0, maxPosition: 2, zIndex: 34 },
-      { minPosition: 2.01, maxPosition: 13, zIndex: 26 },
-      { minPosition: 13.01, maxPosition: 18, zIndex: 18 },
-      { minPosition: 18.01, maxPosition: 20, zIndex: 13 },
-      { minPosition: 20.01, maxPosition: 100, zIndex: 8 },
+      { minPosition: 0, maxPosition: 20, zIndex: 20 },  // Front floor
+      { minPosition: 20, maxPosition: 100, zIndex: 15 } // Back of the room
     ]
   },
   {

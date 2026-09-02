@@ -207,28 +207,60 @@ export const locationBoundaries: Record<string, Boundary> = {
     y: [72.8, 76.8], // Bottom area of booth (floor)
   },
   /**
-   * Clothing Store.
+   * Clothing Store — the floor's OUTER PERIMETER only.
    *
-   * The back edge moved from 79.2 to 77.5 when the room was furnished. That is
-   * a REFINEMENT, not an expansion: probed off the artwork, the back wall meets
-   * the floor at y = 77, so 77.5 still leaves half a percent of margin and the
-   * boundary stays strictly inside painted floor. The old 79.2 was fine while
-   * the checkout was sealed against the wall; once the till became a piece of
-   * furniture with walkable floor behind it, that last inch and a half was the
-   * difference between a through-route and a 0.3 %-deep sliver.
+   * Rebuilt from scratch against `clothing-store.webp`, the furnished artwork
+   * that replaced the empty shell the room used to be composed onto. The old
+   * boundary (`y ≥ 77.5` plus two corner triangles) described the shell's much
+   * shallower floor and is not carried forward.
    *
-   * The flanking triangles follow it up, and remain conservative — the real
-   * side-wall/floor junction runs from (0, ~89.7) to (16, ~76), so the triangle
-   * edge from (0, 100) to (16, 77.5) sits well inside it at every x.
+   * The image is 1600×1103, aspect 1.4506 against the world's 1.5007, so
+   * `object-cover` matches its WIDTH and crops it top and bottom: image x IS
+   * world x, image y is not. Every band below was measured on the surviving
+   * crop (rows 18…1085) by finding, for each column, the highest row from which
+   * the wooden floorboards run unbroken to the bottom of the frame.
+   *
+   * That probe gives the floor's back edge directly:
+   *
+   * ```
+   *   x       0    5   10   15   20   25   30   37 | 61   70   80   90   99
+   *   y  →   79   73   71   68   67   66   65   63 | 63   63   66   73   83
+   *                └── booth fronts ──┘  └ shelving ┘ └ rack ┘ └ bookcase ┘
+   * ```
+   *
+   * (x 38–60 is the checkout island, which has no floor behind it and is a
+   * blocker in `clothing-store-config.ts`.)
+   *
+   * The five bands step back with that line and stay strictly INSIDE it. The
+   * room's free-standing obstacles — both booths, the leaning mirror and the
+   * checkout — are `MovementBlocker` rectangles rather than holes punched here,
+   * for the reason the Care Store records: a composite clamps to its NEAREST
+   * area, so a hole makes the Blobbi slide around the rim, while a blocker stops
+   * the walk and lets the route planner take it round.
    */
-  'clothing-store-inside.png': {
+  'clothing-store.webp': {
     shape: 'composite',
     areas: [
-      { type: 'rectangle', x: [16, 84], y: [77.5, 100] },
+      // Front floor: open frame edge to frame edge, in front of everything.
+      { type: 'rectangle', x: [0.5, 99.5], y: [85, 99.5] },
 
-      { type: 'triangle', points: [{ x: 16, y: 77.5 }, { x: 16, y: 100 }, { x: 0, y: 100 }] },
-      { type: 'triangle', points: [{ x: 84, y: 77.5 }, { x: 84, y: 100 }, { x: 100, y: 100 }] },
-    ]
+      // Mid floor, as the side walls begin to close in.
+      { type: 'rectangle', x: [2, 96], y: [78, 85] },
+      { type: 'rectangle', x: [4, 91], y: [74, 78] },
+
+      // The band that crosses in FRONT of the checkout, past both booths.
+      { type: 'rectangle', x: [7, 86], y: [71.5, 74] },
+
+      // Back aisle. Bounded by the booths' thresholds on the left and the
+      // bookcase's base on the right; both booths stand inside it and are
+      // blocked, not excluded.
+      { type: 'rectangle', x: [15, 81], y: [67.5, 71.5] },
+
+      // The two deep pockets either side of the till: in front of the wall
+      // shelving, and in front of the clothing rack's bench.
+      { type: 'rectangle', x: [26.5, 37.5], y: [65.5, 67.5] },
+      { type: 'rectangle', x: [61, 78], y: [64.5, 67.5] },
+    ],
   },
   /**
    * Care Store — the floor's OUTER PERIMETER only.

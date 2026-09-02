@@ -16,7 +16,7 @@ export const LOCATION_BACKGROUNDS: Record<LocationId, string> = {
   'shop': 'shopping-mall-inside.png',
   'back-yard': 'back-yard-open.webp',
   'cave-open': 'cave-inside.png',
-  'clothing-store-inside': 'clothing-store-inside.png',
+  'clothing-store-inside': 'clothing-store.webp',
   'badges-store-inside': 'badges-store-inside.webp',
   'care-store-inside': 'care-store-inside.webp',
 };

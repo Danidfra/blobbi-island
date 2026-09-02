@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import { careStoreBlockers, CARE_STORE_CHECKOUT } from './care-store-config';
 import {
   clothingStoreBlockers,
-  clothingStoreInteractiveObjects,
+  clothingStoreHotspots,
 } from './clothing-store-config';
 import {
   BADGES_STORE_CHECKOUT,
@@ -67,7 +67,7 @@ const ROOMS: Room[] = [
   },
   {
     name: 'Clothing Store',
-    boundary: locationBoundaries['clothing-store-inside.png'],
+    boundary: locationBoundaries['clothing-store.webp'],
     spawn: LOCATION_INITIAL_POSITIONS['clothing-store-inside'],
     blockers: clothingStoreBlockers.map(({ x, y, width, height }) => ({
       x,
@@ -75,9 +75,9 @@ const ROOMS: Room[] = [
       width,
       height,
     })),
-    standPoints: clothingStoreInteractiveObjects.map((object) => ({
-      id: object.id,
-      point: object.interaction!.standPoint,
+    standPoints: clothingStoreHotspots.map((hotspot) => ({
+      id: hotspot.id,
+      point: hotspot.standPoint,
     })),
   },
   {

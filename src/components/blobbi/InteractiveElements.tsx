@@ -20,7 +20,7 @@ import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
 import { BadgesStoreRoom } from './badges-store/BadgesStoreRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
-import { EXIT_POSITIONS } from '@/lib/location-initial-position';
+import { CLOTHING_STORE_FACADE } from '@/lib/clothing-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
@@ -437,37 +437,33 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             />
           </div>
 
-          {/* Clothing Store */}
-          <div className='absolute bottom-[38.5%] right-[25.5%] z-15 w-[24.5%]'>
-            <img
-              src="/assets/locations/shop/clothing-store.png"
-              alt="Shopping clothing store"
-              />
+          {/*
+            Clothing Store — the middle level's right-hand bay.
+
+            The facade IS the entrance. It used to be a `clothing-store.png`
+            storefront with a separate `doors/clothing-store-door.png` overlay
+            carrying the click; the new artwork is an open-front shop with no
+            door painted in it at all, so the overlay is deleted rather than
+            re-placed — a door-shaped affordance over a doorless shop is exactly
+            the trap the Badges Store facade next door already walked out of.
+
+            Hover/focus/press are a FILTER, never a transform: `animated={false}`
+            keeps `InteractiveElement`'s hover-scale and tap-pop off so the shop
+            warms and glows without lifting off its own floor, matching both its
+            neighbours.
+          */}
+          <div
+            data-clothing-store-facade
+            className={`${CLOTHING_STORE_FACADE.containerClassName} transition-[filter] duration-200 ease-cozy hover:brightness-105 hover:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] focus-within:brightness-105 focus-within:drop-shadow-[0_0_12px_rgba(255,236,190,0.65)] active:brightness-110 motion-reduce:transition-none`}
+          >
             <InteractiveElement
-              src="/assets/locations/shop/doors/clothing-store-door.png"
-              alt="Clothing store door"
-              effect="opacity"
-              className="absolute -bottom-[5%] left-[5%] w-[52.8%]"
+              src={CLOTHING_STORE_FACADE.src}
+              alt={CLOTHING_STORE_FACADE.alt}
+              effect="scale"
+              animated={false}
               onClick={() => setCurrentLocation('clothing-store-inside')}
               requestInteraction={requestInteraction}
-              /*
-                An EXPLICIT walk target, as its two neighbours already have.
-
-                Without one, `InteractiveElement` derives the target from the
-                door sprite's base, which lands at y = 61 % — 1.1 % above the
-                middle level's walkway strip (`y ∈ [62.1, 63.1]`) and off the
-                mall's walkable floor altogether. `care-store-config.ts` wrote
-                down exactly this trap: a storefront is set back against the
-                wall, so "the floor at this sprite's base" is not floor.
-
-                It used to be survivable because the old walk clamped an
-                unreachable target onto the strip's top EDGE and hoped; it is
-                not survivable now that a route to a point outside the room is
-                correctly refused. The point reused here is the one the player
-                already returns onto when they come back out, so going in and
-                coming out cannot drift apart.
-              */
-              walkTarget={EXIT_POSITIONS['shop:clothing-store-inside']}
+              walkTarget={CLOTHING_STORE_FACADE.walkTarget}
             />
           </div>
 
@@ -1026,11 +1022,11 @@ if (backgroundFile === 'nostr-station-inside.png') {
 }
 
 /*
-  Clothing Store — delegated, like the arcade and the Care Store. The branch
-  used to be a bare back arrow over an empty room; the boutique's objects, its
-  collision, its checkout and its shop all live in `clothing-store/` now.
+  Clothing Store — delegated, like the arcade and the Care Store. The boutique
+  is painted into `clothing-store.webp`, so what lives in `clothing-store/` is
+  its collision, its checkout and fitting-room hotspots, and its two modals.
 */
-if (backgroundFile === 'clothing-store-inside.png') {
+if (backgroundFile === 'clothing-store.webp') {
   return (
     <ClothingStoreRoom
       blobbiRef={blobbiRef}

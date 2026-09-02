@@ -36,9 +36,15 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1,
     finalScale: 0.8,
   },
-  'clothing-store-inside.png': {
-    initialScale: 1.2,
-    finalScale: 1,
+  // Clothing Store. `initialScale` is the FRONT of the room (y = 99.5) and
+  // `finalScale` the BACK (y = 64.5) — see `resolveBlobbiScale`. The furnished
+  // artwork opened the floor up from a 22 %-deep strip to a 35 %-deep room, so
+  // the ramp widened with it: the old 1.2 → 1.0 was calibrated for the shell and
+  // would have left a Blobbi at the clothing rack the same size as one on the
+  // rug. The slope now matches the Badges Store's, the other room of this depth.
+  'clothing-store.webp': {
+    initialScale: 1.25,
+    finalScale: 0.9,
   },
   // Badges Store. `initialScale` is the FRONT of the room (y = 99) and
   // `finalScale` the BACK (y = 59.5) — see `resolveBlobbiScale`. At ~40 % of the
