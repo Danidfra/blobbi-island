@@ -70,6 +70,9 @@ function makeFakeRelay(url: string): FakeRelay {
     async *req(filters, opts) {
       relay.filters.push(filters);
       ended = false;
+      // A REQ takes a round trip: the relay replays what it holds when the
+      // REQ ARRIVES, not when the client decided to subscribe.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       // Bootstrap replay, then EOSE, then live.
       for (const event of [...stored.snapshots, ...stored.spends, ...stored.folds]) {
         yield ['EVENT', 's', event] as ['EVENT', string, NostrEvent];
@@ -96,6 +99,18 @@ function makeFakeRelay(url: string): FakeRelay {
   return relay;
 }
 
+/** Network behaviour knobs for the authoritative reads. */
+const network = {
+  /** How many discovery (kind:31633) reads happened — the count of authoritative fetches. */
+  discoveryReads: 0,
+  /** How many by-id fold reads happened. */
+  byIdReads: 0,
+  /** When set, by-id reads answer with this instead of the stored set. */
+  byId: null as null | (() => { events: NostrEvent[]; answered: boolean }),
+  /** When set, runs right after the FIRST discovery read answers (an event landing after the fetch). */
+  afterFirstDiscovery: null as null | (() => void),
+};
+
 vi.mock('./external-inventory-relays', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./external-inventory-relays')>();
   return {
@@ -104,14 +119,28 @@ vi.mock('./external-inventory-relays', async (importOriginal) => {
     readFromExternalRelays: async (_relays: readonly string[], filters: NostrFilter[]) => {
       const kinds = new Set(filters.flatMap((f) => f.kinds ?? []));
       const ids = new Set(filters.flatMap((f) => f.ids ?? []));
+      if (kinds.has(KIND_GAME_INVENTORY)) network.discoveryReads += 1;
+      if (ids.size > 0) {
+        network.byIdReads += 1;
+        if (network.byId) return network.byId();
+      }
       const all = [...stored.snapshots, ...stored.spends, ...stored.folds];
       const events = all.filter((e) => kinds.has(e.kind) && (ids.size === 0 || ids.has(e.id)));
+      if (kinds.has(KIND_GAME_INVENTORY) && network.discoveryReads === 1 && network.afterFirstDiscovery) {
+        const land = network.afterFirstDiscovery;
+        network.afterFirstDiscovery = null;
+        land();
+      }
       return { events, answered: true };
     },
   };
 });
 
-import { useExternalInventoryView, externalInventoryEventsQueryKey } from './useExternalInventoryEvents';
+import {
+  useExternalInventoryView,
+  externalInventoryEventsQueryKey,
+  foldRetryPolicy,
+} from './useExternalInventoryEvents';
 
 const hex = (seed: string) =>
   seed.split('').map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(64, '0').slice(0, 64);
@@ -162,8 +191,21 @@ beforeEach(() => {
   stored.spends = [];
   stored.folds = [];
   openRelays.length = 0;
+  network.discoveryReads = 0;
+  network.byIdReads = 0;
+  network.byId = null;
+  network.afterFirstDiscovery = null;
   clearEstablishedSpends();
 });
+
+/** A relay set that has NOT caught up: it answers the refetch with `events`. */
+const relaysServe = (snapshots: NostrEvent[], spends: NostrEvent[] = [], folds: NostrEvent[] = []) => {
+  stored.snapshots = snapshots;
+  stored.spends = spends;
+  stored.folds = folds;
+};
+const refetch = () => act(async () => { await client.invalidateQueries({ queryKey: externalInventoryEventsQueryKey(OWNER) }); });
+const settle = () => new Promise((r) => setTimeout(r, 20));
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -304,6 +346,101 @@ describe('the live tail', () => {
   });
 });
 
+describe('a refetch reconciles — it never makes the client forget', () => {
+  it('a live spend survives a stale refetch that does not return it: effective stays 3', async () => {
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    act(() => live()[0].emit(['EVENT', 's', spend('live1')]));
+    await waitFor(() => expect(strawberryQty(result)).toBe(3));
+
+    relaysServe([snapshot('s1', 4)]); // the relays never got live1
+    await refetch();
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(strawberryQty(result)).toBe(3);
+    const store = client.getQueryData<{ spends: NostrEvent[] }>(externalInventoryEventsQueryKey(OWNER))!;
+    expect(store.spends.map((e) => e.id)).toEqual([hex('live1')]);
+  });
+
+  it('a live newer snapshot (rev18) survives a stale refetch that only knows rev17', async () => {
+    stored.snapshots = [snapshot('r17', 4, { createdAt: 17 })];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    act(() => live()[0].emit(['EVENT', 's', snapshot('r18', 2, { createdAt: 18 })]));
+    await waitFor(() => expect(strawberryQty(result)).toBe(2));
+
+    await refetch(); // relays still serve r17
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(strawberryQty(result)).toBe(2);
+  });
+
+  it('a fetched newer VALID snapshot (rev19) still advances the winner', async () => {
+    stored.snapshots = [snapshot('r18', 2, { createdAt: 18 })];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(2));
+    relaysServe([snapshot('r19', 6, { createdAt: 19 })]);
+    await refetch();
+    await waitFor(() => expect(strawberryQty(result)).toBe(6));
+  });
+
+  it('a known fold survives a stale refetch', async () => {
+    stored.spends = [spend('x1')];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(3));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    act(() => {
+      live()[0].emit(['EVENT', 's', fold('m1', [hex('x1')])]);
+      live()[0].emit(['EVENT', 's', snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })]);
+    });
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    expect(strawberryQty(result)).toBe(3);
+
+    // A relay that has the new snapshot but not the fold, and not the spend.
+    relaysServe([snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })]);
+    await refetch();
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready');
+    expect(strawberryQty(result)).toBe(3);
+  });
+
+  it('pending → folded with quantity 3, then a stale refetch: still 2', async () => {
+    stored.snapshots = [snapshot('s1', 5, { createdAt: 10 })];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(5));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    act(() => live()[0].emit(['EVENT', 's', spend('x1', 3)]));
+    await waitFor(() => expect(strawberryQty(result)).toBe(2));
+    act(() => {
+      live()[1].emit(['EVENT', 's', fold('m1', [hex('x1')])]);
+      live()[1].emit(['EVENT', 's', snapshot('s2', 2, { createdAt: 20, fold: hex('m1') })]);
+    });
+    await settle();
+    expect(strawberryQty(result)).toBe(2);
+
+    // The stale relay still serves the pre-fold world.
+    relaysServe([snapshot('s1', 5, { createdAt: 10 })], [spend('x1', 3)]);
+    await refetch();
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(strawberryQty(result)).toBe(2);
+  });
+
+  it('there is no missed-event window between the fetch and the tail: the tail replays', async () => {
+    // Lands on the relay right after the fetch's discovery read answered —
+    // before the ledger read, before the tail attached.
+    network.afterFirstDiscovery = () => {
+      stored.spends = [spend('between')];
+    };
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(3));
+    expect(network.discoveryReads).toBe(1); // no refetch was needed: the tail's replay carried it
+  });
+});
+
 describe('recovery', () => {
   it('a second EOSE (the relay re-sent the REQ after reconnecting) reconciles from the authoritative fetch', async () => {
     const { result } = renderView();
@@ -313,6 +450,22 @@ describe('recovery', () => {
     stored.spends = [spend('missed')];
     act(() => live()[0].emit(['EOSE', 's']));
     await waitFor(() => expect(strawberryQty(result)).toBe(3));
+  });
+
+  it('the first (bootstrap) EOSE does not invalidate, and a reconnect EOSE invalidates exactly once — no loop', async () => {
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live().every((r) => r.filters.length === 1)).toBe(true));
+    await settle();
+    expect(network.discoveryReads).toBe(1);
+    const before = openRelays.length;
+
+    act(() => live()[0].emit(['EOSE', 's']));
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(network.discoveryReads).toBe(2); // the refetch did not re-trigger anything
+    expect(openRelays.length).toBe(before); // no resubscription: the scope did not change
+    expect(live().every((r) => r.filters.length === 1)).toBe(true);
   });
 
   it('a dropped iterator resubscribes and reconciles', async () => {
@@ -328,6 +481,113 @@ describe('recovery', () => {
     });
     await waitFor(() => expect(dropped.filters.length).toBe(2));
     await waitFor(() => expect(strawberryQty(result)).toBe(3));
+  });
+});
+
+describe('missing folds', () => {
+  it('a transient (unanswered) by-id read is retried on the next recovery trigger and then resolves', async () => {
+    stored.spends = [spend('x1')];
+    stored.snapshots = [snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })];
+    network.byId = () => ({ events: [], answered: false }); // by-id relays down
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBeGreaterThan(0));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    await settle();
+    const attemptsSoFar = network.byIdReads;
+    const fetchesSoFar = network.discoveryReads;
+    expect(strawberryQty(result)).toBeNull(); // never the raw number
+
+    // The by-id relays come back, holding the manifest (it is ONLY reachable
+    // by id here — the ledger read still does not have it). After the
+    // unanswered wait, a recovery trigger — here the view changing because a
+    // live spend arrived — makes the manifest eligible again.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+    network.byId = () => ({ events: [fold('m1', [hex('x1')])], answered: true });
+    act(() => live()[0].emit(['EVENT', 's', spend('x2', 1, { createdAt: 2500 })]));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    expect(network.byIdReads).toBeGreaterThan(attemptsSoFar);
+    expect(network.discoveryReads).toBe(fetchesSoFar); // no refetch was needed
+    expect(strawberryQty(result)).toBe(2); // raw 3 − x2 (pending); x1 folded, not subtracted
+  });
+
+  it('a by-id read cancelled mid-flight by a view change does not strand the manifest: it is asked for again', async () => {
+    stored.spends = [spend('x1')];
+    stored.snapshots = [snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })];
+    let calls = 0;
+    network.byId = () => {
+      calls += 1;
+      // 1: the authoritative fetch's own by-id round — answered, absent.
+      if (calls === 1) return { events: [], answered: true };
+      // 2: the view's read — a read that never comes back (the relay hangs).
+      if (calls === 2) return new Promise(() => {}) as unknown as { events: NostrEvent[]; answered: boolean };
+      // 3+: the retry finds it.
+      return { events: [fold('m1', [hex('x1')])], answered: true };
+    };
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    await waitFor(() => expect(network.byIdReads).toBe(2));
+    const reads = network.byIdReads;
+    // The view changes while the read hangs: the effect re-runs, cancels the
+    // hung read, and the manifest is eligible again at once.
+    act(() => live()[0].emit(['EVENT', 's', spend('x2', 1, { createdAt: 2500 })]));
+    await waitFor(() => expect(network.byIdReads).toBeGreaterThan(reads));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    expect(strawberryQty(result)).toBe(2);
+  });
+
+  it('an answered-but-absent by-id read is not hammered: the same trigger does not retry before its wait', async () => {
+    stored.spends = [spend('x1')];
+    stored.snapshots = [snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })];
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBeGreaterThan(0));
+    const reads = network.byIdReads;
+    act(() => live()[0]?.emit(['EVENT', 's', spend('x2')])); // view changes → trigger
+    await settle();
+    expect(network.byIdReads).toBe(reads); // still within the absent-wait
+    expect(strawberryQty(result)).toBeNull();
+  });
+
+  it('a live kind:1417 resolves an unresolved inventory without any refetch', async () => {
+    stored.spends = [spend('x1')];
+    stored.snapshots = [snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })];
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    const reads = network.discoveryReads;
+    act(() => live()[0].emit(['EVENT', 's', fold('m1', [hex('x1')])]));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    expect(strawberryQty(result)).toBe(3);
+    expect(network.discoveryReads).toBe(reads);
+  });
+});
+
+describe('the fold retry policy', () => {
+  it('first ask is eligible, in-flight is not, unanswered retries sooner than absent, backoff doubles and caps', () => {
+    const t = 1_000_000;
+    expect(foldRetryPolicy.eligible(undefined, t)).toBe(true);
+    const started = foldRetryPolicy.started(undefined, t);
+    expect(foldRetryPolicy.eligible(started, t + 999_999)).toBe(false);
+    const unanswered = foldRetryPolicy.finished(started, false, t);
+    expect(unanswered.outcome).toBe('unanswered');
+    expect(foldRetryPolicy.eligible(unanswered, t + 4_999)).toBe(false);
+    expect(foldRetryPolicy.eligible(unanswered, t + 5_000)).toBe(true);
+    const absent = foldRetryPolicy.finished(started, true, t);
+    expect(absent.outcome).toBe('absent');
+    expect(foldRetryPolicy.eligible(absent, t + 29_999)).toBe(false);
+    expect(foldRetryPolicy.eligible(absent, t + 30_000)).toBe(true);
+    // A client-side cancellation is eligible again immediately and does not count as a try.
+    const cancelled = foldRetryPolicy.aborted(foldRetryPolicy.started(undefined, t), t);
+    expect(cancelled.inFlight).toBe(false);
+    expect(cancelled.tries).toBe(0);
+    expect(foldRetryPolicy.eligible(cancelled, t)).toBe(true);
+    // Doubling per try, capped at five minutes.
+    let attempt = unanswered;
+    for (let i = 0; i < 12; i += 1) attempt = foldRetryPolicy.finished(foldRetryPolicy.started(attempt, t), false, t);
+    expect(attempt.nextEligibleAt - t).toBe(5 * 60_000);
   });
 });
 

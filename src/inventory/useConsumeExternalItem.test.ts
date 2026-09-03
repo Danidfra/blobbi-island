@@ -19,6 +19,7 @@ import { clearExternalSpendOps, readExternalSpendOp } from '@/lib/external-spend
 import { PET_OP_MARKER_TAG, type PetStateNostr } from '@/lib/pet-state-transaction';
 import type { PetState } from '@/lib/blobbi-types';
 
+import { planCareEffect } from './care-effect';
 import { clearEstablishedSpends, establishedSpendsFor } from './established-spends';
 import type { DiscoveredInventory } from './external-inventories';
 import type { ExternalInventoryResolution } from './external-inventory-state';
@@ -375,6 +376,21 @@ describe('a batch is ONE action', () => {
       if (r.status !== 'applied') throw new Error(r.status);
       return r;
     }
+  });
+
+  it('hunger 20, quantity 3 → +75 attempted → 95; XP still 3 × per unit', async () => {
+    const w = world({ effective: 4, petHunger: 20 });
+    const result = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(tagValue(w.petRelay.getStored()!, 'hunger')).toBe('95');
+    expect(result.status === 'applied' && result.experienceGained).toBe(planCareEffect({ pet: pet(), action: 'feed', effects: definition.effects, quantity: 1, now: new Date() }).experienceGained * 3);
+  });
+
+  it('hunger 80, quantity 3 → clamps at 100; XP is not clamped', async () => {
+    const w = world({ effective: 4, petHunger: 80 });
+    const result = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(tagValue(w.petRelay.getStored()!, 'hunger')).toBe('100');
+    expect(result.status === 'applied' && result.experienceGained).toBe(planCareEffect({ pet: pet(), action: 'feed', effects: definition.effects, quantity: 3, now: new Date() }).experienceGained);
+    expect(result.status === 'applied' && result.experienceGained).toBeGreaterThan(0);
   });
 
   it('clamps a batch at 100', async () => {

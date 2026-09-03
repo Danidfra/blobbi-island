@@ -49,6 +49,13 @@ export function ConsumeItemModal({
   const maxQuantity = Math.max(0, Math.min(maxQuantityProp ?? availableQuantity, availableQuantity));
   const [quantity, setQuantity] = useState(1);
 
+  // A new operation starts at 1. Every caller today unmounts this dialog
+  // between operations, but the selection must not depend on that: opening
+  // it, or opening it for another item, resets what a previous item left.
+  useEffect(() => {
+    if (isOpen) setQuantity(1);
+  }, [isOpen, definition.address]);
+
   // The available quantity is LIVE (another game's inventory can settle or
   // be spent elsewhere while this is open): never let the selection exceed
   // what can currently be used.

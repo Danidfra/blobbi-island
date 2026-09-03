@@ -21,6 +21,17 @@
  * deduplicates) and then streams — so the tail is itself a second bootstrap,
  * which is what closes the gap.
  *
+ * ## A refetch reconciles; it never replaces
+ *
+ * The query function does not return what the relays answered. It returns
+ * `reconcileExternalInventoryStores(held, fetched)`: everything the relays
+ * taught, merged into what this tab already knew. Relays are eventually
+ * consistent, so a refetch that misses a spend the tail streamed a moment
+ * ago, or the snapshot the owner just published, is an incomplete read — and
+ * an incomplete read must not make the balance go back UP. Forgetting happens
+ * only when the store itself goes away: logout, a different player (a
+ * different query key), or cache removal.
+ *
  * ## Recovery
  *
  * `NRelay1` reconnects with backoff and re-sends the REQ; the relay answers
@@ -28,7 +39,10 @@
  * as "we were away": the query is invalidated so the authoritative fetch
  * reconciles anything a different relay may hold. The same happens after the
  * iterator drops (2 s pause, then resubscribe), on `online`, and — the
- * TanStack default — on `refetchOnReconnect`. There is no polling.
+ * TanStack default — on `refetchOnReconnect`. There is no polling, and there
+ * is no loop: an invalidation refetches the SAME query; the tail is keyed on
+ * the player, the relay policy and the address SET, none of which a refetch
+ * changes unless a genuinely new context was discovered.
  *
  * ## Lifecycle
  *
@@ -61,6 +75,7 @@ import {
   mergeExternalInventoryEvent,
   mergeExternalInventoryEvents,
   missingFoldReferencesOf,
+  reconcileExternalInventoryStores,
   type ExternalInventoryEvents,
   type ExternalInventoryFetchDeps,
   type ExternalInventoryState,
@@ -156,6 +171,7 @@ export function applyLiveEvent(
 export function useExternalInventoryEvents() {
   const { config } = useAppContext();
   const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
   const relays = useMemo(() => externalInventoryRelays(config.relayUrl), [config.relayUrl]);
   const pubkey = user?.pubkey;
 
@@ -168,7 +184,13 @@ export function useExternalInventoryEvents() {
         pubkey,
       );
       if (fetched.status === 'error') throw new Error(fetched.error);
-      return fetched.store;
+      // Read the held store AFTER the network answered, so a live event that
+      // arrived during the fetch is part of what is reconciled. Same owner by
+      // construction: the key is the pubkey.
+      const held = queryClient.getQueryData<ExternalInventoryEvents>(
+        externalInventoryEventsQueryKey(pubkey),
+      );
+      return reconcileExternalInventoryStores(held, fetched.store);
     },
     enabled: !!pubkey,
     // The tail keeps this current; staleness only governs the safety-net
@@ -256,6 +278,76 @@ export function useExternalInventoryLiveTail(
   }, [pubkey, relaysKey, addressesKey, queryClient]);
 }
 
+/**
+ * One missing manifest's fetch history, for the retry policy.
+ *
+ * `'unanswered'` — no relay gave a usable answer (timeout, offline, every
+ * relay failed): the manifest MAY exist; try again soon. `'absent'` — at
+ * least one relay answered and did not have it: it may still exist on a
+ * relay that did not answer, or not yet, so retry with a longer wait.
+ */
+export interface FoldFetchAttempt {
+  readonly tries: number;
+  readonly inFlight: boolean;
+  readonly outcome: 'unanswered' | 'absent' | null;
+  /** Earliest time (ms) a recovery trigger may try again. */
+  readonly nextEligibleAt: number;
+}
+
+const FOLD_RETRY_UNANSWERED_MS = 5_000;
+const FOLD_RETRY_ABSENT_MS = 30_000;
+const FOLD_RETRY_MAX_BACKOFF_MS = 5 * 60_000;
+
+/**
+ * When a missing manifest may be asked for again.
+ *
+ * - never while a read for it is in flight;
+ * - a transient failure is retried after a short wait, an answered absence
+ *   after a longer one, both doubling per attempt up to a cap — so a chain
+ *   the owner never published cannot hammer the relays, and one that simply
+ *   has not propagated yet is picked up on the next recovery trigger;
+ * - a manifest that is finally obtained drops out of the table entirely.
+ */
+export const foldRetryPolicy = {
+  eligible(attempt: FoldFetchAttempt | undefined, now: number): boolean {
+    if (!attempt) return true;
+    if (attempt.inFlight) return false;
+    return now >= attempt.nextEligibleAt;
+  },
+  started(attempt: FoldFetchAttempt | undefined, now: number): FoldFetchAttempt {
+    return {
+      tries: (attempt?.tries ?? 0) + 1,
+      inFlight: true,
+      outcome: attempt?.outcome ?? null,
+      nextEligibleAt: now,
+    };
+  },
+  /**
+   * The read was cancelled by THIS client (the effect re-ran, the view
+   * changed, the component unmounted) — not by the network. It is eligible
+   * again at once; the trigger that cancelled it is the one that retries.
+   */
+  aborted(attempt: FoldFetchAttempt | undefined, now: number): FoldFetchAttempt {
+    return {
+      tries: Math.max(0, (attempt?.tries ?? 1) - 1),
+      inFlight: false,
+      outcome: attempt?.outcome ?? null,
+      nextEligibleAt: now,
+    };
+  },
+  finished(attempt: FoldFetchAttempt | undefined, answered: boolean, now: number): FoldFetchAttempt {
+    const tries = attempt?.tries ?? 1;
+    const base = answered ? FOLD_RETRY_ABSENT_MS : FOLD_RETRY_UNANSWERED_MS;
+    const wait = Math.min(base * 2 ** Math.max(0, tries - 1), FOLD_RETRY_MAX_BACKOFF_MS);
+    return {
+      tries,
+      inFlight: false,
+      outcome: answered ? 'absent' : 'unanswered',
+      nextEligibleAt: now + wait,
+    };
+  },
+};
+
 /** What the collection consumes: every discovered inventory and its state. */
 export interface ExternalInventoryViewResult extends ExternalInventoryView {
   /** The authoritative fetch has not answered yet (and nothing is cached). */
@@ -306,31 +398,69 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
   useExternalInventoryLiveTail(query.data ? user?.pubkey : undefined, relays, addresses);
 
   // Missing manifests: a snapshot that arrived (live or fetched) before the
-  // fold it references derives as unresolved. Ask for the named ids once; a
-  // later live kind:1417 resolves it just as well.
-  const attempted = useRef(new Set<string>());
+  // fold it references derives as unresolved. Ask for the named ids by id;
+  // a later live kind:1417 resolves it just as well. Retries are driven by
+  // RECOVERY TRIGGERS (a refetch completing, the view changing) and paced by
+  // `foldRetryPolicy` — never by a timer, so there is no polling and no loop.
+  const attempts = useRef(new Map<string, FoldFetchAttempt>());
   const missing = useMemo(() => missingFoldReferencesOf(view), [view]);
+  // Another player, another table: manifest ids do not collide across
+  // players, but a retry history is knowledge about ONE player's chains.
+  useEffect(() => {
+    attempts.current.clear();
+  }, [user?.pubkey]);
   useEffect(() => {
     const pubkey = user?.pubkey;
     if (!pubkey || missing.length === 0) return;
-    const wanted = missing.filter((ref) => !attempted.current.has(ref.eventId));
+    const now = Date.now();
+    const table = attempts.current;
+    const wanted = missing.filter((ref) => foldRetryPolicy.eligible(table.get(ref.eventId), now));
     if (wanted.length === 0) return;
-    for (const ref of wanted) attempted.current.add(ref.eventId);
+    for (const ref of wanted) {
+      table.set(ref.eventId, foldRetryPolicy.started(table.get(ref.eventId), now));
+    }
     const abort = new AbortController();
     void externalInventoryFetchDeps(relays, pubkey, abort.signal)
       .readFoldsById(wanted)
       .then((result) => {
-        if (abort.signal.aborted || result.events.length === 0) return;
+        if (abort.signal.aborted) return;
+        const found = new Set(result.events.map((event) => event.id));
+        for (const ref of wanted) {
+          if (found.has(ref.eventId)) table.delete(ref.eventId);
+          else {
+            table.set(
+              ref.eventId,
+              foldRetryPolicy.finished(table.get(ref.eventId), result.answered, Date.now()),
+            );
+          }
+        }
+        if (result.events.length === 0) return;
         const key = externalInventoryEventsQueryKey(pubkey);
         queryClient.setQueryData<ExternalInventoryEvents>(key, (previous) =>
           previous ? mergeExternalInventoryEvents(previous, result.events) : previous,
         );
       })
       .catch(() => {
+        // A thrown read is a transport failure: unanswered, retry later.
         // Unresolved stays unresolved. Never guessed around.
+        if (abort.signal.aborted) return;
+        for (const ref of wanted) {
+          table.set(ref.eventId, foldRetryPolicy.finished(table.get(ref.eventId), false, Date.now()));
+        }
       });
-    return () => abort.abort();
-  }, [missing, relays, user?.pubkey, queryClient]);
+    return () => {
+      abort.abort();
+      // A cancelled read must not strand its manifests as "in flight".
+      const cancelledAt = Date.now();
+      for (const ref of wanted) {
+        const attempt = table.get(ref.eventId);
+        if (attempt?.inFlight) table.set(ref.eventId, foldRetryPolicy.aborted(attempt, cancelledAt));
+      }
+    };
+    // `query.dataUpdatedAt` is a deliberate dependency: every completed
+    // authoritative refetch (reconnect, `online`, new context, remount) is a
+    // recovery trigger that re-evaluates eligibility.
+  }, [missing, relays, user?.pubkey, queryClient, query.dataUpdatedAt]);
 
   return {
     ...view,

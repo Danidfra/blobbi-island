@@ -28,10 +28,31 @@
  * ## What merge decides, and what it does not
  *
  * `mergeExternalInventoryEvent` is a STORE operation: it decides whether an
- * event is worth keeping (right kind, right author, parses, newer than the
- * current snapshot for its context, not a duplicate). It decides nothing
- * about balances. Whether a spend applies, whether a fold settles anything,
- * whether a snapshot is resolvable — all of that is the package's
+ * event is worth keeping, and nothing about balances. Admission is the same
+ * for a fetched and a live event, and it is exactly this:
+ *
+ * - the author is the store's owner (a cheap pre-check; the package parsers
+ *   enforce it again against the inventory address);
+ * - kind:31633 — parses as an inventory (`parseInventoryEvent`), is not
+ *   Blobbi's own context, and wins the canonical newest-valid selection for
+ *   its `d` against the snapshot already held;
+ * - kind:1416 — parses as a spend (`parseGameInventorySpend`: full inventory
+ *   and item addresses, canonical quantity, author = inventory owner), and
+ *   is not already held;
+ * - kind:1417 — parses as a fold manifest (`parseGameInventoryFold`: full
+ *   inventory address, well-formed references, author = owner), and is not
+ *   already held.
+ *
+ * A structurally invalid same-author event is therefore NOT stored: it could
+ * never affect a balance (the derivation would reject it again), and keeping
+ * it would only let malformed events grow the store. What is NOT checked is
+ * relevance to a known inventory: a valid spend or fold naming a context this
+ * client has not discovered yet is kept, because the context may be
+ * discovered a moment later. The derivation ignores it until then. Nothing
+ * is ever identified by a bare `d`, and no game-specific rule lives here.
+ *
+ * Whether a spend applies, whether a fold settles anything, whether a
+ * snapshot is resolvable — all of that is the package's
  * `resolveGameInventoryState`, run by `deriveExternalInventoryStates` over
  * the whole store. So:
  *
@@ -43,6 +64,19 @@
  *   live or fetched by id, and the same derivation resolves it;
  * - a spend arriving from three relays is one spend; a spend for another
  *   inventory or by another author is kept out or ignored by the package.
+ *
+ * ## Knowledge is monotonic within one player's store
+ *
+ * The relay network is eventually consistent: a relay that answers a refetch
+ * may not yet hold a spend another relay streamed a second ago, or the
+ * snapshot the owner just published. A network read is therefore ADDITIONAL
+ * EVIDENCE, never permission to forget. `reconcileExternalInventoryStores`
+ * folds a freshly fetched store into the one already held — immutable spends
+ * and folds are a union by id, and a snapshot is replaced only by the
+ * canonical newest-valid winner — so an incomplete read can neither delete a
+ * known kind:1416/1417 nor regress a newer valid kind:31633. The rule is
+ * scoped to ONE owner: stores of different players are never merged, and a
+ * store that has been dropped (logout, cache removal) is simply gone.
  *
  * Spec: `docs/1416-1417-game-inventory-spend.md` in `@nostr-games/inventory`.
  */
@@ -70,6 +104,8 @@ import {
   buildGameInventoryFilter,
   buildGameInventoryFoldFilter,
   buildGameInventorySpendFilter,
+  parseGameInventoryFold,
+  parseGameInventorySpend,
   type GameInventory,
   type GameInventoryFoldProblem,
 } from './package';
@@ -122,10 +158,16 @@ export function mergeExternalInventoryEvent(
     }
     case KIND_GAME_INVENTORY_SPEND: {
       if (store.spends.some((e) => e.id === event.id)) return store;
+      // The package's structural rules, and nothing else: a spend that does
+      // not parse can never debit anything and is not worth remembering.
+      const spend = parseGameInventorySpend(event);
+      if (!spend || spend.owner !== store.owner) return store;
       return { ...store, spends: [...store.spends, event] };
     }
     case KIND_GAME_INVENTORY_FOLD: {
       if (store.folds.some((e) => e.id === event.id)) return store;
+      const fold = parseGameInventoryFold(event);
+      if (!fold || fold.owner !== store.owner) return store;
       return { ...store, folds: [...store.folds, event] };
     }
     default:
@@ -139,6 +181,39 @@ export function mergeExternalInventoryEvents(
   events: readonly NostrEvent[],
 ): ExternalInventoryEvents {
   return events.reduce(mergeExternalInventoryEvent, store);
+}
+
+/**
+ * Reconcile a freshly FETCHED store with the store already HELD for the same
+ * owner. This is what a refetch must do instead of replacing the cache.
+ *
+ * ```
+ *   held:    rev18, S1, S2, S3          (S3 and rev18 arrived live)
+ *   fetched: rev17, S1, S2              (a relay that has not caught up)
+ *   result:  rev18, S1, S2, S3          — nothing forgotten
+ *
+ *   held:    rev18                      fetched: valid rev19   → rev19
+ *   held:    rev18                      fetched: malformed rev20 → rev18
+ * ```
+ *
+ * Implemented as "merge every fetched event into the held store", so the
+ * one admission rule (`mergeExternalInventoryEvent`) governs both directions
+ * and the result is the same object when the fetch taught nothing new.
+ *
+ * Different owners are never merged: a store for another player replaces
+ * nothing and is returned as-is. That is the boundary between "this player's
+ * knowledge is monotonic" and "a new player starts from nothing".
+ */
+export function reconcileExternalInventoryStores(
+  held: ExternalInventoryEvents | undefined,
+  fetched: ExternalInventoryEvents,
+): ExternalInventoryEvents {
+  if (!held || held.owner !== fetched.owner) return fetched;
+  return mergeExternalInventoryEvents(held, [
+    ...fetched.snapshots,
+    ...fetched.spends,
+    ...fetched.folds,
+  ]);
 }
 
 export type ExternalInventoryStatus = 'ready' | 'unresolved';

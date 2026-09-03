@@ -317,6 +317,21 @@ describe('external inventories are read, never written', () => {
     expect(consume).toMatch(/quantity,\s*\n\s*nonce: mintSpendNonce\(\)/);
   });
 
+  it('a refetch RECONCILES with the held store; it never replaces it', () => {
+    const hook = readCode('src/inventory/useExternalInventoryEvents.ts');
+    expect(hook).toMatch(/return reconcileExternalInventoryStores\(held, fetched\.store\)/);
+    expect(hook).not.toMatch(/return fetched\.store/);
+  });
+
+  it('admission to the store goes through the package parsers, for live and fetched events alike', () => {
+    const events = readCode('src/inventory/external-inventory-events.ts');
+    expect(events).toMatch(/parseGameInventorySpend\(event\)/);
+    expect(events).toMatch(/parseGameInventoryFold\(event\)/);
+    // Nothing else appends to the ledgers.
+    expect(events.match(/spends: \[\.\.\.store\.spends, event\]/g)).toHaveLength(1);
+    expect(events.match(/folds: \[\.\.\.store\.folds, event\]/g)).toHaveLength(1);
+  });
+
   it('the store never mutates a raw snapshot after a spend: spends are merged, snapshots selected', () => {
     const consume = readCode('src/inventory/useConsumeExternalItem.ts');
     expect(consume).toMatch(/mergeExternalInventoryEvent\(previous, record\.event\)/);

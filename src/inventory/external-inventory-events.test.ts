@@ -21,6 +21,7 @@ import {
   mergeExternalInventoryEvent,
   mergeExternalInventoryEvents,
   missingFoldReferencesOf,
+  reconcileExternalInventoryStores,
   type ExternalInventoryFetchDeps,
 } from './external-inventory-events';
 import { effectiveQuantity } from './external-inventory-state';
@@ -269,6 +270,106 @@ describe('merging kind:1417 live — arrival order never changes the answer', ()
     const store = mergeExternalInventoryEvent(empty(), snapshot('s2', [[STRAWBERRY, 3]], { fold: hex('m1') }));
     expect(mergeExternalInventoryEvent(store, fold('m1', { spends: [hex('x1')], author: STRANGER }))).toBe(store);
     expect(status(store)).toBe('unresolved');
+  });
+});
+
+describe('admission: the package parsers decide what is worth keeping', () => {
+  const base = () => mergeExternalInventoryEvent(empty(), snapshot('s1', [[STRAWBERRY, 4]]));
+
+  it('a same-author kind:1416 that does not parse is NOT stored', () => {
+    const store = base();
+    const noQuantity: NostrEvent = { ...spend('bad1'), tags: [['a', FARM_MAIN, '', 'inventory'], ['a', STRAWBERRY, '', 'item']] };
+    const dOnly: NostrEvent = { ...spend('bad2'), tags: [['a', 'farm:main', '', 'inventory'], ['a', STRAWBERRY, '', 'item'], ['quantity', '1']] };
+    const zero: NostrEvent = { ...spend('bad3'), tags: [['a', FARM_MAIN, '', 'inventory'], ['a', STRAWBERRY, '', 'item'], ['quantity', '0']] };
+    for (const bad of [noQuantity, dOnly, zero]) expect(mergeExternalInventoryEvent(store, bad)).toBe(store);
+  });
+
+  it('a same-author kind:1417 that does not parse is NOT stored', () => {
+    const store = base();
+    const empty1417: NostrEvent = { ...fold('bad1', { spends: [hex('x1')] }), tags: [['a', FARM_MAIN, '', 'inventory']] };
+    const twice: NostrEvent = fold('bad2', { spends: [hex('x1')], voids: [hex('x1')] });
+    for (const bad of [empty1417, twice]) expect(mergeExternalInventoryEvent(store, bad)).toBe(store);
+  });
+
+  it("an event whose inventory address names another owner never enters, whoever signed it", () => {
+    const store = base();
+    const otherInventory = `31633:${STRANGER}:farm:main`;
+    const signedByOwner: NostrEvent = { ...spend('s'), tags: [['a', otherInventory, '', 'inventory'], ['a', STRAWBERRY, '', 'item'], ['quantity', '1']] };
+    expect(mergeExternalInventoryEvent(store, signedByOwner)).toBe(store);
+    expect(mergeExternalInventoryEvent(store, fold('f', { spends: [hex('x1')], author: STRANGER }))).toBe(store);
+  });
+
+  it('a valid spend or fold for a context not yet discovered IS kept', () => {
+    const store = mergeExternalInventoryEvents(base(), [spend('x', { inventory: CHEST }), fold('m', { spends: [hex('x')], inventory: CHEST })]);
+    expect(store.spends).toHaveLength(1);
+    expect(store.folds).toHaveLength(1);
+    expect(qty(store)).toBe(4);
+  });
+});
+
+describe('reconciling a refetch with what is already known (monotonic per owner)', () => {
+  it('an incomplete refetch cannot delete a known spend: effective stays 3', () => {
+    const held = mergeExternalInventoryEvents(empty(), [snapshot('s1', [[STRAWBERRY, 4]]), spend('x1')]);
+    const fetched = mergeExternalInventoryEvents(empty(), [snapshot('s1', [[STRAWBERRY, 4]])]);
+    const result = reconcileExternalInventoryStores(held, fetched);
+    expect(result).toBe(held); // nothing new was learned
+    expect(qty(result)).toBe(3);
+  });
+
+  it('an incomplete refetch cannot delete a known fold', () => {
+    const held = mergeExternalInventoryEvents(empty(), [
+      spend('x1'),
+      fold('m1', { spends: [hex('x1')] }),
+      snapshot('s2', [[STRAWBERRY, 3]], { fold: hex('m1') }),
+    ]);
+    const fetched = mergeExternalInventoryEvents(empty(), [snapshot('s2', [[STRAWBERRY, 3]], { fold: hex('m1') }), spend('x1')]);
+    const result = reconcileExternalInventoryStores(held, fetched);
+    expect(result.folds).toHaveLength(1);
+    expect(status(result)).toBe('ready');
+    expect(qty(result)).toBe(3);
+  });
+
+  it('a stale refetch cannot regress rev18 → rev17', () => {
+    const held = mergeExternalInventoryEvent(empty(), snapshot('r18', [[STRAWBERRY, 2]], { createdAt: 18 }));
+    const fetched = mergeExternalInventoryEvent(empty(), snapshot('r17', [[STRAWBERRY, 4]], { createdAt: 17 }));
+    const result = reconcileExternalInventoryStores(held, fetched);
+    expect(result.snapshots.map((e) => e.id)).toEqual([hex('r18')]);
+    expect(qty(result)).toBe(2);
+  });
+
+  it('a fetched newer VALID snapshot still advances the winner', () => {
+    const held = mergeExternalInventoryEvent(empty(), snapshot('r18', [[STRAWBERRY, 2]], { createdAt: 18 }));
+    const fetched = mergeExternalInventoryEvent(empty(), snapshot('r19', [[STRAWBERRY, 6]], { createdAt: 19 }));
+    const result = reconcileExternalInventoryStores(held, fetched);
+    expect(result.snapshots.map((e) => e.id)).toEqual([hex('r19')]);
+    expect(qty(result)).toBe(6);
+  });
+
+  it('a fetched malformed newer snapshot does not shadow the held valid one', () => {
+    const held = mergeExternalInventoryEvent(empty(), snapshot('r18', [[STRAWBERRY, 2]], { createdAt: 18 }));
+    const fetched = { ...empty(), snapshots: [snapshot('bad', [[STRAWBERRY, 9]], { createdAt: 99, malformed: true })] };
+    expect(reconcileExternalInventoryStores(held, fetched)).toBe(held);
+  });
+
+  it('pending → folded with quantity 3, then a stale refetch: still 2, never resurrected, never double-subtracted', () => {
+    let held = mergeExternalInventoryEvents(empty(), [snapshot('s1', [[STRAWBERRY, 5]], { createdAt: 10 }), spend('x1', { qty: 3 })]);
+    expect(qty(held)).toBe(2);
+    held = mergeExternalInventoryEvents(held, [fold('m1', { spends: [hex('x1')] }), snapshot('s2', [[STRAWBERRY, 2]], { createdAt: 20, fold: hex('m1') })]);
+    expect(qty(held)).toBe(2);
+    // A relay that still serves the OLD snapshot and not the fold.
+    const stale = mergeExternalInventoryEvents(empty(), [snapshot('s1', [[STRAWBERRY, 5]], { createdAt: 10 }), spend('x1', { qty: 3 })]);
+    const result = reconcileExternalInventoryStores(held, stale);
+    expect(result).toBe(held);
+    expect(qty(result)).toBe(2);
+  });
+
+  it('stores of different owners are never merged: the fetched one stands alone', () => {
+    const held = mergeExternalInventoryEvents(empty(), [snapshot('s1', [[STRAWBERRY, 4]]), spend('x1')]);
+    const theirs = mergeExternalInventoryEvent(emptyExternalInventoryEvents(STRANGER), snapshot('t1', [[STRAWBERRY, 9]], { owner: STRANGER }));
+    const result = reconcileExternalInventoryStores(held, theirs);
+    expect(result).toBe(theirs);
+    expect(result.spends).toEqual([]);
+    expect(reconcileExternalInventoryStores(undefined, theirs)).toBe(theirs);
   });
 });
 

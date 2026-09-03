@@ -288,6 +288,57 @@ derived-state cache: a live event replaces the store in place and the
 derivation re-runs. That is what removed the "Syncing…" flash a live snapshot
 used to cause, and what gives an orphan kind:1417 somewhere to wait.
 
+### What enters the store
+
+Admission is identical for fetched and live events, and it is the package's
+structural rules and nothing else:
+
+- the author is the store's owner;
+- kind:31633 parses as an inventory, is not `blobbi:island`, and wins the
+  canonical newest-valid selection for its `d` against the snapshot held;
+- kind:1416 parses as a spend (`parseGameInventorySpend`: full inventory and
+  item addresses, canonical quantity, author = inventory owner);
+- kind:1417 parses as a fold manifest (`parseGameInventoryFold`);
+- duplicates by id are dropped.
+
+A same-author event that does not parse is not stored: it could never move a
+balance, and keeping it would only let malformed events grow memory. What is
+deliberately NOT checked is relevance to a known context — a valid spend or
+fold naming an inventory this client has not discovered yet is kept, because
+the context may be discovered a moment later; the derivation ignores it until
+then. Nothing is identified by a bare `d`; no game-specific rule lives here.
+
+### Knowledge is monotonic — a refetch reconciles, it never replaces
+
+The relay network is eventually consistent. A relay answering a refetch may
+not yet hold the spend another relay streamed a second ago, or the snapshot
+the owner just published. So the query function does not return what the
+relays answered; it returns
+`reconcileExternalInventoryStores(held, fetched)` — everything the relays
+taught, merged into what this tab already knew, through the same admission
+rule:
+
+```
+held:    rev18, S1, S2, S3      (S3 and rev18 arrived live)
+fetched: rev17, S1, S2          (a relay that has not caught up)
+result:  rev18, S1, S2, S3      — nothing forgotten; effective unchanged
+
+held:    rev18   fetched: valid rev19      → rev19 (a newer valid snapshot advances)
+held:    rev18   fetched: malformed rev20  → rev18 (never shadowed)
+```
+
+- **kind:1416 / kind:1417**: known valid events are a union by id. A read
+  that does not return one cannot delete it.
+- **kind:31633**: the canonical newest-valid selection, so a stale read
+  cannot regress the winner and a genuinely newer valid one still wins;
+  equal `created_at` still breaks on the lower id.
+- **Scope**: one owner's ACTIVE store. Stores of different players are never
+  merged (the query key is the pubkey; the reconcile refuses another owner).
+  Logout, a different player, or cache removal after `gcTime` are real
+  resets — monotonic knowledge is not "forever", it is "for as long as this
+  player's store exists". Pinned against the real query lifecycle in
+  `useExternalInventoryEvents.test.tsx`.
+
 ### Initial fetch + live tail + recovery
 
 ```
@@ -324,7 +375,7 @@ balance — a live event has exactly the same path as a fetched one.
 | kind:1416 (owner-signed) | stored once, whatever relay delivered it | applied/rejected at its deterministic position — `raw 4, live S1 → 3`, raw untouched |
 | kind:1416 for another inventory | stored (a context discovered later may need it) | none for this inventory |
 | kind:1417 nobody references yet | stored, INERT | none: an orphan settles nothing |
-| kind:31633 referencing a fold not yet seen | stored | **unresolved**: no balance, never the raw number; the missing id is fetched once by id, and a later live kind:1417 resolves it just as well |
+| kind:31633 referencing a fold not yet seen | stored | **unresolved**: no balance, never the raw number; the missing id is fetched by id (see below), and a later live kind:1417 resolves it just as well |
 | the fold for such a snapshot | stored | resolves — the same derivation, no special case |
 | a duplicate of anything | ignored | none |
 
@@ -334,9 +385,9 @@ inert → snapshot replaces the old one, its chain reaches the fold → the four
 spends are folded, the new raw quantities stand, nothing is subtracted twice.
 No refresh.
 
-### Scale
+### Scale — and what does NOT scale yet
 
-Subscriptions = relays in the policy, full stop:
+Subscription count is O(relays), not O(inventories) and not O(items):
 
 | external inventories | relay connections | REQ subscriptions | filters per REQ |
 | --- | --- | --- | --- |
@@ -348,6 +399,43 @@ A new partner game adds its relays to the policy (through its trusted-issuer
 entry), which may add a connection; it never adds a subscription per
 inventory, and nothing ever subscribes per item. A change in the address set
 closes the tail and opens a new one with the new scope.
+
+**Historical growth is a V1 protocol limitation, and it is not solved here.**
+The store keeps every valid kind:1416 and kind:1417 it has learned, and the
+authoritative reads deliberately carry no `since`: the protocol allows a late
+spend with an old `created_at` to still be pending, settlement is by explicit
+id through the fold chain, and there is no timestamp watermark. So over
+months of play, bandwidth per fetch, memory per store and derivation cost
+grow with the total immutable ledger history of the player's inventories —
+per player, not per relay or per subscription. Island MUST NOT "fix" this
+locally: no `since`, no timestamp cut-off, no "keep the last N spends/folds",
+no pruning that changes accounting, no assumption that anything older than
+the snapshot is settled — each of those breaks the derivation the spec
+guarantees. The remedy belongs to the protocol and the library: a verifiable
+checkpoint / compaction / epoch mechanism (an owner-published, chain-verified
+point before which readers need nothing) — future work, tracked in
+`@nostr-games/inventory`, deliberately not designed or shipped in Island.
+
+### Missing-fold recovery
+
+A snapshot whose chain names a manifest the store does not hold derives as
+unresolved. `useExternalInventoryView` then asks for the missing ids by id on
+the policy relays plus every usable relay hint the chain carries. Retries are
+driven by RECOVERY TRIGGERS — a completed authoritative refetch (reconnect
+EOSE, `online`, new context, remount) or the view changing — and paced by
+`foldRetryPolicy`, never by a timer:
+
+| by-id outcome | meaning | next eligible |
+| --- | --- | --- |
+| obtained | the manifest is in the store; resolved | — |
+| unanswered (`answered: false`: timeout, offline, every relay failed) | the manifest MAY exist | after 5 s, doubling per attempt, capped at 5 min |
+| answered but absent | no answering relay has it (yet) | after 30 s, doubling, capped at 5 min |
+| in flight | — | never concurrently |
+| cancelled by this client (the view changed, the effect re-ran, unmount) | not a network verdict | at once — the trigger that cancelled it retries; it does not count as a try |
+
+A live kind:1417 resolves the inventory immediately, retry table or not.
+Unresolved never falls back to raw quantities, and nothing is polled: with no
+trigger, nothing is asked.
 
 ### Lifecycle
 
