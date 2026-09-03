@@ -161,7 +161,16 @@ export function InventoryBrowser({
   }, [full, allowed]);
 
   const [category, setCategory] = useState<CollectionCategory | 'all'>('all');
-  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  /*
+    The selection is keyed by the ENTRY, not by the item address.
+
+    An address is not unique across the collection any more: the same item can
+    be owned in Blobbi's inventory and in another game's at the same time, and
+    keying on the address would make one row's selection highlight the other's
+    tile and the detail panel describe whichever came first. `CollectionEntry.key`
+    is `<sourceInventoryId>|<address>`, which is unique by construction.
+  */
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   /**
    * The consumable whose consume dialog is open, or `null`.
    *
@@ -184,8 +193,8 @@ export function InventoryBrowser({
   );
 
   const selected = useMemo(
-    () => collection.entries.find((e) => e.address === selectedAddress) ?? null,
-    [collection.entries, selectedAddress],
+    () => collection.entries.find((e) => e.key === selectedKey) ?? null,
+    [collection.entries, selectedKey],
   );
 
   /**
@@ -213,14 +222,14 @@ export function InventoryBrowser({
     something the player no longer has.
   */
   useEffect(() => {
-    if (selectedAddress && !collection.entries.some((e) => e.address === selectedAddress)) {
-      setSelectedAddress(null);
+    if (selectedKey && !collection.entries.some((e) => e.key === selectedKey)) {
+      setSelectedKey(null);
     }
-  }, [collection.entries, selectedAddress]);
+  }, [collection.entries, selectedKey]);
 
   useEffect(() => {
     if (selected && category !== 'all' && selected.category !== category) {
-      setSelectedAddress(null);
+      setSelectedKey(null);
     }
   }, [category, selected]);
 
@@ -235,7 +244,7 @@ export function InventoryBrowser({
     looking at.
   */
   const select = (entry: CollectionEntry) => {
-    setSelectedAddress(entry.address === selectedAddress ? null : entry.address);
+    setSelectedKey(entry.key === selectedKey ? null : entry.key);
     onSelectSlot?.(null);
   };
 
@@ -380,7 +389,7 @@ export function InventoryBrowser({
             <CollectionGrid
               className="min-w-0 flex-1"
               items={visible}
-              keyOf={(entry) => entry.address}
+              keyOf={(entry) => entry.key}
               resetKey={category}
               label={gridLabel}
               role={selectable ? 'listbox' : 'group'}
@@ -396,19 +405,28 @@ export function InventoryBrowser({
               renderItem={(entry) => (
                 <CollectionTile
                   {...(selectable
-                    ? { role: 'option', 'aria-selected': entry.address === selectedAddress }
+                    ? { role: 'option', 'aria-selected': entry.key === selectedKey }
                     : {})}
+                  /* The address testid predates multi-inventory display and is
+                     kept for the surfaces that query by it. `data-entry-key` is
+                     the UNIQUE handle: an address can legitimately appear twice
+                     when two inventories hold the same item. */
                   data-testid={`item-${entry.address}`}
+                  data-entry-key={entry.key}
+                  data-source={entry.source}
                   {...(entry.equipped ? { 'data-equipped': entry.slot } : {})}
-                  {...(entry.category === 'currency'
-                    ? { 'data-readonly-item': entry.address }
+                  {...(entry.action === 'none'
+                    ? // Every tile with nothing to press: currency, and items
+                      // owned in an inventory Blobbi only reads.
+                      { 'data-readonly-item': entry.address }
                     : {})}
                   name={entry.definition.name}
                   quantity={entry.quantity}
-                  selected={selectable && entry.address === selectedAddress}
-                  /* Currency gets NO handler at all: `ItemTile` renders a plain
-                     <div> without one, so there is no dead button pretending a
-                     coin does something. */
+                  selected={selectable && entry.key === selectedKey}
+                  /* A non-actionable tile gets NO handler at all: `ItemTile`
+                     renders a plain <div> without one, so there is no dead
+                     button pretending a coin does something — or that an item
+                     held in an inventory Blobbi only reads can be spent. */
                   onClick={entry.action === 'none' ? undefined : () => activate(entry)}
                   art={<ItemArt definition={entry.definition} />}
                   className={cn(
@@ -419,7 +437,12 @@ export function InventoryBrowser({
                     entry.definition.rarity === 'epic' && 'ring-1 ring-island-purple/50',
                     entry.equipped && 'border-island-grass-dark/50',
                   )}
-                  stateLabel={entry.equipped ? 'Worn' : undefined}
+                  /* One pill, and what it says depends on what is worth
+                     saying: a worn hat announces that it is worn; anything
+                     else that came from another game announces where from.
+                     A wearable can never be both — it is worn HERE. */
+                  stateLabel={entry.equipped ? 'Worn' : entry.sourceLabel}
+                  stateTone={entry.equipped ? 'positive' : 'accent'}
                 />
               )}
             />

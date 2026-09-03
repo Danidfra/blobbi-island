@@ -11,6 +11,7 @@
  */
 
 export * from './constants';
+export * from './trusted-issuers';
 export * from './registry';
 export * from './catalog-fallback';
 export * from './item-image-resolution';
@@ -20,6 +21,9 @@ export * from './care-store-catalog';
 export * from './clothing-store-catalog';
 export * from './useItemCatalog';
 export * from './useIslandInventory';
+export * from './external-inventories';
+export * from './useExternalInventories';
+export * from './useExternalItemCatalog';
 export * from './useInventoryMutation';
 export * from './useBatchPurchase';
 export * from './useUseItem';

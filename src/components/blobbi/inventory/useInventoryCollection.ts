@@ -14,6 +14,7 @@
  *   what can be worn  → useEquippableCosmetics (31632 catalog ∩ 31633 owned)
  *   what is worn      → usePlacementState (the 31634 document)
  *   what is carried   → useIslandInventory + useItemCatalog (31633 + 31632)
+ *   what is elsewhere → useExternalInventories + useExternalItemCatalog
  * ```
  *
  * and produces a flat, sorted list of {@link CollectionEntry}. It decides
@@ -22,19 +23,40 @@
  * neither is second-guessed here. What this adds is a single presentation model
  * — a category, an action verb, and an equipped flag — so the UI can render one
  * grid instead of two lists.
+ *
+ * ## Several inventories, one collection, no merging
+ *
+ * A player's things are not all in Blobbi's inventory. kind:31633 is scoped by
+ * a `d`, and another game credits its own context under the same player key —
+ * so `useExternalInventories` finds those, and their items join this list.
+ *
+ * They JOIN it; they are not folded into it. Every entry records the inventory
+ * it came from ({@link CollectionEntry.sourceInventoryId}) and keeps its own
+ * row, so the same item address owned in two contexts produces two entries
+ * rather than one summed number that belongs to neither. Nothing here writes,
+ * combines, or reconciles ownership state — this is a view, and the ownership
+ * stays exactly where its owner put it.
  */
 
 import { useMemo } from 'react';
 import type { AccessorySlot } from '@blobbi/react';
 
 import {
+  ISLAND_INVENTORY_D,
+  getTrustedItemIssuer,
+  referencedItemAddresses,
+  useExternalInventories,
+  useExternalItemCatalog,
   useIslandInventory,
   useItemCatalog,
   toIslandEntries,
   type IslandInventoryEntry,
 } from '@/inventory';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
-import { getLastEquippedPlacementBySlot } from '@/inventory/package';
+import {
+  getLastEquippedPlacementBySlot,
+  parseGameItemAddress,
+} from '@/inventory/package';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import { usePlacementState } from '@/placement/usePlacementState';
 import { useEquippableCosmetics } from '@/placement/useEquippableCosmetics';
@@ -62,9 +84,41 @@ export type CollectionAction =
   /** A balance. Nothing to press. */
   | 'none';
 
+/**
+ * Where an entry's ownership actually lives.
+ *
+ * - `'island'` — Blobbi's own kind:31633 (`blobbi:island`). The one inventory
+ *   this game reads AND writes.
+ * - `'external'` — another game's inventory, discovered author-wide. Read only:
+ *   Blobbi never publishes a replacement for a context it does not own.
+ *
+ * This is the property the actionability rule keys on. It is deliberately about
+ * the SOURCE and not about the issuer: "items in inventories we do not write
+ * cannot be spent yet" is a true and durable statement, whereas "Farm items
+ * cannot be used" would be a rule about a particular partner that stops being
+ * true the moment consumption is designed.
+ */
+export type CollectionSource = 'island' | 'external';
+
 export interface CollectionEntry {
-  /** Canonical `31632:<issuer>:<d>` address. Stable identity, and the React key. */
+  /**
+   * Stable identity for React and for selection: `<sourceInventoryId>|<address>`.
+   *
+   * The address alone is NOT unique across a multi-inventory collection — the
+   * same item can be owned in two contexts — so keying on it would collide two
+   * real rows into one and make the detail panel describe the wrong one.
+   */
+  key: string;
+  /** Canonical `31632:<issuer>:<d>` address. The item's protocol identity. */
   address: string;
+  /** Which kind:31633 context holds this. `blobbi:island` for own items. */
+  sourceInventoryId: string;
+  source: CollectionSource;
+  /**
+   * A short player-facing name for where an external item came from — "Farm".
+   * `undefined` for this game's own items, which need no provenance label.
+   */
+  sourceLabel?: string;
   definition: ResolvedBlobbiItemDefinition;
   quantity: number;
   category: CollectionCategory;
@@ -109,6 +163,17 @@ export const CATEGORY_LABELS: Readonly<Record<CollectionCategory, string>> = {
   currency: 'Coins',
 };
 
+/**
+ * The composite identity of a collection row.
+ *
+ * `<sourceInventoryId>|<fullAddress>`. The separator is `|` because neither
+ * half can contain one: an inventory id is a `d` tag and an address is
+ * `31632:<hex>:<d>`, both of which use `:` as their separator.
+ */
+export function entryKey(sourceInventoryId: string, address: string): string {
+  return `${sourceInventoryId}|${address}`;
+}
+
 /** Which chip an item category belongs under. */
 function chipFor(category: string): CollectionCategory | null {
   switch (category) {
@@ -136,10 +201,21 @@ export function useInventoryCollection(options: {
   const placementQuery = usePlacementState(options.characterId);
   const inventoryQuery = useIslandInventory();
   const catalogQuery = useItemCatalog();
+  const externalQuery = useExternalInventories();
 
   const placement = placementQuery.data;
   const inventory = inventoryQuery.data;
   const catalog = catalogQuery.data;
+  const external = externalQuery.data;
+
+  // Every item reference across every discovered inventory, deduped. The
+  // catalog hook decides which of them belong to a trusted issuer; passing all
+  // of them keeps that decision in one place instead of two.
+  const externalRefs = useMemo(
+    () => referencedItemAddresses(external ?? []),
+    [external],
+  );
+  const externalCatalog = useExternalItemCatalog(externalRefs).data;
 
   return useMemo((): InventoryCollection => {
     // ── what is worn ────────────────────────────────────────────────────────
@@ -161,7 +237,10 @@ export function useInventoryCollection(options: {
     for (const cosmetic of cosmetics.available) {
       const equipped = wornAddresses.has(cosmetic.address);
       entries.push({
+        key: entryKey(ISLAND_INVENTORY_D, cosmetic.address),
         address: cosmetic.address,
+        sourceInventoryId: ISLAND_INVENTORY_D,
+        source: 'island',
         definition: cosmetic.definition,
         quantity: cosmetic.quantity,
         category: 'wearable',
@@ -178,7 +257,10 @@ export function useInventoryCollection(options: {
       const category = chipFor(entry.definition.category);
       if (!category) continue;
       entries.push({
+        key: entryKey(ISLAND_INVENTORY_D, entry.address),
         address: entry.address,
+        sourceInventoryId: ISLAND_INVENTORY_D,
+        source: 'island',
         definition: entry.definition,
         quantity: entry.quantity,
         category,
@@ -190,15 +272,69 @@ export function useInventoryCollection(options: {
       });
     }
 
+    // ── items owned in inventories this game does not write ─────────────────
+    //
+    // FAIL CLOSED at every step. An address that does not resolve to a
+    // definition from a trusted issuer produces no entry at all: a tile with a
+    // placeholder name would be Island asserting something about an item it
+    // cannot describe, and an unresolved address is exactly the case where it
+    // must not.
+    for (const source of external ?? []) {
+      for (const item of source.items) {
+        if (item.quantity <= 0) continue;
+        const definition =
+          externalCatalog?.byAddress.get(item.address) ??
+          // An address issued by THIS game, held in another game's inventory,
+          // is already described by the official catalog. No second fetch.
+          catalog?.byAddress.get(item.address);
+        if (!definition) continue;
+
+        const category = chipFor(definition.category);
+        if (!category) continue;
+
+        const issuer = parseGameItemAddress(item.address)?.pubkey;
+
+        entries.push({
+          key: entryKey(source.id, item.address),
+          address: item.address,
+          sourceInventoryId: source.id,
+          source: 'external',
+          // The issuer's own player-facing name. Never the `d`, never the
+          // inventory id, never a pubkey — a player is owed "Farm", not
+          // `farm:main` and certainly not hex.
+          sourceLabel: getTrustedItemIssuer(issuer)?.label,
+          definition,
+          quantity: item.quantity,
+          category,
+          /*
+            NOT ACTIONABLE, because of WHERE it is, not what it is.
+
+            Spending this would mean debiting a replaceable kind:31633 that
+            another application owns and writes — a cross-origin
+            read-modify-write with no shared lock and no compare-and-swap. Until
+            that has an answer, an external entry is something the player can
+            see and count, and nothing more. `'none'` is the same representation
+            currency already uses, so the UI needs no new concept: no click
+            handler, no consume dialog, no debit.
+          */
+          action: 'none',
+          equipped: false,
+        });
+      }
+    }
+
     // Stable order: chip order, then equipped first inside wearables, then name.
     // Equipped-first matters — what the Blobbi is wearing is what the player
-    // came to look at.
+    // came to look at. The key breaks remaining ties so two same-named items
+    // from different inventories never swap places between renders.
     entries.sort((a, b) => {
       const byCategory =
         CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
       if (byCategory !== 0) return byCategory;
       if (a.equipped !== b.equipped) return a.equipped ? -1 : 1;
-      return a.definition.name.localeCompare(b.definition.name);
+      const byName = a.definition.name.localeCompare(b.definition.name);
+      if (byName !== 0) return byName;
+      return a.key.localeCompare(b.key);
     });
 
     const present = new Set(entries.map((e) => e.category));
@@ -229,5 +365,7 @@ export function useInventoryCollection(options: {
     inventory,
     inventoryQuery.isLoading,
     catalog,
+    external,
+    externalCatalog,
   ]);
 }

@@ -36,6 +36,7 @@ import {
   unknownItemDefinition,
 } from './catalog-fallback';
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from './constants';
+import { isTrustedItemIssuer } from './trusted-issuers';
 import { addressToItemId } from './registry';
 
 /**
@@ -66,6 +67,40 @@ export function parseOfficialItemDefinition(
   // Extra guard: the parsed issuer must match (defensive; parser sets it from
   // the event pubkey).
   if (result.value.issuer !== OFFICIAL_ITEM_ISSUER_PUBKEY) return null;
+  return result.value;
+}
+
+/**
+ * Parse a kind:31632 event into a package `GameItemDefinition`, enforcing the
+ * TRUSTED ISSUER SET (`trusted-issuers.ts`) rather than the single official
+ * Blobbi issuer. Returns `null` for rejected events and for any issuer that is
+ * not trusted.
+ *
+ * A SIBLING of {@link parseOfficialItemDefinition}, never a replacement. The
+ * two answer different questions and guard different things:
+ *
+ * ```
+ *   parseOfficialItemDefinition   is this an OFFICIAL BLOBBI item?
+ *                                 → the catalog, the shop, gameplay
+ *   parseTrustedItemDefinition    may this definition DESCRIBE an item a
+ *                                 discovered inventory refers to?
+ *                                 → display of external inventories only
+ * ```
+ *
+ * Widening the official parser to admit a partner issuer would have made every
+ * partner item an "official Blobbi item" everywhere at once — purchasable,
+ * equippable, effect-eligible, consumable. Adding a second, narrower-purpose
+ * parser leaves every pre-existing gate saying exactly what it said before.
+ */
+export function parseTrustedItemDefinition(
+  event: NostrEvent,
+): GameItemDefinition | null {
+  if (!isTrustedItemIssuer(event.pubkey)) return null;
+  const result = parseGameItemDefinitionResult(event, { mode: 'permissive' });
+  if (!result.ok) return null;
+  // Defensive, exactly as in the official parser: the parsed issuer is set
+  // from the event pubkey, and must still be one we trust.
+  if (!isTrustedItemIssuer(result.value.issuer)) return null;
   return result.value;
 }
 

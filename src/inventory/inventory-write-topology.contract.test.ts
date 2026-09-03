@@ -197,3 +197,118 @@ describe('replaceable-event ordering is one shared policy', () => {
     }
   });
 });
+
+/**
+ * The external-inventory READ path, and the wall between it and every writer.
+ *
+ * Blobbi Island discovers and displays kind:31633 inventories written by other
+ * games. Those are replaceable events belonging to another application, and
+ * there is no cross-origin lock, no compare-and-swap and no shared revision
+ * protocol that would make a second writer safe. So Island reads them and stops
+ * there — and "stops there" is asserted here against the source tree rather
+ * than left to a code review to notice.
+ */
+describe('external inventories are read, never written', () => {
+  /** Every module in the discovery/resolution path. */
+  const EXTERNAL_READ_MODULES = [
+    'src/inventory/external-inventories.ts',
+    'src/inventory/useExternalInventories.ts',
+    'src/inventory/useExternalItemCatalog.ts',
+    'src/inventory/trusted-issuers.ts',
+  ];
+
+  it.each(EXTERNAL_READ_MODULES)('%s cannot build a kind:31633 event', (module) => {
+    const code = readCode(module);
+    expect(code).not.toMatch(/buildGameInventoryEvent\s*\(/);
+    expect(code).not.toMatch(/buildInventoryTemplate\s*\(/);
+  });
+
+  it.each(EXTERNAL_READ_MODULES)('%s cannot reach the write layer', (module) => {
+    const code = readCode(module);
+    expect(code).not.toMatch(/inventory-transaction/);
+    expect(code).not.toMatch(/runInventoryTransaction/);
+    expect(code).not.toMatch(/useInventoryMutation/);
+    expect(code).not.toMatch(/useNostrPublish/);
+    // Nor publish anything directly.
+    expect(code).not.toMatch(/nostr\.event\(/);
+    expect(code).not.toMatch(/signEvent\(/);
+    expect(code).not.toMatch(/publishToRelays\(/);
+  });
+
+  it('no writer reads a discovered external inventory', () => {
+    // The other direction, and the one that actually matters: a writer that
+    // built its replacement from a discovered inventory would publish another
+    // game's items under Blobbi's own `d`, or Blobbi's items under theirs.
+    for (const writer of [...TRANSACTION_WRITERS, 'src/inventory/inventory-transaction.ts']) {
+      const code = readCode(writer);
+      expect(code, `${writer} must not read external inventories`).not.toMatch(
+        /external-inventories|useExternalInventories|fetchExternalInventories/,
+      );
+    }
+  });
+
+  it('the ONLY inventory `d` any writer targets is Blobbi\'s own', () => {
+    // `buildInventoryTemplate` hard-codes `id: ISLAND_INVENTORY_D`; there is no
+    // parameter through which a caller could aim a write at another context.
+    const builder = readCode('src/inventory/useInventoryMutation.ts');
+    expect(builder).toMatch(/id: ISLAND_INVENTORY_D,/);
+
+    // And no production module names another game's inventory context at all.
+    const offenders = PRODUCTION_FILES.filter((file) =>
+      /['"`]farm:main['"`]/.test(stripComments(readFileSync(file, 'utf8'))),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it('production never imports the partner fixture data', () => {
+    // Fixtures are captured wire events for tests. A production import would
+    // turn one partner's published items into bundled Blobbi knowledge — the
+    // second-authoritative-catalog failure this architecture exists to avoid.
+    const offenders = PRODUCTION_FILES.filter((file) =>
+      /partner-item-event-fixtures/.test(stripComments(readFileSync(file, 'utf8'))),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * Trust stayed where it was.
+ *
+ * Adding a partner issuer must not have widened any gate that decides what a
+ * Blobbi item IS — the catalog, the shop, equipping, renderer effects. Those
+ * all key on the official issuer or on full official addresses, and none of
+ * them may consult the cross-game trust table.
+ */
+describe('cross-game trust does not reach Blobbi gameplay', () => {
+  const GAMEPLAY_GATES = [
+    'src/inventory/useItemCatalog.ts',
+    'src/inventory/registry.ts',
+    'src/inventory/shop-catalog.ts',
+    'src/inventory/care-store-catalog.ts',
+    'src/inventory/clothing-store-catalog.ts',
+    'src/placement/policy.ts',
+    'src/effects/official-visual-effect-items.ts',
+    'src/arcade/prizes/official-prize-catalog.ts',
+    'src/inventory/useUseItem.ts',
+  ];
+
+  it.each(GAMEPLAY_GATES)('%s does not consult the trusted issuer set', (gate) => {
+    const code = readCode(gate);
+    expect(code).not.toMatch(/trusted-issuers/);
+    expect(code).not.toMatch(/isTrustedItemIssuer|getTrustedItemIssuer/);
+    expect(code).not.toMatch(/parseTrustedItemDefinition/);
+  });
+
+  it('the official catalog still filters on the official issuer alone', () => {
+    const catalog = readCode('src/inventory/useItemCatalog.ts');
+    expect(catalog).toMatch(/authors: \[OFFICIAL_ITEM_ISSUER_PUBKEY\]/);
+    expect(catalog).toMatch(/parseOfficialItemDefinition\(/);
+  });
+
+  it('the official parser still compares against the official issuer', () => {
+    const adapter = readCode('src/inventory/protocol-adapter.ts');
+    expect(adapter).toMatch(
+      /export function parseOfficialItemDefinition[\s\S]{0,400}?event\.pubkey !== OFFICIAL_ITEM_ISSUER_PUBKEY/,
+    );
+  });
+});

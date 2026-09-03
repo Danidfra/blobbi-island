@@ -1,6 +1,6 @@
 # Blobbi Island — Inventory Architecture (kind:31632 / kind:31633)
 
-Status: clean implementation on top of `@nostr-games/inventory@0.1.0`.
+Status: clean implementation on top of `@nostr-games/inventory@0.3.0`.
 This document describes the new inventory foundation. It replaces the legacy
 kind:11125 `storage` consumable inventory. It is **not** a migration: no legacy
 inventory data is copied, and no dual-read / dual-write exists.
@@ -10,6 +10,8 @@ inventory data is copied, and no dual-read / dual-write exists.
 - **Item catalog:** official **kind:31632** Game Item Definitions signed by the
   official issuer.
 - **Player inventory:** **kind:31633** Game Inventory events owned by the user.
+  Island WRITES exactly one (`blobbi:island`) and READS the others the player
+  has authored — see [Cross-game inventories](#cross-game-inventories).
 - **Protocol logic:** `@nostr-games/inventory` owns all parsing, validation,
   building, addressing, quantities, duplicate handling, parse modes, and
   result/error types. Island never re-implements these.
@@ -101,6 +103,9 @@ republication is performed and no private key is bundled.
   The value uses the `blobbi` namespace already used by the item `d` tags. The
   package spec does not mandate a value; a single `d` is the simplest correct
   model. Future multi-inventory features should add new explicit `d` values.
+- **This is the identity Island WRITES.** A player may own several kind:31633
+  inventories, written by other games under the same key; Island discovers and
+  reads those but never writes them. See [Cross-game inventories](#cross-game-inventories).
 
 The protocol inventory representation stays **address-based**
 (`GameInventory` with `31632:<issuer>:<d>` item addresses). The Island view
@@ -114,6 +119,183 @@ legacy itemId for the UI.
 - `src/inventory/package.ts` — the single import surface for the package.
 - kind:11125 profile parsing/writing (`src/lib/blobbi-parsers.ts`) — retained
   for non-inventory fields only.
+
+---
+
+# Cross-game inventories
+
+Blobbi Island is not the only game a player's key is used in, and kind:31633 is
+not a single global inventory. A player may hold several, one per game context,
+each written by the game that owns it. Island reads the others; it writes only
+its own.
+
+The Farm is the first interoperability partner and appears below as the worked
+example, but nothing in the architecture is about the Farm — every mechanism is
+generic and a second partner needs one table entry and no code.
+
+## Author-wide discovery
+
+`src/inventory/external-inventories.ts` asks a deliberately open question:
+
+```
+{ kinds: [31633], authors: [playerPubkey] }
+```
+
+No `#d`. No expected list of contexts. No assumption about how many answers come
+back. Whatever the player has authored is what they have — which is the only
+model under which a game Island has never heard of can credit that player and be
+noticed.
+
+`useExternalInventories` wraps it in a TanStack query keyed
+`['blobbi-external-inventories-31633', pubkey]`, disabled when nobody is signed
+in, with the same 15s freshness as the Island inventory.
+
+**`blobbi:island` is excluded from the result.** It already has a canonical
+reader (`useIslandInventory`) with its own confirmed-empty rule, publish-base
+semantics and cache; a second opinion about it would be a regression.
+
+## Newest-per-context selection
+
+`selectNewestInventoryPerContext` resolves each `d` **independently**:
+
+1. **Parse before compare.** An event that does not parse is not an inventory at
+   any age, so it is discarded before the recency comparison rather than winning
+   it. A newer malformed `farm:main` cannot hide an older good one.
+2. **Per context.** One context answering badly cannot affect another.
+3. **Deterministic ties.** Equal `created_at` resolves to the lexicographically
+   lowest event id — NIP-01's own rule — so two clients agree.
+
+The read model exposes the inventory id, its `context` tags, and each item's
+full address, relay hint and quantity. **Unmanaged tags are not interpreted.** A
+partner's `revision` counter or its own `e` idempotency markers are another
+application's private bookkeeping; guessing at their meaning is how two clients
+end up disagreeing about state neither of them owns.
+
+## Trusted issuer policy
+
+`src/inventory/trusted-issuers.ts` holds a small hand-maintained table of
+issuers: pubkey, player-facing label, role (`blobbi` | `partner`) and known
+relays. `isTrustedItemIssuer` / `getTrustedItemIssuer` are the whole API.
+
+- **Trust is the issuer, never the `d`.** kind:31632 is addressable, so anyone
+  may publish `farm:produce:strawberry` and relays will serve it. Only
+  `31632:<issuer>:<d>` identifies an item, and only the issuer half is a trust
+  input. The table records **no item ids for any issuer** — Island learns what a
+  partner's items are by reading their published definitions, which is what lets
+  a partner add or re-art an item without a Blobbi release.
+- **Being trusted grants exactly one thing:** a definition signed by that key may
+  be parsed and displayed as the item a discovered inventory refers to. It does
+  not make an item official, purchasable, equippable, effect-bearing or
+  consumable.
+- **`parseOfficialItemDefinition` was not widened.** It still means "an official
+  Blobbi item", and still gates the catalog, the shop and gameplay.
+  `parseTrustedItemDefinition` is a sibling with a narrower purpose. Widening the
+  official parser would have made every partner item official everywhere at once.
+  A contract test asserts that no gameplay gate — the catalog, the registry, the
+  shop and store catalogs, placement policy, visual-effect trust, the prize
+  catalog, `useUseItem` — imports the trust table or the trusted parser.
+
+## Full-address definition resolution
+
+`useExternalItemCatalog` takes the item references found in discovered
+inventories and:
+
+1. parses each **full address**, dropping malformed ones;
+2. groups by issuer, dropping every issuer that is not a trusted **partner**
+   (this game's own issuer is left to `useItemCatalog`, so nothing is fetched
+   twice) — the untrusted ones are dropped **before a query is built**, so they
+   cost no connection and produce no cache entry;
+3. issues **one filter per issuer** (`authors` + `#d`) over the existing
+   `queryRelays` fan-out. One combined filter across two issuers would also match
+   issuer A publishing issuer B's `d`, which is the identity confusion full
+   addresses exist to prevent;
+4. re-checks the issuer on every returned event (`parseTrustedItemDefinition`)
+   and admits only addresses this fetch actually requested, so a relay serving
+   extra events cannot inject a definition;
+5. keeps the newest valid definition per address — parse first, compare second.
+
+Relay preference per issuer: the issuer's known relays, then the relay hints
+carried by the referencing `a` tags, then `OFFICIAL_ITEM_RELAYS`, then the
+configured relay. **Hints are collected only after the issuer has passed the
+trust gate**, must be `ws://`/`wss://`, and are capped (2 per issuer, 6 relays
+total) so a hint can never widen the fan-out beyond what a catalog load is worth.
+
+There is **no bundled fallback** for a partner item and there must not be:
+Island cannot ship metadata for an item it does not know, and inventing some
+would be the second-authoritative-catalog failure this architecture avoids. An
+address that does not resolve simply produces no entry — the path **fails
+closed** at every step.
+
+## Generic normalization
+
+No new parsing was added to understand a partner's item. `resolveFromDefinition`
+already reads `name`, `type`, `category`, `t` topics, `rarity`, `content.description`
+and the whole `image` collection straight off the published definition, and
+`category: food` was already a registry category. The Blobbi-specific fields it
+looks for (`content.metadata`, `content.effects`) are simply absent from a
+partner definition, which resolves honestly to `action: null`, `effects: {}` and
+`itemId: null`.
+
+`src/inventory/partner-item-event-fixtures.ts` holds the real signed Farm
+Strawberry event so this claim is proved against the wire and not against an
+imagined shape. A contract test asserts production never imports it.
+
+## Source-preserving display aggregation
+
+The collection view (`useInventoryCollection`) reads several inventories and
+**merges none of them**:
+
+- one `CollectionEntry` per `(sourceInventoryId, fullAddress)`;
+- quantities are **not summed** across contexts — a single number would belong to
+  neither context;
+- each entry carries `sourceInventoryId`, `source` (`island` | `external`) and,
+  for external items, the issuer's player-facing `sourceLabel`;
+- the React and selection key is the composite `<sourceInventoryId>|<address>`.
+  The address alone is no longer unique, and keying on it would collide two real
+  rows into one.
+
+The UI shows an external item in the existing grid under its generic category,
+with its real name, artwork and quantity, and a short source pill ("Farm"). No
+raw Nostr identifier — address, `d` or pubkey — reaches the player.
+
+## Read, never write
+
+**Blobbi Island may read trusted external inventories but does not write them.**
+
+kind:31633 is a **replaceable** event: a write does not patch an inventory, it
+replaces the whole event. Two applications performing read-modify-write on the
+same coordinate from different origins have
+
+- **no shared lock** — Island's cross-tab Web Lock is same-origin and provides
+  no mutual exclusion against another application at all;
+- **no compare-and-swap** — nothing at the protocol level makes "write only if
+  the base I read is still current" expressible;
+- **no shared revision semantics** — a partner's `revision` tag is a convention
+  Island does not model, and preserving a stale one while changing quantities is
+  worse than not writing.
+
+The result is a straightforward lost update: whichever side publishes second
+silently discards the other's work, including harvest idempotency markers it did
+not understand. Cross-origin co-ownership of one replaceable event needs
+coordination semantics that do not exist yet, so until they do, external
+inventories are read-only.
+
+This is why external entries are **not actionable**: they are `action: 'none'`,
+the same representation currency uses — no click handler, no consume dialog, no
+debit. The rule is about the SOURCE, not the issuer: "items in inventories we do
+not write cannot be spent yet" stays true when consumption is eventually
+designed, whereas "partner items cannot be used" would not.
+
+The boundary is structural rather than conventional:
+
+- `buildInventoryTemplate` hard-codes `id: ISLAND_INVENTORY_D`; there is no
+  parameter through which any caller could aim a write at another context;
+- `inventory-write-topology.contract.test.ts` asserts that the discovery and
+  resolution modules cannot build, sign or publish a kind:31633 event and cannot
+  reach the mutation or transaction layer; that no writer reads a discovered
+  inventory; and that no production module names another game's context at all.
+
+---
 
 ## Mutation flow
 
