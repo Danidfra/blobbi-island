@@ -16,8 +16,9 @@
  * ids closed forever, chain walked head-first and verified — belongs to
  * `@nostr-games/inventory` (`resolveGameInventoryState`), whose
  * `docs/1416-1417-game-inventory-spend.md` is the canonical specification.
- * This module decides what to FETCH and how to PRESENT the answer. It
- * reimplements no protocol rule and publishes nothing.
+ * This module decides how to PRESENT the answer (what to fetch is
+ * `external-inventory-events.ts`). It reimplements no protocol rule and
+ * publishes nothing.
  *
  * ## The unresolved state is a state
  *
@@ -46,7 +47,7 @@ import {
   type GameInventoryFoldProblem,
   type GameInventoryFoldResolution,
 } from './package';
-import { dedupeEventsById, type ExternalReadResult } from './external-inventory-relays';
+import { dedupeEventsById } from './external-inventory-relays';
 
 /** An event id plus the relay hint a reference carried for it (`''` when unknown). */
 export interface EventReference {
@@ -162,80 +163,6 @@ export function missingFoldReferences(
     references.push({ eventId: problem.foldId, relay: hints.get(problem.foldId) ?? '' });
   }
   return references;
-}
-
-/** How the read model reaches relays. Wired in `useExternalInventoryStates.ts`. */
-export interface ExternalInventoryReadDeps {
-  /** Every kind:1416 by the owner naming the FULL inventory address. No `since`. */
-  readSpends(): Promise<ExternalReadResult>;
-  /** Every kind:1417 by the owner scoped to the FULL inventory address. */
-  readFolds(): Promise<ExternalReadResult>;
-  /** Specific kind:1417 events by id, on the configured relays plus each hint. */
-  readFoldsById(references: EventReference[]): Promise<ExternalReadResult>;
-}
-
-/** The events a derivation needs, once fetched. */
-export interface ExternalInventoryEvents {
-  spends: NostrEvent[];
-  folds: NostrEvent[];
-}
-
-export type ExternalInventoryEventsLoad =
-  | ({ status: 'ok' } & ExternalInventoryEvents)
-  /** The network could not be read well enough to derive anything. */
-  | { status: 'error'; error: string };
-
-/** Upper bound on by-id fetch rounds while walking an unusually deep chain. */
-const MAX_FOLD_FETCH_ROUNDS = 8;
-
-/**
- * Fetch what a snapshot needs to be derived.
- *
- * 1. read every candidate spend and, when the snapshot references a fold,
- *    every manifest for the inventory — one round trip normally covers the
- *    chain;
- * 2. try to resolve; on `missing-fold`, fetch the named ids from the
- *    configured relays and the relay hints the chain carries, and try again;
- * 3. stop when resolved, when nothing is missing, or when a round finds
- *    nothing new. An unresolved chain is REPORTED by the derivation the caller
- *    runs on these events, never guessed around here.
- *
- * Returns events rather than a resolution so a caller can merge in spends it
- * established itself (see `established-spends.ts`) before deriving.
- */
-export async function loadExternalInventoryEvents(
-  deps: ExternalInventoryReadDeps,
-  snapshot: GameInventory,
-): Promise<ExternalInventoryEventsLoad> {
-  const [spends, folds] = await Promise.all([
-    deps.readSpends(),
-    snapshot.fold
-      ? deps.readFolds()
-      : Promise.resolve<ExternalReadResult>({ events: [], answered: true }),
-  ]);
-  if (!spends.answered) {
-    return { status: 'error', error: 'No relay answered when reading spends against this inventory.' };
-  }
-  if (!folds.answered) {
-    return { status: 'error', error: "No relay answered when reading this inventory's settlement records." };
-  }
-
-  let known = dedupeEventsById(folds.events);
-  let resolution = resolveExternalInventoryState({ snapshot, folds: known, spends: spends.events });
-
-  for (let round = 0; round < MAX_FOLD_FETCH_ROUNDS && resolution.status === 'unresolved'; round += 1) {
-    const missing = missingFoldReferences(snapshot, resolution.chain);
-    if (missing.length === 0) break;
-
-    const fetched = await deps.readFoldsById(missing);
-    const before = known.length;
-    known = dedupeEventsById([...known, ...fetched.events]);
-    if (known.length === before) break;
-
-    resolution = resolveExternalInventoryState({ snapshot, folds: known, spends: spends.events });
-  }
-
-  return { status: 'ok', spends: dedupeEventsById(spends.events), folds: known };
 }
 
 /** A one-line, user-readable account of why a chain did not resolve. */

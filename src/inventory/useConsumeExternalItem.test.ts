@@ -338,6 +338,86 @@ describe('the happy path', () => {
   });
 });
 
+describe('a batch is ONE action', () => {
+  it('quantity 3: ONE kind:1416 with quantity 3, hunger +3 segments, XP ×3, streak/last_meal/receipt once', async () => {
+    const w = world({ effective: 4, petHunger: 10 });
+    const result = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(result.status).toBe('applied');
+    if (result.status !== 'applied') return;
+
+    // One spend, carrying the batch.
+    expect(w.signer.spendsSigned()).toBe(1);
+    expect(w.spendRelays.publish).toHaveBeenCalledTimes(1);
+    const spend = parseGameInventorySpend(w.spendRelays.publish.mock.calls[0][0])!;
+    expect(spend.quantity).toBe(3);
+
+    // One kind:31124, one kind:1124.
+    expect(w.petRelay.published.filter((e) => e.kind === 31124)).toHaveLength(1);
+    expect(w.petRelay.published.filter((e) => e.kind === 1124)).toHaveLength(1);
+
+    // Hunger: 10 + 3 × 25 = 85. XP: the shared per-unit rule × 3.
+    const state = w.petRelay.getStored()!;
+    expect(tagValue(state, 'hunger')).toBe('85');
+    // The streak advanced exactly once (from 0 to 1), not three times.
+    expect(tagValue(state, 'care_streak')).toBe('1');
+    expect(tagValue(state, PET_OP_MARKER_TAG)).toBe(result.spendId);
+    expect(readExternalSpendOp(PUBKEY, result.spendId)?.quantity).toBe(3);
+    // XP: the shared per-unit rule × 3 (measured against a single-unit run).
+    const perUnit = (await runOnce(1)).experienceGained;
+    expect(perUnit).toBeGreaterThan(0);
+    expect(result.experienceGained).toBe(perUnit * 3);
+
+    async function runOnce(q: number) {
+      const w1 = world({ effective: 4, petHunger: 10 });
+      clearExternalSpendOps();
+      const r = await runExternalConsumption(w1.deps, { ...input(inventory(4)), quantity: q });
+      clearExternalSpendOps();
+      if (r.status !== 'applied') throw new Error(r.status);
+      return r;
+    }
+  });
+
+  it('clamps a batch at 100', async () => {
+    const w = world({ effective: 4, petHunger: 60 });
+    await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 4 });
+    expect(tagValue(w.petRelay.getStored()!, 'hunger')).toBe('100');
+  });
+
+  it('a quantity above the FRESH effective balance blocks before anything is signed', async () => {
+    const w = world({ effective: 2 });
+    await expect(runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 })).rejects.toThrow(/Only 2 Strawberry left/);
+    expect(w.signer.signEvent).not.toHaveBeenCalled();
+    expect(w.spendRelays.publish).not.toHaveBeenCalled();
+  });
+
+  it('a retry of a batch reuses the same spend and does not re-apply hunger or XP', async () => {
+    const w = world({ effective: 4, petHunger: 10, petPublish: 'timeout' });
+    const first = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(first.status).toBe('effect-ambiguous');
+    // The timed-out publish HAD landed.
+    w.petRelay.setStored(petEvent({ hunger: 85, createdAt: 2_000, extraTags: [[PET_OP_MARKER_TAG, first.spendId], ['experience', '30']] }));
+    w.petRelay.setPetPublish('ok');
+    const second = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(second).toMatchObject({ status: 'applied', spendId: first.spendId, alreadyApplied: true, experienceGained: 0 });
+    expect(w.signer.spendsSigned()).toBe(1);
+    expect(tagValue(w.petRelay.getStored()!, 'hunger')).toBe('85');
+    expect(w.petRelay.published.filter((e) => e.kind === 31124)).toHaveLength(0);
+  });
+
+  it('a double-click on a batch cannot produce two spends', async () => {
+    let remaining = 4;
+    const w = world({ effective: () => remaining });
+    w.onSpendEstablished.mockImplementation((record) => {
+      remaining -= record.quantity;
+    });
+    const a = runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    const b = runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    await expect(a).resolves.toMatchObject({ status: 'applied' });
+    await expect(b).rejects.toThrow(/Only 1 Strawberry left/);
+    expect(w.signer.spendsSigned()).toBe(1);
+  });
+});
+
 describe('nothing is signed when', () => {
   async function expectNothingSigned(w: World, pattern: RegExp) {
     await expect(runExternalConsumption(w.deps, input(inventory(3)))).rejects.toThrow(pattern);

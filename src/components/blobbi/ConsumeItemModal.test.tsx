@@ -11,7 +11,7 @@ describe('ConsumeItemModal', () => {
     isOpen: true,
     onClose: vi.fn(),
     definition: appleDefinition,
-    maxQuantity: 5,
+    availableQuantity: 5,
     onUseItem: vi.fn(),
   };
 
@@ -23,11 +23,12 @@ describe('ConsumeItemModal', () => {
     );
 
     // The window names itself; the item's own name and how many the player has
-    // are content. "Max: 5" became "You have 5", which is the same fact said
-    // the way a player would say it.
+    // are content. "Available: 5" is what the player HAS — distinct from the
+    // quantity they select for this one use, which starts at 1.
     expect(await screen.findByRole('dialog')).toHaveAccessibleName('Use item');
     expect(screen.getByRole('heading', { name: 'Apple' })).toBeInTheDocument();
-    expect(screen.getByText('You have 5')).toBeInTheDocument();
+    expect(screen.getByText('Available: 5')).toBeInTheDocument();
+    expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('1');
   });
 
   it('allows quantity adjustment within limits', async () => {

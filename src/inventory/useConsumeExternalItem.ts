@@ -30,6 +30,16 @@
  * establish could never be reconciled with anything. Spend-first turns every
  * partial failure into a resumable state instead of a leak.
  *
+ * ## A batch is ONE action
+ *
+ * `quantity: N` publishes ONE kind:1416 with `["quantity", "N"]` — the spec's
+ * one-item-per-event, any-quantity model — and applies ONE feed whose stat
+ * effects and XP scale N times (`planCareEffect` with `quantity: N`; the
+ * shared XP rule is already per-unit × quantity) while the care streak,
+ * `last_meal`, `last_interaction`, the kind:31124 revision and the kind:1124
+ * receipt happen once. The spend id identifies the whole batch; a retry
+ * republishes the same event and re-applies nothing.
+ *
  * ## Not atomic, but recoverable
  *
  * Three events (immutable 1416, replaceable 31124, regular 1124) cannot be
@@ -109,9 +119,13 @@ import {
 } from './external-spend';
 import { publishToRelays } from './relay-fan-out';
 import {
-  externalInventoryStateQueryKey,
+  externalInventoryEventsQueryKey,
   fetchExternalInventoryState,
-} from './useExternalInventoryStates';
+} from './useExternalInventoryEvents';
+import {
+  mergeExternalInventoryEvent,
+  type ExternalInventoryEvents,
+} from './external-inventory-events';
 
 /** The `e` tag marker linking a kind:1124 interaction to the spend it consumed. */
 export const INTERACTION_SPEND_MARKER = 'inventory-spend';
@@ -135,6 +149,12 @@ export interface ConsumeExternalItemInput {
   compatibility: ExternalItemCompatibility;
   /** Pet to apply the effect to. */
   petId: string;
+  /**
+   * Units to consume in THIS operation (default 1). One kind:1416 carrying
+   * `quantity N`, one effect scaled N times, one action lifecycle — never N
+   * spends, never N feeds. See the module doc.
+   */
+  quantity?: number;
 }
 
 export type ConsumeExternalItemResult =
@@ -219,6 +239,11 @@ export async function runExternalConsumption(
   const action = input.definition.action;
   if (!action) throw new Error(`Item has no usable action: ${input.itemAddress}`);
 
+  const quantity = input.quantity ?? 1;
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error('Quantity must be a positive integer');
+  }
+
   const pet = deps.pets.find((p) => p.id === input.petId);
   if (!pet) throw new Error(`Blobbi ${input.petId} not found`);
 
@@ -274,13 +299,18 @@ export async function runExternalConsumption(
           if (have < 1) {
             throw new Error(`No ${input.definition.name} left in ${input.inventory.id}`);
           }
+          if (have < quantity) {
+            throw new Error(
+              `Only ${have} ${input.definition.name} left in ${input.inventory.id} (asked for ${quantity})`,
+            );
+          }
 
           const template = buildSpendTemplate({
             inventoryAddress: input.inventory.address,
             inventoryRelay: deps.relayHint ?? '',
             itemAddress: input.itemAddress,
             itemRelay: input.itemRelay ?? '',
-            quantity: 1,
+            quantity,
             nonce: mintSpendNonce(),
           });
           const signed = await signSpend(user, template, Math.floor(now() / 1000));
@@ -289,7 +319,7 @@ export async function runExternalConsumption(
             spendId: signed.id,
             inventoryAddress: input.inventory.address,
             itemAddress: input.itemAddress,
-            quantity: 1,
+            quantity,
             petId: input.petId,
             status: 'signed',
             event: signed,
@@ -499,20 +529,14 @@ export function useConsumeExternalItem() {
           fetchState: (inventory) => fetchExternalInventoryState(relays, inventory),
           relayHint: relays[0],
           onSpendEstablished: (record) => {
-            // The spend is on a relay. Put it in the SPEND cache for its
-            // inventory so the effective quantity drops now — the raw
-            // snapshot is never touched, which is what keeps the later
-            // pending → folded transition from subtracting it twice.
-            const key = externalInventoryStateQueryKey(
-              input.inventory.address,
-              input.inventory.fold?.eventId,
-            );
-            queryClient.setQueryData<{ spends: NostrEvent[]; folds: NostrEvent[] }>(
-              key,
-              (previous) =>
-                previous && !previous.spends.some((s) => s.id === record.spendId)
-                  ? { ...previous, spends: [...previous.spends, record.event] }
-                  : previous,
+            // The spend is on a relay. Merge it into the external event
+            // store so the effective quantity drops now — through the same
+            // merge a live relay delivery uses. The raw snapshot is never
+            // touched, which is what keeps the later pending → folded
+            // transition from subtracting it twice.
+            queryClient.setQueryData<ExternalInventoryEvents>(
+              externalInventoryEventsQueryKey(user?.pubkey),
+              (previous) => (previous ? mergeExternalInventoryEvent(previous, record.event) : previous),
             );
           },
           onEffectApplied: (petId, plan) => {

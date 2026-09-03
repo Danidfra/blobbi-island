@@ -384,7 +384,7 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
             setSelectedEntry(null);
           }}
           definition={selectedEntry.definition}
-          maxQuantity={selectedEntry.quantity}
+          availableQuantity={selectedEntry.quantity}
           onUseItem={(quantity) => handleUseItem(selectedEntry, quantity)}
           isLoading={isPlaying}
           loadingText="Playing..."

@@ -202,6 +202,21 @@ export function InventoryBrowser({
     [collection.entries, selectedKey],
   );
 
+  /*
+    The dialog reads the LIVE row, not the row as it was when clicked. An
+    external inventory can change while the dialog is open — the owner folds,
+    a spend from another device lands — and the available quantity has to
+    follow. If the row disappears (consumed elsewhere, inventory unresolved)
+    the dialog closes rather than offering something that is no longer there.
+  */
+  const liveUseEntry = useMemo(
+    () => (useEntry ? collection.entries.find((e) => e.key === useEntry.key) ?? null : null),
+    [collection.entries, useEntry],
+  );
+  useEffect(() => {
+    if (useEntry && (!liveUseEntry || liveUseEntry.action !== 'use')) setUseEntry(null);
+  }, [useEntry, liveUseEntry]);
+
   /**
    * Whether this surface selects things at all.
    *
@@ -278,7 +293,7 @@ export function InventoryBrowser({
       return;
     }
     if (entry.source === 'external') {
-      handleUseExternal(entry, status.currentPet.id);
+      handleUseExternal(entry, status.currentPet.id, quantity);
       return;
     }
     consumeItem(
@@ -318,7 +333,7 @@ export function InventoryBrowser({
    * one. Every outcome after the spend may exist is a STATUS, not an error —
    * the toasts below say what is owed and that the next tap finishes it.
    */
-  const handleUseExternal = (entry: CollectionEntry, petId: string) => {
+  const handleUseExternal = (entry: CollectionEntry, petId: string, quantity: number) => {
     if (!entry.inventory || !entry.compatibility) {
       toast({
         title: 'Could Not Use Item',
@@ -336,6 +351,7 @@ export function InventoryBrowser({
         definition: entry.definition,
         compatibility: entry.compatibility,
         petId,
+        quantity,
       },
       {
         onSuccess: (result) => {
@@ -343,7 +359,7 @@ export function InventoryBrowser({
           if (result.status === 'applied') {
             toast({
               title: result.resumed ? 'Finished an Earlier Feed' : 'Item Used',
-              description: `Fed ${entry.definition.name} from ${entry.sourceLabel ?? entry.sourceInventoryId} to ${petName}.${
+              description: `Fed ${quantity} ${entry.definition.name}${quantity === 1 ? '' : 's'} from ${entry.sourceLabel ?? entry.sourceInventoryId} to ${petName}.${
                 result.warning ? ` (${result.warning})` : ''
               }`,
             });
@@ -607,16 +623,20 @@ export function InventoryBrowser({
         </details>
       )}
 
-      {useEntry && (
+      {liveUseEntry && liveUseEntry.action === 'use' && (
         <ConsumeItemModal
           isOpen
           onClose={() => setUseEntry(null)}
-          definition={useEntry.definition}
-          /* An external item is spent ONE unit per action: one kind:1416, one
-             durable identity, one effect. The Island path keeps its
-             multi-unit dialog. */
-          maxQuantity={useEntry.source === 'external' ? 1 : useEntry.quantity}
-          onUseItem={(quantity) => handleUse(useEntry, quantity)}
+          definition={liveUseEntry.definition}
+          /* Available = what the player has (live effective quantity for an
+             external row); the selection may be any number up to it. Both
+             the Island path and the spend path consume N in ONE action —
+             one debit (a local 31633 write or ONE kind:1416 carrying
+             quantity N), one effect scaled N times, one receipt. Waste is
+             allowed exactly as it is for Island food: the dialog shows the
+             total effect and the clamp decides. */
+          availableQuantity={liveUseEntry.quantity}
+          onUseItem={(quantity) => handleUse(liveUseEntry, quantity)}
           isLoading={isConsuming}
           loadingText="Using..."
         />

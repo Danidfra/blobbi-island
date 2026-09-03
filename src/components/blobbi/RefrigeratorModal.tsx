@@ -260,7 +260,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
             setSelectedEntry(null);
           }}
           definition={selectedEntry.definition}
-          maxQuantity={selectedEntry.quantity}
+          availableQuantity={selectedEntry.quantity}
           onUseItem={(quantity) => handleUseItem(selectedEntry, quantity)}
           isLoading={isFeeding}
           loadingText="Feeding..."

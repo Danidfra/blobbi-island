@@ -14,7 +14,7 @@
  *   what can be worn  → useEquippableCosmetics (31632 catalog ∩ 31633 owned)
  *   what is worn      → usePlacementState (the 31634 document)
  *   what is carried   → useIslandInventory + useItemCatalog (31633 + 31632)
- *   what is elsewhere → useExternalInventories + useExternalItemCatalog
+ *   what is elsewhere → useExternalInventoryView + useExternalItemCatalog
  * ```
  *
  * and produces a flat, sorted list of {@link CollectionEntry}. It decides
@@ -28,7 +28,7 @@
  *
  * A player's things are not all in Blobbi's inventory. kind:31633 is scoped by
  * a `d`, and another game credits its own context under the same player key —
- * so `useExternalInventories` finds those, and their items join this list.
+ * so `useExternalInventoryView` finds those, and their items join this list.
  *
  * They JOIN it; they are not folded into it. Every entry records the inventory
  * it came from ({@link CollectionEntry.sourceInventoryId}) and keeps its own
@@ -47,8 +47,7 @@ import {
   getTrustedItemIssuer,
   referencedItemAddresses,
   resolveExternalItemCompatibility,
-  useExternalInventories,
-  useExternalInventoryStates,
+  useExternalInventoryView,
   useExternalItemCatalog,
   useIslandInventory,
   useItemCatalog,
@@ -245,12 +244,15 @@ export function useInventoryCollection(options: {
   const placementQuery = usePlacementState(options.characterId);
   const inventoryQuery = useIslandInventory();
   const catalogQuery = useItemCatalog();
-  const externalQuery = useExternalInventories();
+  // ONE live store for every inventory another game writes: discovery,
+  // spends and folds together, derived through the canonical package rules,
+  // kept current by a relay tail. See `useExternalInventoryEvents.ts`.
+  const externalView = useExternalInventoryView();
 
   const placement = placementQuery.data;
   const inventory = inventoryQuery.data;
   const catalog = catalogQuery.data;
-  const external = externalQuery.data;
+  const external = externalView.inventories;
 
   // Every item reference across every discovered inventory, deduped. The
   // catalog hook decides which of them belong to a trusted issuer; passing all
@@ -260,9 +262,7 @@ export function useInventoryCollection(options: {
     [external],
   );
   const externalCatalog = useExternalItemCatalog(externalRefs).data;
-  // Spend-aware state per discovered inventory: the snapshot with pending
-  // kind:1416 spends applied, or an explicit loading/unresolved state.
-  const externalStates = useExternalInventoryStates(external);
+  const externalStates = externalView.states;
 
   return useMemo((): InventoryCollection => {
     // ── what is worn ────────────────────────────────────────────────────────
@@ -338,11 +338,7 @@ export function useInventoryCollection(options: {
     for (const source of external ?? []) {
       const state = externalStates.get(source.address);
       const availability: CollectionAvailability =
-        state?.status === 'ready'
-          ? 'ready'
-          : state?.status === 'loading' || state === undefined
-            ? 'loading'
-            : 'unresolved';
+        state?.status === 'ready' ? 'ready' : state === undefined ? 'loading' : 'unresolved';
 
       for (const item of source.items) {
         const definition =
@@ -439,16 +435,15 @@ export function useInventoryCollection(options: {
         Without the second, a player whose only items are Farm produce saw an
         "empty bag" flash before the discovery answered. Both reads throw on an
         unusable relay answer (bounded timeouts) rather than pending forever,
-        so neither can leave a permanent spinner.
+        so neither can leave a permanent spinner. Live updates to the external
+        store replace it in place and re-derive — they never send the
+        collection back through this loading state.
 
         The catalog and the placement document are deliberately NOT gated on:
-        they only add wearables to a grid that can already render. Nor are the
-        per-inventory spend/fold reads: their rows appear at once with a
-        `loading` availability and become actionable when the derivation
-        settles. A grid that fills in late is strictly better than a grid that
-        never arrives.
+        they only add wearables to a grid that can already render. A grid that
+        fills in late is strictly better than a grid that never arrives.
       */
-      isLoading: inventoryQuery.isLoading || externalQuery.isLoading,
+      isLoading: inventoryQuery.isLoading || externalView.isLoading,
     };
   }, [
     cosmetics.available,
@@ -457,7 +452,7 @@ export function useInventoryCollection(options: {
     placement,
     inventory,
     inventoryQuery.isLoading,
-    externalQuery.isLoading,
+    externalView.isLoading,
     catalog,
     external,
     externalCatalog,

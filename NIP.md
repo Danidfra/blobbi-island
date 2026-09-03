@@ -169,14 +169,16 @@ model are specified in `@nostr-games/inventory`
 - **Tags** (through the canonical builder; never hand-rolled):
   - `["a", "31633:<owner>:<d>", "<relay>", "inventory"]` — the **full** inventory address;
   - `["a", "31632:<issuer>:<d>", "<relay>", "item"]` — the **full** item address;
-  - `["quantity", "1"]`;
+  - `["quantity", "<N>"]` — the whole batch of one action; never N events;
   - informational, never accounting: `["purpose", "feed:blobbi"]`,
     `["client", "blobbi-island"]`, `["nonce", "<unique>"]`, `["alt", …]`.
 - **Identity**: the event id. A retry after an ambiguous publish republishes the
   same signed event; a second signature would be a second debit.
 - Blobbi Island **never replaces** another game's kind:31633 and **never
-  publishes a kind:1417** for it; it READS kind:1417 to derive effective
-  balances. See `docs/INVENTORY_ARCHITECTURE.md` (Cross-game inventories).
+  publishes a kind:1417** for it; it READS kind:31633, kind:1416 and kind:1417
+  — an authoritative fetch plus one live subscription per relay — to derive
+  effective balances. See `docs/INVENTORY_ARCHITECTURE.md` (Cross-game
+  inventories).
 
 ### Receipt on kind 1124 (Island extension)
 

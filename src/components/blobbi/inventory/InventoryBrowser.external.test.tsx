@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TestApp } from '@/test/TestApp';
 import { InventoryBrowser } from './InventoryBrowser';
 import { entryKey, type CollectionCategory } from './useInventoryCollection';
@@ -26,9 +26,11 @@ import {
   ISLAND_INVENTORY_D,
   parseInventoryEvent,
   parseTrustedItemDefinition,
+  resolveExternalInventoryState,
   resolveFromDefinition,
   type DiscoveredInventory,
   type ExternalInventoryState,
+  type ExternalInventoryViewResult,
   type ExternalItemCatalog,
   type ResolvedBlobbiItemDefinition,
 } from '@/inventory';
@@ -41,9 +43,8 @@ import { addInventoryItemQuantity, setInventoryItemQuantity } from '@nostr-games
 
 const mockUseIslandInventory = vi.fn();
 const mockUseItemCatalog = vi.fn();
-const mockUseExternalInventories = vi.fn();
+const mockUseExternalInventoryView = vi.fn();
 const mockUseExternalItemCatalog = vi.fn();
-const mockUseExternalInventoryStates = vi.fn();
 const mockUseOptimizedStatus = vi.fn();
 const mockUseUseItem = vi.fn();
 const mockUseConsumeExternalItem = vi.fn();
@@ -54,10 +55,8 @@ vi.mock('@/inventory', async (importOriginal) => {
     ...actual,
     useIslandInventory: () => mockUseIslandInventory(),
     useItemCatalog: () => mockUseItemCatalog(),
-    useExternalInventories: () => mockUseExternalInventories(),
+    useExternalInventoryView: () => mockUseExternalInventoryView(),
     useExternalItemCatalog: () => mockUseExternalItemCatalog(),
-    useExternalInventoryStates: (inventories: DiscoveredInventory[] | undefined) =>
-      mockUseExternalInventoryStates(inventories),
     useUseItem: () => mockUseUseItem(),
     useConsumeExternalItem: () => mockUseConsumeExternalItem(),
   };
@@ -121,11 +120,32 @@ function readyState(inventory: DiscoveredInventory, effective?: [string, number]
   for (const [address, quantity] of effective ?? []) {
     inv = setInventoryItemQuantity(inv, address, quantity);
   }
-  return { inventory, status: 'ready', effective: inv };
+  const resolution = resolveExternalInventoryState({ snapshot: inv, folds: [], spends: [] });
+  return { inventory, status: 'ready', resolution, effective: inv };
 }
 
-function statesOf(...states: ExternalInventoryState[]) {
-  return new Map(states.map((state) => [state.inventory.address, state]));
+function unresolvedState(inventory: DiscoveredInventory): ExternalInventoryState {
+  const resolution = resolveExternalInventoryState({
+    snapshot: parseInventoryEvent({
+      ...inventory.snapshot.event,
+      id: 'unres'.padEnd(64, '0'),
+      tags: [...inventory.snapshot.event.tags, ['e', 'f'.repeat(64), '', 'fold']],
+    } as Parameters<typeof parseInventoryEvent>[0])!,
+    folds: [],
+    spends: [],
+  });
+  return { inventory, status: 'unresolved', resolution, problems: [] };
+}
+
+function viewOf(inventories: DiscoveredInventory[], states: ExternalInventoryState[], extra: Partial<ExternalInventoryViewResult> = {}): ExternalInventoryViewResult {
+  return {
+    inventories,
+    states: new Map(states.map((state) => [state.inventory.address, state])),
+    isLoading: false,
+    isError: false,
+    error: null,
+    ...extra,
+  };
 }
 
 function catalogOf(...definitions: ResolvedBlobbiItemDefinition[]): ExternalItemCatalog {
@@ -164,9 +184,8 @@ beforeEach(() => {
     isLoading: false,
   });
   mockUseItemCatalog.mockReturnValue({ data: undefined });
-  mockUseExternalInventories.mockReturnValue({ data: [], isLoading: false });
+  mockUseExternalInventoryView.mockReturnValue(viewOf([], []));
   mockUseExternalItemCatalog.mockReturnValue({ data: undefined });
-  mockUseExternalInventoryStates.mockReturnValue(new Map());
   mockUseUseItem.mockReturnValue({ mutate: consumeIsland, isPending: false });
   mockUseConsumeExternalItem.mockReturnValue({ mutate: consumeExternal, isPending: false });
   mockUseOptimizedStatus.mockReturnValue({
@@ -174,10 +193,9 @@ beforeEach(() => {
   });
 });
 
-function showFarm(inventory: DiscoveredInventory, state: ExternalInventoryState = readyState(inventory)) {
-  mockUseExternalInventories.mockReturnValue({ data: [inventory], isLoading: false });
+function showFarm(inventory: DiscoveredInventory, state: ExternalInventoryState | null = readyState(inventory)) {
+  mockUseExternalInventoryView.mockReturnValue(viewOf([inventory], state ? [state] : []));
   mockUseExternalItemCatalog.mockReturnValue({ data: catalogOf(STRAWBERRY_DEFINITION, FARM_TOOL_DEFINITION) });
-  mockUseExternalInventoryStates.mockReturnValue(statesOf(state));
 }
 
 describe("a partner item appears in the player's things", () => {
@@ -263,14 +281,62 @@ describe('a compatible partner item is USABLE through the spend path', () => {
     expect(consumeIsland).not.toHaveBeenCalled();
   });
 
-  it('spends ONE unit per action', async () => {
+  it('shows the AVAILABLE quantity, defaults the selection to 1, and lets the player pick up to what they have', async () => {
     render(browser());
     fireEvent.click(await tile('Strawberry'));
-    const dialog = await screen.findByRole('dialog');
-    // The quantity stepper cannot exceed one for an external item.
-    expect(dialog.textContent).not.toContain('/ 3');
+    await screen.findByRole('dialog');
+    expect(screen.getByTestId('consume-available').textContent).toBe('Available: 3');
+    const input = screen.getByLabelText('Quantity') as HTMLInputElement;
+    expect(input.value).toBe('1');
+    expect(input.max).toBe('3');
+    const plus = screen.getByRole('button', { name: 'Increase quantity' });
+    fireEvent.click(plus);
+    fireEvent.click(plus);
+    expect(input.value).toBe('3');
+    expect(plus).toBeDisabled(); // not beyond what the player has
+    // The effect readout scales: three segments.
+    expect(screen.getByRole('dialog').textContent).toContain('+75 hunger');
+  });
+
+  it('selecting 3 asks for ONE consumption of quantity 3 — never three calls', async () => {
+    render(browser());
+    fireEvent.click(await tile('Strawberry'));
+    await screen.findByRole('dialog');
+    const plus = screen.getByRole('button', { name: 'Increase quantity' });
+    fireEvent.click(plus);
+    fireEvent.click(plus);
     fireEvent.click(screen.getByRole('button', { name: 'Use' }));
     expect(consumeExternal).toHaveBeenCalledTimes(1);
+    expect(consumeExternal.mock.calls[0][0].quantity).toBe(3);
+  });
+
+  it('a live drop in the available quantity while the dialog is open revalidates the selection', async () => {
+    const inventory = farmInventory(3);
+    const { rerender } = render(browser());
+    fireEvent.click(await tile('Strawberry'));
+    await screen.findByRole('dialog');
+    const plus = screen.getByRole('button', { name: 'Increase quantity' });
+    fireEvent.click(plus);
+    fireEvent.click(plus);
+    expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('3');
+
+    // Another device spent two; the store re-derived to 1.
+    showFarm(inventory, readyState(inventory, [[STRAWBERRY, 1]]));
+    rerender(browser());
+    await screen.findByText('Available: 1');
+    expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('1');
+    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    expect(consumeExternal.mock.calls[0][0].quantity).toBe(1);
+  });
+
+  it('closes the dialog when the row is consumed elsewhere or becomes unresolved', async () => {
+    const inventory = farmInventory(3);
+    const { rerender } = render(browser());
+    fireEvent.click(await tile('Strawberry'));
+    await screen.findByRole('dialog');
+    showFarm(inventory, unresolvedState(inventory));
+    rerender(browser());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('disables the dialog while a spend is in flight', async () => {
@@ -298,7 +364,7 @@ describe('what stays display-only', () => {
 
   it('a compatible item whose inventory is still syncing', async () => {
     const inventory = farmInventory(3);
-    showFarm(inventory, { inventory, status: 'loading' });
+    showFarm(inventory, null);
     render(browser());
     const cell = await tile('Strawberry');
     expect(cell).toHaveAttribute('data-availability', 'loading');
@@ -310,7 +376,7 @@ describe('what stays display-only', () => {
 
   it('a compatible item whose fold chain could not be verified', async () => {
     const inventory = farmInventory(3);
-    showFarm(inventory, { inventory, status: 'unresolved', problems: [] });
+    showFarm(inventory, unresolvedState(inventory));
     render(browser());
     const cell = await tile('Strawberry');
     expect(cell).toHaveAttribute('data-availability', 'unresolved');
@@ -326,9 +392,8 @@ describe('provenance is kept, not merged', () => {
   it('gives the same item in two inventories two stable rows, each its own spend source', async () => {
     const main = farmInventory(3);
     const chest = farmInventory(2, 'guild:chest');
-    mockUseExternalInventories.mockReturnValue({ data: [main, chest], isLoading: false });
+    mockUseExternalInventoryView.mockReturnValue(viewOf([main, chest], [readyState(main), readyState(chest)]));
     mockUseExternalItemCatalog.mockReturnValue({ data: catalogOf(STRAWBERRY_DEFINITION) });
-    mockUseExternalInventoryStates.mockReturnValue(statesOf(readyState(main), readyState(chest)));
 
     render(browser());
 
@@ -352,11 +417,10 @@ describe('provenance is kept, not merged', () => {
 describe('failing closed', () => {
   it('renders nothing for an address whose definition did not resolve', async () => {
     const inventory = farmInventory(3);
-    mockUseExternalInventories.mockReturnValue({ data: [inventory], isLoading: false });
+    mockUseExternalInventoryView.mockReturnValue(viewOf([inventory], [readyState(inventory)]));
     mockUseExternalItemCatalog.mockReturnValue({
       data: { byAddress: new Map(), resolvedCount: 0, requestedCount: 1 },
     });
-    mockUseExternalInventoryStates.mockReturnValue(statesOf(readyState(inventory)));
 
     render(browser());
 
@@ -365,7 +429,7 @@ describe('failing closed', () => {
   });
 
   it('shows the loading state, not an empty bag, while discovery has not answered', async () => {
-    mockUseExternalInventories.mockReturnValue({ data: undefined, isLoading: true });
+    mockUseExternalInventoryView.mockReturnValue(viewOf([], [], { isLoading: true }));
     mockUseExternalItemCatalog.mockReturnValue({ data: undefined });
 
     render(browser());

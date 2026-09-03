@@ -219,8 +219,8 @@ describe('external inventories are read, never written', () => {
     'src/inventory/external-inventory-state.ts',
     'src/inventory/established-spends.ts',
     'src/inventory/external-item-compatibility.ts',
-    'src/inventory/useExternalInventories.ts',
-    'src/inventory/useExternalInventoryStates.ts',
+    'src/inventory/external-inventory-events.ts',
+    'src/inventory/useExternalInventoryEvents.ts',
     'src/inventory/useExternalItemCatalog.ts',
     'src/inventory/trusted-issuers.ts',
   ];
@@ -281,10 +281,48 @@ describe('external inventories are read, never written', () => {
     expect(spend).not.toMatch(/\['quantity'/);
   });
 
-  it('no external spend query uses a timestamp cut-off', () => {
-    for (const module of ['src/inventory/useExternalInventoryStates.ts', 'src/inventory/external-inventory-state.ts']) {
+  it('no external spend/fold query or live filter uses a timestamp cut-off', () => {
+    for (const module of [
+      'src/inventory/external-inventory-events.ts',
+      'src/inventory/useExternalInventoryEvents.ts',
+      'src/inventory/external-inventory-state.ts',
+    ]) {
       expect(readCode(module)).not.toMatch(/since\s*:/);
     }
+  });
+
+  it('there is exactly ONE live subscription site, and it is never per item or per inventory', () => {
+    // The only module allowed to open a live relay is the store hook, and it
+    // opens one REQ per relay with the batched filters. Item addresses never
+    // appear in a live filter.
+    const offenders = PRODUCTION_FILES.filter(
+      (file) =>
+        !/useExternalInventoryEvents\.ts$/.test(file) &&
+        !/external-inventory-relays\.ts$/.test(file) &&
+        /openLiveRelay\(/.test(stripComments(readFileSync(file, 'utf8'))),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+    const filters = readCode('src/inventory/external-inventory-events.ts');
+    expect(filters).toMatch(/buildGameInventorySpendFilter\(\{ authors: \[owner\], inventoryAddresses: addresses \}\)/);
+    expect(filters).not.toMatch(/itemAddresses/);
+    const hook = readCode('src/inventory/useExternalInventoryEvents.ts');
+    expect(hook).toMatch(/relayUrls\.map\(\(url\) => openLiveRelay\(url\)\)/);
+  });
+
+  it('a batch consumption signs ONE spend for N units — no per-unit loop', () => {
+    const consume = readCode('src/inventory/useConsumeExternalItem.ts');
+    expect(consume.match(/signSpend\(/g)).toHaveLength(1);
+    expect(consume.match(/buildSpendTemplate\(/g)).toHaveLength(1);
+    // The quantity travels INTO the one template, not around it.
+    expect(consume).toMatch(/quantity,\s*\n\s*nonce: mintSpendNonce\(\)/);
+  });
+
+  it('the store never mutates a raw snapshot after a spend: spends are merged, snapshots selected', () => {
+    const consume = readCode('src/inventory/useConsumeExternalItem.ts');
+    expect(consume).toMatch(/mergeExternalInventoryEvent\(previous, record\.event\)/);
+    expect(consume).not.toMatch(/setInventoryItemQuantity|removeInventoryItemQuantity/);
+    const events = readCode('src/inventory/external-inventory-events.ts');
+    expect(events).not.toMatch(/setInventoryItemQuantity|removeInventoryItemQuantity|addInventoryItemQuantity/);
   });
 
   it.each(EXTERNAL_MODULES)('%s cannot reach the kind:31633 write layer', (module) => {

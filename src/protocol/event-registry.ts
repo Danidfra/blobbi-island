@@ -488,7 +488,8 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     owningPackage: '@nostr-games/inventory',
     sourceFiles: [
       'src/inventory/external-inventory-state.ts',
-      'src/inventory/useExternalInventoryStates.ts',
+      'src/inventory/external-inventory-events.ts',
+      'src/inventory/useExternalInventoryEvents.ts',
     ],
     docs: ['docs/INVENTORY_ARCHITECTURE.md'],
     notes:

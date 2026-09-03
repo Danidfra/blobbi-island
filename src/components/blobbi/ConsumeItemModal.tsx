@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,18 @@ interface ConsumeItemModalProps {
   onClose: () => void;
   /** Resolved catalog definition (fetched 31632 or bundled fallback). */
   definition: ResolvedBlobbiItemDefinition;
-  maxQuantity: number;
+  /**
+   * How many the player HAS — the number shown as "Available". For an item in
+   * another game's inventory this is the live effective quantity, and it may
+   * change while the dialog is open.
+   */
+  availableQuantity: number;
+  /**
+   * The most that may be SELECTED in this one operation. Defaults to
+   * `availableQuantity`; a caller enforcing a per-operation cap passes less.
+   * Never confused with what the player has.
+   */
+  maxQuantity?: number;
   onUseItem: (quantity: number) => void;
   isLoading?: boolean;
   loadingText?: string;
@@ -29,12 +40,21 @@ export function ConsumeItemModal({
   isOpen,
   onClose,
   definition,
-  maxQuantity,
+  availableQuantity,
+  maxQuantity: maxQuantityProp,
   onUseItem,
   isLoading = false,
   loadingText = 'Using...',
 }: ConsumeItemModalProps) {
+  const maxQuantity = Math.max(0, Math.min(maxQuantityProp ?? availableQuantity, availableQuantity));
   const [quantity, setQuantity] = useState(1);
+
+  // The available quantity is LIVE (another game's inventory can settle or
+  // be spent elsewhere while this is open): never let the selection exceed
+  // what can currently be used.
+  useEffect(() => {
+    setQuantity((current) => Math.max(1, Math.min(current, Math.max(1, maxQuantity))));
+  }, [maxQuantity]);
 
   // An item-detail header is an unposed, compact context, so it shows the
   // item's PRIMARY image and never a pose-specific view.
@@ -86,7 +106,7 @@ export function ConsumeItemModal({
           <Button
             variant="accent"
             onClick={handleUse}
-            disabled={isLoading}
+            disabled={isLoading || maxQuantity < 1}
             className="min-h-[44px]"
           >
             {isLoading ? loadingText : 'Use'}
@@ -109,7 +129,9 @@ export function ConsumeItemModal({
             </span>
             <div className="min-w-0">
               <h3 className="truncate font-bold text-island-ink">{definition.name}</h3>
-              <p className="text-xs text-island-ink-soft">You have {maxQuantity}</p>
+              <p className="text-xs text-island-ink-soft" data-testid="consume-available">
+                Available: {availableQuantity}
+              </p>
             </div>
           </div>
         </div>

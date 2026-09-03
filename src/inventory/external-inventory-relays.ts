@@ -26,7 +26,7 @@
  * None of this is a claim of global completeness, which no relay set gives.
  */
 
-import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
+import { NRelay1, type NostrEvent, type NostrFilter } from '@nostrify/nostrify';
 
 import { RelayReadUnknownError, type RelayReader } from '@/lib/relay-read';
 
@@ -104,4 +104,27 @@ export function createExternalRelayReader(relayUrls: readonly string[]): RelayRe
 /** Relay hints worth adding to a fetch: well-formed websocket URLs. */
 export function usableRelayHints(hints: readonly string[]): string[] {
   return dedupeRelayUrls(hints.filter((hint) => /^wss?:\/\/\S+$/.test(hint)));
+}
+
+/**
+ * A live relay connection for the cross-game tail.
+ *
+ * The narrow surface `useExternalInventoryEvents` needs, so a test can stand
+ * in a fake. The real one is Nostrify's `NRelay1`: it verifies every event's
+ * signature before yielding it, reconnects with exponential backoff on its
+ * own, re-sends every open REQ when the socket reopens (and the relay then
+ * answers with stored events and a fresh EOSE), and closes the subscription
+ * when the iterator is abandoned. `close()` prevents any further reconnect.
+ */
+export interface LiveRelay {
+  req(
+    filters: NostrFilter[],
+    opts?: { signal?: AbortSignal },
+  ): AsyncIterable<['EVENT', string, NostrEvent] | ['EOSE', string] | ['CLOSED', string, string]>;
+  close(): Promise<void>;
+}
+
+/** Open a live connection to one relay. Overridden by tests. */
+export function openLiveRelay(url: string): LiveRelay {
+  return new NRelay1(url);
 }

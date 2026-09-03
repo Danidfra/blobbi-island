@@ -14,12 +14,9 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import {
   effectiveQuantity,
-  loadExternalInventoryEvents,
   missingFoldReferences,
   resolveExternalInventoryState,
-  type ExternalInventoryReadDeps,
 } from './external-inventory-state';
-import { dedupeEventsById } from './external-inventory-relays';
 import {
   KIND_GAME_INVENTORY,
   KIND_GAME_INVENTORY_FOLD,
@@ -266,70 +263,6 @@ describe('the unresolved state', () => {
     expect(r.status).toBe('unresolved');
     if (r.status !== 'unresolved') return;
     expect(missingFoldReferences(snap, r.chain)).toEqual([{ eventId: hex('f1'), relay: '' }]);
-  });
-});
-
-describe('loading the events a derivation needs', () => {
-  function deps(overrides: Partial<ExternalInventoryReadDeps> = {}): ExternalInventoryReadDeps & { calls: string[] } {
-    const calls: string[] = [];
-    return {
-      calls,
-      readSpends: async () => {
-        calls.push('spends');
-        return { events: [spend('s1')], answered: true };
-      },
-      readFolds: async () => {
-        calls.push('folds');
-        return { events: [], answered: true };
-      },
-      readFoldsById: async (refs) => {
-        calls.push(`byId:${refs.map((r) => r.eventId.slice(0, 2)).join(',')}`);
-        return { events: [], answered: true };
-      },
-      ...overrides,
-    };
-  }
-
-  it('does not read manifests for a snapshot with no fold reference', async () => {
-    const d = deps();
-    const load = await loadExternalInventoryEvents(d, snapshot([[STRAWBERRY, 3]]));
-    expect(load.status).toBe('ok');
-    expect(d.calls).toEqual(['spends']);
-  });
-
-  it('fetches a missing manifest by id, then resolves', async () => {
-    const d = deps({
-      readFoldsById: async () => ({ events: [fold('f1', { spends: [hex('s1')] })], answered: true }),
-    });
-    const snap = snapshot([[STRAWBERRY, 2]], { fold: hex('f1') });
-    const load = await loadExternalInventoryEvents(d, snap);
-    expect(load.status).toBe('ok');
-    if (load.status !== 'ok') return;
-    const r = resolveExternalInventoryState({ snapshot: snap, folds: load.folds, spends: load.spends });
-    expect(r.status).toBe('ready');
-    expect(qty(r)).toBe(2);
-  });
-
-  it('stops, and reports unresolved, when a round finds nothing new', async () => {
-    const d = deps();
-    const snap = snapshot([[STRAWBERRY, 2]], { fold: hex('f1') });
-    const load = await loadExternalInventoryEvents(d, snap);
-    expect(load.status).toBe('ok');
-    if (load.status !== 'ok') return;
-    expect(d.calls.filter((c) => c.startsWith('byId'))).toHaveLength(1);
-    const r = resolveExternalInventoryState({ snapshot: snap, folds: load.folds, spends: load.spends });
-    expect(r.status).toBe('unresolved');
-  });
-
-  it('an unanswered spend read is an error, never an empty balance', async () => {
-    const d = deps({ readSpends: async () => ({ events: [], answered: false }) });
-    const load = await loadExternalInventoryEvents(d, snapshot([[STRAWBERRY, 3]]));
-    expect(load.status).toBe('error');
-  });
-
-  it('dedupes by id', () => {
-    const s = spend('s1');
-    expect(dedupeEventsById([s, { ...s }, spend('s2')])).toHaveLength(2);
   });
 });
 

@@ -263,7 +263,7 @@ The owning game's record of exactly which kind:1416 spends a kind:31633 snapshot
 - **This client:** Implemented (read only)
 - **Protocol status:** Current
 - **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
-- **Implemented in:** `src/inventory/external-inventory-state.ts`, `src/inventory/useExternalInventoryStates.ts`
+- **Implemented in:** `src/inventory/external-inventory-state.ts`, `src/inventory/external-inventory-events.ts`, `src/inventory/useExternalInventoryEvents.ts`
 - **Documented in:** `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Island NEVER publishes one: folding is the owning game's act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance — the row is shown as unavailable and never spent against.
 

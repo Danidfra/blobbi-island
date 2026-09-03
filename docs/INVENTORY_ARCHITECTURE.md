@@ -149,9 +149,10 @@ back. Whatever the player has authored is what they have — which is the only
 model under which a game Island has never heard of can credit that player and be
 noticed.
 
-`useExternalInventories` wraps it in a TanStack query keyed
-`['blobbi-external-inventories-31633', pubkey]`, disabled when nobody is signed
-in, with the same 15s freshness as the Island inventory.
+Discovery is the first step of the ONE external store's authoritative fetch
+(see [The live external store](#the-live-external-store)); the same filter is
+also the first filter of the live tail, so a new game's inventory is
+discovered live as well.
 
 **`blobbi:island` is excluded from the result.** It already has a canonical
 reader (`useIslandInventory`) with its own confirmed-empty rule, publish-base
@@ -262,6 +263,101 @@ The UI shows an external item in the existing grid under its generic category,
 with its real name, artwork and quantity, and a short source pill ("Farm"). No
 raw Nostr identifier — address, `d` or pubkey — reaches the player.
 
+## The live external store
+
+Everything Island knows about the inventories other games write for the
+signed-in player lives in ONE value, owned by ONE TanStack query
+(`['blobbi-external-inventory-events', pubkey]`, `useExternalInventoryEvents`):
+
+```
+external inventory event store  (src/inventory/external-inventory-events.ts)
+  ├── latest valid kind:31633 per context   (canonical newest-valid selection on merge)
+  ├── immutable kind:1416 spends            (deduplicated by id)
+  └── immutable kind:1417 folds             (deduplicated by id)
+         ↓ deriveExternalInventoryStates  (+ this tab's established spends)
+  per-inventory state: ready | unresolved   (resolveGameInventoryState)
+         ↓ useExternalInventoryView
+  collection / UI
+```
+
+The store is an immutable value; `mergeExternalInventoryEvent` is the ONE pure
+function through which any event — fetched or live — enters it, and it
+returns the same object when nothing changed. The UI never learns what a relay
+is. There is no per-inventory query, no separate discovery query and no
+derived-state cache: a live event replaces the store in place and the
+derivation re-runs. That is what removed the "Syncing…" flash a live snapshot
+used to cause, and what gives an orphan kind:1417 somewhere to wait.
+
+### Initial fetch + live tail + recovery
+
+```
+1. authoritative fetch (fetchExternalInventoryEvents)
+     discovery { kinds:[31633], authors:[player] }               → newest-valid per d
+     one round  { kinds:[1416], authors:[player], #a:[addr…] }   ┐ every discovered
+                { kinds:[1417], authors:[player], #a:[addr…] }   ┘ address, no `since`
+     derive; for every unresolved inventory fetch its missing manifests BY ID
+     (configured relays + the chain's relay hints), derive again; ≤ 8 rounds
+2. live tail (useExternalInventoryLiveTail), once the store exists
+     ONE REQ per relay in the cross-game policy, carrying the same three filters
+     every EVENT → mergeExternalInventoryEvent → setQueryData → re-derive
+3. recovery
+     NRelay1 reconnects with backoff and re-sends the REQ; the relay replays and
+     sends a FRESH EOSE → every EOSE after the first invalidates the query
+     a dropped iterator → 2 s → resubscribe + invalidate
+     `online`, refetchOnReconnect, remount after staleTime → refetch
+```
+
+Nothing is missed between mount and subscription: the REQ carries no `since`,
+so attaching the tail replays every stored match (harmless — every merge
+deduplicates). Nothing is polled. `NRelay1` verifies every event's signature
+before it is yielded; the merge then checks the author against the store's
+owner, the package parsers decide validity, and the derivation decides the
+balance — a live event has exactly the same path as a fetched one.
+
+### Arrival order never changes the answer
+
+| Arrives | Effect on the store | Effect on the balance |
+| --- | --- | --- |
+| newer valid kind:31633 for a known context | replaces that context's snapshot (parse before compare; equal `created_at` → lower id) | re-derived against the chain it references |
+| malformed newer kind:31633 | not stored | none — the valid snapshot is not shadowed |
+| kind:31633 for a NEW context | stored; an authoritative refetch is triggered so its spends/folds load; the tail is re-scoped | its rows appear once derived |
+| kind:1416 (owner-signed) | stored once, whatever relay delivered it | applied/rejected at its deterministic position — `raw 4, live S1 → 3`, raw untouched |
+| kind:1416 for another inventory | stored (a context discovered later may need it) | none for this inventory |
+| kind:1417 nobody references yet | stored, INERT | none: an orphan settles nothing |
+| kind:31633 referencing a fold not yet seen | stored | **unresolved**: no balance, never the raw number; the missing id is fetched once by id, and a later live kind:1417 resolves it just as well |
+| the fold for such a snapshot | stored | resolves — the same derivation, no special case |
+| a duplicate of anything | ignored | none |
+
+The Farm's live sequence — a kind:1417 settling four spends, then a
+kind:31633 (revision 17) referencing it — therefore lands as: fold stored and
+inert → snapshot replaces the old one, its chain reaches the fold → the four
+spends are folded, the new raw quantities stand, nothing is subtracted twice.
+No refresh.
+
+### Scale
+
+Subscriptions = relays in the policy, full stop:
+
+| external inventories | relay connections | REQ subscriptions | filters per REQ |
+| --- | --- | --- | --- |
+| 1 | 2 (Farm's set + configured, deduped) | 1 per relay | 3 |
+| 10 | 2 | 1 per relay | 3 (`#a` lists 10 addresses) |
+| 50 | 2 | 1 per relay | 3 (`#a` lists 50 addresses) |
+
+A new partner game adds its relays to the policy (through its trusted-issuer
+entry), which may add a connection; it never adds a subscription per
+inventory, and nothing ever subscribes per item. A change in the address set
+closes the tail and opens a new one with the new scope.
+
+### Lifecycle
+
+The tail is keyed on the player, the relay policy and the discovered address
+set. Logout aborts the REQs and closes every relay and derives nothing;
+another player signing in gets their own store (keyed by pubkey) and their own
+tail; the filters carry `authors:[player]` and the merge re-checks the author,
+so the previous player's events can never enter the new store. Unmount closes
+everything. Tests: `useExternalInventoryEvents.test.tsx`.
+
 ## Spend-aware derivation (kind:1416 / kind:1417)
 
 A discovered snapshot is the owner's **last consolidated statement**, not the
@@ -307,20 +403,20 @@ inventory**. While the spend/fold reads are still in flight the row is marked
 
 ### Caches, and the pending → folded transition
 
-Per inventory, one query (keyed by inventory address + fold head) holds the
-fetched spends and manifests. The derivation runs over that plus the spends
-this tab itself established (`established-spends.ts`), so a spend Island just
-published reduces the effective quantity at once and a lagging relay answer
-cannot bounce it back. **The raw snapshot cache is never mutated.** That is
-what keeps the transition stable:
+The derivation runs over the store plus the spends this tab itself established
+(`established-spends.ts`), so a spend Island just published reduces the
+effective quantity at once and a lagging relay answer cannot bounce it back.
+A spend Island publishes is also merged into the store through the same merge
+a live delivery uses. **The raw snapshot is never mutated.** That is what
+keeps the transition stable, for any quantity:
 
 ```
-raw 3, pending S1               → effective 2
-Farm folds: raw 2, chain ∋ S1   → effective 2   (S1 excluded by the chain; never 2 − 1)
+raw 5, pending S1 (quantity 3)     → effective 2
+Farm folds: raw 2, chain ∋ S1      → effective 2   (S1 excluded by the chain; never 2 − 3)
 ```
 
-The owner's later kind:1417 and folding kind:31633 are discovered by the
-ordinary refetch; Island acknowledges nothing and edits nothing.
+The owner's later kind:1417 and folding kind:31633 arrive on the tail;
+Island acknowledges nothing and edits nothing.
 
 ## Compatibility policy: what an external item DOES
 
@@ -365,17 +461,18 @@ the issuer's event is never modified and no `based_on` overlay is published.
 
 Farm owns and writes `farm:main`. Blobbi discovers it read-only, derives its
 effective state, and — for a compatible item in a `ready` inventory — may
-consume ONE unit per action by publishing a **player-signed kind:1416**.
+consume N units in ONE action by publishing a **player-signed kind:1416**
+carrying `quantity N`.
 **Blobbi never replaces `farm:main` and never publishes a kind:1417 for it.**
 The Farm folds applied spends and voids rejected ones on its next own write.
 
 ```
-1. validate: action, Blobbi exists, stage allowed, the inventory is the player's
-2. FRESH derivation of the source inventory → unresolved or effective < 1: stop, sign nothing
+1. validate: action, Blobbi exists, stage allowed, the inventory is the player's, 1 ≤ N
+2. FRESH derivation of the source inventory → unresolved or effective < N: stop, sign nothing
 3. build ONE kind:1416 through the canonical builder and sign it as the owner:
      ["a", "31633:<player>:farm:main", <relay>, "inventory"]
      ["a", "31632:<farm-issuer>:farm:produce:<slug>", <relay>, "item"]
-     ["quantity", "1"]
+     ["quantity", "N"]
      ["purpose", "feed:blobbi"]  ["client", "blobbi-island"]  ["nonce", …]  ["alt", …]
    (purpose/client/nonce/alt are informational; the spec forbids them from
    affecting accounting)
@@ -387,6 +484,31 @@ The Farm folds applied spends and voids rejected ones on its next own write.
    spend id as the `blobbi_op` operation marker
 6. best-effort kind:1124 receipt carrying ["e", <spend id>, <relay>, "inventory-spend"]
 ```
+
+### A batch is one action
+
+```
+quantity N  →  one kind:1416 (quantity N)
+            →  one feed:   hunger += N × 25 (clamped at 100)
+                           XP     = N × the shared per-unit feed XP
+                                    (`calculateInventoryActionXP('feed', N)`, already per-unit × quantity)
+            →  once:       care streak, last_meal, last_interaction,
+                           the kind:31124 revision, the kind:1124 receipt
+```
+
+`planCareEffect({ quantity: N })` is the same planner Island food uses, so a
+batch of Farm produce and a batch of Apples scale identically. Never N spends,
+never N feeds, never N receipts. The spend id identifies the whole batch: a
+retry republishes the same event and, once the marker is on the pet's newest
+state, re-applies nothing.
+
+**The dialog** shows `Available: <effective quantity>` — the live number from
+the store, which can change while the dialog is open — and lets the player
+select 1…available. Waste is allowed exactly as it is for Island food: the
+dialog shows the total effect and the stat clamp decides; a "useful maximum"
+would be a product change for both paths, not a cross-game one. If the row's
+availability drops below the selection the selection follows; if the row
+disappears (consumed elsewhere, inventory unresolved) the dialog closes.
 
 Modules: `external-spend.ts` (build/sign/establish), `useConsumeExternalItem.ts`
 (the orchestration), `src/lib/external-spend-ledger.ts` (durable per-browser
@@ -455,13 +577,15 @@ no consuming game ever needs to. Island's walls are structural:
   parameter through which any caller could aim a write at another context;
 - the kind:1417 builder is not even re-exported from `package.ts`, and
   `inventory-write-topology.contract.test.ts` asserts that no production module
-  reaches it, that every cross-game module (discovery, relays, derivation,
-  established spends, compatibility, spend, consumption) cannot build a
-  kind:31633 or kind:1417 and cannot reach the inventory mutation or
+  reaches it, that every cross-game module (discovery, relays, store,
+  derivation, established spends, compatibility, spend, consumption) cannot
+  build a kind:31633 or kind:1417 and cannot reach the inventory mutation or
   transaction layer, that the read modules sign and publish nothing, that the
-  spend modules sign exactly the enumerated kinds, that no spend query carries
-  a `since`, and that no production module names another game's context or
-  item ids.
+  spend modules sign exactly the enumerated kinds, that no spend query or live
+  filter carries a `since`, that the only live-subscription site is the store
+  hook and it subscribes per relay (never per inventory or item), that a batch
+  signs exactly one spend, that no quantity is ever mutated on a snapshot, and
+  that no production module names another game's context or item ids.
 
 The Island's own consumables in `blobbi:island` are untouched: `useUseItem`
 still debits through the local kind:31633 mutation path, publishes no spend,
