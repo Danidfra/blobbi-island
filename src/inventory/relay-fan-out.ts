@@ -33,6 +33,13 @@ export interface RelayPublishOutcome {
   relay: string;
   ok: boolean;
   error?: string;
+  /**
+   * The relay gave NO verdict — a timeout or abort. The event MAY have landed
+   * there. Callers publishing immutable economic events (a kind:1416 spend)
+   * must treat this as "unknown", never as "rejected": retrying a timed-out
+   * publish with a freshly signed event is how one debit becomes two.
+   */
+  indefinite?: boolean;
 }
 
 /** Default per-relay budget. Matches the catalog's long-standing 4s. */
@@ -106,7 +113,12 @@ export async function publishToRelays(
         await relay.event(event, { signal: relaySignal });
         return { relay: url, ok: true };
       } catch (error) {
-        return { relay: url, ok: false, error: describeError(error) };
+        return {
+          relay: url,
+          ok: false,
+          error: describeError(error),
+          indefinite: isIndefiniteError(error),
+        };
       } finally {
         try {
           await relay?.close();
@@ -115,6 +127,14 @@ export async function publishToRelays(
         }
       }
     }),
+  );
+}
+
+/** Did the relay go silent (timeout/abort) rather than answer? */
+export function isIndefiniteError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === 'TimeoutError' || error.name === 'AbortError')
   );
 }
 

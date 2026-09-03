@@ -12,15 +12,20 @@
  * WRITES, and this is a read-only view of the ones it does not.
  */
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNostr } from '@nostrify/react';
 
+import { useAppContext } from '@/hooks/useAppContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 import {
   fetchExternalInventories,
   type DiscoveredInventory,
 } from './external-inventories';
+import {
+  createExternalRelayReader,
+  externalInventoryRelays,
+} from './external-inventory-relays';
 
 /** Canonical TanStack Query key factory for discovered external inventories. */
 export function externalInventoriesQueryKey(pubkey: string | undefined) {
@@ -33,14 +38,22 @@ export function externalInventoriesQueryKey(pubkey: string | undefined) {
  * discovery without a player.
  */
 export function useExternalInventories() {
-  const { nostr } = useNostr();
+  const { config } = useAppContext();
   const { user } = useCurrentUser();
+
+  // Another game's snapshot lives on THAT game's relays, not necessarily on
+  // the one Island is configured with; reading only the configured relay would
+  // derive a balance from a stale base. The cross-game relay policy is one
+  // list (`external-inventory-relays.ts`), shared with the spend/fold reads
+  // and the spend publish.
+  const relays = useMemo(() => externalInventoryRelays(config.relayUrl), [config.relayUrl]);
+  const reader = useMemo(() => createExternalRelayReader(relays), [relays]);
 
   return useQuery({
     queryKey: externalInventoriesQueryKey(user?.pubkey),
     queryFn: async (c): Promise<DiscoveredInventory[]> => {
       if (!user?.pubkey) return [];
-      return fetchExternalInventories(nostr, user.pubkey, { signal: c.signal });
+      return fetchExternalInventories(reader, user.pubkey, { signal: c.signal });
     },
     enabled: !!user?.pubkey,
     // Same freshness as the Island inventory: a harvest in another game should

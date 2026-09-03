@@ -41,6 +41,23 @@ export {
   validateGameInventory,
   // Marker (`e` tag index 3) identifying grant/receipt references in 31633
   GRANT_MARKER,
+  // Owner-wide inventory discovery filter (`authors` only → every context)
+  buildGameInventoryFilter,
+  // Spend / fold model (kind:1416 Game Inventory Spend, kind:1417 Fold
+  // Manifest). Island is a READER of folds and a PUBLISHER of spends against
+  // inventories other games own. It never builds a manifest: the fold builder
+  // (`buildGameInventoryFoldEvent`, `toBuildGameInventoryFoldInput`) is
+  // deliberately NOT re-exported, and `inventory-write-topology.contract.test.ts`
+  // asserts no production module reaches it.
+  KIND_GAME_INVENTORY_SPEND,
+  KIND_GAME_INVENTORY_FOLD,
+  INVENTORY_FOLD_MARKER,
+  buildGameInventorySpendEvent,
+  buildGameInventorySpendFilter,
+  buildGameInventoryFoldFilter,
+  parseGameInventorySpend,
+  parseGameInventoryFold,
+  resolveGameInventoryState,
   // Item images / view markers (31632 `image` tags)
   GAME_ITEM_IMAGE_MARKERS,
   isGameItemImageMarker,
@@ -130,6 +147,16 @@ export type {
   ParseWarningCode,
   KindGameItemDefinition,
   KindGameInventory,
+  // Spend / fold model (1416 / 1417)
+  KindGameInventorySpend,
+  GameInventorySpend,
+  GameInventoryFold,
+  GameInventoryFoldReference,
+  GameInventoryStateResolution,
+  GameInventoryDerivedState,
+  GameInventoryFoldResolution,
+  GameInventoryFoldProblem,
+  BuildGameInventorySpendInput,
   // Item placement (31634)
   KindGameItemPlacement,
   GameItemPlacement,

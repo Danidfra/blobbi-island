@@ -176,8 +176,10 @@ describe('what is preserved', () => {
       }),
     ]);
 
-    // The read model exposes identity, contexts and items. Nothing else from
-    // the event surfaces, so nothing else can be acted on.
+    // The read model exposes identity, contexts, items, and the parsed
+    // package snapshot the spend-aware derivation is handed (which carries
+    // the event verbatim, as the package requires). No other field surfaces
+    // — nothing here re-reads a `revision` or a partner's harvest marker.
     expect(Object.keys(inventory).sort()).toEqual([
       'address',
       'contexts',
@@ -185,9 +187,29 @@ describe('what is preserved', () => {
       'id',
       'items',
       'owner',
+      'snapshot',
     ]);
-    expect(JSON.stringify(inventory)).not.toContain('farm-harvest');
-    expect(JSON.stringify(inventory)).not.toContain('revision');
+    const { snapshot, ...readModel } = inventory;
+    expect(JSON.stringify(readModel)).not.toContain('farm-harvest');
+    expect(JSON.stringify(readModel)).not.toContain('revision');
+    // The snapshot is the package's object, untouched: its revision is the
+    // package's reading, not Island's.
+    expect(snapshot.revision).toBe(2);
+    expect(inventory.fold).toBeUndefined();
+  });
+
+  it('surfaces the fold reference the package parsed, and nothing about it is interpreted here', () => {
+    const [inventory] = selectNewestInventoryPerContext([
+      inventoryEvent({
+        d: 'farm:main',
+        created_at: 10,
+        extraTags: [['e', 'a'.repeat(64), 'wss://relay.primal.net', 'fold']],
+        items: [[STRAWBERRY, '', '1']],
+      }),
+    ]);
+    expect(inventory.fold).toEqual({ eventId: 'a'.repeat(64), relay: 'wss://relay.primal.net' });
+    // Still the raw snapshot quantity: resolution is the derivation's job.
+    expect(inventory.items[0].quantity).toBe(1);
   });
 });
 

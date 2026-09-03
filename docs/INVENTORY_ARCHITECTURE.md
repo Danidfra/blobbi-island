@@ -1,6 +1,9 @@
 # Blobbi Island — Inventory Architecture (kind:31632 / kind:31633)
 
-Status: clean implementation on top of `@nostr-games/inventory@0.3.0`.
+Status: clean implementation on top of `@nostr-games/inventory@0.4.0` at
+commit `c3e777e` (the kind:1416 / kind:1417 spend model), consumed as a local
+`file:../nostr-games-inventory` link until that commit is released to npm
+(see [Dependency](#dependency)).
 This document describes the new inventory foundation. It replaces the legacy
 kind:11125 `storage` consumable inventory. It is **not** a migration: no legacy
 inventory data is copied, and no dual-read / dual-write exists.
@@ -247,7 +250,8 @@ The collection view (`useInventoryCollection`) reads several inventories and
 
 - one `CollectionEntry` per `(sourceInventoryId, fullAddress)`;
 - quantities are **not summed** across contexts — a single number would belong to
-  neither context;
+  neither context — and, for external rows, are the EFFECTIVE quantities of the
+  spend-aware derivation below, never the raw snapshot alone;
 - each entry carries `sourceInventoryId`, `source` (`island` | `external`) and,
   for external items, the issuer's player-facing `sourceLabel`;
 - the React and selection key is the composite `<sourceInventoryId>|<address>`.
@@ -258,42 +262,220 @@ The UI shows an external item in the existing grid under its generic category,
 with its real name, artwork and quantity, and a short source pill ("Farm"). No
 raw Nostr identifier — address, `d` or pubkey — reaches the player.
 
-## Read, never write
+## Spend-aware derivation (kind:1416 / kind:1417)
 
-**Blobbi Island may read trusted external inventories but does not write them.**
+A discovered snapshot is the owner's **last consolidated statement**, not the
+current balance. Any application — Island included — may have published a
+player-signed **kind:1416 Game Inventory Spend** against it that the owner has
+not yet folded. Island therefore never displays a raw external quantity as
+definitive. For every discovered inventory it fetches
 
-kind:31633 is a **replaceable** event: a write does not patch an inventory, it
-replaces the whole event. Two applications performing read-modify-write on the
-same coordinate from different origins have
+- every kind:1416 by the owner naming the **full** inventory address
+  (`kinds:[1416]`, `authors:[owner]`, `#a:[31633:<owner>:<d>]`) — **never with
+  `since`**: a spend older than the snapshot that is not in its chain is still
+  pending, and a timestamp cut-off would lose it;
+- when the snapshot carries a `["e", <manifest>, <relay>, "fold"]` reference,
+  every kind:1417 for the inventory, then any still-missing manifest **by id**
+  on the cross-game relays plus each relay hint the chain carries (bounded to 8
+  rounds);
 
-- **no shared lock** — Island's cross-tab Web Lock is same-origin and provides
-  no mutual exclusion against another application at all;
-- **no compare-and-swap** — nothing at the protocol level makes "write only if
-  the base I read is still current" expressible;
-- **no shared revision semantics** — a partner's `revision` tag is a convention
-  Island does not model, and preserving a stale one while changing quantities is
-  worse than not writing.
+deduplicates by event id, and hands snapshot + folds + spends to the package's
+`resolveGameInventoryState`. Every rule — author must equal owner,
+`(created_at, id)` ordering, overdraw rejected in full, folded ids excluded
+exactly once, voided ids closed forever, chain walked head-first and verified —
+is the package's. `src/inventory/external-inventory-state.ts` decides what to
+fetch and how to present the answer; it reimplements nothing. The protocol is
+specified in `@nostr-games/inventory`'s `docs/1416-1417-game-inventory-spend.md`,
+which is canonical; nothing here restates it.
 
-The result is a straightforward lost update: whichever side publishes second
-silently discards the other's work, including harvest idempotency markers it did
-not understand. Cross-origin co-ownership of one replaceable event needs
-coordination semantics that do not exist yet, so until they do, external
-inventories are read-only.
+Relays: one policy, `externalInventoryRelays()` — every trusted partner
+issuer's relay set plus the configured relay. Discovery, spend/fold reads and
+the spend publish all use it, so a spend Island publishes is one the Farm's
+next fold will see.
 
-This is why external entries are **not actionable**: they are `action: 'none'`,
-the same representation currency uses — no click handler, no consume dialog, no
-debit. The rule is about the SOURCE, not the issuer: "items in inventories we do
-not write cannot be spent yet" stays true when consumption is eventually
-designed, whereas "partner items cannot be used" would not.
+### The unresolved state
 
-The boundary is structural rather than conventional:
+If a snapshot references a manifest that cannot be retrieved or verified —
+missing, malformed, scoped to another inventory, wrong author, cyclic, or
+claiming a spend it could not have settled — **there is no balance**. The row
+stays visible, marked `Unavailable`, showing the last consolidated number as
+such, with no action. Falling back to the raw quantity would resurrect items
+another game already consumed; treating every spend as pending would debit the
+player twice. Neither is done, and **Blobbi never spends against an unresolved
+inventory**. While the spend/fold reads are still in flight the row is marked
+`Syncing…` and is equally not actionable.
+
+### Caches, and the pending → folded transition
+
+Per inventory, one query (keyed by inventory address + fold head) holds the
+fetched spends and manifests. The derivation runs over that plus the spends
+this tab itself established (`established-spends.ts`), so a spend Island just
+published reduces the effective quantity at once and a lagging relay answer
+cannot bounce it back. **The raw snapshot cache is never mutated.** That is
+what keeps the transition stable:
+
+```
+raw 3, pending S1               → effective 2
+Farm folds: raw 2, chain ∋ S1   → effective 2   (S1 excluded by the chain; never 2 − 1)
+```
+
+The owner's later kind:1417 and folding kind:31633 are discovered by the
+ordinary refetch; Island acknowledges nothing and edits nothing.
+
+## Compatibility policy: what an external item DOES
+
+```
+the kind:31632 definition  = semantic identity   (issuer-signed: what the item IS)
+Island's compatibility profile = gameplay interpretation (what it DOES to a Blobbi)
+```
+
+The Farm publishes generic semantics — `type: consumable`, `category: food`,
+topic `edible` — and deliberately no Blobbi vocabulary. Island interprets them
+in exactly one place, `src/inventory/external-item-compatibility.ts`, which
+returns a **profile**, never performs an effect, and is consulted by nothing in
+the generic protocol parser, the trusted-definition parser or the derivation.
+
+An external item is usable only when **both** hold:
+
+1. its issuer (from the item's **full** address) is a trusted partner that has
+   been granted the profile — `TrustedItemIssuer.compatibility` in
+   `trusted-issuers.ts`; the Farm is granted `['raw-produce']`;
+2. its published definition has the profile's semantics: `consumable` +
+   `food` + `edible` for `raw-produce`.
+
+A trusted issuer's crafting material is not food because the issuer is trusted;
+a stranger's "edible" is not food because it says so; a Farm item mis-filed
+under `category: food` without edible-consumable semantics stays display-only.
+No item id, `d` or address of any partner appears in Island code (a contract
+test asserts `farm:produce` is named nowhere in production).
+
+`raw-produce` → `{ action: 'feed', hungerSegments: 1 }`. **One food segment is
+25 hunger points**, derived from the existing balance rather than chosen: the
+hunger meter is 0–100 and the UI reads it in 25-point bands (`needLevel`:
+critical ≤ 25, low ≤ 50), the smallest official food (Apple) restores exactly
+25, and the generic feed step is +25. Stages are the same as every official
+food (`baby`, `adult`). Prepared food from a future cooking game would be a new
+profile mapping to more segments, in the same unit — nothing else changes.
+
+For display and gameplay the row's definition is the issuer's definition with
+Island's `action`/`effects`/`stages` laid over it (`applyExternalCompatibility`);
+the issuer's event is never modified and no `based_on` overlay is published.
+
+## Consuming Farm produce: kind:1416
+
+Farm owns and writes `farm:main`. Blobbi discovers it read-only, derives its
+effective state, and — for a compatible item in a `ready` inventory — may
+consume ONE unit per action by publishing a **player-signed kind:1416**.
+**Blobbi never replaces `farm:main` and never publishes a kind:1417 for it.**
+The Farm folds applied spends and voids rejected ones on its next own write.
+
+```
+1. validate: action, Blobbi exists, stage allowed, the inventory is the player's
+2. FRESH derivation of the source inventory → unresolved or effective < 1: stop, sign nothing
+3. build ONE kind:1416 through the canonical builder and sign it as the owner:
+     ["a", "31633:<player>:farm:main", <relay>, "inventory"]
+     ["a", "31632:<farm-issuer>:farm:produce:<slug>", <relay>, "item"]
+     ["quantity", "1"]
+     ["purpose", "feed:blobbi"]  ["client", "blobbi-island"]  ["nonce", …]  ["alt", …]
+   (purpose/client/nonce/alt are informational; the spec forbids them from
+   affecting accounting)
+4. establish it: the SAME signed bytes to every cross-game relay
+     ≥1 accepted → established
+     all silent  → look up the exact id; found → established; else UNCONFIRMED
+     all refused → rejected (nothing exists; a new action signs a new spend)
+5. apply the effect on kind:31124 through the pet-state transaction, with the
+   spend id as the `blobbi_op` operation marker
+6. best-effort kind:1124 receipt carrying ["e", <spend id>, <relay>, "inventory-spend"]
+```
+
+Modules: `external-spend.ts` (build/sign/establish), `useConsumeExternalItem.ts`
+(the orchestration), `src/lib/external-spend-ledger.ts` (durable per-browser
+record of every signed spend **with the signed event**).
+
+### Ordering, and the failure policy
+
+Spend **first**, effect second — the opposite of `useUseItem`, for a reason.
+Island's own debit can fail without losing anything, so applying the effect
+first favours the player. A kind:1416 is different: its event id is the
+durable identity of the whole consumption, so an established spend can always
+have its effect recovered, whereas an effect applied before a spend that then
+fails to establish could never be reconciled with anything. Spend-first turns
+every partial failure into a **resumable state** rather than a leak:
+
+| Outcome | Ledger | Next action on the row |
+| --- | --- | --- |
+| relays silent, id not found | `unconfirmed` | republishes the **same** signed event; never signs another |
+| spend established, 31124 publish ambiguous | `effect-ambiguous` | reads the pet's newest state: marker present → done; else applies the effect — no new spend |
+| spend established, 31124 definitely not published (signer refused) | `established` | applies the effect — no new spend |
+| everything landed | `applied` | a new action signs a new spend |
+| every relay refused | `failed` | a new action signs a new spend |
+
+None of this is atomic and it is not described as such. What is guaranteed:
+one player action yields at most one kind:1416; one kind:1416 yields at most
+one effect (the marker is checked on the authoritative kind:31124 inside the
+per-pet lock before publishing); and every intermediate state is reported to
+the UI as a status, not an error, with a toast that says the next tap finishes
+it. Double-clicks are stopped by the mutation's pending state, by per-inventory
+serialization, and by the resume rule.
+
+### Eventual consistency and the multi-device overdraw
+
+A spend accepted by one relay is established but not globally final. The
+protocol orders pending spends by `(created_at, id)`; if another device spends
+the same last unit, one spend wins at its deterministic position and the Farm's
+next fold **voids** the other, permanently. Island applies the effect as soon
+as the spend is established, because waiting for the owner to fold is not a
+browser-only UX anyone would accept. The residual cost is a Blobbi fed from a
+spend that is later voided — bounded to that concurrent multi-device race
+(the fresh in-lock derivation stops every same-browser stale click), the same
+class of favour-the-user leak `useUseItem` already tolerates, and accepted
+knowingly. No backend or coordinator exists to close it.
+
+### Trust boundaries, stated plainly
+
+- **Spend authority** is cryptographic: `1416.pubkey == inventory owner`.
+  Island refuses to sign for any inventory the signed-in player does not own.
+- **Item trust** is Island policy: which issuers and which semantics it will
+  interpret. The spend protocol does not decide this.
+- **Application identity** is informational: `client: blobbi-island` proves
+  nothing and is never treated as an authorization by anyone.
+- **Snapshot authority** is a coordination convention: the Farm is the
+  designated writer of `farm:main`. Island respects it voluntarily — and
+  structurally.
+
+## Read, never replace
+
+kind:31633 is a **replaceable** event, and two applications performing
+read-modify-write on the same coordinate from different origins have no shared
+lock, no compare-and-swap and no shared revision semantics: whichever publishes
+second silently discards the other's work. The kind:1416 model exists so that
+no consuming game ever needs to. Island's walls are structural:
 
 - `buildInventoryTemplate` hard-codes `id: ISLAND_INVENTORY_D`; there is no
   parameter through which any caller could aim a write at another context;
-- `inventory-write-topology.contract.test.ts` asserts that the discovery and
-  resolution modules cannot build, sign or publish a kind:31633 event and cannot
-  reach the mutation or transaction layer; that no writer reads a discovered
-  inventory; and that no production module names another game's context at all.
+- the kind:1417 builder is not even re-exported from `package.ts`, and
+  `inventory-write-topology.contract.test.ts` asserts that no production module
+  reaches it, that every cross-game module (discovery, relays, derivation,
+  established spends, compatibility, spend, consumption) cannot build a
+  kind:31633 or kind:1417 and cannot reach the inventory mutation or
+  transaction layer, that the read modules sign and publish nothing, that the
+  spend modules sign exactly the enumerated kinds, that no spend query carries
+  a `since`, and that no production module names another game's context or
+  item ids.
+
+The Island's own consumables in `blobbi:island` are untouched: `useUseItem`
+still debits through the local kind:31633 mutation path, publishes no spend,
+and shares only the effect planner (`care-effect.ts`) with the external path.
+
+## Dependency
+
+`@nostr-games/inventory` is linked as `file:../nostr-games-inventory` (the
+sibling checkout at commit `c3e777e`, version `0.4.0`, `dist/` built there) —
+the same mechanism the Farm uses. The link is the least invasive way to consume
+an unreleased commit; replace it with the released version when it ships.
+Island's import surface stays `src/inventory/package.ts`, which now re-exports
+the spend/fold reading API and the spend builder and deliberately not the fold
+builder.
 
 ---
 

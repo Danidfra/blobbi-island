@@ -35,8 +35,8 @@ describe('application event kinds', () => {
   it('covers every kind the audit, NIP.md and the NIP-BB draft document', () => {
     const kinds = APPLICATION_EVENT_KINDS.map((k) => k.kind).sort((a, b) => a - b);
     expect(kinds).toEqual([
-      1124, 11125, 14919, 14920, 14921, 21201, 21951, 31124, 31125, 31632,
-      31633, 31634, 31950, 31951,
+      1124, 1416, 1417, 11125, 14919, 14920, 14921, 21201, 21951, 31124, 31125,
+      31632, 31633, 31634, 31950, 31951,
     ]);
   });
 
@@ -46,7 +46,7 @@ describe('application event kinds', () => {
   });
 
   it('does not claim ownership of the external inventory kinds', () => {
-    for (const kind of [31632, 31633, 31634]) {
+    for (const kind of [1416, 1417, 31632, 31633, 31634]) {
       const entry = APPLICATION_EVENT_KINDS.find((k) => k.kind === kind)!;
       expect(entry.ownership).toBe('external-package');
       expect(entry.owningPackage).toBe('@nostr-games/inventory');

@@ -11,7 +11,7 @@ import type { PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 
 import { useToast } from '@/hooks/useToast';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useUseItem } from '@/inventory';
+import { useConsumeExternalItem, useUseItem } from '@/inventory';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 import { ConsumeItemModal } from '../ConsumeItemModal';
@@ -181,7 +181,12 @@ export function InventoryBrowser({
   const [useEntry, setUseEntry] = useState<CollectionEntry | null>(null);
 
   const { status } = useOptimizedStatus();
-  const { mutate: consumeItem, isPending: isConsuming } = useUseItem();
+  const { mutate: consumeItem, isPending: isConsumingIsland } = useUseItem();
+  // Items owned in another game's inventory are debited by a player-signed
+  // kind:1416 spend, never by Island's own inventory write. Same dialog, a
+  // different path underneath.
+  const { mutate: consumeExternal, isPending: isConsumingExternal } = useConsumeExternalItem();
+  const isConsuming = isConsumingIsland || isConsumingExternal;
   const { toast } = useToast();
 
   const visible = useMemo(
@@ -272,6 +277,10 @@ export function InventoryBrowser({
       });
       return;
     }
+    if (entry.source === 'external') {
+      handleUseExternal(entry, status.currentPet.id);
+      return;
+    }
     consumeItem(
       {
         address: entry.address,
@@ -288,6 +297,71 @@ export function InventoryBrowser({
             }.${result.warning ? ` (${result.warning})` : ''}`,
           });
           setUseEntry(null);
+        },
+        onError: (error) => {
+          toast({
+            title: 'Could Not Use Item',
+            description: error.message,
+            variant: 'destructive',
+          });
+        },
+      },
+    );
+  };
+
+  /**
+   * Use ONE unit of an item owned in another game's inventory.
+   *
+   * A double-click cannot start a second spend: the mutation's own pending
+   * state disables the dialog, and the consumption serializes per inventory
+   * and resumes any unfinished spend for the row before it would sign a new
+   * one. Every outcome after the spend may exist is a STATUS, not an error —
+   * the toasts below say what is owed and that the next tap finishes it.
+   */
+  const handleUseExternal = (entry: CollectionEntry, petId: string) => {
+    if (!entry.inventory || !entry.compatibility) {
+      toast({
+        title: 'Could Not Use Item',
+        description: 'This item cannot be used from here.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const petName = status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi';
+    consumeExternal(
+      {
+        inventory: entry.inventory,
+        itemAddress: entry.address,
+        itemRelay: entry.itemRelay,
+        definition: entry.definition,
+        compatibility: entry.compatibility,
+        petId,
+      },
+      {
+        onSuccess: (result) => {
+          setUseEntry(null);
+          if (result.status === 'applied') {
+            toast({
+              title: result.resumed ? 'Finished an Earlier Feed' : 'Item Used',
+              description: `Fed ${entry.definition.name} from ${entry.sourceLabel ?? entry.sourceInventoryId} to ${petName}.${
+                result.warning ? ` (${result.warning})` : ''
+              }`,
+            });
+            return;
+          }
+          if (result.status === 'spend-unconfirmed') {
+            toast({
+              title: 'Not Confirmed Yet',
+              description: `The relays did not confirm the ${entry.definition.name}. Nothing was applied; tap it again to retry the same spend.`,
+              variant: 'destructive',
+            });
+            return;
+          }
+          toast({
+            title: 'Almost There',
+            description: `The ${entry.definition.name} was spent but ${petName}'s update was not confirmed. Tap it again to finish — it will not be spent twice.`,
+            variant: 'destructive',
+          });
         },
         onError: (error) => {
           toast({
@@ -414,6 +488,7 @@ export function InventoryBrowser({
                   data-testid={`item-${entry.address}`}
                   data-entry-key={entry.key}
                   data-source={entry.source}
+                  data-availability={entry.availability}
                   {...(entry.equipped ? { 'data-equipped': entry.slot } : {})}
                   {...(entry.action === 'none'
                     ? // Every tile with nothing to press: currency, and items
@@ -438,10 +513,20 @@ export function InventoryBrowser({
                     entry.equipped && 'border-island-grass-dark/50',
                   )}
                   /* One pill, and what it says depends on what is worth
-                     saying: a worn hat announces that it is worn; anything
-                     else that came from another game announces where from.
-                     A wearable can never be both — it is worn HERE. */
-                  stateLabel={entry.equipped ? 'Worn' : entry.sourceLabel}
+                     saying: a worn hat announces that it is worn; an item
+                     from another game announces where from — unless its
+                     balance is not current, in which case THAT is the thing
+                     worth saying. A wearable can never be both — it is worn
+                     HERE. */
+                  stateLabel={
+                    entry.equipped
+                      ? 'Worn'
+                      : entry.availability === 'loading'
+                        ? 'Syncing…'
+                        : entry.availability === 'unresolved'
+                          ? 'Unavailable'
+                          : entry.sourceLabel
+                  }
                   stateTone={entry.equipped ? 'positive' : 'accent'}
                 />
               )}
@@ -527,7 +612,10 @@ export function InventoryBrowser({
           isOpen
           onClose={() => setUseEntry(null)}
           definition={useEntry.definition}
-          maxQuantity={useEntry.quantity}
+          /* An external item is spent ONE unit per action: one kind:1416, one
+             durable identity, one effect. The Island path keeps its
+             multi-unit dialog. */
+          maxQuantity={useEntry.source === 'external' ? 1 : useEntry.quantity}
           onUseItem={(quantity) => handleUse(useEntry, quantity)}
           isLoading={isConsuming}
           loadingText="Using..."

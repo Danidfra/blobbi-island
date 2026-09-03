@@ -54,7 +54,12 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { readRelayEventsOrThrow, type RelayReader } from '@/lib/relay-read';
 
-import { ISLAND_INVENTORY_D, KIND_GAME_INVENTORY } from './package';
+import {
+  ISLAND_INVENTORY_D,
+  KIND_GAME_INVENTORY,
+  type GameInventory,
+  type GameInventoryFoldReference,
+} from './package';
 import { getInventoryItems, parseInventoryEvent } from './protocol-adapter';
 
 /** One item reference inside a discovered inventory. */
@@ -85,8 +90,25 @@ export interface DiscoveredInventory {
   contexts: readonly string[];
   /** `created_at` of the event this was selected from. */
   createdAt: number;
-  /** Item references, in the event's own tag order. */
+  /**
+   * Item references AS THE SNAPSHOT DECLARES THEM, in the event's own tag
+   * order. These are the owner's last consolidated quantities, not the
+   * effective balance: kind:1416 spends other games published may already
+   * have debited them. `external-inventory-state.ts` derives the effective
+   * quantities; nothing should treat these as spendable.
+   */
   items: readonly DiscoveredInventoryItem[];
+  /**
+   * The snapshot's kind:1417 fold reference, when it carries one. A snapshot
+   * without one has folded nothing: every valid spend against it is pending.
+   */
+  fold?: GameInventoryFoldReference;
+  /**
+   * The parsed package inventory the fields above were read from — the exact
+   * object `resolveGameInventoryState` needs. Exposed so the derivation can be
+   * handed the snapshot without re-parsing the event.
+   */
+  snapshot: GameInventory;
 }
 
 export interface SelectInventoriesOptions {
@@ -151,6 +173,8 @@ export function selectNewestInventoryPerContext(
           relay: item.relay,
           quantity: item.quantity,
         })),
+        ...(parsed.fold ? { fold: parsed.fold } : {}),
+        snapshot: parsed,
       },
     });
   }

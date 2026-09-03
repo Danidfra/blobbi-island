@@ -110,9 +110,11 @@ tag schema, parsing, validation, and quantities.
   use `d` values of the form `blobbi:<category>:<slug>` (e.g. `blobbi:food:apple`).
   This client only trusts definitions from the official issuer.
 - **Kind 31633 — Game Inventory** (addressable, `31633:<owner>:<d>`): the
-  player's inventory. Blobbi Island uses a single per-user inventory with
-  `d = "blobbi:island"`. Item references are `a` tags pointing at 31632 item
-  addresses with decimal-integer quantities.
+  player's inventory. Blobbi Island WRITES a single per-user inventory with
+  `d = "blobbi:island"`, and READS every other context the player has authored
+  (e.g. the Farm's `farm:main`), deriving their effective balances through
+  kind:1416 spends and kind:1417 folds. Item references are `a` tags pointing
+  at 31632 item addresses with decimal-integer quantities.
 
 Items fall into two kinds of category. **Consumable care items** (`food`, `toy`,
 `medicine`, `hygiene`, `energy`) carry stat effects and a gameplay `action`, and
@@ -152,6 +154,39 @@ It is generated from `src/protocol/event-registry.ts` and is not duplicated here
 See `docs/INVENTORY_ARCHITECTURE.md` for the full Island architecture.
 
 ---
+
+## Kind 1416 — Game Inventory Spend (Regular, `@nostr-games/inventory`)
+
+Blobbi Island publishes a **player-signed kind:1416** to consume ONE unit of an
+item owned in an inventory another game writes (first: Farm produce in
+`31633:<player>:farm:main`). The kind, its tags, the deterministic derivation
+(`(created_at, id)` order, overdraw rejected in full) and the kind:1417 fold
+model are specified in `@nostr-games/inventory`
+(`docs/1416-1417-game-inventory-spend.md`), which is canonical.
+
+- **Author**: the inventory owner — `event.pubkey` equals the owner in the
+  inventory address. Island refuses to sign for any other inventory.
+- **Tags** (through the canonical builder; never hand-rolled):
+  - `["a", "31633:<owner>:<d>", "<relay>", "inventory"]` — the **full** inventory address;
+  - `["a", "31632:<issuer>:<d>", "<relay>", "item"]` — the **full** item address;
+  - `["quantity", "1"]`;
+  - informational, never accounting: `["purpose", "feed:blobbi"]`,
+    `["client", "blobbi-island"]`, `["nonce", "<unique>"]`, `["alt", …]`.
+- **Identity**: the event id. A retry after an ambiguous publish republishes the
+  same signed event; a second signature would be a second debit.
+- Blobbi Island **never replaces** another game's kind:31633 and **never
+  publishes a kind:1417** for it; it READS kind:1417 to derive effective
+  balances. See `docs/INVENTORY_ARCHITECTURE.md` (Cross-game inventories).
+
+### Receipt on kind 1124 (Island extension)
+
+When the effect of a spend is applied, the kind:1124 interaction carries an
+additional `["e", "<1416 id>", "<relay>", "inventory-spend"]` reference. The
+kind:1124 schema is unchanged (its parser ignores the extra tag); the
+reference makes the receipt queryable by `#e` for reconciliation. The
+kind:31124 revision that applies the effect carries the spend id as its
+`blobbi_op` operation marker (the same marker the Mine's energy settlement
+uses), which is what makes the effect idempotent per spend id.
 
 ## Kind 31124 — Blobbi Pet State (Addressable)
 

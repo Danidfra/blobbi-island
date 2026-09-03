@@ -34,39 +34,13 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergePetStateTags } from '@/lib/blobbi-parsers';
-import type { PetState } from '@/lib/blobbi-types';
 import { buildInteractionEventTemplate } from '@blobbi-kit/core/blobbi-interaction';
-import { calculateInventoryActionXP } from '@blobbi-kit/react/lib/blobbi-xp';
-import { calculateStreakUpdate } from '@blobbi-kit/react/lib/blobbi-streak';
 
+import { planCareEffect } from './care-effect';
 import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation, getQuantity } from './useInventoryMutation';
 import { fetchInventory, inventoryQueryKey } from './useIslandInventory';
 import type { ItemAction, ResolvedBlobbiItemDefinition } from './catalog-fallback';
-
-/** Map our catalog action to the shared kind:1124 interaction action name. */
-const ACTION_TO_INTERACTION: Record<
-  ItemAction,
-  'feed' | 'play' | 'clean' | 'medicate' | 'boost'
-> = {
-  feed: 'feed',
-  play: 'play',
-  clean: 'clean',
-  medicine: 'medicate',
-  boost: 'boost',
-};
-
-/** Map our catalog action to the XP table action name (feed/play only have XP). */
-function xpForAction(action: ItemAction, quantity: number): number {
-  if (action === 'feed') return calculateInventoryActionXP('feed', quantity);
-  if (action === 'play') return calculateInventoryActionXP('play', quantity);
-  // Other actions currently grant no inventory XP in the shared table.
-  return 0;
-}
-
-function clampStat(value: number, change: number): number {
-  return Math.max(0, Math.min(100, value + change));
-}
 
 export interface UseItemInput {
   /** Canonical kind:31632 address of the item. */
@@ -155,51 +129,18 @@ export function useUseItem() {
       }
 
       // Effects come from the resolved definition. Never inferred from names.
-      const effects = definition.effects;
-
-      // Compute new stats using the existing Island clamp (shared behavior).
-      const totalEffect = (key: keyof typeof effects) =>
-        (effects[key] ?? 0) * quantity;
-      const newStats = {
-        hunger: clampStat(pet.hunger, totalEffect('hunger')),
-        happiness: clampStat(pet.happiness, totalEffect('happiness')),
-        health: clampStat(pet.health, totalEffect('health')),
-        hygiene: clampStat(pet.hygiene, totalEffect('hygiene')),
-        energy: clampStat(pet.energy, totalEffect('energy')),
-      };
-
-      const experienceGained = xpForAction(action, quantity);
-      const newExperience = pet.experience + experienceGained;
+      // The stat clamp, XP and the shared care-streak bookkeeping are the ONE
+      // planner every consumption path uses (`care-effect.ts`).
       const now = new Date();
-
-      // Care streak: reuse the SHARED @blobbi-kit streak helper
-      // (`calculateStreakUpdate`) that owns this behavior — do NOT reimplement a
-      // second algorithm. It manages all three tags consistently:
-      //   - care_streak          (streak count)
-      //   - care_streak_last_at  (unix seconds of last update)
-      //   - care_streak_last_day (local YYYY-MM-DD of last update)
-      // Rules: initialize→1, increment on the next local calendar day, no-op on
-      // same day, reset→1 after missing 2+ days. The `care_streak_last_day` is
-      // not a typed PetState field; read it from the preserved raw tags.
-      const careStreakLastDay = pet.rawTags.find(
-        ([name]) => name === 'care_streak_last_day',
-      )?.[1];
-      const streakResult = calculateStreakUpdate(
-        pet.careStreak,
-        careStreakLastDay,
-        now,
-      );
-      const newCareStreak = streakResult.newStreak;
-      // Only write streak-metadata overrides when the helper actually updated the
-      // streak; on a same-day action we leave the existing metadata untouched
-      // (preserved as-is by mergePetStateTags) so nothing is corrupted.
-      const streakOverrides: Record<string, string> = streakResult.wasUpdated
-        ? {
-            care_streak: streakResult.newStreak.toString(),
-            care_streak_last_at: streakResult.newLastAt.toString(),
-            care_streak_last_day: streakResult.newLastDay,
-          }
-        : {};
+      const {
+        newStats,
+        experienceGained,
+        newExperience,
+        newCareStreak,
+        streakOverrides,
+        updatedPet,
+        interactionAction,
+      } = planCareEffect({ pet, action, effects: definition.effects, quantity, now });
 
       // Equipment lives in kind:31634 and is untouched by feeding a Blobbi:
       // there are no `equip` tags to preserve on the 31124 republish any more.
@@ -208,22 +149,12 @@ export function useUseItem() {
       const interactionTemplate = buildInteractionEventTemplate({
         ownerPubkey: user.pubkey,
         blobbiDTag: petId,
-        action: ACTION_TO_INTERACTION[action],
+        action: interactionAction,
         source: 'blobbi-island',
         itemId: definition.itemId ?? undefined,
       });
       await publish(interactionTemplate);
 
-      const updatedPet: PetState = {
-        ...pet,
-        ...newStats,
-        experience: newExperience,
-        careStreak: newCareStreak,
-        lastInteraction: now,
-        ...(action === 'feed' ? { lastMeal: now } : {}),
-        ...(action === 'clean' ? { lastClean: now } : {}),
-        ...(action === 'medicine' ? { lastMedicine: now } : {}),
-      };
       // Pass the streak-metadata overrides so care_streak_last_at /
       // care_streak_last_day advance in lockstep with care_streak (never stale).
       const petStateTags = mergePetStateTags(updatedPet, streakOverrides);

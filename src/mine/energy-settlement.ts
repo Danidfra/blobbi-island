@@ -66,11 +66,16 @@ import {
   PetStateTransactionError,
   readPetState,
   runPetStateTransaction,
+  PET_OP_MARKER_TAG,
   type PetStateNostr,
 } from '@/lib/pet-state-transaction';
 
-/** The tag name carrying a settlement marker on kind:31124. */
-export const PET_OP_MARKER_TAG = 'blobbi_op';
+/**
+ * The tag name carrying a settlement marker on kind:31124. Owned by the
+ * pet-state transaction primitive (shared with external-item consumption);
+ * re-exported here so existing importers keep one name.
+ */
+export { PET_OP_MARKER_TAG };
 
 /** Highest energy value the game recognises (matches the shared stat clamp). */
 export const MAX_PET_ENERGY = 100;

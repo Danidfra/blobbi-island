@@ -209,30 +209,107 @@ describe('replaceable-event ordering is one shared policy', () => {
  * than left to a code review to notice.
  */
 describe('external inventories are read, never written', () => {
-  /** Every module in the discovery/resolution path. */
+  /**
+   * Every module in the discovery / derivation path. These READ. They sign
+   * nothing and publish nothing.
+   */
   const EXTERNAL_READ_MODULES = [
     'src/inventory/external-inventories.ts',
+    'src/inventory/external-inventory-relays.ts',
+    'src/inventory/external-inventory-state.ts',
+    'src/inventory/established-spends.ts',
+    'src/inventory/external-item-compatibility.ts',
     'src/inventory/useExternalInventories.ts',
+    'src/inventory/useExternalInventoryStates.ts',
     'src/inventory/useExternalItemCatalog.ts',
     'src/inventory/trusted-issuers.ts',
   ];
 
-  it.each(EXTERNAL_READ_MODULES)('%s cannot build a kind:31633 event', (module) => {
+  /**
+   * The two modules that WRITE about a foreign inventory — and the only thing
+   * they may write is a player-signed kind:1416 (plus the Blobbi's own
+   * kind:31124 / kind:1124). They sign, so the no-signing rule does not apply;
+   * every other wall does.
+   */
+  const EXTERNAL_SPEND_MODULES = [
+    'src/inventory/external-spend.ts',
+    'src/inventory/useConsumeExternalItem.ts',
+  ];
+
+  const EXTERNAL_MODULES = [...EXTERNAL_READ_MODULES, ...EXTERNAL_SPEND_MODULES];
+
+  it.each(EXTERNAL_MODULES)('%s cannot build a kind:31633 event', (module) => {
     const code = readCode(module);
     expect(code).not.toMatch(/buildGameInventoryEvent\s*\(/);
     expect(code).not.toMatch(/buildInventoryTemplate\s*\(/);
   });
 
-  it.each(EXTERNAL_READ_MODULES)('%s cannot reach the write layer', (module) => {
+  it.each(EXTERNAL_MODULES)('%s cannot build a kind:1417 fold manifest', (module) => {
+    // Folding is the OWNER's act. Island reads manifests; it never writes one
+    // for an inventory it does not own — and it owns none of the external ones.
+    const code = readCode(module);
+    expect(code).not.toMatch(/buildGameInventoryFoldEvent/);
+    expect(code).not.toMatch(/toBuildGameInventoryFoldInput/);
+  });
+
+  it('the kind:1417 builder is not even re-exported from the package surface', () => {
+    const surface = readCode('src/inventory/package.ts');
+    expect(surface).not.toMatch(/buildGameInventoryFoldEvent/);
+    expect(surface).not.toMatch(/toBuildGameInventoryFoldInput/);
+  });
+
+  it('no production module anywhere builds a kind:1417', () => {
+    const offenders = PRODUCTION_FILES.filter((file) =>
+      /buildGameInventoryFoldEvent|toBuildGameInventoryFoldInput/.test(
+        stripComments(readFileSync(file, 'utf8')),
+      ),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it('the spend path never publishes through the timeout-swallowing generic hook', () => {
+    for (const module of ['src/inventory/external-spend.ts', 'src/inventory/useConsumeExternalItem.ts']) {
+      expect(readCode(module)).not.toMatch(/useNostrPublish/);
+    }
+  });
+
+  it('a spend is built ONLY through the canonical builder, from full addresses', () => {
+    const spend = readCode('src/inventory/external-spend.ts');
+    expect(spend).toMatch(/buildGameInventorySpendEvent\(/);
+    // No hand-rolled protocol tags.
+    expect(spend).not.toMatch(/\['a',/);
+    expect(spend).not.toMatch(/\['quantity'/);
+  });
+
+  it('no external spend query uses a timestamp cut-off', () => {
+    for (const module of ['src/inventory/useExternalInventoryStates.ts', 'src/inventory/external-inventory-state.ts']) {
+      expect(readCode(module)).not.toMatch(/since\s*:/);
+    }
+  });
+
+  it.each(EXTERNAL_MODULES)('%s cannot reach the kind:31633 write layer', (module) => {
     const code = readCode(module);
     expect(code).not.toMatch(/inventory-transaction/);
     expect(code).not.toMatch(/runInventoryTransaction/);
     expect(code).not.toMatch(/useInventoryMutation/);
     expect(code).not.toMatch(/useNostrPublish/);
-    // Nor publish anything directly.
+  });
+
+  it.each(EXTERNAL_READ_MODULES)('%s signs nothing and publishes nothing', (module) => {
+    const code = readCode(module);
     expect(code).not.toMatch(/nostr\.event\(/);
     expect(code).not.toMatch(/signEvent\(/);
     expect(code).not.toMatch(/publishToRelays\(/);
+  });
+
+  it('the spend modules sign only kind:1416, kind:31124 (via the pet-state primitive) and kind:1124', () => {
+    // Every `signEvent(` call site in the spend modules is enumerated here so
+    // a new one is a deliberate, reviewed addition.
+    const spend = readCode('src/inventory/external-spend.ts');
+    expect(spend.match(/signEvent\(/g)).toHaveLength(1); // the kind:1416
+    const consume = readCode('src/inventory/useConsumeExternalItem.ts');
+    expect(consume.match(/signEvent\(/g)).toHaveLength(1); // the kind:1124 receipt
+    expect(consume).toMatch(/runPetStateTransaction\(/); // kind:31124 goes through the primitive
   });
 
   it('no writer reads a discovered external inventory', () => {
@@ -256,6 +333,19 @@ describe('external inventories are read, never written', () => {
     // And no production module names another game's inventory context at all.
     const offenders = PRODUCTION_FILES.filter((file) =>
       /['"`]farm:main['"`]/.test(stripComments(readFileSync(file, 'utf8'))),
+    ).map(rel);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no production module names a Farm item address or `d`', () => {
+    // Compatibility is decided from issuer trust + published semantics, never
+    // from a list of the partner's item ids.
+    const offenders = PRODUCTION_FILES.filter(
+      (file) =>
+        // The captured wire fixture is test data; production never imports
+        // it (asserted below).
+        !/partner-item-event-fixtures\.ts$/.test(file) &&
+        /farm:produce/.test(stripComments(readFileSync(file, 'utf8'))),
     ).map(rel);
     expect(offenders).toEqual([]);
   });
@@ -297,6 +387,18 @@ describe('cross-game trust does not reach Blobbi gameplay', () => {
     expect(code).not.toMatch(/trusted-issuers/);
     expect(code).not.toMatch(/isTrustedItemIssuer|getTrustedItemIssuer/);
     expect(code).not.toMatch(/parseTrustedItemDefinition/);
+  });
+
+  it.each(GAMEPLAY_GATES)('%s does not consult the cross-game compatibility policy', (gate) => {
+    const code = readCode(gate);
+    expect(code).not.toMatch(/external-item-compatibility/);
+    expect(code).not.toMatch(/resolveExternalItemCompatibility/);
+  });
+
+  it('the Island consumption path does not reach the spend path, nor the reverse', () => {
+    expect(readCode('src/inventory/useUseItem.ts')).not.toMatch(/useConsumeExternalItem|external-spend|kind:1416|1416/);
+    const external = readCode('src/inventory/useConsumeExternalItem.ts');
+    expect(external).not.toMatch(/useInventoryMutation|runInventoryMutationTransaction|useUseItem/);
   });
 
   it('the official catalog still filters on the official issuer alone', () => {

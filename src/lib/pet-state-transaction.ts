@@ -145,6 +145,23 @@ export class PetStateTransactionError extends Error {
 }
 
 /** The ONE cross-tab lock name for pet-state writes. Per owner AND pet. */
+/**
+ * The tag name carrying an operation marker on kind:31124.
+ *
+ * `mergePetStateTags` preserves unknown tags verbatim, so a writer that puts
+ * `[PET_OP_MARKER_TAG, <opId>]` on a revision can later read the newest state
+ * and know whether THAT operation already landed — the Mine's energy
+ * settlement and the external-item consumption both key on it. Exactly one
+ * marker rides on the event at a time (`dropTagNames: [PET_OP_MARKER_TAG]`),
+ * so it proves the most recent operation and nothing older.
+ */
+export const PET_OP_MARKER_TAG = 'blobbi_op';
+
+/** Does this revision carry the marker of operation `opId`? */
+export function hasPetOpMarker(tags: readonly (readonly string[])[], opId: string): boolean {
+  return tags.some((tag) => tag[0] === PET_OP_MARKER_TAG && tag[1] === opId);
+}
+
 export function petStateLockName(pubkey: string, petId: string): string {
   return `blobbi-pet-state:${pubkey}:${petId}`;
 }

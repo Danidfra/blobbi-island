@@ -68,12 +68,23 @@ describe('the table records issuers, not products', () => {
     expect(serialized).not.toContain('strawberry');
     for (const issuer of TRUSTED_ITEM_ISSUERS) {
       expect(Object.keys(issuer).sort()).toEqual([
+        'compatibility',
         'label',
         'pubkey',
         'relays',
         'role',
       ]);
+      // `compatibility` names Blobbi PROFILES, never partner products.
+      for (const profile of issuer.compatibility) {
+        expect(profile).toBe('raw-produce');
+      }
     }
+  });
+
+  it('grants the raw-produce profile to the Farm only, and nothing to itself', () => {
+    const byRole = Object.fromEntries(TRUSTED_ITEM_ISSUERS.map((i) => [i.role, i.compatibility]));
+    expect(byRole.blobbi).toEqual([]);
+    expect(byRole.partner).toEqual(['raw-produce']);
   });
 
   it('has unique keys', () => {

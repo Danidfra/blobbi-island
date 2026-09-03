@@ -21,6 +21,8 @@ Two independent status axes. **This client** says what the code in this reposito
 | `21951` | Shared Playback Command | Ephemeral | Blobbi Island | Implemented (read + write) | Current |
 | `31632` | Game Item Definition | Addressable | External — `@nostr-games/inventory` | Implemented (read only) | Current |
 | `31633` | Game Inventory | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `1416` | Game Inventory Spend | Regular | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `1417` | Game Inventory Fold Manifest | Regular | External — `@nostr-games/inventory` | Implemented (read only) | Current |
 | `31634` | Game Item Placement | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
 | `14919` | Blobbi Interaction (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Superseded |
 | `14920` | Blobbi Breeding Event (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Undetermined by this repository |
@@ -42,6 +44,8 @@ Addressable and replaceable kinds are referenced by coordinate. Non-addressable 
 | `21951` | not addressable |
 | `31632` | `31632:<issuer>:<d>` |
 | `31633` | `31633:<owner>:<d>` |
+| `1416` | not addressable |
+| `1417` | not addressable |
 | `31634` | `31634:<owner>:<d>` |
 | `14919` | not addressable |
 | `14920` | not addressable |
@@ -63,6 +67,8 @@ Authority in Nostr derives from authorship: an event is authoritative for a thin
 | `21951` | Blobbi Island | Session host |
 | `31632` | `@nostr-games/inventory` | Official item issuer |
 | `31633` | `@nostr-games/inventory` | The player |
+| `1416` | `@nostr-games/inventory` | The player |
+| `1417` | `@nostr-games/inventory` | The player |
 | `31634` | `@nostr-games/inventory` | The player |
 | `14919` | Blobbi Island | The player |
 | `14920` | Blobbi Island | The player |
@@ -228,6 +234,38 @@ The player's item inventory: kind:31632 addresses with integer quantities.
 - **Implemented in:** `src/inventory/useIslandInventory.ts`, `src/inventory/useInventoryMutation.ts`, `src/inventory/constants.ts`, `src/inventory/economy-entry.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).
+
+### Kind 1416 — Game Inventory Spend
+
+A player-signed debit of one item quantity from one kind:31633 inventory — how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.
+
+- **Class:** Regular
+- **Address format:** not addressable
+- **Signed by:** The player
+- **Lifecycle:** Immutable; the event id is the durable identity of the consumption. Published to the cross-game relay set; a retry after an ambiguous publish republishes the SAME signed event. Settled later by the owning game's kind:1417 fold.
+- **Expiration:** none
+- **This client:** Implemented (read + write)
+- **Protocol status:** Current
+- **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
+- **Implemented in:** `src/inventory/external-spend.ts`, `src/inventory/useConsumeExternalItem.ts`, `src/lib/external-spend-ledger.ts`
+- **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
+- **Notes:** Author MUST be the inventory owner (the package parser rejects anything else). Exactly one full inventory address, one full item address and one quantity; purpose/client/nonce/alt are informational and never affect accounting. Island signs at most one per player action and applies the Blobbi effect at most once per spend id (kind:31124 `blobbi_op` marker).
+
+### Kind 1417 — Game Inventory Fold Manifest
+
+The owning game's record of exactly which kind:1416 spends a kind:31633 snapshot has incorporated (spend) or permanently closed (void).
+
+- **Class:** Regular
+- **Address format:** not addressable
+- **Signed by:** The player
+- **Lifecycle:** Immutable, chained through `previous` references, written by the inventory OWNER before the snapshot that references it. Island only reads these to derive effective balances.
+- **Expiration:** none
+- **This client:** Implemented (read only)
+- **Protocol status:** Current
+- **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
+- **Implemented in:** `src/inventory/external-inventory-state.ts`, `src/inventory/useExternalInventoryStates.ts`
+- **Documented in:** `docs/INVENTORY_ARCHITECTURE.md`
+- **Notes:** Island NEVER publishes one: folding is the owning game's act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance — the row is shown as unavailable and never spent against.
 
 ### Kind 31634 — Game Item Placement
 

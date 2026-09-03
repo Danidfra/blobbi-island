@@ -37,6 +37,7 @@
  */
 
 import { OFFICIAL_ITEM_ISSUER_PUBKEY, OFFICIAL_ITEM_RELAYS } from './constants';
+import type { ExternalCompatibilityProfile } from './external-item-compatibility';
 
 /**
  * Whose catalog this is.
@@ -64,10 +65,24 @@ export interface TrustedItemIssuer {
   label: string;
   role: TrustedIssuerRole;
   /**
-   * Relays known to carry this issuer's definitions. Used as the preferred
-   * sources when resolving their items; never as an authorization input.
+   * Relays known to carry this issuer's definitions — and, for a partner game,
+   * the relay set that game reads and writes its inventories, kind:1416
+   * spends and kind:1417 folds on. Used as the preferred sources when
+   * resolving their items and as the destination for spends against their
+   * inventories; never as an authorization input.
    */
   relays: readonly string[];
+  /**
+   * Which Blobbi COMPATIBILITY PROFILES this issuer's items may be classified
+   * into (`external-item-compatibility.ts`). Empty means "display only": the
+   * issuer's items are shown and counted but never used on a Blobbi.
+   *
+   * This is the issuer's half of a two-part opt-in; the other half is the
+   * item's own published semantics. Granting a profile here says "we are
+   * willing to interpret this game's edible things as food", not "everything
+   * this key signs is food".
+   */
+  compatibility: readonly ExternalCompatibilityProfile[];
 }
 
 /**
@@ -90,6 +105,9 @@ export const TRUSTED_ITEM_ISSUERS: readonly TrustedItemIssuer[] = [
     label: 'Blobbi Island',
     role: 'blobbi',
     relays: OFFICIAL_ITEM_RELAYS,
+    // Own items are interpreted by the official catalog, never by the
+    // cross-game policy.
+    compatibility: [],
   },
   {
     // The Farm — the first interoperability partner, and the reason this table
@@ -101,7 +119,13 @@ export const TRUSTED_ITEM_ISSUERS: readonly TrustedItemIssuer[] = [
     pubkey: 'f47aaf2e3279fe6fcdde556336d1f740705126c9a37e6390e2ede21165199fb4',
     label: 'Farm',
     role: 'partner',
+    // The Farm reads and writes `farm:main`, its kind:1416 spends and its
+    // kind:1417 folds on this set (its `INVENTORY_RELAYS`), so a spend Island
+    // publishes here is one the Farm's next fold will see.
     relays: ['wss://relay.primal.net', 'wss://relay.ditto.pub'],
+    // Farm produce that is published as edible food is raw produce to a
+    // Blobbi. Nothing else the Farm signs is interpreted.
+    compatibility: ['raw-produce'],
   },
 ];
 

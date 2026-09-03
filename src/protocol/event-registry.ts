@@ -59,6 +59,8 @@
 import {
   KIND_GAME_ITEM_DEFINITION,
   KIND_GAME_INVENTORY,
+  KIND_GAME_INVENTORY_FOLD,
+  KIND_GAME_INVENTORY_SPEND,
   KIND_GAME_ITEM_PLACEMENT,
 } from '@nostr-games/inventory';
 import { buildGameItemAddress } from '@nostr-games/inventory';
@@ -442,6 +444,55 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md'],
     notes:
       'Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).',
+  },
+  {
+    kind: KIND_GAME_INVENTORY_SPEND, // 1416
+    name: 'Game Inventory Spend',
+    purpose:
+      'A player-signed debit of one item quantity from one kind:31633 inventory — how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.',
+    eventClass: 'regular',
+    addressFormat: null,
+    authority: 'player',
+    lifecycle:
+      'Immutable; the event id is the durable identity of the consumption. Published to the cross-game relay set; a retry after an ambiguous publish republishes the SAME signed event. Settled later by the owning game\'s kind:1417 fold.',
+    expiration: null,
+    clientStatus: 'implemented',
+    protocolStatus: 'current',
+    protocolStatusEvidence: null,
+    ownership: 'external-package',
+    owningPackage: '@nostr-games/inventory',
+    sourceFiles: [
+      'src/inventory/external-spend.ts',
+      'src/inventory/useConsumeExternalItem.ts',
+      'src/lib/external-spend-ledger.ts',
+    ],
+    docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md'],
+    notes:
+      'Author MUST be the inventory owner (the package parser rejects anything else). Exactly one full inventory address, one full item address and one quantity; purpose/client/nonce/alt are informational and never affect accounting. Island signs at most one per player action and applies the Blobbi effect at most once per spend id (kind:31124 `blobbi_op` marker).',
+  },
+  {
+    kind: KIND_GAME_INVENTORY_FOLD, // 1417
+    name: 'Game Inventory Fold Manifest',
+    purpose:
+      "The owning game's record of exactly which kind:1416 spends a kind:31633 snapshot has incorporated (spend) or permanently closed (void).",
+    eventClass: 'regular',
+    addressFormat: null,
+    authority: 'player',
+    lifecycle:
+      'Immutable, chained through `previous` references, written by the inventory OWNER before the snapshot that references it. Island only reads these to derive effective balances.',
+    expiration: null,
+    clientStatus: 'read-only',
+    protocolStatus: 'current',
+    protocolStatusEvidence: null,
+    ownership: 'external-package',
+    owningPackage: '@nostr-games/inventory',
+    sourceFiles: [
+      'src/inventory/external-inventory-state.ts',
+      'src/inventory/useExternalInventoryStates.ts',
+    ],
+    docs: ['docs/INVENTORY_ARCHITECTURE.md'],
+    notes:
+      'Island NEVER publishes one: folding is the owning game\'s act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance — the row is shown as unavailable and never spent against.',
   },
   {
     kind: KIND_GAME_ITEM_PLACEMENT, // 31634
