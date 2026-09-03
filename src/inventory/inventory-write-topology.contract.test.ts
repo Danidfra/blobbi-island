@@ -317,10 +317,15 @@ describe('external inventories are read, never written', () => {
     expect(consume).toMatch(/quantity,\s*\n\s*nonce: mintSpendNonce\(\)/);
   });
 
-  it('a refetch RECONCILES with the held store; it never replaces it', () => {
+  it('every cache write RECONCILES with the latest held store, at commit time', () => {
+    // The reconciliation is the query's `structuralSharing`: TanStack applies
+    // it inside `Query.setData` against `state.data` as it is when the write
+    // happens — for a completed fetch and for every setQueryData — so nothing
+    // can forget a live event that landed after the query function returned.
     const hook = readCode('src/inventory/useExternalInventoryEvents.ts');
-    expect(hook).toMatch(/return reconcileExternalInventoryStores\(held, fetched\.store\)/);
-    expect(hook).not.toMatch(/return fetched\.store/);
+    expect(hook).toMatch(/structuralSharing: \(held: unknown, next: unknown\) =>\s*reconcileExternalInventoryStores\(/);
+    // And the query function does NOT do its own (earlier, racy) reconcile.
+    expect(hook).not.toMatch(/getQueryData<ExternalInventoryEvents>\(\s*externalInventoryEventsQueryKey\(pubkey\)/);
   });
 
   it('admission to the store goes through the package parsers, for live and fetched events alike', () => {

@@ -137,10 +137,12 @@ vi.mock('./external-inventory-relays', async (importOriginal) => {
 });
 
 import {
+  applyLiveEvent,
   useExternalInventoryView,
   externalInventoryEventsQueryKey,
   foldRetryPolicy,
 } from './useExternalInventoryEvents';
+import type { ExternalInventoryEvents } from './external-inventory-events';
 
 const hex = (seed: string) =>
   seed.split('').map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(64, '0').slice(0, 64);
@@ -441,6 +443,79 @@ describe('a refetch reconciles — it never makes the client forget', () => {
   });
 });
 
+describe('the last window: a live event between the query result and its commit', () => {
+  /**
+   * Hook the ONE place TanStack writes a completed fetch — `Query.setData`
+   * without `manual` — and, right before it commits, deliver a live event
+   * through the production path (`applyLiveEvent` → `setQueryData`, which is
+   * a `manual` write through the same method). That is exactly "the query
+   * function has already returned; the result has not been committed yet".
+   * Against 3accc2b (reconcile inside the query function) this loses the
+   * event; against `structuralSharing` reconciliation it cannot.
+   */
+  function injectAtCommit(event: NostrEvent) {
+    const query = client.getQueryCache().find<ExternalInventoryEvents>({
+      queryKey: externalInventoryEventsQueryKey(OWNER),
+    })!;
+    const original = query.setData.bind(query);
+    const seen = { injected: false, committed: null as ExternalInventoryEvents | null };
+    query.setData = (data, options) => {
+      if (!options?.manual && !seen.injected) {
+        seen.injected = true;
+        applyLiveEvent(client, OWNER, event);
+      }
+      const committed = original(data, options);
+      if (!options?.manual) seen.committed = committed;
+      return committed;
+    };
+    return seen;
+  }
+
+  it('a live spend that lands after the refetch produced its result is NOT forgotten by the commit', async () => {
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    const seen = injectAtCommit(spend('s4'));
+
+    relaysServe([snapshot('s1', 4)]); // the relays never got s4
+    await refetch();
+    await waitFor(() => expect(seen.committed).not.toBeNull());
+    expect(seen.injected).toBe(true);
+    // The COMMITTED value itself carries s4 — not a later re-merge.
+    expect(seen.committed!.spends.map((e) => e.id)).toEqual([hex('s4')]);
+    await settle();
+    expect(strawberryQty(result)).toBe(3);
+  });
+
+  it('a live newer snapshot that lands after the refetch produced its result is NOT regressed by the commit', async () => {
+    stored.snapshots = [snapshot('r17', 4, { createdAt: 17 })];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    const seen = injectAtCommit(snapshot('r18', 2, { createdAt: 18 }));
+
+    await refetch(); // relays still serve r17
+    await waitFor(() => expect(seen.committed).not.toBeNull());
+    expect(seen.committed!.snapshots.map((e) => e.id)).toEqual([hex('r18')]);
+    await settle();
+    expect(strawberryQty(result)).toBe(2);
+  });
+
+  it('the same commit still advances to a fetched newer VALID snapshot', async () => {
+    stored.snapshots = [snapshot('r17', 4, { createdAt: 17 })];
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    const seen = injectAtCommit(spend('s4'));
+    relaysServe([snapshot('r19', 6, { createdAt: 19 })]);
+    await refetch();
+    await waitFor(() => expect(seen.committed).not.toBeNull());
+    expect(seen.committed!.snapshots.map((e) => e.id)).toEqual([hex('r19')]);
+    expect(seen.committed!.spends.map((e) => e.id)).toEqual([hex('s4')]);
+    await waitFor(() => expect(strawberryQty(result)).toBe(5));
+  });
+});
+
 describe('recovery', () => {
   it('a second EOSE (the relay re-sent the REQ after reconnecting) reconciles from the authoritative fetch', async () => {
     const { result } = renderView();
@@ -562,6 +637,111 @@ describe('missing folds', () => {
     await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
     expect(strawberryQty(result)).toBe(3);
     expect(network.discoveryReads).toBe(reads);
+  });
+});
+
+describe('missing folds: the one-shot wake-up', () => {
+  /** by-id answers scripted per call; the fetch's own round is call 1. */
+  function scriptById(script: ((call: number) => { events: NostrEvent[]; answered: boolean })) {
+    let calls = 0;
+    network.byId = () => script((calls += 1));
+  }
+  const unresolvedFarm = () => {
+    stored.spends = [spend('x1')];
+    stored.snapshots = [snapshot('s2', 3, { createdAt: 2000, fold: hex('m1') })];
+  };
+  const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+
+  it('unanswered: with NO event, refetch or reconnect, the second by-id happens by itself after ~5 s and resolves', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    unresolvedFarm();
+    scriptById((call) => (call <= 2 ? { events: [], answered: false } : { events: [fold('m1', [hex('x1')])], answered: true }));
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(2));
+    await advance(4_500);
+    expect(network.byIdReads).toBe(2);
+    const fetches = network.discoveryReads;
+    await advance(1_000);
+    await waitFor(() => expect(network.byIdReads).toBe(3));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    expect(strawberryQty(result)).toBe(3);
+    expect(network.discoveryReads).toBe(fetches); // no refetch, no reconnect
+  });
+
+  it('answered-but-absent: no retry before 30 s, exactly one at the deadline', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    unresolvedFarm();
+    scriptById((call) => (call <= 2 ? { events: [], answered: true } : { events: [fold('m1', [hex('x1')])], answered: true }));
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(2));
+    await advance(29_000);
+    expect(network.byIdReads).toBe(2);
+    await advance(1_500);
+    await waitFor(() => expect(network.byIdReads).toBe(3));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    await advance(60_000);
+    expect(network.byIdReads).toBe(3); // resolved: no further reads, no timer
+  });
+
+  it('repeated failures back off exponentially — 5 s, 10 s, 20 s — and never hammer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    unresolvedFarm();
+    scriptById(() => ({ events: [], answered: false }));
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(2)); // t≈0: fetch round + view read
+    await advance(5_200);
+    await waitFor(() => expect(network.byIdReads).toBe(3)); // +5 s
+    await advance(9_000);
+    expect(network.byIdReads).toBe(3);
+    await advance(1_500);
+    await waitFor(() => expect(network.byIdReads).toBe(4)); // +10 s
+    await advance(19_000);
+    expect(network.byIdReads).toBe(4);
+    await advance(1_500);
+    await waitFor(() => expect(network.byIdReads).toBe(5)); // +20 s
+    expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved');
+    expect(strawberryQty(result)).toBeNull();
+  });
+
+  it('a live fold arriving before the deadline resolves, and the pending wake-up performs no read', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    unresolvedFarm();
+    scriptById(() => ({ events: [], answered: false }));
+    const { result } = renderView();
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(2));
+    await waitFor(() => expect(live()[0]?.filters.length).toBe(1));
+    act(() => live()[0].emit(['EVENT', 's', fold('m1', [hex('x1')])]));
+    await waitFor(() => expect(result.current.states.get(FARM_MAIN)?.status).toBe('ready'));
+    await advance(30_000);
+    expect(network.byIdReads).toBe(2);
+  });
+
+  it('unmount cancels the pending wake-up; a user change never retries the old user\'s manifest', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    unresolvedFarm();
+    scriptById(() => ({ events: [], answered: false }));
+    const first = renderView();
+    await waitFor(() => expect(first.result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(2));
+    first.unmount();
+    await advance(30_000);
+    expect(network.byIdReads).toBe(2);
+
+    // Same scenario, then the player changes before the deadline.
+    const second = renderView();
+    await waitFor(() => expect(second.result.current.states.get(FARM_MAIN)?.status).toBe('unresolved'));
+    await waitFor(() => expect(network.byIdReads).toBe(4));
+    currentUser = { pubkey: OTHER };
+    stored.snapshots = [snapshot('o1', 9, { owner: OTHER })];
+    stored.spends = [];
+    second.rerender();
+    await waitFor(() => expect(second.result.current.inventories.map((i) => i.owner)).toEqual([OTHER]));
+    await advance(60_000);
+    expect(network.byIdReads).toBe(4);
   });
 });
 

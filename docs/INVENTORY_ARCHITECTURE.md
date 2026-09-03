@@ -308,15 +308,19 @@ fold naming an inventory this client has not discovered yet is kept, because
 the context may be discovered a moment later; the derivation ignores it until
 then. Nothing is identified by a bare `d`; no game-specific rule lives here.
 
-### Knowledge is monotonic — a refetch reconciles, it never replaces
+### Knowledge is monotonic — every cache write reconciles, none replaces
 
 The relay network is eventually consistent. A relay answering a refetch may
 not yet hold the spend another relay streamed a second ago, or the snapshot
-the owner just published. So the query function does not return what the
-relays answered; it returns
-`reconcileExternalInventoryStores(held, fetched)` — everything the relays
-taught, merged into what this tab already knew, through the same admission
-rule:
+the owner just published. So the reconciliation lives at the ONE point where
+TanStack writes the cache — the query's `structuralSharing` function, which
+TanStack calls as `structuralSharing(state.data, newData)` inside
+`Query.setData` for a completed fetch and for every `setQueryData` alike,
+with the cache AS IT IS AT COMMIT TIME. A live event that lands after the
+query function returned and before its result is committed is therefore
+still reconciled (pinned by a test that injects a live event at the commit
+point). The query function returns only what the relays taught; the store
+merges it through the same admission rule:
 
 ```
 held:    rev18, S1, S2, S3      (S3 and rev18 arrived live)
@@ -421,9 +425,15 @@ point before which readers need nothing) — future work, tracked in
 A snapshot whose chain names a manifest the store does not hold derives as
 unresolved. `useExternalInventoryView` then asks for the missing ids by id on
 the policy relays plus every usable relay hint the chain carries. Retries are
-driven by RECOVERY TRIGGERS — a completed authoritative refetch (reconnect
-EOSE, `online`, new context, remount) or the view changing — and paced by
-`foldRetryPolicy`, never by a timer:
+paced by `foldRetryPolicy` and happen on RECOVERY TRIGGERS — a completed
+authoritative refetch (reconnect EOSE, `online`, new context, remount) or the
+view changing — or, so that a quiet tab is not stuck once the network is
+healthy again, at the nearest deadline through ONE one-shot wake-up timer.
+That is not polling: with nothing missing, or nothing waiting on a deadline,
+no timer exists; the timer fires once, the read happens once, and a failure
+computes the next, longer deadline (and arms the next single timer). A
+manifest that arrives live before its deadline clears the pending wake-up
+without a read; unmount, logout and a player change cancel it.
 
 | by-id outcome | meaning | next eligible |
 | --- | --- | --- |
@@ -434,8 +444,7 @@ EOSE, `online`, new context, remount) or the view changing — and paced by
 | cancelled by this client (the view changed, the effect re-ran, unmount) | not a network verdict | at once — the trigger that cancelled it retries; it does not count as a try |
 
 A live kind:1417 resolves the inventory immediately, retry table or not.
-Unresolved never falls back to raw quantities, and nothing is polled: with no
-trigger, nothing is asked.
+Unresolved never falls back to raw quantities.
 
 ### Lifecycle
 

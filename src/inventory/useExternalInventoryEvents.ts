@@ -21,14 +21,18 @@
  * deduplicates) and then streams — so the tail is itself a second bootstrap,
  * which is what closes the gap.
  *
- * ## A refetch reconciles; it never replaces
+ * ## Every cache write reconciles; none replaces
  *
- * The query function does not return what the relays answered. It returns
- * `reconcileExternalInventoryStores(held, fetched)`: everything the relays
- * taught, merged into what this tab already knew. Relays are eventually
- * consistent, so a refetch that misses a spend the tail streamed a moment
- * ago, or the snapshot the owner just published, is an incomplete read — and
- * an incomplete read must not make the balance go back UP. Forgetting happens
+ * Relays are eventually consistent, so a refetch that misses a spend the
+ * tail streamed a moment ago, or the snapshot the owner just published, is
+ * an incomplete read — and an incomplete read must not make the balance go
+ * back UP. The reconciliation therefore lives at the ONE point where TanStack
+ * writes the cache: the query's `structuralSharing` function. TanStack calls
+ * it as `structuralSharing(state.data, newData)` inside `Query.setData`, for
+ * a completed fetch and for every `setQueryData` alike, with the cache as it
+ * is AT COMMIT TIME — so a live event that lands after the query function
+ * returned and before its result is committed is still reconciled, and the
+ * query function simply returns what the relays taught. Forgetting happens
  * only when the store itself goes away: logout, a different player (a
  * different query key), or cache removal.
  *
@@ -58,7 +62,7 @@
  * changes the `#a` list inside the same three filters.
  */
 
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 
@@ -171,7 +175,6 @@ export function applyLiveEvent(
 export function useExternalInventoryEvents() {
   const { config } = useAppContext();
   const { user } = useCurrentUser();
-  const queryClient = useQueryClient();
   const relays = useMemo(() => externalInventoryRelays(config.relayUrl), [config.relayUrl]);
   const pubkey = user?.pubkey;
 
@@ -184,14 +187,21 @@ export function useExternalInventoryEvents() {
         pubkey,
       );
       if (fetched.status === 'error') throw new Error(fetched.error);
-      // Read the held store AFTER the network answered, so a live event that
-      // arrived during the fetch is part of what is reconciled. Same owner by
-      // construction: the key is the pubkey.
-      const held = queryClient.getQueryData<ExternalInventoryEvents>(
-        externalInventoryEventsQueryKey(pubkey),
-      );
-      return reconcileExternalInventoryStores(held, fetched.store);
+      // What the relays taught, and nothing else. Reconciliation with what
+      // this tab already knows happens in `structuralSharing`, at commit.
+      return fetched.store;
     },
+    // THE monotonic write. TanStack invokes this with the cache as it is at
+    // the moment of the write (`Query.setData` → `replaceData(state.data,
+    // next)`), for the completed fetch and for every `setQueryData`, so no
+    // write path can forget a known spend/fold or regress a newer valid
+    // snapshot. Same owner by construction — the key is the pubkey — and
+    // `reconcile` refuses another owner's store regardless.
+    structuralSharing: (held: unknown, next: unknown) =>
+      reconcileExternalInventoryStores(
+        held as ExternalInventoryEvents | undefined,
+        next as ExternalInventoryEvents,
+      ),
     enabled: !!pubkey,
     // The tail keeps this current; staleness only governs the safety-net
     // refetch on remount / reconnect.
@@ -305,7 +315,8 @@ const FOLD_RETRY_MAX_BACKOFF_MS = 5 * 60_000;
  * - a transient failure is retried after a short wait, an answered absence
  *   after a longer one, both doubling per attempt up to a cap — so a chain
  *   the owner never published cannot hammer the relays, and one that simply
- *   has not propagated yet is picked up on the next recovery trigger;
+ *   has not propagated yet is picked up at its deadline (one-shot wake-up)
+ *   or on the next recovery trigger, whichever comes first;
  * - a manifest that is finally obtained drops out of the table entirely.
  */
 export const foldRetryPolicy = {
@@ -399,11 +410,18 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
 
   // Missing manifests: a snapshot that arrived (live or fetched) before the
   // fold it references derives as unresolved. Ask for the named ids by id;
-  // a later live kind:1417 resolves it just as well. Retries are driven by
-  // RECOVERY TRIGGERS (a refetch completing, the view changing) and paced by
-  // `foldRetryPolicy` — never by a timer, so there is no polling and no loop.
+  // a later live kind:1417 resolves it just as well. Retries are paced by
+  // `foldRetryPolicy` and re-evaluated on RECOVERY TRIGGERS (a refetch
+  // completing, the view changing) — and, so that a quiet tab is not stuck
+  // once the network is healthy again, by ONE one-shot wake-up armed for the
+  // nearest eligibility deadline. That is not polling: with nothing missing,
+  // or nothing waiting on a deadline, no timer exists; when one fires it
+  // asks once, and a failure computes the next, longer deadline.
   const attempts = useRef(new Map<string, FoldFetchAttempt>());
   const missing = useMemo(() => missingFoldReferencesOf(view), [view]);
+  // Bumped by the wake-up timer: a ref-held table does not re-render, so the
+  // timer deliberately goes through state to re-run the retry effect.
+  const [wakeUp, setWakeUp] = useState(0);
   // Another player, another table: manifest ids do not collide across
   // players, but a retry history is knowledge about ONE player's chains.
   useEffect(() => {
@@ -415,7 +433,27 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
     const now = Date.now();
     const table = attempts.current;
     const wanted = missing.filter((ref) => foldRetryPolicy.eligible(table.get(ref.eventId), now));
-    if (wanted.length === 0) return;
+
+    // Arm ONE wake-up for the nearest deadline among the manifests still
+    // waiting (not in flight, not yet eligible). Cleared whenever this effect
+    // re-runs — a live fold, a refetch, a view change — so a manifest that
+    // arrives before the deadline never causes a read, and there is never
+    // more than one pending timer.
+    const nearest = missing.reduce<number | null>((soonest, ref) => {
+      const attempt = table.get(ref.eventId);
+      if (!attempt || attempt.inFlight || attempt.nextEligibleAt <= now) return soonest;
+      return soonest === null ? attempt.nextEligibleAt : Math.min(soonest, attempt.nextEligibleAt);
+    }, null);
+    const wakeUpTimer =
+      nearest === null
+        ? null
+        : setTimeout(() => setWakeUp((tick) => tick + 1), Math.max(0, nearest - now));
+
+    if (wanted.length === 0) {
+      return () => {
+        if (wakeUpTimer !== null) clearTimeout(wakeUpTimer);
+      };
+    }
     for (const ref of wanted) {
       table.set(ref.eventId, foldRetryPolicy.started(table.get(ref.eventId), now));
     }
@@ -434,7 +472,12 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
             );
           }
         }
-        if (result.events.length === 0) return;
+        if (result.events.length === 0) {
+          // Nothing arrived: the table now holds a new deadline for each
+          // manifest asked for, so re-run to arm the wake-up for it.
+          setWakeUp((tick) => tick + 1);
+          return;
+        }
         const key = externalInventoryEventsQueryKey(pubkey);
         queryClient.setQueryData<ExternalInventoryEvents>(key, (previous) =>
           previous ? mergeExternalInventoryEvents(previous, result.events) : previous,
@@ -447,8 +490,10 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
         for (const ref of wanted) {
           table.set(ref.eventId, foldRetryPolicy.finished(table.get(ref.eventId), false, Date.now()));
         }
+        setWakeUp((tick) => tick + 1);
       });
     return () => {
+      if (wakeUpTimer !== null) clearTimeout(wakeUpTimer);
       abort.abort();
       // A cancelled read must not strand its manifests as "in flight".
       const cancelledAt = Date.now();
@@ -459,8 +504,9 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
     };
     // `query.dataUpdatedAt` is a deliberate dependency: every completed
     // authoritative refetch (reconnect, `online`, new context, remount) is a
-    // recovery trigger that re-evaluates eligibility.
-  }, [missing, relays, user?.pubkey, queryClient, query.dataUpdatedAt]);
+    // recovery trigger that re-evaluates eligibility. `wakeUp` is the
+    // one-shot timer's signal.
+  }, [missing, relays, user?.pubkey, queryClient, query.dataUpdatedAt, wakeUp]);
 
   return {
     ...view,
