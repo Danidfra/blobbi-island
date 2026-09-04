@@ -174,6 +174,16 @@ function ChatBubbleElement({ bubble, isExpiring }: ChatBubbleElementProps) {
     <div
       className={cn(
         "absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full",
+        /*
+          WIDTH. This wrapper is absolutely positioned INSIDE the actor's
+          anchor, so its containing block is the Blobbi's own box (64 to 128
+          px wide). Left to shrink-to-fit, a bubble could never be wider than
+          that box, and a sentence wrapped into a narrow column of one or two
+          words per line, the "words stacking" bug. `w-max` sizes the wrapper
+          to its content instead; the cap keeps a long sentence to a readable
+          measure and is what the text actually wraps against.
+        */
+        "w-max max-w-[220px]",
         "pointer-events-none", // não bloqueia interação
         "transition-opacity duration-300 ease-out",
         isVisible && !isExpiring ? "opacity-100" : "opacity-0"
@@ -185,7 +195,10 @@ function ChatBubbleElement({ bubble, isExpiring }: ChatBubbleElementProps) {
         className={cn(
           "relative max-w-[220px]",
           "bg-white border border-gray-200 rounded-2xl shadow-lg",
-          "text-sm text-gray-900 break-words",
+          // `anywhere`, not `break-word`: an unbroken string (a URL, a run of
+          // emoji) must fail safely inside the cap rather than widen the
+          // bubble past it.
+          "text-sm text-gray-900 [overflow-wrap:anywhere]",
           // An emote is a picture, not a sentence: it gets a tighter, squarer
           // bubble so a single glyph does not sit in a paragraph-shaped box.
           isEmote ? "px-3 py-1.5" : "px-3 py-2",

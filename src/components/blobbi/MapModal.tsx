@@ -33,6 +33,26 @@ const MAP_DESIGN_WIDTH = WORLD_WIDTH;
 const MAP_DESIGN_HEIGHT = WORLD_HEIGHT;
 const MAP_ASPECT = MAP_DESIGN_WIDTH / MAP_DESIGN_HEIGHT;
 
+/**
+ * The frame around the map: a wooden border with a cream mat, in the game's
+ * own tokens (so Lantern Night gets its darker wood and warmer cream for
+ * free). The map used to float loose in the modal body; the frame makes it
+ * read as the island's paper map pinned in a frame.
+ *
+ * The frame is taken OUT of the space the map is fitted into, so the map
+ * box is measured against the stage minus the frame on every side. That
+ * costs the map a few pixels, not a size class: at the modal's default size
+ * the map keeps well over 95 % of its width, and on a phone the frame is
+ * thinner (`sm:` is the wider step).
+ */
+/** Border + padding of the frame element below, per breakpoint. */
+const MAP_FRAME_INSET_PX = { base: 10, sm: 14 } as const;
+const MAP_FRAME_SM_BREAKPOINT_PX = 640;
+
+function mapFrameInsetPx(viewportWidth: number): number {
+  return viewportWidth >= MAP_FRAME_SM_BREAKPOINT_PX ? MAP_FRAME_INSET_PX.sm : MAP_FRAME_INSET_PX.base;
+}
+
 const LOCATIONS: Location[] = [
   {
     id: 'home',
@@ -93,7 +113,10 @@ export function MapModal({ className }: MapModalProps) {
   const { isMapModalOpen, setIsMapModalOpen, currentLocation, setCurrentLocation } = useLocation();
   const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
+  // State, not a ref: the stage mounts inside a portalled dialog, so it can
+  // appear AFTER the open effect has already run. Holding the element in
+  // state re-runs the measuring effect when it actually exists.
+  const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState<Record<string, ImageDimensions>>({});
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
   // The rendered map rect (the largest MAP_ASPECT box that fits the stage),
@@ -208,12 +231,16 @@ export function MapModal({ className }: MapModalProps) {
   // it (the actual rendered map rect). Markers are positioned relative to this.
   useEffect(() => {
     if (!isMapModalOpen) return;
-    const stage = stageRef.current;
+    const stage = stageEl;
     if (!stage) return;
 
     const recompute = () => {
-      const { width, height } = stage.getBoundingClientRect();
-      if (width === 0 || height === 0) return;
+      const rect = stage.getBoundingClientRect();
+      // The frame takes its inset from every side before the map is fitted.
+      const inset = mapFrameInsetPx(window.innerWidth) * 2;
+      const width = rect.width - inset;
+      const height = rect.height - inset;
+      if (width <= 0 || height <= 0) return;
       // Contain: bind by whichever dimension is the limiting constraint.
       let w = width;
       let h = w / MAP_ASPECT;
@@ -231,8 +258,14 @@ export function MapModal({ className }: MapModalProps) {
     recompute();
     const ro = new ResizeObserver(recompute);
     ro.observe(stage);
-    return () => ro.disconnect();
-  }, [isMapModalOpen]);
+    // The frame inset steps at the `sm` breakpoint; a viewport resize that
+    // crosses it changes the map box without changing the stage's size.
+    window.addEventListener('resize', recompute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', recompute);
+    };
+  }, [isMapModalOpen, stageEl]);
 
   if (!isMapModalOpen) return null;
 
@@ -269,28 +302,43 @@ export function MapModal({ className }: MapModalProps) {
       bodyClassName="relative flex items-center justify-center overflow-hidden p-2"
     >
       <div
-        ref={stageRef}
+        ref={setStageEl}
         className="relative flex h-full w-full items-center justify-center"
       >
-
+        {/*
+          The frame. Wood on the outside, a cream mat inside, the map sitting
+          in the mat with a soft inner shadow so it reads as paper under
+          glass. Sized from the map box, never the other way round, so the
+          markers' coordinate space (the map container below) is untouched.
+        */}
+        <div
+          data-map-frame
+          className={cn(
+            'relative rounded-2xl border-4 border-island-wood-dark/80 bg-island-wood',
+            'p-[6px] sm:rounded-[1.25rem] sm:border-[6px] sm:p-2',
+            'shadow-cozy-raised ring-1 ring-island-ink/15',
+            // The inner mat: a cream lip between the wood and the paper.
+            'before:pointer-events-none before:absolute before:inset-[3px] before:rounded-xl before:border-2 before:border-island-cream/70',
+          )}
+          style={{ visibility: mapBox.width ? 'visible' : 'hidden' }}
+        >
 
         {/* Map Container: sized to the measured rendered map rect so all
             markers (children of this box) stay aligned and proportional with
             the map image at any modal size. */}
         <div
           ref={mapContainerRef}
-          className="relative"
+          className="relative overflow-visible rounded-lg bg-island-sand shadow-[inset_0_0_0_1px_hsl(var(--island-ink)/0.15),inset_0_2px_10px_hsl(var(--island-ink)/0.25)]"
           style={{
             width: mapBox.width || undefined,
             height: mapBox.height || undefined,
-            visibility: mapBox.width ? 'visible' : 'hidden',
           }}
         >
           {/* Island Map Background */}
           <img
             src="/assets/world/map/blobbi-island.png"
             alt="Blobbi Village Map"
-            className="absolute inset-0 w-full h-full object-fill drop-shadow-2xl transition-all duration-500 ease-in-out"
+            className="absolute inset-0 w-full h-full rounded-lg object-fill transition-all duration-500 ease-in-out"
             draggable={false}
           />
 
@@ -387,6 +435,7 @@ export function MapModal({ className }: MapModalProps) {
           );})}
 
 
+        </div>
         </div>
 
       </div>

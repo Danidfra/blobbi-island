@@ -18,6 +18,7 @@ import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
 import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { useLocation } from '@/hooks/useLocation';
 import { PlaceBackground } from '@/components/blobbi/PlaceBackground';
+import { MapModal } from '@/components/blobbi/MapModal';
 import { BoundaryVisualizer } from '@/components/blobbi/BoundaryVisualizer';
 import { MovableBlobbi, type MovableBlobbiRef } from '@/components/blobbi/MovableBlobbi';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -80,7 +81,7 @@ class RoomErrorBoundary extends React.Component<
 }
 
 function RoomView() {
-  const { currentLocation, setCurrentLocation } = useLocation();
+  const { currentLocation, setCurrentLocation, setIsMapModalOpen } = useLocation();
   const containerRef = useRef<HTMLDivElement>(null);
   const blobbiRef = useRef<MovableBlobbiRef>(null);
   const { setShowDebugOverlays } = useDebugOverlays();
@@ -175,6 +176,14 @@ function RoomView() {
             snap {label}
           </button>
         ))}
+        <button
+          type="button"
+          className="rounded bg-neutral-700 px-1.5 py-0.5 hover:bg-neutral-600"
+          data-block-move
+          onClick={() => setIsMapModalOpen(true)}
+        >
+          map
+        </button>
         {lastPos && <span>last stop: ({lastPos.x.toFixed(1)}, {lastPos.y.toFixed(1)})</span>}
         <span className="opacity-60">red cross = stored ground point · click = walk feet there</span>
       </div>
@@ -231,6 +240,7 @@ function RoomView() {
             }}
             onMoveComplete={setLastPos}
           />
+          <MapModal />
         </PlaceBackground>
       </div>
     </div>

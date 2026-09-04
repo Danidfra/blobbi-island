@@ -24,6 +24,22 @@ function renderMap() {
 }
 
 describe('MapModal', () => {
+  it('frames the map: the map image sits inside the wooden frame, markers and all', async () => {
+    renderMap();
+    const frame = (await screen.findByRole('dialog')).querySelector('[data-map-frame]') as HTMLElement;
+    expect(frame).not.toBeNull();
+    // Wood outside, a mat inside: the game's tokens, so every theme keeps it.
+    expect(frame.className).toMatch(/border-island-wood/);
+    expect(frame.className).toMatch(/bg-island-wood/);
+    const map = frame.querySelector('img[alt="Blobbi Village Map"]');
+    expect(map).not.toBeNull();
+    // Every destination marker lives in the same box as the map image, so the
+    // frame changed nothing about their coordinate space.
+    for (const marker of frame.querySelectorAll('[data-map-destination]')) {
+      expect(marker.parentElement).toBe(map!.parentElement);
+    }
+  });
+
   it('renders as a named dialog when open', async () => {
     renderMap();
     expect(await screen.findByRole('dialog')).toHaveAccessibleName('Island Map');
