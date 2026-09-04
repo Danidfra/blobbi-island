@@ -24,7 +24,6 @@ const PUBKEY = 'f'.repeat(64);
 const PET_ID = 'blobbi-aa-bb';
 
 /** Every publish the app could make during a run, counted. */
-const petStatePublishes: unknown[] = [];
 const coinGrants: { opId: string; amount: number }[] = [];
 const energySettlements: { opId: string; amount: number }[] = [];
 let coinBehaviour: 'applied' | 'ambiguous' = 'applied';
@@ -68,9 +67,6 @@ vi.mock('@/hooks/useOptimizedStatus', () => ({
   }),
 }));
 // If the component ever reaches for the generic pet writer again, this counts it.
-vi.mock('@/hooks/useBlobbiEvents', () => ({
-  useUpdatePetState: () => ({ mutate: (args: unknown) => petStatePublishes.push(args) }),
-}));
 vi.mock('@/hooks/useMineSettlement', () => ({
   useMineSettlement: () => {
     const settlement = createMineSettlement({
@@ -117,7 +113,6 @@ async function playFullRun(clicks = 8) {
 
 beforeEach(() => {
   clearMineSessions();
-  petStatePublishes.length = 0;
   coinGrants.length = 0;
   energySettlements.length = 0;
   coinBehaviour = 'applied';
@@ -128,12 +123,6 @@ afterEach(() => {
 });
 
 describe('gameplay is entirely local', () => {
-  it('publishes ZERO pet state across a whole run', async () => {
-    renderMine();
-    await playFullRun();
-    expect(petStatePublishes).toHaveLength(0);
-  });
-
   it('records ONE open durable session at Start, before any gameplay', async () => {
     renderMine();
     await act(async () => {
@@ -158,7 +147,6 @@ describe('finishing settles exactly once, in order', () => {
     expect(energySettlements[0].opId).toBe(`mine:${sessionId}:energy`);
     // 8 clicks × 10 energy = the whole run's cost, as ONE delta.
     expect(energySettlements[0].amount).toBe(80);
-    expect(petStatePublishes).toHaveLength(0);
   });
 
   it('marks the session settled and tells the player', async () => {
@@ -204,7 +192,6 @@ describe('an interrupted run costs nothing', () => {
 
     unmount();
 
-    expect(petStatePublishes).toHaveLength(0);
     expect(coinGrants).toHaveLength(0);
     expect(energySettlements).toHaveLength(0);
     expect(readMineSessions(PUBKEY)[0].status).toBe('abandoned');

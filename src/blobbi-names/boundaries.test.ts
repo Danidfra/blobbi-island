@@ -154,8 +154,6 @@ describe('the own-name writer has one validator', () => {
       .map(relative);
 
     expect(writers.sort()).toEqual([
-      // The generic tag builder, called by the adoption writer.
-      'src/hooks/useBlobbiEvents.ts',
       // The adoption writer itself, where `admitOwnBlobbiName` is enforced.
       'src/hooks/useFirstEggAdoption.ts',
       // A parser, not a writer.

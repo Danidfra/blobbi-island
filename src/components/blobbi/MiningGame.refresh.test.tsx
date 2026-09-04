@@ -65,7 +65,6 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
     vi.resetModules();
 
     let refreshCount = 0;
-    const petStateWrites: unknown[] = [];
 
     vi.doMock('@/hooks/useLocation', () => ({
       useLocation: () => ({ setCurrentLocation: () => {}, currentLocation: 'mine' }),
@@ -86,9 +85,6 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
         },
       };
     });
-    vi.doMock('@/hooks/useBlobbiEvents', () => ({
-      useUpdatePetState: () => ({ mutate: (args: unknown) => petStateWrites.push(args) }),
-    }));
     vi.doMock('@/hooks/useMineSettlement', () => ({
       useMineSettlement: () => ({
         settlement: {
@@ -127,8 +123,6 @@ describe('MiningGame refreshes once per mount, not once per render', () => {
 
     // A whole session's worth of state updates and re-renders…
     expect(clicks).toBeGreaterThan(0);
-    // …with ZERO kind:31124 publishes during gameplay (settlement is at the end).
-    expect(petStateWrites).toHaveLength(0);
     // …and still exactly ONE refresh. This was 11 before the fix.
     expect(refreshCount).toBe(1);
   });

@@ -34,13 +34,12 @@ export function isMediaUploadNotPermitted(error: unknown): error is MediaUploadN
  * ## Why the gate is here rather than only at the callers
  *
  * Every consumer of this hook is user-controlled media publication, which is
- * exactly what the capability governs. There are three, and the audit for this
+ * exactly what the capability governs. There are two, and the audit for this
  * phase checked each one:
  *
  *  - the PhotoBooth share (`ShareModal` → `usePhotoShare`);
  *  - the Game Item authoring tools (`tools/game-items/image-upload.ts`), whose
- *    route is separately gated on `authoringTools`;
- *  - `EditProfileForm`, which has no importer anywhere in `src/`: dead code.
+ *    route is separately gated on `authoringTools`.
  *
  * Nothing internal or trusted uploads through this hook: official item artwork
  * is published by the issuer through those same authoring tools, not by the

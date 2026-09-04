@@ -10,10 +10,7 @@ import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
 import { mineCaveStructure } from '@/lib/mine-cave-config';
 import { locationBoundaries } from '@/lib/location-boundaries';
-import {
-  calculateBlobbiZIndex,
-  getInteractiveElementsForBackground,
-} from '@/lib/interactive-elements-config';
+import { calculateBlobbiZIndex } from '@/lib/interactive-elements-config';
 import { constrainPosition } from '@/lib/boundaries';
 
 /**
@@ -221,11 +218,6 @@ describe('the composed cave structure', () => {
     // the arch, and the hotspot above both.
     expect(depth.mouth).toBeLessThan(depth.front);
     expect(depth.front).toBeLessThan(depth.hotspot);
-
-    // And the arch's depth is the one the shared config records for the cave.
-    const registered = getInteractiveElementsForBackground('mine-open.webp');
-    expect(registered.map((el) => el.id)).toEqual(['cave']);
-    expect(registered[0].zIndex).toBe(depth.front);
   });
 });
 

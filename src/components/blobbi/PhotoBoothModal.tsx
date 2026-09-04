@@ -566,10 +566,10 @@ const handleCapturePhoto = async () => {
       // High-DPI / quality settings
       const EXPORT_SCALE = Math.min(3, Math.max(window.devicePixelRatio || 1, 2));
 
-      // Target dimensions (matching CSS PolaroidFrame)
+      // Target dimensions of the exported polaroid
       const targetWidth = 500;
 
-      // Polaroid frame margins (matching PolaroidFrame defaults)
+      // Polaroid frame margins, as percentages of the card
       const margins = { top: 5, right: 4, bottom: 18, left: 4 };
       const aspectRatio = 3 / 4; // Rectangular aspect ratio for sharing
 
@@ -606,7 +606,7 @@ const handleCapturePhoto = async () => {
       polaroidCtx.lineWidth = 1;
       polaroidCtx.stroke();
 
-      // Calculate inner photo area dimensions using same margins as PolaroidFrame
+      // Inner photo area, inset by the same margins
       const photoAreaWidth = targetWidth * (1 - (margins.left + margins.right) / 100);
       const photoAreaHeight = totalHeight * (1 - (margins.top + margins.bottom) / 100);
       const photoAreaX = targetWidth * margins.left / 100;

@@ -287,36 +287,3 @@ export function usePublishThemeSelection() {
     [pubkey, publishActiveTheme, publishDittoSettings],
   );
 }
-
-/**
- * Retract a theme the player published (NIP-09).
- *
- * Both an `e` and an `a` tag: the `e` names the event a relay is holding, the
- * `a` names the address so a relay that has since seen a replacement deletes
- * that too. Neither guarantees anything, deletion on Nostr is a request, which
- * is why the picker's copy says "asked to remove" rather than "deleted".
- */
-export function useDeleteTheme() {
-  const { user } = useCurrentUser();
-  const { mutateAsync: createEvent } = useNostrPublish();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: { eventId: string; identifier: string }) => {
-      if (!user?.pubkey) throw new Error('Sign in first.');
-      await createEvent({
-        kind: 5,
-        content: '',
-        tags: [
-          ['e', input.eventId],
-          ['a', `${THEME_DEFINITION_KIND}:${user.pubkey}:${input.identifier}`],
-          ['k', String(THEME_DEFINITION_KIND)],
-        ],
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nostr-themes', 'mine', user?.pubkey ?? ''] });
-      queryClient.invalidateQueries({ queryKey: ['nostr-themes', 'community'] });
-    },
-  });
-}

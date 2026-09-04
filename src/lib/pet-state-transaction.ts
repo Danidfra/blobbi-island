@@ -2,11 +2,11 @@
  * Value-bearing kind:31124 writes, the pet-state counterpart of
  * `src/inventory/inventory-transaction.ts`.
  *
- * ## Why the generic pet writer is not enough
+ * ## Why a generic pet writer is not enough
  *
- * `useUpdatePetState` is fine for care actions, where a lost update costs a
- * few hunger points. It is not fine for settling a Mine session's energy
- * cost, because it:
+ * A cache-based "republish the pet with these fields" writer, the shape care
+ * actions once used, is fine where a lost update costs a few hunger points.
+ * It is not fine for settling a Mine session's energy cost, because it:
  *
  * - builds from the React Query cache instead of an authoritative read;
  * - has no per-pet serialization and no cross-tab lock;

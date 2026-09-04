@@ -75,9 +75,6 @@ export const DEFAULT_SPEED_PX = 120;
 /** Heartbeat interval in milliseconds (25 seconds) */
 export const HEARTBEAT_INTERVAL_MS = 25000;
 
-/** Animation and garbage collection interval in milliseconds (100ms) */
-export const ANIMATION_INTERVAL_MS = 100;
-
 // ============================================================================
 // Type Definitions
 // ============================================================================

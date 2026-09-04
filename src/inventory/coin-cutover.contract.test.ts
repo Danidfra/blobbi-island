@@ -184,13 +184,12 @@ describe('one canonical Coin balance', () => {
     expect(purchaseHooks).toEqual(['src/inventory/useBatchPurchase.ts']);
   });
 
-  it('profile writers carry no coin responsibility', () => {
-    for (const file of ['src/hooks/useBlobbiEvents.ts', 'src/hooks/useBlobbonautProfile.ts']) {
-      const source = readFileSync(join(ROOT, file), 'utf8');
-      expect(source, `${file} must not author a coins tag`).not.toMatch(
-        /\[\s*['"]coins['"]\s*,/,
-      );
-    }
+  it('the profile writer carries no coin responsibility', () => {
+    const file = 'src/hooks/useBlobbonautProfile.ts';
+    const source = readFileSync(join(ROOT, file), 'utf8');
+    expect(source, `${file} must not author a coins tag`).not.toMatch(
+      /\[\s*['"]coins['"]\s*,/,
+    );
     // The shared serializer no longer manages `coins`: it must ride the
     // unknown-tag passthrough instead.
     const parsers = readFileSync(join(ROOT, 'src/lib/blobbi-parsers.ts'), 'utf8');

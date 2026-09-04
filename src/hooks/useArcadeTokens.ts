@@ -13,7 +13,6 @@
  * is a shop purchase in every respect that matters.
  */
 
-import { useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -100,13 +99,4 @@ export function useBuyArcadeTokens() {
       queryClient.invalidateQueries({ queryKey: inventoryQueryKey(user.pubkey) });
     },
   });
-}
-
-/** Convenience: can this player afford `quantity` Tokens right now? */
-export function useCanAffordTokens(coinBalance: number | null) {
-  return useMemo(
-    () => (quantity: number) =>
-      coinBalance !== null && coinBalance >= arcadeTokenCoinCost(quantity),
-    [coinBalance],
-  );
 }

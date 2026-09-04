@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateBlobbiZIndex,
-  getInteractiveElementsForBackground,
   getZIndexConfigForBackground,
-  convertToBottomBasedPosition,
   getZIndexThresholdForPosition,
   setZIndexConfigForBackground,
 } from './interactive-elements-config';
@@ -106,16 +104,6 @@ describe('Interactive Elements Configuration', () => {
     });
   });
 
-  describe('convertToBottomBasedPosition', () => {
-    it('should correctly convert top-based to bottom-based position', () => {
-      expect(convertToBottomBasedPosition(0)).toBe(100); // Top -> Bottom
-      expect(convertToBottomBasedPosition(100)).toBe(0); // Bottom -> Top
-      expect(convertToBottomBasedPosition(50)).toBe(50); // Middle -> Middle
-      expect(convertToBottomBasedPosition(25)).toBe(75); // 25% from top -> 75% from bottom
-      expect(convertToBottomBasedPosition(75)).toBe(25); // 75% from top -> 25% from bottom
-    });
-  });
-
   describe('getZIndexConfigForBackground', () => {
     it('should return config for stage-inside.png', () => {
       const config = getZIndexConfigForBackground('stage-inside.png');
@@ -148,45 +136,6 @@ describe('Interactive Elements Configuration', () => {
     it('should return undefined for unknown background', () => {
       const threshold = getZIndexThresholdForPosition(50, 'unknown.png');
       expect(threshold).toBeUndefined();
-    });
-  });
-
-  describe('getInteractiveElementsForBackground', () => {
-    it('should return correct elements for town-open.webp', () => {
-      const elements = getInteractiveElementsForBackground('town-open.webp');
-      expect(elements).toHaveLength(9); // 9 elements in town
-
-      const elementIds = elements.map(e => e.id);
-      expect(elementIds).toContain('arcade');
-      expect(elementIds).toContain('stage');
-      expect(elementIds).toContain('shop');
-      expect(elementIds).toContain('bush-1');
-      expect(elementIds).toContain('bush-2');
-      expect(elementIds).toContain('bush-3');
-      expect(elementIds).toContain('bush-4');
-      expect(elementIds).toContain('streetlight-left');
-      expect(elementIds).toContain('streetlight-right');
-    });
-
-    it('should return correct elements for mine-open.webp', () => {
-      const elements = getInteractiveElementsForBackground('mine-open.webp');
-      expect(elements).toHaveLength(1); // 1 element in mine
-      expect(elements[0].id).toBe('cave');
-    });
-
-    it('should return correct elements for beach backgrounds', () => {
-      // Two since Beach 1B: the boat and the treasure-hunt shack.
-      const beachOpenElements = getInteractiveElementsForBackground('beach-open.webp');
-      expect(beachOpenElements).toHaveLength(2);
-      expect(beachOpenElements.map((element) => element.id)).toEqual([
-        'boat',
-        'treasure-shack',
-      ]);
-    });
-
-    it('should return empty array for unknown background', () => {
-      const elements = getInteractiveElementsForBackground('unknown.png');
-      expect(elements).toHaveLength(0);
     });
   });
 });

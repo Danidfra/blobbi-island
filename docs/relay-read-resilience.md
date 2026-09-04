@@ -203,7 +203,7 @@ Ranked by consequence:
 3. **`usePlacementState`** (kind:31634): a false empty makes equipped cosmetics
    briefly disappear. Presentation only.
 4. **`PlayingView`** single-Blobbi read, `MultiplayerLayer`, `useSharedPlayback`,
-   `useAuthor`, `useLoggedInAccounts`, `useBlobbiCoreProbe`: presence, social
+   `useAuthor`, `useLoggedInAccounts`: presence, social
    and metadata reads where a transient empty is self-correcting.
 
 ## 9. Remaining Mine work (next phase)

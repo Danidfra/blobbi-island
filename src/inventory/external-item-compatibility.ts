@@ -71,7 +71,7 @@ export interface ExternalItemCompatibility {
  *   (`needLevel`: critical ≤ 25, low ≤ 50, good above, `src/lib/blobbi-mood.ts`);
  * - the smallest official food, the Apple, restores exactly 25
  *   (`src/protocol/event-registry.ts`);
- * - the generic feed action assumes "+25" (`useFeedPet`).
+ * - the optimistic feed update the care UI once applied assumed "+25".
  *
  * So the quantum the game already thinks in is 25, and raw produce restores
  * one of them. Prepared food from a future cooking game would map to more

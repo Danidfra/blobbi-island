@@ -1,6 +1,9 @@
 /**
- * Configuration for interactive elements with their positions and z-index values
- * Used for dynamic z-index calculations for the Blobbi character
+ * Position-based z-index bands per painted background.
+ *
+ * `calculateBlobbiZIndex` decides whether the Blobbi paints in front of or
+ * behind a room's scenery from its vertical (and sometimes horizontal)
+ * position, after the room's furniture has had first say.
  */
 
 import {
@@ -10,30 +13,6 @@ import {
   PLAZA_OCCLUSION,
 } from '@/lib/plaza-inside-config';
 import { furnitureDepthZIndex } from '@/lib/room-seats-config';
-
-export interface InteractiveElementConfig {
-  id: string;
-  /** Y position as percentage of container height */
-  yPosition: number;
-  /** Z-index value for this element */
-  zIndex: number;
-  /** Background file this element appears in */
-  backgroundFile: string;
-  /** Type of interactive element (for specific behaviors) */
-  type?: 'chair' | 'default';
-  /** Chair-specific configuration */
-  chairConfig?: {
-    /** Whether to close eyes when seated */
-    eyesClosedOnSeat?: boolean;
-    /** Seat anchor position as percentage of chair image */
-    seatAnchor?: {
-      xPercent?: number;
-      yPercent?: number;
-    };
-    /** Z-index offset when seated */
-    sitZIndexOffset?: number;
-  };
-}
 
 /**
  * Z-index threshold configuration for different backgrounds based on vertical position
@@ -318,112 +297,6 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
 ];
 
 /**
- * Configuration for all interactive elements across different backgrounds
- * Y positions are calculated as percentages where 0% is top and 100% is bottom
- */
-export const interactiveElementsConfig: InteractiveElementConfig[] = [
-  // Town elements (town-open.webp)
-  {
-    id: 'arcade',
-    yPosition: 35, // top-[35%] on mobile, top-[30%] on desktop - using mobile value
-    zIndex: 15,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'stage',
-    yPosition: 30, // top-[30%] on mobile, top-[26%] on desktop - using mobile value
-    zIndex: 15,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'shop',
-    yPosition: 35, // top-[35%] on mobile, top-[30%] on desktop - using mobile value
-    zIndex: 15,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'bush-3',
-    yPosition: 68, // top-[68%] on mobile, top-[63%] on desktop - using mobile value
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'bush-4',
-    yPosition: 74, // top-[74%] on mobile, top-[69%] on desktop - using mobile value
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'bush-1',
-    yPosition: 100, // bottom-0 = 100% from top
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'bush-2',
-    yPosition: 100, // bottom-0 = 100% from top
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'streetlight-left',
-    yPosition: 90, // bottom-[10%] = 90% from top
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-  {
-    id: 'streetlight-right',
-    yPosition: 90, // bottom-[10%] = 90% from top
-    zIndex: 25,
-    backgroundFile: 'town-open.webp'
-  },
-
-  // Mine elements (mine-open.webp)
-  {
-    id: 'cave',
-    // Top edge of the composed cave structure: it is anchored by its BOTTOM
-    // (24% up from the world's floor) and its height follows the artwork's
-    // 1271×642 aspect at 70% world width, which puts its top at ≈23%. Placement
-    // itself lives in `mine-cave-config.ts`; this entry only records the depth
-    // contract.
-    yPosition: 23,
-    zIndex: 15,
-    backgroundFile: 'mine-open.webp'
-  },
-
-  // Beach elements (beach-open.webp and beach.png)
-  {
-    id: 'boat',
-    yPosition: 34, // top-[34%] on mobile, top-[39%] on desktop - using mobile value
-    zIndex: 15,
-    backgroundFile: 'beach-open.webp'
-  },
-  {
-    // Treasure-hunt shack. Placement + stand point live in
-    // `beach-shack-config.ts`; this entry records the depth contract only.
-    // Base sits at y=79 (bottom-21%), square art 16% wide → top ≈ 55.
-    id: 'treasure-shack',
-    yPosition: 55,
-    zIndex: 15,
-    backgroundFile: 'beach-open.webp'
-  },
-
-  // Home elements (home-inside.png)
-  {
-    id: 'bed',
-    yPosition: 70, // Bed position in home
-    zIndex: 15,
-    backgroundFile: 'home-inside.png'
-  },
-  {
-    id: 'refrigerator',
-    yPosition: 70, // Refrigerator position in home
-    zIndex: 15,
-    backgroundFile: 'home-inside.png'
-  }
-];
-
-/**
  * The band that claims a position, or undefined.
  *
  * Bands are tried in ascending order of `minPosition`. Among the bands whose
@@ -485,15 +358,6 @@ export function calculateBlobbiZIndex(
 
 
 /**
- * Get all interactive elements for a specific background
- * @param backgroundFile - Background file name
- * @returns Array of interactive elements for that background
- */
-export function getInteractiveElementsForBackground(backgroundFile: string): InteractiveElementConfig[] {
-  return interactiveElementsConfig.filter(element => element.backgroundFile === backgroundFile);
-}
-
-/**
  * Get z-index configuration for a specific background
  * @param backgroundFile - Background file name
  * @returns Background z-index configuration or undefined if not found
@@ -532,34 +396,4 @@ export function getZIndexThresholdForPosition(
   const config = getZIndexConfigForBackground(backgroundFile);
   if (!config) return undefined;
   return findThreshold(config.thresholds, positionFromBottom, blobbiXPosition);
-}
-
-/**
- * Convert Y position from top-based to bottom-based percentage
- * @param yPositionFromTop - Y position as percentage from top (0-100)
- * @returns Y position as percentage from bottom (0-100)
- */
-export function convertToBottomBasedPosition(yPositionFromTop: number): number {
-  return 100 - yPositionFromTop;
-}
-
-/**
- * Debug function to log current z-index calculation details
- * @param blobbiYPosition - Blobbi's Y position from top (0-100)
- * @param backgroundFile - Current background file name
- */
-export function debugZIndexCalculation(blobbiYPosition: number, backgroundFile: string): void {
-  const positionFromBottom = convertToBottomBasedPosition(blobbiYPosition);
-  const config = getZIndexConfigForBackground(backgroundFile);
-  const threshold = getZIndexThresholdForPosition(positionFromBottom, backgroundFile);
-  const calculatedZIndex = calculateBlobbiZIndex(blobbiYPosition, backgroundFile);
-
-  console.log('Z-Index Debug:', {
-    backgroundFile,
-    yPositionFromTop: blobbiYPosition,
-    positionFromBottom,
-    hasConfig: !!config,
-    matchingThreshold: threshold,
-    calculatedZIndex
-  });
 }

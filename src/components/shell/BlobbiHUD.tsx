@@ -6,7 +6,7 @@ import { AccountMenu } from "./AccountMenu";
 import { LocationPill, OnlineCountChip, PresenceStatusChip } from "./hud-primitives";
 import { presenceStatusMessage, usePresenceStatus } from '@/lib/presence-status';
 
-// Friendly display names (kept in sync with LocationIndicator).
+// Friendly display names.
 const LOCATION_NAMES: Record<LocationId, string> = {
   town: "Town Square",
   home: "Cozy Home",

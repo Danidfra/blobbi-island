@@ -88,7 +88,7 @@ Append-only log of a care/social action performed on a Blobbi (feed, play, clean
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** Blobbi Island
-- **Implemented in:** `src/lib/blobbi-kinds.ts`, `src/inventory/useUseItem.ts`, `src/hooks/useBlobbiEvents.ts`
+- **Implemented in:** `src/lib/blobbi-kinds.ts`, `src/inventory/useUseItem.ts`
 - **Documented in:** `NIP.md`
 - **Notes:** Kind number and event builder come from @blobbi-kit/core (blobbi-interaction).
 
@@ -104,7 +104,7 @@ The player's account: owned Blobbis, achievements, current companion. (Historic 
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** Blobbi Island
-- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
+- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`, `docs/blobbi-coin-cutover.md`
 - **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data; never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.
 
@@ -137,7 +137,7 @@ Full state of one Blobbi creature: stats, stage, appearance, personality, care t
 - **This client:** Implemented (read + write)
 - **Protocol status:** Current
 - **Defined by:** Blobbi Island
-- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbis.ts`, `src/hooks/useBlobbiEvents.ts`, `src/inventory/useUseItem.ts`
+- **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbis.ts`, `src/inventory/useUseItem.ts`
 - **Documented in:** `NIP.md`
 
 ### Kind 21201: Island Chat

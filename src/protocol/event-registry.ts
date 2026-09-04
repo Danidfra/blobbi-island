@@ -224,7 +224,6 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     sourceFiles: [
       'src/lib/blobbi-kinds.ts',
       'src/inventory/useUseItem.ts',
-      'src/hooks/useBlobbiEvents.ts',
     ],
     docs: ['NIP.md'],
     notes:
@@ -247,7 +246,6 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     ownership: 'blobbi-island',
     sourceFiles: [
       'src/lib/blobbi-parsers.ts',
-      'src/hooks/useBlobbiEvents.ts',
       'src/hooks/useBlobbonautProfile.ts',
       'src/hooks/useOptimizedStatus.ts',
       'src/hooks/useFirstEggAdoption.ts',
@@ -294,7 +292,6 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     sourceFiles: [
       'src/lib/blobbi-parsers.ts',
       'src/hooks/useBlobbis.ts',
-      'src/hooks/useBlobbiEvents.ts',
       'src/inventory/useUseItem.ts',
     ],
     docs: ['NIP.md'],
