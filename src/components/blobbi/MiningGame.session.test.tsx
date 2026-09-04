@@ -66,7 +66,6 @@ vi.mock('@/hooks/useOptimizedStatus', () => ({
     refreshFromRelay: () => {},
   }),
 }));
-// If the component ever reaches for the generic pet writer again, this counts it.
 vi.mock('@/hooks/useMineSettlement', () => ({
   useMineSettlement: () => {
     const settlement = createMineSettlement({

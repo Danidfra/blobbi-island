@@ -22,9 +22,9 @@ For every file under `public/assets/` the whole repository (`.ts`, `.tsx`, `.js`
    (e.g. `` `/assets/characters/blobbi/accessories/${slot}/${code}.png` ``), which means
    every file inside that directory is considered reachable.
 
-Only files with **zero** hits from all three checks were archived. This is why none of the
-accessory sprites were archived even though no source file names them literally: they are
-resolved at runtime from Nostr inventory data.
+Only files with **zero** hits from all three checks were archived. (The legacy accessory
+sprites were never archived here: at the time they were resolved at runtime from inventory
+data, and once cosmetics moved to their item definitions' image URLs they were deleted.)
 
 ## Contents
 
