@@ -36,7 +36,7 @@ resolved at runtime from Nostr inventory data.
 | `locations/plaza/chill-lounge.png`, `chill-lounge-interactive.png`, `drawing-wall.png`, `drawing-wall-interactive.png`, `information.png`, `information-interactive.png` | The Plaza interior's composed kiosks. Superseded by `world/backgrounds/plaza-inside.webp`, which paints all six storefronts into the plate; the room now overlays pressable hotspots (`plaza-inside-config.ts`) instead of sprites. |
 | `locations/arcade/level-b1/elevator-minus1-door.png` | Unused floor-specific elevator door variant; the arcade basement renders the shared `elevator-door.png` for both states. |
 | `locations/arcade/level-b1/dance-machine-piece.png` | Companion sprite for the dance machine minigame, which has not been implemented yet. Promote to `minigames/dance/` when that game is built. |
-| `ui/icons/map.svg` | Replaced by the `lucide-react` map icon used by `MapButton`. |
+| `ui/icons/map.svg` | Replaced by the `lucide-react` map icon the shell's map control uses. |
 
 ## Policy
 

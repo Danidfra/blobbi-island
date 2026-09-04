@@ -3,14 +3,12 @@
  *
  * Rule of thumb:
  *  - A sprite used in exactly one place may stay an inline literal (`src="/assets/..."`).
- *  - Any path built at runtime from data (an accessory code, a `LocationId`, an item id,
+ *  - Any path built at runtime from data (a `LocationId`, an item id,
  *    a minigame drop table, ...) MUST be produced here, so that moving a folder is a
  *    one-line change instead of a repo-wide search.
  *
  * See `docs/asset-organization.md` for the full directory layout and conventions.
  */
-
-import type { AccessorySlot } from '@blobbi/react';
 
 /** Root directories of every asset domain. Keep in sync with docs/asset-organization.md. */
 export const ASSET_DIRS = {
@@ -24,8 +22,6 @@ export const ASSET_DIRS = {
   worldProps: '/assets/world/props',
   /** Assets unique to a single place: `/assets/locations/<place>/...`. */
   locations: '/assets/locations',
-  /** Wearable accessory sprites, keyed by accessory code. */
-  blobbiAccessories: '/assets/characters/blobbi/accessories',
   /** Selectable Blobbi portrait backdrops, keyed by background id. */
   blobbiBackgrounds: '/assets/characters/blobbi/backgrounds',
   /** Inventory item icons. */
@@ -47,22 +43,6 @@ export const ASSET_DIRS = {
  */
 export function locationBackgroundPath(file: string): string {
   return `${ASSET_DIRS.worldBackgrounds}/${file}`;
-}
-
-// ---------------------------------------------------------------------------
-// Characters / Blobbi
-// ---------------------------------------------------------------------------
-
-/**
- * Sprite for a wearable accessory. Filenames mirror the accessory `code` published in
- * Nostr inventory/equipment tags, so they must never be renamed.
- */
-export function accessoryImagePath(
-  slot: AccessorySlot | string,
-  code: string,
-  ext: 'png' | 'webp' = 'png',
-): string {
-  return `${ASSET_DIRS.blobbiAccessories}/${slot}/${code}.${ext}`;
 }
 
 // ---------------------------------------------------------------------------

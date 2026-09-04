@@ -54,7 +54,6 @@ public/assets/
 │
 ├── characters/             Everything that is a character, not scenery
 │   ├── blobbi/
-│   │   ├── accessories/      <slot>/<code>.png, filenames are Nostr data ids
 │   │   ├── animations/       (reserved)
 │   │   └── backgrounds/      Portrait backdrops, keyed by background id
 │   └── npc/                  (reserved)
@@ -143,8 +142,6 @@ location-scoped.
 5. **Numbered variants are `-1`, `-2`, ... with no padding**: `bush-1.png` … `bush-4.png`.
 6. **Some filenames are data identifiers and must never be renamed.** If the name appears
    in Nostr event data or in a lookup table keyed by name, it is a contract:
-   - `characters/blobbi/accessories/<slot>/<code>.png`: `<code>` is the accessory code
-     published in `inv` / `equip` tags.
    - `characters/blobbi/backgrounds/blobbi-bg-default.png`: the background id stored on
      the pet.
    - `minigames/mining/{stone,gem-1,gem-2,gem-3}.png`: keys of `GEM_VALUES`.
@@ -171,9 +168,8 @@ rule that makes future reorganizations cheap, before it existed, the accessory d
 was interpolated in four separate places with two different spellings.
 
 ```ts
-import { accessoryImagePath, miningItemPath, locationBackgroundPath, ASSET_DIRS } from '@/lib/asset-paths';
+import { miningItemPath, locationBackgroundPath, ASSET_DIRS } from '@/lib/asset-paths';
 
-accessoryImagePath('headwear', 'headwear-8');   // -> /assets/characters/blobbi/accessories/headwear/headwear-8.png
 miningItemPath('gem-2.png');                    // -> /assets/minigames/mining/gem-2.png
 locationBackgroundPath('town-open.webp');        // -> /assets/world/backgrounds/town-open.webp
 ASSET_DIRS.worldProps;                          // -> /assets/world/props
@@ -213,7 +209,7 @@ When moving assets, these are easy to miss; check all of them:
 | UI icons | `ui/icons/<feature>/` | Group by feature (`ui/icons/nostr-hub/`), not by shape. Prefer `lucide-react` for generic glyphs; only add files for custom art. |
 | Cursors | `ui/cursors/` | Remember to register the hotspot in `tailwind.config.ts`. |
 | Achievements / badges | `ui/achievements/` | Filename should equal the achievement id. |
-| Accessories | `characters/blobbi/accessories/<slot>/` | Filename **must** equal the accessory code. |
+| Accessories | not in `public/` | Wearable artwork is published with its kind 31632 item definition and loaded from that event's image URL. |
 | Items (food, furniture, decorations) | `items/<category>/` | Filename should equal the item id where one exists. |
 | Buildings | `world/buildings/` | Ship the shell and its `-door` overlay together. |
 | Decorations / scenery | `world/props/` if reusable, else `locations/<place>/` | See the promotion rule below. |
@@ -281,8 +277,7 @@ used as the static prefix of a template literal as fully reachable.
 
 - Optimize before committing. These are static files with no build-time processing, so a
   large PNG is shipped byte-for-byte to every player.
-- Prefer `.webp` for new photographic/complex art. The accessory loader already falls back
-  `.webp` → `.png`.
+- Prefer `.webp` for new photographic/complex art.
 - Add the state suffix variants (`-open`, `-on`, `-interactive`) in the same commit as the
   base sprite.
 - Update `ASSET_DIRS` in `src/lib/asset-paths.ts` when you add a domain folder.
@@ -309,8 +304,6 @@ survives anywhere.
   art has never existed in the repository (it was previously referenced as
   `/assets/interactive/back-yard-door.png` and 404'd there too). The back yard renders a
   broken image today. Dropping the art at that path fixes it with no code change.
-- `characters/blobbi/accessories/eyewear/` starts at `eyewear-2.png`; there is no
-  `eyewear-1.png`.
 - `public/sw.js` is a self-destroying service worker, kept only so browsers that
   installed the cache-first worker an older deployment registered replace it,
   clear its caches and unregister. Nothing registers a worker any more.
