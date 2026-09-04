@@ -32,6 +32,8 @@ type CoinBehaviour = 'applied' | 'already-applied' | 'ambiguous' | 'throws';
 function makeDeps(options: {
   coin?: CoinBehaviour;
   energy?: EnergySettlementOutcome['status'];
+  /** Which tab this instance models; distinct ids model distinct tabs. */
+  ownerId?: string;
 } = {}) {
   const coinCalls: { opId: string; amount: number }[] = [];
   const energyCalls: { opId: string; amount: number; petId: string }[] = [];
@@ -73,6 +75,7 @@ function makeDeps(options: {
     wallet,
     settler,
     now: () => 1_700_000_000_000,
+    ownerId: options.ownerId,
   });
   return { settlement, wallet, settler, coinCalls, energyCalls };
 }
@@ -233,13 +236,14 @@ describe('an interrupted run costs nothing', () => {
   });
 
   it('recovery LEAVES a live open session alone, another tab may be playing it', async () => {
-    const { settlement } = makeDeps();
-    const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const firstTab = makeDeps({ ownerId: 'tab-a' });
+    const started = await firstTab.settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');
 
     // Opening the cave in a second tab runs recovery. Abandoning here would
     // silently void the run someone is playing in the first tab.
-    await settlement.recoverSessions();
+    const secondTab = makeDeps({ ownerId: 'tab-b' });
+    await secondTab.settlement.recoverSessions();
 
     expect(readMineSession(PUBKEY, started.sessionId)?.status).toBe('open');
   });

@@ -211,11 +211,20 @@ export function MiningGame() {
     return () => clearInterval(timer);
   }, [gameState]);
   useEffect(() => {
-    return () => {
+    const abandonUnfinished = () => {
       const sessionId = sessionIdRef.current;
       if (sessionId && !finishedRef.current) {
         settlementRef.current?.abandonSession(sessionId);
       }
+    };
+    // A reload or a closed tab never runs the unmount cleanup, so the record
+    // would outlive the gameplay it belongs to. `pagehide` is the last
+    // synchronous moment the tab gets; a `localStorage` write fits in it.
+    // (Ownership in the ledger covers the case where even this does not run.)
+    window.addEventListener('pagehide', abandonUnfinished);
+    return () => {
+      window.removeEventListener('pagehide', abandonUnfinished);
+      abandonUnfinished();
     };
   }, []);
 
@@ -485,8 +494,9 @@ export function MiningGame() {
         className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3 text-sm text-island-ink"
         data-mine-session-in-progress
       >
-        You already have a mining trip in progress. Finish it first, or if you
-        closed that window, wait a moment and try again.
+        You already have a mining trip in progress in another window. Finish it
+        there first. If that window is already closed, the trip frees up on its
+        own within a couple of minutes; try again then.
       </p>
     </BlobbiModal>
   );
@@ -507,6 +517,7 @@ export function MiningGame() {
           <img
             key={i}
             src={miningItemPath('mine-wall-hole.png')}
+            alt=""
             className="absolute"
             style={{ left: hole.x - 15, top: hole.y - 15, width: 40, height: 40 }}
           />
@@ -514,7 +525,8 @@ export function MiningGame() {
         {minedItems.map(item => (
           <img
             key={item.id}
-            src={miningItemPath(item.type)}
+            src={miningItemPath(mineGem(item.type).asset)}
+            alt={mineGem(item.type).label}
             className="absolute"
             style={{ left: item.position.x - 5, top: item.position.y - 5, width: 20, height: 20 }}
           />

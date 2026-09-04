@@ -50,6 +50,21 @@
  * is opened, including in a second tab, and doing so voided the run being
  * played in the first.
  *
+ * ## Ownership: a reloaded tab recognises its own debris
+ *
+ * A heartbeat alone cannot tell "another tab is playing" from "this tab just
+ * reloaded mid-run": React's unmount cleanup does not run on a reload, so
+ * the record it would have abandoned survives with a fresh `updatedAt`, and
+ * the reloaded tab then refused to start for up to the whole TTL ("wait a
+ * moment" that lasted a minute and a half). Every record now carries the
+ * opening tab's `ownerId` (`sessionStorage`-scoped, so it survives the reload
+ * and is never shared with another tab). An `open` record with this tab's own
+ * id is debris by definition: the gameplay that owned it is gone, nothing was
+ * durable, and it is abandoned on the spot, both by startup recovery and by
+ * the next start. Gameplay is NOT rehydrated (see `mine-session-ledger.ts`:
+ * the record is an economic record, not a savegame); what the player gets back
+ * is the Mine, immediately, with nothing owed.
+ *
  * ## Why the lock spans both entry points
  *
  * `startSession` and `finalizeSession` both mutate `open` records, the first
@@ -72,6 +87,7 @@ import { withQueuedCrossTabLock } from '@/lib/cross-tab-op-lock';
 import {
   mineCoinOpId,
   mineEnergyOpId,
+  mineSessionOwnerId,
   partitionOpenMineSessions,
   persistMineSession,
   readMineSession,
@@ -86,6 +102,8 @@ export interface MineSettlementDeps {
   readonly wallet: CoinWallet;
   readonly settler: EnergySettler;
   readonly now?: () => number;
+  /** This tab's identity; defaults to {@link mineSessionOwnerId}. */
+  readonly ownerId?: string;
 }
 
 export type StartSessionResult =
@@ -173,6 +191,7 @@ export interface MineSettlement {
 export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
   const { pubkey, wallet, settler } = deps;
   const now = deps.now ?? Date.now;
+  const ownerId = deps.ownerId ?? mineSessionOwnerId();
 
   const save = (record: Omit<MineSessionRecord, 'updatedAt'>): boolean =>
     persistMineSession(pubkey, { ...record, updatedAt: now() });
@@ -266,11 +285,20 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
         async (): Promise<StartSessionResult> => {
           const startedAt = now();
 
-          // Debris first: an `open` record whose tab stopped heartbeating owes
-          // nothing and must not keep the Mine shut.
-          const { active, stale } = partitionOpenMineSessions(pubkey, startedAt);
+          // Debris first: an `open` record whose tab stopped heartbeating, or
+          // that THIS tab opened before a reload, owes nothing and must not
+          // keep the Mine shut.
+          const { active, stale, orphaned } = partitionOpenMineSessions(
+            pubkey,
+            startedAt,
+            undefined,
+            ownerId,
+          );
           for (const record of stale) {
             save({ ...record, status: 'abandoned', note: 'stale-open-session' });
+          }
+          for (const record of orphaned) {
+            save({ ...record, status: 'abandoned', note: 'orphaned-by-reload' });
           }
           if (active.length > 0) {
             return { ok: false, reason: 'session-in-progress' };
@@ -283,6 +311,7 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
             status: 'open',
             startedAt,
             startEnergy,
+            ownerId,
           });
           // No durable operation identity ⇒ no value-bearing operation. Same
           // rule the Coin wallet applies before it publishes.
@@ -358,15 +387,22 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
 
     async recoverSessions(): Promise<MineSettlementResult[]> {
       const results: MineSettlementResult[] = [];
-      const { stale } = partitionOpenMineSessions(pubkey, now());
+      const { stale, orphaned } = partitionOpenMineSessions(pubkey, now(), undefined, ownerId);
       const staleIds = new Set(stale.map((record) => record.sessionId));
+      const orphanedIds = new Set(orphaned.map((record) => record.sessionId));
       for (const record of unresolvedMineSessions(pubkey)) {
         if (record.status === 'open') {
           // Debris is abandoned; nothing was ever owed, so the player loses
-          // nothing and no reward is fabricated. A session still being
-          // heartbeaten is LEFT ALONE: recovery runs whenever the cave is
-          // opened, including in a second tab, and abandoning a live run there
-          // would silently void the run someone is playing in the first.
+          // nothing and no reward is fabricated. Another tab's session still
+          // being heartbeaten is LEFT ALONE: recovery runs whenever the cave
+          // is opened, including in a second tab, and abandoning a live run
+          // there would silently void the run someone is playing in the first.
+          // This tab's OWN open record is debris however fresh it is: nothing
+          // in this tab is playing it (recovery runs before any start).
+          if (orphanedIds.has(record.sessionId)) {
+            save({ ...record, status: 'abandoned', note: 'orphaned-by-reload' });
+            continue;
+          }
           if (!staleIds.has(record.sessionId)) continue;
           save({ ...record, status: 'abandoned', note: 'recovered-open' });
           continue;

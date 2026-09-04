@@ -244,6 +244,7 @@ describe('one mining trip at a time', () => {
       wallet,
       settler,
       now: () => 1_700_000_000_000,
+      ownerId: 'another-tab',
     });
     const live = await otherTab.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!live.ok) throw new Error('start failed');
@@ -267,6 +268,7 @@ describe('one mining trip at a time', () => {
       wallet,
       settler,
       now: () => 1_700_000_000_000,
+      ownerId: 'another-tab',
     });
     const live = await otherTab.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!live.ok) throw new Error('start failed');
@@ -276,6 +278,49 @@ describe('one mining trip at a time', () => {
     await act(async () => {});
 
     expect(readMineSession(PUBKEY, live.sessionId)?.status).toBe('open');
+  });
+
+  it('a reload mid-run frees the Mine for the same tab at once', async () => {
+    // This tab's own run, started before the reload. The unmount cleanup never
+    // ran (a reload does not run it), so the record is still open and fresh.
+    const beforeReload = createMineSettlement({
+      pubkey: PUBKEY,
+      wallet,
+      settler,
+      now: () => 1_700_000_000_000,
+    });
+    const orphan = await beforeReload.startSession({ petId: PET_ID, startEnergy: 100 });
+    if (!orphan.ok) throw new Error('start failed');
+
+    // The reloaded tab: same sessionStorage identity, a fresh component.
+    renderMine();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Start'));
+    });
+
+    expect(document.querySelector('[data-mine-session-in-progress]')).toBeNull();
+    expect(readMineSession(PUBKEY, orphan.sessionId)).toMatchObject({
+      status: 'abandoned',
+      note: 'orphaned-by-reload',
+    });
+    expect(readMineSessions(PUBKEY).filter((r) => r.status === 'open')).toHaveLength(1);
+  });
+
+  it('leaving the page mid-run abandons the session before the tab goes', async () => {
+    renderMine();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Start'));
+    });
+    const open = readMineSessions(PUBKEY).filter((r) => r.status === 'open');
+    expect(open).toHaveLength(1);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    expect(readMineSession(PUBKEY, open[0].sessionId)?.status).toBe('abandoned');
+    expect(energySettlements).toHaveLength(0);
+    expect(coinGrants).toHaveLength(0);
   });
 
   it('a normal solo run is unaffected', async () => {

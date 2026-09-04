@@ -26,7 +26,12 @@ const PET_ID = 'pet-1';
 /** A fixed reference instant; the Mine has no calendar behaviour any more. */
 const DAY_ONE = Date.UTC(2026, 7, 28, 12);
 
-function makeSettlement(nowRef: { ms: number }) {
+/**
+ * `ownerId` models WHICH TAB an instance is. Two instances with distinct ids
+ * are two tabs; the same id is one tab across a reload, whose own leftover
+ * run is debris (see `mine-session-reload.test.ts`).
+ */
+function makeSettlement(nowRef: { ms: number }, ownerId = 'tab-a') {
   const coinCalls: { opId: string; amount: number }[] = [];
   const wallet = {
     readBalance: async () => 0,
@@ -47,6 +52,7 @@ function makeSettlement(nowRef: { ms: number }) {
     wallet,
     settler,
     now: () => nowRef.ms,
+    ownerId,
   });
   return { settlement, coinCalls };
 }
@@ -82,10 +88,11 @@ afterEach(() => {
 describe('overlapping Mine runs are prevented', () => {
   it('a second start is refused while a run is in progress', async () => {
     const nowRef = { ms: DAY_ONE };
-    const { settlement } = makeSettlement(nowRef);
+    const { settlement } = makeSettlement(nowRef, 'tab-a');
+    const otherTab = makeSettlement(nowRef, 'tab-b');
 
     const first = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
-    const second = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const second = await otherTab.settlement.startSession({ petId: PET_ID, startEnergy: 100 });
 
     expect(first.ok).toBe(true);
     expect(second).toEqual({ ok: false, reason: 'session-in-progress' });
@@ -96,8 +103,8 @@ describe('overlapping Mine runs are prevented', () => {
   it('simultaneous starts in two tabs produce exactly ONE active session', async () => {
     const nowRef = { ms: DAY_ONE };
     // Two independent settlement instances = two tabs on one account.
-    const tabA = makeSettlement(nowRef);
-    const tabB = makeSettlement(nowRef);
+    const tabA = makeSettlement(nowRef, 'tab-a');
+    const tabB = makeSettlement(nowRef, 'tab-b');
 
     const [a, b] = await Promise.all([
       tabA.settlement.startSession({ petId: PET_ID, startEnergy: 100 }),
@@ -113,13 +120,14 @@ describe('overlapping Mine runs are prevented', () => {
 
   it('a run left behind by a closed tab stops blocking once it goes quiet', async () => {
     const nowRef = { ms: DAY_ONE };
-    const { settlement } = makeSettlement(nowRef);
-    const abandonedTab = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
+    const closedTab = makeSettlement(nowRef, 'tab-closed');
+    const { settlement } = makeSettlement(nowRef, 'tab-b');
+    const abandonedTab = await closedTab.settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!abandonedTab.ok) throw new Error('start failed');
 
     // Still heartbeating: genuinely in progress, so still blocked.
     nowRef.ms = DAY_ONE + MINE_ACTIVE_SESSION_TTL_MS - 1_000;
-    settlement.heartbeatSession(abandonedTab.sessionId);
+    closedTab.settlement.heartbeatSession(abandonedTab.sessionId);
     expect(await settlement.startSession({ petId: PET_ID, startEnergy: 100 })).toEqual({
       ok: false,
       reason: 'session-in-progress',

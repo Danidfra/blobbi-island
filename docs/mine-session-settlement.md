@@ -172,10 +172,31 @@ from scratch.
 | Situation | Energy | Coins | Session |
 |---|---|---|---|
 | App closes mid-run | **0** | **0** | abandoned on recovery |
+| Page reloads mid-run (same tab) | **0** | **0** | abandoned on `pagehide`, or by the reloaded tab as its own orphan |
 | Coin settles, app closes before energy | untouched | kept | resumes `energy-pending` |
 | Coin ambiguous | **untouched** | reconciled later | `coin-pending`, no blind retry |
 | Energy ambiguous | reconciled by marker | kept | `energy-pending`, no second subtraction |
 | Settlement called twice | one delta | one grant | `settled` |
+
+### 8.1 Ownership: whose `open` record is this?
+
+A heartbeat alone cannot distinguish "another tab is playing" from "this tab
+just reloaded mid-run". React's unmount cleanup does not run on a reload, so the
+`open` record survived with a fresh `updatedAt`, and the reloaded tab refused to
+start ("You already have a mining trip in progress") until the record aged past
+the 90 s TTL. A "hard" reload appeared to fix it only because it usually came
+later; the reload type never mattered.
+
+Every record now carries the opening tab's `ownerId`, minted once per tab in
+`sessionStorage` (survives that tab's reloads, never shared with another tab).
+Both `startSession` and startup recovery abandon an `open` record carrying this
+tab's own id at once (`note: orphaned-by-reload`), because nothing in this tab is
+playing it. A record with another id is another tab's live run until its
+heartbeat goes quiet, exactly as before. Records written before ownership
+existed carry no id and are treated as foreign, the safe direction. Gameplay is
+still never rehydrated: the record is an economic record, not a savegame, and an
+`open` run owes nothing. The component also abandons its run on `pagehide`, so
+in the common case the record is closed before the reload even completes.
 
 ## 9. Performance
 

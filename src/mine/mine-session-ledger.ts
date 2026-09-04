@@ -60,9 +60,65 @@ export interface MineSessionRecord {
   readonly energyStatus?: 'applied' | 'ambiguous' | 'failed';
   readonly updatedAt: number;
   readonly note?: string;
+  /**
+   * Which browser tab opened the run; see {@link mineSessionOwnerId}. Absent
+   * on records written before ownership existed, which are treated as
+   * foreign (the safe direction: a foreign run is left alone until it goes
+   * quiet).
+   */
+  readonly ownerId?: string;
 }
 
 const STORAGE_KEY = 'blobbi:mine:sessions';
+const OWNER_STORAGE_KEY = 'blobbi:mine:owner';
+
+let inMemoryOwnerId: string | null = null;
+
+function mintOwnerId(): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  return uuid ?? `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+}
+
+/**
+ * The identity of THIS browser tab, for telling its own orphaned run from a
+ * run another tab is playing.
+ *
+ * Lives in `sessionStorage`, which is exactly the scope needed: it survives a
+ * reload of the same tab (normal or hard) and is never shared with another
+ * tab. So after a reload the tab finds an `open` record carrying its own id
+ * and knows, without waiting for a heartbeat to time out, that the record is
+ * its own debris: the gameplay that owned it is gone, nothing was durable, and
+ * it owes nothing. A record carrying another id is another tab's live run
+ * until its heartbeat says otherwise.
+ *
+ * Falls back to a per-process id when `sessionStorage` is unavailable, which
+ * degrades to the previous behaviour (every orphan waits out the TTL).
+ */
+export function mineSessionOwnerId(): string {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const existing = sessionStorage.getItem(OWNER_STORAGE_KEY);
+      if (existing) return existing;
+      const minted = mintOwnerId();
+      sessionStorage.setItem(OWNER_STORAGE_KEY, minted);
+      return minted;
+    }
+  } catch {
+    /* storage refused: fall through */
+  }
+  if (!inMemoryOwnerId) inMemoryOwnerId = mintOwnerId();
+  return inMemoryOwnerId;
+}
+
+/** Test helper: forget this tab's identity, as a brand-new tab would. */
+export function resetMineSessionOwnerId(): void {
+  inMemoryOwnerId = null;
+  try {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(OWNER_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Settled/abandoned records are kept this long for diagnostics, then pruned. */
 export const MINE_SESSION_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -182,28 +238,39 @@ export function persistMineSession(
 /**
  * `open` records: gameplay that was started and never finished.
  *
- * Split by liveness rather than returned raw, because the two halves mean
- * opposite things: a session still being heartbeaten belongs to a tab that is
- * playing right now and must be left alone, while one that went quiet is
- * debris and can be abandoned (it owes nothing; no reward was frozen and no
- * energy was ever published).
+ * Split three ways rather than returned raw, because the parts mean different
+ * things:
+ *
+ *  - `orphaned`: opened by THIS tab (same {@link mineSessionOwnerId}). The
+ *    caller is asking because it holds no run, so the gameplay that owned the
+ *    record is gone (the tab reloaded). Debris, however fresh its heartbeat.
+ *  - `active`: another tab's run, still heartbeating. Must be left alone.
+ *  - `stale`: another tab's run that went quiet. Debris.
+ *
+ * Debris owes nothing: no reward was frozen and no energy was ever published.
  */
 export function partitionOpenMineSessions(
   pubkey: string | undefined,
   nowMs: number,
   ttlMs: number = MINE_ACTIVE_SESSION_TTL_MS,
-): { active: MineSessionRecord[]; stale: MineSessionRecord[] } {
+  ownerId?: string,
+): { active: MineSessionRecord[]; stale: MineSessionRecord[]; orphaned: MineSessionRecord[] } {
   const active: MineSessionRecord[] = [];
   const stale: MineSessionRecord[] = [];
+  const orphaned: MineSessionRecord[] = [];
   for (const record of readMineSessions(pubkey)) {
     if (record.status !== 'open') continue;
+    if (ownerId && record.ownerId === ownerId) {
+      orphaned.push(record);
+      continue;
+    }
     // `updatedAt` is refreshed by the playing tab's heartbeat. A clock that
     // jumped backwards makes the age negative, which reads as "just touched",
     // the safe direction, since it errs toward preserving a live run.
     if (nowMs - record.updatedAt > ttlMs) stale.push(record);
     else active.push(record);
   }
-  return { active, stale };
+  return { active, stale, orphaned };
 }
 
 /**
