@@ -194,6 +194,13 @@ describe('Nostr Station VR chairs', () => {
   // chair's height. (96 px × ~1.32 × 12 % ≈ 15 px ≈ 2.2 % of 697; the chair is
   // 27.4 % tall.)
   const BODY_GAP_OF_CHAIR = 0.08;
+  // The visible body's height over the chair's height: the body spans ~75 %
+  // of the box (baby 12.5–88 %), and the box is ~0.66 of the chair.
+  const BODY_HEIGHT_OF_CHAIR = 0.5;
+  // The cushion must overlap the body enough to read as "in the seat"...
+  const MIN_OVERLAP_OF_CHAIR = 0.02;
+  // ...and never swallow more than this share of the body.
+  const MAX_HIDDEN_BODY_FRACTION = 0.1;
 
   it('has four chairs that share one seat-contact configuration', () => {
     expect(chairs).toHaveLength(4);
@@ -223,8 +230,23 @@ describe('Nostr Station VR chairs', () => {
     for (const chair of chairs) {
       expect(chair.foregroundFrom, chair.id).toBeGreaterThan(PAD_REAR_SEAM);
       expect(chair.foregroundFrom, chair.id).toBeLessThanOrEqual(PAD_FRONT_SEAM);
-      // The overlap that makes the body read as sunk into the seat.
-      expect(chair.seatContact.y - BODY_GAP_OF_CHAIR, chair.id).toBeGreaterThan(chair.foregroundFrom!);
+    }
+  });
+
+  it('the body visibly overlaps the cushion, so it is seated rather than perched or floating', () => {
+    for (const chair of chairs) {
+      const bodyBottom = chair.seatContact.y - BODY_GAP_OF_CHAIR;
+      const overlap = bodyBottom - chair.foregroundFrom!;
+      expect(overlap, `${chair.id} overlap`).toBeGreaterThanOrEqual(MIN_OVERLAP_OF_CHAIR);
+      // Perched would be a body bottom at or above the lip, floating above the pad.
+      expect(bodyBottom, chair.id).toBeGreaterThan(PAD_FRONT_SEAM);
+    }
+  });
+
+  it('the foreground slice hides only a small share of the body (the lower body stays readable)', () => {
+    for (const chair of chairs) {
+      const hidden = chair.seatContact.y - BODY_GAP_OF_CHAIR - chair.foregroundFrom!;
+      expect(hidden / BODY_HEIGHT_OF_CHAIR, `${chair.id} hidden share`).toBeLessThanOrEqual(MAX_HIDDEN_BODY_FRACTION);
     }
   });
 
