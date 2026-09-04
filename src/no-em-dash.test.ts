@@ -14,7 +14,8 @@ import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const EM_DASH = '—';
+// Built from its code point so this file passes its own check once tracked.
+const EM_DASH = String.fromCodePoint(0x2014);
 
 const SKIP_PREFIXES = ['node_modules/', 'dist/', 'public/assets/'];
 const SKIP_EXTENSIONS = [
