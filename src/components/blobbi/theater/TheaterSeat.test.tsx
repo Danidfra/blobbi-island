@@ -9,6 +9,7 @@
  */
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
+import { boundaryYRange } from '@/lib/blobbi-world-render';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, act, fireEvent } from '@testing-library/react';
 import { TheaterSeat } from './TheaterSeat';
@@ -102,8 +103,10 @@ describe('TheaterSeat', () => {
   });
 
   it('clamps the walk target into the theater boundary', () => {
-    // The theater floor starts at y=75; a cushion point above it must be pulled
-    // down to a reachable spot rather than becoming a target that never arrives.
+    // A cushion point above the theater floor must be pulled down to a
+    // reachable spot rather than becoming a target that never arrives. The
+    // floor's top edge is the carpet strip along the stage lip.
+    const { minY: floorTop } = boundaryYRange(locationBoundaries['stage-inside.png']);
     const highSeat: TheaterSeatConfig = { ...seatA1, interactionTarget: { x: 0.5, y: 0.0 } };
     const h = renderSeat(highSeat);
     const seat = h.container.querySelector<HTMLElement>(`[data-seat-id="${highSeat.id}"]`)!;
@@ -112,7 +115,8 @@ describe('TheaterSeat', () => {
     } as DOMRect);
 
     fireEvent.click(seat);
-    expect(h.requests[0].target.y).toBeGreaterThanOrEqual(75);
+    expect(h.requests[0].target.y).toBeGreaterThanOrEqual(floorTop);
+    expect(h.requests[0].target.y).toBeLessThan(75); // the strip in front of row C
   });
 
   it('sits only after CONFIRMED ARRIVAL, never on click', () => {

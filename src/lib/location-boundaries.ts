@@ -224,10 +224,29 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [10, 90],
     y: [84.2, 100],
   },
+  /**
+   * Theater: the seating floor, the centre aisle and the carpet strip along
+   * the stage lip.
+   *
+   * The old single band (y ≥ 84.2) was tuned around the previous approach
+   * behaviour and left the whole aisle unreachable. Measured against the
+   * rendered seat sprites (`theater-seats-config.ts`, 10.7 % × 15.4 % boxes):
+   * row C spans y 74.6–90 with its inner boxes ending at x 45.4 / 54.6, row B
+   * y 79.6–95 at x 41.4 / 58.6, row A y 84.6–100 at x 38.2 / 61.8, and the
+   * stage lip sits at y ≈ 70.4. The aisle is the narrowest gap (row C's) all
+   * the way down, so feet never land under a chair; the body may overlap
+   * neighbouring sprites and is drawn behind them (z 9 under every row).
+   */
   'stage-inside.png': {
-    shape: 'rectangle',
-    x: [0, 100],
-    y: [84.2, 100],
+    shape: 'composite',
+    areas: [
+      // The seating floor, unchanged.
+      { type: 'rectangle', x: [0, 100], y: [84.2, 100] },
+      // The carpet strip between the stage lip and the back row.
+      { type: 'rectangle', x: [0, 100], y: [71, 74.6] },
+      // The centre aisle, row C's gap, down to the seating floor.
+      { type: 'rectangle', x: [45.4, 54.6], y: [74.6, 84.2] },
+    ],
   },
   'cave-inside.png': {
     // Deliberately thin: the corridor floor band in the art. Ground-anchor
