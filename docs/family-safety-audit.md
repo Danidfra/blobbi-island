@@ -389,7 +389,7 @@ moderation exists · **Persist** = content persists beyond the session.
 | S14 | **Inventory / Coins** (kind 31633) | `inventory/*` | self | self | no | no | no | no | no | no | n/a | yes |
 | S15 | **Blobbonaut profile** (kind 11125) | `useBlobbonautProfile.ts`, `blobbi-parsers.ts` | self + Ditto | semi | no (read of others is not wired to UI) | no | no | no | no | no | n/a | yes |
 | S16 | **Relay selector** | `RelaySelector.tsx`, reachable via `AccountMenu.tsx:306` | **the child** | n/a | n/a | **yes, arbitrary `wss://` URL** | n/a | **yes** | changes *which* strangers appear | no | n/a | localStorage |
-| S17 | **Nostr Hub modal** | `NostrHubModal.tsx` via `InteractiveElements.tsx:929` | app | curated | no | no | local icons | **no links today** | not today | no | n/a | n/a |
+| S17 | **Nostr Hub modal** (Connected Experiences section) | `NostrHubModal.tsx` + `nostr-station/ConnectedExperiencesSection.tsx` via `InteractiveElements.tsx` | app | curated (`src/connected-experiences`) | no | no | local icons | **one `external-link` egress to Nostr Farm**, through the egress boundary; disabled and explained under Family | no | no | n/a | n/a |
 | S18 | **Game Item Tools** (`/tools/game-items`) | `GameItemTools.tsx`, ships in production, unlinked | the child, if they find it | n/a | n/a | **yes** | **yes (upload)** | **yes** | **yes**: external link at `GameItemTools.tsx:267` | no | n/a | publishes kind 31632 |
 | S19 | **Signup / nsec** | `SignupDialog.tsx` | app | curated | no | no | no | no | downloads `nsec.txt` | no | n/a | **the credential, forever** |
 | S20 | **Achievements** | kind 11125 `achievement` tags | self + Ditto | semi | no | no | no | no | no | no | n/a | yes, **but no social announcement surface exists** |

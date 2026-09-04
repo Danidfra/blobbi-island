@@ -3,7 +3,7 @@
  * cushion lip down IN FRONT of its sitter, and only while it has one.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { MovementBlockerProvider } from '@/contexts/MovementBlockerContext';
 import { RoomSeat } from './RoomSeat';
 import { getRoomSeat } from '@/lib/room-seats-config';
@@ -50,5 +50,45 @@ describe('RoomSeat foreground slice', () => {
     const id = 'mall-terrace-1-left-chair';
     expect(getRoomSeat(id)!.foregroundFrom).toBeUndefined();
     expect(renderSeat(id, id).foreground()).toBeNull();
+  });
+});
+
+describe('RoomSeat while already seated', () => {
+  it('a click on the occupied chair re-fires the seated action without a walk or a second arrival', () => {
+    const config = getRoomSeat('nostr-station-chair-1')!;
+    const requestInteraction = vi.fn();
+    const onSit = vi.fn();
+    const onArrive = vi.fn();
+    const onSeatedClick = vi.fn();
+    const view = render(
+      <MovementBlockerProvider>
+        <RoomSeat
+          config={config}
+          requestInteraction={requestInteraction}
+          sittingIn={config.id}
+          onSit={onSit}
+          onArrive={onArrive}
+          onSeatedClick={onSeatedClick}
+        />
+      </MovementBlockerProvider>,
+    );
+    const chair = view.container.querySelector(`[data-seat-id="${config.id}"]`) as HTMLElement;
+    fireEvent.click(chair);
+    expect(onSeatedClick).toHaveBeenCalledTimes(1);
+    expect(requestInteraction).not.toHaveBeenCalled();
+    expect(onSit).not.toHaveBeenCalled();
+    expect(onArrive).not.toHaveBeenCalled();
+  });
+
+  it('a click on the occupied chair with no seated action does nothing', () => {
+    const config = getRoomSeat('nostr-station-chair-1')!;
+    const requestInteraction = vi.fn();
+    const view = render(
+      <MovementBlockerProvider>
+        <RoomSeat config={config} requestInteraction={requestInteraction} sittingIn={config.id} />
+      </MovementBlockerProvider>,
+    );
+    fireEvent.click(view.container.querySelector(`[data-seat-id="${config.id}"]`) as HTMLElement);
+    expect(requestInteraction).not.toHaveBeenCalled();
   });
 });

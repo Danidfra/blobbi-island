@@ -543,6 +543,32 @@ describe('recovery', () => {
     expect(live().every((r) => r.filters.length === 1)).toBe(true);
   });
 
+  it('the tab becoming visible again reconciles once from the authoritative fetch; hidden does nothing', async () => {
+    // The Connected Experiences return path: the player harvested in another
+    // tab and came back. A silenced socket must not leave stale produce.
+    const { result } = renderView();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live().every((r) => r.filters.length === 1)).toBe(true));
+    await settle();
+    expect(network.discoveryReads).toBe(1);
+    const before = openRelays.length;
+
+    const visibility = vi.spyOn(document, 'visibilityState', 'get');
+    visibility.mockReturnValue('hidden');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await settle();
+    expect(network.discoveryReads).toBe(1);
+
+    stored.spends = [spend('while-away')];
+    visibility.mockReturnValue('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(strawberryQty(result)).toBe(3));
+    await settle();
+    expect(network.discoveryReads).toBe(2);
+    expect(openRelays.length).toBe(before);
+    visibility.mockRestore();
+  });
+
   it('a dropped iterator resubscribes and reconciles', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { result } = renderView();

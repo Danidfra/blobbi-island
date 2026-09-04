@@ -222,6 +222,7 @@ still opens as a popup rather than a full tab.
 | `ShareModal` (native) | `navigator.share` + hand-rolled feature detection | `requestEgress({ class: 'native-share', data })`; the button label now reflects what pressing it will actually do |
 | `GameItemTools` | `<a target="_blank">` to soapbox.pub | button → `external-link` |
 | `ImageManager` | `<a target="_blank">` to an **author-typed URL** | button → `external-link`, so the URL is parsed and refused unless `https:` |
+| Nostr Hub, Connected Experiences section (`ConnectedExperiencesSection`, added later) | none: a new action | `requestEgress({ class: 'external-link', url, label: 'Nostr Farm' })`, with the label shown as context under the host (`docs/connected-experiences.md`) |
 | `RelaySelector` | wrote the relay directly | hidden when disallowed; the write is gated in `AppProvider` |
 | `/tools/game-items` | unlinked but reachable by typing the path | `EgressRouteGuard` |
 | `NoteContent.tsx` | dead code that linkified arbitrary URLs | **deleted** |
