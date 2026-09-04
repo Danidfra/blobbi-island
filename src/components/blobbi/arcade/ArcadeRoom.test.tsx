@@ -694,8 +694,9 @@ describe('elevator', () => {
 
     // The `slide` branch used to have no data-block-move, no touch handler and
     // no pointer stop-propagation, so a tap started BOTH a raw world walk and a
-    // walk-to-interact, and the two raced.
-    expect(doorWrapper).toHaveAttribute('data-block-move');
+    // walk-to-interact, and the two raced. The elevator box (doors and the
+    // opening between them) carries the contract now.
+    expect(doorWrapper.closest('[data-block-move]')).not.toBeNull();
     fireEvent.pointerDown(doorWrapper, { bubbles: true });
     fireEvent.touchStart(doorWrapper);
     expect(worldMoves).toBe(0);

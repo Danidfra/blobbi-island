@@ -331,6 +331,20 @@ export function ArcadeRoom({
     },
     [requestInteraction],
   );
+  /**
+   * The whole elevator box is the control, doors AND the opening between
+   * them. With the doors slid aside (hover, or an earlier call) the middle of
+   * the box is the open doorway, and a tap there must call the elevator just
+   * as a tap on a door does; the old markup put the handlers on the door
+   * images only, so the open doorway swallowed the click.
+   */
+  const callElevator = useCallback(
+    (event: React.SyntheticEvent, isTouch = false) => {
+      event.stopPropagation();
+      requestElevatorInteraction({ target: elevatorStand, touch: isTouch, action: () => {} });
+    },
+    [requestElevatorInteraction, elevatorStand],
+  );
   const handleElevatorPickerClose = useCallback(() => {
     setIsElevatorModalOpen(false);
     dispatchElevator({ type: 'modal-closed' });
@@ -399,18 +413,25 @@ export function ArcadeRoom({
           style={{ zIndex: ARCADE_ELEVATOR_Z_INDEX }}
           data-elevator-phase={elevatorDoors.phase}
           data-elevator-open={elevatorDoorOpen ? 'true' : 'false'}
+          data-block-move
+          role="button"
+          aria-label="Elevator"
           onMouseEnter={() => dispatchElevator({ type: 'hover-enter' })}
           onMouseLeave={() => dispatchElevator({ type: 'hover-leave' })}
+          onClick={(event) => callElevator(event)}
+          onTouchStart={(event) => {
+            event.preventDefault();
+            callElevator(event, true);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
         >
+          {/* The door leaves: visuals driven by the lifecycle above. */}
           <InteractiveElement
             src={ARCADE_ELEVATOR_DOOR_SRC}
             alt="Elevator, left door"
             effect="slide"
             slideDirection="right"
             className="scale-x-[-1]"
-            onClick={() => {}}
-            requestInteraction={requestElevatorInteraction}
-            walkTarget={elevatorStand}
             isHovered={elevatorDoorOpen}
           />
           <InteractiveElement
@@ -418,9 +439,6 @@ export function ArcadeRoom({
             alt="Elevator, right door"
             effect="slide"
             slideDirection="right"
-            onClick={() => {}}
-            requestInteraction={requestElevatorInteraction}
-            walkTarget={elevatorStand}
             isHovered={elevatorDoorOpen}
           />
         </div>

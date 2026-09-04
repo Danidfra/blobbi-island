@@ -332,11 +332,14 @@ export function InteractiveElement({
     const isActionable = Boolean(onClick);
     return (
       <div
-        className={cn('cursor-pointer select-none', className)}
+        className={cn(isActionable ? 'cursor-pointer' : 'cursor-default', 'select-none', className)}
         {...(isActionable ? { 'data-block-move': true } : {})}
         onMouseEnter={() => setIsSelfHovered(true)}
         onMouseLeave={() => setIsSelfHovered(false)}
-        onClick={handleInteraction}
+        // A sliding leaf with no action of its own is a visual (the elevator
+        // doors, driven by their box's lifecycle; the theater's little door):
+        // it must not swallow the click, so the parent control receives it.
+        onClick={isActionable ? handleInteraction : undefined}
         {...(isActionable
           ? {
               onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => {
