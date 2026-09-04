@@ -209,7 +209,7 @@ Concrete per-room inconsistencies **[confirmed]**:
 
 - `photo-booth-inside.png` boundary (`x:[20,68], y:[59,63]`) is used by the PhotoBooth modal in **modal-local** percent space — the same numbers mean different on-screen geometry than they would in-world.
 - `cave-inside.png` has a 4.5%-tall walkable strip (`y:[71,75.5]`) — with center-anchored positioning the body dwarfs the walkable band; the room works only because the art tolerates overlap **[inference]**.
-- `nostr-station-inside.png` and `plaza-inside.png` model stairs/aisles as many abutting rects/triangles; nearest-point clamping across these can produce corner-cutting between adjacent areas when a click lands in a notch **[likely]**.
+- `nostr-station-inside.png` and `plaza-inside.webp` model stairs/aisles as many abutting rects/triangles; nearest-point clamping across these can produce corner-cutting between adjacent areas when a click lands in a notch **[likely]**.
 - `arcade-minus1.png` contains commented-out leftover areas (`location-boundaries.ts:146-147`) — config maintained by trial and error **[inference]**.
 
 ## 8. Room-by-room depth scaling comparison
@@ -221,7 +221,7 @@ Concrete per-room inconsistencies **[confirmed]**:
 | Background | Front scale (bottom) | Back scale (top) | Ratio | Boundary y-extent | Notes |
 |---|---|---|---|---|---|
 | `nostr-station-open.webp` | 1.2 | 0.6 | **2.00×** | 30–95 (composite) | Largest depth variation; worst shadow separation |
-| `plaza-inside.png` | 1.0 | 0.6 | 1.67× | 33–100 (composite) | Two floors share one linear ramp |
+| `plaza-inside.webp` | 1.0 | 0.6 | 1.67× | 33–100 (composite) | Two floors share one linear ramp |
 | `town-open.webp` | 1.2 | 0.8 | 1.50× | 58–70 (arch) | Steep ramp over only 12% of height |
 | `plaza-open.webp` | 1.2 | 0.8 | 1.50× | 56–98 (rect) | Gentle ramp |
 | `arcade-minus1.png` | 1.2 | 0.8 | 1.50× | 49–94 (composite) | |

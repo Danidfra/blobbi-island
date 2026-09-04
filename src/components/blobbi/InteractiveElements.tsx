@@ -19,11 +19,13 @@ import { CareStoreRoom } from './care-store/CareStoreRoom';
 import { ClothingStoreRoom } from './clothing-store/ClothingStoreRoom';
 import { BadgesStoreRoom } from './badges-store/BadgesStoreRoom';
 import { FurnitureStoreRoom } from './furniture-store/FurnitureStoreRoom';
+import { PlazaInsideRoom } from './plaza/PlazaInsideRoom';
 import { CARE_STORE_FACADE } from '@/lib/care-store-config';
 import { BADGES_STORE_FACADE } from '@/lib/badges-store-config';
 import { CLOTHING_STORE_FACADE } from '@/lib/clothing-store-config';
 import { FURNITURE_STORE_FACADE } from '@/lib/furniture-store-config';
 import { MALL_PHOTO_BOOTH } from '@/lib/photo-booth-config';
+import { PLAZA_INSIDE_BACKGROUND } from '@/lib/plaza-inside-config';
 import { arcadeFloorForBackground } from '@/lib/arcade-machines-config';
 import { TownBush } from './TownBush';
 import { townBushes } from '@/lib/town-bushes-config';
@@ -869,121 +871,15 @@ if (backgroundFile === 'plaza-open.webp') {
   );
 }
 
-// Plaza inside elements (when background is plaza-inside.png)
-if (backgroundFile === 'plaza-inside.png') {
-  return (
-    <>
-      {/*
-        Plaza inside Door — closed art is the base layer, the open art is a
-        hover/tap overlay on top of it (same pattern as the shopping-mall store
-        doors). Sits at z-[9], the deepest layer of this room, so the balcony /
-        staircase layer below still occludes its base correctly.
-      */}
-      <div className='absolute w-[11.5%] left-[43.6%] top-[33.5%] z-[9]'>
-          <img
-            src="/assets/locations/plaza/inside-door.png"
-            alt="Plaza inside door"
-            className='block w-full'
-          />
-        {/*
-          The open-door PNG has a WIDER canvas than the closed one (432×351 vs
-          424×351) because its panels swing outward past the door frame. Both are
-          drawn on the same grid at the same scale, so rendering the overlay at
-          432/424 = 101.887% of the group width — with height left automatic —
-          reproduces the closed door's exact pixel scale and makes the shared
-          frame/arch line up. Using w-full/h-full/inset-0 instead would letterbox
-          it via object-contain (~1.9% too small, ~1px off).
-        */}
-        <InteractiveElement
-          src="/assets/locations/plaza/inside-door-open.png"
-          alt="Plaza inside door open"
-          animated={false}
-          effect="door"
-          onClick={() => setCurrentLocation('plaza')}
-          requestInteraction={requestInteraction}
-          className="absolute top-0 left-0 w-[101.887%]"
-        />
-      </div>
-
-      {/*
-        Balcony railing + staircase foreground layer. Purely decorative, so it
-        must not capture pointer events: it spans the full width and covers the
-        door above, and without pointer-events-none it swallows the door's hover.
-        Same convention as the shopping mall's glass barriers.
-      */}
-      <img
-        src="/assets/locations/plaza/glass-barrier.png"
-        alt="Glass Barrier"
-        className="absolute opacity-60 top-[30.5%] w-full object-cover z-[10] pointer-events-none"
-      />
-      {/* <img
-        src="/assets/locations/plaza/glass-barrier.png"
-        alt="Glass Barrier"
-        className="absolute top-[30.5%] w-full object-cover z-[2]"
-      /> */}
-
-      {/* Plaza Chill Lounge */}
-      <div className='group absolute bottom-[28.2%] right-[6.5%] z-[11] w-[14.3%]'>
-        <img
-          src="/assets/locations/plaza/chill-lounge.png"
-          alt="Plaza chill lounge"
-          className="w-full"
-        />
-        <InteractiveElement
-          src="/assets/locations/plaza/chill-lounge-interactive.png"
-          alt="Chill lounge entrace"
-          effect="scale"
-          className="absolute right-[20%] -bottom-[15%] w-[90%]"
-          inert
-        />
-      </div>
-
-      {/* Plaza Drawing Wall */}
-      <div className='absolute bottom-[35.8%] right-[26.8%] z-[11] w-[8.8%]'>
-        <img
-          src="/assets/locations/plaza/drawing-wall.png"
-          alt="Plaza drawing wall"
-          className="w-full"
-        />
-        <InteractiveElement
-          src="/assets/locations/plaza/drawing-wall-interactive.png"
-          alt="Drawing wall entrace"
-          effect="scale"
-          className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%]"
-          inert
-        />
-      </div>
-
-      {/* Plaza Information */}
-      <div className='absolute bottom-[29%] left-[6.5%] z-[11] w-[13.2%]'>
-        <img
-          src="/assets/locations/plaza/information.png"
-          alt="Plaza information"
-          className="w-full"
-        />
-        <InteractiveElement
-          src="/assets/locations/plaza/information-interactive.png"
-          alt="Information door"
-          effect="scale"
-          className="absolute bottom-[0] right-0"
-          inert
-        />
-      </div>
-
-      {/* Plaza Fountain */}
-        <div className='absolute left-1/2 transform -translate-x-1/2 bottom-[10%] z-[24]'>
-          <img src="/assets/locations/plaza/floor.png" alt="Floor" />
-          <img src="/assets/locations/plaza/fountain-bottom.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[30%] w-[70%]" />
-          <img src="/assets/locations/plaza/fountain-top.png" alt="Floor" className="absolute left-1/2 transform -translate-x-1/2 bottom-[80%] w-[25%]" />
-        </div>
-
-      {/* Back button to return to plaza */}
-      <BackArrow
-        onClick={() => setCurrentLocation('plaza')}
-        className="absolute top-[5%] left-4 w-12 h-12 z-20 text-current"
-      />
-    </>
-  );
+/*
+  Plaza interior — delegated to `plaza/PlazaInsideRoom.tsx`, like the arcade
+  and the shop interiors. The new plate paints the storefronts, balcony,
+  staircase and rug, so the room composes only the door, the railing/stairs
+  occluder, six storefront hotspots, the fountain and its blockers — every
+  number in `plaza-inside-config.ts`.
+*/
+if (backgroundFile === PLAZA_INSIDE_BACKGROUND) {
+  return <PlazaInsideRoom blobbiRef={blobbiRef} selectedBlobbiId={selectedBlobbi?.id ?? null} />;
 }
 
 // Nostr Station Inside elements

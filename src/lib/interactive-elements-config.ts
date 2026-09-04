@@ -3,6 +3,13 @@
  * Used for dynamic z-index calculations for the Blobbi character
  */
 
+import {
+  PLAZA_DEPTH,
+  PLAZA_FOUNTAIN,
+  PLAZA_INSIDE_BACKGROUND,
+  PLAZA_OCCLUSION,
+} from '@/lib/plaza-inside-config';
+
 export interface InteractiveElementConfig {
   id: string;
   /** Y position as percentage of container height */
@@ -181,11 +188,54 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     ]
   },
   {
-    backgroundFile: 'plaza-inside.png',
+    /*
+      Plaza interior. One occluder — the balcony railing + staircase overlay at
+      `PLAZA_DEPTH.overlay` — and one prop, the fountain at `PLAZA_DEPTH.fountain`.
+      The lines are measurements from `plaza-inside-config.ts`, not preferences:
+
+      - Below the fountain plinth's bottom edge (y = 97) the Blobbi is in front
+        of the fountain.
+      - From there up to the railing's base (y = 49.3) — the whole ground floor
+        and the flight of stairs — it is in front of the overlay.
+      - Between the railing's base and the landing's top edge (y = 44.6) the
+        overlay is opaque on the corridor AND on the landing, and only x tells
+        them apart: between the stair rails the Blobbi is on the landing, in
+        front; either side it is on the corridor, behind the railing plate.
+      - Above the landing's top edge only the corridor's wings remain, all of it
+        behind the railing.
+
+      A y-only band could not say "in front only between the rails", which is
+      what used to put a Blobbi walking the corridor in front of the railing
+      it was standing behind.
+    */
+    backgroundFile: PLAZA_INSIDE_BACKGROUND,
     thresholds: [
-      { minPosition: 0, maxPosition: 22, zIndex: 25 },
-      { minPosition: 22.01, maxPosition: 56, zIndex: 20 },
-      { minPosition: 56.01, maxPosition: 100, zIndex: 9 }
+      {
+        minPosition: 0,
+        maxPosition: 100 - PLAZA_FOUNTAIN.frontLineY,
+        zIndex: PLAZA_DEPTH.blobbiInFrontOfFountain,
+      },
+      {
+        minPosition: 100 - PLAZA_FOUNTAIN.frontLineY + 0.01,
+        maxPosition: 100 - PLAZA_OCCLUSION.railingBase,
+        zIndex: PLAZA_DEPTH.blobbiInFront,
+      },
+      {
+        minPosition: 100 - PLAZA_OCCLUSION.railingBase + 0.01,
+        maxPosition: 100 - PLAZA_OCCLUSION.landingTop,
+        xRange: [PLAZA_OCCLUSION.stairsX[0], PLAZA_OCCLUSION.stairsX[1]],
+        zIndex: PLAZA_DEPTH.blobbiInFront,
+      },
+      {
+        minPosition: 100 - PLAZA_OCCLUSION.railingBase + 0.01,
+        maxPosition: 100 - PLAZA_OCCLUSION.landingTop,
+        zIndex: PLAZA_DEPTH.blobbiBehind,
+      },
+      {
+        minPosition: 100 - PLAZA_OCCLUSION.landingTop + 0.01,
+        maxPosition: 100,
+        zIndex: PLAZA_DEPTH.blobbiBehind,
+      },
     ]
   },
   {

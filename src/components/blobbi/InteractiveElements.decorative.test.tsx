@@ -58,21 +58,12 @@ describe('unfinished props are decoration', () => {
     expect(inert('Shopping coffe shop')).not.toBeNull();
   });
 
-  it('the plaza kiosks: no pointer cursor on their base art, no hover lift, no walk', async () => {
-    const { goTo } = await renderAt('plaza-inside');
-    for (const alt of ['Chill lounge entrace', 'Drawing wall entrace', 'Information door']) {
-      expect(inert(alt)).not.toBeNull();
-      fireEvent.click(screen.getByAltText(alt));
-    }
-    for (const base of ['Plaza chill lounge', 'Plaza drawing wall', 'Plaza information']) {
-      expect(screen.getByAltText(base).className).not.toContain('cursor-pointer');
-    }
-    expect(goTo).not.toHaveBeenCalled();
-    expect(document.querySelector('.group-hover\\:scale-110')).toBeNull();
-  });
-
   it('the plaza inside door still works — it is a real door', async () => {
+    // The plaza's kiosks (chill lounge, drawing wall, information) are no
+    // longer composed sprites at all: the new plate paints six storefronts,
+    // each of which is a real, pressable hotspot — see `PlazaInsideRoom.test`.
     await renderAt('plaza-inside');
     expect(screen.getByAltText('Plaza inside door open').closest('[data-inert-element]')).toBeNull();
+    expect(document.querySelector('[data-inert-element]')).toBeNull();
   });
 });

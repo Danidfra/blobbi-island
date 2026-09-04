@@ -33,6 +33,7 @@ resolved at runtime from Nostr inventory data.
 | `world/buildings/shop-old.png` | Superseded by `world/buildings/shop.png`. The `-old` suffix marks it as a replaced iteration. |
 | `world/props/bench-1.png`, `world/props/bench-2.png` | Town bench scenery that was never placed in any location. Likely intended for the town or plaza. |
 | `locations/shop/glass-barrier.png` | Superseded by the split `glass-barrier-top.png` / `glass-barrier-bottom.png` pair actually rendered in the shopping mall. |
+| `locations/plaza/chill-lounge.png`, `chill-lounge-interactive.png`, `drawing-wall.png`, `drawing-wall-interactive.png`, `information.png`, `information-interactive.png` | The Plaza interior's composed kiosks. Superseded by `world/backgrounds/plaza-inside.webp`, which paints all six storefronts into the plate; the room now overlays pressable hotspots (`plaza-inside-config.ts`) instead of sprites. |
 | `locations/arcade/level-b1/elevator-minus1-door.png` | Unused floor-specific elevator door variant; the arcade basement renders the shared `elevator-door.png` for both states. |
 | `locations/arcade/level-b1/dance-machine-piece.png` | Companion sprite for the dance machine minigame, which has not been implemented yet. Promote to `minigames/dance/` when that game is built. |
 | `ui/icons/map.svg` | Replaced by the `lucide-react` map icon used by `MapButton`. |

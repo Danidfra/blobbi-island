@@ -76,8 +76,17 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     initialScale: 1.5,
     finalScale: 1.5,
   },
-  'plaza-inside.png': {
+  // Plaza interior. `initialScale` is the FRONT of the room (y = 99.5) and
+  // `finalScale` the BACK (y = 44.8, the far ends of the balcony's wings) — see
+  // `resolveBlobbiScale`. Two floors share one linear ramp: the upper corridor
+  // and the top of the stairs sit at ~0.75–0.8, the ground floor at ~0.9–1.0.
+  //
+  // The back was 0.6 when the balcony was a distant strip on the old plate. On
+  // the new one the Blobbi stands BEHIND the balcony railing, which the artwork
+  // draws 8–9 % of the world tall along the walkable corridor; at 0.6 the head
+  // barely cleared the top rail. 0.75 keeps it a head above the railing.
+  'plaza-inside.webp': {
     initialScale: 1,
-    finalScale: 0.6,
+    finalScale: 0.75,
   },
 };

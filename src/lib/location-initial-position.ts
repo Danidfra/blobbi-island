@@ -19,7 +19,10 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'nostr-station': { x: 50, y: 82 },
   'nostr-station-inside': { x: 50, y: 94.5 },
   'plaza': { x: 50, y: 81.8 },
-  'plaza-inside': { x: 50, y: 47.5 },
+  // Plaza interior: on the landing at the top of the stairs, at the door the
+  // player just came through. The same point the door walks back to
+  // (`PLAZA_DOOR.walkTarget`), so in and out use one spot.
+  'plaza-inside': { x: 50, y: 46 },
   'arcade': { x: 50, y: 84.2 },
   'arcade-1': { x: 50, y: 71.3 },
   'arcade-minus1': { x: 50, y: 60.9 },

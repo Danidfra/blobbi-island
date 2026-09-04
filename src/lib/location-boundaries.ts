@@ -89,39 +89,71 @@ export const locationBoundaries: Record<string, Boundary> = {
     x: [5, 95],
     y: [61.5, 100],
   },
-  'plaza-inside.png': {
+  /**
+   * Plaza interior — two floors joined by the staircase.
+   *
+   * Rebuilt from scratch against `plaza-inside.webp` (1536×1024, the world's
+   * own 3:2, so image percentages are world percentages). Every band follows a
+   * line probed on the plate or on the balcony/staircase overlay that is cut
+   * from it — the figures are in `plaza-inside-config.ts`.
+   *
+   * ## Ground floor
+   *
+   * Open from frame edge to frame edge below the shops' threshold line
+   * (y = 73.6, just under the bottom step at 72.9). The fountain, the two big
+   * planters and the two sign boards that stand out past the threshold are
+   * `MovementBlocker` rectangles (`plazaInsideBlockers`), not holes punched
+   * here — a composite clamps to its NEAREST area, so a hole makes the Blobbi
+   * slide round its rim while a blocker stops the walk and lets the route
+   * planner take it round.
+   *
+   * ## Staircase
+   *
+   * The treads: a column between the stair rails' inner faces (x 43–57 at the
+   * landing), widening down the flight to the newel posts (x 40.2–59.8) and
+   * touching the ground floor at y = 73.6. The landing is its top, from
+   * y = 44.6 — the door's walk target and the room's spawn are on it.
+   *
+   * ## Upper corridor
+   *
+   * The balcony floor is hidden behind its own railing, so the corridor is a
+   * thin band whose FEET stay just above the railing's base: behind the plate,
+   * body rising past the pickets. Along the centre run (x 27–73) the base is
+   * y = 49.3 and the band is y 45.7–48.3, meeting the landing at x = 43 / 57.
+   * Toward each frame edge the railing climbs, and the two wings climb with
+   * it — each a quadrilateral, written as two triangles.
+   *
+   * The wings stop at x = 19 and x = 81, short of the frame. The plate draws
+   * the railing taller the further it gets from the stairs (8 % of the world
+   * beside the landing, nearly 13 % at the frame edge), and past those two
+   * columns a Blobbi standing behind it would show nothing but the top of its
+   * head. The two upper storefronts' stand points sit inside the kept span,
+   * at the bays' inner posts.
+   */
+  'plaza-inside.webp': {
     shape: 'composite',
     areas: [
+      // Ground floor.
+      { type: 'rectangle', x: [0.5, 99.5], y: [73.6, 99.5] },
 
-      // Main area
-      { type: 'rectangle', x: [0, 41], y: [77.7, 100] },
+      // Staircase: the landing and the treads between the rails…
+      { type: 'rectangle', x: [43, 57], y: [44.6, 73.6] },
+      // …and the flight's widening sides, down to the newel posts.
+      { type: 'triangle', points: [{ x: 43, y: 46.8 }, { x: 43, y: 73.6 }, { x: 40.2, y: 73.6 }] },
+      { type: 'triangle', points: [{ x: 57, y: 46.8 }, { x: 57, y: 73.6 }, { x: 59.8, y: 73.6 }] },
 
-      { type: 'rectangle', x: [59, 100], y: [77.7, 100] },
-      { type: 'triangle', points: [{ x: 59, y: 80.9 }, { x: 55, y: 80.9 }, { x: 59, y: 86.1 }] },
+      // Upper corridor, centre run: either side of the landing, behind the
+      // railing plate.
+      { type: 'rectangle', x: [27, 43], y: [45.7, 48.3] },
+      { type: 'rectangle', x: [57, 73], y: [45.7, 48.3] },
 
-      { type: 'rectangle', x: [41, 59], y: [91.3, 100] },
-      { type: 'triangle', points: [{ x: 41, y: 80.9 }, { x: 45, y: 80.9 }, { x: 41, y: 86.1 }] },
-
-      { type: 'rectangle', x: [25, 75], y: [74.6, 80.9] },
-      { type: 'triangle', points: [{ x: 0, y: 77.7 }, { x: 25, y: 67.3 }, { x: 25, y: 77.7 }] },
-      { type: 'rectangle', x: [25, 35], y: [67.3, 74.6] },
-      { type: 'triangle', points: [{ x: 100, y: 77.7 }, { x: 75, y: 67.3 }, { x: 75, y: 77.7 }] },
-      { type: 'rectangle', x: [65, 75], y: [67.3, 74.6] },
-
-      // Stairs
-      { type: 'triangle', points: [{ x: 42, y: 74.6 }, { x: 46, y: 74.6 }, { x: 46, y: 47.5 }] },
-      { type: 'triangle', points: [{ x: 58, y: 74.6 }, { x: 53, y: 74.6 }, { x: 53, y: 47.5 }] },
-      { type: 'rectangle', x: [44, 55], y: [60, 74.6] },
-      { type: 'rectangle', x: [46, 53], y: [47.5, 60] },
-
-      // First floor
-      { type: 'rectangle', x: [44.5, 54.5], y: [47.5, 49.6] },
-
-      { type: 'rectangle', x: [53, 76], y: [47.5, 47.5] },
-      { type: 'rectangle', x: [25, 46], y: [47.5, 47.5] },
-
-      { type: 'triangle', points: [{ x: 25, y: 47.5 }, { x: 0, y: 37.1 }, { x: 25, y: 47.5 }] },
-      { type: 'triangle', points: [{ x: 75, y: 47.5 }, { x: 100, y: 37.1 }, { x: 75, y: 47.5 }] },
+      // Upper corridor, left wing: the band climbs from y 45.7–48.3 at x = 27
+      // to y 44.8–47.4 at x = 19, following the railing's base.
+      { type: 'triangle', points: [{ x: 19, y: 44.8 }, { x: 27, y: 45.7 }, { x: 27, y: 48.3 }] },
+      { type: 'triangle', points: [{ x: 19, y: 44.8 }, { x: 27, y: 48.3 }, { x: 19, y: 47.4 }] },
+      // Right wing, the mirror.
+      { type: 'triangle', points: [{ x: 81, y: 44.8 }, { x: 73, y: 45.7 }, { x: 73, y: 48.3 }] },
+      { type: 'triangle', points: [{ x: 81, y: 44.8 }, { x: 73, y: 48.3 }, { x: 81, y: 47.4 }] },
     ],
   },
   'arcade-inside.png': {
