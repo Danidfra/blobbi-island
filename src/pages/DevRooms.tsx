@@ -29,6 +29,7 @@ import type { LocationId } from '@/lib/location-types';
 import type { Position } from '@/lib/types';
 import { constrainPosition } from '@/lib/boundaries';
 import { boundaryYRange, resolveSeatedRender } from '@/lib/blobbi-world-render';
+import { roomSeatAnchorPosition, roomSeatApproachPosition, roomSeatsFor } from '@/lib/room-seats-config';
 import {
   occupiableTheaterSeats,
   seatAnchorPosition,
@@ -45,6 +46,21 @@ const DEV_VISUAL = {
   eyeColor: '#3A2A1A',
   name: 'DevBlobbi',
 };
+
+/**
+ * Body variants the harness can wear, so seat contact and face-anchored props
+ * (the Station VR headset) can be checked against bodies whose eyes and
+ * bottoms sit at different heights in the renderer box: the baby, an adult
+ * with a high face (rosey), a low one (mushie) and a wide one (pandi).
+ */
+const DEV_VISUALS = {
+  baby: DEV_VISUAL,
+  leafy: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'leafy' },
+  rosey: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'rosey' },
+  mushie: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'mushie' },
+  pandi: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'pandi' },
+} as const;
+type DevVisualKey = keyof typeof DEV_VISUALS;
 
 function Marker({ pos, color, label }: { pos: Position; color: string; label: string }) {
   return (
@@ -88,6 +104,7 @@ function RoomView() {
   const [lastPos, setLastPos] = useState<Position | null>(null);
   const [hiddenIn, setHiddenIn] = useState<string | null>(null);
   const [sittingIn, setSittingIn] = useState<string | null>(null);
+  const [visualKey, setVisualKey] = useState<DevVisualKey>('baby');
   // The most recent walk-to-interact APPROACH target (usePendingInteraction
   // broadcasts every request as a presenceMove dock event).
   const [lastApproach, setLastApproach] = useState<Position | null>(null);
@@ -151,6 +168,17 @@ function RoomView() {
         >
           {Object.keys(LOCATION_BACKGROUNDS).map((loc) => (
             <option key={loc} value={loc}>{loc}</option>
+          ))}
+        </select>
+        <select
+          className="rounded bg-neutral-700 px-1 py-0.5"
+          value={visualKey}
+          onChange={(e) => setVisualKey(e.target.value as DevVisualKey)}
+          data-block-move
+          data-dev-visual
+        >
+          {Object.keys(DEV_VISUALS).map((key) => (
+            <option key={key} value={key}>{key}</option>
           ))}
         </select>
         <span>size: {getBlobbiSizeForLocation(currentLocation)}</span>
@@ -220,6 +248,11 @@ function RoomView() {
                 <Marker key={`${seat.id}-cushion`} pos={seatCushionPoint(seat)} color="#38bdf8" label={`cushion ${seat.id.slice(-2)}`} />,
                 <Marker key={`${seat.id}-pose`} pos={seatAnchorPosition(seat)} color="#a855f7" label={`pose ${seat.id.slice(-2)}`} />,
               ])}
+          {/* Room chairs (terrace, basement, station): approach (floor) + seat anchor. */}
+          {roomSeatsFor(background).flatMap((seat) => [
+            <Marker key={`${seat.id}-approach`} pos={roomSeatApproachPosition(seat, boundary)} color="#f97316" label={`approach ${seat.id.split('-').slice(-2).join('-')}`} />,
+            <Marker key={`${seat.id}-seat`} pos={roomSeatAnchorPosition(seat)} color="#a855f7" label={`seat ${seat.id.split('-').slice(-2).join('-')}`} />,
+          ])}
           {exits.map(([key, pos]) => (
             <Marker key={key} pos={pos} color="#eab308" label={key.split(':')[1]} />
           ))}
@@ -232,7 +265,7 @@ function RoomView() {
             backgroundFile={background}
             size={getBlobbiSizeForLocation(currentLocation)}
             scaleByYPosition={true}
-            visualOverride={DEV_VISUAL}
+            visualOverride={DEV_VISUALS[visualKey]}
             pose={sittingIn ? { kind: 'seated', seatId: sittingIn } : hiddenIn ? { kind: 'hidden', spotId: hiddenIn } : { kind: 'standing' }}
             onMoveStart={() => {
               setSittingIn(null);
