@@ -475,7 +475,8 @@ derived view (READY inventories, EFFECTIVE quantities)
    ↓ observeExternalInventories(baseline, view)
 { baseline', arrivals }   arrival = effective quantity rose since last seen
    ↓ definition from the trusted catalog (same query the bag uses) + issuer name
-one toast per reconciliation: "+1 Strawberry" / "Received from Nostr Farm"
+one in-game notice per reconciliation: "+1 Strawberry" / "Received from Nostr Farm"
+   (`src/lib/game-notices.ts` → `GameNoticeLayer` inside `BlobbiFrame`; max two on screen)
 ```
 
 What is compared is the effective number the bag shows, after the snapshot,
@@ -491,7 +492,9 @@ that reports, so a duplicate event, a refetch returning what the tail already
 applied, a reconnect or a remount diffs to nothing. Arrivals wait for a trusted
 definition and are dropped if the catalog settles without one, so no notice
 ever names an address. Several arrivals in one reconciliation are one notice
-(up to three named, more counted); the toast system shows one at a time.
+(up to three named, more counted); the in-game stack shows at most two notices
+and evicts the oldest at once, which is presentation only and never re-arms
+the detector.
 Tests: `external-arrivals.test.ts`, `useExternalInventoryArrivals.test.tsx`,
 and the end-to-end return cases in `useExternalInventoryEvents.test.tsx`.
 

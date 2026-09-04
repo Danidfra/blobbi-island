@@ -25,6 +25,7 @@ does, as Nostr events read back by the inventory (`docs/INVENTORY_ARCHITECTURE.m
 | Farm produce in the inventory, with its source label | `src/inventory/trusted-issuers.ts`, `src/inventory/useExternalInventoryEvents.ts` |
 | The moment after a feed: the Blobbi's reaction, the real stat gain, the source | `src/inventory/care-feedback.ts`, `src/components/blobbi/CareReaction.tsx`, `src/components/blobbi/useCareReaction.ts` |
 | The live store for the whole session, and the arrival notice on return | `src/components/ExternalInventoryController.tsx`, `src/inventory/external-arrivals.ts`, `src/inventory/useExternalInventoryArrivals.ts` |
+| The in-game notice stack (top-right of the game window, max two) | `src/lib/game-notices.ts`, `src/components/shell/GameNoticeLayer.tsx` |
 | Independence guard | `src/connected-experiences/boundaries.test.ts` |
 
 The official Farm URL, `https://farm.blobbi.pet`, is written once, as
@@ -112,13 +113,26 @@ dropping. No polling was added; both triggers are events, like `online`.
 The tail and the visibility refetch used to run only while the My Blobbi
 window was open, so the return showed nothing until the bag was next opened.
 Now the store is live everywhere on the Island, and when an item's effective
-quantity in a Farm inventory rises the player sees the same toast every other
-Island moment uses:
+quantity in a Farm inventory rises the player sees an in-game notice at the
+top-right of the game window, in the paper-chip style the Farm uses for its
+own produce notices (`ProduceChangeChips`):
 
 ```
-+1 Strawberry
-[🍓] Received from Nostr Farm
+[🍓] +1 Strawberry
+     Received from Nostr Farm
 ```
+
+The chip is rendered by `GameNoticeLayer` INSIDE `BlobbiFrame`'s bezel, so it
+moves and clips with the game window in the framed, immersive and fullscreen
+presentations, never with the browser viewport; the app toaster (which portals
+to `document.body`) is not used for it. It mirrors the Farm chip's shape
+(`rounded-xl`, 1px border, paper background, inset highlight plus soft drop
+shadow, `px-3 py-2`, 32px picture, `text-base` headline over a `text-xs`
+caption, `gap-2` stacking, `fade-in slide-in-from-top-2` entrance, instant
+removal, 7 s dwell) in the Island's own tokens and typeface. The stack is
+bounded to TWO in every layout: a third notice evicts the oldest at once, with
+no exit animation and no backlog (`src/lib/game-notices.ts`). Evicting a chip
+is presentation only; the arrival detector's baseline is untouched.
 
 The number is the rise in the EFFECTIVE quantity (snapshot, pending spends and
 fold chain, the number the bag shows), so feeding a Strawberry here and the

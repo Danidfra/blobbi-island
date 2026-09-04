@@ -31,10 +31,14 @@ vi.mock('@/hooks/useAppContext', () => ({
   useAppContext: () => ({ config: { relayUrl: 'wss://relay.ditto.pub' } }),
 }));
 
-// For the arrival notices: the toast is spied, and the two catalogs answer
-// at once so the notice is about the plumbing, not the definition fetch.
+// For the arrival notices: the in-game notice store is spied, and the two
+// catalogs answer at once so the notice is about the plumbing, not the
+// definition fetch.
 const toastSpy = vi.fn();
-vi.mock('@/hooks/useToast', () => ({ toast: (...args: unknown[]) => toastSpy(...args), useToast: () => ({ toast: toastSpy }) }));
+vi.mock('@/lib/game-notices', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/game-notices')>();
+  return { ...actual, showGameNotice: (...args: unknown[]) => toastSpy(...args) };
+});
 vi.mock('./useExternalItemCatalog', () => ({
   useExternalItemCatalog: () => ({
     data: { byAddress: new Map([[STRAWBERRY, resolveFromDefinition(parseTrustedItemDefinition(FARM_STRAWBERRY_EVENT)!)]]), resolvedCount: 1, requestedCount: 1 },
@@ -874,14 +878,6 @@ describe('the return from another game: what the player is told', () => {
     return { ...utils, result: probe.result };
   };
   const notices = () => toastSpy.mock.calls.map(([t]) => t.title);
-  const descriptionText = (node: unknown): string => {
-    if (typeof node === 'string') return node;
-    if (Array.isArray(node)) return node.map(descriptionText).join('');
-    if (node && typeof node === 'object' && 'props' in node) {
-      return descriptionText((node as { props: { children?: unknown } }).props.children);
-    }
-    return '';
-  };
 
   it('hydration says nothing about what was already there', async () => {
     const { result } = renderController();
@@ -902,7 +898,7 @@ describe('the return from another game: what the player is told', () => {
     await waitFor(() => expect(strawberryQty(result)).toBe(5));
     await settle();
     expect(notices()).toEqual(['+1 Strawberry']);
-    expect(descriptionText(toastSpy.mock.calls[0][0].description)).toBe('Received from Nostr Farm');
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({ description: 'Received from Nostr Farm', imageUrl: expect.stringMatching(/^https:/) });
 
     // Back to the tab: the refetch returns the same state.
     relaysServe([harvested]);

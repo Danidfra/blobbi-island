@@ -10,11 +10,12 @@
  * open, so a player returning from the Farm saw nothing until they opened
  * it.
  *
- * The arrival notice uses the same toast every other Island moment uses:
+ * The arrival notice is an in-game notice at the top-right of the game
+ * window, in the paper-chip style the Farm uses for the same moment:
  *
  * ```
- *   +1 Strawberry
- *   [🍓] Received from Nostr Farm
+ *   [🍓] +1 Strawberry
+ *        Received from Nostr Farm
  * ```
  *
  * Renders nothing and never publishes.
@@ -22,8 +23,8 @@
 
 import { useCallback } from 'react';
 
-import { toast } from '@/hooks/useToast';
 import { describeArrivals, type ResolvedArrival } from '@/inventory/external-arrivals';
+import { showGameNotice } from '@/lib/game-notices';
 import { useExternalInventoryArrivals } from '@/inventory/useExternalInventoryArrivals';
 import { useExternalInventorySync } from '@/inventory/useExternalInventoryEvents';
 
@@ -33,20 +34,13 @@ export function ExternalInventoryController(): null {
   const onArrivals = useCallback((arrivals: ResolvedArrival[]) => {
     const notice = describeArrivals(arrivals);
     if (!notice) return;
-    // The title slot is text (it doubles as the Radix root's `title`), so
-    // the item's picture sits beside the source line.
-    toast({
+    // An in-game notice, not an app toast: it renders inside the game
+    // window (see `GameNoticeLayer`), and the stack it joins is bounded.
+    showGameNotice({
       title: notice.title,
-      description: (
-        <span className="flex items-center gap-2" data-testid="external-arrival">
-          {notice.imageUrl ? (
-            <img src={notice.imageUrl} alt="" className="size-6 shrink-0 object-contain" />
-          ) : notice.emoji ? (
-            <span aria-hidden className="text-base leading-none">{notice.emoji}</span>
-          ) : null}
-          <span>{notice.description}</span>
-        </span>
-      ),
+      description: notice.description,
+      ...(notice.imageUrl ? { imageUrl: notice.imageUrl } : {}),
+      ...(notice.emoji ? { emoji: notice.emoji } : {}),
     });
   }, []);
 
