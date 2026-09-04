@@ -49,9 +49,32 @@ export type CareStats = Pick<
   'hunger' | 'happiness' | 'health' | 'hygiene' | 'energy'
 >;
 
+/**
+ * What ONE successful consumption actually did to a Blobbi, in the words the
+ * player is shown: the applied stat changes, and how many units were used.
+ *
+ * Carried on every consumption result so a surface can show the REAL gain
+ * (`+25 Hunger`) without re-deriving it from a definition, and without
+ * hardcoding a number that lives in the item's published effects.
+ */
+export interface AppliedCareEffect {
+  action: ItemAction;
+  /** Units applied in this one action. */
+  quantity: number;
+  /**
+   * The change each stat actually underwent, AFTER the [0, 100] clamp: a
+   * Blobbi at 90 hunger fed one segment gains 10, not 25. Zero for a stat the
+   * item does not touch, or one already at its cap.
+   */
+  statDeltas: CareStats;
+  experienceGained: number;
+}
+
 export interface CareEffectPlan {
   /** Every care stat after the effect, clamped. */
   newStats: CareStats;
+  /** The change each stat actually underwent (`newStats` minus the pet's). */
+  statDeltas: CareStats;
   experienceGained: number;
   newExperience: number;
   newCareStreak: number;
@@ -95,6 +118,14 @@ export function planCareEffect(input: PlanCareEffectInput): CareEffectPlan {
     energy: clampStat(pet.energy, totalEffect('energy')),
   };
 
+  const statDeltas: CareStats = {
+    hunger: newStats.hunger - pet.hunger,
+    happiness: newStats.happiness - pet.happiness,
+    health: newStats.health - pet.health,
+    hygiene: newStats.hygiene - pet.hygiene,
+    energy: newStats.energy - pet.energy,
+  };
+
   const experienceGained = xpForAction(action, quantity);
   const newExperience = pet.experience + experienceGained;
 
@@ -126,11 +157,26 @@ export function planCareEffect(input: PlanCareEffectInput): CareEffectPlan {
 
   return {
     newStats,
+    statDeltas,
     experienceGained,
     newExperience,
     newCareStreak,
     streakOverrides,
     updatedPet,
     interactionAction: ACTION_TO_INTERACTION[action],
+  };
+}
+
+/** The player-facing summary of a plan that was APPLIED. */
+export function appliedCareEffect(
+  plan: Pick<CareEffectPlan, 'statDeltas' | 'experienceGained'>,
+  action: ItemAction,
+  quantity: number,
+): AppliedCareEffect {
+  return {
+    action,
+    quantity,
+    statDeltas: { ...plan.statDeltas },
+    experienceGained: plan.experienceGained,
   };
 }

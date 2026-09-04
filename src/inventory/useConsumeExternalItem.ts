@@ -96,7 +96,7 @@ import {
 } from '@/lib/pet-state-transaction';
 import { serializeByKey } from '@/lib/replaceable-write';
 
-import { planCareEffect, type CareEffectPlan } from './care-effect';
+import { appliedCareEffect, planCareEffect, type AppliedCareEffect, type CareEffectPlan } from './care-effect';
 import type { ResolvedBlobbiItemDefinition } from './catalog-fallback';
 import { recordEstablishedSpend } from './established-spends';
 import type { DiscoveredInventory } from './external-inventories';
@@ -167,6 +167,12 @@ export type ConsumeExternalItemResult =
       resumed: boolean;
       /** The effect had already landed for this spend id; nothing republished. */
       alreadyApplied: boolean;
+      /**
+       * What the effect did in THIS action, for the feedback the player sees.
+       * Absent when `alreadyApplied`: the gain happened on an earlier attempt
+       * and is not shown again.
+       */
+      effect?: AppliedCareEffect;
       warning?: string;
     }
   /**
@@ -389,6 +395,7 @@ export async function runExternalConsumption(
           experienceGained: effect.plan?.experienceGained ?? 0,
           resumed,
           alreadyApplied: effect.alreadyApplied,
+          ...(effect.plan ? { effect: appliedCareEffect(effect.plan, action, record.quantity) } : {}),
           ...(warning ? { warning } : {}),
         };
       },

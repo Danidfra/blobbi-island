@@ -12,7 +12,13 @@ import type { PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 
 import { useToast } from '@/hooks/useToast';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
-import { useConsumeExternalItem, useUseItem } from '@/inventory';
+import {
+  careFeedbackFrom,
+  mintCareFeedbackId,
+  useConsumeExternalItem,
+  useUseItem,
+  type CareFeedback,
+} from '@/inventory';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 
 import { ConsumeItemModal } from '../ConsumeItemModal';
@@ -124,6 +130,15 @@ export interface InventoryBrowserProps {
   /** A publish that failed, surfaced rather than swallowed. */
   publishError?: string | null;
   isPublishing?: boolean;
+  /**
+   * A consumable was APPLIED to the Blobbi: called exactly once per
+   * successful logical consumption, with what it did and where the item came
+   * from, for a host that shows the moment in-world (the My Blobbi stage
+   * bounces the Blobbi and floats the real stat gain). When a host handles
+   * it, the plain success toast is not shown as well; every warning, partial
+   * outcome and error still goes through the toast, unchanged.
+   */
+  onCareApplied?: (feedback: CareFeedback) => void;
   className?: string;
 }
 
@@ -143,6 +158,7 @@ export function InventoryBrowser({
   onUnequip,
   publishError,
   isPublishing = false,
+  onCareApplied,
   className,
 }: InventoryBrowserProps) {
   const full = useInventoryCollection({ characterId, form });
@@ -306,13 +322,26 @@ export function InventoryBrowser({
       },
       {
         onSuccess: (result) => {
+          setUseEntry(null);
+          // The effect is applied by the time this resolves (the Island path
+          // applies it first and reports the debit separately). An Island
+          // item has no provenance: it was always here.
+          const inWorld = Boolean(onCareApplied && result.effect);
+          if (onCareApplied && result.effect) {
+            onCareApplied(
+              careFeedbackFrom(result.effect, {
+                id: mintCareFeedbackId(),
+                itemName: entry.definition.name,
+              }),
+            );
+          }
+          if (inWorld && !result.warning) return;
           toast({
             title: 'Item Used',
             description: `Used ${quantity} ${entry.definition.name}(s) on ${
               status.currentPet ? getBlobbiDisplayName(status.currentPet) : 'your Blobbi'
             }.${result.warning ? ` (${result.warning})` : ''}`,
           });
-          setUseEntry(null);
         },
         onError: (error) => {
           toast({
@@ -361,6 +390,25 @@ export function InventoryBrowser({
         onSuccess: (result) => {
           setUseEntry(null);
           if (result.status === 'applied') {
+            /*
+              The in-world moment, keyed on the spend id so one logical
+              consumption is one reaction however many times this resolves.
+              Only when the effect landed in THIS action (`effect` present):
+              a resume that found the marker already on the pet shows the
+              toast that says so, not a gain that happened last time.
+              Provenance is the source's product name; the item is not asked.
+            */
+            const inWorld = Boolean(onCareApplied && result.effect);
+            if (onCareApplied && result.effect) {
+              onCareApplied(
+                careFeedbackFrom(result.effect, {
+                  id: result.spendId,
+                  itemName: entry.definition.name,
+                  provenance: entry.sourceName ?? entry.sourceLabel,
+                }),
+              );
+            }
+            if (inWorld && !result.resumed && !result.warning) return;
             toast({
               title: result.resumed ? 'Finished an Earlier Feed' : 'Item Used',
               description: `Fed ${quantity} ${entry.definition.name}${quantity === 1 ? '' : 's'} from ${entry.sourceLabel ?? 'another game'} to ${petName}.${

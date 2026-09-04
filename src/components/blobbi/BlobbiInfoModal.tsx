@@ -6,6 +6,8 @@ import { ChevronRight, Package, PawPrint, Shirt } from 'lucide-react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { StateCard } from '@/components/ui/state-card';
 import { CurrentBlobbiPreview } from './CurrentBlobbiPreview';
+import { CareReactionOverlay } from './CareReaction';
+import { careActorClass, useCareReaction } from './useCareReaction';
 import { BlobbiStageBackdrop, StageBackgroundSwatch } from './BlobbiStageBackdrop';
 import { StageBackgroundPicker } from './StageBackgroundPicker';
 import { InventoryBrowser } from './inventory/InventoryBrowser';
@@ -27,6 +29,7 @@ import { analyzeCareStatus } from '@/lib/blobbi-parsers';
 import { STAGE_ASPECT_RATIO, resolveStageBackground } from '@/lib/blobbi-stage-backgrounds';
 import type { CollectionCategory } from './inventory/useInventoryCollection';
 import { useStageBackground } from '@/hooks/useStageBackground';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { dbg } from '@/lib/debug';
 import { cn } from '@/lib/utils';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
@@ -134,6 +137,14 @@ export function BlobbiInfoModal({
   const [backgroundPickerOpen, setBackgroundPickerOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  /*
+    The moment after a feed: the stage's Blobbi bounces and the real stat
+    gain floats off it, with the source named for an item from another game.
+    Fed by the Items tab's consumption callback; keyed per logical action, so
+    it plays once however the result is re-reported.
+  */
+  const careReaction = useCareReaction();
+  const reducedMotion = useReducedMotion();
   // Equipment editing state is keyed by SLOT, because a kind:31634 document
   // holds one equipped entry per slot. The legacy editor keyed everything by
   // accessory code, which only worked while an accessory *was* its code.
@@ -484,7 +495,13 @@ export function BlobbiInfoModal({
                   <CurrentBlobbiPreview
                     key={`preview:${previewKey}`}
                     size="xl"
-                    className="h-full w-full transform-gpu"
+                    /* The bounce lives on the preview's own wrapper, so the
+                       renderer box under `stageRef` is untouched and the
+                       placement overlay's coordinate space stays exact. */
+                    className={cn(
+                      'h-full w-full transform-gpu',
+                      careActorClass(careReaction.feedback !== null, reducedMotion),
+                    )}
                     boxClassName="h-full w-full"
                     showFallback={true}
                     isSleeping={blobbiData.isSleeping}
@@ -526,6 +543,10 @@ export function BlobbiInfoModal({
                   )}
                 </div>
               </div>
+
+              {/* The floating readout, over the Blobbi's head. z-20: above
+                  the Blobbi layer, never above the modal's own chrome. */}
+              <CareReactionOverlay feedback={careReaction.feedback} />
 
             </div>
           </div>
@@ -764,6 +785,7 @@ export function BlobbiInfoModal({
                     onUnequip={handleUnequip}
                     publishError={publishError}
                     isPublishing={equipmentMutation.isPending}
+                    onCareApplied={careReaction.show}
                   />
                 </TabsContent>
 

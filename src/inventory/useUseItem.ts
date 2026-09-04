@@ -36,7 +36,7 @@ import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { mergePetStateTags } from '@/lib/blobbi-parsers';
 import { buildInteractionEventTemplate } from '@blobbi-kit/core/blobbi-interaction';
 
-import { planCareEffect } from './care-effect';
+import { appliedCareEffect, planCareEffect, type AppliedCareEffect } from './care-effect';
 import { isAmbiguousInventoryPublish } from './inventory-transaction';
 import { useInventoryMutation, getQuantity } from './useInventoryMutation';
 import { fetchInventory, inventoryQueryKey } from './useIslandInventory';
@@ -65,6 +65,8 @@ export interface UseItemResult {
    */
   inventoryDecremented: boolean;
   warning?: string;
+  /** What the effect actually did, for the feedback the player sees. */
+  effect: AppliedCareEffect;
 }
 
 /**
@@ -132,6 +134,7 @@ export function useUseItem() {
       // The stat clamp, XP and the shared care-streak bookkeeping are the ONE
       // planner every consumption path uses (`care-effect.ts`).
       const now = new Date();
+      const plan = planCareEffect({ pet, action, effects: definition.effects, quantity, now });
       const {
         newStats,
         experienceGained,
@@ -140,7 +143,7 @@ export function useUseItem() {
         streakOverrides,
         updatedPet,
         interactionAction,
-      } = planCareEffect({ pet, action, effects: definition.effects, quantity, now });
+      } = plan;
 
       // Equipment lives in kind:31634 and is untouched by feeding a Blobbi:
       // there are no `equip` tags to preserve on the 31124 republish any more.
@@ -201,6 +204,7 @@ export function useUseItem() {
         experienceGained,
         inventoryDecremented,
         warning,
+        effect: appliedCareEffect(plan, action, quantity),
       };
     },
     onSettled: () => {

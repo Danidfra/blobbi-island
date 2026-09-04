@@ -29,6 +29,7 @@ export * from './established-spends';
 export * from './external-item-compatibility';
 export * from './external-spend';
 export * from './care-effect';
+export * from './care-feedback';
 export * from './useExternalInventoryEvents';
 export * from './useExternalItemCatalog';
 export * from './useConsumeExternalItem';

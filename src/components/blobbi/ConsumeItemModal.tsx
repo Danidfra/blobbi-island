@@ -2,21 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Minus, Plus, Heart, Zap, Sparkles, Droplets, Sprout } from 'lucide-react';
+import { Minus, Plus, Sprout } from 'lucide-react';
 import {
   primaryItemImageUrl,
   type ItemAction,
   type ResolvedBlobbiItemDefinition,
 } from '@/inventory';
-
-// Effect icons mapping
-const EFFECT_ICONS = {
-  hunger: Heart,
-  energy: Zap,
-  hygiene: Droplets,
-  happiness: Sparkles,
-  health: Heart,
-} as const;
+import { CARE_STAT_ICONS as EFFECT_ICONS } from './care-stat-icons';
 
 /**
  * What the primary button says, by what the item DOES. "Use" is the honest
@@ -32,7 +24,7 @@ const ACTION_LABELS: Readonly<Record<ItemAction, string>> = {
 };
 
 /** The primary button's label for a definition's action. */
-export function consumeActionLabel(action: ItemAction | null | undefined): string {
+function consumeActionLabel(action: ItemAction | null | undefined): string {
   return (action && ACTION_LABELS[action]) || 'Use';
 }
 

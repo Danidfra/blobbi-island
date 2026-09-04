@@ -156,6 +156,22 @@ export default {
 				'storefront-glow': {
 					'0%, 100%': { opacity: '1' },
 					'50%': { opacity: '0.72' }
+				},
+				// A fed Blobbi: one squash, one stretch, back to rest. Bottom
+				// origin so the feet stay planted; under a second, never looped.
+				'care-bounce': {
+					'0%': { transform: 'scale(1, 1)' },
+					'25%': { transform: 'scale(1.07, 0.9)' },
+					'55%': { transform: 'scale(0.95, 1.08) translateY(-5%)' },
+					'80%': { transform: 'scale(1.02, 0.98)' },
+					'100%': { transform: 'scale(1, 1)' }
+				},
+				// A stat gain rising off the Blobbi and fading as it goes.
+				'care-float': {
+					'0%': { opacity: '0', transform: 'translateY(0.5rem) scale(0.9)' },
+					'15%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+					'70%': { opacity: '1', transform: 'translateY(-0.5rem) scale(1)' },
+					'100%': { opacity: '0', transform: 'translateY(-1.25rem) scale(1)' }
 				}
 			},
 			animation: {
@@ -163,7 +179,9 @@ export default {
 				'cozy-wiggle': 'cozy-wiggle 0.5s ease-in-out',
 				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)',
 				'scale-in': 'scale-in 0.14s cubic-bezier(0.34, 1.4, 0.5, 1)',
-				'storefront-glow': 'storefront-glow 3.2s ease-in-out infinite'
+				'storefront-glow': 'storefront-glow 3.2s ease-in-out infinite',
+				'care-bounce': 'care-bounce 0.7s cubic-bezier(0.34, 1.3, 0.5, 1) both',
+				'care-float': 'care-float 1.6s ease-out both'
 			},
 			cursor: {
 				pickaxe: "url('/assets/ui/cursors/pickaxe.png') 0 0, auto",
