@@ -9,6 +9,7 @@ import {
   PLAZA_INSIDE_BACKGROUND,
   PLAZA_OCCLUSION,
 } from '@/lib/plaza-inside-config';
+import { furnitureDepthZIndex } from '@/lib/room-seats-config';
 
 export interface InteractiveElementConfig {
   id: string;
@@ -463,6 +464,12 @@ export function calculateBlobbiZIndex(
   blobbiXPosition?: number,
 ): number {
   const positionFromBottom = 100 - blobbiYPosition;
+
+  // Furniture placed on the room (chairs, tables) comes first: a Blobbi whose
+  // feet are inside a chair's box, within its span, is behind that chair
+  // whatever the painted background's bands say. See `room-seats-config.ts`.
+  const furniture = furnitureDepthZIndex(backgroundFile, positionFromBottom, blobbiXPosition);
+  if (furniture !== undefined) return furniture;
 
   const backgroundConfig = backgroundZIndexConfigs.find(
     config => config.backgroundFile === backgroundFile

@@ -74,6 +74,14 @@ export interface RoomSeatConfig extends SpriteBox {
   readonly size: BlobbiRenderSize;
   /** The floor band the chair stands on. Absent when the boundary already keeps the Blobbi out. */
   readonly footprint?: FurnitureFootprint;
+  /**
+   * How far down the sprite box (as a fraction of its height) a standing
+   * Blobbi's feet may be and still count as BEHIND the chair. `1` means the
+   * whole box: feet anywhere above the chair's base are behind it. A deep
+   * bucket seat uses its cushion line instead, so a Blobbi standing at the
+   * chair's front edge (the approach) is drawn in front of it.
+   */
+  readonly behindWithin: number;
 }
 
 export interface RoomTableConfig extends SpriteBox {
@@ -197,6 +205,7 @@ function cluster(
       facing: 'front',
       size: spec.size,
       footprint: baseFootprint(sprite, CHAIR_FOOTPRINT_FRACTION),
+      behindWithin: 1,
     };
   };
   const tableBox = box(placement.tableX, placement.tableBottom, spec.tableWidth, spec.tableArt);
@@ -282,7 +291,9 @@ function stationChair(index: number, leftPercent: number): RoomSeatConfig {
     src: `${STATION}/chair.png`,
     alt: `Nostr Station Chair ${index}`,
     ...sprite,
-    zIndex: 15,
+    // One under the room's depth band for this floor (15), so a Blobbi standing
+    // at the chair's front edge is in front of it rather than tied with it.
+    zIndex: 14,
     seatedZIndex: 16,
     // Deep bucket seat: the walk ends on the corridor floor at the chair's
     // front edge, the body settles on the cushion two thirds of the way down.
@@ -291,6 +302,7 @@ function stationChair(index: number, leftPercent: number): RoomSeatConfig {
     seatedScale: 1,
     facing: 'front',
     size: 'lg',
+    behindWithin: 0.68,
   };
 }
 
@@ -319,4 +331,73 @@ export function roomSeatsFor(room: string): RoomSeatConfig[] {
 
 export function roomTablesFor(room: string): RoomTableConfig[] {
   return roomTables.filter((table) => table.room === room);
+}
+
+// ── Depth ───────────────────────────────────────────────────────────────────
+
+/**
+ * A depth band in the shape `interactive-elements-config.ts` uses: positions
+ * are measured FROM THE BOTTOM of the world, and `xRange` limits the band to
+ * the furniture's own span.
+ */
+export interface FurnitureDepthBand {
+  readonly minPosition: number;
+  readonly maxPosition: number;
+  readonly zIndex: number;
+  readonly xRange: readonly [number, number];
+}
+
+/**
+ * Where a standing Blobbi is BEHIND a piece of furniture: its feet inside the
+ * sprite box (above the base line), within the sprite's horizontal span. The
+ * room's own depth bands are keyed to its painted background and know nothing
+ * about the chairs placed on it, so without these a Blobbi standing behind a
+ * chair could be drawn over it, and the layering jumped when it crossed a
+ * background band instead of the chair's base.
+ *
+ * Below the base the room band applies, and every room here gives a Blobbi
+ * whose feet are below the furniture's base a z above the furniture, so it is
+ * in front. Seated actors use `seatedZIndex`, never these.
+ */
+export function furnitureDepthBands(room: string): FurnitureDepthBand[] {
+  const bands: FurnitureDepthBand[] = [];
+  for (const seat of roomSeatsFor(room)) {
+    const top = 100 - seat.bottomPercent - seat.heightPercent;
+    const behindBelowY = top + seat.heightPercent * seat.behindWithin;
+    bands.push({
+      minPosition: 100 - behindBelowY,
+      maxPosition: 100 - top,
+      zIndex: seat.zIndex - 1,
+      xRange: [seat.leftPercent, seat.leftPercent + seat.widthPercent],
+    });
+  }
+  for (const table of roomTablesFor(room)) {
+    const top = 100 - table.bottomPercent - table.heightPercent;
+    // Behind the table means behind the whole cluster: one step under its chairs.
+    const chairZ = Math.min(...roomSeatsFor(room).map((seat) => seat.zIndex), table.zIndex);
+    bands.push({
+      minPosition: table.bottomPercent,
+      maxPosition: 100 - top,
+      zIndex: chairZ - 1,
+      xRange: [table.leftPercent, table.leftPercent + table.widthPercent],
+    });
+  }
+  return bands;
+}
+
+/** The furniture band a standing Blobbi falls in, if any. */
+export function furnitureDepthZIndex(
+  room: string,
+  positionFromBottom: number,
+  x: number | undefined,
+): number | undefined {
+  if (x === undefined) return undefined;
+  const band = furnitureDepthBands(room).find(
+    (b) =>
+      positionFromBottom >= b.minPosition &&
+      positionFromBottom <= b.maxPosition &&
+      x >= b.xRange[0] &&
+      x <= b.xRange[1],
+  );
+  return band?.zIndex;
 }

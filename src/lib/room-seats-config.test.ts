@@ -21,6 +21,7 @@ import { constrainPosition } from './boundaries';
 import { resolveSeatedRender } from './blobbi-world-render';
 import { resolveActorRender } from './blobbi-pose';
 import { isBlocked } from './blobbi-route';
+import { calculateBlobbiZIndex } from './interactive-elements-config';
 import { getBlobbiInitialPosition } from './location-initial-position';
 import type { Position } from './types';
 
@@ -107,6 +108,48 @@ describe('every room seat', () => {
   it('refuses unknown ids', () => {
     expect(resolveSeatedRender('mall-terrace-9-left-chair')).toBeNull();
     expect(getRoomSeat(undefined)).toBeUndefined();
+  });
+});
+
+describe('depth around furniture', () => {
+  it('draws a standing Blobbi behind a chair when its feet are above the base, and in front below it', () => {
+    for (const seat of roomSeats) {
+      if (seat.behindWithin < 1) continue;
+      const base = 100 - seat.bottomPercent;
+      const top = base - seat.heightPercent;
+      const x = seat.leftPercent + seat.widthPercent / 2;
+      const behind = calculateBlobbiZIndex((top + base) / 2, seat.room, x);
+      const inFront = calculateBlobbiZIndex(base + 0.5, seat.room, x);
+      expect(behind, `${seat.id} behind`).toBeLessThan(seat.zIndex);
+      expect(inFront, `${seat.id} in front`).toBeGreaterThan(seat.zIndex);
+      for (const table of roomTablesFor(seat.room)) {
+        expect(inFront, `${seat.id} in front of the table`).toBeGreaterThan(table.zIndex);
+      }
+    }
+  });
+
+  it('keeps a bucket seat\'s front edge in front of the chair (the approach stands in it)', () => {
+    const chair = getRoomSeat('nostr-station-chair-1')!;
+    const approach = roomSeatApproachPosition(chair);
+    expect(calculateBlobbiZIndex(approach.y, chair.room, approach.x)).toBeGreaterThan(chair.zIndex);
+    const top = 100 - chair.bottomPercent - chair.heightPercent;
+    expect(calculateBlobbiZIndex(top + 2, chair.room, approach.x)).toBeLessThan(chair.zIndex);
+  });
+
+  it('never changes the seated z: the sitter is between its chair and its table', () => {
+    for (const seat of roomSeats) {
+      const seated = resolveSeatedRender(seat.id)!;
+      expect(seated.zIndex).toBe(seat.seatedZIndex);
+    }
+  });
+
+  it('leaves the room band alone outside the furniture span', () => {
+    const seat = getRoomSeat('mall-terrace-1-left-chair')!;
+    const base = 100 - seat.bottomPercent;
+    const outside = calculateBlobbiZIndex(base - 2, seat.room, 20);
+    const inside = calculateBlobbiZIndex(base - 2, seat.room, seat.leftPercent + 1);
+    expect(inside).toBe(seat.zIndex - 1);
+    expect(outside).not.toBe(seat.zIndex - 1);
   });
 });
 
