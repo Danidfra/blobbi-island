@@ -122,7 +122,6 @@ img {
   --blobbi-purple-500: hsl(var(--island-purple));
 }
 
-
 @layer base {
   /* ---- Layer 2: semantic roles --------------------------------------------
      The shadcn/Radix token contract, every value a REFERENCE into the palette
@@ -177,15 +176,6 @@ img {
     --border: var(--island-wood);
     --input: var(--island-sand);
     --ring: var(--island-focus);
-
-    --sidebar-background: var(--island-cream);
-    --sidebar-foreground: var(--island-ink);
-    --sidebar-primary: var(--island-wood-dark);
-    --sidebar-primary-foreground: var(--island-cream);
-    --sidebar-accent: var(--island-sand);
-    --sidebar-accent-foreground: var(--island-ink);
-    --sidebar-border: var(--island-wood);
-    --sidebar-ring: var(--island-focus);
   }
 
   /*
@@ -309,10 +299,6 @@ img {
     padding: 1.5rem;
   }
 
-  .blobbi-muted {
-    color: hsl(var(--island-ink-soft));
-  }
-
   .blobbi-hover {
     transition: transform var(--dur) var(--ease-cozy), box-shadow var(--dur) var(--ease-cozy);
   }
@@ -334,12 +320,6 @@ img {
     color: hsl(var(--island-wood-dark));
     border-radius: 9999px;
     background: transparent;
-  }
-
-  .blobbi-badge-soft-amber {
-    border-color: transparent;
-    background: hsl(var(--island-sand));
-    color: hsl(var(--island-wood-dark));
   }
 
   .blobbi-badge-baby {
@@ -389,30 +369,9 @@ img {
     border-color: rgba(185, 133, 91, 0.55);
   }
 
-  .blobbi-gradient-container {
-    background-image: linear-gradient(to bottom right, hsl(var(--island-cream)), hsl(var(--island-sand)));
-    border: 2px solid var(--blobbi-border-light);
-    border-radius: 1rem;
-    transition: border var(--dur) var(--ease-cozy);
-  }
-
-  .blobbi-gradient-container:hover {
-    border-color: rgba(185, 133, 91, 0.55);
-  }
-
   /* Icon colors (remapped to island palette) */
-  .icon-yellow   { color: hsl(var(--island-warn)); }
-  .icon-amber    { color: hsl(var(--island-warn)); }
-  .icon-pink     { color: hsl(var(--island-purple)); }
   .icon-blue     { color: hsl(var(--island-ocean)); }
-  .icon-green    { color: hsl(var(--island-grass-dark)); }
   .icon-purple   { color: hsl(var(--island-purple)); }
-
-  /* Status icons */
-  .blobbi-status-icon-yellow { color: hsl(var(--island-warn)); }
-  .blobbi-status-icon-blue   { color: hsl(var(--island-ocean)); }
-  .blobbi-status-icon-purple { color: hsl(var(--island-purple)); }
-  .blobbi-status-icon-red    { color: hsl(var(--island-danger)); }
 
   /* Text styles */
   .blobbi-text {
@@ -546,22 +505,6 @@ img {
     scrollbar-width: thin;
   }
 
-  .scrollbar-thumb-purple-300 {
-    scrollbar-color: #c4b5fd transparent;
-  }
-
-  .dark .scrollbar-thumb-purple-700 {
-    scrollbar-color: #6b21a8 transparent;
-  }
-
-  .scrollbar-thumb-purple-400 {
-    scrollbar-color: #a78bfa transparent;
-  }
-
-  .dark .scrollbar-thumb-purple-600 {
-    scrollbar-color: #9333ea transparent;
-  }
-
   .scrollbar-track-transparent {
     scrollbar-color: transparent transparent;
   }
@@ -576,42 +519,10 @@ img {
     border-radius: 3px;
   }
 
-  .scrollbar-thumb-purple-300::-webkit-scrollbar-thumb {
-    background-color: #c4b5fd;
-    border-radius: 3px;
-    border: none;
-  }
-
-  .scrollbar-thumb-purple-400::-webkit-scrollbar-thumb {
-    background-color: #a78bfa;
-    border-radius: 3px;
-    border: none;
-  }
-
-  .dark .scrollbar-thumb-purple-700::-webkit-scrollbar-thumb {
-    background-color: #6b21a8;
-    border-radius: 3px;
-    border: none;
-  }
-
-  .dark .scrollbar-thumb-purple-600::-webkit-scrollbar-thumb {
-    background-color: #9333ea;
-    border-radius: 3px;
-    border: none;
-  }
-
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  /* Hover effects for scrollbars */
-  .hover\\:scrollbar-thumb-purple-400:hover::-webkit-scrollbar-thumb {
-    background-color: #a78bfa;
-  }
-
-  .dark .hover\\:scrollbar-thumb-purple-600:hover::-webkit-scrollbar-thumb {
-    background-color: #9333ea;
-  }
 }
 
 /* ==========================================================================
@@ -1144,7 +1055,6 @@ img {
   -webkit-user-select: none;
   user-select: none;
 }
-
 
 /* ── Air Hockey, table overlays ───────────────────────────────────────────
    The playfield itself is a canvas, so there is almost nothing to style: the

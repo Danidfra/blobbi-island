@@ -4,9 +4,6 @@ import tailwindcssAnimate from "tailwindcss-animate";
 export default {
 	darkMode: ["class"],
 	content: [
-		"./pages/**/*.{ts,tsx}",
-		"./components/**/*.{ts,tsx}",
-		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
 		// The @blobbi/react renderer implements its canonical square box with
 		// literal Tailwind classes (BLOBBI_RENDER_SIZE_CLASSES) so callers can
@@ -107,16 +104,6 @@ export default {
 					// the elements rendered at their inherited colour.
 					danger: 'hsl(var(--island-danger) / <alpha-value>)',
 					warn: 'hsl(var(--island-warn) / <alpha-value>)',
-				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
 			// One definition per elevation, shared with the `--shadow-*` custom
@@ -144,22 +131,6 @@ export default {
 				frame: 'var(--radius-frame)'
 			},
 			keyframes: {
-				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
-				},
-				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				},
 				'cozy-pop': {
 					'0%': { transform: 'scale(0.92)', opacity: '0' },
 					'100%': { transform: 'scale(1)', opacity: '1' }
@@ -188,8 +159,6 @@ export default {
 				}
 			},
 			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
 				'cozy-pop': 'cozy-pop 0.24s cubic-bezier(0.34, 1.4, 0.5, 1)',
 				'cozy-wiggle': 'cozy-wiggle 0.5s ease-in-out',
 				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)',
