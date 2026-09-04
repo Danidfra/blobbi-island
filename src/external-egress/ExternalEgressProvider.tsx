@@ -111,6 +111,14 @@ export function ExternalEgressProvider({ children }: { children: ReactNode }) {
             </span>{' '}
             outside Blobbi Island.
           </p>
+          {pending.destination.egressClass === 'external-link' && pending.destination.label ? (
+            // The caller's name for the place, as context under the host, never
+            // instead of it: "Nostr Farm" tells the player what they are
+            // opening; the host above tells them where.
+            <p className="mt-2 text-sm text-island-ink-soft" data-testid="egress-label">
+              That is where {pending.destination.label} lives. Blobbi Island stays open in this tab.
+            </p>
+          ) : null}
         </BlobbiModal>
       ) : null}
     </ExternalEgressContext.Provider>

@@ -280,9 +280,23 @@ export function useExternalInventoryLiveTail(
     const onOnline = () => invalidate();
     globalThis.addEventListener?.('online', onOnline);
 
+    // Coming back to this tab (from another game in another tab, say) is the
+    // moment the player expects to see what they earned there. A background
+    // tab's sockets are usually still up and the live tail has already
+    // applied the events; when they are not, the iterator may hang without
+    // an error rather than drop, and the resubscribe above never fires. One
+    // authoritative refetch on becoming visible closes that gap. Event
+    // driven, like `online`: not a poll, not a loop.
+    const doc = typeof document === 'undefined' ? null : document;
+    const onVisible = () => {
+      if (doc?.visibilityState === 'visible') invalidate();
+    };
+    doc?.addEventListener('visibilitychange', onVisible);
+
     return () => {
       abort.abort();
       globalThis.removeEventListener?.('online', onOnline);
+      doc?.removeEventListener('visibilitychange', onVisible);
       for (const relay of connections) void relay.close();
     };
   }, [pubkey, relaysKey, addressesKey, queryClient]);

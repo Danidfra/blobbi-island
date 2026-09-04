@@ -38,6 +38,7 @@ import {
   THEATER_BACKGROUND_FILE,
 } from '@/lib/theater-seats-config';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
+import { ExternalEgressProvider } from '@/external-egress';
 
 const DEV_VISUAL = {
   stage: 'baby' as const,
@@ -286,7 +287,13 @@ export function DevRooms() {
       <DebugOverlaysProvider>
         <PhotoBoothProvider>
           <MovementBlockerProvider>
-            <RoomView />
+            {/* The real egress boundary, so a room's outbound action (the
+                Station terminal) behaves here as in the game. The safety
+                provider is mounted by App alone; here the policy falls back
+                to Standard, which is what this harness wants. */}
+            <ExternalEgressProvider>
+              <RoomView />
+            </ExternalEgressProvider>
           </MovementBlockerProvider>
         </PhotoBoothProvider>
       </DebugOverlaysProvider>
