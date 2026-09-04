@@ -142,6 +142,12 @@ export interface CollectionEntry {
    */
   sourceLabel?: string;
   /**
+   * The full product name of where an external item came from, "Nostr Farm",
+   * for the consume dialog and the feeding feedback, which have room for it.
+   * `undefined` for this game's own items.
+   */
+  sourceName?: string;
+  /**
    * The full `31633:<owner>:<d>` address of the inventory this row came from.
    * A spend must name exactly this, never a `d`.
    */
@@ -361,7 +367,7 @@ export function useInventoryCollection(options: {
         // player does not have it any more.
         if (quantity <= 0) continue;
 
-        const issuer = parseGameItemAddress(item.address)?.pubkey;
+        const issuer = getTrustedItemIssuer(parseGameItemAddress(item.address)?.pubkey);
 
         // Island's interpretation, if the compatibility policy grants one.
         // Everything about what the item DOES lives there; this loop only
@@ -384,7 +390,8 @@ export function useInventoryCollection(options: {
           // The issuer's own player-facing name. Never the `d`, never the
           // inventory id, never a pubkey, a player is owed "Farm", not
           // `farm:main` and certainly not hex.
-          sourceLabel: getTrustedItemIssuer(issuer)?.label,
+          sourceLabel: issuer?.label,
+          sourceName: issuer?.name,
           ...(compatibility ? { compatibility } : {}),
           definition: compatibility
             ? applyExternalCompatibility(definition, compatibility)

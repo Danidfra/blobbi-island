@@ -43,6 +43,7 @@ describe('the Nostr Farm experience', () => {
   it('names its source the way the inventory does', () => {
     const farm = TRUSTED_ITEM_ISSUERS.find((issuer) => issuer.role === 'partner')!;
     expect(NOSTR_FARM_EXPERIENCE.sourceLabel).toBe(getTrustedItemIssuer(farm.pubkey)?.label);
+    expect(NOSTR_FARM_EXPERIENCE.name).toBe(getTrustedItemIssuer(farm.pubkey)?.name);
   });
 
   it('speaks to players: no kind numbers, relays, issuers or manifests in the copy', () => {

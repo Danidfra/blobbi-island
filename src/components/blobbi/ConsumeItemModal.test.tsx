@@ -55,14 +55,14 @@ describe('ConsumeItemModal', () => {
     expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('1');
   });
 
-  it('disables Use when nothing is available', async () => {
+  it('disables the action when nothing is available', async () => {
     render(
       <TestApp>
         <ConsumeItemModal {...mockProps} availableQuantity={0} />
       </TestApp>
     );
     await screen.findByRole('dialog');
-    expect(screen.getByRole('button', { name: 'Use' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Feed Blobbi' })).toBeDisabled();
   });
 
   it('allows quantity adjustment within limits', async () => {

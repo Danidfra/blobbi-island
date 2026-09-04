@@ -643,6 +643,14 @@ export function InventoryBrowser({
              allowed exactly as it is for Island food: the dialog shows the
              total effect and the clamp decides. */
           availableQuantity={liveUseEntry.quantity}
+          /* Provenance is a property of the SOURCE, never of the item: an
+             item from another game's inventory says where it came from, in
+             that game's own name; an Island item says nothing. */
+          provenance={
+            liveUseEntry.source === 'external'
+              ? liveUseEntry.sourceName ?? liveUseEntry.sourceLabel
+              : undefined
+          }
           onUseItem={(quantity) => handleUse(liveUseEntry, quantity)}
           isLoading={isConsuming}
           loadingText="Using..."

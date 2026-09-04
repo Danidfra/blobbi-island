@@ -63,6 +63,13 @@ export interface TrustedItemIssuer {
    * pubkey, an npub or a `d` prefix. Rendered on the inventory tile.
    */
   label: string;
+  /**
+   * The issuer's full product name, "Nostr Farm", for surfaces with room for
+   * it: the consume dialog and the feeding feedback say "From Nostr Farm"
+   * where a tile pill says "Farm". Presentation only; never an input to any
+   * trust, resolution or accounting decision.
+   */
+  name: string;
   role: TrustedIssuerRole;
   /**
    * Relays known to carry this issuer's definitions, and, for a partner game,
@@ -103,6 +110,7 @@ export const TRUSTED_ITEM_ISSUERS: readonly TrustedItemIssuer[] = [
     // this is a restatement, never a second source of truth.
     pubkey: OFFICIAL_ITEM_ISSUER_PUBKEY,
     label: 'Blobbi Island',
+    name: 'Blobbi Island',
     role: 'blobbi',
     relays: OFFICIAL_ITEM_RELAYS,
     // Own items are interpreted by the official catalog, never by the
@@ -118,6 +126,7 @@ export const TRUSTED_ITEM_ISSUERS: readonly TrustedItemIssuer[] = [
     // stock settings resolves them without any extra connection.
     pubkey: 'f47aaf2e3279fe6fcdde556336d1f740705126c9a37e6390e2ede21165199fb4',
     label: 'Farm',
+    name: 'Nostr Farm',
     role: 'partner',
     // The Farm reads and writes `farm:main`, its kind:1416 spends and its
     // kind:1417 folds on this set (its `INVENTORY_RELAYS`), so a spend Island

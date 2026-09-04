@@ -269,7 +269,7 @@ describe('a compatible partner item is USABLE through the spend path', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('dialog').textContent).toContain('25');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Feed Blobbi' }));
 
     expect(consumeExternal).toHaveBeenCalledTimes(1);
     const [input] = consumeExternal.mock.calls[0];
@@ -305,7 +305,7 @@ describe('a compatible partner item is USABLE through the spend path', () => {
     const plus = screen.getByRole('button', { name: 'Increase quantity' });
     fireEvent.click(plus);
     fireEvent.click(plus);
-    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Feed Blobbi' }));
     expect(consumeExternal).toHaveBeenCalledTimes(1);
     expect(consumeExternal.mock.calls[0][0].quantity).toBe(3);
   });
@@ -325,7 +325,7 @@ describe('a compatible partner item is USABLE through the spend path', () => {
     rerender(browser());
     await screen.findByText('Available: 1');
     expect((screen.getByLabelText('Quantity') as HTMLInputElement).value).toBe('1');
-    fireEvent.click(screen.getByRole('button', { name: 'Use' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Feed Blobbi' }));
     expect(consumeExternal.mock.calls[0][0].quantity).toBe(1);
   });
 
@@ -409,7 +409,7 @@ describe('provenance is kept, not merged', () => {
       .map((t) => t.closest('[data-entry-key]')!)
       .find((t) => t.getAttribute('data-entry-key') === entryKey('guild:chest', STRAWBERRY))!;
     fireEvent.click(chestTile);
-    fireEvent.click(await screen.findByRole('button', { name: 'Use' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Feed Blobbi' }));
     expect(consumeExternal.mock.calls[0][0].inventory.address).toBe(`31633:${OWNER}:guild:chest`);
   });
 });
@@ -458,7 +458,7 @@ describe('the island inventory is unaffected', () => {
 
     // Using the apple goes through Island's own inventory debit…
     fireEvent.click(apple);
-    fireEvent.click(await screen.findByRole('button', { name: 'Use' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Feed Blobbi' }));
     expect(consumeIsland).toHaveBeenCalledTimes(1);
     expect(consumeIsland.mock.calls[0][0].address).toBe(itemIdToAddress('food_apple'));
     // …and never the spend path.

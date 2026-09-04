@@ -2,8 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Minus, Plus, Heart, Zap, Sparkles, Droplets } from 'lucide-react';
-import { primaryItemImageUrl, type ResolvedBlobbiItemDefinition } from '@/inventory';
+import { Minus, Plus, Heart, Zap, Sparkles, Droplets, Sprout } from 'lucide-react';
+import {
+  primaryItemImageUrl,
+  type ItemAction,
+  type ResolvedBlobbiItemDefinition,
+} from '@/inventory';
 
 // Effect icons mapping
 const EFFECT_ICONS = {
@@ -13,6 +17,24 @@ const EFFECT_ICONS = {
   happiness: Sparkles,
   health: Heart,
 } as const;
+
+/**
+ * What the primary button says, by what the item DOES. "Use" is the honest
+ * fallback for an action without a better verb; a feed is the one a player
+ * performs most, and "Feed Blobbi" says what is about to happen to whom.
+ */
+const ACTION_LABELS: Readonly<Record<ItemAction, string>> = {
+  feed: 'Feed Blobbi',
+  play: 'Play together',
+  clean: 'Clean up',
+  medicine: 'Give medicine',
+  boost: 'Use',
+};
+
+/** The primary button's label for a definition's action. */
+export function consumeActionLabel(action: ItemAction | null | undefined): string {
+  return (action && ACTION_LABELS[action]) || 'Use';
+}
 
 interface ConsumeItemModalProps {
   isOpen: boolean;
@@ -34,6 +56,13 @@ interface ConsumeItemModalProps {
   onUseItem: (quantity: number) => void;
   isLoading?: boolean;
   loadingText?: string;
+  /**
+   * Where the item came from, when it came from another game: the product
+   * name, "Nostr Farm". Rendered as "From Nostr Farm" beside the item so the
+   * player sees that what they grew there is what they are about to use
+   * here. Omitted for this game's own items, which need no provenance.
+   */
+  provenance?: string;
 }
 
 export function ConsumeItemModal({
@@ -45,6 +74,7 @@ export function ConsumeItemModal({
   onUseItem,
   isLoading = false,
   loadingText = 'Using...',
+  provenance,
 }: ConsumeItemModalProps) {
   const maxQuantity = Math.max(0, Math.min(maxQuantityProp ?? availableQuantity, availableQuantity));
   const [quantity, setQuantity] = useState(1);
@@ -116,7 +146,7 @@ export function ConsumeItemModal({
             disabled={isLoading || maxQuantity < 1}
             className="min-h-[44px]"
           >
-            {isLoading ? loadingText : 'Use'}
+            {isLoading ? loadingText : consumeActionLabel(definition.action)}
           </Button>
         </>
       }
@@ -139,6 +169,15 @@ export function ConsumeItemModal({
               <p className="text-xs text-island-ink-soft" data-testid="consume-available">
                 Available: {availableQuantity}
               </p>
+              {provenance ? (
+                <p
+                  data-testid="consume-provenance"
+                  className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full border border-island-grass-dark/30 bg-island-grass-dark/10 px-2 py-0.5 text-[0.6875rem] font-semibold text-island-grass-dark"
+                >
+                  <Sprout aria-hidden className="size-3 shrink-0" />
+                  <span className="truncate">From {provenance}</span>
+                </p>
+              ) : null}
             </div>
           </div>
         </div>

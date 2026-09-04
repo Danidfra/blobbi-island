@@ -32,6 +32,7 @@ describe('who is trusted', () => {
     const issuer = getTrustedItemIssuer(FARM_ISSUER);
     expect(issuer?.role).toBe('partner');
     expect(issuer?.label).toBe('Farm');
+    expect(issuer?.name).toBe('Nostr Farm');
     expect(issuer?.relays.length).toBeGreaterThan(0);
   });
 
@@ -70,6 +71,7 @@ describe('the table records issuers, not products', () => {
       expect(Object.keys(issuer).sort()).toEqual([
         'compatibility',
         'label',
+        'name',
         'pubkey',
         'relays',
         'role',
