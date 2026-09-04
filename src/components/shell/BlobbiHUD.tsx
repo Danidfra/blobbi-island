@@ -3,7 +3,8 @@ import { useLocation } from "@/hooks/useLocation";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { LocationId } from "@/lib/location-types";
 import { AccountMenu } from "./AccountMenu";
-import { LocationPill, OnlineCountChip } from "./hud-primitives";
+import { LocationPill, OnlineCountChip, PresenceStatusChip } from "./hud-primitives";
+import { presenceStatusMessage, usePresenceStatus } from '@/lib/presence-status';
 
 // Friendly display names (kept in sync with LocationIndicator).
 const LOCATION_NAMES: Record<LocationId, string> = {
@@ -57,6 +58,10 @@ interface BlobbiHUDProps {
  * or a tall bottom drawer.
  */
 export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, showGlobalControls = true }: BlobbiHUDProps) {
+  // One quiet line when presence is paused because signing was declined —
+  // the only presence state the player caused and can change. Nothing else
+  // about presence is worth a word here.
+  const presenceMessage = presenceStatusMessage(usePresenceStatus());
   const { currentLocation } = useLocation();
   const { user } = useCurrentUser();
   const locationName = LOCATION_NAMES[currentLocation] ?? "The Island";
@@ -95,6 +100,7 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
       {/* Right: status + account/menu */}
       <div data-block-move className="pointer-events-auto flex items-center gap-2 shrink-0">
         {typeof onlineCount === "number" && <OnlineCountChip count={onlineCount} size={size} />}
+        {presenceMessage && <PresenceStatusChip message={presenceMessage} size={size} />}
 
         {/* Single home for account / current Blobbi / switch Blobbi / relays /
             logout. Opens as a centered, touch-friendly game modal in

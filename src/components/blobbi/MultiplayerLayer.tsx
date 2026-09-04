@@ -15,6 +15,7 @@ import { useNostr } from '@nostrify/react';
 // import { useQuery } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
+import { createPresencePublisher } from '@/lib/presence-publish';
 import { useIslandPresence } from '@/hooks/useIslandPresence';
 import { useLocation } from '@/hooks/useLocation';
 // import type { LocationId } from '@/lib/location-types';
@@ -359,6 +360,19 @@ export function MultiplayerLayer({
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { mutateAsync: publishEvent } = useNostrPublish();
+  // Presence has its own publisher: signing and sending are separate stages,
+  // so a signer refusal is recognisable (and stops the lifecycle) while a slow
+  // relay stays best-effort. Stable identity — the presence hook keys effects
+  // on it. See `src/lib/presence-publish.ts`.
+  const presencePublish = useMemo(
+    () =>
+      user
+        ? createPresencePublisher({ user, nostr })
+        : async () => {
+            /* signed out: nothing to publish */
+          },
+    [user, nostr],
+  );
   // Capability set for the current experience. A frozen singleton, so it is
   // referentially stable and safe to use directly as a hook dependency.
   const safetyPolicy = useIslandSafetyPolicy();
@@ -745,9 +759,7 @@ export function MultiplayerLayer({
     pubkey: user?.pubkey || '',
     blobbiD: currentBlobbiD,
     startPos: startPosition,
-    publish: async (event: Record<string, unknown>) => {
-      await publishEvent(event);
-    },
+    publish: presencePublish,
     subscribe,
     fetch31124: fetchBlobbi31124,
     percentToPixel,

@@ -67,6 +67,36 @@ export function OnlineCountChip({
   );
 }
 
+/**
+ * A quiet status line next to the online count — used only when presence is
+ * paused because the player declined to sign it. Muted, not alarming: the
+ * game is fully playable, they are just not visible to others.
+ */
+export function PresenceStatusChip({
+  message,
+  size = "default",
+  className,
+}: {
+  message: string;
+  size?: HudSize;
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      data-presence-status
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border border-island-wood/20 bg-island-cream/80 text-island-ink-soft shadow-cozy-soft",
+        size === "compact" ? "px-2.5 py-1 text-[0.6875rem]" : "px-3 py-1.5 text-xs",
+        className,
+      )}
+    >
+      <span aria-hidden className="inline-flex size-2 rounded-full bg-island-ink-soft/50" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
 /** A cozy HUD icon button (settings, collection, menu, etc.). */
 export function HudIconButton({
   icon,

@@ -37,6 +37,22 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
+// Presence has its own publisher (sign, then send — see
+// `src/lib/presence-publish.ts`). Route it through the same capture so these
+// tests keep reading what THIS client advertises.
+vi.mock('@/lib/presence-publish', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
+  // Delegate to this file's `useNostrPublish` mock so its capture — and any
+  // failure injection it performs — applies to presence exactly as before.
+  const { useNostrPublish } = await import('@/hooks/useNostrPublish');
+  return {
+    ...actual,
+    createPresencePublisher:
+      () => async (event: Record<string, unknown>) => {
+        await useNostrPublish().mutateAsync(event as never);
+      },
+  };
+});
 
 let currentLocation = 'stage';
 vi.mock('@/hooks/useLocation', () => ({

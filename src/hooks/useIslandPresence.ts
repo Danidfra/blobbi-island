@@ -4,6 +4,8 @@
 import { posAt } from '@/lib/multiplayer';
 import { type PlayerAnimState } from '@/lib/multiplayer';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { isPresenceSignerRefusal } from '@/lib/presence-publish';
+import { setPresenceStatus } from '@/lib/presence-status';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
 // Debug flag for multiplayer logging.
@@ -162,6 +164,11 @@ interface UseIslandPresenceReturn {
   setActivity: (sessionAddress: string | null) => Promise<void>;
   myPosRef: React.MutableRefObject<Position>;
   isLoading: boolean;
+  /**
+   * The signer declined to sign presence for this lifecycle. Presence is
+   * paused (no prompts, no publishes, no logs); the world stays playable.
+   */
+  signerRefused: boolean;
   error?: string;
 }
 
@@ -176,10 +183,47 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
     pubkey,
     blobbiD,
     startPos,
-    publish,
+    publish: rawPublish,
     subscribe,
     fetch31124,
   } = opts;
+
+  /*
+    The presence CIRCUIT BREAKER.
+
+    A signer refusal is permanent for this lifecycle: the same prompt would be
+    declined on the next walk, the next heartbeat and the next room, and
+    asking again is a loop of prompts and console errors — the player's only
+    exit used to be leaving the world. So the first refusal flips
+    `signerRefusedRef`, says so ONCE (info, not error), and every later publish
+    in this lifecycle resolves as a silent no-op: nothing is signed, nothing is
+    sent, nothing is logged, and every caller carries on exactly as it does
+    after a successful publish. Reading remote players is unaffected — the
+    subscription never needed the signer.
+
+    Transient failures (relay down, offline) are not refusals: they still
+    throw, and every existing "…failed but continuing" path — the debounced
+    move retry, the next heartbeat — keeps its behaviour.
+  */
+  const signerRefusedRef = useRef(false);
+  const [signerRefused, setSignerRefused] = useState(false);
+  const publish = useCallback(
+    async (event: Record<string, unknown>): Promise<void> => {
+      if (signerRefusedRef.current) return;
+      try {
+        await rawPublish(event);
+      } catch (error) {
+        if (!isPresenceSignerRefusal(error)) throw error;
+        if (!signerRefusedRef.current) {
+          signerRefusedRef.current = true;
+          setSignerRefused(true);
+          setPresenceStatus('signer-declined');
+          console.info('[blobbi][mp] presence paused for this visit: signing was declined');
+        }
+      }
+    },
+    [rawPublish],
+  );
 
   const navApi = useMemo(() => opts.nav ?? createWalkableApi(location), [opts.nav, location]);
 
@@ -1083,6 +1127,7 @@ const animatePlayers = useCallback(() => {
 
     let mounted = true;
 
+    setPresenceStatus('live');
     const doLoginAndStart = async () => {
       try {
         await publishPresenceLogin(publish, {
@@ -1151,6 +1196,7 @@ const animatePlayers = useCallback(() => {
 
     return () => {
       mounted = false;
+      setPresenceStatus('idle');
       if (subscriptionRef.current) subscriptionRef.current.close();
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (gcIntervalRef.current) clearInterval(gcIntervalRef.current);
@@ -1314,5 +1360,6 @@ const animatePlayers = useCallback(() => {
     myPosRef,
     isLoading,
     error,
+    signerRefused,
   };
 }
