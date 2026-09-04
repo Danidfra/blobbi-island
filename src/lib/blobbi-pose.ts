@@ -23,6 +23,7 @@
  */
 
 import type { GroundPosition, PoseAnchor } from '@/lib/spatial-intent';
+import type { SeatedAccessory } from '@/lib/room-seats-config';
 import type { Boundary } from '@/lib/boundaries';
 import {
   resolveBlobbiScale,
@@ -86,6 +87,12 @@ export interface ActorRender {
   seatedIn: string | null;
   /** Hiding-spot id for the actor's data attribute, or null. */
   hiddenIn: string | null;
+  /**
+   * A prop the seat makes the Blobbi wear (the VR headset in a Nostr Station
+   * chair), or null. Presentation only; never equipment. Standing, hidden and
+   * sleeping poses always resolve to null, so the prop cannot outlive the seat.
+   */
+  seatedAccessory: SeatedAccessory | null;
 }
 
 /**
@@ -117,6 +124,7 @@ export function resolveActorRender(
         sleeping: false,
         seatedIn: seated.seat.id,
         hiddenIn: null,
+        seatedAccessory: seated.accessory,
       };
     }
     // Unknown / decorative / stale seat id: a hostile or outdated claim can
@@ -134,6 +142,7 @@ export function resolveActorRender(
     sleeping: false,
     seatedIn: null,
     hiddenIn: null,
+    seatedAccessory: null,
   };
 
   switch (pose.kind) {

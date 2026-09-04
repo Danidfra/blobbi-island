@@ -181,3 +181,94 @@ describe('room spawns', () => {
     expect(isBlocked(spawn, footprintsIn(room)), `${location} spawn ${JSON.stringify(spawn)}`).toBe(false);
   });
 });
+
+describe('Nostr Station VR chairs', () => {
+  const chairs = roomSeatsFor('nostr-station-inside.png');
+  // Lines measured on `chair.png` (fractions of the sprite height), see the
+  // table above `stationChair` in room-seats-config.ts.
+  const PAD_REAR_SEAM = 0.56;
+  const PAD_FRONT_SEAM = 0.615;
+  const CUP_RIM = 0.73;
+  // The visible body ends this far above the anchor: the empty bottom of the
+  // renderer box, scaled to this room's `lg` box and depth ramp, over the
+  // chair's height. (96 px × ~1.32 × 12 % ≈ 15 px ≈ 2.2 % of 697; the chair is
+  // 27.4 % tall.)
+  const BODY_GAP_OF_CHAIR = 0.08;
+
+  it('has four chairs that share one seat-contact configuration', () => {
+    expect(chairs).toHaveLength(4);
+    const first = chairs[0];
+    for (const chair of chairs) {
+      expect(chair.seatContact).toEqual(first.seatContact);
+      expect(chair.approach).toEqual(first.approach);
+      expect(chair.seatedScale).toBe(1);
+      expect(chair.foregroundFrom).toBe(first.foregroundFrom);
+      expect(chair.seatedAccessory).toBe('vr-headset');
+      expect(chair.bottomPercent).toBe(first.bottomPercent);
+      expect(chair.widthPercent).toBe(first.widthPercent);
+    }
+  });
+
+  it('pins the visible body bottom inside the cup: below the cushion lip, above the rim', () => {
+    for (const chair of chairs) {
+      const bodyBottom = chair.seatContact.y - BODY_GAP_OF_CHAIR;
+      expect(bodyBottom, chair.id).toBeGreaterThan(PAD_FRONT_SEAM);
+      expect(bodyBottom, chair.id).toBeLessThan(CUP_RIM);
+      // Never through the pedestal or the floor.
+      expect(chair.seatContact.y, chair.id).toBeLessThan(0.8);
+    }
+  });
+
+  it('repaints the chair from the cushion lip down in front of the sitter, and nothing above the pad', () => {
+    for (const chair of chairs) {
+      expect(chair.foregroundFrom, chair.id).toBeGreaterThan(PAD_REAR_SEAM);
+      expect(chair.foregroundFrom, chair.id).toBeLessThanOrEqual(PAD_FRONT_SEAM);
+      // The overlap that makes the body read as sunk into the seat.
+      expect(chair.seatContact.y - BODY_GAP_OF_CHAIR, chair.id).toBeGreaterThan(chair.foregroundFrom!);
+    }
+  });
+
+  it('centres the body on the chair and its corridor', () => {
+    const boundary = locationBoundaries['nostr-station-inside.png'];
+    for (const chair of chairs) {
+      const anchor = roomSeatAnchorPosition(chair);
+      const chairCentre = chair.leftPercent + chair.widthPercent / 2;
+      expect(anchor.x, chair.id).toBeCloseTo(chairCentre, 6);
+      // The corridor the boundary carves into this chair is centred on it too,
+      // so a seated body and a walking body share one column.
+      const approach = roomSeatApproachPosition(chair, boundary);
+      expect(approach.x, chair.id).toBeCloseTo(chairCentre, 6);
+    }
+  });
+
+  it('keeps the approach on the corridor floor, in front of the seat anchor, and routeable', () => {
+    for (const chair of chairs) {
+      const approach = roomSeatApproachPosition(chair);
+      const anchor = roomSeatAnchorPosition(chair);
+      expect(onFloor(approach, chair.room), chair.id).toBe(true);
+      expect(approach.y, chair.id).toBeGreaterThan(anchor.y);
+      expect(isBlocked(approach, footprintsIn(chair.room)), chair.id).toBe(false);
+    }
+  });
+
+  it('renders the seated Blobbi one under the foreground slice and over the chair', () => {
+    for (const chair of chairs) {
+      const seated = resolveSeatedRender(chair.id)!;
+      expect(seated.zIndex).toBeGreaterThan(chair.zIndex);
+      // The slice sits at seatedZIndex + 1 (RoomSeat); the sitter must stay
+      // below the room's front-floor band (20) so a Blobbi walking past in
+      // front of the chairs is still drawn over them.
+      expect(seated.zIndex + 1).toBeLessThan(20);
+    }
+  });
+
+  it('the headset is a consequence of the seat, and only of these seats', () => {
+    for (const chair of chairs) {
+      expect(resolveSeatedRender(chair.id)!.accessory).toBe('vr-headset');
+    }
+    for (const seat of roomSeats.filter((s) => s.room !== 'nostr-station-inside.png')) {
+      expect(resolveSeatedRender(seat.id)!.accessory, seat.id).toBeNull();
+      expect(seat.foregroundFrom, seat.id).toBeUndefined();
+    }
+  });
+});

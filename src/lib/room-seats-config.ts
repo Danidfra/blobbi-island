@@ -50,6 +50,13 @@ export interface SpriteBox {
   readonly heightPercent: number;
 }
 
+/**
+ * A presentation-only prop a seated Blobbi wears while it is in this chair.
+ * It is not equipment: it is never published, never in the inventory, never
+ * a placement, and it disappears the moment the Blobbi stands up.
+ */
+export type SeatedAccessory = 'vr-headset';
+
 export interface RoomSeatConfig extends SpriteBox {
   readonly id: string;
   /** The background file of the room this seat lives in. */
@@ -82,6 +89,18 @@ export interface RoomSeatConfig extends SpriteBox {
    * chair's front edge (the approach) is drawn in front of it.
    */
   readonly behindWithin: number;
+  /**
+   * A deep bucket seat wraps round the sitter: the part of the chair from
+   * this fraction of the sprite box DOWN (the cushion's front face, the cup,
+   * the pedestal) is drawn again IN FRONT of a seated Blobbi, so the body sinks
+   * into the seat instead of perching on its lip. Absent for chairs drawn
+   * entirely behind the sitter (the terrace and basement chairs, whose tables
+   * do that job). Only painted while this seat is occupied: a standing Blobbi
+   * at the chair's front edge must not vanish behind its own chair's pedestal.
+   */
+  readonly foregroundFrom?: number;
+  /** What a seated Blobbi wears here, if anything. Presentation only. */
+  readonly seatedAccessory?: SeatedAccessory;
 }
 
 export interface RoomTableConfig extends SpriteBox {
@@ -278,11 +297,42 @@ const basementClusters = [
 ];
 
 /**
- * The Nostr Station's four gaming chairs. The room's walk boundary carves a
+ * The Nostr Station's four VR gaming chairs. The room's walk boundary carves a
  * corridor into each chair (x 20–26, 33–39, 61–67, 74–80), which is what
  * keeps the Blobbi out of the chair bodies, so these carry no footprint;
  * the approach lands in the corridor and the seat anchor sits inside it.
+ *
+ * ## Seat contact, measured on `chair.png` (171 × 260)
+ *
+ * Fractions of the sprite's height, read off the artwork's alpha and seams:
+ *
+ *  | line                                   | fraction |
+ *  | -------------------------------------- | -------- |
+ *  | cushion pad, rear seam (meets backrest)| 0.56     |
+ *  | cushion pad, front seam (the lip)      | 0.615    |
+ *  | cup's front face                       | 0.62–0.72|
+ *  | neon rim at the bottom of the cup      | 0.73     |
+ *  | pedestal                               | 0.75–1.0 |
+ *
+ * The pose anchor pins the BOTTOM OF THE RENDERER BOX, and every Blobbi body
+ * ends above that: the artwork leaves the lowest ~12 % of the square box empty
+ * (see `BLOBBI_BODY_BOTTOM_PERCENT`). At this room's `lg` size and ~1.32 depth
+ * scale the box is ~0.66 of the chair's height, so the visible body bottom is
+ * ~0.08 of the chair ABOVE the anchor. The old anchor (0.68) therefore put the
+ * body's bottom on the pad's front lip (0.60) with the whole cup face showing
+ * beneath it: perched, not seated.
+ *
+ * Now the anchor is 0.76: the body bottom lands at ~0.68, inside the cup's
+ * front face, and `foregroundFrom` repaints the chair from the lip (0.615)
+ * down in front of the sitter, so the cushion overlaps the lowest ~0.06 of
+ * the chair's height of the body. Adult variants whose bodies end a little
+ * higher or lower in the box (0.79–0.90) all land inside that overlap band,
+ * which is what makes the four chairs read the same for every Blobbi.
  */
+const STATION_SEAT_CONTACT = { x: 0.5, y: 0.76 } as const;
+/** The cushion's front seam: everything below it is repainted over the sitter. */
+const STATION_FOREGROUND_FROM = 0.615;
+
 function stationChair(index: number, leftPercent: number): RoomSeatConfig {
   const sprite = box(leftPercent, 25, 12, ART.stationChair);
   return {
@@ -296,13 +346,15 @@ function stationChair(index: number, leftPercent: number): RoomSeatConfig {
     zIndex: 14,
     seatedZIndex: 16,
     // Deep bucket seat: the walk ends on the corridor floor at the chair's
-    // front edge, the body settles on the cushion two thirds of the way down.
+    // front edge; the seat anchor is documented above.
     approach: { x: 0.5, y: 0.85 },
-    seatContact: { x: 0.5, y: 0.68 },
+    seatContact: STATION_SEAT_CONTACT,
     seatedScale: 1,
     facing: 'front',
     size: 'lg',
     behindWithin: 0.68,
+    foregroundFrom: STATION_FOREGROUND_FROM,
+    seatedAccessory: 'vr-headset',
   };
 }
 

@@ -156,3 +156,44 @@ describe('local/remote parity', () => {
     expect({ ...moving, disableFloat: still.disableFloat }).toEqual(still);
   });
 });
+
+describe('seated accessory (presentation-only prop)', () => {
+  const STATION: Pick<ActorRenderContext, 'backgroundFile' | 'boundary' | 'scaleByYPosition'> = {
+    backgroundFile: 'nostr-station-inside.png',
+    boundary: locationBoundaries['nostr-station-inside.png'],
+    scaleByYPosition: true,
+  };
+
+  it('a Nostr Station VR chair puts the headset on; the pose carries nothing else about it', () => {
+    for (const n of [1, 2, 3, 4]) {
+      const render = resolveActorRender(
+        { kind: 'seated', seatId: `nostr-station-chair-${n}` },
+        { groundPosition: GROUND, ...STATION },
+      );
+      expect(render.seatedAccessory).toBe('vr-headset');
+      expect(render.seatedIn).toBe(`nostr-station-chair-${n}`);
+      expect(render.facing).toBe('front');
+    }
+  });
+
+  it('other chairs, the theater, standing, sleeping and hidden all resolve to no accessory', () => {
+    const cases = [
+      resolveActorRender({ kind: 'seated', seatId: 'mall-terrace-1-left-chair' }, { groundPosition: GROUND, backgroundFile: 'shopping-mall-inside.png' }),
+      resolveActorRender({ kind: 'seated', seatId: 'arcade-b1-1-right-chair' }, { groundPosition: GROUND, backgroundFile: 'arcade-minus1.png' }),
+      resolveActorRender({ kind: 'seated', seatId: 'theater-seat-a1' }, { groundPosition: GROUND, ...THEATER }),
+      resolveActorRender({ kind: 'seated', seatId: 'nostr-station-chair-9' }, { groundPosition: GROUND, ...STATION }),
+      resolveActorRender(STANDING_POSE, { groundPosition: GROUND, ...STATION }),
+      resolveActorRender({ kind: 'sleeping', anchor: GROUND }, { groundPosition: GROUND, ...STATION }),
+      resolveActorRender({ kind: 'hidden', spotId: 'bush-1' }, { groundPosition: GROUND, ...STATION }),
+    ];
+    for (const render of cases) expect(render.seatedAccessory).toBeNull();
+  });
+
+  it('standing up removes it in the same resolution (nothing persists past the seat)', () => {
+    const seated = resolveActorRender({ kind: 'seated', seatId: 'nostr-station-chair-2' }, { groundPosition: GROUND, ...STATION });
+    const standing = resolveActorRender(STANDING_POSE, { groundPosition: seated.renderPosition, ...STATION });
+    expect(seated.seatedAccessory).toBe('vr-headset');
+    expect(standing.seatedAccessory).toBeNull();
+    expect(standing.seatedIn).toBeNull();
+  });
+});

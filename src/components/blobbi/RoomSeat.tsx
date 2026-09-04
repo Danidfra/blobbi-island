@@ -34,6 +34,12 @@ interface RoomSeatProps {
  *
  * A click while already seated here does nothing: no second walk, no re-fired
  * arrival.
+ *
+ * A deep bucket seat (`foregroundFrom`) is painted twice while occupied: the
+ * whole chair behind the sitter, and the part below the cushion's front seam
+ * again in front of it (one z above the seated Blobbi), so the body sinks
+ * into the seat. The slice is only mounted while THIS seat is occupied; a
+ * standing Blobbi at the chair's front edge stays in front of the pedestal.
  */
 export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArrive }: RoomSeatProps) {
   const blockers = useMovementBlocker({ optional: true });
@@ -92,6 +98,23 @@ export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArriv
       >
         <img src={config.src} alt={config.alt} draggable={false} className="w-full h-full object-contain" />
       </div>
+      {isSittingHere && config.foregroundFrom !== undefined && (
+        <img
+          src={config.src}
+          alt=""
+          aria-hidden
+          draggable={false}
+          data-seat-foreground={config.id}
+          className="absolute pointer-events-none select-none"
+          style={{
+            left: `${config.leftPercent}%`,
+            bottom: `${config.bottomPercent}%`,
+            width: `${config.widthPercent}%`,
+            zIndex: config.seatedZIndex + 1,
+            clipPath: `inset(${(config.foregroundFrom * 100).toFixed(2)}% 0 0 0)`,
+          }}
+        />
+      )}
       {config.footprint && (
         <MovementBlocker id={`seat-footprint-${config.id}`} {...config.footprint} />
       )}

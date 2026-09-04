@@ -22,7 +22,7 @@ import {
   getTheaterSeat,
   seatAnchorPosition,
 } from '@/lib/theater-seats-config';
-import { getRoomSeat, roomSeatAnchorPosition } from '@/lib/room-seats-config';
+import { getRoomSeat, roomSeatAnchorPosition, type SeatedAccessory } from '@/lib/room-seats-config';
 
 /**
  * Vertical extent of a boundary, used to map a y-position onto a room's
@@ -125,6 +125,11 @@ export interface SeatedRender {
   hideShadow: true;
   /** A bobbing seated Blobbi fights the chair it is sitting in. */
   disableFloat: true;
+  /**
+   * A prop worn BECAUSE of this seat (the Nostr Station's VR headset), or
+   * null. Presentation only: not equipment, never published, gone on standing.
+   */
+  accessory: SeatedAccessory | null;
 }
 
 /**
@@ -153,6 +158,7 @@ export function resolveSeatedRender(seatId: string | null | undefined): SeatedRe
       zIndex: roomSeat.seatedZIndex,
       hideShadow: true,
       disableFloat: true,
+      accessory: roomSeat.seatedAccessory ?? null,
     };
   }
   if (!seat.occupiable) return null;
@@ -167,5 +173,6 @@ export function resolveSeatedRender(seatId: string | null | undefined): SeatedRe
     zIndex: Math.max(seat.zIndex - 5, 9),
     hideShadow: true,
     disableFloat: true,
+    accessory: null,
   };
 }
