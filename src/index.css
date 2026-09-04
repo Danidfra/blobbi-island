@@ -1267,3 +1267,56 @@ img {
     transition: none !important;
   }
 }
+/* ── First-session moments (src/components/onboarding) ─────────────────────
+   Arrival veil + title, the Coin-grant burst, the welcome card. Every one of
+   these is a short, in-frame moment; under reduced motion the components
+   render without these classes, so no keyframe below needs a media guard of
+   its own — but the guard is here too, as belt and braces. */
+@keyframes blobbi-arrival-veil {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes blobbi-arrival-title {
+  0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+  22% { opacity: 1; transform: translateY(0) scale(1); }
+  74% { opacity: 1; transform: translateY(0) scale(1.02); }
+  100% { opacity: 0; transform: translateY(-8px) scale(1.04); }
+}
+@keyframes blobbi-coin-card {
+  0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+  18% { opacity: 1; transform: translateY(0) scale(1.04); }
+  30% { transform: scale(1); }
+  85% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+@keyframes blobbi-coin-piece {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--coin-angle)) translateY(0) scale(0.6); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--coin-angle)) translateY(-84px) scale(1); }
+}
+@keyframes blobbi-welcome-in {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.blobbi-arrival-veil {
+  background: radial-gradient(ellipse at center, hsl(var(--island-ink) / 0.35), hsl(var(--island-ink) / 0.7));
+  animation: blobbi-arrival-veil 1700ms ease-in-out both;
+}
+.blobbi-arrival-title {
+  animation: blobbi-arrival-title 1700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.blobbi-coin-card {
+  animation: blobbi-coin-card 2800ms ease-out both;
+}
+.blobbi-coin-piece {
+  animation: blobbi-coin-piece 1100ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .blobbi-arrival-veil,
+  .blobbi-arrival-title,
+  .blobbi-coin-card,
+  .blobbi-coin-piece {
+    animation: none;
+  }
+}

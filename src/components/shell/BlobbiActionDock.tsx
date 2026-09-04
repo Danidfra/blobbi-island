@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { MessageCircle, Map as MapIcon, Home, PawPrint, ChevronUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "@/hooks/useLocation";
+import { readDockCollapsed, writeDockCollapsed } from "@/lib/first-session";
 import { DOCK_EVENTS } from "./dock-events";
 
 function emit(name: string) {
@@ -42,16 +43,26 @@ interface BlobbiActionDockProps {
  */
 export function BlobbiActionDock({ compact = false, inWorld = true, className }: BlobbiActionDockProps) {
   const { setIsMapModalOpen, setCurrentLocation, currentLocation } = useLocation();
-  const [expanded, setExpanded] = useState(false);
+  /*
+    VISIBLE BY DEFAULT, HIDDEN ONLY BY EXPLICIT CHOICE.
+
+    The dock is how a new player discovers that there is anything to do; it
+    used to start folded and fold itself again on every room change, which is
+    the same as hiding the controls from the people who need them most. Now it
+    opens on entry and stays however the player left it: a room change, a
+    navigation transition, a remount of the shell — none of them touch it.
+    Only the collapse arrow does, and that choice is remembered for this
+    visit (`first-session.ts`).
+  */
+  const [expanded, setExpanded] = useState(() => !readDockCollapsed());
 
   const toggleDock = useCallback(() => {
-    setExpanded((prev) => !prev);
+    setExpanded((prev) => {
+      const next = !prev;
+      writeDockCollapsed(!next);
+      return next;
+    });
   }, []);
-
-  // Collapse the dock when the player changes location/screen.
-  useEffect(() => {
-    setExpanded(false);
-  }, [currentLocation]);
 
   const actions: DockAction[] = [
     {

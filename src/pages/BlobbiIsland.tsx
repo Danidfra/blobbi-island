@@ -10,6 +10,7 @@ import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
 import { SafetyGate } from '@/safety';
 import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
+import { FirstSessionOverlays } from "@/components/onboarding/FirstSessionOverlays";
 
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
 import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
@@ -338,6 +339,9 @@ export function BlobbiIsland() {
             attempt that follows a retry — because that surface lives inside a
             modal the player may never open. */}
         <EconomyEntryNotice inWorld={isPlaying} />
+        {/* The first minutes: arrival, the initial Coin grant, the welcome. In
+            the frame, sequenced, each gated by its own local fact. */}
+        <FirstSessionOverlays inWorld={isPlaying} />
         <Suspense fallback={null}>
           <SceneTransition />
           <MapModal />
