@@ -5,7 +5,6 @@ import { EgressRouteGuard } from "@/external-egress";
 
 // Lazy load pages for better performance with loading states
 const BlobbiIsland = lazy(() => import("./pages/BlobbiIsland").then(m => ({ default: m.BlobbiIsland })));
-const MultiplayerDemo = lazy(() => import("./pages/MultiplayerDemo").then(m => ({ default: m.MultiplayerDemo })));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 /**
@@ -84,11 +83,6 @@ export function AppRouter() {
         <Route path="/" element={
           <Suspense fallback={<PageLoading />}>
             <BlobbiIsland />
-          </Suspense>
-        } />
-        <Route path="/multiplayer-demo" element={
-          <Suspense fallback={<PageLoading />}>
-            <MultiplayerDemo />
           </Suspense>
         } />
         <Route path="/tools/game-items" element={
