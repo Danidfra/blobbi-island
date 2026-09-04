@@ -24,6 +24,7 @@ does, as Nostr events read back by the inventory (`docs/INVENTORY_ARCHITECTURE.m
 | Opening the tab: capability, validation, confirmation, opener isolation | `src/external-egress/` (`docs/external-egress-safety.md`) |
 | Farm produce in the inventory, with its source label | `src/inventory/trusted-issuers.ts`, `src/inventory/useExternalInventoryEvents.ts` |
 | The moment after a feed: the Blobbi's reaction, the real stat gain, the source | `src/inventory/care-feedback.ts`, `src/components/blobbi/CareReaction.tsx`, `src/components/blobbi/useCareReaction.ts` |
+| The live store for the whole session, and the arrival notice on return | `src/components/ExternalInventoryController.tsx`, `src/inventory/external-arrivals.ts`, `src/inventory/useExternalInventoryArrivals.ts` |
 | Independence guard | `src/connected-experiences/boundaries.test.ts` |
 
 The official Farm URL, `https://farm.blobbi.pet`, is written once, as
@@ -100,12 +101,31 @@ words and disables the action; the egress boundary would refuse regardless.
 ## 6. The return path
 
 There is no return protocol. The player comes back to the Island tab. The
-external-inventory live tail (`useExternalInventoryLiveTail`) holds one relay
-subscription per relay and applies Farm's kind:31633 snapshots as they arrive,
-so produce harvested while the Island tab was in the background is already
-there. When the tab becomes visible again the tail also issues one
+external-inventory live tail (`useExternalInventoryLiveTail`, run by
+`ExternalInventoryController` at the app root for the whole session) holds one
+relay subscription per relay and applies Farm's kind:31633 snapshots as they
+arrive, so produce harvested while the Island tab was in the background is
+already there. When the tab becomes visible again the tail also issues one
 authoritative refetch, covering a socket that a browser silenced without
 dropping. No polling was added; both triggers are events, like `online`.
+
+The tail and the visibility refetch used to run only while the My Blobbi
+window was open, so the return showed nothing until the bag was next opened.
+Now the store is live everywhere on the Island, and when an item's effective
+quantity in a Farm inventory rises the player sees the same toast every other
+Island moment uses:
+
+```
++1 Strawberry
+[🍓] Received from Nostr Farm
+```
+
+The number is the rise in the EFFECTIVE quantity (snapshot, pending spends and
+fold chain, the number the bag shows), so feeding a Strawberry here and the
+Farm folding that spend later never reads as an arrival; the first load after
+opening the Island hydrates silently; the same state seen twice (both relays,
+live then refetch, a remount) is one notice. Details and the guarantees:
+`docs/INVENTORY_ARCHITECTURE.md`, "Arrivals".
 
 ### What the player sees, back on the Island
 

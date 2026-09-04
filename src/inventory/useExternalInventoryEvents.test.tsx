@@ -10,7 +10,11 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 
+import { render } from '@testing-library/react';
+
 import { clearEstablishedSpends } from './established-spends';
+import { FARM_STRAWBERRY_EVENT } from './partner-item-event-fixtures';
+import { parseTrustedItemDefinition, resolveFromDefinition } from './protocol-adapter';
 import type { LiveRelay } from './external-inventory-relays';
 import { KIND_GAME_INVENTORY, KIND_GAME_INVENTORY_FOLD, KIND_GAME_INVENTORY_SPEND } from './package';
 
@@ -26,6 +30,19 @@ vi.mock('@/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: curren
 vi.mock('@/hooks/useAppContext', () => ({
   useAppContext: () => ({ config: { relayUrl: 'wss://relay.ditto.pub' } }),
 }));
+
+// For the arrival notices: the toast is spied, and the two catalogs answer
+// at once so the notice is about the plumbing, not the definition fetch.
+const toastSpy = vi.fn();
+vi.mock('@/hooks/useToast', () => ({ toast: (...args: unknown[]) => toastSpy(...args), useToast: () => ({ toast: toastSpy }) }));
+vi.mock('./useExternalItemCatalog', () => ({
+  useExternalItemCatalog: () => ({
+    data: { byAddress: new Map([[STRAWBERRY, resolveFromDefinition(parseTrustedItemDefinition(FARM_STRAWBERRY_EVENT)!)]]), resolvedCount: 1, requestedCount: 1 },
+    isError: false,
+    isFetching: false,
+  }),
+}));
+vi.mock('./useItemCatalog', () => ({ useItemCatalog: () => ({ data: undefined }) }));
 
 /** What the "relays" hold for the authoritative fetch. */
 const stored: { snapshots: NostrEvent[]; spends: NostrEvent[]; folds: NostrEvent[] } = {
@@ -144,6 +161,7 @@ import {
   foldRetryPolicy,
 } from './useExternalInventoryEvents';
 import type { ExternalInventoryEvents } from './external-inventory-events';
+import { ExternalInventoryController } from '@/components/ExternalInventoryController';
 
 const hex = (seed: string) =>
   seed.split('').map((c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('').padEnd(64, '0').slice(0, 64);
@@ -200,6 +218,7 @@ beforeEach(() => {
   network.byId = null;
   network.afterFirstDiscovery = null;
   clearEstablishedSpends();
+  toastSpy.mockReset();
 });
 
 /** A relay set that has NOT caught up: it answers the refetch with `events`. */
@@ -844,5 +863,117 @@ describe('lifecycle', () => {
     await new Promise((r) => setTimeout(r, 10));
     const store = client.getQueryData<{ spends: NostrEvent[] }>(externalInventoryEventsQueryKey(OTHER))!;
     expect(store.spends).toEqual([]);
+  });
+});
+
+describe('the return from another game: what the player is told', () => {
+  /** The real controller: the root sync plus the arrival notice, over the fake relays. */
+  const renderController = () => {
+    const utils = render(<ExternalInventoryController />, { wrapper });
+    const probe = renderHook(() => useExternalInventoryView(), { wrapper });
+    return { ...utils, result: probe.result };
+  };
+  const notices = () => toastSpy.mock.calls.map(([t]) => t.title);
+  const descriptionText = (node: unknown): string => {
+    if (typeof node === 'string') return node;
+    if (Array.isArray(node)) return node.map(descriptionText).join('');
+    if (node && typeof node === 'object' && 'props' in node) {
+      return descriptionText((node as { props: { children?: unknown } }).props.children);
+    }
+    return '';
+  };
+
+  it('hydration says nothing about what was already there', async () => {
+    const { result } = renderController();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    await settle();
+    expect(toastSpy).not.toHaveBeenCalled();
+  });
+
+  it('a harvest that streams in live: ONE notice, from both relays, and the visibility refetch that follows adds none', async () => {
+    const { result } = renderController();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    await settle();
+
+    const harvested = snapshot('s2', 5, { createdAt: 1001 });
+    for (const relay of live()) act(() => relay.emit(['EVENT', 's', harvested]));
+    await waitFor(() => expect(strawberryQty(result)).toBe(5));
+    await settle();
+    expect(notices()).toEqual(['+1 Strawberry']);
+    expect(descriptionText(toastSpy.mock.calls[0][0].description)).toBe('Received from Nostr Farm');
+
+    // Back to the tab: the refetch returns the same state.
+    relaysServe([harvested]);
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    expect(notices()).toEqual(['+1 Strawberry']);
+    visibility.mockRestore();
+  });
+
+  it('a harvest made while the tab was hidden and the socket silent: the return refetch finds it, ONE notice', async () => {
+    const { result } = renderController();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    await settle();
+
+    // Away in the Farm tab. The relays learn the harvest; the tail never
+    // delivers it (silenced socket).
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    relaysServe([snapshot('s2', 5, { createdAt: 1001 })]);
+    await settle();
+    expect(strawberryQty(result)).toBe(4);
+    expect(toastSpy).not.toHaveBeenCalled();
+
+    visibility.mockReturnValue('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(strawberryQty(result)).toBe(5));
+    await settle();
+    expect(notices()).toEqual(['+1 Strawberry']);
+    // A second return with nothing new: nothing more.
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    await waitFor(() => expect(network.discoveryReads).toBe(3));
+    await settle();
+    expect(notices()).toEqual(['+1 Strawberry']);
+    visibility.mockRestore();
+  });
+
+  it('feeding a Strawberry here (a live kind:1416) and the Farm folding it later: no notice at any step', async () => {
+    const { result } = renderController();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    await settle();
+
+    act(() => live()[0].emit(['EVENT', 's', spend('sp1')]));
+    await waitFor(() => expect(strawberryQty(result)).toBe(3));
+    // The Farm's next write: the fold, then the debited snapshot referencing it.
+    act(() => live()[0].emit(['EVENT', 's', fold('f1', [hex('sp1')])]));
+    act(() => live()[0].emit(['EVENT', 's', snapshot('s2', 3, { createdAt: 3001, fold: hex('f1') })]));
+    await settle();
+    expect(strawberryQty(result)).toBe(3);
+    // And a stale refetch that has neither the spend nor the fold: still 3, still silent.
+    await refetch();
+    await settle();
+    expect(strawberryQty(result)).toBe(3);
+    expect(toastSpy).not.toHaveBeenCalled();
+  });
+
+  it('a reconnect (second EOSE) and a remount of the controller re-report nothing', async () => {
+    const { result, unmount } = renderController();
+    await waitFor(() => expect(strawberryQty(result)).toBe(4));
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    await settle();
+    act(() => live()[0].emit(['EOSE', 's']));
+    await waitFor(() => expect(network.discoveryReads).toBe(2));
+    await settle();
+    unmount();
+    const again = renderController();
+    await waitFor(() => expect(strawberryQty(again.result)).toBe(4));
+    await settle();
+    expect(toastSpy).not.toHaveBeenCalled();
   });
 });

@@ -276,9 +276,18 @@ external inventory event store  (src/inventory/external-inventory-events.ts)
   └── immutable kind:1417 folds             (deduplicated by id)
          ↓ deriveExternalInventoryStates  (+ this tab's established spends)
   per-inventory state: ready | unresolved   (resolveGameInventoryState)
-         ↓ useExternalInventoryView
+         ↓ useExternalInventoryView         (read side: query + derivation, any number of them)
   collection / UI
+         ↑ useExternalInventorySync         (write side: the tail, recovery, manifests; ONE, at the app root)
 ```
+
+`ExternalInventoryController` (mounted once at the authenticated app root,
+beside the other account-level controllers) runs `useExternalInventorySync`.
+The tail, its reconnect recovery, the `online` and `visibilitychange`
+refetches and the missing-manifest retrieval therefore exist for the whole
+session, whatever screen the player is on. They used to live in the view hook,
+which only mounts inside the My Blobbi window, so a harvest made in another
+game's tab reached the Island only when that window was next opened.
 
 The store is an immutable value; `mergeExternalInventoryEvent` is the ONE pure
 function through which any event, fetched or live, enters it, and it
@@ -454,6 +463,43 @@ another player signing in gets their own store (keyed by pubkey) and their own
 tail; the filters carry `authors:[player]` and the merge re-checks the author,
 so the previous player's events can never enter the new store. Unmount closes
 everything. Tests: `useExternalInventoryEvents.test.tsx`.
+
+### Arrivals: "+1 Strawberry, received from Nostr Farm"
+
+`external-arrivals.ts` (pure) and `useExternalInventoryArrivals.ts` (run by
+the same root controller, over the view the sync keeps live) tell the player
+when something new lands in an inventory another game writes:
+
+```
+derived view (READY inventories, EFFECTIVE quantities)
+   ↓ observeExternalInventories(baseline, view)
+{ baseline', arrivals }   arrival = effective quantity rose since last seen
+   ↓ definition from the trusted catalog (same query the bag uses) + issuer name
+one toast per reconciliation: "+1 Strawberry" / "Received from Nostr Farm"
+```
+
+What is compared is the effective number the bag shows, after the snapshot,
+the pending kind:1416 spends and the kind:1417 fold chain; never the raw
+snapshot. So a consumption lowers it, a fold that settles that spend leaves it
+where it was, and neither can read as an arrival. The first observation for a
+player hydrates silently; an inventory discovered at hydration but unresolved
+until its manifests arrive is absorbed on its first ready observation; an
+inventory first discovered later (a game the player just started) has no
+history, so its items arrive from 0. A quantity that drops to zero is
+remembered as 0, so "3 → 0 → 1" is +1. The baseline advances in the same step
+that reports, so a duplicate event, a refetch returning what the tail already
+applied, a reconnect or a remount diffs to nothing. Arrivals wait for a trusted
+definition and are dropped if the catalog settles without one, so no notice
+ever names an address. Several arrivals in one reconciliation are one notice
+(up to three named, more counted); the toast system shows one at a time.
+Tests: `external-arrivals.test.ts`, `useExternalInventoryArrivals.test.tsx`,
+and the end-to-end return cases in `useExternalInventoryEvents.test.tsx`.
+
+Same-second replacement: `selectNewestInventoryPerContext` orders kind:31633
+candidates by `created_at`, and on a tie keeps the LOWER event id, the NIP-01
+rule relays apply to replaceable events. A Farm snapshot published in the
+same second as its predecessor with a higher id therefore loses on the Island
+exactly as it does on a relay; the Island does not diverge from the network.
 
 ## Spend-aware derivation (kind:1416 / kind:1417)
 
