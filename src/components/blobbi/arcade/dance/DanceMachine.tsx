@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
 import type { ArcadeRewardWriter } from '@/arcade/arcade-reward-boundary';
@@ -23,6 +22,7 @@ import { BlobbiDanceGame } from './BlobbiDanceGame';
 import { DancePreview } from './DancePreview';
 import { DanceResults } from './DanceResults';
 import { arcadeEntryRefusalMessage } from '@/arcade/tokens/entry-copy';
+import { ArcadeStartButton } from '../ArcadeStartButton';
 import {
   FREE_ARCADE_GAME_ENTRY,
   type ArcadeGameEntry,
@@ -374,23 +374,9 @@ export function DanceMachine({
       {chartProblems.length === 0 &&
         !audioError &&
         (status === 'preview' ? (
-          <button
-            type="button"
-            data-dance-start
-            onClick={handleStart}
-            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
-          >
-            Start
-          </button>
+          <ArcadeStartButton entry={entry} gameId={gameId} dataAttribute="data-dance-start" onClick={handleStart} />
         ) : (
-          <button
-            type="button"
-            data-dance-replay
-            onClick={handleReplay}
-            className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
-          >
-            Play again
-          </button>
+          <ArcadeStartButton entry={entry} gameId={gameId} replay dataAttribute="data-dance-replay" onClick={handleReplay} />
         ))}
     </>
   );

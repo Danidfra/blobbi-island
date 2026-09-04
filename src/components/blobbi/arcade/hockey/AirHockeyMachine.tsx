@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useImmersive } from '@/hooks/useImmersive';
 import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
@@ -29,6 +28,7 @@ import { AirHockeyTable } from './AirHockeyTable';
 import { AirHockeyPreview } from './AirHockeyPreview';
 import { AirHockeyResults } from './AirHockeyResults';
 import { arcadeEntryRefusalMessage } from '@/arcade/tokens/entry-copy';
+import { ArcadeStartButton } from '../ArcadeStartButton';
 import {
   FREE_ARCADE_GAME_ENTRY,
   type ArcadeGameEntry,
@@ -350,14 +350,14 @@ export function AirHockeyMachine({
    * destination — the mistake Blobbi Dance's footer was corrected for.
    */
   const footer = playing ? null : (
-    <button
-      type="button"
-      data-hockey-start={status === 'preview' ? 'first' : 'again'}
+    <ArcadeStartButton
+      entry={entry}
+      gameId={gameId}
+      replay={status !== 'preview'}
+      dataAttribute="data-hockey-start"
+      dataValue={status === 'preview' ? 'first' : 'again'}
       onClick={status === 'preview' ? handleStart : handleReplay}
-      className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
-    >
-      {status === 'preview' ? 'Start' : 'Play again'}
-    </button>
+    />
   );
 
   return (

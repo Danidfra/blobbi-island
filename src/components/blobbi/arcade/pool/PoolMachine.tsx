@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useImmersive } from '@/hooks/useImmersive';
 import { useArcadeRewardController } from '@/hooks/useArcadeRewardController';
@@ -27,6 +26,7 @@ import { PoolTable } from './PoolTable';
 import { PoolPreview } from './PoolPreview';
 import { PoolResults } from './PoolResults';
 import { arcadeEntryRefusalMessage } from '@/arcade/tokens/entry-copy';
+import { ArcadeStartButton } from '../ArcadeStartButton';
 import {
   FREE_ARCADE_GAME_ENTRY,
   type ArcadeGameEntry,
@@ -334,14 +334,14 @@ export function PoolMachine({
    * destination.
    */
   const footer = playing ? null : (
-    <button
-      type="button"
-      data-pool-start={status === 'preview' ? 'first' : 'again'}
+    <ArcadeStartButton
+      entry={entry}
+      gameId={gameId}
+      replay={status !== 'preview'}
+      dataAttribute="data-pool-start"
+      dataValue={status === 'preview' ? 'first' : 'again'}
       onClick={status === 'preview' ? handleStart : handleReplay}
-      className={cn(islandCtaButtonClass, 'w-auto min-w-[10rem] px-8 py-2.5')}
-    >
-      {status === 'preview' ? 'Start' : 'Play again'}
-    </button>
+    />
   );
 
   return (
