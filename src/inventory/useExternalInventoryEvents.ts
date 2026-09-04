@@ -56,6 +56,17 @@
  * enter: the filters carry `authors:[player]` and the merge checks the author
  * against the store's owner again.
  *
+ * ## Who runs it: ONE sync at the app root, any number of views
+ *
+ * `useExternalInventorySync` (the tail, its recovery triggers, the
+ * visibility refetch and the missing-manifest retrieval) is mounted ONCE, by
+ * `ExternalInventoryController` at the authenticated app root, so the store
+ * is live for the whole session: a harvest in another game's tab reaches
+ * the Island while the player is walking around, not only while the
+ * inventory window happens to be open. `useExternalInventoryView` is the
+ * read side: the query and the derivation, nothing else, so a surface that
+ * mounts it (the inventory collection) opens no second subscription.
+ *
  * ## Scale
  *
  * Subscriptions = relays in the policy, full stop. One inventory or fifty
@@ -379,23 +390,23 @@ export interface ExternalInventoryViewResult extends ExternalInventoryView {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  /** When the store was last written (TanStack's `dataUpdatedAt`); 0 with no store. */
+  dataUpdatedAt: number;
 }
 
 const EMPTY_VIEW: ExternalInventoryView = { inventories: [], states: new Map() };
 
 /**
- * Derived, live external inventory state for the signed-in player.
+ * Derived external inventory state for the signed-in player: the store's
+ * query and its derivation, merged with this tab's established spends.
  *
- * Runs the tail, retrieves missing manifests for unresolved inventories once
- * per manifest id, and merges this tab's established spends into the
- * derivation. Rows never flash back to loading on a live update: the store
- * is replaced in place and re-derived.
+ * READ SIDE ONLY. Nothing here subscribes, refetches or fetches manifests;
+ * that is `useExternalInventorySync`, mounted once at the app root. Any
+ * number of surfaces may call this without opening a connection. Rows never
+ * flash back to loading on a live update: the store is replaced in place
+ * and re-derived.
  */
 export function useExternalInventoryView(): ExternalInventoryViewResult {
-  const { config } = useAppContext();
-  const { user } = useCurrentUser();
-  const queryClient = useQueryClient();
-  const relays = useMemo(() => externalInventoryRelays(config.relayUrl), [config.relayUrl]);
   const query = useExternalInventoryEvents();
   const established = useSyncExternalStore(
     subscribeEstablishedSpends,
@@ -411,6 +422,40 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
     return deriveExternalInventoryStates(query.data, extra);
   }, [query.data, established]);
 
+  return useMemo(
+    () => ({
+      ...view,
+      isLoading: query.isLoading,
+      isError: query.isError,
+      error: query.error instanceof Error ? query.error : null,
+      dataUpdatedAt: query.dataUpdatedAt,
+    }),
+    [view, query.isLoading, query.isError, query.error, query.dataUpdatedAt],
+  );
+}
+
+/**
+ * The WRITE side of the live store: the tail, its recovery triggers (a
+ * reconnect EOSE, a dropped iterator, `online`, the tab becoming visible),
+ * and the bounded retrieval of missing manifests. Mount ONCE, at the
+ * authenticated app root (`ExternalInventoryController`); returns the same
+ * derived view `useExternalInventoryView` returns, so the root can also read
+ * what it keeps current.
+ *
+ * Runs the tail, retrieves missing manifests for unresolved inventories once
+ * per manifest id, and merges this tab's established spends into the
+ * derivation.
+ */
+export function useExternalInventorySync(): ExternalInventoryViewResult {
+  const { config } = useAppContext();
+  const { user } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const relays = useMemo(() => externalInventoryRelays(config.relayUrl), [config.relayUrl]);
+  const result = useExternalInventoryView();
+  const view: ExternalInventoryView = result;
+  // A store exists once the query has been written at least once.
+  const hasStore = result.dataUpdatedAt > 0;
+
   const addresses = useMemo(
     () => view.inventories.map((inventory) => inventory.address),
     [view.inventories],
@@ -420,7 +465,7 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
   // once for discovery and again after the fetch. Nothing is missed by
   // waiting: the REQ carries no `since`, so the relay replays every stored
   // match when the tail attaches.
-  useExternalInventoryLiveTail(query.data ? user?.pubkey : undefined, relays, addresses);
+  useExternalInventoryLiveTail(hasStore ? user?.pubkey : undefined, relays, addresses);
 
   // Missing manifests: a snapshot that arrived (live or fetched) before the
   // fold it references derives as unresolved. Ask for the named ids by id;
@@ -516,18 +561,13 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
         if (attempt?.inFlight) table.set(ref.eventId, foldRetryPolicy.aborted(attempt, cancelledAt));
       }
     };
-    // `query.dataUpdatedAt` is a deliberate dependency: every completed
+    // `dataUpdatedAt` is a deliberate dependency: every completed
     // authoritative refetch (reconnect, `online`, new context, remount) is a
     // recovery trigger that re-evaluates eligibility. `wakeUp` is the
     // one-shot timer's signal.
-  }, [missing, relays, user?.pubkey, queryClient, query.dataUpdatedAt, wakeUp]);
+  }, [missing, relays, user?.pubkey, queryClient, result.dataUpdatedAt, wakeUp]);
 
-  return {
-    ...view,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error instanceof Error ? query.error : null,
-  };
+  return result;
 }
 
 /**

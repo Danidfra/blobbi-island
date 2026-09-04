@@ -138,6 +138,7 @@ vi.mock('./external-inventory-relays', async (importOriginal) => {
 
 import {
   applyLiveEvent,
+  useExternalInventorySync,
   useExternalInventoryView,
   externalInventoryEventsQueryKey,
   foldRetryPolicy,
@@ -179,7 +180,8 @@ let client: QueryClient;
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
-const renderView = () => renderHook(() => useExternalInventoryView(), { wrapper });
+/** The root's sync (tail, recovery, manifests) together with the view it returns. */
+const renderView = () => renderHook(() => useExternalInventorySync(), { wrapper });
 const strawberryQty = (result: { current: ReturnType<typeof useExternalInventoryView> }) => {
   const state = result.current.states.get(FARM_MAIN);
   if (!state || state.status !== 'ready' || !state.effective) return null;
@@ -798,6 +800,19 @@ describe('the fold retry policy', () => {
 });
 
 describe('lifecycle', () => {
+  it('the read side alone opens NO subscription: the sync at the app root is the one tail', async () => {
+    const { result } = renderHook(() => useExternalInventoryView(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await settle();
+    expect(strawberryQty(result)).toBe(4);
+    expect(openRelays).toHaveLength(0);
+    // Two readers beside one sync: still one tail.
+    renderHook(() => useExternalInventoryView(), { wrapper });
+    renderView();
+    await waitFor(() => expect(live()).toHaveLength(RELAYS.length));
+    expect(openRelays).toHaveLength(RELAYS.length);
+  });
+
   it('unmount closes every relay', async () => {
     const { result, unmount } = renderView();
     await waitFor(() => expect(strawberryQty(result)).toBe(4));

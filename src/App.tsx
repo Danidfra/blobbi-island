@@ -14,6 +14,7 @@ import { CharacterEquipmentProvider } from '@/components/CharacterEquipmentProvi
 import { CoinOpRecoveryController } from '@/components/CoinOpRecoveryController';
 import { EconomyEntryController } from '@/components/EconomyEntryController';
 import { InventoryCacheController } from '@/components/InventoryCacheController';
+import { ExternalInventoryController } from '@/components/ExternalInventoryController';
 import { IslandThemeSync } from '@/components/IslandThemeSync';
 import { PlayerSafetyAccountSync } from '@/components/PlayerSafetyAccountSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -78,6 +79,10 @@ export function App() {
                   surface at once. Must sit above anything that reads Coins or
                   items. */}
               <InventoryCacheController />
+              {/* The inventories other games write, kept live for the whole
+                  session, and the "+1 Strawberry, received from Nostr Farm"
+                  moment when one of them grows. */}
+              <ExternalInventoryController />
               <EconomyEntryController />
               {/* Read-only reconciliation of unresolved (ambiguous) Coin
                   operations on login. Never publishes. */}

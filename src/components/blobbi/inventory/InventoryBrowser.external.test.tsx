@@ -144,6 +144,7 @@ function viewOf(inventories: DiscoveredInventory[], states: ExternalInventorySta
     isLoading: false,
     isError: false,
     error: null,
+    dataUpdatedAt: 1,
     ...extra,
   };
 }
