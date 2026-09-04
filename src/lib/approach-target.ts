@@ -28,7 +28,12 @@ import type { Position } from '@/lib/types';
 import type { ApproachTarget, ObjectFraction } from '@/lib/spatial-intent';
 import type { Boundary } from '@/lib/boundaries';
 import { constrainPosition } from '@/lib/boundaries';
-import { elementFractionToWorldPercent } from '@/lib/world-coordinates';
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  elementFractionToWorldPercent,
+  worldDistancePx,
+} from '@/lib/world-coordinates';
 
 /**
  * The canonical world surface: the single `[data-world-surface]` container the
@@ -111,4 +116,69 @@ export function resolveElementApproachTarget(
   const clamped = target.x !== raw.x || target.y !== raw.y;
 
   return { target, meta: { raw, clamped, fraction } };
+}
+
+/** `isPositionBlocked(x, y)` from the movement-blocker context, in world percent. */
+export type BlockedPredicate = (x: number, y: number) => boolean;
+
+/**
+ * Search radii (world-design px) tried, nearest first, when the clamped aim
+ * point sits inside a movement blocker. Bounded: a target that has no free
+ * floor within the largest ring is handed back clamped and the route planner
+ * refuses it honestly, which is still better than walking into furniture.
+ */
+const PROJECTION_RADII_PX = [24, 48, 72, 96, 128, 160] as const;
+const PROJECTION_DIRECTIONS = 16;
+
+/**
+ * Put an approach point somewhere the Blobbi can actually stand.
+ *
+ * Two facts the route planner enforces as hard requirements (`planRoute`
+ * returns `null` and `goTo` refuses to move): the destination must be ON the
+ * room's walk boundary, and it must not be INSIDE a blocker. A door on a
+ * building's wall resolves to a point above the floor; a kiosk's base may sit
+ * on the very rectangle registered to keep the Blobbi out of it. Either way
+ * the walk never started and the door looked dead — the Town Stage, the Plaza
+ * building and the Nostr Station exterior all shipped that way.
+ *
+ * This is the ONE generic answer:
+ *
+ * 1. clamp into the boundary (the nearest floor point the boundary offers);
+ * 2. if that point is blocked, walk outward in rings and pick the nearest
+ *    candidate that is on the floor and free, preferring the side the raw
+ *    point was on;
+ * 3. if nothing within the rings is free, return the clamped point — the
+ *    planner will still refuse, and that refusal is the honest outcome.
+ *
+ * Nothing here is per-room or per-door: the boundary and the blockers are
+ * whatever the room registered.
+ */
+export function projectIntoWalkableFloor(
+  raw: Position,
+  boundary: Boundary,
+  isBlocked?: BlockedPredicate,
+): Position {
+  const clamped = constrainPosition(raw, boundary);
+  if (!isBlocked || !isBlocked(clamped.x, clamped.y)) return clamped;
+
+  let best: { point: Position; distance: number } | null = null;
+  for (const radiusPx of PROJECTION_RADII_PX) {
+    for (let i = 0; i < PROJECTION_DIRECTIONS; i += 1) {
+      const angle = (i / PROJECTION_DIRECTIONS) * Math.PI * 2;
+      const candidate = constrainPosition(
+        {
+          x: clamped.x + ((Math.cos(angle) * radiusPx) / WORLD_WIDTH) * 100,
+          y: clamped.y + ((Math.sin(angle) * radiusPx) / WORLD_HEIGHT) * 100,
+        },
+        boundary,
+      );
+      if (isBlocked(candidate.x, candidate.y)) continue;
+      const distance = worldDistancePx(raw, candidate);
+      if (!best || distance < best.distance) best = { point: candidate, distance };
+    }
+    // The first ring with any free candidate wins: nearer is better, and a
+    // farther ring cannot beat a point already found on a nearer one.
+    if (best) return best.point;
+  }
+  return clamped;
 }

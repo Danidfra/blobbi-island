@@ -1,12 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { Position } from '@/lib/types';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import type { Boundary } from '@/lib/boundaries';
 import {
   ELEMENT_BASE_FRACTION,
+  projectIntoWalkableFloor,
   resolveElementApproachTarget,
 } from '@/lib/approach-target';
+import { LocationContext } from '@/contexts/LocationContextValue';
+import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
+import { locationBoundaries } from '@/lib/location-boundaries';
+import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 
 /**
  * The generic room sprite: an image with a click affordance, an optional hover
@@ -111,6 +116,16 @@ export function InteractiveElement({
   const [isSelfHovered, setIsSelfHovered] = useState(false);
   // Touch-driven "active" feedback so mobile gets a visual cue equivalent to
   // desktop hover while the Blobbi walks toward the target.
+  // The room's walk boundary, unless the caller named one. Read optionally:
+  // outside a location (dev harnesses, isolated renders) there is none, and
+  // the element then behaves exactly as before.
+  const location = useContext(LocationContext);
+  const roomBoundary = location
+    ? locationBoundaries[getBackgroundForLocation(location.currentLocation)]
+    : undefined;
+  const effectiveBoundary: Boundary | undefined = walkBoundary ?? roomBoundary;
+  const blockers = useMovementBlocker({ optional: true });
+
   const [isTouchActive, setIsTouchActive] = useState(false);
   const touchFeedbackTimer = useRef<number | null>(null);
   /**
@@ -210,13 +225,27 @@ export function InteractiveElement({
       const fraction = seatAnchor
         ? { x: seatAnchor.xPercent / 100, y: seatAnchor.yPercent / 100 }
         : ELEMENT_BASE_FRACTION;
-      const target =
+      /*
+        The approach point must be somewhere the Blobbi can stand, or the
+        route planner refuses the walk and the element is dead. The element's
+        own aim point is where it wants the Blobbi to END UP; the room's
+        boundary and blockers say where that is possible. An explicit
+        `walkTarget` is trusted as configured (those points were placed on the
+        floor by hand); everything else is projected — into the room's walk
+        boundary (the prop, or the current location's own) and out of any
+        blocker the room registered.
+      */
+      const resolved =
         walkTarget ??
         resolveElementApproachTarget({
           element: event.currentTarget,
           fraction,
-          boundary: walkBoundary,
+          boundary: effectiveBoundary,
         })?.target;
+      const target =
+        resolved && !walkTarget && effectiveBoundary
+          ? projectIntoWalkableFloor(resolved, effectiveBoundary, blockers?.isPositionBlocked)
+          : resolved;
       if (target) {
         // Show active/touched feedback immediately (mobile parity with hover)
         // and hold it for the whole walk: the pending interaction, not a timer,

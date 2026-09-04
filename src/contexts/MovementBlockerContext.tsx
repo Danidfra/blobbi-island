@@ -45,10 +45,22 @@ export const MovementBlockerProvider: React.FC<{ children: React.ReactNode }> = 
   );
 };
 
-export const useMovementBlocker = () => {
+/**
+ * The room's blocker registry.
+ *
+ * By default a missing provider is a programming error. With
+ * `{ optional: true }` it is simply `undefined`: for components that USE
+ * blockers to improve a decision but do not depend on them — an interactive
+ * element projecting its approach point away from furniture can only do so
+ * where a room registered any, and must still work (and be testable) in a
+ * tree without the provider.
+ */
+export function useMovementBlocker(): MovementBlockerContextType;
+export function useMovementBlocker(options: { optional: true }): MovementBlockerContextType | undefined;
+export function useMovementBlocker(options?: { optional?: boolean }): MovementBlockerContextType | undefined {
   const context = useContext(MovementBlockerContext);
-  if (!context) {
+  if (!context && !options?.optional) {
     throw new Error('useMovementBlocker must be used within a MovementBlockerProvider');
   }
   return context;
-};
+}

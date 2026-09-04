@@ -193,3 +193,39 @@ describe('DOM/runtime ↔ config-helper parity', () => {
     }
   });
 });
+
+// ── projectIntoWalkableFloor ────────────────────────────────────────────────
+
+import { projectIntoWalkableFloor } from './approach-target';
+import { planRoute } from './blobbi-route';
+import type { Boundary } from './boundaries';
+
+describe('projectIntoWalkableFloor', () => {
+  const room: Boundary = { shape: 'rectangle', x: [10, 90], y: [60, 100] };
+
+  it('leaves a point that is already on free floor alone', () => {
+    expect(projectIntoWalkableFloor({ x: 50, y: 80 }, room, () => false)).toEqual({ x: 50, y: 80 });
+  });
+
+  it('clamps a point above the floor onto it — a door on a wall becomes its doorstep', () => {
+    const projected = projectIntoWalkableFloor({ x: 50, y: 20 }, room);
+    expect(projected).toEqual({ x: 50, y: 60 });
+    expect(planRoute({ x: 50, y: 90 }, projected, room, [])).not.toBeNull();
+  });
+
+  it('moves a clamped point out of a blocker to the nearest free floor, and the planner accepts it', () => {
+    const blocker = { x: 45, y: 60, width: 10, height: 8 };
+    const isBlocked = (x: number, y: number) =>
+      x >= blocker.x && x <= blocker.x + blocker.width && y >= blocker.y && y <= blocker.y + blocker.height;
+    const projected = projectIntoWalkableFloor({ x: 50, y: 20 }, room, isBlocked);
+    expect(isBlocked(projected.x, projected.y)).toBe(false);
+    expect(projected.y).toBeGreaterThanOrEqual(60);
+    expect(planRoute({ x: 50, y: 95 }, projected, room, [blocker])).not.toBeNull();
+  });
+
+  it('returns the clamped point when no free floor exists within reach, so the planner refuses honestly', () => {
+    const projected = projectIntoWalkableFloor({ x: 50, y: 20 }, room, () => true);
+    expect(projected).toEqual({ x: 50, y: 60 });
+    expect(planRoute({ x: 50, y: 95 }, projected, room, [{ x: 0, y: 0, width: 100, height: 100 }])).toBeNull();
+  });
+});
