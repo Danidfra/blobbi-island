@@ -25,25 +25,41 @@ describe('sky location coverage', () => {
   });
 });
 
+/**
+ * Interiors whose artwork has real windows cut out of it. An interior earns a
+ * sky only by being on this list — see the guard below.
+ */
+const INTERIORS_WITH_WINDOWS: LocationId[] = ['plaza-inside'];
+
 describe('the locations enabled in this phase', () => {
-  it('is exactly the six confirmed outdoor scenes', () => {
+  it('is exactly the six confirmed outdoor scenes plus the Plaza interior', () => {
     expect(skyEnabledLocations().sort()).toEqual([
       'back-yard',
       'beach',
       'mine',
       'nostr-station',
       'plaza',
+      'plaza-inside',
       'town',
     ]);
   });
 
-  it('only enables scenes whose background asset is an "-open" exterior plate', () => {
+  it('only enables "-open" exterior plates, or an interior whose windows are cut out', () => {
     // Not a rule that the filename *grants* a sky — the interiors below prove the
     // suffix is not sufficient. It is a guard that an interior plate never
-    // silently ends up enabled.
+    // silently ends up enabled: an interior gets in by being NAMED here, which
+    // is a claim that its plate has transparent windows (`plaza-inside.webp`'s
+    // three arches are the only transparent pixels in it).
     for (const id of skyEnabledLocations()) {
+      if (INTERIORS_WITH_WINDOWS.includes(id)) continue;
       expect(LOCATION_BACKGROUNDS[id], id).toMatch(/-open\.(png|webp)$/);
     }
+  });
+
+  it('grades the Plaza interior at half strength — lit by its own lamps', () => {
+    const config = getLocationSkyConfig('plaza-inside');
+    expect(config.worldLightStrength).toBeGreaterThan(0);
+    expect(config.worldLightStrength).toBeLessThan(getLocationSkyConfig('plaza').worldLightStrength);
   });
 
   it('is keyed by LocationId, so a .png → .webp rename cannot switch a sky off', () => {
@@ -69,7 +85,6 @@ describe('the locations enabled in this phase', () => {
 describe('the locations deliberately left disabled', () => {
   const DISABLED_IDS: LocationId[] = [
     'home',
-    'plaza-inside',
     'nostr-station-inside',
     'arcade',
     'arcade-1',
@@ -113,10 +128,11 @@ describe('the locations deliberately left disabled', () => {
 
 describe('artwork readiness', () => {
   it('records every enabled scene as sky-ready — the migration is complete', () => {
-    // All six outdoor plates now expose a transparent sky region. Verified against
-    // the actual files, not inferred from the config.
+    // All six outdoor plates and the Plaza interior's windows expose a
+    // transparent sky region. Verified against the actual files, not inferred
+    // from the config.
     expect(skyReadyLocations().sort()).toEqual(skyEnabledLocations().sort());
-    expect(skyReadyLocations()).toHaveLength(6);
+    expect(skyReadyLocations()).toHaveLength(7);
   });
 
   it('keeps readiness a record rather than a gate', () => {

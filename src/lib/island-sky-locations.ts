@@ -17,11 +17,12 @@
  *
  * ## `enabled` is about the scene, `artworkSkyReady` is about the asset
  *
- * A location is `enabled` when it is an outdoor scene that *should* share the
- * island's sky. `artworkSkyReady` records whether its artwork has actually had the
- * sky region cut out yet.
+ * A location is `enabled` when it is a scene that *should* share the island's
+ * sky — every outdoor scene, and the one interior whose windows look out on it.
+ * `artworkSkyReady` records whether its artwork has actually had the sky region
+ * cut out yet.
  *
- * **As of this pass, all six are ready.** The asset migration landed cut-out plates
+ * **As of this pass, all seven are ready.** The asset migration landed cut-out plates
  * scene by scene while this feature was being built, so the flag spent most of that
  * time partly false; it is kept because it gates nothing and it is the honest place
  * to record the state if a future scene is enabled before its art is done. A scene
@@ -70,7 +71,7 @@ const DISABLED: LocationSkyConfig = {
 };
 
 /**
- * Explicit for all 16 `LocationId`s — a `Record`, not a `Partial`, so adding a
+ * Explicit for every `LocationId` — a `Record`, not a `Partial`, so adding a
  * location to the union is a type error here until somebody decides whether it
  * has a sky.
  */
@@ -127,8 +128,21 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
     note: 'Outdoor hillside approach. Artwork is transparent above the hill and tree line.',
   },
 
+  'plaza-inside': {
+    enabled: true,
+    // The three arched windows sit at y 9–24 %, and every cloud's ink stays
+    // above 26 %, so passages drift past the glass exactly as they should.
+    showClouds: true,
+    showStars: true,
+    // An interior lit by its own lamps: it follows the day at half strength,
+    // so night is visible through the glass and felt in the room without
+    // putting the storefronts' signs into the dark.
+    worldLightStrength: 0.5,
+    artworkSkyReady: true,
+    note: 'Plaza INTERIOR — the only interior with a sky. Its three arched windows are cut out of `plaza-inside.webp`; every other pixel of the plate is opaque.',
+  },
+
   home: DISABLED,
-  'plaza-inside': DISABLED,
   'nostr-station-inside': DISABLED,
   arcade: DISABLED,
   'arcade-1': DISABLED,

@@ -612,9 +612,10 @@ landed.
 | `back-yard` | `back-yard-open.webp` | **Yes** (~28% strip above the fence) |
 | `mine` | `mine-open.webp` | **Yes** (through the conifer gap) |
 | `nostr-station` | `nostr-station-open.webp` | **Yes** |
+| `plaza-inside` | `plaza-inside.webp` | **Yes** (the three arched windows, y 9–24 %) |
 
-**The asset migration is complete: all six plates now expose a transparent sky
-region**, verified by opening each current file. Every one is an outdoor scene with a
+**The asset migration is complete: all six outdoor plates now expose a transparent
+sky region**, verified by opening each current file. Every one is an outdoor scene with a
 real sky. `mine-open.webp` is the mine **exterior**; `nostr-station-open.webp` is a
 stylized outdoor hillside. Neither is a cave opening or an interior window, so both
 take the global sky. `open` in a filename was treated as no evidence at all — see the
@@ -631,10 +632,19 @@ hall is no longer in `plaza-open.webp`, and the Mine's cave mouth has moved to
 and structures composite in front of clouds correctly), but it means the "usable
 sky" figures above will keep growing, and any figure quoted here is a snapshot.
 
+**`plaza-inside` is the one interior with a sky.** Its redrawn plate has three
+arched windows whose panes are cut out (they are the only transparent pixels in
+the file — a test on the location table pins the claim), so the live sky, clouds
+and stars show through the glass while the walls stay opaque. It is graded at
+half strength (`worldLightStrength: 0.5`): a room lit by its own lamps follows
+the day without its storefront signs going dark. Nothing is faked behind the
+windows — the same `IslandSkyLayer` sits behind the plate as everywhere else.
+
 ### Deliberately disabled
 
-`home`, `plaza-inside`, `nostr-station-inside`, `arcade`, `arcade-1`,
-`arcade-minus1`, `stage`, `shop`, `clothing-store-inside` — interiors.
+`home`, `nostr-station-inside`, `arcade`, `arcade-1`, `arcade-minus1`, `stage`,
+`shop`, `clothing-store-inside` and the other shop interiors — interiors with no
+window onto the sky.
 
 `cave-open` — **despite the id**, its artwork is `cave-inside.png`, a cave
 interior. The clearest illustration of why ids and filenames are not evidence.
