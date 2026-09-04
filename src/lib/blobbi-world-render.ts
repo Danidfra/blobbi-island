@@ -21,8 +21,8 @@ import { locationScalingConfig } from '@/lib/location-scaling-config';
 import {
   getTheaterSeat,
   seatAnchorPosition,
-  type TheaterSeatConfig,
 } from '@/lib/theater-seats-config';
+import { getRoomSeat, roomSeatAnchorPosition } from '@/lib/room-seats-config';
 
 /**
  * Vertical extent of a boundary, used to map a y-position onto a room's
@@ -105,7 +105,8 @@ export function resolveBlobbiZIndex(
 
 /** Everything that changes visually about a Blobbi because it is seated. */
 export interface SeatedRender {
-  seat: TheaterSeatConfig;
+  /** The seat's canonical id (a theater seat or a room chair). */
+  seat: { readonly id: string };
   /** World-percent POSE anchor the Blobbi is pinned to (body bottom = cushion). */
   position: Position;
   /** Which way it is turned, theater seats all face the screen. */
@@ -138,7 +139,23 @@ export interface SeatedRender {
  */
 export function resolveSeatedRender(seatId: string | null | undefined): SeatedRender | null {
   const seat = getTheaterSeat(seatId);
-  if (!seat || !seat.occupiable) return null;
+  if (!seat) {
+    // An ordinary room chair (mall terrace, arcade basement, station lounge):
+    // drawn from the front, so the sitter goes IN FRONT of its own chair at
+    // the configured seated z, pinned to the cushion anchor.
+    const roomSeat = getRoomSeat(seatId);
+    if (!roomSeat) return null;
+    return {
+      seat: roomSeat,
+      position: roomSeatAnchorPosition(roomSeat),
+      facing: roomSeat.facing,
+      scale: roomSeat.seatedScale,
+      zIndex: roomSeat.seatedZIndex,
+      hideShadow: true,
+      disableFloat: true,
+    };
+  }
+  if (!seat.occupiable) return null;
 
   return {
     seat,

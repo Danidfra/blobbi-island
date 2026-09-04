@@ -42,6 +42,7 @@ import {
 } from '@/lib/world-coordinates';
 import { MOVEMENT_SNAP_PX } from '@/lib/blobbi-ground';
 import { planRoute } from '@/lib/blobbi-route';
+import { projectIntoWalkableFloor } from '@/lib/approach-target';
 import { useMovementBlocker } from '@/contexts/MovementBlockerContext';
 
 export interface MovementDirection {
@@ -254,6 +255,21 @@ export function useBlobbiMovementController({
       if (isPositionBlocked(target.x, target.y)) return;
 
       /*
+        Standing up. A seated (or sleeping) Blobbi is pinned to a POSE anchor
+        that may lie on the furniture, inside the very footprint that keeps
+        walkers out of it. A walk that starts there cannot be planned (every
+        first step is "into" the blocker), so the feet are first put down on
+        the nearest free floor beside the furniture and the walk is planned
+        from there. Nothing else changes: the destination is still refused if
+        it is blocked, and an unobstructed walk is still a straight line.
+      */
+      if (isPositionBlocked(positionRef.current.x, positionRef.current.y)) {
+        const freed = projectIntoWalkableFloor(positionRef.current, boundary, isPositionBlocked);
+        positionRef.current = freed;
+        setPosition(freed);
+      }
+
+      /*
         Plan once, here, rather than reacting frame by frame. The route is
         `[target]` whenever the way is clear, so an unobstructed walk is
         byte-for-byte the old behaviour; when something is in the way it is the
@@ -285,7 +301,11 @@ export function useBlobbiMovementController({
 
   const snapTo = useCallback(
     (pose: PoseAnchor) => {
-      if (optionsRef.current.isPositionBlocked(pose.x, pose.y)) return;
+      // A pose anchor is furniture, not floor: a chair cushion or a mattress
+      // sits on the object's own footprint by construction. The caller only
+      // reaches here on a CONFIRMED arrival at the approach point, so the
+      // anchor is trusted; refusing it left a Blobbi standing in front of a
+      // chair it had just been told to sit in.
       cancelFrame();
       routeRef.current = [];
       targetRef.current = pose;

@@ -8,6 +8,7 @@
  * checkable here.
  */
 import { describe, it, expect } from 'vitest';
+import { roomSeatsFor, roomTablesFor } from './room-seats-config';
 
 import {
   ARCADE_BACKGROUND_FILES,
@@ -31,7 +32,7 @@ import {
   ARCADE_ELEVATOR_Z_INDEX,
   ARCADE_PRIZE_COUNTER,
   ARCADE_TICKET_COUNTER,
-  arcadeBasementSeatGroups,
+  ARCADE_BASEMENT_BACKGROUND,
   arcadeElevatorStandPoint,
   arcadePropsByFloor,
 } from './arcade-room-config';
@@ -398,9 +399,9 @@ describe('decorative art is not represented as a machine', () => {
 
 describe('basement seating', () => {
   it('describes two tables with four distinctly named chairs', () => {
-    expect(arcadeBasementSeatGroups).toHaveLength(2);
+    expect(roomTablesFor(ARCADE_BASEMENT_BACKGROUND)).toHaveLength(2);
 
-    const seats = arcadeBasementSeatGroups.flatMap((g) => g.seats);
+    const seats = roomSeatsFor(ARCADE_BASEMENT_BACKGROUND);
     expect(seats).toHaveLength(4);
 
     const ids = seats.map((s) => s.id);

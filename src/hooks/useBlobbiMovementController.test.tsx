@@ -250,6 +250,38 @@ describe('useBlobbiMovementController lifecycle', () => {
     expect(pendingFrames()).toBe(0);
   });
 
+  it('snapTo pins a pose anchor even inside a blocker: a chair cushion is furniture, not floor', () => {
+    const { result, onMoveComplete } = mount({}, { x: 60, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.snapTo({ x: 70, y: 50 }); // on the furniture footprint
+    });
+
+    expect(result.current.position).toEqual({ x: 70, y: 50 });
+    expect(onMoveComplete).toHaveBeenCalledWith({ x: 70, y: 50 });
+  });
+
+  it('standing up from a pose anchor inside a blocker puts the feet on free floor first, then walks', () => {
+    const { result, onMoveStart } = mount({}, { x: 60, y: 40, width: 20, height: 20 });
+
+    act(() => {
+      result.current.snapTo({ x: 70, y: 50 }); // seated: inside the footprint
+    });
+    act(() => {
+      result.current.goTo({ x: 10, y: 50 });
+    });
+
+    // The walk was accepted, from a start that is no longer inside the blocker.
+    expect(onMoveStart).toHaveBeenCalledWith({ x: 10, y: 50 });
+    expect(result.current.isMoving).toBe(true);
+    const start = result.current.getCurrentPosition();
+    const inside = start.x >= 60 && start.x <= 80 && start.y >= 40 && start.y <= 60;
+    expect(inside).toBe(false);
+
+    runFrames(() => result.current.isMoving);
+    expect(result.current.position.x).toBeCloseTo(10, 0);
+  });
+
   it('a blocker between start and target is WALKED AROUND, not stopped at', () => {
     // This used to be the "ends the walk at the collision edge" test: the
     // Blobbi met the obstacle at x=20 and gave up there, several body-lengths

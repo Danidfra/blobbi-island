@@ -7,6 +7,8 @@ import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOn
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 import { BackArrow } from '../BackArrow';
 import { InteractiveElement } from '../InteractiveElement';
+import { RoomSeat, RoomTable } from '../RoomSeat';
+import { roomSeatsFor, roomTablesFor } from '@/lib/room-seats-config';
 import { ArcadeTokenShopModal } from './ArcadeTokenShopModal';
 import { ElevatorModal } from '../ElevatorModal';
 import { ArcadeMachine } from './ArcadeMachine';
@@ -20,7 +22,6 @@ import { resolveNativeArcadeGame } from './native-games';
 import { NativeGameHost } from './NativeGameHost';
 
 import {
-  arcadeBoundaryForFloor,
   arcadeMachinesForFloor,
   getArcadeMachine,
   type ArcadeFloorId,
@@ -42,7 +43,7 @@ import {
   ARCADE_ELEVATOR_Z_INDEX,
   ARCADE_PRIZE_COUNTER,
   ARCADE_TICKET_COUNTER,
-  arcadeBasementSeatGroups,
+  ARCADE_BASEMENT_BACKGROUND,
   arcadeElevatorByFloor,
   arcadeElevatorStandPoint,
   arcadePropsByFloor,
@@ -109,9 +110,19 @@ interface ArcadeRoomProps {
   floor: ArcadeFloorId;
   /** Selected Blobbi id, used only to invalidate pending walks when it changes. */
   selectedBlobbiId?: string | null;
+  /** The seat the local player occupies (the basement chairs), owned by PlayingView. */
+  sittingIn?: string | null;
+  /** Fired on confirmed arrival at a basement chair. */
+  onSitInSeat?: (seatId: string) => void;
 }
 
-export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: ArcadeRoomProps) {
+export function ArcadeRoom({
+  blobbiRef,
+  floor,
+  selectedBlobbiId = null,
+  sittingIn = null,
+  onSitInSeat,
+}: ArcadeRoomProps) {
   const { currentLocation, setCurrentLocation } = useLocation();
 
   const [isElevatorHovered, setIsElevatorHovered] = useState(false);
@@ -147,16 +158,6 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   const cabinetsHaveGames = useMemo(() => sharedCabinetCatalogue().length > 0, []);
   const props = arcadePropsByFloor[floor];
   const elevator = arcadeElevatorByFloor[floor];
-  /*
-   * Every walk-to target in this room is clamped into the floor's boundary.
-   *
-   * Without it, the ticket and prize counters are unreachable: they are mounted
-   * high on the back wall, above the walkable `y ≥ 48` floor, and
-   * `MovableBlobbi` clamps each animation STEP rather than the target, so the
-   * Blobbi slides along the floor's top edge until it hits a wall, never closes
-   * the distance, and the pending interaction never fires. Browser-reproduced.
-   */
-  const walkBoundary = arcadeBoundaryForFloor(floor);
   const elevatorStand = arcadeElevatorStandPoint[floor];
 
   /**
@@ -363,39 +364,30 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
           />
         ))}
 
-        {/* Basement seating: two tables, four distinctly-named chairs. */}
-        {floor === 'basement' &&
-          arcadeBasementSeatGroups.map((group) => (
-            <div key={group.id} className={group.className}>
-              {group.seats.map((seat) => (
-                <InteractiveElement
-                  key={seat.id}
-                  src={seat.src}
-                  alt={seat.alt}
-                  effect="scale"
-                  className={cn('absolute', seat.className)}
-                  /*
-                    Walking to a chair and standing there is all these have ever
-                    done: there is no seated pose or state in the arcade. They
-                    now go through the shared walk-to-interact system instead of
-                    a handler that located its container with
-                    `closest('.w-full.h-full.relative')`, a class-string lookup
-                    that would have silently stopped working on any refactor.
-                  */
-                  onClick={() => {}}
-                  requestInteraction={requestInteraction}
-                  walkBoundary={walkBoundary}
-                />
-              ))}
-              <img
-                src={group.tableSrc}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className={cn(group.tableClassName, 'pointer-events-none select-none')}
+        {/*
+          Basement seating: two tables, four distinctly-named chairs, from
+          `room-seats-config.ts`. Real seats now: the walk ends on the floor
+          in front of the chair, arrival sits the Blobbi on the cushion, and
+          chairs and tables are obstacles the route planner walks round. The
+          old flex groups absolutely positioned both chairs of a cluster at
+          nearly the same x, floating above the table.
+        */}
+        {floor === 'basement' && (
+          <>
+            {roomTablesFor(ARCADE_BASEMENT_BACKGROUND).map((table) => (
+              <RoomTable key={table.id} config={table} />
+            ))}
+            {roomSeatsFor(ARCADE_BASEMENT_BACKGROUND).map((seat) => (
+              <RoomSeat
+                key={seat.id}
+                config={seat}
+                requestInteraction={requestInteraction}
+                sittingIn={sittingIn}
+                onSit={onSitInSeat}
               />
-            </div>
-          ))}
+            ))}
+          </>
+        )}
 
         {/* The machines. */}
         {machines.map((machine) => (

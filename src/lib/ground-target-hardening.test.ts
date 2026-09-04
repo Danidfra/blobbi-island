@@ -7,6 +7,7 @@
  * not just the current constants.
  */
 import { describe, it, expect } from 'vitest';
+import { roomSeats } from './room-seats-config';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -127,8 +128,8 @@ describe('theater seats: approach vs pose', () => {
     // Representative rows: sitter in front of every farther row's chairs.
     const rowB = resolveSeatedRender('theater-seat-b2')!;
     const rowC = resolveSeatedRender('theater-seat-c2')!;
-    expect(seated.zIndex).toBeGreaterThan(rowB.seat.zIndex); // A sitter (25) > B chairs (20)
-    expect(rowB.zIndex).toBeGreaterThan(rowC.seat.zIndex);   // B sitter (15) > C chairs (10)
+    expect(seated.zIndex).toBeGreaterThan(getTheaterSeat(rowB.seat.id)!.zIndex); // A sitter (25) > B chairs (20)
+    expect(rowB.zIndex).toBeGreaterThan(getTheaterSeat(rowC.seat.id)!.zIndex);   // B sitter (15) > C chairs (10)
   });
 });
 
@@ -158,14 +159,15 @@ describe('chairs: live inline configs (shop / Nostr Station)', () => {
     expect(resolverSource).toContain(".closest('[data-world-surface]')");
   });
 
-  it('every chair anchor aims at the base half of the chair (ground semantics)', () => {
-    const anchors = [...source.matchAll(/seatAnchor:\s*\{\s*xPercent:\s*([\d.]+),\s*yPercent:\s*([\d.]+)\s*\}/g)];
-    expect(anchors.length).toBeGreaterThan(0);
-    for (const match of anchors) {
-      expect(
-        Number(match[2]),
-        `chair anchor yPercent ${match[0]} must aim at the base half`,
-      ).toBeGreaterThanOrEqual(70);
+  it('every chair APPROACH aims at the base of the chair (ground semantics), never the cushion', () => {
+    // Chairs are configured now (`room-seats-config.ts`), no inline anchors.
+    expect(source).not.toMatch(/seatAnchor:\s*\{/);
+    expect(roomSeats.length).toBeGreaterThan(0);
+    for (const seat of roomSeats) {
+      expect(seat.approach.y, `${seat.id} must aim at the base`).toBeGreaterThanOrEqual(0.85);
+      // The SEAT anchor is a separate point, above the approach: the body
+      // sits on the cushion, the feet stopped on the floor in front.
+      expect(seat.seatContact.y).toBeLessThan(seat.approach.y);
     }
   });
 });

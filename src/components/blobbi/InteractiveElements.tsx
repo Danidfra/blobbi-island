@@ -5,7 +5,6 @@ import { NostrHubModal } from '@/components/NostrHubModal';
 import React, { useState, useRef } from 'react';
 import { useLocation } from '@/hooks/useLocation';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
-import { locationBoundaries } from '@/lib/location-boundaries';
 import { MovableBlobbiRef } from './MovableBlobbi';
 import { MovementBlocker } from './MovementBlocker';
 import type { Blobbi } from '@/hooks/useBlobbis';
@@ -32,6 +31,8 @@ import { townBushes } from '@/lib/town-bushes-config';
 import { TheaterSeat } from './theater/TheaterSeat';
 import { TheaterStage } from './theater/TheaterStage';
 import { theaterSeats } from '@/lib/theater-seats-config';
+import { RoomSeat, RoomTable } from './RoomSeat';
+import { roomSeatsFor, roomTablesFor } from '@/lib/room-seats-config';
 import { TreasureHuntShack } from './beach/TreasureHuntShack';
 import { TreasureHuntModal } from './beach/TreasureHuntModal';
 import {
@@ -120,7 +121,6 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
    * rect math, action fired immediately on click while still far away) is
    * gone; there is still no seated state in these rooms, by design.
    */
-  const roomBoundary = locationBoundaries[backgroundFile];
 
   /*
     Props with no behaviour yet (the beach boat, the coffee shop, the plaza
@@ -189,6 +189,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
         blobbiRef={blobbiRef}
         floor={arcadeFloor}
         selectedBlobbiId={selectedBlobbi?.id ?? null}
+        sittingIn={sittingIn}
+        onSitInSeat={onSitInSeat}
       />
     );
   }
@@ -567,66 +569,25 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           capturedPolaroidSrc={shareModalData.capturedPolaroidSrc}
         />
 
-        <div>
-          <div className='flex absolute bottom-[3%] right-[42%] w-[16.5%] gap-[30%]'>
-            <img
-              src="/assets/locations/shop/table.png"
-              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
-            <InteractiveElement
-                src="/assets/locations/shop/left-chair.png"
-              alt="Shop left chair"
-              type="chair"
-              chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 85 }
-              }}
-              requestInteraction={requestInteraction}
-              walkBoundary={roomBoundary}
-              effect='scale'
-              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
-            />
-            <InteractiveElement
-                src="/assets/locations/shop/right-chair.png"
-              alt="Shop right chair"
-              type="chair"
-              chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 85 }
-              }}
-              requestInteraction={requestInteraction}
-              walkBoundary={roomBoundary}
-              effect='scale'
-              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
-            />
-          </div>
-          <div className='flex absolute bottom-[3%] right-[24%] w-[16.5%] gap-[30%]'>
-            <img
-              src="/assets/locations/shop/table.png"
-              alt="Shop table" className="absolute left-1/2 transform -translate-x-1/2 top-[20%] w-[50%] z-[28]" />
-            <InteractiveElement
-                src="/assets/locations/shop/left-chair.png"
-              alt="Shop left chair"
-              type="chair"
-              chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 85 }
-              }}
-              requestInteraction={requestInteraction}
-              walkBoundary={roomBoundary}
-              effect='scale'
-              className='left-[18%] bottom-[36%] w-[40%] z-[27]'
-            />
-            <InteractiveElement
-                src="/assets/locations/shop/right-chair.png"
-              alt="Shop right chair"
-              type="chair"
-              chairConfig={{
-                seatAnchor: { xPercent: 50, yPercent: 85 }
-              }}
-              requestInteraction={requestInteraction}
-              walkBoundary={roomBoundary}
-              effect='scale'
-              className='left-[30%] bottom-[36%] w-[40%] z-[27]'
-            />
-          </div>
-        </div>
+        {/*
+          The coffee-shop terrace: two tables, four chairs, from
+          `room-seats-config.ts`. Each chair is an obstacle (its footprint), an
+          approach point (the floor in front of it) and a seat (the cushion
+          anchor the body is pinned to on arrival); each table is an obstacle.
+          They used to be flex groups the Blobbi walked straight through.
+        */}
+        {roomTablesFor(backgroundFile).map((table) => (
+          <RoomTable key={table.id} config={table} />
+        ))}
+        {roomSeatsFor(backgroundFile).map((seat) => (
+          <RoomSeat
+            key={seat.id}
+            config={seat}
+            requestInteraction={requestInteraction}
+            sittingIn={sittingIn}
+            onSit={onSitInSeat}
+          />
+        ))}
       </>
     );
   }
@@ -894,59 +855,22 @@ if (backgroundFile === 'nostr-station-inside.png') {
 
       <img src='/assets/locations/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
 
-      {/* Nostr Station Chairs */}
-      <InteractiveElement
-        src="/assets/locations/nostr-station/chair.png"
-        alt="Nostr Station Chair 1"
-        type="chair"
-        chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 85 }
-        }}
-        onClick={() => setIsNostrHubModalOpen(true)}
-        requestInteraction={requestInteraction}
-        walkBoundary={roomBoundary}
-        effect="scale"
-        className="absolute left-[17%] bottom-[25%] w-[12%] z-[15]"
-      />
-      <InteractiveElement
-        src="/assets/locations/nostr-station/chair.png"
-        alt="Nostr Station Chair 2"
-        type="chair"
-        chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 85 }
-        }}
-        onClick={() => setIsNostrHubModalOpen(true)}
-        requestInteraction={requestInteraction}
-        walkBoundary={roomBoundary}
-        effect="scale"
-        className="absolute left-[30%] bottom-[25%] w-[12%] z-[15]"
-      />
-      <InteractiveElement
-        src="/assets/locations/nostr-station/chair.png"
-        alt="Nostr Station Chair 3"
-        type="chair"
-        chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 85 }
-        }}
-        onClick={() => setIsNostrHubModalOpen(true)}
-        requestInteraction={requestInteraction}
-        walkBoundary={roomBoundary}
-        effect="scale"
-        className="absolute right-[17%] bottom-[25%] w-[12%] z-[15]"
-      />
-      <InteractiveElement
-        src="/assets/locations/nostr-station/chair.png"
-        alt="Nostr Station Chair 4"
-        type="chair"
-        chairConfig={{
-          seatAnchor: { xPercent: 50, yPercent: 85 }
-        }}
-        onClick={() => setIsNostrHubModalOpen(true)}
-        requestInteraction={requestInteraction}
-        walkBoundary={roomBoundary}
-        effect="scale"
-        className="absolute right-[30%] bottom-[25%] w-[12%] z-[15]"
-      />
+      {/*
+        The four gaming chairs: real seats now (`room-seats-config.ts`).
+        Arrival sits the Blobbi down AND opens the hub, as the old pseudo-sit
+        did; the walk boundary's corridors are what keep walkers out of the
+        chair bodies, so these register no footprint of their own.
+      */}
+      {roomSeatsFor(backgroundFile).map((seat) => (
+        <RoomSeat
+          key={seat.id}
+          config={seat}
+          requestInteraction={requestInteraction}
+          sittingIn={sittingIn}
+          onSit={onSitInSeat}
+          onArrive={() => setIsNostrHubModalOpen(true)}
+        />
+      ))}
 
       {/* Nostr Hub Modal */}
       <NostrHubModal

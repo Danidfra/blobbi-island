@@ -17,10 +17,16 @@ interface MovementBlockerProps {
 }
 
 export const MovementBlocker: React.FC<MovementBlockerProps> = ({ id, x, y, width, height, visible = true }) => {
-  const { addBlocker, removeBlocker } = useMovementBlocker();
+  // Optional: furniture registers its own footprint, and a room rendered
+  // without a blocker registry (an isolated component test) simply has no
+  // collision, exactly as `InteractiveElement` treats a missing provider.
+  const registry = useMovementBlocker({ optional: true });
+  const addBlocker = registry?.addBlocker;
+  const removeBlocker = registry?.removeBlocker;
   const { showDebugOverlays } = useDebugOverlays();
 
   useEffect(() => {
+    if (!addBlocker || !removeBlocker) return;
     const rect = { x, y, width, height };
     addBlocker({ id, rect });
 

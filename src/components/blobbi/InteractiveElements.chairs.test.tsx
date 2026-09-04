@@ -24,6 +24,7 @@ import type { Position } from '@/lib/types';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
+import { getRoomSeat } from '@/lib/room-seats-config';
 
 const SURFACE_RECT = {
   width: 1046, height: 697, x: 0, y: 0, top: 0, left: 0, right: 1046, bottom: 697,
@@ -36,10 +37,12 @@ const CHAIR_RECT = {
 } as DOMRect;
 
 /** The accepted pseudo-sit point: `{50, 85}` of the chair rect, boundary-clamped. */
-function expectedChairTarget(location: LocationId): Position {
+/** The configured APPROACH fraction of the seat, through the mocked live rect. */
+function expectedChairTarget(location: LocationId, seatId: string): Position {
+  const seat = getRoomSeat(seatId)!;
   const raw = {
-    x: ((CHAIR_RECT.left + CHAIR_RECT.width * 0.5) / SURFACE_RECT.width) * 100,
-    y: ((CHAIR_RECT.top + CHAIR_RECT.height * 0.85) / SURFACE_RECT.height) * 100,
+    x: ((CHAIR_RECT.left + CHAIR_RECT.width * seat.approach.x) / SURFACE_RECT.width) * 100,
+    y: ((CHAIR_RECT.top + CHAIR_RECT.height * seat.approach.y) / SURFACE_RECT.height) * 100,
   };
   return constrainPosition(raw, locationBoundaries[getBackgroundForLocation(location)]);
 }
@@ -94,7 +97,7 @@ describe('Nostr Station chairs', () => {
     fireEvent.click(chair('Nostr Station Chair 1'));
 
     // The walk started, to the canonical pseudo-sit point…
-    const target = expectedChairTarget('nostr-station-inside');
+    const target = expectedChairTarget('nostr-station-inside', 'nostr-station-chair-1');
     expect(goTo).toHaveBeenCalledTimes(1);
     expect(goTo.mock.calls[0][0].x).toBeCloseTo(target.x, 6);
     expect(goTo.mock.calls[0][0].y).toBeCloseTo(target.y, 6);
@@ -103,7 +106,7 @@ describe('Nostr Station chairs', () => {
   });
 
   it('a click with the Blobbi already at the chair opens the Nostr Hub (confirmed arrival, underfoot)', async () => {
-    const target = expectedChairTarget('nostr-station-inside');
+    const target = expectedChairTarget('nostr-station-inside', 'nostr-station-chair-1');
     const { chair } = await renderAt('nostr-station-inside', () => target);
 
     fireEvent.click(chair('Nostr Station Chair 2'));
@@ -122,7 +125,7 @@ describe('Nostr Station chairs', () => {
     fireEvent.pointerDown(surface);
 
     // Even if the Blobbi later ends up on the chair point, nothing fires.
-    pos = expectedChairTarget('nostr-station-inside');
+    pos = expectedChairTarget('nostr-station-inside', 'nostr-station-chair-1');
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => resolve());
@@ -133,12 +136,12 @@ describe('Nostr Station chairs', () => {
 });
 
 describe('shop chairs', () => {
-  it('walk with no action: clicking a shop chair starts the pseudo-sit walk and nothing else', async () => {
+  it('walk with no action: clicking a shop chair starts the approach walk and nothing else', async () => {
     const { goTo, chair } = await renderAt('shop', () => ({ x: 10, y: 95 }));
 
-    fireEvent.click(chair('Shop left chair'));
+    fireEvent.click(chair('Shop table 1, left chair'));
 
-    const target = expectedChairTarget('shop');
+    const target = expectedChairTarget('shop', 'mall-terrace-1-left-chair');
     expect(goTo).toHaveBeenCalledTimes(1);
     expect(goTo.mock.calls[0][0].x).toBeCloseTo(target.x, 6);
     expect(goTo.mock.calls[0][0].y).toBeCloseTo(target.y, 6);

@@ -27,7 +27,9 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
   'arcade-1': { x: 50, y: 71.3 },
   'arcade-minus1': { x: 50, y: 60.9 },
   'stage': { x: 50, y: 84.2 },
-  'shop': { x: 50, y: 96.7 },
+  // Between the two terrace tables (x 35.5–52 and 61.5–78): x = 50 spawned
+  // the Blobbi ON the first table once tables became obstacles.
+  'shop': { x: 56.5, y: 96.7 },
   'back-yard': { x: 50, y: 84.2 },
   'cave-open': { x: 50, y: 84.2 },
   'clothing-store-inside': { x: 50, y: 90.1 },

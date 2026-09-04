@@ -103,59 +103,12 @@ export const arcadePropsByFloor: Record<ArcadeFloorId, readonly ArcadePropConfig
 };
 
 // ── Basement seating ───────────────────────────────────────────────────────
+//
+// Moved to `room-seats-config.ts`, the shared furniture model (obstacle
+// footprint, approach point and seat anchor per chair). The basement's two
+// clusters are keyed by this background file there.
 
-export interface ArcadeSeatConfig {
-  /** Stable, unique id across the whole room. */
-  readonly id: string;
-  readonly src: string;
-  /** Accessible name. Unique, four chairs previously shared two labels. */
-  readonly alt: string;
-  readonly className: string;
-}
-
-export interface ArcadeSeatGroupConfig {
-  readonly id: string;
-  /** Placement of the table + chair cluster. */
-  readonly className: string;
-  readonly tableSrc: string;
-  readonly tableClassName: string;
-  readonly seats: readonly ArcadeSeatConfig[];
-}
-
-function seatGroup(index: 1 | 2, containerClass: string): ArcadeSeatGroupConfig {
-  return {
-    id: `arcade-b1-table-${index}`,
-    className: containerClass,
-    tableSrc: `${B1}/table.png`,
-    tableClassName: 'absolute left-1/2 -translate-x-1/2 top-[20%] w-[44%] z-[27]',
-    seats: [
-      {
-        id: `arcade-b1-table-${index}-left-chair`,
-        src: `${B1}/left-chair.png`,
-        alt: `Table ${index}, left chair`,
-        className: 'left-[18%] bottom-[36%] w-[40%] z-[25]',
-      },
-      {
-        id: `arcade-b1-table-${index}-right-chair`,
-        src: `${B1}/right-chair.png`,
-        alt: `Table ${index}, right chair`,
-        className: 'left-[30%] bottom-[36%] w-[40%] z-[25]',
-      },
-    ],
-  };
-}
-
-/**
- * The two identical table-and-chairs clusters facing the karaoke stage.
- *
- * They were byte-identical blocks of JSX producing four chairs that shared two
- * `alt` values ("Left Chair" twice, "Right Chair" twice): so a screen-reader
- * user, and any test, saw two chairs where there are four.
- */
-export const arcadeBasementSeatGroups: readonly ArcadeSeatGroupConfig[] = [
-  seatGroup(1, 'flex absolute bottom-[25%] left-[24%] w-[16.5%] gap-[40%]'),
-  seatGroup(2, 'flex absolute bottom-[25%] right-[24%] w-[16.5%] gap-[40%]'),
-];
+export const ARCADE_BASEMENT_BACKGROUND = 'arcade-minus1.png';
 
 // ── Elevator ───────────────────────────────────────────────────────────────
 
