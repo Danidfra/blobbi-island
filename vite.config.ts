@@ -31,8 +31,7 @@ export default defineConfig(() => ({
           // its ~49 kB gzipped is a separately cacheable chunk rather than
           // inflating the main gameplay bundle on every deploy.
           physics: ['planck'],
-          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
-          utils: ['clsx', 'tailwind-merge', 'date-fns'],
+          utils: ['clsx', 'tailwind-merge', 'zod'],
         },
       },
     },
