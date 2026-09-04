@@ -162,10 +162,47 @@ Explicitly modeled visual poses that may sit OFF the walkable floor:
 - theater seat cushion: `seatAnchorPosition(seat)` = cushion line +
   `SEAT_CONTACT_RATIO (0.5, derived from the legacy visual)` × seated-scaled
   body height;
-- bed sleep pose: `getBedSleepPose(bedPosition)` (`src/lib/bed-arrival.ts`).
+- bed sleep pose: `getBedSleepPose(bedPosition)` (`src/lib/bed-arrival.ts`);
+- room chair cushion: `roomSeatAnchorPosition(seat)` (`src/lib/room-seats-config.ts`),
+  the fraction of the chair's sprite box where the body's bottom meets the
+  cushion, calibrated per chair asset.
 
 Pose anchors are entered only through `snapTo(...)` on confirmed arrival, and
-never flow into walking APIs.
+never flow into walking APIs. A pose anchor may lie inside a furniture
+footprint (a cushion is on the chair's own floor band): `snapTo` does not
+refuse it, and a walk that starts from one first puts the feet on the nearest
+free floor (`projectIntoWalkableFloor`) before planning, so standing up always
+works.
+
+### 7.1 Room furniture: obstacle, approach, seat
+
+A chair outside the theater (`src/lib/room-seats-config.ts`: the mall terrace,
+the arcade basement, the Nostr Station lounge) is three different points:
+
+| point | what it is | who uses it |
+| --- | --- | --- |
+| `footprint` | the floor band under the legs, a `MovementBlocker` | the route planner (walks round it) |
+| `approach` | a fraction of the sprite box, normally just below its base | `requestInteraction` (the walk ends there) |
+| `seatContact` | a fraction of the sprite box, on the cushion | `snapTo` on confirmed arrival (the seated pose) |
+
+Tables carry a footprint only. `RoomSeat` / `RoomTable`
+(`src/components/blobbi/RoomSeat.tsx`) render them; `resolveSeatedRender`
+understands room seats as well as theater seats, so local and remote actors
+share one seated presentation (sitter in front of its chair at
+`seatedZIndex`, behind its table). Furniture also contributes depth bands
+(`furnitureDepthBands`): a standing Blobbi whose feet are inside the sprite box
+within its span is drawn behind the piece, feet below its base fall back to
+the room band, which puts it in front. Presence still publishes theater seats
+only; a room seat is local presentation.
+
+### 7.2 The arcade elevator
+
+`src/lib/arcade-elevator-state.ts` is the doors' lifecycle
+(`idle / engaged / selecting / exiting` plus a hover flag). Hover opens the
+doors while idle; a click or tap locks them open BEFORE the walk starts, so the
+actor never crosses a closed door; arrival waits out the door slide before the
+floor picker appears; dismissing the picker keeps the doors open until the
+Blobbi walks away. The stand point is in the doorway alcove on every floor.
 
 ## 8. Actor pose model
 
@@ -228,7 +265,8 @@ converts wire coordinates.
 | background → z bands | `interactive-elements-config.ts` |
 | location → room size token | `location-blobbi-sizes.ts` |
 | location → spawn/exits | `location-initial-position.ts` |
-| per-object interaction config | `theater-seats-config.ts`, `town-bushes-config.ts`, `arcade-machines-config.ts`, `mine-cave-config.ts`, … |
+| per-object interaction config | `theater-seats-config.ts`, `room-seats-config.ts`, `town-bushes-config.ts`, `arcade-machines-config.ts`, `arcade-room-config.ts`, `beach-shack-config.ts`, `mine-cave-config.ts`, … |
+| furniture depth bands | `room-seats-config.ts` (`furnitureDepthBands`), consulted first by `calculateBlobbiZIndex` |
 
 ## 12. Adding a new walk-to-interact object
 
