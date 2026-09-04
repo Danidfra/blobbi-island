@@ -618,3 +618,57 @@ describe('the effect is applied at most once per spend id', () => {
     expect(readExternalSpendOp(PUBKEY, result.status === 'applied' ? result.spendId : '')?.status).toBe('applied');
   });
 });
+
+describe('what the player is shown: the applied effect on the result', () => {
+  it('a fresh consumption carries the real, clamped change of THIS action', async () => {
+    const w = world({ effective: 1, petHunger: 50 });
+    const result = await runExternalConsumption(w.deps, input(inventory(3)));
+    expect(result.status).toBe('applied');
+    if (result.status !== 'applied') return;
+    expect(result.effect).toMatchObject({ action: 'feed', quantity: 1 });
+    expect(result.effect?.statDeltas).toEqual({ hunger: 25, happiness: 0, health: 0, hygiene: 0, energy: 0 });
+    expect(result.effect?.experienceGained).toBe(result.experienceGained);
+  });
+
+  it('a batch of 3 carries the scaled change, and a clamp shows what actually landed', async () => {
+    const w = world({ effective: 4, petHunger: 10 });
+    const result = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(result.status === 'applied' && result.effect?.quantity).toBe(3);
+    expect(result.status === 'applied' && result.effect?.statDeltas.hunger).toBe(75);
+
+    clearExternalSpendOps();
+    const full = world({ effective: 4, petHunger: 90 });
+    const clamped = await runExternalConsumption(full.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(clamped.status === 'applied' && clamped.effect?.statDeltas.hunger).toBe(10);
+  });
+
+  it('a resume that finds the marker already on the pet carries NO effect: the gain happened last time', async () => {
+    const w = world({ effective: 4, petHunger: 10, petPublish: 'timeout' });
+    const first = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(first.status).toBe('effect-ambiguous');
+    expect('effect' in first).toBe(false);
+    w.petRelay.setStored(petEvent({ hunger: 85, createdAt: 2_000, extraTags: [[PET_OP_MARKER_TAG, first.spendId]] }));
+    w.petRelay.setPetPublish('ok');
+    const second = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 3 });
+    expect(second).toMatchObject({ status: 'applied', alreadyApplied: true });
+    expect(second.status === 'applied' && second.effect).toBeUndefined();
+  });
+
+  it('a resume that applies the owed effect carries it, still with one spend', async () => {
+    const w = world({ effective: 4, petHunger: 10, petPublish: 'timeout' });
+    const first = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 2 });
+    expect(first.status).toBe('effect-ambiguous');
+    w.petRelay.setPetPublish('ok');
+    const second = await runExternalConsumption(w.deps, { ...input(inventory(4)), quantity: 2 });
+    expect(second).toMatchObject({ status: 'applied', alreadyApplied: false, resumed: true });
+    expect(second.status === 'applied' && second.effect?.statDeltas.hunger).toBe(50);
+    expect(w.signer.spendsSigned()).toBe(1);
+  });
+
+  it('an unconfirmed spend has nothing to show', async () => {
+    const w = world({ effective: 1, spendMode: 'silent' });
+    const result = await runExternalConsumption(w.deps, input(inventory(3)));
+    expect(result.status).toBe('spend-unconfirmed');
+    expect('effect' in result).toBe(false);
+  });
+});

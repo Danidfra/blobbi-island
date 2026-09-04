@@ -23,6 +23,7 @@ does, as Nostr events read back by the inventory (`docs/INVENTORY_ARCHITECTURE.m
 | The Connected Experiences section (the Farm card and its launch) | `src/components/blobbi/nostr-station/ConnectedExperiencesSection.tsx` |
 | Opening the tab: capability, validation, confirmation, opener isolation | `src/external-egress/` (`docs/external-egress-safety.md`) |
 | Farm produce in the inventory, with its source label | `src/inventory/trusted-issuers.ts`, `src/inventory/useExternalInventoryEvents.ts` |
+| The moment after a feed: the Blobbi's reaction, the real stat gain, the source | `src/inventory/care-feedback.ts`, `src/components/blobbi/CareReaction.tsx`, `src/components/blobbi/useCareReaction.ts` |
 | Independence guard | `src/connected-experiences/boundaries.test.ts` |
 
 The official Farm URL, `https://farm.blobbi.pet`, is written once, as
@@ -105,6 +106,30 @@ so produce harvested while the Island tab was in the background is already
 there. When the tab becomes visible again the tail also issues one
 authoritative refetch, covering a socket that a browser silenced without
 dropping. No polling was added; both triggers are events, like `online`.
+
+### What the player sees, back on the Island
+
+The whole cross-game idea has to be legible without a word about event
+kinds, so the produce carries its origin at every step:
+
+```
+inventory tile      "Farm" pill on the Strawberry (the issuer's short label)
+consume dialog      "From Nostr Farm" under the item, the button says "Feed Blobbi"
+after the feed      the stage Blobbi bounces once; "+25 Hunger" floats off it,
+                    then "From Nostr Farm" a beat later
+```
+
+The number is the applied change carried on the consumption result (the
+clamped per-stat delta of that one action, times its quantity: a batch of two
+shows `+50 Hunger`, a Blobbi at 90 shows `+10`), never a constant. The
+provenance is the trusted issuer's product name; the item is never asked what
+it is, so a new crop needs nothing here. Island's own food gets the same
+reaction and no provenance cue. The moment plays only from the mutation's
+success path with the effect present: a refused or unconfirmed spend, an owed
+effect, or a resume that found the effect already on the pet shows the
+existing toast and no reaction. It is keyed on the spend id, so one logical
+consumption is one reaction however many times it is reported. Reduced motion
+keeps the readout and drops the bounce and the float.
 
 ## 7. Independence
 

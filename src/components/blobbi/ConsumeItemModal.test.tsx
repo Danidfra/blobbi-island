@@ -81,4 +81,35 @@ describe('ConsumeItemModal', () => {
     fireEvent.change(quantityInput, { target: { value: '3' } });
     expect(quantityInput).toHaveValue(3);
   });
+
+  it('names its action: feeding a Blobbi says so', async () => {
+    render(
+      <TestApp>
+        <ConsumeItemModal {...mockProps} />
+      </TestApp>
+    );
+    await screen.findByRole('dialog');
+    expect(screen.getByRole('button', { name: 'Feed Blobbi' })).toBeInTheDocument();
+  });
+
+  it('shows where an item from another game came from, in that game\'s name', async () => {
+    render(
+      <TestApp>
+        <ConsumeItemModal {...mockProps} provenance="Nostr Farm" />
+      </TestApp>
+    );
+    await screen.findByRole('dialog');
+    expect(screen.getByTestId('consume-provenance')).toHaveTextContent('From Nostr Farm');
+  });
+
+  it('shows no provenance for an Island item', async () => {
+    render(
+      <TestApp>
+        <ConsumeItemModal {...mockProps} />
+      </TestApp>
+    );
+    await screen.findByRole('dialog');
+    expect(screen.queryByTestId('consume-provenance')).toBeNull();
+    expect(screen.getByRole('dialog').textContent).not.toContain('From ');
+  });
 });

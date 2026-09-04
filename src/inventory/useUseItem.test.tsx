@@ -185,3 +185,40 @@ describe('useUseItem consumption', () => {
     expect(inventoryMutate).not.toHaveBeenCalled();
   });
 });
+
+describe('what the player is shown', () => {
+  beforeEach(() => {
+    publish.mockReset();
+    inventoryMutate.mockReset();
+    nostrQuery.mockReset();
+    currentPet = { ...babyPet };
+    publish.mockResolvedValue(undefined);
+    inventoryMutate.mockResolvedValue(undefined);
+  });
+
+  it('the result carries the real applied change, scaled by the quantity', async () => {
+    nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 3)]);
+    const { result } = renderUse();
+    let res: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined;
+    await act(async () => {
+      res = await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 2 });
+    });
+    const perUnit = appleDef.effects.hunger ?? 0;
+    expect(perUnit).toBeGreaterThan(0);
+    expect(res!.effect).toMatchObject({ action: 'feed', quantity: 2 });
+    expect(res!.effect.statDeltas.hunger).toBe(Math.min(100, 50 + perUnit * 2) - 50);
+    expect(res!.effect.experienceGained).toBe(res!.experienceGained);
+  });
+
+  it('a decrement failure still reports the effect that was applied', async () => {
+    nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 1)]);
+    inventoryMutate.mockRejectedValue(new Error('relay refused'));
+    const { result } = renderUse();
+    let res: Awaited<ReturnType<typeof result.current.mutateAsync>> | undefined;
+    await act(async () => {
+      res = await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+    });
+    expect(res!.inventoryDecremented).toBe(false);
+    expect(res!.effect.statDeltas.hunger).toBeGreaterThan(0);
+  });
+});

@@ -606,10 +606,26 @@ dialog shows the total effect and the stat clamp decides; a "useful maximum"
 would be a product change for both paths, not a cross-game one. If the row's
 availability drops below the selection the selection follows; if the row
 disappears (consumed elsewhere, inventory unresolved) the dialog closes.
+For an external row the dialog names the source ("From Nostr Farm", the
+trusted issuer's `name`), and its button names the action ("Feed Blobbi").
+
+**The moment after.** Both consumption paths carry an `AppliedCareEffect` on
+their result (`care-effect.ts`): the action, the quantity, the clamped
+per-stat deltas of that one action and the XP. `useUseItem` always has one;
+the external `applied` result has one unless `alreadyApplied` (a resume that
+found the marker on the pet: the gain happened on an earlier attempt and is
+not shown again). The inventory browser turns it into one `CareFeedback`
+(`care-feedback.ts`) per successful logical consumption, keyed on the spend id
+(a fresh id for an Island item), and hands it to its host; the My Blobbi
+stage plays a short bounce and floats the real gain ("+25 Hunger", "+75
+Hunger" for a batch of three) followed, for an external row, by the source.
+Nothing about the spend, the effect publish, the receipt or the fold
+accounting changed: this is a read of the result that already existed.
 
 Modules: `external-spend.ts` (build/sign/establish), `useConsumeExternalItem.ts`
 (the orchestration), `src/lib/external-spend-ledger.ts` (durable per-browser
-record of every signed spend **with the signed event**).
+record of every signed spend **with the signed event**), `care-feedback.ts`
+(the presentation model of a success).
 
 ### Ordering, and the failure policy
 
