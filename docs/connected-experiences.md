@@ -129,7 +129,10 @@ to `document.body`) is not used for it. It mirrors the Farm chip's shape
 (`rounded-xl`, 1px border, paper background, inset highlight plus soft drop
 shadow, `px-3 py-2`, 32px picture, `text-base` headline over a `text-xs`
 caption, `gap-2` stacking, `fade-in slide-in-from-top-2` entrance, instant
-removal, 7 s dwell) in the Island's own tokens and typeface. The stack is
+removal, 7 s dwell) in the Island's own tokens and typeface. Under the mobile
+breakpoint the same chip is compact (a 13rem cap, tighter padding, a 24px
+picture, one type size down, a tighter stack gap; headlines clamp to two lines
+and captions to one), so it never dominates a phone's play area. The stack is
 bounded to TWO in every layout: a third notice evicts the oldest at once, with
 no exit animation and no backlog (`src/lib/game-notices.ts`). Evicting a chip
 is presentation only; the arrival detector's baseline is untouched.
