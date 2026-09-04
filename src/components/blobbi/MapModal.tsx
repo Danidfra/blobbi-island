@@ -4,6 +4,7 @@ import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { useLocation } from '@/hooks/useLocation';
 import type { LocationId } from '@/lib/location-types';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '@/lib/world-coordinates';
+import { mapDestinationFor } from '@/lib/map-destinations';
 
 // Location data with positioning coordinates (as percentages of the island image)
 interface Location {
@@ -245,8 +246,9 @@ export function MapModal({ className }: MapModalProps) {
     setIsMapModalOpen(false);
   };
 
-  const currentName =
-    LOCATIONS.find((l) => l.id === currentLocation)?.name ?? currentLocation;
+  // Where the player IS, on this map's terms — never a raw location id.
+  const hereId = mapDestinationFor(currentLocation);
+  const currentName = LOCATIONS.find((l) => l.id === hereId)?.name ?? 'the Island';
 
   return (
     <BlobbiModal
@@ -302,20 +304,26 @@ export function MapModal({ className }: MapModalProps) {
             const widthPct = (finalSize.width / MAP_DESIGN_WIDTH) * 100;
             const heightPct = (finalSize.height / MAP_DESIGN_HEIGHT) * 100;
 
+            const isHere = location.id === hereId;
+
             return (
               <button
                 key={location.id}
+                data-map-destination={location.id}
+                data-map-here={isHere ? '' : undefined}
+                aria-current={isHere ? 'location' : undefined}
                 onClick={() => handleLocationClick(location.id)}
                 onMouseEnter={() => setHoveredLocation(location.id)}
                 onMouseLeave={() => setHoveredLocation(null)}
                 className={cn(
                   "absolute transform -translate-x-1/2 -translate-y-1/2",
-                  "transition-all duration-300 ease-out",
+                  "transition-all duration-300 ease-out motion-reduce:transition-none",
                   "cursor-pointer",
                   "hover:z-20",
                   "rounded-lg",
                   "active:scale-95",
                   hoveredLocation === location.id && "scale-110 drop-shadow-2xl z-20",
+                  isHere && "z-10",
                   isImageLoading && "opacity-50", // Show loading state
                 )}
                 style={{
@@ -325,7 +333,7 @@ export function MapModal({ className }: MapModalProps) {
                   height: `${heightPct}%`,
                 }}
                 title={location.name}
-                aria-label={`Go to ${location.name}`}
+                aria-label={isHere ? `${location.name} — you are here` : `Go to ${location.name}`}
                 disabled={isImageLoading}
               >
               {isImageLoading ? (
@@ -345,21 +353,35 @@ export function MapModal({ className }: MapModalProps) {
                 />
               )}
 
-              {/* Location Label (appears on hover) */}
+              {/* "You are here" — a pin above the marker the player is on. */}
+              {isHere && (
+                <span
+                  aria-hidden
+                  className="absolute left-1/2 bottom-full mb-1 flex -translate-x-1/2 flex-col items-center"
+                >
+                  <span className="rounded-full border border-island-cream/40 bg-island-danger px-2 py-0.5 text-[0.625rem] font-black uppercase tracking-wide text-island-cream shadow-cozy-soft whitespace-nowrap">
+                    You are here
+                  </span>
+                  <span className="-mt-px h-0 w-0 border-x-[5px] border-t-[6px] border-x-transparent border-t-island-danger" />
+                </span>
+              )}
+
+              {/* Location label — ALWAYS visible. A new player has to be able
+                  to read the map, not discover it by hovering; the hover only
+                  lifts the label a little. */}
               <div
                 className={cn(
-                  "absolute left-1/2 transform -translate-x-1/2 top-full mt-2",
-                  "rounded-full bg-island-ink/90 px-3 py-1.5 text-xs font-medium text-island-cream",
+                  "absolute left-1/2 transform -translate-x-1/2 top-full mt-1.5",
+                  "rounded-full px-2.5 py-1 text-[0.6875rem] font-bold leading-none",
                   "transition-all duration-300 ease-out motion-reduce:transition-none",
-                  "whitespace-nowrap border border-island-cream/20",
-                  "backdrop-blur-sm",
-                  hoveredLocation === location.id
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-2"
+                  "whitespace-nowrap border backdrop-blur-sm shadow-cozy-soft",
+                  isHere
+                    ? "border-island-cream/40 bg-island-danger text-island-cream"
+                    : "border-island-cream/20 bg-island-ink/85 text-island-cream",
+                  hoveredLocation === location.id && "-translate-y-0.5",
                 )}
               >
                 {location.name}
-                {currentLocation === location.id && " (Current)"}
               </div>
             </button>
           );})}
