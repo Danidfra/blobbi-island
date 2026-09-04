@@ -141,12 +141,16 @@ describe('useFirstEggAdoption', () => {
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
-    const returnedId = await result.current.finalizeAdoption(preview, 'Puck');
+    const handoff = await result.current.finalizeAdoption(preview, 'Puck');
 
     const babyEvent = nostrEvent.mock.calls[0][0];
     const profileEvent = nostrEvent.mock.calls[1][0];
 
-    expect(returnedId).toBe(preview.d);
+    expect(handoff.blobbiId).toBe(preview.d);
+    // The signed events ride along so the Island can write its caches from
+    // them instead of trusting a relay read issued a moment after the publish.
+    expect(handoff.babyEvent).toBe(babyEvent);
+    expect(handoff.profileEvent).toBe(profileEvent);
     expect(tagValue(babyEvent.tags, 'd')).toBe(preview.d);
     expect(tagValue(babyEvent.tags, 'stage')).toBe('baby');
     expect(tagValue(babyEvent.tags, 'name')).toBe('Puck');
@@ -213,7 +217,7 @@ describe('useFirstEggAdoption', () => {
 
     // Retry: publishes succeed this time. Same d (replaceable overwrite).
     nostrEvent.mockResolvedValue(undefined);
-    const id = await result.current.finalizeAdoption(preview, 'Puck');
+    const { blobbiId: id } = await result.current.finalizeAdoption(preview, 'Puck');
 
     expect(id).toBe(preview.d);
     const babyTags = nostrEvent.mock.calls.find(([e]) => e.kind === KIND_BLOBBI_STATE)![0].tags;
@@ -244,10 +248,10 @@ describe('useFirstEggAdoption', () => {
     await vi.waitFor(() => expect(resolveBaby).toBeTypeOf('function'));
     resolveBaby!();
 
-    const [id1, id2] = await Promise.all([p1, p2]);
+    const [h1, h2] = await Promise.all([p1, p2]);
 
-    expect(id1).toBe(preview.d);
-    expect(id2).toBe(preview.d);
+    expect(h1.blobbiId).toBe(preview.d);
+    expect(h2.blobbiId).toBe(preview.d);
 
     // Exactly one baby publish despite two submits.
     const babyPublishes = nostrEvent.mock.calls.filter(([e]) => e.kind === KIND_BLOBBI_STATE);

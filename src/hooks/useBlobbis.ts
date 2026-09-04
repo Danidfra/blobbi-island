@@ -43,7 +43,7 @@ export interface Blobbi {
 }
 
 /** Convert PetState to legacy Blobbi interface */
-function petStateToLegacyBlobbi(petState: PetState): Blobbi {
+export function petStateToLegacyBlobbi(petState: PetState): Blobbi {
   return {
     id: petState.id,
     stage: petState.stage,

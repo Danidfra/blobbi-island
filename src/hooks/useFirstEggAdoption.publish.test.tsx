@@ -132,7 +132,7 @@ async function adopt(result: { current: ReturnType<typeof useFirstEggAdoption> }
   let id: string | null = null;
   await act(async () => {
     try {
-      id = await result.current.finalizeAdoption(preview, name);
+      id = (await result.current.finalizeAdoption(preview, name)).blobbiId;
     } catch (caught) {
       error = caught;
     }
@@ -377,7 +377,9 @@ describe('double submit', () => {
     await act(async () => {
       const first = result.current.finalizeAdoption(preview, 'Rocket');
       const second = result.current.finalizeAdoption(preview, 'Rocket');
-      [a, b] = await Promise.all([first, second]);
+      const [x, y] = await Promise.all([first, second]);
+      a = x.blobbiId;
+      b = y.blobbiId;
     });
 
     expect(a).toBe(b);

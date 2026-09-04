@@ -45,6 +45,7 @@ import { useTypewriter } from '@/hooks/useTypewriter';
 import { buildRevealGradient } from '@/lib/ceremony-colors';
 import { AdoptionPublishError, useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
 import type { BlobbiEggPreview } from '@/lib/blobbi-egg-preview';
+import type { AdoptionHandoff } from '@/lib/adoption-handoff';
 import { CURATED_ADJECTIVES, CURATED_NOUNS, composeCuratedName } from '@/blobbi-names';
 import { CuratedNameComposer } from './CuratedNameComposer';
 import { useIslandSafetyPolicy } from '@/safety';
@@ -70,7 +71,8 @@ type CeremonyPhase =
 
 interface BlobbiHatchingCeremonyProps {
   /** Called once the ceremony is fully complete, with the new Blobbi's d-tag. */
-  onComplete: (blobbiId: string) => void;
+  /** Fires ONLY after both publishes succeeded, with the signed events. */
+  onComplete: (handoff: AdoptionHandoff) => void;
 }
 
 export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyProps) {
@@ -246,13 +248,13 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
   }, [phase, dialogTypewriter, dialogLineIndex]);
 
   const finishCeremony = useCallback(
-    (blobbiId: string) => {
+    (handoff: AdoptionHandoff) => {
       setNamingVisible(false);
       setTimeout(() => {
         setFadeOut(true);
         setTimeout(() => {
           setPhase('complete');
-          onComplete(blobbiId);
+          onComplete(handoff);
         }, 2000);
       }, 500);
     },
@@ -281,9 +283,9 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
     setIsNaming(true);
     setHatchError(null);
     try {
-      const blobbiId = await finalizeAdoption(preview, submittedName);
+      const handoff = await finalizeAdoption(preview, submittedName);
       // Only finish once the baby + profile are really published.
-      finishCeremony(blobbiId);
+      finishCeremony(handoff);
     } catch (error) {
       /*
         The technical cause stays in diagnostics. A player who sees

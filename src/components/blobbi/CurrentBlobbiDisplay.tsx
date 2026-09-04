@@ -132,6 +132,18 @@ export interface CurrentBlobbiDisplayProps {
    * where a picture comes from, not what anybody owns.
    */
   definitionsOverride?: ReadonlyMap<string, ResolvedBlobbiItemDefinition>;
+  /**
+   * Draw THIS owned Blobbi (by `d`) instead of the profile's
+   * `current_companion`.
+   *
+   * The Island router already knows which Blobbi the player is playing as (a
+   * manual selection wins over the profile there); the in-world actor must
+   * agree with the router, not re-derive the answer from a profile cache that
+   * can lag a fresh hatch or a switch. With this set, a Blobbi missing from
+   * the owned list renders NOTHING: the egg fallback below means "no Blobbi
+   * selected", which is never true of a world that is showing an actor.
+   */
+  companionId?: string;
 }
 
 export function CurrentBlobbiDisplay({
@@ -151,6 +163,7 @@ export function CurrentBlobbiDisplay({
   definitionsOverride,
   eyeOffset,
   facing = "front",
+  companionId,
 }: CurrentBlobbiDisplayProps) {
   // SVG id namespace for this instance. A caller-supplied `idSuffix` always
   // wins: remote actors and tests depend on a stable, meaningful id.
@@ -200,10 +213,11 @@ export function CurrentBlobbiDisplay({
     [definitionsByAddress, definitionsOverride, facing],
   );
 
+  const resolvedCompanionId = companionId ?? profile?.currentCompanion;
   const currentBlobbi = visualOverride
     ? null
-    : (profile?.currentCompanion && blobbis
-        ? blobbis.find((b) => b.id === profile.currentCompanion) ?? null
+    : (resolvedCompanionId && blobbis
+        ? blobbis.find((b) => b.id === resolvedCompanionId) ?? null
         : null);
 
   // A visualOverride without any colors renders nothing (legacy remote-preview
@@ -268,6 +282,10 @@ export function CurrentBlobbiDisplay({
       />
     );
   }
+
+  // An explicit companion that is not (yet) in the owned list is a handoff in
+  // progress, not "no Blobbi selected": draw nothing rather than the egg.
+  if (companionId && !visualOverride) return null;
 
   // Fallback if enabled and no Blobbi/visual is available.
   if (showFallback && !currentBlobbi && !visualOverride) {

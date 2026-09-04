@@ -57,7 +57,7 @@ async function adopt(profile: ExperienceProfile, name: string) {
   let id: string | null = null;
   await act(async () => {
     try {
-      id = await result.current.finalizeAdoption(preview, name);
+      id = (await result.current.finalizeAdoption(preview, name)).blobbiId;
     } catch (caught) {
       error = caught;
     }

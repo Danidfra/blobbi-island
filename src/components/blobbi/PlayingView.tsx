@@ -615,6 +615,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi && !actorSuppressed}
+        blobbiId={selectedBlobbi?.id}
         // One coherent presentation description (standing / sleeping / seated /
         // hidden), owned by the pose controller and resolved through the same
         // pure resolver remote actors use.

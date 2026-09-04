@@ -95,6 +95,7 @@ import {
 import { admitOwnBlobbiName } from '@/blobbi-names';
 import { useIslandSafetyPolicy } from '@/safety';
 import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
+import type { AdoptionHandoff } from '@/lib/adoption-handoff';
 
 /**
  * How many times one signed adoption event is offered to the relays.
@@ -158,7 +159,7 @@ export function useFirstEggAdoption() {
   // Duplicate-submit guard: once finalize is in flight (or done) for this hook
   // instance, remember the promise so a second submit can't create a second
   // profile/baby. Belt-and-suspenders alongside the ceremony's UI guard.
-  const finalizeInFlightRef = useRef<Promise<string> | null>(null);
+  const finalizeInFlightRef = useRef<Promise<AdoptionHandoff> | null>(null);
 
   /**
    * Adoption-only STRICT publish. Signs the event (adding the same
@@ -243,15 +244,16 @@ export function useFirstEggAdoption() {
    * FIRST, then: only if that succeeds, publishes exactly one final profile
    * event linking the baby in (has[] + current_companion). Idempotent per hook
    * instance (guards double-submit). Resolves with the new Blobbi's canonical
-   * d-tag on success; rejects on failure (the ceremony must NOT call onComplete
-   * on rejection). On retry it re-queries the latest profile and re-publishes
+   * d-tag plus the two signed events (the caller writes them into the query
+   * caches, see `src/lib/adoption-handoff.ts`) on success; rejects on failure
+   * (the ceremony must NOT call onComplete on rejection). On retry it re-queries the latest profile and re-publishes
    * the same baby coordinate + final profile.
    */
   const finalizeAdoption = useCallback(
-    (preview: BlobbiEggPreview, name: string): Promise<string> => {
+    (preview: BlobbiEggPreview, name: string): Promise<AdoptionHandoff> => {
       if (finalizeInFlightRef.current) return finalizeInFlightRef.current;
 
-      const run = async (): Promise<string> => {
+      const run = async (): Promise<AdoptionHandoff> => {
         if (!user?.pubkey) throw new Error('User is not logged in');
         const pubkey = user.pubkey;
 
@@ -344,7 +346,7 @@ export function useFirstEggAdoption() {
         //       fails we throw before touching the profile, so no profile is
         //       created/updated. ──
         const babyTags = previewToBabyTags({ ...preview, name: finalName });
-        await strictPublish({
+        const babyEvent = await strictPublish({
           kind: KIND_BLOBBI_STATE,
           content: '',
           tags: babyTags,
@@ -354,7 +356,7 @@ export function useFirstEggAdoption() {
         //       step fails, run() rejects and the guard is cleared, so the
         //       ceremony stays in retry mode (no onComplete) and a retry will
         //       re-query + re-publish the same baby coordinate + final profile. ──
-        await strictPublish({
+        const profileEvent = await strictPublish({
           kind: KIND_BLOBBONAUT_PROFILE,
           content: profileContent,
           tags: finalProfileTags,
@@ -363,7 +365,7 @@ export function useFirstEggAdoption() {
         // Adoption ends here. No currency moves: the initial Coin allocation
         // is economy entry's responsibility and has already run (or will run)
         // independently of whether this user ever adopts.
-        return preview.d;
+        return { blobbiId: preview.d, babyEvent, profileEvent };
       };
 
       const promise = run().catch((err) => {

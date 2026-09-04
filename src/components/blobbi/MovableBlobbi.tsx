@@ -91,6 +91,13 @@ export interface MovableBlobbiProps {
    */
   visualOverride?: BlobbiRenderVisual;
   /**
+   * Which owned Blobbi this actor IS, by `d`. The room orchestrator passes the
+   * router's selection so the actor never disagrees with it (a profile cache
+   * that lags a hatch or a switch would otherwise draw the wrong body, or the
+   * "no Blobbi selected" egg). Undefined falls back to the profile's companion.
+   */
+  blobbiId?: string;
+  /**
    * Shared ref holding the local Blobbi's attention *decision* (which Blobbi to
    * look at). Combined with {@link livePositionsRef} the eyes resolve the
    * target's CURRENT position each frame, so gaze follows a moving target
@@ -134,6 +141,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       disableFloating = false,
       anchorId,
       visualOverride,
+      blobbiId,
       localAttentionRef,
       livePositionsRef,
       localActiveRef,
@@ -418,6 +426,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             facing={render.facing}
             eyeOffset={eyeOffset}
             visualOverride={visualOverride}
+            companionId={blobbiId}
             className={cn(isMoving && "scale-105")}
           />
         </BlobbiActor>

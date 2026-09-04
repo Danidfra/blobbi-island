@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNostr } from "@nostrify/react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
@@ -17,6 +18,11 @@ import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { useIslandLocationResume } from "@/hooks/useIslandLocationResume";
 import { nextGameState, type GameState } from "./blobbi-island-state";
+import {
+  applyAdoptionHandoff,
+  reconcileAdoptionWithRelay,
+  type AdoptionHandoff,
+} from "@/lib/adoption-handoff";
 
 /**
  * The island this page is. Matches `MultiplayerLayer`'s `islandId` default,
@@ -45,6 +51,7 @@ export function BlobbiIsland() {
   const { user } = useCurrentUser();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const { nostr } = useNostr();
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
   // Where this session opens, from the player's own kind:31950 presence. Runs in
@@ -183,26 +190,24 @@ export function BlobbiIsland() {
     setGameState('hatching');
   };
 
-  // Called by the ceremony ONLY after the baby kind 31124 publish has succeeded
-  // (the ceremony gates onComplete on that publish). Because useBlobbis filters
-  // out eggs, we must refetch the collection and confirm the new baby is present
-  // BEFORE entering the world; otherwise the derived-state effect could bounce
-  // back to selection while the baby is still refetching. We select the new
-  // Blobbi first, await the collection refetch, then enter playing.
-  const handleHatchComplete = async (blobbiId: string) => {
-    setManualSelectionId(blobbiId);
+  // Called by the ceremony ONLY after both publishes succeeded (the ceremony
+  // gates onComplete on them) and hands over the signed events.
+  //
+  // READ-YOUR-WRITE, not refetch-and-hope. The previous version refetched the
+  // Blobbi list and profile straight after the publish; a relay that had not
+  // indexed the events yet answered empty, `relay-read.ts` confirmed that
+  // empty answer, and the world then drew the "no Blobbi selected" egg from a
+  // profile cache nothing ever refreshed again (see `adoption-handoff.ts`).
+  // The signed events are the authoritative state, so every companion cache
+  // is written from them BEFORE the world mounts, the world enters on that,
+  // and the relay is only asked to confirm in the background. The caches are
+  // invalidated once it does; until then they already hold the truth.
+  const handleHatchComplete = (handoff: AdoptionHandoff) => {
+    setManualSelectionId(handoff.blobbiId);
     if (user?.pubkey) {
-      // Refetch the profile in the background (has[]/current_companion), and
-      // AWAIT the collection refetch so `selectedBlobbi` can resolve to the new
-      // baby before we transition to the world.
-      queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile', user.pubkey] });
-      try {
-        await queryClient.refetchQueries({ queryKey: ['blobbis', user.pubkey] });
-      } catch {
-        // A refetch hiccup shouldn't trap the player on the ceremony, the
-        // baby was published successfully. Enter playing anyway; the selection
-        // resolves on the next natural refetch.
-      }
+      const pubkey = user.pubkey;
+      applyAdoptionHandoff(queryClient, pubkey, handoff);
+      void reconcileAdoptionWithRelay(queryClient, nostr, pubkey, handoff.blobbiId);
     }
     setGameState('playing');
   };
