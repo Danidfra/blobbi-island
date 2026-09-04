@@ -440,10 +440,9 @@ describe('counters and elevator', () => {
     }
   });
 
-  it('keeps the ground-floor stand points clear of the elevator alcove', () => {
-    // The alcove (`x ∈ [45,55], y ∈ [36,48]`) can capture a walk that travels
-    // along the floor's top edge, which is how the ticket counter became
-    // unreachable in the first place.
+  it('keeps the counter stand points clear of the elevator alcove and AT their counters', () => {
+    // The alcove can capture a walk that travels along the floor's top edge,
+    // which is how the ticket counter became unreachable in the first place.
     const inAlcove = (p: { x: number; y: number }) =>
       p.x >= ARCADE_ELEVATOR_ALCOVE.x[0] &&
       p.x <= ARCADE_ELEVATOR_ALCOVE.x[1] &&
@@ -452,14 +451,39 @@ describe('counters and elevator', () => {
 
     expect(inAlcove(ARCADE_TICKET_COUNTER.interactionPoint)).toBe(false);
     expect(inAlcove(ARCADE_PRIZE_COUNTER.interactionPoint)).toBe(false);
-    expect(inAlcove(arcadeElevatorStandPoint.ground)).toBe(false);
-    // ...and well below the walkable band's top edge, not on it.
-    for (const point of [
-      ARCADE_TICKET_COUNTER.interactionPoint,
-      ARCADE_PRIZE_COUNTER.interactionPoint,
-      arcadeElevatorStandPoint.ground,
-    ]) {
-      expect(point.y).toBeGreaterThan(ARCADE_ELEVATOR_ALCOVE.y[1] + 5);
+    // Horizontally clear of the alcove mouth by a body width, so a straight
+    // walk in from anywhere on the floor never grazes it.
+    expect(ARCADE_TICKET_COUNTER.interactionPoint.x).toBeLessThan(ARCADE_ELEVATOR_ALCOVE.x[0] - 10);
+    expect(ARCADE_PRIZE_COUNTER.interactionPoint.x).toBeGreaterThan(ARCADE_ELEVATOR_ALCOVE.x[1] + 10);
+    // ...and just inside the floor band, at the counter, not a body height
+    // below it (the old y = 69.2 stopped the walk visibly short).
+    const floorTop = ARCADE_ELEVATOR_ALCOVE.y[1];
+    for (const point of [ARCADE_TICKET_COUNTER.interactionPoint, ARCADE_PRIZE_COUNTER.interactionPoint]) {
+      expect(point.y).toBeGreaterThan(floorTop);
+      expect(point.y).toBeLessThan(floorTop + 5);
+    }
+  });
+
+  it('stands the elevator rider IN the doorway alcove on every floor', () => {
+    const ground = arcadeElevatorStandPoint.ground;
+    expect(ground.x).toBe(50);
+    expect(ground.y).toBeGreaterThan(ARCADE_ELEVATOR_ALCOVE.y[0]);
+    expect(ground.y).toBeLessThan(ARCADE_ELEVATOR_ALCOVE.y[1]);
+    // The upper floors' alcoves are the narrow `x 48–52` rectangles at the top
+    // of their boundaries: the stand point must be inside them, not merely on
+    // the floor somewhere below.
+    for (const floor of ['floor-1', 'basement'] as const) {
+      const point = arcadeElevatorStandPoint[floor];
+      const boundary = arcadeBoundaryForFloor(floor)!;
+      expect(boundary.shape).toBe('composite');
+      if (boundary.shape !== 'composite') return;
+      const alcove = boundary.areas.find(
+        (area) => area.type === 'rectangle' && area.x[0] === 48 && area.x[1] === 52,
+      );
+      expect(alcove, `${floor} alcove`).toBeDefined();
+      if (!alcove || alcove.type !== 'rectangle') return;
+      expect(point.y).toBeGreaterThan(alcove.y[0]);
+      expect(point.y).toBeLessThan(alcove.y[1]);
     }
   });
 

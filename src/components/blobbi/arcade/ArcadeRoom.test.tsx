@@ -42,6 +42,7 @@ vi.mock('@/hooks/useArcadeGameEntry', () => ({
 import { ArcadeRoom } from './ArcadeRoom';
 import { arcadeMachines, type ArcadeFloorId } from '@/lib/arcade-machines-config';
 import { arcadePropsByFloor } from '@/lib/arcade-room-config';
+import { ELEVATOR_DOOR_TRANSITION_MS } from '@/lib/arcade-elevator-state';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import type { MovableBlobbiRef } from '../MovableBlobbi';
 
@@ -113,8 +114,12 @@ vi.mock('./ArcadeTokenShopModal', () => ({
     isOpen ? <div data-testid="token-shop-modal" /> : null,
 }));
 vi.mock('../ElevatorModal', () => ({
-  ElevatorModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="elevator-modal" /> : null,
+  ElevatorModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+    isOpen ? (
+      <div data-testid="elevator-modal">
+        <button type="button" onClick={onClose}>Close picker</button>
+      </div>
+    ) : null,
 }));
 
 const SURFACE_RECT = {
@@ -547,18 +552,129 @@ describe('decoration is decoration', () => {
 });
 
 describe('elevator', () => {
+  const doors = () => document.querySelector('[data-elevator-phase]') as HTMLElement;
+  const doorWrapper = (side: 'left' | 'right') =>
+    screen.getByAltText(`Elevator, ${side} door`).parentElement!.parentElement as HTMLElement;
+  /** The slide transform the door art carries: open is `translateX(100%)`. */
+  const doorSlide = (side: 'left' | 'right') =>
+    (screen.getByAltText(`Elevator, ${side} door`).parentElement as HTMLElement).style.transform;
+  const isOpen = () => doors().dataset.elevatorOpen === 'true' && doorSlide('right') === 'translateX(100%)';
+
   it('opens the floor selector for everyone, with no entitlement check', () => {
     // The elevator used to demand an Arcade Pass and open a refusal modal
     // instead. The arcade charges for PLAYS now; one Arcade Token per game,
     // bought at the counter, so riding it is free and the refusal modal is
     // gone rather than merely unreachable.
+    vi.useFakeTimers();
+    try {
+      renderRoom('ground');
+      expect(clickAndArrive(doorWrapper('left'))).toBe(true);
+      act(() => {
+        vi.advanceTimersByTime(ELEVATOR_DOOR_TRANSITION_MS);
+      });
+      expect(screen.getByTestId('elevator-modal')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('starts closed, opens on hover and closes again when the pointer leaves while idle', () => {
     renderRoom('ground');
+    expect(isOpen()).toBe(false);
+    expect(doorSlide('left')).toBe('translate(0, 0)');
 
-    const leftDoor = screen.getByAltText('Elevator, left door').parentElement!
-      .parentElement as HTMLElement;
-    expect(clickAndArrive(leftDoor)).toBe(true);
+    fireEvent.mouseEnter(doors());
+    expect(isOpen()).toBe(true);
+    fireEvent.mouseLeave(doors());
+    expect(isOpen()).toBe(false);
+  });
 
-    expect(screen.getByTestId('elevator-modal')).toBeInTheDocument();
+  it('a click locks the doors open: leaving with the pointer no longer closes them', () => {
+    renderRoom('ground');
+    fireEvent.mouseEnter(doors());
+    fireEvent.click(doorWrapper('right'));
+    expect(requests).toHaveLength(1);
+    expect(doors().dataset.elevatorPhase).toBe('engaged');
+
+    fireEvent.mouseLeave(doors());
+    expect(isOpen()).toBe(true);
+  });
+
+  it('opens the doors BEFORE the walk and shows the picker only once they have finished opening', () => {
+    vi.useFakeTimers();
+    try {
+      renderRoom('ground');
+      fireEvent.click(doorWrapper('right'));
+      // Locked open at request time, before any arrival.
+      expect(isOpen()).toBe(true);
+      expect(screen.queryByTestId('elevator-modal')).toBeNull();
+
+      // Arrival straight away (the Blobbi was already in the doorway): the
+      // picker waits for the door slide to finish.
+      act(() => requests[0].action());
+      expect(doors().dataset.elevatorPhase).toBe('selecting');
+      expect(screen.queryByTestId('elevator-modal')).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(ELEVATOR_DOOR_TRANSITION_MS - 1);
+      });
+      expect(screen.queryByTestId('elevator-modal')).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByTestId('elevator-modal')).toBeInTheDocument();
+      // Still open with the picker up, pointer or no pointer.
+      fireEvent.mouseLeave(doors());
+      expect(isOpen()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a cancelled walk lets the doors close again', () => {
+    renderRoom('ground');
+    fireEvent.click(doorWrapper('left'));
+    expect(isOpen()).toBe(true);
+
+    act(() => requests[0].onCancel?.());
+    expect(doors().dataset.elevatorPhase).toBe('idle');
+    expect(isOpen()).toBe(false);
+  });
+
+  it('keeps the doors open after the picker is dismissed until the Blobbi walks away', () => {
+    vi.useFakeTimers();
+    try {
+      const { container } = renderRoom('ground');
+      expect(clickAndArrive(doorWrapper('right'))).toBe(true);
+      act(() => {
+        vi.advanceTimersByTime(ELEVATOR_DOOR_TRANSITION_MS);
+      });
+      fireEvent.click(screen.getByText('Close picker'));
+      expect(screen.queryByTestId('elevator-modal')).toBeNull();
+      // Dismissed, but the Blobbi is still standing in the doorway.
+      expect(doors().dataset.elevatorPhase).toBe('exiting');
+      expect(isOpen()).toBe(true);
+      fireEvent.mouseLeave(doors());
+      expect(isOpen()).toBe(true);
+
+      // A tap on UI is not a departure...
+      fireEvent.pointerDown(doorWrapper('left'), { bubbles: true });
+      expect(isOpen()).toBe(true);
+      // ...a tap on the floor is: the Blobbi is walking off, close behind it.
+      const surface = container.querySelector('[data-world-surface]') as HTMLElement;
+      fireEvent.pointerDown(surface, { bubbles: true });
+      expect(doors().dataset.elevatorPhase).toBe('idle');
+      expect(isOpen()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a tap works without hover: the doors open and the walk starts', () => {
+    renderRoom('ground');
+    fireEvent.touchStart(doorWrapper('right'));
+    expect(requests).toHaveLength(1);
+    expect(isOpen()).toBe(true);
+    expect(doors().dataset.elevatorPhase).toBe('engaged');
   });
 
   it('blocks the raw world walk on the sliding doors', () => {

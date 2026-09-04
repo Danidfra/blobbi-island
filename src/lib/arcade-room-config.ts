@@ -149,20 +149,26 @@ export const ARCADE_ELEVATOR_DOOR_SRC = `${B1}/elevator-door.png`;
  *
  * ## Why these are configured rather than derived
  *
- * Both counters are mounted HIGH on the back wall, well above the ground floor's
- * walkable band (`y ≥ 48`). The generic "aim at the element's base" rule
- * therefore produces a point off the floor, and clamping it merely moves it onto
- * the floor's top EDGE, which is worse: the edge runs straight through the
- * mouth of the narrow elevator alcove (`x ∈ [45,55], y ∈ [36,48]`), so a walk
- * along it can be captured by the alcove and never converge. Browser-reproduced:
- * the Blobbi slid along the back wall and the modal never opened, which is the
- * same symptom the audit recorded (§8.3).
+ * Both counters are mounted HIGH on the back wall, above the ground floor's
+ * walkable band (`y ≥ 57.2`, ground-anchor semantics). The generic "aim at the
+ * element's base" rule therefore produces a point off the floor, and clamping
+ * it merely moves it onto the floor's top EDGE, which is worse: the edge runs
+ * straight through the mouth of the narrow elevator alcove
+ * (`x ∈ [45,55], y ∈ [45.2,57.2]`), so a walk along it can be captured by the
+ * alcove and never converge. Browser-reproduced: the Blobbi slid along the
+ * back wall and the modal never opened.
  *
- * Picking the point deliberately, a comfortable distance onto open floor,
- * horizontally centred on the counter and clear of the alcove, removes the
- * whole class of problem. `arcade-machines-config.test.ts` checks both.
+ * Picking the point deliberately removes the whole class of problem. It used
+ * to be a "comfortable distance" (y = 69.2) onto open floor, which put the
+ * player a full body height below the counter: the walk visibly stopped short
+ * of the thing it was walking to. Measured against the rendered art (ticket
+ * counter base at y ≈ 45.5, prize counter base at y ≈ 54.2), the feet now stop
+ * just inside the floor band, so the body stands AT the counter, overlapping
+ * its lower edge the way a customer does. Both points are horizontally
+ * centred on their counter and well clear of the alcove.
+ * `arcade-machines-config.test.ts` checks both.
  */
-export const ARCADE_COUNTER_STAND_Y = 69.2;
+export const ARCADE_COUNTER_STAND_Y = 59.5;
 
 export const ARCADE_TICKET_COUNTER = {
   baseSrc: `${GROUND}/ticket.png`,
@@ -188,20 +194,28 @@ export const ARCADE_PRIZE_COUNTER = {
   alt: 'Prize counter',
   displayName: 'Prize Counter',
   blurb: 'Spend your Arcade Tickets on prizes.',
-  /** Roughly under the counter (its sprite spans x ≈ 68–93 %). */
-  interactionPoint: { x: 80, y: ARCADE_COUNTER_STAND_Y },
+  /** Centred under the counter (its sprite spans x ≈ 68–93 %, base y ≈ 54). */
+  interactionPoint: { x: 80, y: ARCADE_COUNTER_STAND_Y + 1 },
 } as const;
 
 /**
- * Where the Blobbi stands to call the elevator, per floor.
+ * Where the Blobbi stands to ride the elevator, per floor: IN the doorway.
  *
- * Same reasoning as the counters: the doors are on the back wall, and their
- * derived base point lands on (ground floor) or above (upper floors) the
- * walkable band. The alcove makes the ground floor's edge especially unsafe to
- * walk along, so the stand point is stated instead.
+ * Each floor's walk boundary carves an alcove into the back wall under the
+ * doors (ground `x 45–55, y 45.2–57.2`; floor 1 `x 48–52, y 59.3–67.3`;
+ * basement `x 48–52, y 54.5–60.9`). The stand point is inside that alcove, a
+ * few percent below the doors' bottom edge (ground ≈ 47.7, floor 1 ≈ 58.6,
+ * basement ≈ 55.5), so the feet are on the threshold and the body fills the
+ * open doorway. It used to be on the open floor well below the alcove, which
+ * left the Blobbi calling the elevator from the middle of the room.
+ *
+ * The doors are drawn strictly below every Blobbi depth band
+ * ({@link ARCADE_ELEVATOR_Z_INDEX}), so a Blobbi in the doorway is in front
+ * of them; the door lifecycle (`arcade-elevator-state.ts`) makes sure they are
+ * open before it gets there.
  */
 export const arcadeElevatorStandPoint: Record<ArcadeFloorId, { x: number; y: number }> = {
-  ground: { x: 50, y: 67.2 },
-  'floor-1': { x: 50, y: 74.3 },
-  basement: { x: 50, y: 66.2 },
+  ground: { x: 50, y: 52 },
+  'floor-1': { x: 50, y: 63 },
+  basement: { x: 50, y: 58 },
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useReducer, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 import { useLocation } from '@/hooks/useLocation';
@@ -52,6 +52,14 @@ import {
   INITIAL_ARCADE_MACHINE_STATE,
   arcadeMachineReducer,
 } from '@/arcade/arcade-machine-state';
+import {
+  ELEVATOR_DOOR_TRANSITION_MS,
+  ELEVATOR_INITIAL_STATE,
+  elevatorReducer,
+  isElevatorDoorOpen,
+} from '@/lib/arcade-elevator-state';
+import { isWithinMoveBlockingUi } from '@/lib/world-input';
+import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 
 /**
  * ArcadeRoom: all three arcade floors, extracted from `InteractiveElements`.
@@ -125,9 +133,15 @@ export function ArcadeRoom({
 }: ArcadeRoomProps) {
   const { currentLocation, setCurrentLocation } = useLocation();
 
-  const [isElevatorHovered, setIsElevatorHovered] = useState(false);
   const [isTokenShopOpen, setIsTokenShopOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
+  /**
+   * The elevator doors' lifecycle (`arcade-elevator-state.ts`): hover opens
+   * them while idle; a click or tap locks them open through the walk, the
+   * floor picker and the exit, until the Blobbi walks away.
+   */
+  const [elevatorDoors, dispatchElevator] = useReducer(elevatorReducer, ELEVATOR_INITIAL_STATE);
+  const elevatorDoorOpen = isElevatorDoorOpen(elevatorDoors);
   /** Which screen is up. Never a run; see the two-state-machines note above. */
   const [view, setView] = useState<ArcadeView>(ARCADE_VIEW_CLOSED);
   /**
@@ -274,8 +288,71 @@ export function ArcadeRoom({
    * (one Arcade Token each) and turns the pass into a premium Ticket reward
    * that waives that cost, so exploring the floors, reading the catalogues
    * and browsing the prize counter are free, as they should always have been.
+   *
+   * ## Sequencing: doors first, then the Blobbi, then the picker
+   *
+   * The doors are locked open the moment the walk is REQUESTED (`interact`),
+   * not when the Blobbi arrives, so the actor never crosses a closed door.
+   * On arrival the picker waits out whatever is left of the door slide
+   * before it appears, which matters when the Blobbi was already standing in
+   * the doorway (arrival is then immediate). The wrapped `requestInteraction`
+   * is what carries the lifecycle: the door elements themselves stay generic.
    */
-  const handleElevatorClick = useCallback(() => setIsElevatorModalOpen(true), []);
+  const elevatorEngagedAtRef = useRef(0);
+  const pickerTimerRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (pickerTimerRef.current !== null) window.clearTimeout(pickerTimerRef.current);
+    },
+    [],
+  );
+  const requestElevatorInteraction = useCallback(
+    (opts: RequestInteractionOptions) => {
+      dispatchElevator({ type: 'interact' });
+      elevatorEngagedAtRef.current = Date.now();
+      requestInteraction({
+        ...opts,
+        action: () => {
+          dispatchElevator({ type: 'arrived' });
+          const elapsed = Date.now() - elevatorEngagedAtRef.current;
+          const remaining = Math.max(0, ELEVATOR_DOOR_TRANSITION_MS - elapsed);
+          if (pickerTimerRef.current !== null) window.clearTimeout(pickerTimerRef.current);
+          pickerTimerRef.current = window.setTimeout(() => {
+            pickerTimerRef.current = null;
+            setIsElevatorModalOpen(true);
+            opts.action();
+          }, remaining);
+        },
+        onCancel: () => {
+          dispatchElevator({ type: 'cancelled' });
+          opts.onCancel?.();
+        },
+      });
+    },
+    [requestInteraction],
+  );
+  const handleElevatorPickerClose = useCallback(() => {
+    setIsElevatorModalOpen(false);
+    dispatchElevator({ type: 'modal-closed' });
+  }, []);
+  // After the picker is dismissed the Blobbi is still in the doorway; the
+  // doors close only once it walks away, which a world tap is the start of.
+  // Same predicate the walk-cancel hook uses, so taps on UI do not count.
+  useEffect(() => {
+    if (elevatorDoors.phase !== 'exiting') return;
+    const surface = document.querySelector('[data-world-surface]') as HTMLElement | null;
+    if (!surface) return;
+    const onWorldPointerDown = (ev: Event) => {
+      if (isWithinMoveBlockingUi(ev.target)) return;
+      dispatchElevator({ type: 'departed' });
+    };
+    surface.addEventListener('pointerdown', onWorldPointerDown, { capture: true });
+    surface.addEventListener('touchstart', onWorldPointerDown, { capture: true });
+    return () => {
+      surface.removeEventListener('pointerdown', onWorldPointerDown, { capture: true });
+      surface.removeEventListener('touchstart', onWorldPointerDown, { capture: true });
+    };
+  }, [elevatorDoors.phase]);
 
   /** The machine the open view belongs to, for its title and its artwork. */
   const openMachine = useMemo(
@@ -320,8 +397,10 @@ export function ArcadeRoom({
             elevator.containerClassName,
           )}
           style={{ zIndex: ARCADE_ELEVATOR_Z_INDEX }}
-          onMouseEnter={() => setIsElevatorHovered(true)}
-          onMouseLeave={() => setIsElevatorHovered(false)}
+          data-elevator-phase={elevatorDoors.phase}
+          data-elevator-open={elevatorDoorOpen ? 'true' : 'false'}
+          onMouseEnter={() => dispatchElevator({ type: 'hover-enter' })}
+          onMouseLeave={() => dispatchElevator({ type: 'hover-leave' })}
         >
           <InteractiveElement
             src={ARCADE_ELEVATOR_DOOR_SRC}
@@ -329,20 +408,20 @@ export function ArcadeRoom({
             effect="slide"
             slideDirection="right"
             className="scale-x-[-1]"
-            onClick={handleElevatorClick}
-            requestInteraction={requestInteraction}
+            onClick={() => {}}
+            requestInteraction={requestElevatorInteraction}
             walkTarget={elevatorStand}
-            isHovered={isElevatorHovered}
+            isHovered={elevatorDoorOpen}
           />
           <InteractiveElement
             src={ARCADE_ELEVATOR_DOOR_SRC}
             alt="Elevator, right door"
             effect="slide"
             slideDirection="right"
-            onClick={handleElevatorClick}
-            requestInteraction={requestInteraction}
+            onClick={() => {}}
+            requestInteraction={requestElevatorInteraction}
             walkTarget={elevatorStand}
-            isHovered={isElevatorHovered}
+            isHovered={elevatorDoorOpen}
           />
         </div>
 
@@ -454,7 +533,7 @@ export function ArcadeRoom({
         <ArcadeTokenShopModal isOpen onClose={() => setIsTokenShopOpen(false)} />
       )}
       {isElevatorModalOpen && (
-        <ElevatorModal isOpen onClose={() => setIsElevatorModalOpen(false)} />
+        <ElevatorModal isOpen onClose={handleElevatorPickerClose} />
       )}
 
       {/*
