@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { StageOverlayContext } from "@/contexts/StageOverlayContext";
+import { GameNoticeLayer } from "./GameNoticeLayer";
 import { WORLD_ASPECT } from "@/lib/world-coordinates";
 
 interface BlobbiFrameProps {
@@ -148,6 +149,12 @@ export function BlobbiFrame({
             {hud && <div className="absolute inset-x-0 top-0 z-30 pointer-events-none">{hud}</div>}
 
             {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
+
+            {/* In-game notices ("+1 Strawberry, received from Nostr Farm"):
+                top-right INSIDE the bezel, below the HUD row, above the world
+                and the HUD (same z band, later sibling), below the overlay
+                host where modals live. Pointer-transparent. */}
+            <GameNoticeLayer />
 
             {/*
               In-world overlay host: where the arcade's surfaces are portaled.
