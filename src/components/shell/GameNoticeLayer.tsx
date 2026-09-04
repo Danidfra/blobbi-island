@@ -41,11 +41,21 @@
  *
  * Pointer-transparent throughout, like the Farm's: a chip never blocks a
  * tap on the world.
+ *
+ * ## Compact on a phone
+ *
+ * On a viewport under the mobile breakpoint the game window IS the screen,
+ * and the desktop chip covered too much of it. The compact treatment is the
+ * same component with smaller numbers: a narrower cap, tighter padding, a
+ * 24px picture, one size down on both lines, a tighter stack gap, a smaller
+ * edge inset. Long names wrap to at most two lines for the headline and one
+ * for the caption, so a chip can never grow past its cap or off the frame.
  */
 
 import { useSyncExternalStore } from 'react';
 
 import { useImmersive } from '@/hooks/useImmersive';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { gameNoticesSnapshot, subscribeGameNotices, type GameNotice } from '@/lib/game-notices';
 import { cn } from '@/lib/utils';
@@ -57,17 +67,20 @@ function useGameNotices(): readonly GameNotice[] {
 export function GameNoticeLayer({ className }: { className?: string }) {
   const notices = useGameNotices();
   const immersive = useImmersive();
+  const compact = useIsMobile();
   const reducedMotion = useReducedMotion();
   if (notices.length === 0) return null;
 
   return (
     <div
       data-testid="game-notice-layer"
+      data-compact={compact ? '' : undefined}
       aria-live="polite"
       className={cn(
-        'pointer-events-none absolute z-30 flex flex-col items-end gap-2',
-        'right-[max(0.75rem,env(safe-area-inset-right))] sm:right-4',
-        'max-w-[min(20rem,calc(100%-1.5rem))]',
+        'pointer-events-none absolute z-30 flex flex-col items-end',
+        compact
+          ? 'gap-1.5 right-[max(0.5rem,env(safe-area-inset-right))] max-w-[min(13rem,calc(100%-1rem))]'
+          : 'gap-2 right-[max(0.75rem,env(safe-area-inset-right))] sm:right-4 max-w-[min(20rem,calc(100%-1.5rem))]',
         // Below the HUD row: compact (immersive) is one short line; the
         // default HUD's pills are taller.
         immersive ? 'top-11' : 'top-14',
@@ -75,13 +88,21 @@ export function GameNoticeLayer({ className }: { className?: string }) {
       )}
     >
       {notices.map((notice) => (
-        <GameNoticeChip key={notice.id} notice={notice} reducedMotion={reducedMotion} />
+        <GameNoticeChip key={notice.id} notice={notice} compact={compact} reducedMotion={reducedMotion} />
       ))}
     </div>
   );
 }
 
-function GameNoticeChip({ notice, reducedMotion }: { notice: GameNotice; reducedMotion: boolean }) {
+function GameNoticeChip({
+  notice,
+  compact,
+  reducedMotion,
+}: {
+  notice: GameNotice;
+  compact: boolean;
+  reducedMotion: boolean;
+}) {
   return (
     <div
       role="status"
@@ -90,22 +111,41 @@ function GameNoticeChip({ notice, reducedMotion }: { notice: GameNotice; reduced
       className={cn(
         // The Farm's `.farm-paper`, in Island tokens: rounded-xl, 1px border,
         // paper background, ink text, inset highlight + soft drop.
-        'flex max-w-full items-center gap-3 rounded-xl border border-island-wood/40 bg-island-cream px-3 py-2 text-island-ink',
+        'flex max-w-full items-center rounded-xl border border-island-wood/40 bg-island-cream text-island-ink',
         'shadow-[inset_0_1px_0_hsl(0_0%_100%/0.55),0_8px_20px_-12px_hsl(var(--island-ink)/0.55)]',
+        compact ? 'gap-2 px-2 py-1.5' : 'gap-3 px-3 py-2',
         !reducedMotion && 'animate-in fade-in slide-in-from-top-2 duration-200',
       )}
     >
       {notice.imageUrl ? (
-        <img src={notice.imageUrl} alt="" className="size-8 shrink-0 object-contain" />
+        <img
+          src={notice.imageUrl}
+          alt=""
+          className={cn('shrink-0 object-contain', compact ? 'size-6' : 'size-8')}
+        />
       ) : notice.emoji ? (
-        <span aria-hidden className="text-2xl leading-none">
+        <span aria-hidden className={cn('leading-none', compact ? 'text-xl' : 'text-2xl')}>
           {notice.emoji}
         </span>
       ) : null}
       <div className="min-w-0 leading-tight">
-        <p className="break-words text-base font-bold tabular-nums">{notice.title}</p>
+        <p
+          className={cn(
+            'line-clamp-2 break-words font-bold tabular-nums',
+            compact ? 'text-sm' : 'text-base',
+          )}
+        >
+          {notice.title}
+        </p>
         {notice.description ? (
-          <p className="break-words text-xs text-island-ink-soft">{notice.description}</p>
+          <p
+            className={cn(
+              'line-clamp-1 break-words text-island-ink-soft',
+              compact ? 'text-[0.6875rem]' : 'text-xs',
+            )}
+          >
+            {notice.description}
+          </p>
         ) : null}
       </div>
     </div>

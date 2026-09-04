@@ -11,7 +11,9 @@ import { BlobbiFrame } from './BlobbiFrame';
 import { GameNoticeLayer } from './GameNoticeLayer';
 
 let immersive = false;
+let mobile = false;
 vi.mock('@/hooks/useImmersive', () => ({ useImmersive: () => immersive }));
+vi.mock('@/hooks/useIsMobile', () => ({ useIsMobile: () => mobile }));
 
 const originalMatchMedia = window.matchMedia;
 function reducedMotion(matches: boolean) {
@@ -33,6 +35,7 @@ function reducedMotion(matches: boolean) {
 
 beforeEach(() => {
   immersive = false;
+  mobile = false;
   clearGameNotices();
 });
 afterEach(() => {
@@ -164,5 +167,87 @@ describe('the stack', () => {
       for (let i = 0; i < 5; i += 1) showGameNotice({ ...strawberry, title: `X${i}` });
     });
     expect(screen.getAllByRole('status')).toHaveLength(2);
+  });
+});
+
+describe('compact on a phone', () => {
+  const LONG = { ...strawberry, title: '+1 Extraordinarily Long Heirloom Strawberry Variety Name', description: 'Received from Nostr Farm' };
+
+  it('uses the reduced dimensions: narrower cap, tighter padding, 24px picture, smaller type, tighter stack', () => {
+    mobile = true;
+    render(<GameNoticeLayer />);
+    act(() => {
+      showGameNotice(strawberry);
+    });
+    const layer = screen.getByTestId('game-notice-layer');
+    expect(layer).toHaveAttribute('data-compact');
+    expect(layer.className).toContain('max-w-[min(13rem,calc(100%-1rem))]');
+    expect(layer.className).toContain('gap-1.5');
+    expect(layer.className).toMatch(/right-\[max\(0\.5rem,env\(safe-area-inset-right\)\)\]/);
+    const chip = screen.getByRole('status');
+    expect(chip.className).toContain('px-2');
+    expect(chip.className).toContain('py-1.5');
+    expect(chip.className).toContain('gap-2');
+    expect(chip.querySelector('img')!.className).toContain('size-6');
+    const [title, caption] = chip.querySelectorAll('p');
+    expect(title.className).toContain('text-sm');
+    expect(caption.className).toContain('text-[0.6875rem]');
+    // Same component, same paper: still the Farm chip.
+    for (const cls of ['rounded-xl', 'border', 'bg-island-cream', 'items-center']) expect(chip.className).toContain(cls);
+    expect(chip.className).toContain('shadow-[');
+  });
+
+  it('stays inside the game frame at the top-right, below the compact HUD, and keeps the max-two stack', () => {
+    mobile = true;
+    immersive = true;
+    render(
+      <BlobbiFrame variant="immersive" hud={<div data-testid="hud">hud</div>}>
+        <div>world</div>
+      </BlobbiFrame>,
+    );
+    act(() => {
+      showGameNotice({ ...strawberry, title: 'A' });
+      showGameNotice({ ...strawberry, title: 'B' });
+      showGameNotice({ ...strawberry, title: 'C' });
+    });
+    const layer = screen.getByTestId('game-notice-layer');
+    expect(layer.parentElement).toBe(document.querySelector('[data-stage-overlay-host]')!.parentElement);
+    expect(layer.className).toContain('top-11');
+    expect(layer.className).toContain('absolute');
+    expect(screen.getAllByRole('status').map((c) => c.querySelector('p')!.textContent)).toEqual(['B', 'C']);
+  });
+
+  it('a long item name wraps within the cap rather than widening the chip or leaving the frame', () => {
+    mobile = true;
+    render(<GameNoticeLayer />);
+    act(() => {
+      showGameNotice(LONG);
+    });
+    const chip = screen.getByRole('status');
+    const [title, caption] = chip.querySelectorAll('p');
+    expect(chip.className).toContain('max-w-full');
+    expect(title.parentElement!.className).toContain('min-w-0');
+    expect(title.className).toContain('line-clamp-2');
+    expect(title.className).toContain('break-words');
+    expect(caption.className).toContain('line-clamp-1');
+  });
+
+  it('desktop keeps its own dimensions unchanged', () => {
+    render(<GameNoticeLayer />);
+    act(() => {
+      showGameNotice(LONG);
+    });
+    const layer = screen.getByTestId('game-notice-layer');
+    expect(layer).not.toHaveAttribute('data-compact');
+    expect(layer.className).toContain('max-w-[min(20rem,calc(100%-1.5rem))]');
+    expect(layer.className).toContain('gap-2');
+    const chip = screen.getByRole('status');
+    expect(chip.className).toContain('px-3');
+    expect(chip.className).toContain('py-2');
+    expect(chip.className).toContain('gap-3');
+    expect(chip.querySelector('img')!.className).toContain('size-8');
+    expect(chip.querySelector('p')!.className).toContain('text-base');
+    // The long name wraps here too: never past the cap.
+    expect(chip.querySelector('p')!.className).toContain('line-clamp-2');
   });
 });
