@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { LOCATION_BACKGROUNDS } from './location-backgrounds';
 import type { LocationId } from './location-types';
 import {
+  INTERIOR_WINDOW_LIGHT_STRENGTH,
   LOCATION_SKY_CONFIG,
   getLocationSkyConfig,
   isSkyEnabledLocation,
@@ -56,10 +57,20 @@ describe('the locations enabled in this phase', () => {
     }
   });
 
-  it('grades the Plaza interior at half strength — lit by its own lamps', () => {
-    const config = getLocationSkyConfig('plaza-inside');
-    expect(config.worldLightStrength).toBeGreaterThan(0);
-    expect(config.worldLightStrength).toBeLessThan(getLocationSkyConfig('plaza').worldLightStrength);
+  it('keeps an interior with windows lit at night: the sky is in the glass, the grade is a whisper', () => {
+    for (const id of INTERIORS_WITH_WINDOWS) {
+      const config = getLocationSkyConfig(id);
+      // The sky still renders behind the plate…
+      expect(config.enabled, id).toBe(true);
+      expect(config.showStars, id).toBe(true);
+      // …but the room takes the shared interior rule, not a number of its own.
+      expect(config.worldLightStrength, id).toBe(INTERIOR_WINDOW_LIGHT_STRENGTH);
+    }
+    // Far below the outdoor grade, above zero: at deep night the artwork keeps
+    // at least 95 % of its brightness and the veil stays under 2 %.
+    expect(INTERIOR_WINDOW_LIGHT_STRENGTH).toBeGreaterThan(0);
+    expect(INTERIOR_WINDOW_LIGHT_STRENGTH).toBeLessThanOrEqual(0.15);
+    expect(INTERIOR_WINDOW_LIGHT_STRENGTH).toBeLessThan(getLocationSkyConfig('plaza').worldLightStrength / 5);
   });
 
   it('is keyed by LocationId, so a .png → .webp rename cannot switch a sky off', () => {

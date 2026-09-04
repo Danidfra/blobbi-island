@@ -77,16 +77,25 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 1.5,
   },
   // Plaza interior. `initialScale` is the FRONT of the room (y = 99.5) and
-  // `finalScale` the BACK (y = 44.8, the far ends of the balcony's wings) — see
-  // `resolveBlobbiScale`. Two floors share one linear ramp: the upper corridor
-  // and the top of the stairs sit at ~0.75–0.8, the ground floor at ~0.9–1.0.
+  // `finalScale` the BACK (y ≈ 39.4, the far ends of the balcony's wings) —
+  // see `resolveBlobbiScale`. Two floors share one linear ramp, so the scale
+  // runs continuously: ~1.05 at the frame's bottom edge, ~0.85 at the bottom
+  // step (y = 73.6), ~0.73 halfway up the flight, ~0.63 on the landing and the
+  // corridor's centre run (y = 46), easing to 0.58 as the wings climb the
+  // parapet toward the frame edges.
   //
-  // The back was 0.6 when the balcony was a distant strip on the old plate. On
-  // the new one the Blobbi stands BEHIND the balcony railing, which the artwork
-  // draws 8–9 % of the world tall along the walkable corridor; at 0.6 the head
-  // barely cleared the top rail. 0.75 keeps it a head above the railing.
+  // The back was 0.75, at which a Blobbi on the landing stood 87 % as tall as
+  // the painted door beside it and looked no further away than one at the foot
+  // of the stairs. The ramp now puts it at ~70 % of the door. Its floor is the
+  // balcony parapet: the Blobbi walks the corridor BEHIND it, and the corridor
+  // line keeps the same immersion behind the parapet's plate all the way out
+  // (`PLAZA_CORRIDOR`), so what has to hold is that an `lg` rig (96 px, 8 % of
+  // the world tall at 0.58) keeps its head and eyes above the plate — which it
+  // does with ~1.5 % to spare above the top rail at the wings' ends and ~3.5 %
+  // along the centre run. Lower than this and the corridor becomes a walk
+  // behind a fence.
   'plaza-inside.webp': {
-    initialScale: 1,
-    finalScale: 0.75,
+    initialScale: 1.05,
+    finalScale: 0.58,
   },
 };

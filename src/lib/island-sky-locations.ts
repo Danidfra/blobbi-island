@@ -61,6 +61,24 @@ export interface LocationSkyConfig {
   note: string;
 }
 
+/**
+ * The grade for an INTERIOR whose windows look out on the sky.
+ *
+ * The time-of-day grade exists to make an outdoor scene follow the sun. A room
+ * lit by its own lamps does not: at night the sky in its windows goes dark and
+ * the room stays lit, which is exactly what the split between the sky layer
+ * (behind the plate, showing through its transparent panes) and the grade (a
+ * filter on the plate and a veil over the scene) allows. So an interior keeps
+ * `enabled: true` for the sky and takes THIS strength for the grade — a whisper
+ * rather than nothing, so the room shares the island's warmth at dusk without
+ * ever reading as a darkened room. At deep night it comes to a brightness of
+ * 0.97 on the artwork and a veil of 1.4 % over the scene.
+ *
+ * The Plaza is the first such room; any later interior with cut-out windows
+ * should use this rather than choose its own number.
+ */
+export const INTERIOR_WINDOW_LIGHT_STRENGTH = 0.1;
+
 const DISABLED: LocationSkyConfig = {
   enabled: false,
   showClouds: false,
@@ -134,10 +152,9 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
     // above 26 %, so passages drift past the glass exactly as they should.
     showClouds: true,
     showStars: true,
-    // An interior lit by its own lamps: it follows the day at half strength,
-    // so night is visible through the glass and felt in the room without
-    // putting the storefronts' signs into the dark.
-    worldLightStrength: 0.5,
+    // An interior lit by its own lamps: the night is in the windows, not in
+    // the room — see `INTERIOR_WINDOW_LIGHT_STRENGTH`.
+    worldLightStrength: INTERIOR_WINDOW_LIGHT_STRENGTH,
     artworkSkyReady: true,
     note: 'Plaza INTERIOR — the only interior with a sky. Its three arched windows are cut out of `plaza-inside.webp`; every other pixel of the plate is opaque.',
   },

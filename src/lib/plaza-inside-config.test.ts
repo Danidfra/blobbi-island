@@ -12,14 +12,24 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  PLAZA_CORRIDOR,
   PLAZA_DOOR,
   PLAZA_FOUNTAIN,
   PLAZA_INSIDE_BACKGROUND,
   PLAZA_INSIDE_SPAWN,
   PLAZA_OCCLUSION,
+  PLAZA_STAIRS,
+  PLAZA_STAIRS_WALK_BOTTOM,
+  PLAZA_STAIRS_WALK_TOP,
+  plazaCorridorPaths,
+  plazaCorridorPointAt,
+  plazaCorridorY,
   plazaInsideBlockers,
   plazaStorefronts,
 } from './plaza-inside-config';
+import { blobbiHalfHeightPercent } from './blobbi-ground';
+import { getBlobbiSizeForLocation } from './location-blobbi-sizes';
+import { resolveBlobbiScale } from './blobbi-world-render';
 import { isStorefrontOpen, storefrontAccessibleName } from './storefront-hotspots';
 import { locationBoundaries } from './location-boundaries';
 import { LOCATION_BACKGROUNDS } from './location-backgrounds';
@@ -252,9 +262,14 @@ describe('the six storefronts', () => {
 });
 
 describe('walking the balcony', () => {
-  it('runs the whole corridor, wing to wing, without leaving the floor', () => {
-    const farLeft = { x: 20, y: 46 };
-    const farRight = { x: 80, y: 46 };
+  const farLeft = plazaCorridorPointAt(PLAZA_CORRIDOR.left);
+  const farRight = plazaCorridorPointAt(PLAZA_CORRIDOR.right);
+
+  it('runs the whole visible parapet, frame edge to frame edge, without leaving the floor', () => {
+    // The plate paints the balcony floor edge to edge; the corridor reaches to
+    // within a body's width of both frame edges.
+    expect(PLAZA_CORRIDOR.left).toBeLessThanOrEqual(4);
+    expect(PLAZA_CORRIDOR.right).toBeGreaterThanOrEqual(96);
     expect(isOnFloor(farLeft, PLAZA)).toBe(true);
     expect(isOnFloor(farRight, PLAZA)).toBe(true);
     const result = routeAndWalk(farLeft, farRight);
@@ -264,15 +279,232 @@ describe('walking the balcony', () => {
     expect(result.path.some((p) => p.x > 47 && p.x < 53 && p.y < PLAZA_OCCLUSION.railingBase)).toBe(true);
   });
 
+  it('is one line: every step across it is on the centreline, level along the centre run', () => {
+    const result = routeAndWalk(farLeft, farRight);
+    for (const p of result.path) {
+      if (p.x > PLAZA_OCCLUSION.stairsX[0] && p.x < PLAZA_OCCLUSION.stairsX[1]) {
+        // The landing is crossed at the corridor's own row.
+        expect(p.y, `${p.x},${p.y}`).toBeCloseTo(PLAZA_CORRIDOR.y, 6);
+        continue;
+      }
+      expect(p.y, `${p.x},${p.y}`).toBeCloseTo(plazaCorridorPointAt(p.x).y, 4);
+      // Level from the end of one blend to the start of the other.
+      if (p.x >= PLAZA_CORRIDOR.kinks[0] + PLAZA_CORRIDOR.blend && p.x <= PLAZA_CORRIDOR.kinks[1] - PLAZA_CORRIDOR.blend) {
+        expect(p.y, `${p.x},${p.y}`).toBeCloseTo(PLAZA_CORRIDOR.y, 6);
+      }
+    }
+  });
+
+  it('follows the parapet: flat along the centre run, climbing at its slope along the wings, mirrored', () => {
+    const { y, kinks, wingSlope, blend } = PLAZA_CORRIDOR;
+    // The parapet's top edge, probed on the overlay: flat at 43.8 from x = 27
+    // to 73, then 40.7 at x = 15, 39.2 at x = 10, 38.0 at x = 6, 37.0 at x = 3.
+    const parapetTop = (x: number) => 43.8 - wingSlope * Math.max(0, kinks[0] - x, x - kinks[1]);
+    expect(parapetTop(15)).toBeCloseTo(40.7, 0);
+    expect(parapetTop(10)).toBeCloseTo(39.2, 0);
+    expect(parapetTop(3)).toBeCloseTo(37.0, 0);
+    // Same immersion behind the plate everywhere outside the blend.
+    const immersion = y - 43.8;
+    for (const x of [PLAZA_CORRIDOR.left, 10, 15, 21.8, 35, 50, 65, 78, 85, 90, PLAZA_CORRIDOR.right]) {
+      if (Math.abs(x - kinks[0]) < blend || Math.abs(x - kinks[1]) < blend) continue;
+      expect(plazaCorridorY(x) - parapetTop(x), `x=${x}`).toBeCloseTo(immersion, 6);
+      expect(plazaCorridorY(x), `x=${x}`).toBeCloseTo(plazaCorridorY(100 - x), 6);
+    }
+    // The wing ends are well up the parapet, not on the row the run uses.
+    expect(plazaCorridorY(PLAZA_CORRIDOR.left)).toBeLessThan(y - 6);
+  });
+
+  it('bends smoothly through each kink: monotone, small turns, tangent at both ends', () => {
+    const { y, kinks, wingSlope, blend, blendStep } = PLAZA_CORRIDOR;
+    for (const kink of kinks) {
+      const sign = kink < 50 ? -1 : 1;
+      const inside = kink - sign * blend;
+      const outside = kink + sign * blend;
+      expect(plazaCorridorY(inside)).toBeCloseTo(y, 9);
+      expect(plazaCorridorY(outside)).toBeCloseTo(y - wingSlope * blend, 9);
+      // Slope grows from 0 to the wing's, never beyond, never backwards.
+      let previous = 0;
+      for (let x = inside; sign * (x - outside) < 0; x += sign * blendStep) {
+        const slope = (plazaCorridorY(x) - plazaCorridorY(x + sign * blendStep)) / blendStep;
+        expect(slope).toBeGreaterThanOrEqual(previous - 1e-9);
+        expect(slope).toBeLessThanOrEqual(wingSlope + 1e-9);
+        previous = slope;
+      }
+      expect(previous).toBeGreaterThan(wingSlope * 0.7);
+    }
+    // The chain the walk follows has a vertex at every sample, so it IS the
+    // curve at those points, and its joints turn by only a few degrees.
+    for (const chain of Object.values(plazaCorridorPaths())) {
+      for (let i = 1; i < chain.length - 1; i++) {
+        const a = Math.atan2((chain[i].y - chain[i - 1].y) * (WORLD_HEIGHT / 100), (chain[i].x - chain[i - 1].x) * (WORLD_WIDTH / 100));
+        const b = Math.atan2((chain[i + 1].y - chain[i].y) * (WORLD_HEIGHT / 100), (chain[i + 1].x - chain[i].x) * (WORLD_WIDTH / 100));
+        expect(Math.abs(a - b) * (180 / Math.PI), `joint at x=${chain[i].x}`).toBeLessThan(6);
+      }
+    }
+  });
+
+  it('projects a click above or below the parapet onto the line', () => {
+    for (const x of [6, 10, 21.8, 35, 70, 78, 92]) {
+      const on = plazaCorridorPointAt(x);
+      for (const dy of [-6, -2, 0, 1.5, 3]) {
+        const landed = constrainPosition({ x, y: on.y + dy }, PLAZA);
+        expect(isOnFloor(landed, PLAZA), `${x},${on.y + dy}`).toBe(true);
+        // Onto the line, near the same x: the drop onto a wing is
+        // perpendicular to its slope, which shifts x by about a quarter of
+        // the distance dropped.
+        expect(Math.abs(landed.x - x), `${x},${on.y + dy}`).toBeLessThanOrEqual(Math.abs(dy) * 0.3 + 1e-9);
+        expect(landed.y, `${x},${on.y + dy}`).toBeCloseTo(plazaCorridorPointAt(landed.x).y, 4);
+      }
+    }
+    // A click behind the door lands on the landing's top row, not the line.
+    expect(constrainPosition({ x: 50, y: 40 }, PLAZA)).toEqual({ x: 50, y: PLAZA_STAIRS.landingTop });
+  });
+
+  it('keeps the feet behind the parapet\'s plate at every column', () => {
+    // The plate's base, probed per column: 46.2 at x = 1, 46.7 at x = 4,
+    // 47.6 at x = 10, 48.3 at x = 15, 49.3 along the centre run — and its top
+    // edge 2.2 below the corridor everywhere (see the parapet test above).
+    const plateBase = (x: number) => (Math.min(x, 100 - x) >= 27 ? 49.3 : 46.2 + (Math.min(x, 100 - x) - 1) * (3.1 / 26));
+    for (const x of [PLAZA_CORRIDOR.left, 4, 10, 15, 21.8, 35, 65, 78, 90, PLAZA_CORRIDOR.right]) {
+      expect(plazaCorridorY(x), `x=${x}`).toBeLessThan(plateBase(x));
+    }
+    expect(PLAZA_CORRIDOR.y).toBeGreaterThanOrEqual(PLAZA_STAIRS.landingTop);
+  });
+
+  it('the upper stand points and the door target are on the line', () => {
+    expect(PLAZA_DOOR.walkTarget.y).toBe(PLAZA_CORRIDOR.y);
+    for (const store of plazaStorefronts) {
+      if (store.standPoint.y < PLAZA_OCCLUSION.railingBase) {
+        expect(store.standPoint, store.id).toEqual(plazaCorridorPointAt(store.standPoint.x));
+        expect(isOnFloor(store.standPoint, PLAZA), store.id).toBe(true);
+      }
+    }
+  });
+
+  it('leaves the stairs two-dimensional: a click on the flight lands where it was aimed', () => {
+    for (const p of [{ x: 50, y: 50 }, { x: 48, y: 60 }, { x: 52, y: 70 }, { x: 50, y: 45 }]) {
+      expect(constrainPosition(p, PLAZA)).toEqual(p);
+    }
+  });
+
   it('descends the stairs to the ground floor and comes back up', () => {
     // Onto the rug, which is walkable; the fountain below it is not.
-    const down = routeAndWalk(PLAZA_INSIDE_SPAWN, { x: 50, y: 86 });
+    const down = routeAndWalk(PLAZA_INSIDE_SPAWN, { x: 50, y: 84 });
     expect(down.arrived).toBe(true);
     expect(down.offFloor).toEqual([]);
     expect(usedStairs(down.path)).toBe(true);
-    const up = routeAndWalk({ x: 50, y: 86 }, PLAZA_INSIDE_SPAWN);
+    const up = routeAndWalk({ x: 50, y: 84 }, PLAZA_INSIDE_SPAWN);
     expect(up.arrived).toBe(true);
     expect(usedStairs(up.path)).toBe(true);
+  });
+});
+
+describe('the stair rails', () => {
+  const size = getBlobbiSizeForLocation('plaza-inside');
+  /** Half the rendered rig's width at `y`, in world x-percent (the rig is square). */
+  const halfWidthAt = (y: number) =>
+    (blobbiHalfHeightPercent(size, resolveBlobbiScale({ x: 50, y }, PLAZA_INSIDE_BACKGROUND, PLAZA)) *
+      WORLD_HEIGHT) /
+    WORLD_WIDTH;
+
+  it('inset the walkable column from the painted rails on both sides, top and bottom', () => {
+    expect(PLAZA_STAIRS.railMargin).toBeGreaterThan(0);
+    expect(PLAZA_STAIRS_WALK_TOP[0]).toBe(PLAZA_STAIRS.railsTop[0] + PLAZA_STAIRS.railMargin);
+    expect(PLAZA_STAIRS_WALK_TOP[1]).toBe(PLAZA_STAIRS.railsTop[1] - PLAZA_STAIRS.railMargin);
+    expect(PLAZA_STAIRS_WALK_BOTTOM[0]).toBe(PLAZA_STAIRS.railsBottom[0] + PLAZA_STAIRS.railMargin);
+    expect(PLAZA_STAIRS_WALK_BOTTOM[1]).toBe(PLAZA_STAIRS.railsBottom[1] - PLAZA_STAIRS.railMargin);
+  });
+
+  it('keep the painted body off the rails without narrowing the flight by more than the rails themselves', () => {
+    // The painted body fills about three quarters of the rig's square box; the
+    // margin must cover that half-width wherever the flight is walked, and must
+    // not exceed the rig's full half-width (which would be a corridor, not a
+    // staircase).
+    const BODY_FRACTION = 0.75;
+    for (const y of [PLAZA_STAIRS.landingTop, 55, 65, PLAZA_STAIRS.foot]) {
+      expect(PLAZA_STAIRS.railMargin, `y=${y}`).toBeGreaterThanOrEqual(halfWidthAt(y) * BODY_FRACTION);
+      expect(PLAZA_STAIRS.railMargin, `y=${y}`).toBeLessThanOrEqual(halfWidthAt(y) + 0.5);
+    }
+  });
+
+  /** The rails' inner faces at height `y`, following the flight as it widens. */
+  function railFacesAt(y: number): [number, number] {
+    const t = (y - PLAZA_STAIRS.flightTop) / (PLAZA_STAIRS.foot - PLAZA_STAIRS.flightTop);
+    const clampedT = Math.max(0, Math.min(1, t));
+    return [
+      PLAZA_STAIRS.railsTop[0] + (PLAZA_STAIRS.railsBottom[0] - PLAZA_STAIRS.railsTop[0]) * clampedT,
+      PLAZA_STAIRS.railsTop[1] + (PLAZA_STAIRS.railsBottom[1] - PLAZA_STAIRS.railsTop[1]) * clampedT,
+    ];
+  }
+
+  it('a click on a rail is projected inside the column, and the walk never touches the rail', () => {
+    // From the flight proper down. Beside the landing (y < 49) the corridor
+    // line, one row up, is nearer to the rail than the column is, and a click
+    // there lands behind the railing instead — also floor, also off the rail.
+    for (const y of [50, 60, 70]) {
+      const [left, right] = railFacesAt(y);
+      // The nearest floor to a point on the rail is the column's slanted edge,
+      // a margin's width inside the rail (a touch less, measured straight
+      // across, since the projection is perpendicular to the slant).
+      const fromLeft = constrainPosition({ x: left, y }, PLAZA);
+      const fromRight = constrainPosition({ x: right, y }, PLAZA);
+      expect(isOnFloor(fromLeft, PLAZA), `${left},${y}`).toBe(true);
+      expect(isOnFloor(fromRight, PLAZA), `${right},${y}`).toBe(true);
+      expect(fromLeft.x - railFacesAt(fromLeft.y)[0], `${left},${y}`).toBeGreaterThanOrEqual(PLAZA_STAIRS.railMargin - 0.1);
+      expect(railFacesAt(fromRight.y)[1] - fromRight.x, `${right},${y}`).toBeGreaterThanOrEqual(PLAZA_STAIRS.railMargin - 0.1);
+    }
+    // Hug the left rail all the way down, then the right rail all the way up.
+    const down = routeAndWalk({ x: PLAZA_STAIRS_WALK_TOP[0], y: 47 }, { x: 30, y: 76 });
+    const up = routeAndWalk({ x: 70, y: 76 }, { x: PLAZA_STAIRS_WALK_TOP[1], y: 47 });
+    for (const p of [...down.path, ...up.path]) {
+      if (p.y < PLAZA_STAIRS.foot && p.y > PLAZA_STAIRS.landingTop && p.x > 35 && p.x < 65) {
+        const [left, right] = railFacesAt(p.y);
+        expect(p.x, `${p.x},${p.y}`).toBeGreaterThanOrEqual(left + PLAZA_STAIRS.railMargin - 1e-6);
+        expect(p.x, `${p.x},${p.y}`).toBeLessThanOrEqual(right - PLAZA_STAIRS.railMargin + 1e-6);
+      }
+    }
+  });
+});
+
+describe('the depth ramp', () => {
+  const scaleAt = (y: number) => resolveBlobbiScale({ x: 50, y }, PLAZA_INSIDE_BACKGROUND, PLAZA);
+
+  it('runs from the frame\'s bottom edge to the landing, with the balcony at the far end', () => {
+    // The corridor and the landing are the same depth: same row, same scale.
+    expect(scaleAt(PLAZA_CORRIDOR.y)).toBeCloseTo(scaleAt(PLAZA_DOOR.walkTarget.y), 6);
+    // Front to back is a clear step down, with no jump anywhere on the flight.
+    expect(scaleAt(99.5) / scaleAt(PLAZA_DOOR.walkTarget.y)).toBeGreaterThanOrEqual(1.6);
+    let previous = scaleAt(99.5);
+    for (let y = 99; y >= PLAZA_STAIRS.landingTop; y -= 0.5) {
+      const s = scaleAt(y);
+      expect(s).toBeLessThanOrEqual(previous);
+      expect(previous - s).toBeLessThan(0.01);
+      previous = s;
+    }
+  });
+
+  it('leaves a Blobbi at the door clearly shorter than the door, and its head above the balcony rail', () => {
+    const size = getBlobbiSizeForLocation('plaza-inside');
+    const height = 2 * blobbiHalfHeightPercent(size, scaleAt(PLAZA_DOOR.walkTarget.y));
+    const door = PLAZA_DOOR.painted.bottom - PLAZA_DOOR.painted.top;
+    expect(height / door).toBeLessThan(0.8);
+    expect(height / door).toBeGreaterThan(0.6);
+    // The top rail runs at y ≈ 41.1 along the centre run of the balcony.
+    expect(PLAZA_CORRIDOR.y - height).toBeLessThan(41.1 - 2);
+  });
+
+  it('keeps the head above the top rail all the way out along the wings, where the ramp is at its floor', () => {
+    const size = getBlobbiSizeForLocation('plaza-inside');
+    // The top rail, probed on the overlay: 41.1 along the centre run, 38.8 at
+    // x = 19, 37.2 at x = 15, 35.4 at x = 10, 33.8 at x = 6, 32.7 at x = 3.
+    const railTop = (x: number) => 41.1 - (0.283 + 0.07) * Math.max(0, 27 - Math.min(x, 100 - x));
+    expect(railTop(15)).toBeCloseTo(37.2, 0);
+    expect(railTop(3)).toBeCloseTo(32.7, 0);
+    for (const x of [PLAZA_CORRIDOR.left, 6, 10, 15, 21.8, 35, 65, 78, 90, PLAZA_CORRIDOR.right]) {
+      const feet = plazaCorridorY(x);
+      const head = feet - 2 * blobbiHalfHeightPercent(size, scaleAt(feet));
+      expect(railTop(x) - head, `x=${x}`).toBeGreaterThan(1);
+    }
   });
 });
 
@@ -302,6 +534,32 @@ describe('the fountain', () => {
     expect(plinth.top).toBeGreaterThan(83.5);
     expect(plinth.bottom).toBeLessThanOrEqual(99.5);
     expect(isOnFloor({ x: plinth.left, y: plinth.top }, PLAZA)).toBe(true);
+  });
+
+  it('is the room\'s centrepiece: a fifth of the floor wide, centred, with open floor on both sides and in front', () => {
+    const plinth = plinthFootprint();
+    const { placement } = PLAZA_FOUNTAIN;
+    expect(placement.centerX).toBe(50);
+    expect(placement.width).toBeGreaterThanOrEqual(20);
+    expect(placement.width).toBeLessThanOrEqual(25);
+    // A strip of floor in front of the plinth, so the Blobbi can pass in front.
+    expect(99.5 - plinth.bottom).toBeGreaterThanOrEqual(2);
+    // Two fifths of the floor clear on either side.
+    expect(plinth.left).toBeGreaterThanOrEqual(40);
+    expect(plinth.right).toBeLessThanOrEqual(60);
+  });
+
+  it('the Blobbi passes behind it above the plinth and in front of it below', () => {
+    const plinth = plinthFootprint();
+    const behind = { x: 50, y: plinth.top - 0.5 };
+    const inFront = { x: 50, y: plinth.bottom + 0.5 };
+    expect(isOnFloor(behind, PLAZA)).toBe(true);
+    expect(isBlocked(behind, BLOCKERS)).toBe(false);
+    expect(isOnFloor(inFront, PLAZA)).toBe(true);
+    expect(isBlocked(inFront, BLOCKERS)).toBe(false);
+    const across = routeAndWalk({ x: 30, y: inFront.y }, { x: 70, y: inFront.y });
+    expect(across.arrived).toBe(true);
+    expect(across.path.every((p) => p.y >= plinth.bottom)).toBe(true);
   });
 
   it('can be walked around from either side', () => {

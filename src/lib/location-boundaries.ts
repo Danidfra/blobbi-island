@@ -1,4 +1,15 @@
-import { Boundary } from '@/lib/boundaries';
+import { Boundary, WalkableArea } from '@/lib/boundaries';
+import {
+  PLAZA_STAIRS,
+  PLAZA_STAIRS_WALK_BOTTOM,
+  PLAZA_STAIRS_WALK_TOP,
+  plazaCorridorPaths,
+} from '@/lib/plaza-inside-config';
+
+/** A polyline as the chain of `segment` areas the walk follows. */
+function segmentsAlong(points: readonly { x: number; y: number }[]): WalkableArea[] {
+  return points.slice(1).map((to, i): WalkableArea => ({ type: 'segment', from: points[i], to }));
+}
 
 /**
  * Walkable-floor boundaries, in GROUND-ANCHOR semantics (Phase 2).
@@ -109,26 +120,25 @@ export const locationBoundaries: Record<string, Boundary> = {
    *
    * ## Staircase
    *
-   * The treads: a column between the stair rails' inner faces (x 43–57 at the
-   * landing), widening down the flight to the newel posts (x 40.2–59.8) and
-   * touching the ground floor at y = 73.6. The landing is its top, from
-   * y = 44.6 — the door's walk target and the room's spawn are on it.
+   * The treads: a column between the stair rails, widening down the flight to
+   * the newel posts and touching the ground floor at y = 73.6. The landing is
+   * its top, from y = 44.6 — the door's walk target and the room's spawn are on
+   * it. The column is the rails' inner faces brought in by `PLAZA_STAIRS.railMargin`
+   * on each side: the boundary constrains the Blobbi's ground point, and a
+   * ground point on a rail's face is half a body over the rail.
    *
    * ## Upper corridor
    *
-   * The balcony floor is hidden behind its own railing, so the corridor is a
-   * thin band whose FEET stay just above the railing's base: behind the plate,
-   * body rising past the pickets. Along the centre run (x 27–73) the base is
-   * y = 49.3 and the band is y 45.7–48.3, meeting the landing at x = 43 / 57.
-   * Toward each frame edge the railing climbs, and the two wings climb with
-   * it — each a quadrilateral, written as two triangles.
-   *
-   * The wings stop at x = 19 and x = 81, short of the frame. The plate draws
-   * the railing taller the further it gets from the stairs (8 % of the world
-   * beside the landing, nearly 13 % at the frame edge), and past those two
-   * columns a Blobbi standing behind it would show nothing but the top of its
-   * head. The two upper storefronts' stand points sit inside the kept span,
-   * at the bays' inner posts.
+   * The balcony floor is hidden behind its own parapet, so the corridor is a
+   * LINE, not a band: a chain of `segment` areas along the centreline that
+   * `plazaCorridorPaths` samples from `PLAZA_CORRIDOR` — flat along the centre
+   * run at the landing's row, then climbing at the parapet's own slope along
+   * each wing, with a short blend across the kink. The ordinary nearest-point
+   * clamp projects any target above or below the line straight onto it, and
+   * every walking step lands on it, so a Blobbi crossing the balcony cannot
+   * drift off the parapet. The chain meets the landing at the stair column's
+   * edges. The stairs keep their full two-dimensional column, so climbing and
+   * descending still interpolate as they always have.
    */
   'plaza-inside.webp': {
     shape: 'composite',
@@ -137,23 +147,33 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [0.5, 99.5], y: [73.6, 99.5] },
 
       // Staircase: the landing and the treads between the rails…
-      { type: 'rectangle', x: [43, 57], y: [44.6, 73.6] },
+      {
+        type: 'rectangle',
+        x: [PLAZA_STAIRS_WALK_TOP[0], PLAZA_STAIRS_WALK_TOP[1]],
+        y: [PLAZA_STAIRS.landingTop, PLAZA_STAIRS.foot],
+      },
       // …and the flight's widening sides, down to the newel posts.
-      { type: 'triangle', points: [{ x: 43, y: 46.8 }, { x: 43, y: 73.6 }, { x: 40.2, y: 73.6 }] },
-      { type: 'triangle', points: [{ x: 57, y: 46.8 }, { x: 57, y: 73.6 }, { x: 59.8, y: 73.6 }] },
+      {
+        type: 'triangle',
+        points: [
+          { x: PLAZA_STAIRS_WALK_TOP[0], y: PLAZA_STAIRS.flightTop },
+          { x: PLAZA_STAIRS_WALK_TOP[0], y: PLAZA_STAIRS.foot },
+          { x: PLAZA_STAIRS_WALK_BOTTOM[0], y: PLAZA_STAIRS.foot },
+        ],
+      },
+      {
+        type: 'triangle',
+        points: [
+          { x: PLAZA_STAIRS_WALK_TOP[1], y: PLAZA_STAIRS.flightTop },
+          { x: PLAZA_STAIRS_WALK_TOP[1], y: PLAZA_STAIRS.foot },
+          { x: PLAZA_STAIRS_WALK_BOTTOM[1], y: PLAZA_STAIRS.foot },
+        ],
+      },
 
-      // Upper corridor, centre run: either side of the landing, behind the
-      // railing plate.
-      { type: 'rectangle', x: [27, 43], y: [45.7, 48.3] },
-      { type: 'rectangle', x: [57, 73], y: [45.7, 48.3] },
-
-      // Upper corridor, left wing: the band climbs from y 45.7–48.3 at x = 27
-      // to y 44.8–47.4 at x = 19, following the railing's base.
-      { type: 'triangle', points: [{ x: 19, y: 44.8 }, { x: 27, y: 45.7 }, { x: 27, y: 48.3 }] },
-      { type: 'triangle', points: [{ x: 19, y: 44.8 }, { x: 27, y: 48.3 }, { x: 19, y: 47.4 }] },
-      // Right wing, the mirror.
-      { type: 'triangle', points: [{ x: 81, y: 44.8 }, { x: 73, y: 45.7 }, { x: 73, y: 48.3 }] },
-      { type: 'triangle', points: [{ x: 81, y: 44.8 }, { x: 73, y: 48.3 }, { x: 81, y: 47.4 }] },
+      // Upper corridor: the centreline either side of the stair column, from
+      // the frame edge in to the landing.
+      ...segmentsAlong(plazaCorridorPaths().left),
+      ...segmentsAlong(plazaCorridorPaths().right),
     ],
   },
   'arcade-inside.png': {

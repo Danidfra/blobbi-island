@@ -81,6 +81,7 @@ async function renderRoom() {
 
 const hotspot = (id: string) => document.querySelector(`[data-storefront="${id}"]`) as HTMLButtonElement;
 const signOf = (button: HTMLElement) => button.querySelector('[data-storefront-sign]') as HTMLElement;
+const glowOf = (button: HTMLElement) => button.querySelector('[data-storefront-glow]') as HTMLElement;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -207,11 +208,29 @@ describe('a storefront hotspot on its own', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].target).toEqual(store.standPoint);
     expect(requests[0].touch).toBe(true);
-    // Selected: the ring is solid, the sign is up and popped.
+    // Selected: the light is on and pulsing, the sign is up and popped.
     expect(button).toHaveAttribute('data-storefront-phase', 'walking');
-    expect(button.className).toContain('ring-island-cream/90');
+    expect(glowOf(button).className).toContain('animate-storefront-glow');
+    expect(glowOf(button).className).not.toContain('opacity-0');
     expect(signOf(button).className).toContain('animate-cozy-pop');
     expect(signOf(button).className).not.toContain('opacity-0');
+  });
+
+  it('lights the storefront rather than boxing it: no ring, no rectangular shadow', () => {
+    const { button } = renderHotspot(store);
+    expect(button.className).not.toMatch(/\bring-/);
+    expect(button.className).not.toMatch(/\bshadow-/);
+    // The light is a soft, blurred bloom screened onto the artwork, larger than
+    // the bay so its falloff, not the bay's edge, is what the eye meets.
+    const glow = glowOf(button);
+    expect(glow.className).toContain('radial-gradient');
+    expect(glow.className).toContain('blur-md');
+    expect(glow.className).toContain('mix-blend-screen');
+    expect(glow.className).toContain('rounded-[50%]');
+    // Off until pointed at or focused.
+    expect(glow.className).toContain('opacity-0');
+    expect(glow.className).toContain('group-hover:opacity-100');
+    expect(glow.className).toContain('group-focus-visible:opacity-100');
   });
 
   it('clears when the walk is cancelled', () => {
@@ -222,6 +241,8 @@ describe('a storefront hotspot on its own', () => {
     act(() => requests[0].onCancel?.());
     expect(button).toHaveAttribute('data-storefront-phase', 'idle');
     expect(signOf(button).className).toContain('opacity-0');
+    expect(glowOf(button).className).toContain('opacity-0');
+    expect(glowOf(button).className).not.toContain('animate-storefront-glow');
   });
 
   it('goes inside on arrival once a destination is configured — the one-field upgrade', () => {

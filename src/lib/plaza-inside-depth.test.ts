@@ -17,11 +17,14 @@ import { calculateBlobbiZIndex } from './interactive-elements-config';
 import { locationBoundaries } from './location-boundaries';
 import { isOnFloor } from './blobbi-route';
 import {
+  PLAZA_CORRIDOR,
   PLAZA_DEPTH,
   PLAZA_FOUNTAIN,
   PLAZA_INSIDE_BACKGROUND,
   PLAZA_INSIDE_SPAWN,
   PLAZA_OCCLUSION,
+  PLAZA_STAIRS,
+  plazaCorridorPointAt,
   plazaStorefronts,
 } from './plaza-inside-config';
 import type { Position } from './types';
@@ -38,16 +41,20 @@ const onFloor = (p: Position) => {
 describe('behind the railing', () => {
   it('a Blobbi anywhere on the upper corridor is drawn behind the overlay', () => {
     const corridor: Position[] = [
-      { x: 20, y: 46 }, // far end of the left wing
-      { x: 21.8, y: 46.5 }, // in front of the Toy Shop
-      { x: 27, y: 47 }, // where the wing meets the centre run
-      { x: 35, y: 46 }, // centre run, left of the stairs
-      { x: 42, y: 47.5 }, // hard against the stair rail
-      { x: 58, y: 47.5 }, // hard against the other stair rail
-      { x: 65, y: 46 }, // centre run, right of the stairs
-      { x: 78, y: 46.5 }, // in front of Books
-      { x: 80, y: 46 }, // far end of the right wing
-    ];
+      PLAZA_CORRIDOR.left, // far left end of the parapet, high on the wing
+      10,
+      21.8, // in front of the Toy Shop
+      27, // the kink
+      35, // centre run, left of the stairs
+      PLAZA_STAIRS.railsTop[0] + 1, // in the margin beside the stair rail
+      PLAZA_OCCLUSION.stairsX[0] - 0.01, // a hair outside the walkable column
+      PLAZA_OCCLUSION.stairsX[1] + 0.01,
+      PLAZA_STAIRS.railsTop[1] - 1,
+      65, // centre run, right of the stairs
+      78, // in front of Books
+      90,
+      PLAZA_CORRIDOR.right, // far right end of the parapet
+    ].map(plazaCorridorPointAt);
     for (const p of corridor) {
       expect(z(onFloor(p)), `${p.x},${p.y}`).toBeLessThan(OVERLAY);
       expect(z(p)).toBeGreaterThan(PLAZA_DEPTH.door);
@@ -74,17 +81,17 @@ describe('on the landing and the stairs', () => {
     }
   });
 
-  it('at the same height, the rail is the line: corridor behind, landing in front', () => {
-    const y = 46.5;
-    const [railLeft, railRight] = PLAZA_OCCLUSION.stairsX;
-    expect(z(onFloor({ x: railLeft - 1, y }))).toBeLessThan(OVERLAY);
-    expect(z(onFloor({ x: railLeft + 1, y }))).toBeGreaterThan(OVERLAY);
-    expect(z(onFloor({ x: railRight - 1, y }))).toBeGreaterThan(OVERLAY);
-    expect(z(onFloor({ x: railRight + 1, y }))).toBeLessThan(OVERLAY);
+  it('at the same height, the walkable column is the line: corridor behind, landing in front', () => {
+    const y = PLAZA_CORRIDOR.y;
+    const [columnLeft, columnRight] = PLAZA_OCCLUSION.stairsX;
+    expect(z(onFloor({ x: columnLeft - 1, y }))).toBeLessThan(OVERLAY);
+    expect(z(onFloor({ x: columnLeft + 1, y }))).toBeGreaterThan(OVERLAY);
+    expect(z(onFloor({ x: columnRight - 1, y }))).toBeGreaterThan(OVERLAY);
+    expect(z(onFloor({ x: columnRight + 1, y }))).toBeLessThan(OVERLAY);
   });
 
   it('falls back to "behind" when only y is known — a y-only caller is never put in front of the railing', () => {
-    const y = 46.5;
+    const y = PLAZA_CORRIDOR.y;
     expect(calculateBlobbiZIndex(y, PLAZA_INSIDE_BACKGROUND)).toBeLessThan(OVERLAY);
   });
 });

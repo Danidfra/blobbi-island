@@ -178,6 +178,13 @@ export default {
 				'scale-in': {
 					'0%': { transform: 'scale(0.96)', opacity: '0' },
 					'100%': { transform: 'scale(1)', opacity: '1' }
+				},
+				// A held storefront's light: a slow, shallow breath of the bloom,
+				// never a blink. Tailwind's `pulse` is 2 s and drops to half, which
+				// read as flashing on a bay the player is already walking toward.
+				'storefront-glow': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.72' }
 				}
 			},
 			animation: {
@@ -186,7 +193,8 @@ export default {
 				'cozy-pop': 'cozy-pop 0.24s cubic-bezier(0.34, 1.4, 0.5, 1)',
 				'cozy-wiggle': 'cozy-wiggle 0.5s ease-in-out',
 				'sign-flip': 'sign-flip 0.28s cubic-bezier(0.34, 1.2, 0.5, 1)',
-				'scale-in': 'scale-in 0.14s cubic-bezier(0.34, 1.4, 0.5, 1)'
+				'scale-in': 'scale-in 0.14s cubic-bezier(0.34, 1.4, 0.5, 1)',
+				'storefront-glow': 'storefront-glow 3.2s ease-in-out infinite'
 			},
 			cursor: {
 				pickaxe: "url('/assets/ui/cursors/pickaxe.png') 0 0, auto",

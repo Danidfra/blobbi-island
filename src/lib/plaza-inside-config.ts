@@ -23,8 +23,10 @@
  * - The balcony railing: its base runs y = 46.2 at both frame edges and drops
  *   to y = 49.3 from x ≈ 27 to x ≈ 73, where the two wings meet the staircase.
  *   The railing itself grows from 8 % of the world tall beside the landing to
- *   nearly 13 % at the frame edges, which is why the walkable corridor stops
- *   at x = 19 / 81 (`location-boundaries.ts`).
+ *   14 % at the frame edges, its solid plate alone from 5.5 % to 9.5 %; its top
+ *   edge is flat at y = 43.8 along the centre run and rises straight to
+ *   y ≈ 37 at the frame edges. The corridor line (`PLAZA_CORRIDOR`) follows
+ *   that edge.
  * - The staircase: top landing from y = 44.6 between the stair rails (x 43.4
  *   and 56.6 at the top), the rails diverging to newel posts at x 36.1–40.1 and
  *   59.9–63.9, bottom step at y = 72.9.
@@ -80,6 +82,155 @@ export const PLAZA_DEPTH = {
   blobbiInFrontOfFountain: 25,
 } as const;
 
+// ---------------------------------------------------------------------------
+// The staircase and the balcony corridor
+// ---------------------------------------------------------------------------
+
+/**
+ * The staircase, as the plate paints it and as the player may walk it.
+ *
+ * `railsTop` / `railsBottom` are the inner faces of the two stair rails, at the
+ * landing and at the newel posts. The walkable column is those faces brought
+ * in by {@link PLAZA_STAIRS.railMargin} on each side — the Blobbi's GROUND
+ * POINT is what the boundary constrains, and a ground point on the rail's
+ * inner face puts half a body over the rail. The `lg` rig is a 96 px box; on
+ * the flight it is drawn at 0.7–0.85 depth scale, so its half-width is
+ * 3.2–3.9 % of the world, of which the painted body takes about three quarters.
+ * A 3 % margin keeps the body off both rails all the way up without narrowing
+ * the flight by more than the rails' own thickness on each side.
+ */
+export const PLAZA_STAIRS = {
+  /** Inner faces of the stair rails at the landing. */
+  railsTop: [43, 57] as readonly [number, number],
+  /** Inner faces of the newel posts at the foot of the flight. */
+  railsBottom: [40.2, 59.8] as readonly [number, number],
+  /** How far inside each rail the ground point must stay, in world x. */
+  railMargin: 3,
+  /** Top edge of the landing, the highest walkable row on the stairs. */
+  landingTop: 44.6,
+  /** Where the flight starts widening below the landing. */
+  flightTop: 46.8,
+  /** The bottom step meets the ground floor here. */
+  foot: 73.6,
+} as const;
+
+/** The walkable stair column at the landing: rails inset by the margin. */
+export const PLAZA_STAIRS_WALK_TOP: readonly [number, number] = [
+  PLAZA_STAIRS.railsTop[0] + PLAZA_STAIRS.railMargin,
+  PLAZA_STAIRS.railsTop[1] - PLAZA_STAIRS.railMargin,
+];
+
+/** The walkable stair column at the foot of the flight. */
+export const PLAZA_STAIRS_WALK_BOTTOM: readonly [number, number] = [
+  PLAZA_STAIRS.railsBottom[0] + PLAZA_STAIRS.railMargin,
+  PLAZA_STAIRS.railsBottom[1] - PLAZA_STAIRS.railMargin,
+];
+
+/**
+ * The balcony corridor: ONE LINE, drawn along the parapet.
+ *
+ * The balcony floor is hidden behind its own parapet, so there is no floor to
+ * walk on — only a line to walk along, and the line has to be where the eye
+ * expects a Blobbi behind that parapet to be. It is a centreline, and the
+ * Blobbi's feet ride it: any target above or below is projected straight onto
+ * it by the ordinary boundary clamp (the line is a chain of `segment` areas,
+ * so nothing about the walk is special-cased), and a walk along it cannot
+ * drift up or down.
+ *
+ * ## Its shape is the parapet's
+ *
+ * Probed on the overlay, the parapet's top edge is flat at y = 43.8 from
+ * x = 27 to x = 73 and then rises in a straight line to y ≈ 37 at the frame
+ * edges — 6.8 % of the world's height over 24 % of its width, the same on both
+ * sides. The corridor keeps a constant immersion behind it: on the centre run
+ * the feet are at y = 46 (the landing's own row, so the door target and the
+ * spawn are on the line and the walk from the door to a shop is one leg),
+ * 2.2 % below the parapet's edge, and along each wing they climb at the
+ * parapet's own slope so that the same lower quarter of the Blobbi is behind
+ * the plate all the way out. The kink at x = 27 / 73 is real in the artwork
+ * but is not walked as a corner: a parabola {@link PLAZA_CORRIDOR.blend} either
+ * side of it joins the run to the wing with matching slope, so the climb
+ * begins gently.
+ *
+ * A line that stayed on y = 46 to the ends was tried first and put the Blobbi
+ * behind a parapet that is 9.5 % of the world tall at the frame edges: from
+ * x ≈ 15 outward nothing but the crown of the head showed. Following the
+ * parapet instead keeps head and eyes above it everywhere — the parapet's
+ * pickets are see-through, only its plate is solid.
+ *
+ * The line runs to within a body's width of both frame edges; the plate
+ * paints the balcony edge to edge, with the two upper bays standing behind it.
+ * {@link plazaCorridorPaths} samples the line into the segments the boundary
+ * walks, and {@link plazaCorridorPointAt} puts a stand point exactly on it.
+ */
+export const PLAZA_CORRIDOR = {
+  /** The centre run's row, shared with the landing. */
+  y: 46,
+  /** Where the parapet kinks: the centre run's ends, the wings' starts. */
+  kinks: [27, 73] as readonly [number, number],
+  /** The reachable ends, a body's width in from the frame. */
+  left: 3.5,
+  right: 96.5,
+  /** The wings' rise per unit of x, from the parapet's top edge. */
+  wingSlope: 6.8 / 24,
+  /** Half-width, in x, of the parabolic blend either side of each kink. */
+  blend: 4,
+  /** Sample spacing, in x, through the blend. */
+  blendStep: 2,
+} as const;
+
+/**
+ * The corridor centreline's y at `x`: flat along the centre run, a parabola
+ * across each kink, the parapet's own slope along each wing.
+ */
+export function plazaCorridorY(x: number): number {
+  const { y, kinks, wingSlope, blend } = PLAZA_CORRIDOR;
+  // How far past the nearer kink `x` is; negative inside the centre run.
+  const d = Math.max(kinks[0] - x, x - kinks[1]);
+  if (d <= -blend) return y;
+  if (d >= blend) return y - wingSlope * d;
+  // Tangent to the run at d = -blend, to the wing at d = +blend.
+  return y - (wingSlope * (d + blend) ** 2) / (4 * blend);
+}
+
+/**
+ * The corridor as two polylines, left and right of the stair column, each
+ * running from the frame edge in to the column: the sampled centreline, with a
+ * vertex at every blend sample so the walked chain matches the curve.
+ */
+export function plazaCorridorPaths(): { left: Position[]; right: Position[] } {
+  const { kinks, blend, blendStep, left, right } = PLAZA_CORRIDOR;
+  const xsLeft: number[] = [left];
+  for (let x = kinks[0] - blend; x <= kinks[0] + blend + 1e-9; x += blendStep) xsLeft.push(x);
+  xsLeft.push(PLAZA_STAIRS_WALK_TOP[0]);
+  const xsRight: number[] = [right];
+  for (let x = kinks[1] + blend; x >= kinks[1] - blend - 1e-9; x -= blendStep) xsRight.push(x);
+  xsRight.push(PLAZA_STAIRS_WALK_TOP[1]);
+  const at = (x: number): Position => ({ x, y: plazaCorridorY(x) });
+  return { left: xsLeft.map(at), right: xsRight.map(at) };
+}
+
+/**
+ * The point ON the walked corridor at `x` — on the sampled chain, not the
+ * curve it approximates, so a stand point placed with this is on the floor to
+ * the last bit.
+ */
+export function plazaCorridorPointAt(x: number): Position {
+  const { left, right } = plazaCorridorPaths();
+  const chain = x < 50 ? left : right;
+  for (let i = 0; i < chain.length - 1; i++) {
+    const a = chain[i];
+    const b = chain[i + 1];
+    const lo = Math.min(a.x, b.x);
+    const hi = Math.max(a.x, b.x);
+    if (x >= lo - 1e-9 && x <= hi + 1e-9) {
+      const t = hi === lo ? 0 : (x - a.x) / (b.x - a.x);
+      return { x, y: a.y + t * (b.y - a.y) };
+    }
+  }
+  throw new Error(`x = ${x} is not on the Plaza corridor`);
+}
+
 /**
  * Where the overlay's occlusion actually changes, in world y.
  *
@@ -91,14 +242,16 @@ export const PLAZA_DEPTH = {
  * only the x-position says which one the Blobbi is standing on.
  */
 export const PLAZA_OCCLUSION = {
-  landingTop: 44.6,
+  landingTop: PLAZA_STAIRS.landingTop,
   railingBase: 49.3,
   /**
-   * The staircase's horizontal extent within that band: the inner faces of the
-   * two stair rails at the landing, which is also where the walk boundary's
-   * stair column begins and the corridor's centre run ends.
+   * The staircase's horizontal extent within that band: the walkable stair
+   * column at the landing ({@link PLAZA_STAIRS_WALK_TOP}). Inside it the
+   * Blobbi can only be on the landing, in front of the overlay; outside it —
+   * including the margin between the column and the rail's face — it can only
+   * be on the corridor line, behind the railing.
    */
-  stairsX: [43, 57] as readonly [number, number],
+  stairsX: PLAZA_STAIRS_WALK_TOP,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -181,12 +334,9 @@ export const PLAZA_OVERLAY = {
  *
  * Ground floor: on the open floor just below the shops' threshold line
  * (y = 73.6), clear of every planter and sign board. Upper floor: on the
- * balcony corridor at the bay's inner post, inside the thin band behind the
- * railing — see the corridor wings in `location-boundaries.ts`. They stand at
- * the post rather than the bay's centre because the railing grows taller
- * toward the frame edges; at the post the head still clears the top rail. The
- * upper stand points sit at y ≈ 46.5, level with the landing, so the walk from
- * the door is one straight leg along the corridor.
+ * balcony corridor line ({@link PLAZA_CORRIDOR}) at the bay's inner post,
+ * placed with {@link plazaCorridorPointAt} so the point is on the walked chain
+ * exactly.
  */
 const GROUND_STAND_Y = 76;
 
@@ -208,7 +358,7 @@ export const plazaStorefronts: readonly StorefrontHotspotConfig[] = [
     // Upper left. The bay's lower part is behind the balcony railing, so the
     // box stops at the railing's top rail rather than at the shop's floor.
     box: { x: 6.3, y: 17, width: 15.7, height: 22 },
-    standPoint: { x: 21.8, y: 46.5 },
+    standPoint: plazaCorridorPointAt(21.8),
     destination: null,
   },
   {
@@ -216,7 +366,7 @@ export const plazaStorefronts: readonly StorefrontHotspotConfig[] = [
     name: 'Books',
     // Upper right, mirror of the Toy Shop.
     box: { x: 74.5, y: 17, width: 19, height: 23 },
-    standPoint: { x: 78, y: 46.5 },
+    standPoint: plazaCorridorPointAt(78),
     destination: null,
   },
   {
@@ -259,12 +409,15 @@ export const plazaStorefronts: readonly StorefrontHotspotConfig[] = [
  * The fountain — the one prop still composed from sprites, because nothing
  * like it is painted into the plate.
  *
- * It used to stand at 19.8 % of the world wide with its plinth on y = 90,
- * which put its spire over the bottom steps and its plinth over the rug now
- * that the staircase reaches down to y ≈ 73 and the rug fills y 73.5–83.5. It
- * now stands in the open floor BELOW the rug: 15 % wide, plinth on y = 97, so
- * the plinth spans x 42.5–57.5, y ≈ 89–97 and the spire's tip (y ≈ 83) just
- * meets the rug's lower edge. The rug — the Plaza's own emblem — stays whole.
+ * It stands in the open floor below the rug, centred on the room, with its
+ * plinth on y = 97 so that the strip of floor in front of it (y 97–99.5) is
+ * still walkable. It was 15 % wide, which read as a garden ornament on a
+ * floor this size; at 20 % it is the room's centrepiece without crowding the
+ * flanks — 40 % of open floor remains on either side. The plinth then spans
+ * x 40–60, y ≈ 86–97 (the sprite is 207×75, so 20 % of the world's width is
+ * 10.9 % of its height), the basin rises to y ≈ 82 and the spire's tip to
+ * y ≈ 78, overlapping the lower edge of the rug (y 73.5–83.5) — which is
+ * right for a thing standing in front of it.
  *
  * `blocker` is the plinth's floor footprint, which is what the Blobbi's feet
  * are tested against; the basin and spire rise above the floor and block
@@ -281,10 +434,10 @@ export const PLAZA_FOUNTAIN = {
    * `bottom` up from the floor, `width` wide. The basin and spire are placed
    * inside it as fractions of the plinth, exactly as they always were.
    */
-  placement: { centerX: 50, bottom: 3, width: 15 },
+  placement: { centerX: 50, bottom: 3, width: 20 },
   basinClassName: 'absolute left-1/2 -translate-x-1/2 bottom-[30%] w-[70%]',
   spireClassName: 'absolute left-1/2 -translate-x-1/2 bottom-[80%] w-[25%]',
-  blocker: { id: 'plaza-fountain', x: 42.5, y: 89, width: 15, height: 8 } as PlazaInsideBlocker,
+  blocker: { id: 'plaza-fountain', x: 40, y: 86.1, width: 20, height: 10.9 } as PlazaInsideBlocker,
   /**
    * The y below which the Blobbi's feet are in FRONT of the plinth's lowest
    * painted row: the plinth's bottom edge.

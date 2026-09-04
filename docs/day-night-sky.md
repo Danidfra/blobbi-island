@@ -635,10 +635,21 @@ sky" figures above will keep growing, and any figure quoted here is a snapshot.
 **`plaza-inside` is the one interior with a sky.** Its redrawn plate has three
 arched windows whose panes are cut out (they are the only transparent pixels in
 the file — a test on the location table pins the claim), so the live sky, clouds
-and stars show through the glass while the walls stay opaque. It is graded at
-half strength (`worldLightStrength: 0.5`): a room lit by its own lamps follows
-the day without its storefront signs going dark. Nothing is faked behind the
-windows — the same `IslandSkyLayer` sits behind the plate as everywhere else.
+and stars show through the glass while the walls stay opaque. Nothing is faked
+behind the windows — the same `IslandSkyLayer` sits behind the plate as
+everywhere else.
+
+The room itself does NOT follow the night. It takes
+`INTERIOR_WINDOW_LIGHT_STRENGTH` (0.1) rather than a number of its own: the
+rule for any interior with cut-out windows is that the sky layer stays enabled
+(the night is in the glass) while the grade — the brightness/saturation filter
+on the plate and the veil over the scene — is reduced to a whisper, so a room
+lit by its own lamps stays as bright at midnight as at noon (deep night comes to
+a brightness of 0.97 on the plate and a 1.4 % veil). It was graded at half
+strength at first, which darkened the whole plate — floor, shops, staircase —
+to 85 % at night, because the filter cannot tell the windows from the walls;
+the split between the sky layer and the grade is what lets the two behave
+differently.
 
 ### Deliberately disabled
 

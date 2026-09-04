@@ -21,20 +21,27 @@ import {
  * through the SAME `requestInteraction` path every door uses: the Blobbi walks
  * to the shop's stand point, and only on arrival does anything happen.
  *
- * ## The feedback has to be legible
+ * ## The feedback has to be legible — and it must not draw a box
  *
  * The mall's facades warm and glow by a few percent on hover, which reads on a
  * bright sprite against a dim wall and does not read on a bay that is already
- * the brightest thing in the frame. So this hotspot says two things plainly:
+ * the brightest thing in the frame. The first version of this hotspot answered
+ * with a cream ring around its rectangle, which was legible and wrong: the
+ * painted bays are not rectangles — awnings, sign boards and planters spill
+ * past their frames — so the ring traced a box the picture does not have.
  *
- * - **"You can press this."** Pointing at or focusing the bay outlines it in
- *   cream and raises the shop's name on a small sign at its threshold.
- * - **"You pressed it."** The press itself pops the sign, the outline goes solid
- *   and gains a soft glow, and both STAY that way for the whole walk — the
- *   pending interaction, not a timer, decides when they clear. On a touch
- *   screen, which never gets `:hover`, that held state is the whole affordance.
+ * So the cue is LIGHT rather than an outline: a soft, blurred, elliptical bloom
+ * screened over the bay, so the shop itself appears to brighten from within
+ * and the effect has no edge to disagree with the artwork. It says two things:
  *
- * Nothing moves or rescales the artwork: the ring and the sign are drawn over
+ * - **"You can press this."** Pointing at or focusing the bay lights it up and
+ *   raises the shop's name on a small sign at its threshold.
+ * - **"You pressed it."** The press pops the sign, and the light begins a slow
+ *   pulse; both STAY that way for the whole walk — the pending interaction, not
+ *   a timer, decides when they clear. On a touch screen, which never gets
+ *   `:hover`, that held state is the whole affordance.
+ *
+ * Nothing moves or rescales the artwork: the light and the sign are drawn over
  * it, and the only transform is a press-time nudge on the invisible button.
  * The plate stays the picture.
  *
@@ -119,11 +126,8 @@ export function StorefrontHotspot({ config, zIndex, requestInteraction, onEnter 
       data-storefront-phase={phase}
       aria-label={storefrontAccessibleName(config)}
       className={cn(
-        'group absolute cursor-pointer rounded-2xl ring-2 ring-inset transition-[background-color,box-shadow,transform] duration-200 ease-cozy',
+        'group absolute cursor-pointer bg-transparent transition-transform duration-200 ease-cozy',
         'focus-visible:outline-none active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100',
-        selected
-          ? 'bg-island-cream/15 ring-island-cream/90 shadow-[0_0_0_3px_rgba(255,236,190,0.45),0_0_18px_rgba(255,236,190,0.6)]'
-          : 'bg-island-cream/0 ring-island-cream/0 hover:bg-island-cream/10 hover:ring-island-cream/70 focus-visible:bg-island-cream/10 focus-visible:ring-island-cream/80',
       )}
       style={{
         left: `${config.box.x}%`,
@@ -140,6 +144,28 @@ export function StorefrontHotspot({ config, zIndex, requestInteraction, onEnter 
       }}
       onClick={press}
     >
+      {/*
+        The light. A radial bloom a little larger than the bay, blurred so it
+        has no edge, and screened onto the plate so it brightens the painted
+        shop rather than laying a film over it. Hidden until the bay is pointed
+        at, focused or pressed; once pressed it pulses slowly for the walk.
+        The held pulse is `animate-storefront-glow` (tailwind.config.ts): a
+        3.2 s ease-in-out breath between full and ~70 % opacity, slow and
+        shallow enough to say "selected" without asking for attention.
+        Decorative: the button carries the semantics.
+      */}
+      <span
+        aria-hidden
+        data-storefront-glow
+        className={cn(
+          'pointer-events-none absolute -inset-x-[8%] -inset-y-[10%] rounded-[50%] blur-md mix-blend-screen',
+          'bg-[radial-gradient(ellipse_at_center,rgba(255,236,190,0.7)_0%,rgba(255,236,190,0.36)_42%,rgba(255,236,190,0)_74%)]',
+          'transition-opacity duration-300 ease-cozy motion-reduce:transition-none motion-reduce:animate-none',
+          selected
+            ? 'opacity-100 animate-storefront-glow'
+            : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
+        )}
+      />
       {/*
         The sign. Hidden until the bay is pointed at, focused or pressed; once
         pressed it stays up for the walk. It is `aria-hidden` because the button
