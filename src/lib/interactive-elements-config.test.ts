@@ -4,7 +4,8 @@ import {
   getInteractiveElementsForBackground,
   getZIndexConfigForBackground,
   convertToBottomBasedPosition,
-  getZIndexThresholdForPosition
+  getZIndexThresholdForPosition,
+  setZIndexConfigForBackground,
 } from './interactive-elements-config';
 
 describe('Interactive Elements Configuration', () => {
@@ -65,6 +66,44 @@ describe('Interactive Elements Configuration', () => {
     });
 
 
+  });
+
+  describe('x-limited bands', () => {
+    const BACKGROUND = 'x-limited-test.png';
+    const thresholds = [
+      { minPosition: 0, maxPosition: 40, zIndex: 20 },
+      { minPosition: 40.01, maxPosition: 60, xRange: [30, 70] as [number, number], zIndex: 20 },
+      { minPosition: 40.01, maxPosition: 60, zIndex: 9 },
+      { minPosition: 60.01, maxPosition: 100, zIndex: 9 },
+    ];
+
+    it('claims the position only inside its span, and yields to the general band outside it', () => {
+      setZIndexConfigForBackground(BACKGROUND, thresholds);
+      // y = 50 → position 50, inside the split band.
+      expect(calculateBlobbiZIndex(50, BACKGROUND, 50)).toBe(20);
+      expect(calculateBlobbiZIndex(50, BACKGROUND, 30)).toBe(20); // inclusive edge
+      expect(calculateBlobbiZIndex(50, BACKGROUND, 70)).toBe(20);
+      expect(calculateBlobbiZIndex(50, BACKGROUND, 29.9)).toBe(9);
+      expect(calculateBlobbiZIndex(50, BACKGROUND, 70.1)).toBe(9);
+      // Outside the split band, x makes no difference.
+      expect(calculateBlobbiZIndex(70, BACKGROUND, 50)).toBe(20);
+      expect(calculateBlobbiZIndex(30, BACKGROUND, 50)).toBe(9);
+    });
+
+    it('never claims a position whose x is unknown', () => {
+      setZIndexConfigForBackground(BACKGROUND, thresholds);
+      expect(calculateBlobbiZIndex(50, BACKGROUND)).toBe(9);
+      expect(getZIndexThresholdForPosition(50, BACKGROUND)?.xRange).toBeUndefined();
+      expect(getZIndexThresholdForPosition(50, BACKGROUND, 50)?.xRange).toEqual([30, 70]);
+    });
+
+    it('changes nothing for rooms whose bands have no span', () => {
+      // Every pre-existing room: the answer with x is the answer without it.
+      for (const y of [95, 91.2, 75, 50, 20]) {
+        expect(calculateBlobbiZIndex(y, 'stage-inside.png', 50)).toBe(calculateBlobbiZIndex(y, 'stage-inside.png'));
+        expect(calculateBlobbiZIndex(y, 'mine-open.webp', 10)).toBe(calculateBlobbiZIndex(y, 'mine-open.webp'));
+      }
+    });
   });
 
   describe('convertToBottomBasedPosition', () => {

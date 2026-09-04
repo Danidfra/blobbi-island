@@ -86,6 +86,11 @@ export function resolveBlobbiScale(
 /**
  * Stacking order for a Blobbi at `position`, plus an optional offset applied
  * when it is attached to furniture (a chair raises it above the seat back).
+ *
+ * Both coordinates go in: a room's depth bands are keyed on y, and a band may
+ * additionally be limited to a span of x (the Plaza's stair landing, where the
+ * same y is "on the stairs" or "behind the railing" depending on where along
+ * the balcony the Blobbi stands).
  */
 export function resolveBlobbiZIndex(
   position: Position,
@@ -93,7 +98,7 @@ export function resolveBlobbiZIndex(
   offset = 0,
 ): number {
   if (!backgroundFile) return 20;
-  return calculateBlobbiZIndex(position.y, backgroundFile) + offset;
+  return calculateBlobbiZIndex(position.y, backgroundFile, position.x) + offset;
 }
 
 /** Everything that changes visually about a Blobbi because it is seated. */

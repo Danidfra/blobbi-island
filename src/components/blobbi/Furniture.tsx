@@ -90,7 +90,7 @@ export function Furniture({
 
   const getDynamicZIndex = useCallback((currentPos: Position): number => {
     if (!backgroundFile) return 20;
-    return calculateBlobbiZIndex(currentPos.y, backgroundFile);
+    return calculateBlobbiZIndex(currentPos.y, backgroundFile, currentPos.x);
   }, [backgroundFile]);
 
   const handleClick = (event: React.MouseEvent) => {

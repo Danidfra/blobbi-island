@@ -38,6 +38,19 @@ export interface ZIndexThreshold {
   maxPosition: number;
   /** Z-index value for this position range */
   zIndex: number;
+  /**
+   * Optionally limit the band to a horizontal span, `[minX, maxX]` in world
+   * percent from the left (inclusive).
+   *
+   * Most occluders can be described by a y-line alone: below it the Blobbi is
+   * in front, above it behind. A few cannot. On the Plaza's balcony the SAME y
+   * is "on the stair landing, in front of the overlay" between the stair rails
+   * and "on the corridor, behind the railing" outside them. A band with an
+   * `xRange` says so; a band without one applies at any x, and is what the
+   * lookup falls back to when no x-limited band claims the position (or when
+   * the caller has no x to offer).
+   */
+  xRange?: [number, number];
 }
 
 export interface BackgroundZIndexConfig {
@@ -360,12 +373,45 @@ export const interactiveElementsConfig: InteractiveElementConfig[] = [
 ];
 
 /**
+ * The band that claims a position, or undefined.
+ *
+ * Bands are tried in ascending order of `minPosition`. Among the bands whose
+ * y-range contains the position, an x-limited band wins when the caller
+ * supplied an x inside its span; otherwise the first band with no `xRange`
+ * applies. An x-limited band never claims a position whose x is unknown, so a
+ * caller that only knows y gets the same answer it always did.
+ */
+function findThreshold(
+  thresholds: readonly ZIndexThreshold[],
+  positionFromBottom: number,
+  blobbiXPosition?: number,
+): ZIndexThreshold | undefined {
+  const inBand = [...thresholds]
+    .sort((a, b) => a.minPosition - b.minPosition)
+    .filter((t) => positionFromBottom >= t.minPosition && positionFromBottom <= t.maxPosition);
+
+  if (blobbiXPosition !== undefined) {
+    const limited = inBand.find(
+      (t) => t.xRange !== undefined && blobbiXPosition >= t.xRange[0] && blobbiXPosition <= t.xRange[1],
+    );
+    if (limited) return limited;
+  }
+  return inBand.find((t) => t.xRange === undefined);
+}
+
+/**
  * Calculate dynamic z-index for Blobbi based on its vertical position from bottom to top
  * @param blobbiYPosition - Blobbi's Y position as percentage from top (0-100, where 0 is top, 100 is bottom)
  * @param backgroundFile - Current background file name
+ * @param blobbiXPosition - Blobbi's X position as percentage from left (0-100). Optional; only
+ *   bands with an `xRange` read it.
  * @returns Calculated z-index value for the Blobbi
  */
-export function calculateBlobbiZIndex(blobbiYPosition: number, backgroundFile: string): number {
+export function calculateBlobbiZIndex(
+  blobbiYPosition: number,
+  backgroundFile: string,
+  blobbiXPosition?: number,
+): number {
   const positionFromBottom = 100 - blobbiYPosition;
 
   const backgroundConfig = backgroundZIndexConfigs.find(
@@ -376,15 +422,7 @@ export function calculateBlobbiZIndex(blobbiYPosition: number, backgroundFile: s
     return 20; // Default z-index
   }
 
-  const sortedThresholds = [...backgroundConfig.thresholds].sort((a, b) => a.minPosition - b.minPosition);
-
-  for (const threshold of sortedThresholds) {
-    if (positionFromBottom >= threshold.minPosition && positionFromBottom <= threshold.maxPosition) {
-      return threshold.zIndex;
-    }
-  }
-
-  return 20; // Default z-index
+  return findThreshold(backgroundConfig.thresholds, positionFromBottom, blobbiXPosition)?.zIndex ?? 20;
 }
 
 
@@ -426,27 +464,17 @@ export function setZIndexConfigForBackground(backgroundFile: string, thresholds:
  * Get the current z-index threshold for a specific position and background
  * @param positionFromBottom - Position percentage from bottom (0-100)
  * @param backgroundFile - Background file name
+ * @param blobbiXPosition - X position from the left (0-100), for bands with an `xRange`
  * @returns The matching threshold or undefined
  */
-export function getZIndexThresholdForPosition(positionFromBottom: number, backgroundFile: string): ZIndexThreshold | undefined {
+export function getZIndexThresholdForPosition(
+  positionFromBottom: number,
+  backgroundFile: string,
+  blobbiXPosition?: number,
+): ZIndexThreshold | undefined {
   const config = getZIndexConfigForBackground(backgroundFile);
   if (!config) return undefined;
-
-  const sortedThresholds = [...config.thresholds].sort((a, b) => a.minPosition - b.minPosition);
-
-  const threshold = sortedThresholds.find(
-    t => positionFromBottom >= t.minPosition && positionFromBottom <= t.maxPosition
-  );
-
-  // If no threshold found, check if it's at the maximum boundary of the last threshold
-  if (!threshold && sortedThresholds.length > 0) {
-    const lastThreshold = sortedThresholds[sortedThresholds.length - 1];
-    if (positionFromBottom >= lastThreshold.minPosition && positionFromBottom <= lastThreshold.maxPosition) {
-      return lastThreshold;
-    }
-  }
-
-  return threshold;
+  return findThreshold(config.thresholds, positionFromBottom, blobbiXPosition);
 }
 
 /**
