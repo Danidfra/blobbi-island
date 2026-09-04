@@ -31,6 +31,8 @@ export * from './external-spend';
 export * from './care-effect';
 export * from './care-feedback';
 export * from './useExternalInventoryEvents';
+export * from './external-arrivals';
+export * from './useExternalInventoryArrivals';
 export * from './useExternalItemCatalog';
 export * from './useConsumeExternalItem';
 export * from './useInventoryMutation';
