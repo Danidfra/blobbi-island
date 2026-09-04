@@ -39,6 +39,13 @@ export function BoundaryVisualizer({ boundary }: BoundaryVisualizerProps) {
         />
       );
     }
+    if (area.type === 'segment') {
+      return (
+        <svg key={`area-${index}`} className="absolute w-full h-full pointer-events-none" style={{ left: 0, top: 0 }} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1={area.from.x} y1={area.from.y} x2={area.to.x} y2={area.to.y} stroke="red" strokeWidth={strokeWidth} />
+        </svg>
+      );
+    }
     if (area.type === 'triangle') {
       const points = area.points.map(p => `${p.x},${p.y}`).join(' ');
       return (

@@ -42,6 +42,7 @@ export function boundaryYRange(boundary: Boundary | undefined): { minY: number; 
         if (area.type === 'rectangle') return area.y[0];
         if (area.type === 'circle') return area.cy - area.r;
         if (area.type === 'triangle') return Math.min(...area.points.map((p) => p.y));
+        if (area.type === 'segment') return Math.min(area.from.y, area.to.y);
         return 100;
       }),
     );
@@ -50,6 +51,7 @@ export function boundaryYRange(boundary: Boundary | undefined): { minY: number; 
         if (area.type === 'rectangle') return area.y[1];
         if (area.type === 'circle') return area.cy + area.r;
         if (area.type === 'triangle') return Math.max(...area.points.map((p) => p.y));
+        if (area.type === 'segment') return Math.max(area.from.y, area.to.y);
         return 0;
       }),
     );

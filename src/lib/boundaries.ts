@@ -9,7 +9,17 @@ export type Boundary =
 export type WalkableArea =
   | { type: 'rectangle'; x: [number, number]; y: [number, number] }
   | { type: 'circle'; cx: number; cy: number; r: number }
-  | { type: 'triangle'; points: [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] };
+  | { type: 'triangle'; points: [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] }
+  /**
+   * A walk LINE: the floor is the straight segment from `from` to `to` and
+   * nothing either side of it. For a walkway whose floor the artwork hides —
+   * the Plaza's balcony corridor behind its parapet — the Blobbi's feet should
+   * ride one drawn line, projected onto it from wherever the player clicks. A
+   * chain of segments sharing endpoints is a path: each is convex, so the
+   * route planner crosses them joint by joint exactly as it crosses any other
+   * abutting areas.
+   */
+  | { type: 'segment'; from: { x: number; y: number }; to: { x: number; y: number } };
 
 
 /**
@@ -32,6 +42,7 @@ export function areaContains(point: Position, area: WalkableArea, epsilon = 1e-6
   if (area.type === 'circle') {
     return Math.hypot(point.x - area.cx, point.y - area.cy) <= area.r + epsilon;
   }
+  // Segments and triangles: on it when the clamp does not move it.
   const clamped = constrainToArea(point, area);
   return Math.hypot(clamped.x - point.x, clamped.y - point.y) <= epsilon;
 }
@@ -63,6 +74,10 @@ export function constrainToArea(position: Position, area: WalkableArea): Positio
     return { x, y };
   }
 
+  if (area.type === 'segment') {
+    return closestPointOnSegment({ x, y }, area.from, area.to);
+  }
+
   if (isPointInTriangle({ x, y }, area.points)) return { x, y };
 
   // Closest point on the triangle's edges.
@@ -71,11 +86,8 @@ export function constrainToArea(position: Position, area: WalkableArea): Positio
   for (let i = 0; i < 3; i++) {
     const p1 = area.points[i];
     const p2 = area.points[(i + 1) % 3];
-    const l2 = (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2;
-    if (l2 === 0) continue;
-    let t = ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / l2;
-    t = Math.max(0, Math.min(1, t));
-    const closest = { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+    if (p1.x === p2.x && p1.y === p2.y) continue;
+    const closest = closestPointOnSegment({ x, y }, p1, p2);
     const distSq = (x - closest.x) ** 2 + (y - closest.y) ** 2;
     if (distSq < minDistanceSq) {
       minDistanceSq = distSq;
@@ -83,6 +95,19 @@ export function constrainToArea(position: Position, area: WalkableArea): Positio
     }
   }
   return closestPointOnEdge;
+}
+
+/** The nearest point to `p` on the segment `a → b` (its ends included). */
+function closestPointOnSegment(
+  p: Position,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): Position {
+  const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  if (l2 === 0) return { x: a.x, y: a.y };
+  let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
 }
 
 export function constrainPosition(position: Position, boundary: Boundary): Position {
