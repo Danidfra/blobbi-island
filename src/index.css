@@ -1249,24 +1249,6 @@ img {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .arcade-pop-in,
-  .dance-bulb,
-  .dance-judgment-pop,
-  .dance-receptor-pulse,
-  .dance-receptor-pulse .dance-spark,
-  .dance-lane-flash,
-  .dance-countdown-tick,
-  .dance-combo-bump,
-  .dance-mascot-bob,
-  [data-dance-mascot] .dance-mascot-art {
-    animation: none !important;
-  }
-
-  [data-dance-reaction] {
-    transition: none !important;
-  }
-}
 /* ── First-session moments (src/components/onboarding) ─────────────────────
    Arrival veil + title, the Coin-grant burst, the welcome card. Every one of
    these is a short, in-frame moment; under reduced motion the components
@@ -1318,5 +1300,24 @@ img {
   .blobbi-coin-card,
   .blobbi-coin-piece {
     animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-pop-in,
+  .dance-bulb,
+  .dance-judgment-pop,
+  .dance-receptor-pulse,
+  .dance-receptor-pulse .dance-spark,
+  .dance-lane-flash,
+  .dance-countdown-tick,
+  .dance-combo-bump,
+  .dance-mascot-bob,
+  [data-dance-mascot] .dance-mascot-art {
+    animation: none !important;
+  }
+
+  [data-dance-reaction] {
+    transition: none !important;
   }
 }

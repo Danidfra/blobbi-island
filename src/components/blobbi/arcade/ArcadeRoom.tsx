@@ -25,7 +25,7 @@ import {
   getArcadeMachine,
   type ArcadeFloorId,
 } from '@/lib/arcade-machines-config';
-import { canLaunchArcadeGame, getCatalogueEntry } from '@/arcade/catalogue';
+import { canLaunchArcadeGame, getCatalogueEntry, sharedCabinetCatalogue } from '@/arcade/catalogue';
 import {
   ARCADE_VIEW_CLOSED,
   closeArcadeView,
@@ -144,6 +144,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   useCancelInteractionOnWorldClick(pending, currentLocation);
 
   const machines = useMemo(() => arcadeMachinesForFloor(floor), [floor]);
+  const cabinetsHaveGames = useMemo(() => sharedCabinetCatalogue().length > 0, []);
   const props = arcadePropsByFloor[floor];
   const elevator = arcadeElevatorByFloor[floor];
   /*
@@ -403,6 +404,9 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
             config={machine}
             requestInteraction={requestInteraction}
             onActivate={handleMachineArrival}
+            // A generic cabinet is only a machine while the shared catalogue has
+            // something for it to run; until then it is part of the room.
+            decorative={machine.activation.type === 'shared-catalogue' && !cabinetsHaveGames}
           />
         ))}
 

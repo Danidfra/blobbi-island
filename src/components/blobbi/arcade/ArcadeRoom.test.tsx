@@ -11,6 +11,7 @@
  * driven explicitly — that is the whole point of the contract being tested.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ARCADE_CATALOGUE, BLOBBI_DANCE_GAME_ID } from '@/arcade/catalogue';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 
 import { FREE_ARCADE_GAME_ENTRY } from '@/arcade/tokens/game-entry';
@@ -19,6 +20,21 @@ import { FREE_ARCADE_GAME_ENTRY } from '@/arcade/tokens/game-entry';
 // views — not about the arcade economy. The turnstile reads the player's
 // inventory, so it is stubbed to free play here; what it actually charges is
 // covered by `useArcadeGameEntry.test.tsx`.
+/**
+ * What the GENERIC cabinets have to play. Empty in production today — and an
+ * empty catalogue makes the cabinets decoration, so the catalogue path is
+ * exercised here with a stand-in shared-cabinet game.
+ */
+let cabinetGames: import('@/arcade/catalogue').ArcadeCatalogueEntry[] = [];
+vi.mock('@/arcade/catalogue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/arcade/catalogue')>();
+  return {
+    ...actual,
+    sharedCabinetCatalogue: () => cabinetGames,
+    getCatalogueEntry: (id: string) => cabinetGames.find((e) => e.id === id) ?? actual.getCatalogueEntry(id),
+  };
+});
+
 vi.mock('@/hooks/useArcadeGameEntry', () => ({
   useArcadeGameEntry: () => FREE_ARCADE_GAME_ENTRY,
 }));
@@ -176,7 +192,46 @@ const GENERIC_CABINETS = [
   'arcade-cabinet-red',
 ];
 
+const withCabinetGames = () => {
+  const dance = ARCADE_CATALOGUE.find((e) => e.id === BLOBBI_DANCE_GAME_ID)!;
+  cabinetGames = [
+    // Listed but not launchable, so the catalogue opens without offering a
+    // Play control the existing assertions rule out.
+    { ...dance, id: 'test-cabinet-game', title: 'Test Cabinet Game', host: 'shared-cabinet', machineIds: [], availability: 'coming-soon' } as never,
+  ];
+};
+
+describe('generic cabinets with nothing to play', () => {
+  beforeEach(() => {
+    cabinetGames = [];
+  });
+
+  it('are decoration: no button, no walk, no catalogue', () => {
+    renderRoom('floor-1');
+    expect(screen.queryByRole('button', { name: /pink arcade cabinet/i })).toBeNull();
+    const cabinets = document.querySelectorAll('[data-arcade-machine-decorative]');
+    expect(cabinets.length).toBeGreaterThan(0);
+    for (const cabinet of cabinets) {
+      expect(cabinet.getAttribute('role')).toBeNull();
+      expect(cabinet.className).not.toContain('cursor-pointer');
+    }
+    fireEvent.click(cabinets[0]);
+    expect(catalogue()).toBeNull();
+    expect(shell()).toBeNull();
+  });
+
+  it('the dedicated machines are unaffected', () => {
+    renderRoom('floor-1');
+    // The pool table shares floor 1 with the generic cabinets.
+    const pool = document.querySelector('[data-arcade-machine-id="arcade-pool-table"]')!;
+    expect(pool).toHaveAttribute('role', 'button');
+    expect(pool).not.toHaveAttribute('data-arcade-machine-decorative');
+  });
+});
+
 describe('generic cabinets open the shared catalogue', () => {
+  beforeEach(() => withCabinetGames());
+
   it.each(GENERIC_CABINETS.map((id) => [id, arcadeMachines.find((m) => m.id === id)!] as const))(
     '%s opens the shared game list',
     (_id, machine) => {
@@ -208,17 +263,12 @@ describe('generic cabinets open the shared catalogue', () => {
     expect(document.querySelector('[data-catalogue-card="blobbi-dance"]')).toBeNull();
   });
 
-  it('shows an honest prepared state rather than an empty grid', () => {
+  it('lists the cabinet games it has (the empty prepared state is covered on the catalogue itself)', () => {
     renderRoom('floor-1');
     clickAndArrive(screen.getByRole('button', { name: /pink arcade cabinet/i }));
 
-    expect(catalogue()).toHaveAttribute('data-catalogue-games', '0');
+    expect(catalogue()).toHaveAttribute('data-catalogue-games', '1');
     expect(within(catalogue()!).getByRole('heading', { name: 'Arcade Games' })).toBeInTheDocument();
-    expect(
-      within(catalogue()!).getByText(/new games are being prepared for these cabinets/i),
-    ).toBeInTheDocument();
-    // No cards at all — real or placeholder.
-    expect(catalogue()!.querySelector('[data-catalogue-card]')).toBeNull();
   });
 
   it('explains both kinds of game in one sentence each, with no protocol talk', () => {

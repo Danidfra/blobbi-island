@@ -120,19 +120,16 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
    */
   const roomBoundary = locationBoundaries[backgroundFile];
 
-  /**
-   * Placeholder for elements that still have no behaviour (currently only the
-   * beach boat). It logs and does nothing else.
-   *
-   * It used to special-case the literal string `'dance-machine'` and open a
-   * hard-coded "Dance Dance Blobbi" modal — and all nine arcade machines,
-   * including a pool table and an air hockey table, passed that string. That
-   * dispatch is gone: arcade machines are a registry, and what a machine opens
-   * is decided from its own configuration in `arcade/ArcadeRoom.tsx`.
-   */
-  const handleElementClick = (elementName: string) => {
-    console.log(`Interactive element clicked: ${elementName} (location: ${currentLocation})`);
-  };
+  /*
+    Props with no behaviour yet (the beach boat, the coffee shop, the plaza
+    kiosks) are rendered INERT — plain art, no cursor, no hover, no handler —
+    with a small "Coming later" caption where that helps. They used to carry
+    the full interactive treatment and a placeholder click that only logged,
+    which read as broken rather than unfinished.
+
+    (This is also where a `'dance-machine'` string dispatch used to live; arcade
+    machines are a registry now — `arcade/ArcadeRoom.tsx` decides what opens.)
+  */
 
   // Town elements (when background is town-open.webp)
   if (backgroundFile === 'home-inside.png') {
@@ -336,6 +333,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
               alt="Shopping coffe shop"
               effect="scale"
               animated={false}
+              inert
+              comingLater
             />
           </div>
 
@@ -819,8 +818,9 @@ if (backgroundFile === 'nostr-station-open.webp') {
             src="/assets/locations/beach/boat.png"
             alt="Boat"
             animated={false}
-            onClick={() => handleElementClick('boat')}
-            className="size-24 sm:size-28 md:size-32 lg:size-36"
+            inert
+            comingLater
+            className="relative size-24 sm:size-28 md:size-32 lg:size-36"
           />
         </div>
 
@@ -927,43 +927,46 @@ if (backgroundFile === 'plaza-inside.png') {
         <img
           src="/assets/locations/plaza/chill-lounge.png"
           alt="Plaza chill lounge"
-          className="w-full cursor-pointer"
+          className="w-full"
         />
         <InteractiveElement
           src="/assets/locations/plaza/chill-lounge-interactive.png"
           alt="Chill lounge entrace"
           effect="scale"
-          className="absolute right-[20%] -bottom-[15%] w-[90%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+          className="absolute right-[20%] -bottom-[15%] w-[90%]"
+          inert
         />
       </div>
 
       {/* Plaza Drawing Wall */}
-      <div className='group absolute bottom-[35.8%] right-[26.8%] z-[11] w-[8.8%]'>
+      <div className='absolute bottom-[35.8%] right-[26.8%] z-[11] w-[8.8%]'>
         <img
           src="/assets/locations/plaza/drawing-wall.png"
           alt="Plaza drawing wall"
-          className="w-full cursor-pointer"
+          className="w-full"
         />
         <InteractiveElement
           src="/assets/locations/plaza/drawing-wall-interactive.png"
           alt="Drawing wall entrace"
           effect="scale"
-          className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%] group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+          className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-[40%]"
+          inert
         />
       </div>
 
       {/* Plaza Information */}
-      <div className='group absolute bottom-[29%] left-[6.5%] z-[11] w-[13.2%]'>
+      <div className='absolute bottom-[29%] left-[6.5%] z-[11] w-[13.2%]'>
         <img
           src="/assets/locations/plaza/information.png"
           alt="Plaza information"
-          className="w-full cursor-pointer"
+          className="w-full"
         />
         <InteractiveElement
           src="/assets/locations/plaza/information-interactive.png"
           alt="Information door"
           effect="scale"
-          className="absolute bottom-[0] right-0 group-hover:scale-110 group-hover:transition-all group-hover:duration-300 group-hover:ease-out"
+          className="absolute bottom-[0] right-0"
+          inert
         />
       </div>
 

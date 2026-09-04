@@ -69,6 +69,19 @@ export interface InteractiveElementProps {
    */
   walkTarget?: Position;
   /**
+   * DECORATION, explicitly. Renders the artwork with no pointer cursor, no
+   * hover/tap effect and no handlers — a click falls through to the floor as
+   * if the art were part of the background. For props that look like they
+   * should do something but do not yet (the beach boat, the plaza kiosks):
+   * an honest "not yet" beats a door that pretends.
+   */
+  inert?: boolean;
+  /**
+   * With `inert`: a small non-interactive caption ("Coming later") shown
+   * beside the art, where that improves clarity over silence.
+   */
+  comingLater?: boolean;
+  /**
    * Chair configuration for the Nostr Station / shop chairs: `seatAnchor`
    * names the fraction of the chair rect the FEET stop on (the accepted
    * `{50, 85}` pseudo-sit — the body rests on the cushion while any action
@@ -110,6 +123,8 @@ export function InteractiveElement({
   requestInteraction,
   walkBoundary,
   walkTarget,
+  inert = false,
+  comingLater = false,
   chairConfig,
 }: InteractiveElementProps) {
   const [isAnimating, setIsAnimating] = useState(false);
@@ -283,6 +298,22 @@ export function InteractiveElement({
         return 'translate(0, 0)';
     }
   };
+
+  if (inert) {
+    return (
+      <div className={cn('cursor-default select-none', className)} aria-hidden data-inert-element>
+        <img src={src} alt={alt} className="w-full h-full object-contain" draggable={false} />
+        {comingLater && (
+          <span
+            data-coming-later
+            className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-island-wood/25 bg-island-cream/85 px-2 py-0.5 text-[0.625rem] font-bold text-island-ink-soft shadow-cozy-soft"
+          >
+            Coming later
+          </span>
+        )}
+      </div>
+    );
+  }
 
   if (effect === 'slide') {
     /*

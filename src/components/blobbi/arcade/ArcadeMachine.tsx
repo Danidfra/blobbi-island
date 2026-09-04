@@ -82,9 +82,17 @@ interface ArcadeMachineProps {
    * payload, so what a machine DOES can change without touching where it sits.
    */
   onActivate: (machineId: string) => void;
+  /**
+   * Render as DECORATION: the artwork in its place, no button role, no
+   * cursor, no hover lift, no walk-to. A generic cabinet with nothing to play
+   * is furniture until the shared catalogue has a game for it; six identical
+   * "new games are being prepared" screens taught the player only that the
+   * cabinets lie.
+   */
+  decorative?: boolean;
 }
 
-export function ArcadeMachine({ config, requestInteraction, onActivate }: ArcadeMachineProps) {
+export function ArcadeMachine({ config, requestInteraction, onActivate, decorative = false }: ArcadeMachineProps) {
   const onArrive = useCallback(() => {
     onActivate(config.id);
   }, [onActivate, config.id]);
@@ -117,6 +125,22 @@ export function ArcadeMachine({ config, requestInteraction, onActivate }: Arcade
     height: `${machineHeightPercent(config)}%`,
     zIndex: config.zIndex,
   };
+
+  if (decorative) {
+    return (
+      <div
+        data-block-move
+        data-arcade-machine-id={config.id}
+        data-arcade-machine-decorative
+        aria-hidden
+        className="absolute select-none cursor-default"
+        style={style}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <img src={config.src} alt="" aria-hidden draggable={false} className="w-full h-full object-contain pointer-events-none" />
+      </div>
+    );
+  }
 
   return (
     <div
