@@ -322,19 +322,25 @@ const basementClusters = [
  * body's bottom on the pad's front lip (0.60) with the whole cup face showing
  * beneath it: perched, not seated.
  *
- * Now the anchor is 0.73: the body bottom lands at ~0.65, just inside the
- * cup's front face, and `foregroundFrom` repaints the chair from the lip
- * (0.615) down in front of the sitter, so the cushion overlaps the lowest
- * ~0.035 of the chair's height of the body (about 7 % of the body). That is
- * enough for the body to read as sunk into the seat while the whole lower
- * body stays legible; the first cut (0.76) hid twice as much and looked
- * swallowed. Adult variants whose bodies end a little higher or lower in
- * the box (0.79–0.90) all land inside that overlap band, which is what
- * makes the four chairs read the same for every Blobbi.
+ * The anchor is 0.73: the body bottom lands at ~0.65, just inside the cup's
+ * front face, so the body reads as sitting IN the cup rather than perched on
+ * its lip. Adult variants whose bodies end a little higher or lower in the
+ * box (0.79–0.90) all land inside the cup face, which is what makes the
+ * four chairs read the same for every Blobbi.
+ *
+ * ## The whole Blobbi stays visible
+ *
+ * Earlier passes repainted the chair from the cushion lip down IN FRONT of
+ * the sitter (`foregroundFrom`) so the body would sink into the seat. On the
+ * real room that slice hid the lower body, and no cut (0.76, then 0.615)
+ * made both the occlusion and the body legible at once. The requirement is
+ * now explicit: the ENTIRE Blobbi must remain visible, ahead of realistic
+ * occlusion. So the Station chairs carry no foreground cut: the sitter is
+ * drawn whole, over the chair, with the cup's front face and neon rim
+ * showing beneath its body and the backrest behind it. The headset is
+ * unaffected: it rides the face anchor inside the actor's own rig.
  */
 const STATION_SEAT_CONTACT = { x: 0.5, y: 0.73 } as const;
-/** The cushion's front seam: everything below it is repainted over the sitter. */
-const STATION_FOREGROUND_FROM = 0.615;
 
 function stationChair(index: number, leftPercent: number): RoomSeatConfig {
   const sprite = box(leftPercent, 25, 12, ART.stationChair);
@@ -356,7 +362,7 @@ function stationChair(index: number, leftPercent: number): RoomSeatConfig {
     facing: 'front',
     size: 'lg',
     behindWithin: 0.68,
-    foregroundFrom: STATION_FOREGROUND_FROM,
+    // No `foregroundFrom`: nothing is ever painted over the sitter (see above).
     seatedAccessory: 'vr-headset',
   };
 }

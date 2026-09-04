@@ -186,7 +186,6 @@ describe('Nostr Station VR chairs', () => {
   const chairs = roomSeatsFor('nostr-station-inside.png');
   // Lines measured on `chair.png` (fractions of the sprite height), see the
   // table above `stationChair` in room-seats-config.ts.
-  const PAD_REAR_SEAM = 0.56;
   const PAD_FRONT_SEAM = 0.615;
   const CUP_RIM = 0.73;
   // The visible body ends this far above the anchor: the empty bottom of the
@@ -197,10 +196,8 @@ describe('Nostr Station VR chairs', () => {
   // The visible body's height over the chair's height: the body spans ~75 %
   // of the box (baby 12.5–88 %), and the box is ~0.66 of the chair.
   const BODY_HEIGHT_OF_CHAIR = 0.5;
-  // The cushion must overlap the body enough to read as "in the seat"...
-  const MIN_OVERLAP_OF_CHAIR = 0.02;
-  // ...and never swallow more than this share of the body.
-  const MAX_HIDDEN_BODY_FRACTION = 0.1;
+  // The body spans this share of the box above its bottom edge (12.5–88 %).
+  const BODY_TOP_OF_BOX = 0.125;
 
   it('has four chairs that share one seat-contact configuration', () => {
     expect(chairs).toHaveLength(4);
@@ -209,7 +206,6 @@ describe('Nostr Station VR chairs', () => {
       expect(chair.seatContact).toEqual(first.seatContact);
       expect(chair.approach).toEqual(first.approach);
       expect(chair.seatedScale).toBe(1);
-      expect(chair.foregroundFrom).toBe(first.foregroundFrom);
       expect(chair.seatedAccessory).toBe('vr-headset');
       expect(chair.bottomPercent).toBe(first.bottomPercent);
       expect(chair.widthPercent).toBe(first.widthPercent);
@@ -226,27 +222,24 @@ describe('Nostr Station VR chairs', () => {
     }
   });
 
-  it('repaints the chair from the cushion lip down in front of the sitter, and nothing above the pad', () => {
+  it('paints NOTHING over the sitter: the entire Blobbi stays visible in a VR chair', () => {
+    // The explicit requirement: full visibility beats realistic occlusion.
     for (const chair of chairs) {
-      expect(chair.foregroundFrom, chair.id).toBeGreaterThan(PAD_REAR_SEAM);
-      expect(chair.foregroundFrom, chair.id).toBeLessThanOrEqual(PAD_FRONT_SEAM);
+      expect(chair.foregroundFrom, chair.id).toBeUndefined();
+      // The sitter is drawn above the whole chair sprite.
+      expect(chair.seatedZIndex, chair.id).toBeGreaterThan(chair.zIndex);
     }
   });
 
-  it('the body visibly overlaps the cushion, so it is seated rather than perched or floating', () => {
+  it('the seated body lies entirely within the chair sprite\'s box, so the room clips none of it', () => {
     for (const chair of chairs) {
       const bodyBottom = chair.seatContact.y - BODY_GAP_OF_CHAIR;
-      const overlap = bodyBottom - chair.foregroundFrom!;
-      expect(overlap, `${chair.id} overlap`).toBeGreaterThanOrEqual(MIN_OVERLAP_OF_CHAIR);
-      // Perched would be a body bottom at or above the lip, floating above the pad.
-      expect(bodyBottom, chair.id).toBeGreaterThan(PAD_FRONT_SEAM);
-    }
-  });
-
-  it('the foreground slice hides only a small share of the body (the lower body stays readable)', () => {
-    for (const chair of chairs) {
-      const hidden = chair.seatContact.y - BODY_GAP_OF_CHAIR - chair.foregroundFrom!;
-      expect(hidden / BODY_HEIGHT_OF_CHAIR, `${chair.id} hidden share`).toBeLessThanOrEqual(MAX_HIDDEN_BODY_FRACTION);
+      // The box is ~0.66 of the chair; the body's top is 12.5 % of the box below the box top.
+      const boxTop = chair.seatContact.y - 0.66;
+      const bodyTop = boxTop + 0.66 * BODY_TOP_OF_BOX;
+      expect(bodyTop, chair.id).toBeGreaterThanOrEqual(0);
+      expect(bodyBottom, chair.id).toBeLessThanOrEqual(1);
+      expect(bodyBottom - bodyTop, chair.id).toBeCloseTo(BODY_HEIGHT_OF_CHAIR, 1);
     }
   });
 
@@ -273,14 +266,13 @@ describe('Nostr Station VR chairs', () => {
     }
   });
 
-  it('renders the seated Blobbi one under the foreground slice and over the chair', () => {
+  it('renders the seated Blobbi over the chair, and under the room\'s front-floor band', () => {
     for (const chair of chairs) {
       const seated = resolveSeatedRender(chair.id)!;
       expect(seated.zIndex).toBeGreaterThan(chair.zIndex);
-      // The slice sits at seatedZIndex + 1 (RoomSeat); the sitter must stay
-      // below the room's front-floor band (20) so a Blobbi walking past in
-      // front of the chairs is still drawn over them.
-      expect(seated.zIndex + 1).toBeLessThan(20);
+      // The sitter must stay below the room's front-floor band (20) so a
+      // Blobbi walking past in front of the chairs is still drawn over them.
+      expect(seated.zIndex).toBeLessThan(20);
     }
   });
 
