@@ -2,8 +2,8 @@
  * The kind:31633 publish base, against the REAL relay-read semantics.
  *
  * `a1036e9` introduced `readAuthoritativeInventoryBase` on the belief that
- * `nostr.query` rejects on timeout. It does not — `NPool.query` swallows every
- * failure and resolves, usually with `[]` — so the "unknown never becomes a
+ * `nostr.query` rejects on timeout. It does not, `NPool.query` swallows every
+ * failure and resolves, usually with `[]`: so the "unknown never becomes a
  * publish base" guarantee was only as strong as "two consecutive timeouts are
  * unlikely". These tests drive the helper through `req`-shaped relays so the
  * guarantee is real:

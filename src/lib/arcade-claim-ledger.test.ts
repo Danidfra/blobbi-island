@@ -123,7 +123,7 @@ describe('recording claims', () => {
         },
       }),
     );
-    // No baseline means nothing can ever be reconciled — but the record must
+    // No baseline means nothing can ever be reconciled, but the record must
     // still BLOCK, which is the part that matters.
     expect(readClaim(ALICE, 'run-1')).toMatchObject({ quantityBefore: null, reconcileAttempts: 0 });
     expect(isGrantBlocked(ALICE, 'run-1')).toBe(true);
@@ -131,7 +131,7 @@ describe('recording claims', () => {
 
   it('treats `claimed` as a one-way door in storage too', () => {
     persistClaim(ALICE, claim({ status: 'claimed' }));
-    // A late failure — a retry that raced a success, a stale callback — must not
+    // A late failure, a retry that raced a success, a stale callback, must not
     // reopen a claim that was already confirmed.
     persistClaim(ALICE, claim({ status: 'failed', failure: 'publish-rejected' }));
     persistClaim(ALICE, claim({ status: 'ambiguous', failure: 'verify-mismatch' }));
@@ -149,7 +149,7 @@ describe('recording claims', () => {
     expect(isGrantBlocked(ALICE, 'run-1')).toBe(true);
   });
 
-  it('lets an ambiguous record become claimed — the one legal way out', () => {
+  it('lets an ambiguous record become claimed, the one legal way out', () => {
     persistClaim(ALICE, claim({ status: 'ambiguous', quantityBefore: 10 }));
     expect(persistClaim(ALICE, claim({ status: 'claimed' }))).toBe(true);
     expect(hasClaimed(ALICE, 'run-1')).toBe(true);
@@ -187,7 +187,7 @@ describe('surviving a hostile browser', () => {
     expect(persistClaim(ALICE, claim())).toBe(false);
   });
 
-  it('reports a write that silently vanished — read-back, not just "no throw"', () => {
+  it('reports a write that silently vanished, read-back, not just "no throw"', () => {
     // Quota eviction, private mode and some extensions accept `setItem` and drop
     // the value. A claim record that is not really there is exactly the state
     // that lets a grant be offered a second time, so the caller must be told.
@@ -276,7 +276,7 @@ describe('the synchronous in-flight lock', () => {
     expect(acquireClaimLock(ALICE, 'run-1')).toBe(true);
   });
 
-  it('survives what React state does not — it is module-level, not a ref', () => {
+  it('survives what React state does not; it is module-level, not a ref', () => {
     // Ten simultaneous attempts in one synchronous tick.
     const results = Array.from({ length: 10 }, () => acquireClaimLock(ALICE, 'run-1'));
     expect(results.filter(Boolean)).toHaveLength(1);
@@ -288,7 +288,7 @@ describe('the cross-tab claim lock', () => {
   const NOW = 1_700_000_000_000;
 
   it('reports which mechanism this environment actually uses', () => {
-    // jsdom has no Web Locks, so these tests exercise the lease fallback — which
+    // jsdom has no Web Locks, so these tests exercise the lease fallback, which
     // is the weaker of the two and therefore the one worth covering.
     expect(claimLockKind()).toBe('lease');
   });
@@ -315,8 +315,8 @@ describe('the cross-tab claim lock', () => {
       return 'first';
     });
 
-    // A "second tab" — a separate call that does not go through the
-    // same-document Set — is refused while the lease is live.
+    // A "second tab": a separate call that does not go through the
+    // same-document Set: is refused while the lease is live.
     const blocked = await withClaimLock(ALICE, 'run-1', NOW, async () => {
       inner += 1;
       return 'second';
@@ -365,7 +365,7 @@ describe('the cross-tab claim lock', () => {
       throw new Error('storage disabled');
     });
     const outcome = await withClaimLock(ALICE, 'run-1', NOW, async () => 'ran');
-    // It does NOT report contention — there is no other tab, storage is simply
+    // It does NOT report contention; there is no other tab, storage is simply
     // broken. The caller's durable-record requirement refuses the publish next.
     expect(outcome).toMatchObject({ acquired: true, kind: 'none', value: 'ran' });
   });

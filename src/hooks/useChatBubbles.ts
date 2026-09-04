@@ -135,7 +135,7 @@ export function useChatBubbles() {
    *
    * Used when a player is muted or blocked. Without it a hostile message stays
    * up for the rest of its four-second life AFTER the player pressed the button
-   * to make it stop — which is the moment the control most needs to look like it
+   * to make it stop, which is the moment the control most needs to look like it
    * worked.
    *
    * Bubble keys are `<pubkey>:<sessionId>` or `<pubkey>:pending`, so the match is

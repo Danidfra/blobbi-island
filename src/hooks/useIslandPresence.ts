@@ -101,9 +101,9 @@ interface UseIslandPresenceOptions {
 export type SitResult =
   /** Presence carrying the seat was published. */
   | 'published'
-  /** The id is not a seat a Blobbi may occupy. Permanent — do not retry. */
+  /** The id is not a seat a Blobbi may occupy. Permanent, do not retry. */
   | 'rejected'
-  /** The publish itself failed (relay down, offline). Transient — retry. */
+  /** The publish itself failed (relay down, offline). Transient, retry. */
   | 'failed';
 
 interface UseIslandPresenceReturn {
@@ -118,7 +118,7 @@ interface UseIslandPresenceReturn {
   hideAt: (hidingSpotId: string) => Promise<void>;
   /**
    * Clear the local hidden state (without publishing a move). Rarely needed
-   * directly — {@link moveTo} clears it — but exposed for completeness.
+   * directly: {@link moveTo} clears it, but exposed for completeness.
    */
   clearHide: () => void;
   /**
@@ -128,7 +128,7 @@ interface UseIslandPresenceReturn {
    * and by a location change.
    *
    * Never throws. The outcome is returned so the caller can tell a PERMANENT
-   * refusal from a TRANSIENT failure and retry only the second — see
+   * refusal from a TRANSIENT failure and retry only the second; see
    * {@link SitResult}.
    */
   sitAt: (seatId: string) => Promise<SitResult>;
@@ -143,10 +143,10 @@ interface UseIslandPresenceReturn {
    * | --- | --- | --- |
    * | walks away (floor click, another seat, walk-to-interact) | {@link moveTo}'s `moving` presence, which carries no `seatId` | `moveTo`, synchronously before publishing |
    * | leaves the room | the location-change `publishPresenceLogin`, which carries no `seatId` | the location-change effect |
-   * | closes the tab / loses the network | nothing — the presence event expires (NIP-40) and remote GC drops the player | n/a |
+   * | closes the tab / loses the network | nothing, the presence event expires (NIP-40) and remote GC drops the player | n/a |
    *
    * Every one of those paths already nulls the ref itself, so calling this is
-   * normally REDUNDANT — `MultiplayerLayer` calls it when its `sittingIn` prop
+   * normally REDUNDANT, `MultiplayerLayer` calls it when its `sittingIn` prop
    * goes null purely so the hook's copy cannot outlive the UI's copy if some
    * future caller clears the seat without moving. Adding a dedicated stand-up
    * publish here would create a second event that could arrive out of order with
@@ -193,17 +193,17 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
 
     A signer refusal is permanent for this lifecycle: the same prompt would be
     declined on the next walk, the next heartbeat and the next room, and
-    asking again is a loop of prompts and console errors — the player's only
+    asking again is a loop of prompts and console errors, the player's only
     exit used to be leaving the world. So the first refusal flips
     `signerRefusedRef`, says so ONCE (info, not error), and every later publish
     in this lifecycle resolves as a silent no-op: nothing is signed, nothing is
     sent, nothing is logged, and every caller carries on exactly as it does
-    after a successful publish. Reading remote players is unaffected — the
+    after a successful publish. Reading remote players is unaffected, the
     subscription never needed the signer.
 
     Transient failures (relay down, offline) are not refusals: they still
-    throw, and every existing "…failed but continuing" path — the debounced
-    move retry, the next heartbeat — keeps its behaviour.
+    throw, and every existing "…failed but continuing" path, the debounced
+    move retry, the next heartbeat, keeps its behaviour.
   */
   const signerRefusedRef = useRef(false);
   const [signerRefused, setSignerRefused] = useState(false);
@@ -232,7 +232,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   const [players, setPlayers] = useState<Map<string, PlayerRenderState>>(new Map());
   /*
     The part of the policy that changes what a remote name resolves to. A
-    primitive so the effect below compares by value — the policy object is a
+    primitive so the effect below compares by value, the policy object is a
     frozen singleton today, but a derived one would re-run this on every render.
   */
   /*
@@ -241,7 +241,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
     Held on a ref and read at PUBLISH time, never captured. The heartbeat
     interval is built once per location and lives for the whole visit, so a
     policy captured by value would keep publishing at the old detail level until
-    something happened to rebuild it — which for a heartbeat is a location
+    something happened to rebuild it, which for a heartbeat is a location
     change, and for a player standing still is never. This is the same
     stale-closure shape the identity boundary was fixed for; it does not get to
     come back through a different field.
@@ -273,7 +273,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
    * it in `onMoveStart`), so a heartbeat/sit/hide fired mid-walk used to
    * publish where the Blobbi was GOING, snapping remote copies to the endpoint
    * early. MovableBlobbi writes its live per-frame position into the shared
-   * live-positions map under LOCAL_GAZE_KEY — prefer that when available.
+   * live-positions map under LOCAL_GAZE_KEY, prefer that when available.
    * Held on a ref (read at call time), like the file's other publish inputs.
    */
   const currentLocalPosRef = useRef<() => Position>(() => myPosRef.current);
@@ -286,7 +286,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // The local player's current theater seat id, or null. Same reasoning as
   // myHiddenInRef: heartbeats must be able to preserve it without re-subscribing
   // timers, and moveTo must be able to clear it SYNCHRONOUSLY before publishing
-  // a move — otherwise a heartbeat racing a walk could re-seat a Blobbi that is
+  // a move: otherwise a heartbeat racing a walk could re-seat a Blobbi that is
   // already halfway down the aisle.
   const mySeatIdRef = useRef<string | null>(null);
   // The shared activity the local player is participating in (the session
@@ -310,7 +310,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
   // relays may deliver those out of order; without this an older event could
   // resurrect stale state (e.g. put a player back inside a bush they already
   // walked out of). `seq` resolves same-second races that `created_at` alone
-  // cannot — see isSupersededPresence.
+  // cannot: see isSupersededPresence.
   const lastEventOrderRef = useRef<Map<string, PresenceOrder>>(new Map());
   // Monotonic publish counter for THIS session, stamped into every presence we
   // publish so remote clients can order our updates deterministically. Starts at
@@ -325,7 +325,7 @@ export function useIslandPresence(opts: UseIslandPresenceOptions): UseIslandPres
 
   /**
    * Take the next publish sequence number. Called at PUBLISH-INTENT time (before
-   * any await), so the numbers reflect the order the player actually acted in —
+   * any await), so the numbers reflect the order the player actually acted in,
    * e.g. arriving in a bush (hide) then immediately clicking elsewhere (move)
    * yields seq n then n+1 even when both land in the same wall-clock second and
    * reach a relay out of order.
@@ -380,7 +380,7 @@ const animatePlayers = useCallback(() => {
   // Rendered-pixels-per-world-pixel. `anim.speedPx` is a world-space speed
   // (px/s against the 1046×697 world); multiplying by worldScale converts the
   // per-frame step into the SAME on-screen pixels a constant world distance
-  // maps to — so remote walk speed matches the (scale-corrected) local player
+  // maps to: so remote walk speed matches the (scale-corrected) local player
   // and feels identical on desktop and mobile instead of faster on mobile.
   const worldScale = opts.getWorldScale?.() ?? 1;
 
@@ -522,8 +522,8 @@ const animatePlayers = useCallback(() => {
     try {
       // BLOCK, enforced before anything else.
       //
-      // First because it is the cheapest check in the function — a lookup
-      // against a small local map, against a JSON.parse and a tag scan — and
+      // First because it is the cheapest check in the function, a lookup
+      // against a small local map, against a JSON.parse and a tag scan, and
       // because it is the one that must not be reachable around. A blocked
       // player's presence never becomes application state at all: no entry in
       // the players map, no actor, no anchor for a bubble to portal into, no
@@ -685,7 +685,7 @@ const animatePlayers = useCallback(() => {
 
       // WIRE→GROUND boundary (Phase 2): the kind 31950 payload carries legacy
       // CENTER points; everything below operates on internal GROUND points
-      // (walkability, clamping, animation — all calibrated to feet on floor).
+      // (walkability, clamping, animation; all calibrated to feet on floor).
       // See src/lib/presence-ground.ts.
       const groundAnchor = wireCenterToGround(content.anchor, location);
       const groundGoal = content.goal
@@ -859,8 +859,8 @@ const animatePlayers = useCallback(() => {
    * Blocking someone who is ALREADY on screen removes them now.
    *
    * The ingest gate above only stops the next event. Without this, a blocked
-   * player would linger until their presence expired — up to
-   * `EXP_SECONDS + 5` — which is 40 seconds of standing next to someone the
+   * player would linger until their presence expired, up to
+   * `EXP_SECONDS + 5`: which is 40 seconds of standing next to someone the
    * player just said they did not want to see. Waiting out a timeout is not a
    * safety control.
    *
@@ -895,7 +895,7 @@ const animatePlayers = useCallback(() => {
    * Remote names are resolved where a stranger's kind 31124 becomes a
    * `BlobbiVisual` (see `MultiplayerLayer.fetchBlobbi31124`), and that result is
    * cached per Blobbi address. Without this, changing the policy would leave
-   * already-fetched names on screen until a reload — which would make "stop
+   * already-fetched names on screen until a reload, which would make "stop
    * showing authored names" require a page refresh, and a safety control that
    * needs a refresh is one that did not take effect.
    *
@@ -916,8 +916,8 @@ const animatePlayers = useCallback(() => {
    * The ingest, read at call time.
    *
    * The subscription below is opened once at init and rebuilt only on a
-   * location change, so passing the callback by value would pin the ingest —
-   * and everything it closes over — to whatever it was at mount. Going through
+   * location change, so passing the callback by value would pin the ingest,
+   * and everything it closes over, to whatever it was at mount. Going through
    * a ref means the live subscription always runs the current one, which is
    * what keeps identity, policy and player state from silently ageing.
    */
@@ -933,7 +933,7 @@ const animatePlayers = useCallback(() => {
       kinds: [31950],
       '#t': ['blobbi:presence', `island:${islandId}`, `loc:${location}`],
       // Load the full window of still-valid presence (not just the last few
-      // seconds). On any (re)subscribe — e.g. location change — this restores
+      // seconds). On any (re)subscribe, e.g. location change, this restores
       // currently-active remote players immediately, instead of leaving them
       // invisible until their next movement/heartbeat.
       since: nowSec() - (EXP_SECONDS + 5),
@@ -970,7 +970,7 @@ const animatePlayers = useCallback(() => {
       // carries `activity` through so nobody blinks out of the participant list
       // mid-walk. Only an explicit leave, or leaving the location, clears it.
       //
-      // This also means no cleanup event follows a stand-up at all — which is
+      // This also means no cleanup event follows a stand-up at all, which is
       // what keeps the movement canonical. An `idle` clear published a moment
       // after the walk would carry a higher `seq` and no `goal`, and every
       // remote client would correctly treat it as the newest word and freeze the
@@ -1013,7 +1013,7 @@ const animatePlayers = useCallback(() => {
     try {
       // Idempotent by content: re-hiding in the same spot publishes the same
       // state, and presence is addressable (one event per session), so the
-      // newest simply replaces the previous one — a repeated arrival can never
+      // newest simply replaces the previous one, a repeated arrival can never
       // leave observers with a half-applied state.
       myHiddenInRef.current = hidingSpotId;
       if (DEBUG_MP) console.debug('[blobbi][mp] hideAt', { pos: currentLocalPosRef.current(), hidingSpotId });
@@ -1035,7 +1035,7 @@ const animatePlayers = useCallback(() => {
   const sitAt = useCallback(async (seatId: string): Promise<SitResult> => {
     // OUTBOUND VALIDATION. `publishSit` will serialize whatever string it is
     // given, and `NIP.md` promises the wire only ever carries a canonical,
-    // occupiable seat id — so the promise has to be enforced somewhere, and this
+    // occupiable seat id, so the promise has to be enforced somewhere, and this
     // is the boundary where presence meets the theater. Doing it here (rather
     // than in `parseSeatId`, which must stay geometry-free, or only in the UI)
     // means no future caller can publish a decorative chair or a typo by
@@ -1066,7 +1066,7 @@ const animatePlayers = useCallback(() => {
       return 'published';
     } catch (error) {
       // NOT fatal and NOT silent. The local ref stays set on purpose, so the
-      // next heartbeat still advertises the seat — that is the backstop. But the
+      // next heartbeat still advertises the seat; that is the backstop. But the
       // caller is told, so it can retry sooner than a whole heartbeat interval.
       console.warn('Sit publish failed but continuing:', error);
       return 'failed';
@@ -1083,7 +1083,7 @@ const animatePlayers = useCallback(() => {
         ? { type: 'shared-playback', session: sessionAddress }
         : null;
 
-      // Transitions only — publishing on every render would be a flood, and
+      // Transitions only: publishing on every render would be a flood, and
       // publishing on nothing would leave observers 25 s behind.
       //
       // This guard is also LOAD-BEARING for movement: when a stand-up already
@@ -1094,7 +1094,7 @@ const animatePlayers = useCallback(() => {
       if (myActivityRef.current?.session === next?.session) return;
 
       // Set the ref FIRST so any heartbeat that fires during the publish already
-      // agrees with it — and, on a clear, so no heartbeat can re-advertise a
+      // agrees with it, and, on a clear, so no heartbeat can re-advertise a
       // session the player has left.
       myActivityRef.current = next;
 
@@ -1227,7 +1227,7 @@ const animatePlayers = useCallback(() => {
       policy: policyRef.current,
     }).then(() => {
       // Swapping your Blobbi does not get you out of your chair. The login
-      // presence above carries no `seatId` (by design — it is the "here I am"
+      // presence above carries no `seatId` (by design; it is the "here I am"
       // event), so on its own it would stand a seated player up on every remote
       // screen until the next heartbeat ~25 s later. Re-assert the seat
       // immediately, with a HIGHER seq so it cannot be reordered behind the
@@ -1318,7 +1318,7 @@ const animatePlayers = useCallback(() => {
       currentLocalPosRef.current(),
       myHiddenInRef.current ?? undefined,
       // Read at CALL time, not capture time. This interval is REBUILT on every
-      // location change, and entering the theater IS a location change — so a
+      // location change, and entering the theater IS a location change, so a
       // heartbeat that forgot the seat here would eject every player from their
       // chair ~25 s after they sat down. (Caught in a real browser; jsdom never
       // saw it because it needs location-change → sit → heartbeat in that order.)

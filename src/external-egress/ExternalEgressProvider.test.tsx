@@ -3,7 +3,7 @@
  * reaches the browser.
  *
  * These mount the real provider and assert on `window.open` / `navigator.share`
- * rather than on which buttons exist — hiding a control is presentation, and the
+ * rather than on which buttons exist, hiding a control is presentation, and the
  * claim being made here is about enforcement.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -174,7 +174,7 @@ describe('route guard', () => {
   });
 
   it('does not mount the route under Family', () => {
-    // Not hidden — absent. The tools are unlinked rather than unreachable, so
+    // Not hidden: absent. The tools are unlinked rather than unreachable, so
     // the path can simply be typed.
     guarded('family');
     expect(screen.queryByText('secret tools')).toBeNull();
@@ -182,7 +182,7 @@ describe('route guard', () => {
   });
 
   it('says nothing about age, and nothing a curious visitor could use', () => {
-    // A profile is an experience configuration, not an age assertion — and a
+    // A profile is an experience configuration, not an age assertion, and a
     // denied view is not a debugging surface.
     const { container } = guarded('family');
     const text = container.textContent?.toLowerCase() ?? '';

@@ -3,15 +3,15 @@
 Status: **implemented and playable.** The first real game in the Blobbi Island
 arcade, and the first code path in the application that grants an Arcade Ticket.
 
-Phase 3.2 added a presentation pass — the cabinet framing, the note and receptor
+Phase 3.2 added a presentation pass, the cabinet framing, the note and receptor
 treatment, the judgement feedback, the Blobbi on stage, the rebuilt start and
 results screens, a mute control, and the mobile and reduced-motion behaviour that
 goes with them. See **§14**. It changed no rule: the chart, the judgement windows,
 the scoring, the reward policy, the claim boundary and the Nostr event flow are
 exactly as Phase 3 left them. **The track is still the synthesised placeholder.**
 
-It runs on exactly one machine — `arcade-dance-machine`, game id `blobbi-dance`
-— and nothing else in the arcade became playable. The other eight machines still
+It runs on exactly one machine, `arcade-dance-machine`, game id `blobbi-dance`,
+and nothing else in the arcade became playable. The other eight machines still
 have `gameId: null`, which the lifecycle reducer treats as "cannot start a run".
 
 Phase sequence: **Phase 1** Arcade Ticket registry and currency support →
@@ -29,10 +29,10 @@ and the Prize Shop after that (§16).
 src/arcade/                       pure, no React / Nostr / inventory
 ├── types.ts                      ArcadeGameResult + validation
 ├── arcade-machine-state.ts       lifecycle reducer
-├── reward-policy.ts              ticket arithmetic — DANCE policy was `draft`
+├── reward-policy.ts              ticket arithmetic: DANCE policy was `draft`
 ├── arcade-reward-boundary.ts     the write CONTRACT, unimplemented
 ├── arcade-input-map.ts, useArcadeInput.ts, useArcadeInterruption.ts
-└── audio/arcade-audio.ts         AudioContext boundary — no track, no scheduler
+└── audio/arcade-audio.ts         AudioContext boundary; no track, no scheduler
 
 components/blobbi/arcade/
 ├── ArcadeRoom.tsx                → ArcadeGameShell → ArcadeMachinePanel
@@ -47,7 +47,7 @@ No game. No ticket. No publish.
 
 > **Phase 4 changed how it is WIRED, not what it is.** Blobbi Dance remains what
 > it has always been: the game on the basement dance machine. Walking up to
-> `arcade-dance-machine` opens it directly — there is no menu in between, and it
+> `arcade-dance-machine` opens it directly; there is no menu in between, and it
 > is **not** listed in the shared cabinet catalogue, which the six generic
 > cabinets open.
 >
@@ -56,7 +56,7 @@ No game. No ticket. No publish.
 > - `DanceMachine` takes `machineId`, `gameId` and `title` instead of an
 >   `ArcadeMachineConfig`. `gameId` and `title` come from the game registry;
 >   `machineId` comes from the machine the player walked to, which for this game
->   is **always** `arcade-dance-machine` — `canLaunchArcadeGame` refuses the game
+>   is **always** `arcade-dance-machine`: `canLaunchArcadeGame` refuses the game
 >   on every other machine and from the shared catalogue, so a result and a claim
 >   can only ever record the dance machine.
 > - Leaving the game returns to the **arcade room**, not to a catalogue. The
@@ -107,7 +107,7 @@ balance.
 
 ## 2. Gameplay
 
-Four lanes — left, down, up, right — with notes falling toward a judgement line
+Four lanes: left, down, up, right, with notes falling toward a judgement line
 at the bottom of the field. Hit each note as it arrives. A missed note breaks the
 combo and costs its points; it costs nothing else, and there is no fail state.
 
@@ -116,7 +116,7 @@ combo and costs its points; it costs nothing else, and there is no fail state.
 | Session | ~68 seconds end to end |
 | Notes | 110 |
 | Difficulty | one (`normal`) |
-| Fail state | none — every run that reaches the end produces a result |
+| Fail state | none; every run that reaches the end produces a result |
 | Clear condition | finished the song **and** ≥ 60% accuracy |
 
 ### Controls
@@ -131,17 +131,17 @@ combo and costs its points; it costs nothing else, and there is no fail state.
 Each touch button sits **directly under the lane it fires** and shows that lane's
 arrow with its key cap (`A` / `S` / `W` / `D`) beneath it, so the mapping is
 readable without a legend and without relying on colour. The buttons are 56 px
-tall and the full width of their column — comfortably over the 44 px minimum in
+tall and the full width of their column, comfortably over the 44 px minimum in
 `ARCADE_TOUCH_ZONE_MIN_PX`.
 
-All input goes through the shared `useArcadeInput` layer from Phase 2 — there is
+All input goes through the shared `useArcadeInput` layer from Phase 2; there is
 no ad-hoc global listener inside the game. Key auto-repeat is dropped, modified
 keys (`Cmd`/`Ctrl`/`Alt`) are ignored, arrows and space are `preventDefault`ed
 while playing so the page cannot scroll, and `Escape`/`Tab` are never suppressed.
 The touch buttons fire on `pointerdown` and ignore the synthetic click that
 follows (`event.detail === 0` is the keyboard path), so a tap counts once.
 
-Input is dead outside `status === 'playing'` — enforced both by not binding the
+Input is dead outside `status === 'playing'`: enforced both by not binding the
 listeners and by a guard inside the hook, so a touch zone cannot bypass it.
 
 ---
@@ -160,7 +160,7 @@ listeners and by a guard inside the hook, so a touch zone cannot bypass it.
 | Duration | 68,000 ms |
 | Credit | Generated by Blobbi Island |
 | Licence | **No third-party material.** No sample, no recording, nothing to clear. |
-| Readiness | **`development`** — a placeholder, not final music |
+| Readiness | **`development`**: a placeholder, not final music |
 
 #### Why it is synthesised
 
@@ -170,13 +170,13 @@ API.
 
 Option 1 has nothing to reuse: the repository contains exactly one audio file,
 `public/assets/audio/sfx/bush-rustle.mp3`, a one-shot UI effect. Option 2 is not
-something a code change can honestly produce — "add an original recording" means
+something a code change can honestly produce, "add an original recording" means
 somebody records something. So option 3 ships: a kick, an offbeat hat, a backbeat
 clap and a four-bar bass progression, all computed from code in this repository
 and all scheduled against `AudioContext.currentTime`.
 
 `readiness: 'development'` is a field on the track, not a note in a document, and
-the preview renders it — so a placeholder cannot quietly become the shipped
+the preview renders it, so a placeholder cannot quietly become the shipped
 experience by being forgotten about. Replacing it means adding a `DanceTrack`
 with `source: { kind: 'asset', url }` and `readiness: 'production'`; **the chart
 does not change**, because it references the track by id and expresses every note
@@ -218,7 +218,7 @@ refuses:
 - an unknown lane;
 - a negative or non-finite time;
 - notes out of chronological order;
-- two notes **in the same lane** less than 60 ms apart — one input cannot resolve
+- two notes **in the same lane** less than 60 ms apart; one input cannot resolve
   both, so the second is an unavoidable miss and the chart is unwinnable;
 - a note before the lead-in or inside the tail.
 
@@ -246,7 +246,7 @@ songTimeMs = (AudioContext.currentTime − originS) × 1000 − deviceLatencyOff
 `requestAnimationFrame` **samples** that value and draws what it says. A dropped
 frame costs a frame of animation and nothing else, because the next frame reads
 the true song time. Judgement is made against the clock sampled **at the moment
-the input arrives**, not against the last frame — a frame can be 16 ms stale,
+the input arrives**, not against the last frame, a frame can be 16 ms stale,
 which is a quarter of the Perfect window.
 
 ### The lookahead scheduler
@@ -296,7 +296,7 @@ drift into the next note's territory.
    note in its own lane and consumes it.
 2. **One note is judged at most once.** A resolved note is never eligible again.
 3. **Eligibility is bounded by the widest window.** An input more than 180 ms
-   from every unresolved note in its lane resolves *nothing* — it is not a miss,
+   from every unresolved note in its lane resolves *nothing*; it is not a miss,
    and it does not consume the next note. This is what stops early spam from
    eating the chart: mashing left destroys the combo through the notes you then
    fail to hit, not by pre-consuming notes you cannot see.
@@ -313,7 +313,7 @@ points(note) = base(judgement) + min(comboBeforeThisHit, 50) × 4
   Perfect 1000   Good 700   Okay 400   Miss 0
 ```
 
-The combo bonus is **additive and capped** at 200 points per note — a fifth of a
+The combo bonus is **additive and capped** at 200 points per note, a fifth of a
 Perfect. Additive rather than multiplicative because a multiplier compounds, and
 a compounding reward is one an early streak dominates. A single note can
 therefore never be worth two Perfects.
@@ -326,7 +326,7 @@ accuracy = earned BASE points ÷ (notes × 1000) × 100      (one decimal place)
 
 Combo bonuses are **excluded**. Including them would mean a player who hit the
 same notes with the same timing scored a different accuracy depending on the
-*order* of their misses — indefensible when accuracy is what the reward tiers
+*order* of their misses, indefensible when accuracy is what the reward tiers
 read.
 
 ### Full combo
@@ -344,7 +344,7 @@ notes, not all Perfects.
 | C | ≥ 60% |
 | D | below 60% |
 
-**The grade is presentation only.** Nothing downstream reads it — the reward
+**The grade is presentation only.** Nothing downstream reads it, the reward
 policy operates on the explicit validated metrics, because turning a letter into
 money makes a presentation change an economy change.
 
@@ -366,7 +366,7 @@ refresh.
 
 ## 6. Reward policy
 
-**`DANCE_REWARD_POLICY` was promoted from `draft` to `active` in this phase** —
+**`DANCE_REWARD_POLICY` was promoted from `draft` to `active` in this phase**,
 the first and only production policy in the arcade. It was promoted only after
 the result contract, its validator, the pure calculation, the aborted-run
 exclusion, the claim idempotency and the writer integration all existed and were
@@ -394,9 +394,9 @@ aborted / interrupted / invalid / incomplete run              0
 | 96%, one miss, finished | 2 + 4 = **6** |
 | 80%, finished | 2 + 2 = **4** |
 | 61%, finished | 2 + 1 = **3** |
-| 40%, finished | **2** (participation floor — the run did not clear) |
+| 40%, finished | **2** (participation floor, the run did not clear) |
 | 0%, finished | **2** |
-| 100%, closed at bar 30 | **0** — an aborted run has no result at all |
+| 100%, closed at bar 30 | **0**: an aborted run has no result at all |
 | tab hidden mid-song | **0** |
 | accuracy stat outside 0–100 | **0** |
 
@@ -417,7 +417,7 @@ than feeding the shared layer a context of permanent `false`s and advertising
 bonuses that can never fire.
 
 A flat policy opts out of the multiplier and the history bonuses. It does **not**
-opt out of the participation floor or the caps — those are still applied by the
+opt out of the participation floor or the caps; those are still applied by the
 one shared `calculateTicketAward`, so a flat game still cannot invent its own
 economy.
 
@@ -432,7 +432,7 @@ economy.
 
 Eligibility is refused, in order, for: a non-production policy, a missing item
 address, a rejected award (invalid result, wrong game, the game's own refusal),
-and a zero total — each with a reason a human can read, because "not eligible"
+and a zero total; each with a reason a human can read, because "not eligible"
 with no explanation is the copy that makes players think the arcade is broken.
 
 The item address is **passed in** rather than known by `src/arcade/`, which is
@@ -458,8 +458,8 @@ ticket grant preserves unrelated item balances, rejects negative and non-integer
 amounts, and omits zero-quantity entries exactly as every other inventory write
 does. The two deliberate differences are both about honesty:
 
-- **Strict publish.** `useNostrPublish` swallows a 5-second timeout and resolves
-  — correct for presence heartbeats, wrong for a one-shot grant of a scarce
+- **Strict publish.** `useNostrPublish` swallows a 5-second timeout and resolves,
+  correct for presence heartbeats, wrong for a one-shot grant of a scarce
   resource. This signs and publishes locally instead, the same pattern
   `useFirstEggAdoption` already established here. `useNostrPublish` is unchanged,
   exactly as `docs/arcade-reward-publication-boundary.md` settled.
@@ -477,7 +477,7 @@ confused with the Arcade **Ticket** by construction.
 
 `buildInventoryTemplate` is now LOSSLESS for data it does not own: unknown
 tags, `context` tags, grant references and event `content` all ride through
-every write by ANY caller — purchase, use, batch, or this one. (Historically
+every write by ANY caller, purchase, use, batch, or this one. (Historically
 they were dropped; that defect was fixed in the inventory layer before the
 economy-entry allocation marker could rely on surviving rewrites, and the old
 destruction-pinning test became a preservation test.)
@@ -502,14 +502,14 @@ Unknown *item addresses* are likewise preserved with their quantities intact.
 >
 > The earlier claim that this was safe "because the run id is the idempotency
 > key: a retry re-reads the current quantity" was **wrong**. Re-reading prevents
-> stale-state clobbering. It does nothing for an additive mutation — `+3` on a
-> balance that already includes the first `+3` is `+6` — and `runId` appears
+> stale-state clobbering. It does nothing for an additive mutation, `+3` on a
+> balance that already includes the first `+3` is `+6`: and `runId` appears
 > nowhere in kind:31633, so no relay can know a run was paid.
 
 ### The rule
 
 > **Anything that may have crossed the publish boundary is `ambiguous`, and an
-> ambiguous claim is never republished — only reconciled, read-only.**
+> ambiguous claim is never republished; only reconciled, read-only.**
 
 ### The claim state machine
 
@@ -566,13 +566,13 @@ an unrelated, legitimate operation adds 5 → balance 15
 The player is under-paid by 3. That is accepted for this phase, deliberately:
 
 - the alternative rule (`===`, or refusing to confirm without stronger evidence)
-  does not pay the player either — it just leaves the claim unresolved for ever;
+  does not pay the player either; it just leaves the claim unresolved for ever;
 - the only rule that *would* pay them is "publish again when in doubt", which is
   precisely the 3 → 6 duplicate this whole design exists to prevent;
 - so the choice is between **occasionally under-paying one player** and
   **inflating a scarce currency**, and this phase picks the first.
 
-Fixing it properly needs per-event attribution — knowing that *this* grant is in
+Fixing it properly needs per-event attribution, knowing that *this* grant is in
 that balance. kind:31633 cannot express that without inventing per-operation
 tags other clients would not understand (the builder now preserves unknown tags,
 but a tag convention nobody else reads is still not attribution), which is
@@ -584,7 +584,7 @@ recorded deliberately"*, which asserts the false positive on purpose so nobody
 There is deliberately no branch that republishes: a read that cannot prove the
 grant landed also cannot prove it did not.
 
-A claim whose **baseline read failed never publishes at all** — without a
+A claim whose **baseline read failed never publishes at all**: without a
 baseline there is nothing to reconcile against, so the attempt is cancelled and
 marked retryable instead of becoming permanently unresolvable.
 
@@ -597,7 +597,7 @@ marked retryable instead of becoming permanently unresolvable.
 | `ledger-unavailable` (no durable record could be written) | yes |
 | `baseline-unavailable` (the pre-write read failed) | yes |
 | `sign-failed` (the signer refused before returning an event) | yes |
-| `publish-rejected` — **only** from a writer that can prove it | yes |
+| `publish-rejected`: **only** from a writer that can prove it | yes |
 | `publish-timeout` | **no** |
 | `verify-mismatch` | **no** |
 | `verify-unavailable` | **no** |
@@ -617,32 +617,32 @@ offline; the alternative cost is paying twice.
 | scope | guarantee | mechanism |
 | --- | --- | --- |
 | same component | one publish per run | React state + the lifecycle reducer |
-| **same document** — every mount, every hook instance, two clicks in one tick | one publish per run | a synchronous module-level `Set`, taken before any `await` |
+| **same document**: every mount, every hook instance, two clicks in one tick | one publish per run | a synchronous module-level `Set`, taken before any `await` |
 | **same browser profile, after the first ledger write** | no second grant while a record is claimed / publishing / verifying / ambiguous | the `localStorage` ledger, checked before every attempt and again inside the lock |
 | **across tabs**, for the whole check → persist → publish → verify window | one owner | `navigator.locks` where available; a verified `localStorage` lease otherwise |
 | **after a refresh** | an ambiguous or claimed run stays blocked, and the results screen hydrates from the ledger rather than offering a fresh Claim button | the ledger is durable |
-| **across devices** | **none** | — |
-| **protocol level** | **none** | — |
+| **across devices** | **none** |, |
+| **protocol level** | **none** |, |
 
 ### What is NOT protected, stated plainly
 
 - **Cross-device: nothing.** A different browser or device starts with an empty
-  ledger. The exposure is bounded — a `runId` is minted per run and never leaves
-  the device that minted it, so another device has no run id to re-claim — but
+  ledger. The exposure is bounded, a `runId` is minted per run and never leaves
+  the device that minted it, so another device has no run id to re-claim, but
   that is an obstacle, not a guarantee.
 - **Protocol level: nothing.** Recording "run X has been paid" in kind:31633
   would mean inventing a per-run tag convention other clients do not read (the
   builder preserves unknown tags now, but preservation is not attribution).
   Rejected deliberately for per-run rewards; documented instead. The ONE
   protocol-level record of this shape that does exist is the economy-entry
-  allocation marker — viable precisely because it is a single per-account fact,
+  allocation marker: viable precisely because it is a single per-account fact,
   not an unbounded per-run history.
 - **Two tabs racing before either has written to the ledger.** Excluded by the
   cross-tab lock. Where the Web Locks API exists that exclusion is real and
-  atomic — **verified in Chrome across two genuine tabs**: tab B saw tab A's
+  atomic, **verified in Chrome across two genuine tabs**: tab B saw tab A's
   lock in `navigator.locks.query()`, was refused (`acquired: false`), and did not
   run the operation. Where Web Locks does not exist, the `localStorage` lease is a
-  write-then-read-back protocol — strong in practice, but **not** an atomic
+  write-then-read-back protocol: strong in practice, but **not** an atomic
   compare-and-swap. Two tabs writing within the same millisecond could both
   believe they own it. That residual window is a limitation and no copy anywhere
   describes it otherwise.
@@ -668,7 +668,7 @@ validate → same-document lock → cross-tab lock → ledger check
 `persistClaim` verifies its own write by reading it back with the expected
 status, because storage can accept a `setItem` and silently drop it (quota
 eviction, private mode, an extension). A claim record that is not really there is
-exactly the state that lets a grant be offered a second time — so **no durable
+exactly the state that lets a grant be offered a second time, so **no durable
 record means no publication**, and the player is told so.
 
 ---
@@ -697,7 +697,7 @@ quantity exactly `award` higher than the baseline.
 ### What it does not prove
 
 That every relay has it. That it will still be there tomorrow. That no concurrent
-writer will replace it — kind:31633 is replaceable and newest-wins, and
+writer will replace it, kind:31633 is replaceable and newest-wins, and
 `docs/INVENTORY_ARCHITECTURE.md` documents that two tabs can still clobber one
 another.
 
@@ -705,19 +705,19 @@ another.
 
 | Phase | What the player is told | What the button does |
 | --- | --- | --- |
-| calculation unavailable | tickets could not be worked out; the score still stands | — |
-| not eligible | the reason, in words | — |
-| ready | "Claim N tickets" — never "you have them" | claim |
+| calculation unavailable | tickets could not be worked out; the score still stands |, |
+| not eligible | the reason, in words |, |
+| ready | "Claim N tickets": never "you have them" | claim |
 | saving | "Saving your tickets…" | out of action |
-| **confirmed** | "N Arcade Tickets added to your inventory" | — |
+| **confirmed** | "N Arcade Tickets added to your inventory" |, |
 | **failed-before-publish** | nothing was saved; try again | claim again |
-| **unresolved** | "The ticket event may have been sent, but your inventory has not confirmed it yet. To avoid adding the reward twice, Blobbi Island will not send another grant for this run. You can check the status again." | **Check ticket status** — read-only |
+| **unresolved** | "The ticket event may have been sent, but your inventory has not confirmed it yet. To avoid adding the reward twice, Blobbi Island will not send another grant for this run. You can check the status again." | **Check ticket status**: read-only |
 | **checking** | "Checking…" | out of action |
-| already claimed | this run was paid, on this browser | — |
+| already claimed | this run was paid, on this browser |, |
 
 Two things must never appear: a confirmed balance increase the application cannot
 substantiate, and a **"Try again" button on an unresolved claim**. The second is
-not a wording problem — it is the duplicate grant.
+not a wording problem; it is the duplicate grant.
 
 Policy identity (`blobbi-dance-tickets v1`) is protocol trivia and is no longer
 shown to players; it remains available in the DEV harness.
@@ -727,7 +727,7 @@ shown to players; it remains available in the DEV harness.
 The write base is always a fresh relay read taken immediately before building the
 event, never the React Query cache. The baseline is read separately and recorded
 durably, so a concurrent write landing between the two reads produces an
-unresolved claim rather than a silent acceptance — and reconciliation can still
+unresolved claim rather than a silent acceptance, and reconciliation can still
 confirm it later once the balance settles.
 
 ## 10. Interruption behaviour
@@ -740,8 +740,8 @@ confirm it later once the balance settles.
 | Resume button | the engine re-anchors to the current audio time and continues |
 | Shell closed mid-run | run aborts (`closed`) via the reducer |
 | Component unmounts | frame loop cancelled, engine stopped and disposed |
-| Web Audio unavailable | **no run is started at all** — the preview says why |
-| Chart invalid | **no run is started at all** — the preview says why |
+| Web Audio unavailable | **no run is started at all**: the preview says why |
+| Chart invalid | **no run is started at all**: the preview says why |
 
 **An aborted run has no result**, so it cannot become claimable, cannot calculate
 a production reward, and cannot publish anything. The reducer enforces this
@@ -764,13 +764,13 @@ reports **which** one fired so the game can decide:
 - **Blur is not.** The tab is still visible and still rendering; the notes are on
   screen and the music is playing. Ending a sixty-eight second run because
   someone clicked a devtools panel, a second monitor, or dismissed a phone
-  keyboard is hostile — and pausing costs nothing, because the engine re-anchors
+  keyboard is hostile: and pausing costs nothing, because the engine re-anchors
   to the current audio time on resume rather than trusting the clock to have
   frozen.
 
 The first implementation aborted on both. It was changed after the automated
 browser demonstrated how readily a real page loses focus. The trade this phase
-made — a safe abort over a complex mid-song resume — still holds for the case
+made: a safe abort over a complex mid-song resume, still holds for the case
 that genuinely cannot be resumed.
 
 ---
@@ -779,14 +779,14 @@ that genuinely cannot be resumed.
 
 - **Keyboard play** through arrows and WASD; **touch play** through four large
   buttons that share the same action pipeline.
-- Every lane button has a name that includes its keys — "Left lane (← or A)" —
+- Every lane button has a name that includes its keys, "Left lane (← or A)",
   and a visible focus outline. They are `disabled` outside `playing`.
 - The dialog has a title and a description; focus moves into it on open and
   returns to the machine on close.
 - **Colour is never the only signal.** Each lane carries its arrow glyph, and the
   judgement readout is a *word* ("Perfect!", "Miss") that colour only reinforces.
 - **The results summary is a sentence**, in a `role="status"` region, before the
-  table it duplicates — readable without chasing a transient animation.
+  table it duplicates: readable without chasing a transient animation.
 - **Live regions are restrained.** One polite region announces "Get ready",
   "Paused", "The run ended because the game lost focus", and the final summary.
   Notes are **never** announced; a live region narrating 110 notes would make the
@@ -800,7 +800,7 @@ Added in Phase 3.2:
 
 - **A second non-colour cue per lane.** Each touch control shows its arrow *and*
   its key cap (`A` / `S` / `W` / `D`). At 320 px two arrows a centimetre apart
-  start to look alike, and colour is decoration in this game — the arrow and the
+  start to look alike, and colour is decoration in this game, the arrow and the
   letter are the information.
 - **The Blobbi on stage is inert.** It is `aria-hidden`, `pointer-events-none`,
   contains nothing focusable, and is rendered outside the note field, so it can
@@ -816,9 +816,9 @@ Added in Phase 3.2:
 
 ### Reduced motion
 
-`prefers-reduced-motion: reduce` removes every decoration added in Phase 3.2 —
+`prefers-reduced-motion: reduce` removes every decoration added in Phase 3.2,
 the marquee bulbs, the judgement pop, the receptor pulse and its sparks, the lane
-flash, the countdown tick, the combo bump and the mascot's bob and reactions —
+flash, the countdown tick, the combo bump and the mascot's bob and reactions,
 along with the receptor colour transitions, the touch-button press scale and the
 shell's entrance zoom.
 
@@ -826,7 +826,7 @@ It does **not** remove anything that carries information: the notes still move
 (that is the gameplay, not a flourish), the judgement word still appears in the
 same place, the receptors still light up while a lane is held, the combo still
 grows, and the mascot's `data-mood` still changes. And it changes **no timing at
-all** — a note is due when the audio clock says it is, and the accessibility
+all**: a note is due when the audio clock says it is, and the accessibility
 setting has no vote. `DanceUI.test.tsx` asserts exactly that: the same input
 produces the same judgement and the same blip with every animation suppressed.
 
@@ -841,7 +841,7 @@ block in `src/index.css` disables the same animations by name. The stage exposes
 
 A rhythm game updates sixty times a second. React state updated sixty times a
 second re-renders a tree sixty times a second, and the input handler then
-competes with reconciliation for the main thread — which shows up as exactly the
+competes with reconciliation for the main thread, which shows up as exactly the
 thing a rhythm game may not have: input lag.
 
 State is therefore split by frequency:
@@ -857,7 +857,7 @@ State is therefore split by frequency:
 The run state lives in a ref and is advanced through the **pure** reducer
 functions in `judgment.ts`, so the rules stay pure and stay tested by passing
 numbers while the storage is a ref no re-render depends on. The rendered note
-window is bounded — only notes within 1.6 s of the receptors exist as elements,
+window is bounded: only notes within 1.6 s of the receptors exist as elements,
 about a dozen at a time, never the whole 110-note chart.
 
 **Canvas was considered and rejected:** a dozen elements is nowhere near a DOM
@@ -888,7 +888,7 @@ Two deliberate costs, both bounded:
 
 1. **One forced reflow per judgement.** Restarting a CSS animation that is already
    running requires removing the class, reading layout, and re-adding it. That is
-   a handful of reads a second, never one per frame — and it is skipped entirely
+   a handful of reads a second, never one per frame, and it is skipped entirely
    under reduced motion.
 2. **A layout measurement on resize and on phase change**, never inside the frame
    loop, to work out how far a note travels.
@@ -904,7 +904,7 @@ lane rails → judgement readout → notes → receptors → countdown
 The readout sits **below the notes**. A judgement is 420 ms of feedback; a note
 is the thing the player is aiming at, and a note hidden behind a word is a note
 that gets missed. The cost is that a note crossing the readout covers part of the
-word — acceptable, because the word keeps its colour, its size and its position,
+word: acceptable, because the word keeps its colour, its size and its position,
 and the player's eye is at the judgement line rather than at mid-field when it
 appears.
 
@@ -913,7 +913,7 @@ appears.
 Notes were positioned by `progress × fieldHeight` with the note's **top** edge on
 that point, while the receptors sat in a padded row above the field's bottom
 edge. At the moment a note was due, its token was therefore a full receptor-height
-*below* the ring it was supposed to land in — the picture disagreed with the
+*below* the ring it was supposed to land in, the picture disagreed with the
 clock by about 34 px at desktop size, measured in the browser.
 
 The fix is presentation-only and is worth stating precisely, because it is the
@@ -934,14 +934,14 @@ It is now centred on the row, which is correct at every size by construction.
 ## 13. The DEV harness
 
 `/dev/arcade` (`src/pages/DevArcade.tsx`), still behind `import.meta.env.DEV`, so
-the chunk is never emitted in a build — `src/dev-routes.test.ts` proves it at
+the chunk is never emitted in a build, `src/dev-routes.test.ts` proves it at
 both source and artifact level.
 
 Phase 3 additions, under **Blobbi Dance** and **Fake reward writer**:
 
 | Control | What it does |
 | --- | --- |
-| `open dance machine` | mounts the REAL `DanceMachine` — real chart, real judgement, real lifecycle, real claim boundary |
+| `open dance machine` | mounts the REAL `DanceMachine`: real chart, real judgement, real lifecycle, real claim boundary |
 | `chart: valid / invalid` | swaps in a deliberately broken chart to see the error state |
 | `reduced motion: on / off` | forces `prefers-reduced-motion` for this tab and remounts |
 | `confirm / reject / timeout / verify-mismatch / verify-unreadable / lagging-relay` | picks the fake writer's behaviour |
@@ -954,13 +954,13 @@ either 68 seconds away or 420 milliseconds long:
 | Control | What it does |
 | --- | --- |
 | `hide ▾ / show ▴` | collapses the panel, which is 45 vh tall and was covering the bottom half of the very screen it drives |
-| `flawless / decent / scrappy / dud (0 tickets)` | dispatches a REAL `finish` with a hand-built result, so the results screen renders from the production reward policy without playing the song. `dud` is the zero-ticket case — `completedNaturally: 0`, refused by the policy's own rule |
+| `flawless / decent / scrappy / dud (0 tickets)` | dispatches a REAL `finish` with a hand-built result, so the results screen renders from the production reward policy without playing the song. `dud` is the zero-ticket case, `completedNaturally: 0`, refused by the policy's own rule |
 | `already-claimed` | seeds the durable claim ledger before the machine hydrates it, the only way to reach that phase without publishing. Needs a signed-in browser (the ledger is keyed by owner) and says so when there isn't one |
 | `320×568 / 375×667 / 390×844 / 768×1024` | shell-box presets for the viewport audit |
 | `presentation gallery` | every judgement readout, every combo tier, the note / receptor / touch treatments and all four mascot moods, side by side and standing still |
 
-The gallery renders from the **same helpers the live renderer calls** —
-`judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS` — so what a reviewer
+The gallery renders from the **same helpers the live renderer calls**,
+`judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS`: so what a reviewer
 compares there is what a player sees mid-song. It has a `replay pop` button
 because the live readout's animation ends at `opacity: 0`: it is meant to vanish,
 which makes the animated form useless for side-by-side comparison.
@@ -968,23 +968,23 @@ which makes the animated form useless for side-by-side comparison.
 **Neither the panel nor the gallery can leak into production.** The whole module
 is behind `import.meta.env.DEV`, nothing in `src/components/blobbi/arcade/`
 imports it, and `src/dev-routes.test.ts` proves the chunk is absent from a build.
-`showDebugDetails` — which is what puts `Policy blobbi-dance-tickets v1` on the
-results screen — is passed only by this harness and defaults to `false`.
+`showDebugDetails`: which is what puts `Policy blobbi-dance-tickets v1` on the
+results screen: is passed only by this harness and defaults to `false`.
 
 **It publishes nothing.** The fake `ArcadeRewardWriter` replaces the only
-component that could, so every claim outcome — including the two that must never
-be reported as success — is reachable with no key, no relay and no published
+component that could, so every claim outcome, including the two that must never
+be reported as success, is reachable with no key, no relay and no published
 event. Walking the Blobbi to the dance machine in the world below opens the real
 machine with the real writer; that still publishes nothing, because the harness
 has no signed-in user and the claim path refuses before it sends anything.
 
 The harness still **never fakes a playable game for a machine whose `gameId` is
-`null`** — the lifecycle fixtures leave a coming-soon cabinet in `preview` and
+`null`**: the lifecycle fixtures leave a coming-soon cabinet in `preview` and
 say why, because the reducer genuinely refuses to start a run without a game id.
 
 The viewport presets constrain the **box** only; CSS media queries still evaluate
 at the real window width, so a `sm:` rule does not switch off just because the box
-is 320 px wide. That makes them a *conservative* check — the shell is drawn with
+is 320 px wide. That makes them a *conservative* check, the shell is drawn with
 the roomier desktop paddings and type sizes inside the smaller box, so anything
 that fits under a preset also fits on the real device. Genuine breakpoint checks
 still need device emulation, and the harness says so rather than proving less
@@ -997,15 +997,15 @@ than it appears to.
 Phase 3 shipped a game that worked and looked like the developer prototype it
 was: a grey bordered box of coloured squares on the shell's cream background,
 with the tuning table printed on the start screen. Phase 3.2 is a presentation
-pass over the same game. **No rule changed** — not the chart, not a judgement
+pass over the same game. **No rule changed**: not the chart, not a judgement
 window, not the scoring, not the reward policy, not the claim boundary, and not
 one Nostr event.
 
 ### The direction
 
-A **cozy neon cabinet**. The island's cream-and-wood palette forms the machine —
+A **cozy neon cabinet**. The island's cream-and-wood palette forms the machine,
 a marquee with blinking bulbs, a wood-toned bezel, soft depth from flat drop
-shadows — and the playfield inside it is a deep violet screen with neon lane
+shadows: and the playfield inside it is a deep violet screen with neon lane
 accents. Rounded forms, chunky arcade tokens, expressive but restrained feedback,
 and nothing that reads as a slot machine.
 
@@ -1018,11 +1018,11 @@ taken from the lanes. The frame's job is to focus attention on the playfield.
 
 | Screen | Before | After |
 | --- | --- | --- |
-| **Start** | a badge, a title, a two-column control table, and three paragraphs — judgement windows in milliseconds, the full ticket formula (participation, every accuracy tier, the full-combo bonus, the per-run cap), and the audio notice | a marquee with the Blobbi and the song title, one plain-language objective sentence, the duration, a control diagram showing each lane's coloured button with its name and keys, one line naming *both* input methods, and two short honest notes: tickets are earned by finishing and by playing well, and the audio is a placeholder |
+| **Start** | a badge, a title, a two-column control table, and three paragraphs, judgement windows in milliseconds, the full ticket formula (participation, every accuracy tier, the full-combo bonus, the per-run cap), and the audio notice | a marquee with the Blobbi and the song title, one plain-language objective sentence, the duration, a control diagram showing each lane's coloured button with its name and keys, one line naming *both* input methods, and two short honest notes: tickets are earned by finishing and by playing well, and the audio is a placeholder |
 | **Playfield** | a grey rounded box, thin lane dividers, 36 px coloured squares, a dashed line, a bare score/combo row | a cabinet with a bulb-lit marquee (song, mascot, mute, progress), a violet highway with four tinted rails, layered arcade tokens with a lift shadow, a bright judgement line running through the receptors, and a HUD of exactly two live numbers |
 | **Feedback** | a coloured word that appeared and disappeared | the word pops and drifts, the hit receptor pulses a ring and throws five sparks, the lane flashes, the Blobbi reacts, and a long combo scales up and rings the field |
 | **Countdown** | a bare number over a dim overlay | "Get ready" over `• · 3 · 2 · 1 · Go!`, each tick popping in on its own beat |
-| **Results** | a grade box, a percentage, and a six-row two-column table of labels | a celebration card — grade, a sentence that says what the grade *means*, the score, a full-combo star — then two metric tiles, four colour-coded judgement counts, and a ticket panel with the earned quantity as the headline and a status chip |
+| **Results** | a grade box, a percentage, and a six-row two-column table of labels | a celebration card, grade, a sentence that says what the grade *means*, the score, a full-combo star, then two metric tiles, four colour-coded judgement counts, and a ticket panel with the earned quantity as the headline and a status chip |
 
 ### Combo, without moving the playfield
 
@@ -1034,8 +1034,8 @@ hands at the exact moment they were doing well.
 
 ### The Blobbi on stage
 
-`MascotBlobbi` — the existing standalone SVG mascot, no hooks, no Nostr, no
-position system — rendered small in the marquee. It bobs on the beat (the CSS
+`MascotBlobbi`: the existing standalone SVG mascot, no hooks, no Nostr, no
+position system: rendered small in the marquee. It bobs on the beat (the CSS
 duration is `--dance-beat`, set once per run from the track's tempo) and reacts
 to Perfect / Good / Miss through a `data-mood` attribute the frame loop writes.
 
@@ -1054,7 +1054,7 @@ been given a control. **This adds the control, not the capability.** There is no
 volume slider: that would need a new persisted setting, a new engine parameter
 and a migration, none of which exist.
 
-**The track is still the synthesised placeholder** — `readiness: 'development'`,
+**The track is still the synthesised placeholder**: `readiness: 'development'`,
 generated in the browser from code in this repository, no asset and no licence to
 clear. Nothing in this pass changed the audio, the schedule, or the timing model.
 
@@ -1079,7 +1079,7 @@ that:
   cannot scroll the lanes off screen mid-song. Every other state keeps normal
   scrolling, because a results panel at 320 × 568 genuinely needs it;
 - the lane controls carry `touch-action: none`, `user-select: none` and
-  `-webkit-tap-highlight-color: transparent`, scoped to the buttons — the rest of
+  `-webkit-tap-highlight-color: transparent`, scoped to the buttons, the rest of
   the document scrolls normally;
 - the shell footer and the lane strip respect `env(safe-area-inset-bottom)`;
 - the field re-measures its note travel on `resize`, which covers orientation
@@ -1088,8 +1088,8 @@ that:
 Measured in Chrome with the shell box constrained to 320 × 568 (see §13 for what
 that does and does not prove): no horizontal overflow anywhere in the document or
 the content area, a 264 × 221 CSS px playfield, 60 × 56 px lane buttons, and the
-touch strip fully inside the shell. Landscape phone is usable but cramped — the
-marquee and the lane strip leave little height for the highway — and portrait is
+touch strip fully inside the shell. Landscape phone is usable but cramped, the
+marquee and the lane strip leave little height for the highway, and portrait is
 the supported orientation.
 
 ---
@@ -1103,15 +1103,15 @@ the supported orientation.
    headphones the game will feel late until they can.
 3. **Backgrounding the tab loses a run.** Deliberate (§10). A blur no longer
    does, but a phone that backgrounds the browser mid-song still costs the run.
-   The alternative — a freeze-and-confirm screen on return — was judged more
+   The alternative: a freeze-and-confirm screen on return, was judged more
    complex than the first version of this game should carry.
 4. **Claim idempotency is per browser profile**, not cross-device and not
    protocol-level (§8). With the `localStorage` lease fallback (no Web Locks),
    two tabs writing in the same millisecond is a residual window.
 5. **An unresolved claim can stay unresolved.** If the player was offline, or a
    relay never propagates the write, reconciliation will never see the balance
-   move and the tickets are never granted. This is deliberate — the alternative
-   is paying twice — but it is a real cost, and there is no in-app way to force
+   move and the tickets are never granted. This is deliberate, the alternative
+   is paying twice: but it is a real cost, and there is no in-app way to force
    the grant.
 6. **kind:31633 unknown non-item tags are not preserved** by the canonical
    builder (§7). Pre-existing, pinned by a test.
@@ -1152,7 +1152,7 @@ the supported orientation.
 16. **The countdown reads `• 3 2 1 Go!`, not `3 2 1 Go!`.** The track's lead-in is
     four beats, so there is one tick before the three-count; it shows a dot rather
     than a "4". Making it a true three-count would mean changing `leadInMs`, which
-    is a track property every note time is written against — a timing change for a
+    is a track property every note time is written against, a timing change for a
     cosmetic gain, which the brief rules out.
 17. **Narrow-viewport checks were made with the shell box constrained, not with a
     320 px viewport.** Chrome on macOS will not open a window that narrow, so
@@ -1166,14 +1166,14 @@ the supported orientation.
 19. **No hit-error meter, no per-note timing feedback beyond the judgement word,
     and no lane-specific accuracy.** All deferred.
 20. **A note crossing the judgement readout covers part of the word.** Notes paint
-    above it on purpose (see §12); the alternative — feedback covering a target —
+    above it on purpose (see §12); the alternative, feedback covering a target,
     is worse. Any in-field position for the readout is crossed by notes, so the
     only real fix is moving it out of the field, which costs it the player's
     eyeline.
 21. **The mount-time note measurement is taken while the shell is still zooming
     in**, so it is a few per cent short for the length of the countdown. Nothing
     is due then (the first note is at the end of the lead-in) and the phase
-    change into `playing` re-measures, so it is not visible in play — but it does
+    change into `playing` re-measures, so it is not visible in play, but it does
     mean the geometry is briefly wrong rather than briefly absent.
 22. **A viewport change that fires neither `resize` nor `orientationchange` is
     not caught.** In practice both fire for window resizes, orientation changes
@@ -1191,20 +1191,20 @@ pose animation, and any decoration that would need an image asset.
 ## 16. What the next phase should implement
 
 > **Phase 4 shipped, with one scope correction.** The catalogue described below
-> exists — `docs/arcade-catalogue.md` — but it belongs to the **six generic
+> exists, `docs/arcade-catalogue.md`, but it belongs to the **six generic
 > cabinets only**. Blobbi Dance, Pool and Air Hockey are dedicated machines and
 > are not in it; the dance machine opens this game directly. What remains from
 > this section is the **Guest Game Runtime**, deliberately split out and now
 > Phase 5.
 
-**Phase 4 — the Shared Arcade Catalogue.** *(delivered, for generic cabinets)*
+**Phase 4: the Shared Arcade Catalogue.** *(delivered, for generic cabinets)*
 
 Today every cabinet is either Blobbi Dance or an honest "coming soon" panel, and
 the only way to reach a game is to know which cabinet it lives on. The next phase
 makes **every GENERIC arcade cabinet open the same catalogue**, so an
 interchangeable cabinet becomes a door into the arcade's content rather than a
-dead screen. Machines that ARE a specific physical game — the dance pad, the pool
-table, the air hockey table — keep their own experience.
+dead screen. Machines that ARE a specific physical game, the dance pad, the pool
+table, the air hockey table; keep their own experience.
 
 The catalogue separates two kinds of content, and the separation is the point:
 
@@ -1212,9 +1212,9 @@ The catalogue separates two kinds of content, and the separation is the point:
    - integrated with the Island;
    - may produce validated results;
    - may grant Arcade Tickets;
-   - **Blobbi Dance is the first one**, and everything this document describes —
+   - **Blobbi Dance is the first one**, and everything this document describes,
      the lifecycle reducer, the result contract, the reward policy and the claim
-     boundary — is what an Island Game is *made of*.
+     boundary: is what an Island Game is *made of*.
 
 2. **Guest Games**
    - curated external HTML5 / WebXDC packages;
@@ -1224,7 +1224,7 @@ The catalogue separates two kinds of content, and the separation is the point:
 
 The catalogue phase must define discovery, presentation, categories,
 availability, controls, ticket labels and the launch lifecycle. **It must not yet
-execute untrusted packages** — a Guest Game entry in the catalogue is a listing,
+execute untrusted packages**: a Guest Game entry in the catalogue is a listing,
 not a running program, until the runtime exists.
 
 The secure **Guest Game Runtime** follows in a separate phase. Splitting it out
@@ -1234,9 +1234,9 @@ reviewing both under whichever deadline the first one sets.
 
 **The Prize Shop remains deferred** until the arcade has more content and more
 earning sources. It is still the thing that makes a ticket worth having, and the
-pieces it will need already exist — the canonical ticket address, the balance
+pieces it will need already exist, the canonical ticket address, the balance
 read, and a `PRIZES` counter with an honest coming-soon state already wired to
-the shell — but a shop stocked from a single 8-tickets-per-run source is a
+the shell: but a shop stocked from a single 8-tickets-per-run source is a
 smaller product than a shop stocked from an arcade.
 
 Deliberately after all of that, not before: latency calibration, a second chart,

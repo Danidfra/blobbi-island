@@ -152,7 +152,7 @@ describe('useIslandLocationResume', () => {
     await waitFor(() => expect(result.current.isSettled).toBe(true));
 
     expect(result.current.outcome).toEqual({ kind: 'unknown-read', reason: 'unreachable' });
-    // The partial event is diagnostics only — it did not become a restore.
+    // The partial event is diagnostics only; it did not become a restore.
     expect(result.current.location).toBe('town');
   });
 
@@ -244,7 +244,7 @@ describe('LocationProvider bootstrap', () => {
       </LocationProvider>,
     );
 
-    // The FIRST committed render is already the restored location — the world
+    // The FIRST committed render is already the restored location, the world
     // never sees Town, so there is nothing to flash away from.
     expect(screen.getByTestId('loc')).toHaveTextContent('mine');
   });
@@ -338,7 +338,7 @@ describe('LocationProvider bootstrap', () => {
       </LocationProvider>,
     );
 
-    // Both are already correct in the FIRST committed render — no spawn frame,
+    // Both are already correct in the FIRST committed render; no spawn frame,
     // no follow-up effect that moves the actor afterwards.
     expect(screen.getByTestId('loc')).toHaveTextContent('mine');
     expect(screen.getByTestId('pos')).toHaveTextContent('61.5,88');
@@ -384,7 +384,7 @@ describe('LocationProvider bootstrap', () => {
       screen.getByText('go').click();
     });
 
-    // Cleared immediately, not on the far side of the fade — the destination
+    // Cleared immediately, not on the far side of the fade, the destination
     // scene's own spawn rules own it from here.
     expect(screen.getByTestId('pos')).toHaveTextContent('spawn');
 
@@ -432,13 +432,13 @@ describe('LocationProvider bootstrap', () => {
     /**
      * Stands in for `MultiplayerLayer`'s wiring: it reads the live location and
      * hands it to the SAME `publishPresenceLogin` production uses. No second
-     * publisher exists, and the restore reaches this one the ordinary way —
+     * publisher exists, and the restore reaches this one the ordinary way,
      * through `currentLocation`, not through a side channel.
      */
     function PresencePublisher() {
       const { currentLocation } = useLocation();
       // Read at publish time, so the effect can depend on the location without
-      // republishing on every change — login presence goes out once per session,
+      // republishing on every change, login presence goes out once per session,
       // like the real one.
       const locationRef = useRef(currentLocation);
       locationRef.current = currentLocation;

@@ -4,8 +4,8 @@
  * A preview whose fallback rules differ from production is worse than no
  * preview: it would show a hat that the game will not show. So these tests
  * assert that each preview mode picks exactly what its production counterpart
- * picks — `primaryItemImageUrl` for a card, `itemImageSourcesForView` for a
- * posed Blobbi — and that a face-only accessory stays hidden from behind.
+ * picks, `primaryItemImageUrl` for a card, `itemImageSourcesForView` for a
+ * posed Blobbi: and that a face-only accessory stays hidden from behind.
  *
  * The other thing asserted here is a negative: rendering a preview publishes
  * nothing, equips nothing, and grants nothing. Every mutation hook the app owns
@@ -61,7 +61,7 @@ const NO_PROBES = new Map<string, ImageProbe>();
  * Switch tabs.
  *
  * Radix's tab triggers activate on `mousedown`, not on a synthesized `click`,
- * so a plain `fireEvent.click` leaves the panel where it was — which would make
+ * so a plain `fireEvent.click` leaves the panel where it was, which would make
  * every assertion below silently test the Card tab.
  */
 function selectTab(name: string) {
@@ -150,7 +150,7 @@ describe('view comparison', () => {
     selectTab('Compare');
 
     // Side views are listed as published, but only reachable through the
-    // generic "first valid image" last resort — never chosen AS front or back.
+    // generic "first valid image" last resort; never chosen AS front or back.
     expect(screen.getByText(/never substituted/i)).toBeInTheDocument();
   });
 });

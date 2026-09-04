@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — artwork resolution for kind:31634 placements.
+ * Blobbi Island: artwork resolution for kind:31634 placements.
  *
  * The renderer's asset contract is a resolver that turns
  * `{ code, slot, url }` into an ordered list of candidate URLs. On the
@@ -11,7 +11,7 @@
  * with no published definition still drew, because its code doubled as a path
  * into `public/assets/.../accessories/`. There is deliberately no such fallback
  * here. An item identified by address either has a published definition that
- * says what it looks like, or Island does not draw it — inventing a path from
+ * says what it looks like, or Island does not draw it, inventing a path from
  * an address would resurrect exactly the guess-the-filename identity system
  * this migration removes.
  *
@@ -40,7 +40,7 @@ export interface PlacementAccessorySourceOptions {
   definitionsByAddress: ReadonlyMap<string, ResolvedBlobbiItemDefinition>;
   /**
    * Which way the Blobbi is turned. Only `front` and `back` exist, because only
-   * front and back Blobbi artwork exists — a side-view hat over a front-facing
+   * front and back Blobbi artwork exists, a side-view hat over a front-facing
    * body looks worse than the primary image does.
    */
   facing?: ItemImageView;
@@ -49,7 +49,7 @@ export interface PlacementAccessorySourceOptions {
 /**
  * Build the placement artwork resolver.
  *
- * Candidate order, highest first — the same rules
+ * Candidate order, highest first, the same rules
  * `itemImageSourcesForView` already applies for the legacy path, so a cosmetic
  * looks identical whichever path drew it:
  *

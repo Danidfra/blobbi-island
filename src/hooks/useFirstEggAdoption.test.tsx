@@ -1,7 +1,7 @@
 /**
  * Focused tests for the first-egg adoption publish logic.
  *
- * These test the SMALLEST responsible unit — the `useFirstEggAdoption` hook —
+ * These test the SMALLEST responsible unit, the `useFirstEggAdoption` hook,
  * with the surrounding Nostr hooks mocked, so we can drive relay success/failure
  * deterministically without any ceremony animation timing.
  *
@@ -85,7 +85,7 @@ describe('useFirstEggAdoption', () => {
     expect(signEvent).not.toHaveBeenCalled();
   });
 
-  it('publishes ONLY baby (31124) then profile (11125) — adoption is currency-free', async () => {
+  it('publishes ONLY baby (31124) then profile (11125): adoption is currency-free', async () => {
     const { result } = renderHook(() => useFirstEggAdoption());
     const preview = result.current.generatePreview();
 
@@ -130,7 +130,7 @@ describe('useFirstEggAdoption', () => {
       await result.current.finalizeAdoption(result.current.generatePreview(), 'B');
       const kinds = nostrEvent.mock.calls.map(([e]) => e.kind);
       expect(kinds).toEqual([KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE]);
-      // The legacy coins tag rides through opaquely — preserved verbatim,
+      // The legacy coins tag rides through opaquely, preserved verbatim,
       // never updated, never triggering any grant.
       const profileEvent = nostrEvent.mock.calls[1][0];
       expect(profileEvent.tags).toContainEqual(['coins', '5000']);
@@ -177,7 +177,7 @@ describe('useFirstEggAdoption', () => {
     const preview = result.current.generatePreview();
 
     // The named failure carries the timeout as its cause rather than replacing
-    // it — the ceremony maps the type, diagnostics keep the reason.
+    // it: the ceremony maps the type, diagnostics keep the reason.
     await expect(result.current.finalizeAdoption(preview, 'Puck')).rejects.toMatchObject({
       name: 'AdoptionPublishError',
       kind: KIND_BLOBBI_STATE,
@@ -237,7 +237,7 @@ describe('useFirstEggAdoption', () => {
     const p2 = result.current.finalizeAdoption(preview, 'Puck');
 
     // The two submits share one in-flight promise (guard), so run() executes
-    // once — same object identity.
+    // once: same object identity.
     expect(p1).toBe(p2);
 
     // Wait until the (single) baby publish is actually in flight, then release.

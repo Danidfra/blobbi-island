@@ -134,7 +134,7 @@ describe('establishing a signed spend', () => {
     expect(await establishSpend(d, signed)).toMatchObject({ status: 'unconfirmed' });
   });
 
-  it('retrying republishes the identical event — no signer involved', async () => {
+  it('retrying republishes the identical event; no signer involved', async () => {
     const d = deps([{ relay: 'r1', ok: false, error: 'Timed out', indefinite: true }]);
     await establishSpend(d, signed);
     const again = deps([{ relay: 'r1', ok: true }]);

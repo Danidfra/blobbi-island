@@ -1,5 +1,5 @@
 /**
- * The Coin DELTA invariant — the regression suite for the Mine overwrite bug.
+ * The Coin DELTA invariant, the regression suite for the Mine overwrite bug.
  *
  * ```
  *   grantCoins(+N)  ⇒  final = authoritativeCurrentBalance + N
@@ -10,7 +10,7 @@
  * instead of adding to it. The arithmetic was never wrong: the BASE was. A
  * read that resolved empty (a relay that does not carry the inventory) was
  * used as a publish base, and because kind:31633 is replaceable, the resulting
- * event did not lose the delta — it replaced the player's entire inventory
+ * event did not lose the delta; it replaced the player's entire inventory
  * with "20 Coins".
  *
  * Everything here therefore drives the REAL wallet against events built by the
@@ -129,7 +129,7 @@ describe('grantCoins adds a delta to the authoritative balance', () => {
     expect(quantityIn(relay.getStored(), BLOBBI_COIN_ADDRESS)).toBe(20);
   });
 
-  it('100 + 20 = 120 — the reported Mine case', async () => {
+  it('100 + 20 = 120, the reported Mine case', async () => {
     const relay = makeRelay(
       realInventoryEvent([{ address: BLOBBI_COIN_ADDRESS, amount: 100 }], 1_000),
     );

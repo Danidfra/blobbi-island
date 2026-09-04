@@ -1,5 +1,5 @@
 /**
- * The Beach reward ledger — durable reservations and reward operations for
+ * The Beach reward ledger, durable reservations and reward operations for
  * the Treasure Hunt's daily rewarded-hunt window.
  *
  * Third sibling of the arcade claim ledger and the Coin op ledger, for the
@@ -12,7 +12,7 @@
  * A rewarded hunt RESERVES one of the window's slots when it STARTS (inside
  * a queued cross-tab lock, so two tabs cannot both take slot 10). The
  * reservation carries the operation id that will later be the wallet
- * grant's exactly-once identity — one id from start to Coins.
+ * grant's exactly-once identity; one id from start to Coins.
  *
  * ## Status lifecycle
  *
@@ -23,22 +23,22 @@
  *       └──abandon──► abandoned (slot consumed)  /  released (record deleted)
  * ```
  *
- * - `reserved`  — hunt started; counts against the window.
- * - `finalized` — a legitimate result exists and the amount is fixed; the
+ * - `reserved`: hunt started; counts against the window.
+ * - `finalized`: a legitimate result exists and the amount is fixed; the
  *   grant may still be pending (this state survives refresh and is resumed).
- * - `applied` / `ambiguous` — the wallet grant's outcome (the wallet's own
+ * - `applied` / `ambiguous`: the wallet grant's outcome (the wallet's own
  *   ledger holds the publish-level detail under the same opId).
- * - `abandoned` — the hunt was abandoned AFTER crossing the minimum
+ * - `abandoned`: the hunt was abandoned AFTER crossing the minimum
  *   participation threshold: the slot stays consumed, per the documented
  *   anti-farming rule.
- * - released — an abandonment BEFORE meaningful participation deletes the
+ * - released: an abandonment BEFORE meaningful participation deletes the
  *   record and frees the slot (start-and-quit must not burn the day).
  *
  * ## Window monotonicity
  *
  * The effective window never moves backwards past a window that already has
  * operations: winding the system clock back a day does not mint ten fresh
- * slots. This is a speed bump for honest-client accidents, not anti-cheat —
+ * slots. This is a speed bump for honest-client accidents, not anti-cheat,
  * the whole feature is client-trusted, as documented everywhere.
  */
 
@@ -50,7 +50,7 @@ export type BeachRewardOpStatus =
   | 'abandoned';
 
 export interface BeachRewardOp {
-  /** The exactly-once operation id — SAME id used for the wallet grant. */
+  /** The exactly-once operation id: SAME id used for the wallet grant. */
   readonly opId: string;
   /** The simulation round this op paid (`TreasureHuntResult.roundId`). */
   readonly roundKey: string;
@@ -149,7 +149,7 @@ export function readBeachRewardOp(
 
 /**
  * The effective window key: today's, unless a LATER window already holds
- * operations (clock rolled back) — then the later one keeps counting.
+ * operations (clock rolled back): then the later one keeps counting.
  */
 export function effectiveBeachWindowKey(
   pubkey: string | undefined,
@@ -272,7 +272,7 @@ export function resolveBeachReward(
  * Abandon a reserved hunt. Past the participation threshold the slot stays
  * consumed (`abandoned`); before it, the record is RELEASED (deleted) so an
  * accidental open-and-close does not burn the day. Finalized/applied ops are
- * never abandoned — their reward intent must survive.
+ * never abandoned: their reward intent must survive.
  */
 export function abandonBeachReward(
   pubkey: string,

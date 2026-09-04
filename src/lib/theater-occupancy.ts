@@ -10,7 +10,7 @@
  * currently drawn in it.
  *
  * That boundary is deliberate and is the reason kind 31950 stays a presence
- * event. Authoritative seating — "this seat is MINE until I release it" — would
+ * event. Authoritative seating, "this seat is MINE until I release it", would
  * need a writer, a conflict protocol and a release path, and would make an
  * ordinary network hiccup able to lock a chair. Shared playback gets its
  * authority from the session event (kind 31951, NOT implemented yet); seating
@@ -19,7 +19,7 @@
  *
  * ## Duplicate claims
  *
- * Nothing stops two players walking into the same chair — there is no
+ * Nothing stops two players walking into the same chair; there is no
  * reservation, by design. When that happens every client must still draw at most
  * ONE Blobbi per seat, or two sprites overlap at the same anchor and the room
  * looks broken. {@link resolveRemoteSeatOccupancy} is that rule, and it is a
@@ -33,7 +33,7 @@
  *     wins** (ties broken by session id, which is unique per browser session).
  *     Lexicographic order over a hex string is total and identical everywhere,
  *     so no exchange or negotiation is needed.
- *  3. **Losers fall back to normal presence-position rendering** — they are
+ *  3. **Losers fall back to normal presence-position rendering**: they are
  *     still in the room, still walking around, just not drawn in that chair.
  *
  * The visible consequence, stated plainly: if A and B both sit in seat X, A sees
@@ -50,7 +50,7 @@
  * presence map, which is already self-cleaning: NIP-40 expiration (35 s) plus
  * `useIslandPresence`'s per-second sweep of anything older than `EXP_SECONDS + 5`.
  * A player who closes their tab stops publishing, their presence ages out, they
- * leave `players`, and their seat is released by that alone — no timer here, and
+ * leave `players`, and their seat is released by that alone; no timer here, and
  * no way for this module and presence to disagree about who is still around.
  */
 
@@ -69,7 +69,7 @@ export interface RemoteSeatClaim {
  *
  * @param claims       Seat claims from currently-active remote presence.
  * @param localSeatId  The seat the local player occupies, or null. Claims on it
- *                     are dropped — see rule 1 above.
+ *                     are dropped: see rule 1 above.
  * @returns            seatId → the single winning remote claim.
  */
 export function resolveRemoteSeatOccupancy(
@@ -103,7 +103,7 @@ function comparePriority(a: RemoteSeatClaim, b: RemoteSeatClaim): number {
 }
 
 /**
- * The set of seats that should LOOK occupied — remote winners plus the local
+ * The set of seats that should LOOK occupied, remote winners plus the local
  * player's own seat.
  *
  * This is what the chairs themselves read. It is intentionally a set of ids and

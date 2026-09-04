@@ -3,7 +3,7 @@
  *
  * ## The defect this exists to remove
  *
- * `NPool.query()` — the pool every read in this app goes through — **never
+ * `NPool.query()`: the pool every read in this app goes through, **never
  * throws**. Its own documentation says so:
  *
  * > "If the signal is aborted, this method will return partial results instead
@@ -11,8 +11,8 @@
  *
  * and the implementation ends in a bare `catch { }`. So a timeout, a dead
  * socket, a refused subscription and a genuinely empty relay all produce the
- * same value: `[]`. Callers then record that as fact — "this player owns no
- * Blobbis" — and the app shows "Your nest is empty" to someone who owns
+ * same value: `[]`. Callers then record that as fact, "this player owns no
+ * Blobbis": and the app shows "Your nest is empty" to someone who owns
  * several, or ejects them from a live session.
  *
  * A read has to be able to answer three different things:
@@ -46,7 +46,7 @@
  * ## What this does NOT claim
  *
  * It cannot prove a relay holds every relevant event. `EOSE` means "this relay
- * has sent everything it intends to send for this REQ" — a relay that lost an
+ * has sent everything it intends to send for this REQ": a relay that lost an
  * event, or that was never asked, still EOSEs. The narrower question this
  * answers is the one that was actually being got wrong:
  *
@@ -67,7 +67,7 @@ export type RelayReadUnknownReason =
   | 'timeout'
   /** The caller's signal aborted the read (unmount, query cancellation). */
   | 'aborted'
-  /** The relay sent CLOSED before EOSE — the REQ was refused or dropped. */
+  /** The relay sent CLOSED before EOSE, the REQ was refused or dropped. */
   | 'closed'
   /** The subscription threw before completing (socket/transport failure). */
   | 'unreachable';
@@ -75,7 +75,7 @@ export type RelayReadUnknownReason =
 export type RelayReadOutcome =
   /**
    * The relay set completed the REQ (EOSE). `events` is what it holds for
-   * these filters — an empty array here is a CONFIRMED empty.
+   * these filters: an empty array here is a CONFIRMED empty.
    */
   | { readonly status: 'answered'; readonly events: NostrEvent[] }
   /**
@@ -91,7 +91,7 @@ export type RelayReadOutcome =
 
 /**
  * Thrown by the `…OrThrow` helpers so a TanStack query FAILS instead of
- * resolving with a fabricated empty result — which is what lets React Query
+ * resolving with a fabricated empty result, which is what lets React Query
  * retain the previously known-good data.
  *
  * Product UI must not render this message. It only needs to distinguish "we
@@ -119,7 +119,7 @@ export function isRelayReadUnknown(error: unknown): error is RelayReadUnknownErr
  * `req` is optional ONLY so that the many existing test fakes which expose
  * just `query` keep working; production always has it (`NPool` implements
  * `NRelay`). Without `req` the completion distinction is impossible, so the
- * fallback treats a resolved `query` as `answered` — the pre-existing, weaker
+ * fallback treats a resolved `query` as `answered`: the pre-existing, weaker
  * behaviour. Never rely on that path in production code.
  */
 export interface RelayReader {
@@ -196,7 +196,7 @@ export async function readRelay(
         return { status: 'unknown', reason: 'closed', partialCount: events.length };
       }
     }
-    // The iterator finished without EOSE — no relay was routed, or the
+    // The iterator finished without EOSE; no relay was routed, or the
     // subscription ended early. Not a completion.
     return { status: 'unknown', reason: 'unreachable', partialCount: events.length };
   } catch {

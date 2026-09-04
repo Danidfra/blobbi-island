@@ -4,12 +4,12 @@
  *
  * `useLocalStorage` is not used here on purpose: it writes on every `setValue`
  * call, and this form changes on every keystroke. The debounce is the whole
- * point — a 700 ms pause is the unit of work, not a character.
+ * point: a 700 ms pause is the unit of work, not a character.
  *
  * Cross-tab behavior is deliberately narrow. Another tab's draft edits do NOT
  * stomp this tab's editor: silently swapping the form out from under someone
  * mid-sentence is worse than two tabs diverging, and the loser of that race
- * would lose real work. Published events are a different story — those DO
+ * would lose real work. Published events are a different story; those DO
  * update live, because they are facts about the network rather than local
  * scratch state.
  */
@@ -40,7 +40,7 @@ export interface ItemDraftsApi {
   savedAt: number | null;
   /** Set when a stored draft could not be restored, for a visible notice. */
   restoreError: string | null;
-  /** The draft restored at mount, if any — the editor seeds its form from it. */
+  /** The draft restored at mount, if any, the editor seeds its form from it. */
   restoredForm: ItemFormState | null;
   saveNow: (form: ItemFormState) => void;
   clearActiveDraft: () => void;

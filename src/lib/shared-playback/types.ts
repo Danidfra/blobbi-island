@@ -1,5 +1,5 @@
 /**
- * Shared Playback Session — wire types.
+ * Shared Playback Session, wire types.
  *
  * These are the shapes that travel on relays. They are deliberately separate
  * from the theater's local `PlaybackState` (`src/lib/theater-playback.ts`): the
@@ -7,7 +7,7 @@
  * two are mapped explicitly at the controller seam, never assumed identical.
  *
  * Nothing in `src/lib/shared-playback/**` may import React, the DOM, the seat
- * system, presence, chat or rendering — see the protocol document §14.3. That
+ * system, presence, chat or rendering; see the protocol document §14.3. That
  * rule is enforced by `decoupling.test.ts`, not by good intentions.
  */
 
@@ -47,7 +47,7 @@ export interface SharedPlaybackSessionContent {
 
 /** Everything a client knows about one session, tags included. */
 export interface SharedPlaybackSession {
-  /** `31951:<host-pubkey>:<d>` — the only identifier other systems may hold. */
+  /** `31951:<host-pubkey>:<d>`: the only identifier other systems may hold. */
   address: string;
   hostPubkey: string;
   /** The `d` tag: a fresh UUIDv4 per session, never reused. */
@@ -72,7 +72,7 @@ export type SharedSeekReason = 'direct' | 'skip-forward' | 'skip-backward' | 're
 /**
  * The kind 21951 content union.
  *
- * Every variant carries an ABSOLUTE resulting position — never a delta. A
+ * Every variant carries an ABSOLUTE resulting position; never a delta. A
  * relative command is only correct for a client that received every previous
  * command, which is exactly the assumption a lossy ephemeral channel breaks.
  */

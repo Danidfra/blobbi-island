@@ -1,4 +1,4 @@
-# Blobbi Island — Arcade Foundation (Phase 2)
+# Blobbi Island: Arcade Foundation (Phase 2)
 
 Status: implemented, and now **built on**. This document describes the shared
 technical foundation every arcade game uses, as it was designed in Phase 2 and as
@@ -12,7 +12,7 @@ Phase 3 actually consumed it.
 > is the current word on the game, the reward policy and the claim semantics.
 
 It is the follow-up to `docs/arcade-audit.md`, which found that the arcade had no
-games and — more importantly — told the player it did: nine machines, including a
+games and: more importantly, told the player it did: nine machines, including a
 pool table and an air hockey table, all opened one modal titled "Dance Dance
 Blobbi".
 
@@ -42,7 +42,7 @@ InteractiveElements.tsx  (delegates; the arcade branch is now 20 lines)
     ├── arcade/ArcadeMachine.tsx    × 9, from src/lib/arcade-machines-config.ts
     ├── arcade/ArcadeGameShell.tsx  Radix Dialog → portals OUT of the world
     │   └── arcade/ArcadeMachinePanel.tsx  honest preview / coming-soon
-    ├── elevator, counters, chairs, decoration — all from config
+    ├── elevator, counters, chairs, decoration; all from config
     └── arcade/arcade-machine-state.ts  (pure lifecycle reducer)
 
 src/arcade/                      pure, no React / Nostr / inventory
@@ -65,7 +65,7 @@ pending-interaction instance behaves identically to every other room).
 
 ## 2. The machine registry
 
-`src/lib/arcade-machines-config.ts` — one record per machine.
+`src/lib/arcade-machines-config.ts`: one record per machine.
 
 > **Superseded in part by Phase 4.** `gameId`, `availability` and `blurb` were
 > removed from this record and replaced by ONE discriminated field, `activation`,
@@ -88,7 +88,7 @@ pending-interaction instance behaves identically to every other room).
 | `arcade-cabinet-red` | floor-1 | Red Cabinet | shared-catalogue |
 
 The dance machine was called **"Dance Dance Blobbi"**, and is now **"Blobbi Dance
-Machine"** — named for the game it hosts, and named the same as that game. It is
+Machine"**: named for the game it hosts, and named the same as that game. It is
 a DEDICATED machine, so a player should be able to find the dance game by reading
 the room. (An intermediate pass renamed it "Dance Pad Cabinet" to satisfy a rule
 that turned out to apply only to the generic six; the rule, not the name, was the
@@ -103,7 +103,7 @@ Rules the config enforces (all covered by `arcade-machines-config.test.ts`):
 - **What a machine does is one explicit field.** ~~`gameId` is `null` for eight of
   nine.~~ **Phase 4**: `activation` replaced `gameId`, `availability` and `blurb`,
   and a test asserts all three are absent rather than merely unused. The
-  structural guarantee did not weaken — it moved: the lifecycle reducer still
+  structural guarantee did not weaken; it moved: the lifecycle reducer still
   refuses `start` without a game id, and the only thing that can supply one is a
   registry entry that passes `canLaunchArcadeGame` for **this machine and this
   surface**. "A machine owns no game" was never a universal rule; it is true of
@@ -117,8 +117,8 @@ Rules the config enforces (all covered by `arcade-machines-config.test.ts`):
   proven to land on walkable floor.
 
 **No movement blockers are configured.** `MovableBlobbi.goTo` refuses a target
-inside a blocker, so a blocker over a machine's footprint — placed before its
-anchor has been validated in a browser — would silently make that machine
+inside a blocker, so a blocker over a machine's footprint, placed before its
+anchor has been validated in a browser, would silently make that machine
 unreachable. Blockers belong in the phase that has a playable game to walk up to.
 
 Non-machine furniture lives in `src/lib/arcade-room-config.ts`: decoration (with
@@ -138,7 +138,7 @@ seating groups, the elevator, and the two ground-floor counters.
 > `docs/arcade-catalogue.md` §4.
 
 
-`src/arcade/arcade-machine-state.ts` — pure, exhaustive, no React/DOM/timers.
+`src/arcade/arcade-machine-state.ts`: pure, exhaustive, no React/DOM/timers.
 
 ```
 closed ──open──► preview ──start──► countdown ──ready──► playing ⇄ paused
@@ -161,7 +161,7 @@ Invariants, each with a test:
 
 1. `playing` is the only state a result may come from. A `finish` from `paused`
    is refused, so a game cannot score while frozen.
-2. `paused` preserves the run — same run id, machine and game.
+2. `paused` preserves the run, same run id, machine and game.
 3. A `runId` is minted exactly once. The caller supplies it (the reducer is
    pure); the reducer refuses to overwrite one.
 4. Results are immutable. A second `finish` is ignored, as is a result whose
@@ -197,8 +197,8 @@ interface ArcadeGameResult {
 
 `validateArcadeGameResult` rejects impossible values (non-integer or negative
 scores, `NaN`/`Infinity` stats, a run that ended before it started) **before** any
-reward is evaluated. This is not anti-cheat — a client-authored score cannot be
-verified client-side — it is a correctness gate.
+reward is evaluated. This is not anti-cheat, a client-authored score cannot be
+verified client-side: it is a correctness gate.
 
 `findNonSerialisable` walks the value and names anything JSON would silently drop
 (`JSON.stringify` discards functions and returns valid JSON, so it is useless as
@@ -210,21 +210,21 @@ There is deliberately **no leaderboard shape**.
 
 ## 5. The shell boundary
 
-> **Extended in Phase 4.** `ArcadeGameShell` now hosts three surfaces — the
-> shared catalogue, a running game, and a notice/coming-soon panel —
+> **Extended in Phase 4.** `ArcadeGameShell` now hosts three surfaces, the
+> shared catalogue, a running game, and a notice/coming-soon panel,
 > distinguished by a `surface` prop rendered as `data-arcade-surface`. `status`
 > became OPTIONAL, because a catalogue is a screen and not a run; when it is
 > absent there is no `data-arcade-status` and no pause control. The dismiss
 > control's label and accessible name are the caller's to set, so they can
 > describe the destination.
 >
-> It also stopped portaling to `document.body` — see **Where it renders** below.
+> It also stopped portaling to `document.body`: see **Where it renders** below.
 
 `arcade/ArcadeGameShell.tsx` replaces `GameModal`, which has been deleted.
 
 - **Renders outside the world, and inside the game window.** A Radix `Dialog`
   portalled into the **stage overlay host** that `BlobbiFrame` provides through
-  `StageOverlayContext` — `container={useStageOverlayHost()}` plus `inFrame`.
+  `StageOverlayContext`: `container={useStageOverlayHost()}` plus `inFrame`.
   Two separate mistakes are being avoided at once:
   - `GameModal` was a plain `absolute inset-0` div INSIDE `VirtualWorld`, so it
     inherited the world's scale transform and was clipped to the fixed
@@ -234,30 +234,30 @@ There is deliberately **no leaderboard shape**.
     scaling but covered the whole browser page: the wood frame, the shell header
     and footer and the page behind them all disappeared behind a full-viewport
     dialog. The host is level with the world INSIDE the frame's bezel, so the
-    overlay dims the game window and nothing else — on desktop, in immersive and
+    overlay dims the game window and nothing else, on desktop, in immersive and
     in fullscreen alike, with no second code path.
 
   Every arcade modal takes this path, not just the shell: `ArcadePassModal`,
   `ElevatorModal` and `NoPassModal` too. See `docs/arcade-catalogue.md` §5.
 - **Card dialogs must bring their own padding and margins.** `DialogContent`'s
-  two branches are not symmetrical — the body-portal branch carries `p-6`, the
+  two branches are not symmetrical, the body-portal branch carries `p-6`, the
   `inFrame` branch carries positioning and animation only (the in-frame dialogs
   written first are full-bleed artwork boards that pass `p-0`). A dialog moved
   into the frame therefore loses its padding, and its `w-full` starts resolving
   against the stage instead of the viewport, so it loses its side margins too.
   `inFrameDialogPanelClass` in `ui/dialog.tsx` is the one rule that puts both
   back; `ArcadeDialogs.containment.test.tsx` holds the three arcade dialogs to
-  it. `ArcadeGameShell` opts out deliberately — a machine's screen is *meant* to
+  it. `ArcadeGameShell` opts out deliberately, a machine's screen is *meant* to
   fill the stage.
 - **Unmounts on close.** `GameModal` set its content and never cleared it, so the
   last game's markup stayed mounted forever behind a closed modal.
 - **Owns** open/close, title, pause/resume/leave controls, and the
-  reduced-motion decision. **Owns nothing else** — no score, no Nostr, no
+  reduced-motion decision. **Owns nothing else**: no score, no Nostr, no
   inventory. It imports none of them.
 - **Blocks world input** by being a modal dialog outside `[data-world-surface]`;
   `data-block-move` is belt and braces.
 - **Restores focus explicitly.** Radix returns focus to a `DialogTrigger`, and
-  this dialog has none — it is opened by the movement system on ARRIVAL. The
+  this dialog has none; it is opened by the movement system on ARRIVAL. The
   shell remembers the focused element in `onOpenAutoFocus` and restores it in
   `onCloseAutoFocus`.
 - `DialogContent` gained a `hideDefaultClose` prop so the shell's own header
@@ -280,13 +280,13 @@ click / tap / Enter
 
 `data-block-move` plus pointer/touch stop-propagation, so a tap never *also*
 starts a raw world walk that races the pending interaction. The callback payload
-is the machine **id** — not a modal, not copy — so what a machine does can change
+is the machine **id**: not a modal, not copy, so what a machine does can change
 without touching where it sits.
 
 ### Wall-mounted objects need a configured stand point
 
 `MovableBlobbi.goTo` does not clamp its target; it clamps each animation STEP.
-A target above the walkable floor is therefore never reached — every step is
+A target above the walkable floor is therefore never reached; every step is
 pushed back onto the floor's top edge and the Blobbi slides along it. Worse, on
 the ground floor that edge runs through the mouth of the narrow elevator alcove.
 
@@ -309,18 +309,18 @@ Two mitigations, both in place:
 - **`useArcadeInput.ts`**: binds only while `enabled` (the caller passes
   `status === 'playing'`), tracks simultaneously-held lanes, converges touch and
   keyboard on the same action type, and removes every listener on unmount or
-  disable. **No gamepad** — no precedent in the repo, no requirement, and it
+  disable. **No gamepad**: no precedent in the repo, no requirement, and it
   would double the mapping surface.
 - **`useArcadeInterruption.ts`**: `visibilitychange → hidden` and `window` blur.
   No automatic resume, no background continuation, and no `focus`/`pageshow`
   handling (too noisy on mobile Safari). **Phase 3 split the two signals**: the
   hook now reports which one fired, because a hidden tab (rAF stopped, audio
-  clock still advancing — unrecoverable) and a blurred-but-visible tab (nothing
+  clock still advancing: unrecoverable) and a blurred-but-visible tab (nothing
   is wrong, the player clicked elsewhere) are not equally severe. Blobbi Dance
   aborts on the first and pauses on the second.
 - **`useReducedMotion.ts`**: `prefers-reduced-motion: reduce`, reactive,
   jsdom/SSR-safe, used by the shell to drop its decorative zoom. It must never
-  change game timing or remove a gameplay cue — those are information, not
+  change game timing or remove a gameplay cue; those are information, not
   flourish. No repository-wide animation refactor was done.
 
 ---
@@ -334,7 +334,7 @@ Two mitigations, both in place:
 > `AudioContext`, the persisted mute and the persisted latency offset. The
 > decision below held exactly as written: `AudioContext.currentTime` is the
 > authoritative clock, `requestAnimationFrame` only samples it, and the context is
-> created inside the Start click. **The calibration UI was NOT built** — the
+> created inside the Start click. **The calibration UI was NOT built**: the
 > offset is read and applied, but nothing lets a player set it (see
 > `docs/blobbi-dance.md` §14).
 
@@ -342,7 +342,7 @@ Two mitigations, both in place:
 | --- | --- | --- |
 | examples | button blips, coin drop | the track a rhythm game is judged against |
 | mechanism | `useSfx` (`HTMLAudioElement`) | `AudioContext` |
-| clock | none | `AudioContext.currentTime` — **never** `setTimeout`/rAF |
+| clock | none | `AudioContext.currentTime`: **never** `setTimeout`/rAF |
 
 `useSfx` stays exactly as it is for the first column. The module owns: one lazily
 created `AudioContext` (created only from a user gesture, because a context built
@@ -352,7 +352,7 @@ Phase 3 owns the calibration UI.
 
 ---
 
-## 9. Reward boundary — defined, not crossed
+## 9. Reward boundary, defined, not crossed
 
 `src/arcade/reward-policy.ts` calculates; `src/arcade/arcade-reward-boundary.ts`
 describes the write. **Neither grants anything, and no code path in `src/arcade/`
@@ -373,12 +373,12 @@ The dance policy was registered as **`draft`**. `getProductionRewardPolicy()`
 returns `undefined` for a draft, so at the end of Phase 2 there was no production
 policy at all and a caller could not accidentally pay out.
 
-> **Phase 3 promoted it to `active`** — deliberately, once the game existed, the
+> **Phase 3 promoted it to `active`**: deliberately, once the game existed, the
 > result contract was complete, the calculation was pure and tested, aborted runs
 > were excluded and the writer was integrated. It is the only `active` policy in
 > the arcade. Phase 3 also added `policyId`, `version`, a `shape` (`scaled` |
 > `flat`) and a per-game `ineligible` hook to `ArcadeRewardPolicy`, plus
-> `calculateArcadeReward()` — a structured, self-describing grant carrying the
+> `calculateArcadeReward()`: a structured, self-describing grant carrying the
 > item address, the quantity, eligibility and the cap. Numbers and worked
 > examples: `docs/blobbi-dance.md` §6.
 
@@ -397,7 +397,7 @@ finished immutable result → award → createPendingClaim (persisted BEFORE any
 strict publish inside the reward hook plus a verify-after-write read.
 `useNostrPublish` is NOT changed.** It resolves on a 5-second timeout, which is
 correct for presence heartbeats and wrong for a one-shot grant of a scarce
-resource — but tightening it globally would turn every relay hiccup into a
+resource: but tightening it globally would turn every relay hiccup into a
 user-visible error across presence, chat, playback, profile, Blobbi state and
 inventory. `useFirstEggAdoption` already solved this locally, so the pattern is
 precedented rather than invented. ~~Idempotency on `runId` is what makes
@@ -407,14 +407,14 @@ strictness cheap: retrying something that actually succeeded costs nothing.~~
 > duplicate grant (a 3-ticket reward paid twice). `runId` is not carried in
 > kind:31633 and the grant is ADDITIVE, so a retry after a publish that actually
 > landed simply adds the award a second time. An attempt that may have been
-> published is now `ambiguous` and is never republished — only reconciled,
+> published is now `ambiguous` and is never republished; only reconciled,
 > read-only. See `docs/arcade-reward-publication-boundary.md` §6.
 
 `ARCADE_REWARD_WRITER_UNIMPLEMENTED` rejects both of its methods, so a future
 caller wired up too early fails loudly instead of silently doing nothing.
 
 > **Phase 3 implemented the real writer** in
-> `src/inventory/arcade-reward-writer.ts` — outside `src/arcade/`, because
+> `src/inventory/arcade-reward-writer.ts`: outside `src/arcade/`, because
 > `boundaries.test.ts` proves that nothing under `src/arcade/` can reach a relay
 > or an inventory, and that property was worth more than keeping the files
 > together. The lifecycle above shipped exactly as drawn: persist the pending
@@ -435,9 +435,9 @@ caller wired up too early fails loudly instead of silently doing nothing.
 | Defect | Fix |
 | --- | --- |
 | The 20-coin charge published nothing (`updateOwnerCoins` is a local optimistic mutation on a per-hook-instance ref) | Routed through `useCoinsMutation`: fresh relay read as the write base, `mergeOwnerProfileTags` + raw `inv` passthrough, negative balance rejected, published exactly once |
-| Pass granted before the charge | Granted **only after** the publish resolves. No optimistic pass and no optimistic balance — an optimistic update is honest only when it is backed by a rollback, and here the thing to roll back is access already used |
+| Pass granted before the charge | Granted **only after** the publish resolves. No optimistic pass and no optimistic balance, an optimistic update is honest only when it is backed by a rollback, and here the thing to roll back is access already used |
 | Two clicks in one tick could both charge (`isPending` only flips after a re-render) | A synchronous `inFlightRef` is the actual guard; the disabled button is a courtesy on top of it |
-| `grantArcadePass()` could not fail, so a browser that refuses storage left the player charged, passless, and congratulated | The store now **reads back** its own write and returns whether it stuck. The modal reports three distinct outcomes: charge failed (no coins deducted), charge succeeded but the pass could not be stored (copy must not claim the coins are safe), full success. **No compensating coin write is attempted** — a refund would be a second unverified publish on top of a first whose outcome is unknown |
+| `grantArcadePass()` could not fail, so a browser that refuses storage left the player charged, passless, and congratulated | The store now **reads back** its own write and returns whether it stuck. The modal reports three distinct outcomes: charge failed (no coins deducted), charge succeeded but the pass could not be stored (copy must not claim the coins are safe), full success. **No compensating coin write is attempted**: a refund would be a second unverified publish on top of a first whose outcome is unknown |
 | An unresolved coin query rendered as "Your current coins: 0" and disabled the button | Skeleton while loading, an error with a retry when unreadable, a number only when it is genuinely a number |
 | `ArcadePassIcon` polled `sessionStorage` at 1 Hz for the whole session, in every location | `src/lib/arcade-pass.ts` + `useArcadePass`: writers notify, plus one shared cross-tab `storage` listener. No timers |
 | Pass-holder spawn `{50, 48}` sat on the elevator alcove's boundary line, from which the ticket counter was unreachable | `ARCADE_PASS_HOLDER_SPAWN = {50, 58}`, on open floor. `arcade-spawn.test.ts` proves it is walkable, clear of the alcove, and that a straight line from it to every ground-floor destination stays on walkable floor |
@@ -464,7 +464,7 @@ one replacement event was signed with a monotonic `created_at`, **at least one
 relay accepted it**, and a read-back was attempted (`verified`).
 
 A timeout is NOT success: it resolves as `ambiguous`, is recorded durably, and
-is reconciled read-only — never blind-retried. So the old "pass granted for
+is reconciled read-only: never blind-retried. So the old "pass granted for
 coins that may not have been deducted" hazard is gone in that direction. What
 remains, and is stated honestly in `ArcadePassModal`'s header, is the reverse:
 the pass itself is `sessionStorage`, granted AFTER the charge, so a storage
@@ -474,7 +474,7 @@ more.
 ### The pass is tab-scoped, deliberately
 
 `sessionStorage` is per browsing context. A second tab starts without a pass and
-buying one there does not appear here — that is the intended behaviour for
+buying one there does not appear here; that is the intended behaviour for
 temporary access to the visit you are currently making, not a limitation being
 worked around. The module keeps one `storage` listener purely so a write it did
 not make cannot leave subscribers stale; it is **not** cross-tab synchronisation.
@@ -507,14 +507,14 @@ Moving between `arcade`, `arcade-1` and `arcade-minus1` never clears the pass
 ## 12. DEV harness
 
 `/dev/arcade` (`src/pages/DevArcade.tsx`), on the `DevTheater` pattern and gated
-by `import.meta.env.DEV`, which Vite replaces with a literal `false` in a build —
+by `import.meta.env.DEV`, which Vite replaces with a literal `false` in a build,
 so the chunk is never emitted.
 
 `src/dev-routes.test.ts` proves it at two levels. The source-level assertions
 always run: both harnesses are behind the DEV gate, exactly two `/dev/*` routes
 exist, neither is imported statically, and `AppRouter` is the only production
 module that mentions either. The artifact-level assertions run only against a
-build that is **newer than `src/`** — a stale `dist/` proves nothing, so those
+build that is **newer than `src/`**: a stale `dist/` proves nothing, so those
 checks are reported as SKIPPED rather than passing vacuously. To demand them,
 build and then run with `REQUIRE_FRESH_BUILD=1`, which turns a missing or stale
 build into a failure.
@@ -524,7 +524,7 @@ coming-soon cabinet and pressing a run-state fixture leaves it in `preview` and
 says why, because the reducer genuinely refuses to start a run without a game id.
 
 It mounts the REAL shell, `PlayingView`, `ArcadeRoom`, machines, movement and
-lifecycle reducer — there is no second, fake arcade. It can switch floors, select
+lifecycle reducer: there is no second, fake arcade. It can switch floors, select
 a machine, drive every lifecycle state, overlay each machine's configured walk-to
 anchor, toggle the pass, and seed a ticket balance / fetched-vs-fallback
 definitions / a broken image **into the TanStack cache only**. It publishes
@@ -533,19 +533,19 @@ logged in".
 
 ---
 
-## 13. What Phase 3 had to implement — and what it did
+## 13. What Phase 3 had to implement, and what it did
 
 > **Scorecard.** 1 ✅ (one track, one difficulty, four lanes, an authored chart in
-> committed data, exactly one `ArcadeGameResult`, no inventory or Nostr reference
-> — but **four** judgements plus a combo counter, not three, because a distinct
+> committed data, exactly one `ArcadeGameResult`, no inventory or Nostr reference,
+> but **four** judgements plus a combo counter, not three, because a distinct
 > Okay tier is what makes the accuracy curve legible). 2 ✅ engine, ❌ calibration
 > screen. 3 ✅ as `useArcadeReward`. 4 ✅. 5 ✅ as `DanceResults` (the daily-limit
 > explanation is absent because a `flat` policy has no daily limit to explain).
-> 6 ✅ — the touch zones are 56 px tall, above `ARCADE_TOUCH_ZONE_MIN_PX`. 7 ✅ for
+> 6 ✅: the touch zones are 56 px tall, above `ARCADE_TOUCH_ZONE_MIN_PX`. 7 ✅ for
 > input and interruption; ❌ movement blockers, still deliberately absent.
 >
 > One deliberate change: `useArcadeInterruption` now reports WHICH signal fired,
-> and Blobbi Dance aborts on `hidden` while pausing on `blur` — see
+> and Blobbi Dance aborts on `hidden` while pausing on `blur`: see
 > `docs/blobbi-dance.md` §10 for why the two are not equally severe.
 
 ### The original list
@@ -561,7 +561,7 @@ logged in".
 3. **`useArcadeReward`**, implementing `ArcadeRewardWriter` per §9: persist the
    pending claim first, strict-publish, verify by reading the quantity back, mark
    claimed only then, and surface failure with a retry that reuses the `runId`.
-4. **Promote `DANCE_REWARD_POLICY` to `active`** — deliberately, once the game's
+4. **Promote `DANCE_REWARD_POLICY` to `active`**: deliberately, once the game's
    scoring exists and the numbers have been balanced.
 5. **`ArcadeResults`**, rendering the award breakdown the policy already
    produces, including the cap and daily-limit explanations.
@@ -574,7 +574,7 @@ logged in".
 Playable notes, a music track, a beat map, score accumulation, combo judgements,
 final reward quantities, ticket grants, prize purchases, leaderboard events,
 real-time multiplayer, pool physics, air-hockey physics, microphone/pitch
-detection, gamepad support, and the six cabinet games. Also: **anti-cheat** — a
+detection, gamepad support, and the six cabinet games. Also: **anti-cheat**: a
 client-side game cannot be made cheat-proof, and the economy is designed so that
 cheating is boring (caps, sinks, no transfers) rather than pretending it is
 prevented.
@@ -588,7 +588,7 @@ prevented.
   through `useArcadeReward`. `src/arcade/boundaries.test.ts` still enforces
   against the real import graph that `src/arcade/` can reach neither the
   inventory layer nor a Nostr client, and now additionally that exactly one
-  arcade component reaches the reward boundary — so "the game itself grants
+  arcade component reaches the reward boundary, so "the game itself grants
   nothing" remains structural rather than a promise in a comment.
 - Movement blockers are absent, so a Blobbi can still walk through a cabinet.
 - The basement chairs walk the Blobbi over and stop; there is no seated pose or

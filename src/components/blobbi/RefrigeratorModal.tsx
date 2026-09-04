@@ -163,7 +163,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
         onError: (error) => {
           toast({
             title: 'Feeding Failed',
-            description: playerFacingMessage(error, "We couldn't feed your Blobbi right now. Nothing was used — try again in a moment."),
+            description: playerFacingMessage(error, "We couldn't feed your Blobbi right now. Nothing was used; try again in a moment."),
             variant: 'destructive',
           });
         },

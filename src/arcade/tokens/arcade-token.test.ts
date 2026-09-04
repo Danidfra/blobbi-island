@@ -1,8 +1,8 @@
 /**
  * Arcade Token identity and price.
  *
- * The Token and the Ticket are opposite halves of the arcade loop — one is
- * paid IN to play, the other is paid OUT as a reward — so the first thing that
+ * The Token and the Ticket are opposite halves of the arcade loop; one is
+ * paid IN to play, the other is paid OUT as a reward, so the first thing that
  * has to be true is that they are two different items.
  */
 
@@ -47,7 +47,7 @@ describe('the Arcade Token is a registered official currency', () => {
       category: 'currency',
       status: 'active',
       stackable: true,
-      // Currency is never used on a Blobbi — a null action is what keeps it
+      // Currency is never used on a Blobbi, a null action is what keeps it
       // out of every care flow.
       action: null,
     });
@@ -73,7 +73,7 @@ describe('Token, Ticket and Coin are three distinct currencies', () => {
 
   it('is not purchasable through the food shop', async () => {
     // Currency is earned or bought at its own counter, never priced in the
-    // consumable shop — the shop's validator rejects a currency price outright.
+    // consumable shop: the shop's validator rejects a currency price outright.
     const { priceForAddress } = await import('@/inventory/shop-catalog');
     expect(priceForAddress(ARCADE_TOKEN_ADDRESS)).toBeNull();
   });

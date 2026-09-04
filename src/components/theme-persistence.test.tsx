@@ -1,14 +1,14 @@
 /**
  * The theme a player chose is still there after a reload.
  *
- * `island-theme.test.tsx` pins the offline half — config in, palette out. This
+ * `island-theme.test.tsx` pins the offline half, config in, palette out. This
  * pins the half that broke: what happens when that local answer meets the
  * ACCOUNT's answer, which arrives from a relay a moment later and is stale by
  * construction for as long as the publish debounce lasts.
  *
  * A "reload" here is `cleanup()` followed by a fresh `render()`: localStorage
  * survives, every provider, query cache and ref does not. That is the boundary
- * the bug lived on — it needed real bootstrap ordering to show itself, and no
+ * the bug lived on; it needed real bootstrap ordering to show itself, and no
  * amount of testing the resolver in isolation would have found it.
  *
  * No real relay, no real signer, no published event.
@@ -35,7 +35,7 @@ const COMMUNITY_ID = `nostr:${THEME_DEFINITION_KIND}:${AUTHOR}:harbour-dusk`;
 /**
  * A signer that stamps events without any key material.
  *
- * Enough for the publish path to complete — the point of those tests is that a
+ * Enough for the publish path to complete, the point of those tests is that a
  * write is ATTEMPTED and not silently dropped, never what it is signed with.
  */
 function fakeUser(pubkey: string) {
@@ -242,7 +242,7 @@ describe('a theme survives a reload', () => {
 
   it('THE REGRESSION: the account\'s previous selection does not reclaim it', async () => {
     /*
-      The relay holds what the player was on BEFORE — the default, for almost
+      The relay holds what the player was on BEFORE, the default, for almost
       everybody, because that is where every account starts. The new choice is
       published after a two-second debounce, so for that window (and forever, if
       the player reloads inside it) the account is still advertising the old one.
@@ -303,7 +303,7 @@ describe('a community theme survives a reload', () => {
 
   it('keeps rendering it from the palette cache when the relay is gone', async () => {
     // A relay outage is not a theme change. The id stays, and the cached
-    // palette is what paints — the default must never stand in silently.
+    // palette is what paints, the default must never stand in silently.
     stored = [themeDefinitionEvent()];
     await boot();
     await waitFor(() => expect(screen.getByTestId('community-count').textContent).toBe('1'));
@@ -334,7 +334,7 @@ describe('a read that failed is not a choice', () => {
   });
 
   it('changes nothing when the account has no theme at all', async () => {
-    // A confirmed absence, not a failure — and still not a reason to write.
+    // A confirmed absence, not a failure, and still not a reason to write.
     stored = [];
     await boot();
     pick(/lantern night/i);

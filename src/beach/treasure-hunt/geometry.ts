@@ -1,5 +1,5 @@
 /**
- * Beach Treasure Hunt — tiny shared geometry helpers.
+ * Beach Treasure Hunt, tiny shared geometry helpers.
  *
  * Kept separate so `generator`, `detector` and `digging` measure distance the
  * same way, and so "is this point even a point" has exactly one definition.

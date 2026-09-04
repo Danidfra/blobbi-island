@@ -50,7 +50,7 @@ interface InteractiveElementsProps {
    */
   sittingIn?: string | null;
   /**
-   * Theater seats that currently LOOK occupied — remote players' winning
+   * Theater seats that currently LOOK occupied, remote players' winning
    * presence claims plus {@link sittingIn}. Visual only: a seat listed here is
    * still clickable, because presence reserves nothing (see
    * `src/lib/theater-occupancy.ts`).
@@ -61,7 +61,7 @@ interface InteractiveElementsProps {
   /**
    * Reports the address of the shared watch session the local player is in, or
    * null. Threaded straight through to `PlayingView`, which owns it and hands it
-   * to presence — this component never interprets it.
+   * to presence: this component never interprets it.
    */
   onActivityChange?: (sessionAddress: string | null) => void;
   /** Visible players presence says are in that session, including this one. */
@@ -77,7 +77,7 @@ interface InteractiveElementsProps {
   /**
    * LOCAL-ONLY suppression of the player's actor while a contained minigame
    * is running (the treasure hunt). Never touches the pose controller or
-   * presence — see the note in `PlayingView`.
+   * presence: see the note in `PlayingView`.
    */
   onActorSuppressionChange?: (suppressed: boolean) => void;
 }
@@ -114,7 +114,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
    * walk-to-interact path as every door and kiosk: `InteractiveElement`
    * resolves the chair's configured seat-anchor fraction (the accepted
    * `{50, 85}` pseudo-sit) through `resolveElementApproachTarget`, walks the
-   * Blobbi there, and fires the chair's `onClick` — the Nostr Hub modal —
+   * Blobbi there, and fires the chair's `onClick`: the Nostr Hub modal,
    * only on CONFIRMED ARRIVAL. The shop chairs attach no action: walking to
    * the cushion is the whole interaction. The legacy inline flow (its own
    * rect math, action fired immediately on click while still far away) is
@@ -124,13 +124,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
 
   /*
     Props with no behaviour yet (the beach boat, the coffee shop, the plaza
-    kiosks) are rendered INERT — plain art, no cursor, no hover, no handler —
+    kiosks) are rendered INERT, plain art, no cursor, no hover, no handler,
     with a small "Coming later" caption where that helps. They used to carry
     the full interactive treatment and a placeholder click that only logged,
     which read as broken rather than unfinished.
 
     (This is also where a `'dance-machine'` string dispatch used to live; arcade
-    machines are a registry now — `arcade/ArcadeRoom.tsx` decides what opens.)
+    machines are a registry now, `arcade/ArcadeRoom.tsx` decides what opens.)
   */
 
   // Town elements (when background is town-open.webp)
@@ -173,7 +173,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   }
 
   /*
-    Arcade — all three floors, delegated to `arcade/ArcadeRoom.tsx`.
+    Arcade: all three floors, delegated to `arcade/ArcadeRoom.tsx`.
 
     This branch used to be ~285 lines: nine machines that all called
     `handleElementClick('dance-machine')`, four chairs in two byte-identical
@@ -194,7 +194,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   }
 
   /*
-    Care Store — same delegation as the arcade. Its blockers, its checkout
+    Care Store: same delegation as the arcade. Its blockers, its checkout
     hotspot and its shop modal all live in `care-store/`, so nothing about a
     care item ever reaches this dispatcher.
   */
@@ -214,7 +214,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           Screen, curtain and controls, all driven by one local state machine
           (`src/lib/theater-state.ts`). The only input is which seat the local
           Blobbi has ARRIVED at: with nobody sitting down there is no card, no
-          player and no error — just an idle theater with its curtain closed.
+          player and no error, just an idle theater with its curtain closed.
 
           `stage-inside.png` has a genuine transparent rectangle in its
           proscenium, so the player mounts INSIDE the artwork rather than on top
@@ -227,7 +227,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           participants={sessionParticipants}
         />
 
-        {/* Little stage door: decoration. It has no behaviour by design — it
+        {/* Little stage door: decoration. It has no behaviour by design; it
             slides on hover and leads nowhere. */}
         <InteractiveElement
           src="/assets/locations/stage/open-little-door.png"
@@ -238,8 +238,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
         />
 
         {/*
-          Seating. 28 chair sprites — 26 OCCUPIABLE seats plus 2 DECORATIVE
-          chairs — driven by `theaterSeats`, replacing six flex rows of identical
+          Seating. 28 chair sprites: 26 OCCUPIABLE seats plus 2 DECORATIVE
+          chairs: driven by `theaterSeats`, replacing six flex rows of identical
           clones that all collapsed to one `data-chair-id`. Each occupiable seat
           carries a stable id, a fixed z-index and a real arrival callback; the
           two decorative chairs hang off the edges of the world and render as
@@ -309,7 +309,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
        </div>
 
           {/*
-            Coffee Shop — ground floor, left of the Photo Booth. Decorative: it
+            Coffee Shop: ground floor, left of the Photo Booth. Decorative: it
             has no door, no interior and no click handler, and gains none here.
 
             Re-placed for the REPLACEMENT artwork. The old `.png` was 579×385
@@ -318,8 +318,8 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             r 2.08 %, t 2.73 %, b 2.54 %, which would have shrunk the stall and
             floated it off the floor at the old numbers.
 
-            The box below reproduces the old PAINTED extent exactly — x 28.0 →
-            50.38, base on y = 87.94 — so nothing else on the ground floor moves:
+            The box below reproduces the old PAINTED extent exactly, x 28.0 →
+            50.38, base on y = 87.94, so nothing else on the ground floor moves:
 
               box width  W = 22.383 / 0.9564 = 23.4 %  → box height 23.41 %
               box left     = 28.0 − 0.0228 · W = 27.47 %
@@ -341,7 +341,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           </div>
 
           {/*
-            Photo Booth — moved down to the ground floor, into the bay beside the
+            Photo Booth: moved down to the ground floor, into the bay beside the
             Coffee Shop. A single narrow booth reads correctly in a wide bay,
             where a full-width storefront would not; the Care Store took its old
             middle-level slot in return. Its door overlay is positioned inside
@@ -361,13 +361,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           </div>
 
           {/*
-            Badges Store — the middle level's far-left bay.
+            Badges Store: the middle level's far-left bay.
 
             The facade IS the entrance. It used to carry a separate
             `badges-store-door.png` overlay with NO click handler: a door-shaped
             affordance that hovered, invited a tap and did nothing. That overlay
             is gone rather than wired up, because the Care Store settled the
-            question next door — one storefront, one way in, and the way in is
+            question next door: one storefront, one way in, and the way in is
             the building.
 
             Hover/focus/press are a FILTER, never a transform: `animated={false}`
@@ -395,7 +395,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           The middle level's LEFT plant is deliberately absent: it used to fill
           the narrow gap beside the Photo Booth, and once the Care Store took
           that bay it only crowded the storefront's shoulder. Its mirror on the
-          right stays — it still marks the edge of the Clothing Store.
+          right stays: it still marks the edge of the Clothing Store.
         */}
           <img
             className='absolute bottom-[38.5%] right-[26%] z-[15] w-[3%]'
@@ -432,12 +432,12 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
 
 
           {/*
-            Care Store — on the middle level, in the bay the Photo Booth used to
+            Care Store: on the middle level, in the bay the Photo Booth used to
             hold, between the left plant and the Clothing Store.
 
             The facade IS the entrance: no separate door overlay exists for it,
             so the whole storefront is the click target. The affordance is a
-            FILTER, never a transform — a building that lifts off its own floor
+            FILTER, never a transform, a building that lifts off its own floor
             when you point at it looks broken, so hover/focus/press only warm and
             brighten it while it stays exactly where it stands. `animated={false}`
             keeps `InteractiveElement`'s hover-scale and tap-pop off for the same
@@ -459,13 +459,13 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           </div>
 
           {/*
-            Clothing Store — the middle level's right-hand bay.
+            Clothing Store: the middle level's right-hand bay.
 
             The facade IS the entrance. It used to be a `clothing-store.png`
             storefront with a separate `doors/clothing-store-door.png` overlay
             carrying the click; the new artwork is an open-front shop with no
             door painted in it at all, so the overlay is deleted rather than
-            re-placed — a door-shaped affordance over a doorless shop is exactly
+            re-placed: a door-shaped affordance over a doorless shop is exactly
             the trap the Badges Store facade next door already walked out of.
 
             Hover/focus/press are a FILTER, never a transform: `animated={false}`
@@ -489,7 +489,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
           </div>
 
           {/*
-            Furniture Store — the mall's TOP level.
+            Furniture Store: the mall's TOP level.
 
             The facade IS the entrance, and here that is a fix rather than a
             restatement: the old storefront carried a
@@ -691,7 +691,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
 
           </div>
 
-        {/* Interactive bushes — driven by shared config (art, placement, fixed
+        {/* Interactive bushes: driven by shared config (art, placement, fixed
             z-index and the per-bush walk-to target). Each TownBush reuses the
             existing movement system to walk the Blobbi to the bush's configured
             center, then reports an explicit hide on arrival (the Blobbi visual
@@ -707,7 +707,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
             />
           ))}
 
-        {/* Streetlights — decorative art plus the movement blocker at each foot.
+        {/* Streetlights: decorative art plus the movement blocker at each foot.
             Both come from the SAME config entry (placement + measured sprite
             footprint), so the blocker can no longer drift away from the artwork
             the way it did when these were two independent sets of numbers. */}
@@ -776,8 +776,8 @@ if (backgroundFile === 'nostr-station-open.webp') {
       The cave used to be a single `/assets/locations/mine/cave.png` overlay
       dropped on the spot where `mine-open.png` had the cave mouth painted into
       it. The migrated `mine-open.webp` is a bare forest path, so that overlay
-      had nothing to sit on and its whole rectangle — transparent pixels
-      included — was clickable. It is replaced by a composed structure whose art
+      had nothing to sit on and its whole rectangle, transparent pixels
+      included: was clickable. It is replaced by a composed structure whose art
       is inert and whose only hit target is the arch opening; the destination,
       the walk-to-interact flow and this room's `requestInteraction` are
       unchanged. See `MineCaveEntrance` / `mine-cave-config.ts`.
@@ -828,7 +828,7 @@ if (backgroundFile === 'nostr-station-open.webp') {
 
         {/* Treasure-hunting shack on the right sand shelf. Arrival opens the
             contained hunt; the modal reports LOCAL actor suppression while a
-            hunt is actually running (never the published hidden pose — that
+            hunt is actually running (never the published hidden pose; that
             would tell remote players this Blobbi is hidden in a world spot). */}
         <TreasureHuntShack
           requestInteraction={requestInteraction}
@@ -872,10 +872,10 @@ if (backgroundFile === 'plaza-open.webp') {
 }
 
 /*
-  Plaza interior — delegated to `plaza/PlazaInsideRoom.tsx`, like the arcade
+  Plaza interior: delegated to `plaza/PlazaInsideRoom.tsx`, like the arcade
   and the shop interiors. The new plate paints the storefronts, balcony,
   staircase and rug, so the room composes only the door, the railing/stairs
-  occluder, six storefront hotspots, the fountain and its blockers — every
+  occluder, six storefront hotspots, the fountain and its blockers; every
   number in `plaza-inside-config.ts`.
 */
 if (backgroundFile === PLAZA_INSIDE_BACKGROUND) {
@@ -958,7 +958,7 @@ if (backgroundFile === 'nostr-station-inside.png') {
 }
 
 /*
-  Clothing Store — delegated, like the arcade and the Care Store. The boutique
+  Clothing Store: delegated, like the arcade and the Care Store. The boutique
   is painted into `clothing-store.webp`, so what lives in `clothing-store/` is
   its collision, its checkout and fitting-room hotspots, and its two modals.
 */
@@ -972,7 +972,7 @@ if (backgroundFile === 'clothing-store.webp') {
 }
 
 /*
-  Badges Store — delegated for the same reason as its neighbours. The room's two
+  Badges Store: delegated for the same reason as its neighbours. The room's two
   display units, its checkout hotspot, its collision and its shop all live in
   `badges-store/`.
 */
@@ -986,7 +986,7 @@ if (backgroundFile === 'badges-store-inside.webp') {
 }
 
 /*
-  Furniture Store — delegated like every other mall interior. The showroom is
+  Furniture Store: delegated like every other mall interior. The showroom is
   painted into `furniture-store-inside.webp`, so what lives in
   `furniture-store/` is its collision, its checkout hotspot and its modal.
 */

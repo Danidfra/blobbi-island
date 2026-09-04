@@ -35,12 +35,12 @@ import {
 } from '@/arcade/tokens/game-entry';
 
 /**
- * Air Hockey — the controller that joins the game to the shared arcade.
+ * Air Hockey: the controller that joins the game to the shared arcade.
  *
  * The same shape as `DanceMachine`, deliberately: it is the pattern a dedicated
  * arcade machine follows, and Pool should be the third file that looks like
  * this. What a controller owns is the WIRING, and nothing the pieces around it
- * already own — the lifecycle lives in `ArcadeRoom`'s reducer, the rules live in
+ * already own: the lifecycle lives in `ArcadeRoom`'s reducer, the rules live in
  * `src/arcade/hockey/`, and the frame is `ArcadeGameShell`.
  *
  * ## The rules the wiring enforces
@@ -62,7 +62,7 @@ import {
  * ## Rewards
  *
  * `HOCKEY_REWARD_POLICY` is active and the catalogue says `grantsTickets:
- * true`, so this controller carries the same claim wiring as `DanceMachine` —
+ * true`, so this controller carries the same claim wiring as `DanceMachine`,
  * the shared `useArcadeRewardController`, which prices the finished
  * {@link ArcadeGameResult} and drives the exactly-once claim through
  * `useArcadeReward`. Nothing about the simulation or the result shape changed
@@ -85,7 +85,7 @@ export interface AirHockeyMachineProps {
   readonly exitAriaLabel: string;
   /**
    * The turnstile that charges for a run. Injected, like the reward writer:
-   * a machine rendered without one plays free, which is the safe default —
+   * a machine rendered without one plays free, which is the safe default,
    * charging by omission would be taking money nobody wired up.
    */
   readonly entry?: ArcadeGameEntry;
@@ -106,7 +106,7 @@ export interface AirHockeyMachineProps {
    * Force the expanded (whole-screen) presentation on or off.
    *
    * Production leaves it undefined and the answer comes from `useImmersive`,
-   * the app's existing feature-based test for a touch-first handheld — the same
+   * the app's existing feature-based test for a touch-first handheld, the same
    * one `BlobbiAppShell` uses to decide whether the world fills the screen.
    * Overridable only so a test can render either presentation deterministically.
    */
@@ -158,8 +158,8 @@ export function AirHockeyMachine({
    * The table layout the player explicitly asked for, or `null` to follow the
    * shape of the box.
    *
-   * It lives HERE rather than in the table so that it survives a replay — the
-   * table unmounts between runs — and it starts as `null` so a device that is
+   * It lives HERE rather than in the table so that it survives a replay, the
+   * table unmounts between runs, and it starts as `null` so a device that is
    * rotated re-answers the question instead of being stuck with an answer given
    * in the other orientation.
    */
@@ -213,7 +213,7 @@ export function AirHockeyMachine({
    * Build a fresh engine for a new run, from inside the click that asked for it.
    *
    * Never refuses the run. Air Hockey's clock is its own loop, so a browser with
-   * no Web Audio gets a silent match rather than no match — which is the
+   * no Web Audio gets a silent match rather than no match, which is the
    * opposite of Blobbi Dance, and correct for the opposite reason.
    */
   const prepareEngine = useCallback((): HockeyAudioEngine => {
@@ -234,7 +234,7 @@ export function AirHockeyMachine({
       setAbortNotice(null);
       prepareEngine();
 
-      // A free run — or one a Pass waives — starts on this tick, with no
+      // A free run, or one a Pass waives, starts on this tick, with no
       // write and no await.
       if (entry.admitFree(gameId)) {
         dispatch({ type: kind, runId: mintRunId(), difficulty });
@@ -284,7 +284,7 @@ export function AirHockeyMachine({
    * Deliberately scoped to a LIVE run. The start panel, the difficulty picker
    * and the results all want to be readable panels; only gameplay wants every
    * pixel. And it is deliberately not a second modal, a second route or a
-   * second lifecycle — the same shell, told to stop insetting itself, and the
+   * second lifecycle: the same shell, told to stop insetting itself, and the
    * same table, told to drop its chrome. `BlobbiFrame` already makes the stage
    * fill the screen on a handheld, so filling the stage is filling the screen.
    */
@@ -347,7 +347,7 @@ export function AirHockeyMachine({
    *
    * The header's dismiss control already says where leaving goes, so a second
    * quiet "Close" down here would be two differently-worded buttons with one
-   * destination — the mistake Blobbi Dance's footer was corrected for.
+   * destination: the mistake Blobbi Dance's footer was corrected for.
    */
   const footer = playing ? null : (
     <ArcadeStartButton
@@ -385,7 +385,7 @@ export function AirHockeyMachine({
       /*
         Expanded play gives the shell the whole stage: no inset, no rounding, no
         border. `sm:` is where the shell adds them, so `sm:` is where they are
-        taken back — one override, not a second layout.
+        taken back: one override, not a second layout.
       */
       className={expanded ? 'sm:inset-0 sm:rounded-none border-0' : undefined}
       /*

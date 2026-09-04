@@ -1,5 +1,5 @@
 /**
- * Pool — seven short sounds, and nothing that keeps time.
+ * Pool: seven short sounds, and nothing that keeps time.
  *
  * A **feedback** engine, exactly like `hockey-audio.ts`: it is handed events
  * that have already happened and makes a noise about them. The simulation would
@@ -8,7 +8,7 @@
  * run.
  *
  * It shares the ONE arcade `AudioContext` (`arcade-audio.ts`) and the one
- * persisted mute setting, so muting the dance machine mutes this too — which is
+ * persisted mute setting, so muting the dance machine mutes this too, which is
  * what a player means by "turn the arcade down".
  *
  * ## The one thing this engine has to do that air hockey's did not
@@ -27,8 +27,8 @@
  *    within 32 ms whatever the caller does, which covers the frames either side
  *    of the break as the rack keeps re-colliding.
  *
- * The result is that a break sounds like a break — one loud crack and a scatter
- * of smaller ones — rather than like a fault.
+ * The result is that a break sounds like a break; one loud crack and a scatter
+ * of smaller ones, rather than like a fault.
  */
 
 import { ensureArcadeAudio, isArcadeMuted } from '../audio/arcade-audio';
@@ -36,7 +36,7 @@ import { ensureArcadeAudio, isArcadeMuted } from '../audio/arcade-audio';
 export interface PoolAudioEngine {
   /** The cue struck the ball. `power` in 0..1 scales pitch and level. */
   strike(power: number): void;
-  /** Two balls touched. `strength` in 0..1. Throttled — see the module note. */
+  /** Two balls touched. `strength` in 0..1. Throttled; see the module note. */
   collide(strength: number): void;
   /** A ball kissed a cushion. Softer and duller than a collision. */
   cushion(strength: number): void;
@@ -81,7 +81,7 @@ export type PoolAudioFactory = () => PoolAudioEngine;
  *
  * **Call this from a user-gesture handler** (the Start click). An
  * `AudioContext` constructed outside one starts suspended and silently produces
- * nothing — the rule `arcade-audio.ts` documents, obeyed here rather than
+ * nothing: the rule `arcade-audio.ts` documents, obeyed here rather than
  * rediscovered.
  */
 export function createPoolAudio(): PoolAudioEngine {
@@ -119,7 +119,7 @@ export function createPoolAudio(): PoolAudioEngine {
     osc.start(now);
     osc.stop(now + durationS + 0.02);
     // Nodes disconnect themselves when they stop, so nothing accumulates over a
-    // four-minute match — which is the failure mode a per-contact sound invites.
+    // four-minute match: which is the failure mode a per-contact sound invites.
     osc.onended = () => {
       try {
         gain.disconnect();

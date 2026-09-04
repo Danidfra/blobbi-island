@@ -4,7 +4,7 @@
  * The one production consumer of the unresolved-operation scan: ambiguous
  * Coin spends/grants left behind by a publish timeout are reconciled
  * READ-ONLY against the authoritative inventory on login. Sits next to
- * `EconomyEntryController`, outside the `playing` gate, for the same reason —
+ * `EconomyEntryController`, outside the `playing` gate, for the same reason,
  * an unresolved charge belongs to the account, not to any particular screen.
  * Renders nothing, never publishes, never blocks rendering.
  */

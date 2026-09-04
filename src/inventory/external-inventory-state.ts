@@ -1,8 +1,8 @@
 /**
- * Blobbi Island — the EFFECTIVE state of an inventory another game owns.
+ * Blobbi Island: the EFFECTIVE state of an inventory another game owns.
  *
  * A discovered kind:31633 snapshot is the owner's LAST CONSOLIDATED
- * statement, not the current balance. Any application — this one included —
+ * statement, not the current balance. Any application; this one included,
  * may have published a player-signed kind:1416 spend against it that the
  * owner has not folded yet. So a reader derives:
  *
@@ -11,9 +11,9 @@
  *   pending   = valid spends not settled by the kind:1417 chain the snapshot references
  * ```
  *
- * Every rule in that sentence — author must equal owner, `(created_at, id)`
+ * Every rule in that sentence, author must equal owner, `(created_at, id)`
  * order, overdraw rejected in full, folded ids excluded exactly once, voided
- * ids closed forever, chain walked head-first and verified — belongs to
+ * ids closed forever, chain walked head-first and verified, belongs to
  * `@nostr-games/inventory` (`resolveGameInventoryState`), whose
  * `docs/1416-1417-game-inventory-spend.md` is the canonical specification.
  * This module decides how to PRESENT the answer (what to fetch is
@@ -33,7 +33,7 @@
  * ## No timestamp shortcuts
  *
  * Spends are never filtered by `since`. A spend can carry a `created_at`
- * older than the snapshot and still be pending — it is settled by explicit id
+ * older than the snapshot and still be pending; it is settled by explicit id
  * through the fold chain, and by nothing else.
  */
 
@@ -97,7 +97,7 @@ export interface ResolveExternalInventoryInput {
  * Wrong-author and foreign spends are invalid/ignored by the package's
  * parser; folded and voided ids are excluded by its chain walk; pending
  * spends are applied or rejected in the normative order. A spend of an item
- * the snapshot does not hold is an overdraw against zero and is rejected —
+ * the snapshot does not hold is an overdraw against zero and is rejected,
  * no balance is invented for it.
  */
 export function resolveExternalInventoryState(

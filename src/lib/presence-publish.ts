@@ -1,5 +1,5 @@
 /**
- * Publishing PRESENCE (kind:31950) — the one place where signing and sending
+ * Publishing PRESENCE (kind:31950): the one place where signing and sending
  * are two different failures.
  *
  * Presence is republished on every walk, every location change and every
@@ -7,18 +7,18 @@
  * in one opaque step (so a caller cannot tell "the player declined to sign"
  * from "the relay was slow"), it reports a timeout as success, and it logs an
  * error per attempt. When a signer extension refused presence, every walk
- * asked again — an unbounded loop of prompts and console errors that the
+ * asked again: an unbounded loop of prompts and console errors that the
  * player could only stop by leaving.
  *
  * This publisher separates the two stages:
  *
- * - **signing** — a throw here is the SIGNER (or the player behind it)
+ * - **signing**: a throw here is the SIGNER (or the player behind it)
  *   declining. It is surfaced as {@link PresenceSignerRefusedError} so the
  *   presence lifecycle can stop asking. Extensions word their refusals
  *   differently (and some throw plain strings), so the classification is by
  *   STAGE, not by message: nothing that happens inside `signEvent` is a
  *   network problem;
- * - **sending** — a relay timeout stays best-effort (presence is addressable
+ * - **sending**: a relay timeout stays best-effort (presence is addressable
  *   and re-sent constantly; a lost heartbeat costs nothing), exactly as
  *   before; any other relay error is transient and thrown as-is.
  */

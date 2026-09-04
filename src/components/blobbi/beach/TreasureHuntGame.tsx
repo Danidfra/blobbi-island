@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt — the playfield.
+ * Treasure Hunt: the playfield.
  *
  * Rendering and input only: the round state it receives IS the game (the pure
  * reducer's state); this component never keeps a parallel copy of targets,
@@ -16,14 +16,14 @@
  * CLAMPED mapping (a drag that leaves the sand pins the coil to the edge);
  * the shovel uses the STRICT mapping (a tap outside the sand is refused and
  * costs nothing). The rendered sprite hangs off the logical coil point via
- * the calibration in `treasure-hunt-config.ts` — never the other way around.
+ * the calibration in `treasure-hunt-config.ts`: never the other way around.
  *
  * ## What the player is never shown
  *
  * Target positions. The only signal surfaces are the meter, the glow and the
  * beep, all driven by the pure `DetectorSignal`. The dev overlays that DO
  * draw targets and radii render exclusively when the harness passes
- * `devOverlays` — no production caller does.
+ * `devOverlays`: no production caller does.
  */
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -102,7 +102,7 @@ export function TreasureHuntGame({
   const rectRef = useRef<DOMRect | null>(null);
   const draggingRef = useRef<number | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  /** Fine-pointer (mouse/trackpad) device — gates the decorative shovel cursor. */
+  /** Fine-pointer (mouse/trackpad) device, gates the decorative shovel cursor. */
   const [finePointer] = useState(() => {
     // Same defensive shape as `useImmersive`: a throwing or partial matchMedia
     // (jsdom, odd embedders) must degrade to "coarse", never crash a render.
@@ -271,7 +271,7 @@ export function TreasureHuntGame({
   const pxPerUnit = mapping.layout.imageHeight * SAND_HEIGHT_FRACTION;
 
   /* The rendered detector: at the coil while active, parked toward the tool
-     dock while the shovel is selected. Presentation only — the round's
+     dock while the shovel is selected. Presentation only, the round's
      coilPosition is untouched, so re-selecting the detector animates it
      straight back to the searched spot. */
   const detectorBoxStyle: React.CSSProperties = docked
@@ -318,7 +318,7 @@ export function TreasureHuntGame({
 
   const toolHint =
     tool === 'shovel'
-      ? `Tap the sand to dig — ${round.shovelUsesRemaining} dig${round.shovelUsesRemaining === 1 ? '' : 's'} remaining`
+      ? `Tap the sand to dig, ${round.shovelUsesRemaining} dig${round.shovelUsesRemaining === 1 ? '' : 's'} remaining`
       : 'Drag the detector across the sand and watch the signal';
 
   return (
@@ -364,13 +364,13 @@ export function TreasureHuntGame({
       </div>
 
       <div className="flex min-h-0 flex-1 items-stretch gap-2">
-        {/* Left dock — shovel */}
+        {/* Left dock: shovel */}
         <div className="flex shrink-0 flex-col items-center justify-center gap-1">
           <button
             type="button"
             onClick={() => onToolChange('shovel')}
             aria-pressed={tool === 'shovel'}
-            aria-label={`Shovel — ${round.shovelUsesRemaining} uses remaining`}
+            aria-label={`Shovel: ${round.shovelUsesRemaining} uses remaining`}
             disabled={!interactive && round.status === 'finished'}
             className={cn(
               'flex min-h-[56px] min-w-[56px] flex-col items-center justify-center rounded-2xl border-2 bg-island-cream/85 p-1.5',
@@ -422,7 +422,7 @@ export function TreasureHuntGame({
               className="absolute inset-0 h-full w-full"
             />
 
-            {/* Dig markers — every accepted dig, hit or miss, stays visible. */}
+            {/* Dig markers: every accepted dig, hit or miss, stays visible. */}
             {round.digHistory.map((record, index) => {
               const at = fieldPointToImagePercent(record.position, mapping);
               return (
@@ -468,10 +468,10 @@ export function TreasureHuntGame({
                 );
               })}
 
-            {/* Detector — a rendered game object hung off the logical coil
+            {/* Detector: a rendered game object hung off the logical coil
                 point via the calibration anchor; never an OS cursor. While the
                 shovel is selected it parks toward the dock, dimmed, display
-                dark and glow off — deactivated, not just quieter. */}
+                dark and glow off, deactivated, not just quieter. */}
             <div
               className={cn(
                 'pointer-events-none absolute',
@@ -604,7 +604,7 @@ export function TreasureHuntGame({
             )}
           </div>
 
-          {/* Find toast — brief, non-blocking, out of the core search area. */}
+          {/* Find toast: brief, non-blocking, out of the core search area. */}
           {toastKind && (
             <div
               role="status"
@@ -630,7 +630,7 @@ export function TreasureHuntGame({
           )}
         </div>
 
-        {/* Right dock — detector + signal meter */}
+        {/* Right dock: detector + signal meter */}
         <div className="flex shrink-0 flex-col items-center justify-center gap-2">
           <button
             type="button"

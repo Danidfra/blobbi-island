@@ -7,7 +7,7 @@
  * be handed a slice and a setter and stay unaware that a Nostr event exists.
  *
  * On a narrow screen the two columns stack, preview first-after-editor rather
- * than hidden — an authoring tool that drops the preview on mobile is a tool
+ * than hidden: an authoring tool that drops the preview on mobile is a tool
  * you cannot check your work in.
  */
 
@@ -91,7 +91,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
       title: `Loaded ${record.definition.name}`,
       description:
         result.value.length > 0
-          ? `${result.value.length} parser warning(s) — see the validation panel.`
+          ? `${result.value.length} parser warning(s): see the validation panel.`
           : 'All fields populated. Unknown tags are preserved.',
     });
   };
@@ -100,7 +100,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
    * Apply a pasted event to the editor.
    *
    * `replaceForm` establishes a new baseline, and the studio's autosave effect
-   * writes it to the active draft slot on the next tick — so an import is a
+   * writes it to the active draft slot on the next tick, so an import is a
    * local draft immediately, with nothing published and nothing signed.
    */
   const handleImported = (imported: ImportedEvent) => {
@@ -109,7 +109,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
       title: `Imported ${imported.form.name || imported.form.d || 'item'}`,
       description:
         imported.form.images.length === 0
-          ? 'No image tag in the paste — add artwork in the Images section.'
+          ? 'No image tag in the paste, add artwork in the Images section.'
           : 'Saved as a local draft. Publishing still signs with your key.',
     });
   };
@@ -195,7 +195,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
           <AlertDescription className="space-y-2 text-xs">
             <p>
               This definition was published by another key. You cannot replace
-              somebody else&rsquo;s addressable event — publishing would create your
+              somebody else&rsquo;s addressable event, publishing would create your
               own item at your own address.
             </p>
             <Button
@@ -257,7 +257,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
             onChange={(content) => patch({ content })}
             error={validation.fieldErrors.content}
             // Decides which `visual` shape opens first for a still-blank
-            // visual — wearable slot, or effect id. Nothing else.
+            // visual: wearable slot, or effect id. Nothing else.
             category={form.category}
           />
 
@@ -300,7 +300,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
             </span>
           ) : !validation.isPublishable ? (
             <span className="text-destructive">
-              {validation.blocking.length} blocking error(s) — see the validation panel.
+              {validation.blocking.length} blocking error(s): see the validation panel.
             </span>
           ) : (
             <span className="break-all font-mono text-muted-foreground">{address}</span>
@@ -347,7 +347,7 @@ export function ItemStudio({ studio, identity, relayUrls }: ItemStudioProps) {
           } else {
             toast({
               title: 'No relay accepted the event',
-              description: 'The form is untouched — you can try again.',
+              description: 'The form is untouched; you can try again.',
               variant: 'destructive',
             });
           }

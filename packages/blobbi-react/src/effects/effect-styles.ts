@@ -2,7 +2,7 @@
  * The effect system's CSS, owned by the package as text.
  *
  * WHY A STRING AND NOT A STYLESHEET. The package builds with plain `tsc`, which
- * emits `.js` and `.d.ts` and copies nothing else — a `.css` import would never
+ * emits `.js` and `.d.ts` and copies nothing else, a `.css` import would never
  * reach `dist/`. It also ships no Tailwind config, and no arrangement of
  * Tailwind utilities can express an `@keyframes`. So the CSS lives here, is
  * rendered into a `<style>` element next to the effect layers, and needs
@@ -14,7 +14,7 @@
  *
  * Classes are `blobbi-fx-*` and keyframes are `blobbi-fx-*`. A keyframe called
  * `float`, `pulse` or `sparkle` would be a global name in the consumer's
- * document and would silently win or lose against theirs — this repository
+ * document and would silently win or lose against theirs; this repository
  * already defines a global `@keyframes float`, which is precisely the collision
  * being avoided.
  *
@@ -31,7 +31,7 @@
  *
  * This is what makes reduced motion work with no JavaScript at all: switch
  * every animation off and each piece falls back to `opacity: var(--fx-o)` at
- * its authored position — a still, legible version of the effect rather than an
+ * its authored position, a still, legible version of the effect rather than an
  * invisible one.
  */
 
@@ -44,8 +44,8 @@
  * system can produce.
  *
  * REDUCED MOTION removes `animation` and nothing else. Motion is what the
- * preference is about; a STATIC transform is placement, not motion — a
- * lightning segment's fixed tilt, a radially arranged arc — and stripping it
+ * preference is about; a STATIC transform is placement, not motion, a
+ * lightning segment's fixed tilt, a radially arranged arc, and stripping it
  * would bend the resting composition into something never designed. Animated
  * transforms need no separate kill switch: with `animation: none` they simply
  * stop existing, and the element falls back to its inline (static) transform.
@@ -62,7 +62,7 @@ const BASE_RULES = `
 `;
 
 /**
- * TRACK keyframes — where a particle travels.
+ * TRACK keyframes: where a particle travels.
  *
  * The track is a full-box element, so its `translate` percentages are
  * percentages OF THE RENDERER BOX rather than of the particle. That is the only
@@ -99,7 +99,7 @@ const TRACK_KEYFRAMES: Record<string, string> = {
 50%{transform:translate(var(--fx-dx,0%),var(--fx-dy,0%))}}`,
 
   // Rotating the full-box track carries whatever is pinned inside it around the
-  // box centre — an orbit with one animated property and no trigonometry.
+  // box centre: an orbit with one animated property and no trigonometry.
   'blobbi-fx-orbit': `@keyframes blobbi-fx-orbit{
 from{transform:rotate(0deg)}
 to{transform:rotate(360deg)}}`,
@@ -112,13 +112,13 @@ to{transform:rotate(360deg)}}`,
 100%{transform:scale(0.72);opacity:0}}`,
 };
 
-/** PIECE keyframes — what a particle does in place, while the track carries it. */
+/** PIECE keyframes: what a particle does in place, while the track carries it. */
 const PIECE_KEYFRAMES: Record<string, string> = {
   'blobbi-fx-twinkle': `@keyframes blobbi-fx-twinkle{
 0%,100%{transform:scale(0.6);opacity:calc(var(--fx-o,1) * 0.25)}
 50%{transform:scale(1);opacity:var(--fx-o,1)}}`,
 
-  // Long dim stretches with a short lit plateau — a firefly, not a strobe. One
+  // Long dim stretches with a short lit plateau, a firefly, not a strobe. One
   // light-dark cycle per period, and the fastest preset that uses it runs at
   // 1.6 s, so the effective rate stays under 1 Hz. The dim state is a fifth of
   // full rather than off: a firefly that vanished completely would leave the
@@ -145,7 +145,7 @@ to{transform:rotate(360deg)}}`,
 50%{opacity:var(--fx-o,1)}}`,
 
   // Digital displacement. Paired with `steps(1,end)` timing at the call site so
-  // the fragment JUMPS between five discrete states instead of sliding — an
+  // the fragment JUMPS between five discrete states instead of sliding, an
   // interpolated glitch reads as a wobble.
   'blobbi-fx-glitch': `@keyframes blobbi-fx-glitch{
 0%,100%{transform:translate(0,0);opacity:calc(var(--fx-o,1) * 0.18)}
@@ -162,7 +162,7 @@ to{transform:rotate(360deg)}}`,
   //                `pathLength="100"` and `stroke-dasharray:100`, so driving
   //                stroke-dashoffset 100→0 DRAWS the path from its `M` (the
   //                origin at the Blobbi's feet) to its tip in 0→6.5% of the
-  //                cycle — 182 ms, fast enough to feel instant, slow enough to
+  //                cycle: 182 ms, fast enough to feel instant, slow enough to
   //                see the bolt travel. Then the flicker of a real strike:
   //                full → 0.3 → full → out across ~320 ms, one restrike only
   //                (more would head toward strobe territory).
@@ -216,7 +216,7 @@ export function isKnownEffectAnimation(name: string): boolean {
  *
  * Only the keyframes actually in use are emitted, so a Blobbi wearing one
  * effect carries one effect's worth of CSS rather than twelve. Names are sorted
- * so the same set always produces byte-identical text — the markup has to be
+ * so the same set always produces byte-identical text, the markup has to be
  * comparable between renders for the determinism tests to mean anything.
  */
 export function effectStylesheetFor(

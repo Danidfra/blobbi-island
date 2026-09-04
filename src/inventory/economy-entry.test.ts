@@ -1,5 +1,5 @@
 /**
- * Economy entry — exactly-once initial allocation, proven against fake relays.
+ * Economy entry: exactly-once initial allocation, proven against fake relays.
  *
  * The scenarios mirror the reset's product invariants: marker-as-proof
  * (never balance, never ledger, never legacy profile coins), atomic
@@ -188,7 +188,7 @@ describe('marker helpers', () => {
     expect(isIslandAllocationMarker(tag as string[])).toBe(false);
   });
 
-  it('a malformed allocation tag is not proof, so the grant still applies — and it is preserved', async () => {
+  it('a malformed allocation tag is not proof, so the grant still applies, and it is preserved', async () => {
     const relay = makeRelay({
       [PUBKEY]: inventoryEvent({ coin: 10, extraTags: [['allocation', 'island-economy:v1', 'oops']] }),
     });
@@ -260,7 +260,7 @@ describe('eligibility', () => {
     expect(relay.published.every((e) => e.kind === KIND_GAME_INVENTORY)).toBe(true);
   });
 
-  it('never queries kind:11125 — the legacy coins value cannot influence anything', async () => {
+  it('never queries kind:11125: the legacy coins value cannot influence anything', async () => {
     const relay = makeRelay();
     await makeEntry(relay).checkAndApply();
     expect(relay.queries.length).toBeGreaterThan(0);
@@ -294,7 +294,7 @@ describe('eligibility', () => {
     expect(relay.published).toHaveLength(0);
   });
 
-  it('marker present with a ZERO balance receives nothing — balance is never proof', async () => {
+  it('marker present with a ZERO balance receives nothing, balance is never proof', async () => {
     const relay = makeRelay({ [PUBKEY]: inventoryEvent({ coin: 0, marker: true }) });
     const result = await makeEntry(relay).checkAndApply();
     expect(result).toMatchObject({ status: 'applied', alreadyApplied: true });
@@ -366,7 +366,7 @@ describe('failure and recovery', () => {
     expect(readCoinOp(PUBKEY, ISLAND_ALLOCATION_OP_ID)).toBeNull();
   });
 
-  it('the balance ceiling rejects explicitly — no clamp, no partial marker-only event', async () => {
+  it('the balance ceiling rejects explicitly; no clamp, no partial marker-only event', async () => {
     const relay = makeRelay({ [PUBKEY]: inventoryEvent({ coin: MAX_COIN_BALANCE - 100 }) });
     const result = await makeEntry(relay).checkAndApply();
     expect(result).toMatchObject({ status: 'failed', reason: 'balance-cap', terminal: true });
@@ -388,7 +388,7 @@ describe('failure and recovery', () => {
     expect(coinQuantityOf(relay.getStored(PUBKEY))).toBe(200);
   });
 
-  it('a publish timeout becomes ambiguous — recorded, surfaced, never auto-retried in the same run', async () => {
+  it('a publish timeout becomes ambiguous, recorded, surfaced, never auto-retried in the same run', async () => {
     const relay = makeRelay();
     relay.setPublishBehavior('timeout');
     const result = await makeEntry(relay).checkAndApply();
@@ -487,7 +487,7 @@ describe('cross-storage durability', () => {
     await makeEntry(relay).checkAndApply();
     expect(coinQuantityOf(relay.getStored(PUBKEY))).toBe(200);
 
-    // Device B: separate localStorage (empty ledger) and a STALE view — it
+    // Device B: separate localStorage (empty ledger) and a STALE view; it
     // raced device A, so its reads still show the pre-grant state.
     clearCoinOps();
     relay.freezeStaleSnapshot();
@@ -498,7 +498,7 @@ describe('cross-storage durability', () => {
     relay.setReadBehavior('ok');
 
     // Convergence: the newest replacement event carries ONE marker and ONE
-    // +200 — B built `empty base + 200 + marker`, not `A's 200 + 200`.
+    // +200: B built `empty base + 200 + marker`, not `A's 200 + 200`.
     const final = relay.getStored(PUBKEY);
     expect(coinQuantityOf(final)).toBe(200);
     expect(markerCount(final)).toBe(1);
@@ -526,7 +526,7 @@ describe('cross-storage durability', () => {
 // ── Operation identity ─────────────────────────────────────────────────────
 
 describe('operation identity', () => {
-  it('uses ONE stable op id embedding the economy version — never random', async () => {
+  it('uses ONE stable op id embedding the economy version; never random', async () => {
     expect(ISLAND_ALLOCATION_OP_ID).toBe(`initial-allocation:${ISLAND_ECONOMY_ALLOCATION_ID}`);
     const relay = makeRelay();
     await makeEntry(relay).checkAndApply();

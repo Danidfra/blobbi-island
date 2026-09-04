@@ -1,12 +1,12 @@
 /**
- * kind:31632 image views — library integration and Island selection policy.
+ * kind:31632 image views, library integration and Island selection policy.
  *
  * Every case here starts from RAW TAGS and goes through the real
  * `@nostr-games/inventory@0.2.0` parser, so the tests fail if the library's
  * contract moves under us rather than quietly agreeing with a hand-built object
  * that no issuer could actually publish.
  *
- * No relay, no signer, no published event, no inventory ownership — see
+ * No relay, no signer, no published event, no inventory ownership; see
  * `item-image-fixtures.ts`.
  */
 
@@ -44,7 +44,7 @@ import {
 } from './item-image-fixtures';
 import type { NostrEvent } from '@nostrify/nostrify';
 
-/** Parse a fixture, asserting it survived — none of them are invalid items. */
+/** Parse a fixture, asserting it survived; none of them are invalid items. */
 function parse(event: NostrEvent): GameItemDefinition {
   const result = parseGameItemDefinitionResult(event, { mode: 'permissive' });
   if (!result.ok) throw new Error(`fixture rejected: ${result.error}`);

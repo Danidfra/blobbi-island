@@ -2,15 +2,15 @@
  * Cross-game economy checks for Arcade V1.
  *
  * The three dedicated games pay from three separate policies, and nothing else
- * ties their numbers together — so this file does. It pins the documented
+ * ties their numbers together, so this file does. It pins the documented
  * balance table and asserts the two properties the economy is tuned around:
  *
  *  1. **Equal ceilings.** No game's best run pays more than another's. The
  *     per-run maximum is 8 everywhere, well inside the shared hard cap of 25.
  *  2. **No dominant farm.** Tickets-per-minute for a TYPICAL result (using the
  *     catalogue's own duration estimates) must not differ by more than 2.5×
- *     between any two games. Not parity — pool takes longer and pays a little
- *     less per minute, dance is shorter and pays a little more — but no game
+ *     between any two games. Not parity, pool takes longer and pays a little
+ *     less per minute, dance is shorter and pays a little more, but no game
  *     may be "several times" the others.
  *
  * ## The balance table (Arcade V1, policies v1)
@@ -22,7 +22,7 @@
  * | strong Normal win | 6 (96%) | 7 (7–3) | 7 (clean, rival's early 8) |
  * | best realistic run | 8 (96% + full combo) | 8 (7–0 shutout) | 8 (clean legal 8) |
  *
- * These are PRODUCT numbers. Changing a policy is allowed — arriving here with
+ * These are PRODUCT numbers. Changing a policy is allowed, arriving here with
  * a failing pin and editing it deliberately is the intended workflow.
  */
 import { describe, it, expect } from 'vitest';

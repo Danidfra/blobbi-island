@@ -4,7 +4,7 @@
  * Three claims, each cheap to break by accident and expensive to discover later:
  *
  *  1. **The policy core is pure.** A module that cannot import React, a relay or
- *     storage cannot make a capability decision depend on any of them — which is
+ *     storage cannot make a capability decision depend on any of them, which is
  *     what lets `admitChatMessage` be the same function in a unit test and in
  *     the running game.
  *  2. **Family is unreachable.** No module outside this directory names the
@@ -56,14 +56,14 @@ function importsOf(file: string): string[] {
  * The two modules that are allowed to know React exists.
  *
  * Explicit rather than a glob, so adding a third is a decision recorded here.
- * Both are the delivery mechanism — a context and the provider that fills it —
+ * Both are the delivery mechanism, a context and the provider that fills it,
  * and neither contains a capability decision.
  */
 const REACT_ALLOWED = new Set([
   'island-safety-context.ts',
   'IslandSafetyProvider.tsx',
   // The gate is a component by necessity: refusing to MOUNT a subtree is
-  // something only a component can do, and it contains no capability decision —
+  // something only a component can do, and it contains no capability decision,
   // it reads a resolution status and renders one branch or the other.
   'SafetyGate.tsx',
 ]);
@@ -130,7 +130,7 @@ describe('Family is defined and unreachable', () => {
     'ExperienceProfile',
     'IslandSafetyPolicyContext',
     // Added with the resolution model (H.0). Providing this context directly is
-    // a second way to hand a subtree a Family policy — one that mounts no
+    // a second way to hand a subtree a Family policy; one that mounts no
     // `IslandSafetyProvider` at all, so the prop check below would never see
     // it. Naming it here closes that route before anything takes it.
     'SafetyResolutionContext',

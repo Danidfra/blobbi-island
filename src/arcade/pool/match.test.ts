@@ -1,5 +1,5 @@
 /**
- * The match state machine — one shot at a time, and exactly once each.
+ * The match state machine; one shot at a time, and exactly once each.
  *
  * Everything here drives the REAL `stepPoolMatch` with numbers. No canvas, no
  * React, no clock: a whole frame is a loop over a pure function, which is what
@@ -98,7 +98,7 @@ function ready(state = createPoolMatch({ seed: 1 })): PoolMatchState {
 /**
  * A hand-built table, loaded into the world.
  *
- * Since Planck owns the bodies, changing `state.balls` alone changes nothing —
+ * Since Planck owns the bodies, changing `state.balls` alone changes nothing,
  * the world has to be told too. Every fixture below goes through here.
  */
 function load(state: PoolMatchState): PoolMatchState {
@@ -225,8 +225,8 @@ describe('taking a shot', () => {
   });
 
   it('gives up on a shot that will not settle rather than freezing the match', () => {
-    // Cannot be produced by real physics — constant deceleration guarantees a
-    // stop — so the backstop is exercised by asserting its bound directly.
+    // Cannot be produced by real physics, constant deceleration guarantees a
+    // stop: so the backstop is exercised by asserting its bound directly.
     expect(MAX_SHOT_MS).toBeGreaterThan((190 / 26) * 1000);
     const struck = applyPlayerShot(ready(), 0, 1, world).state;
     const { state } = runUntil(struck, (s) => s.phase !== 'rolling');
@@ -439,7 +439,7 @@ describe('winning and losing', () => {
     const cue = { x: eight.x - (dx / length) * 40, y: eight.y - (dy / length) * 40 };
 
     // Same shot, but the player still has a solid up, so the 8 is not theirs to
-    // take — and hitting it first is a foul into the bargain.
+    // take: and hitting it first is a foul into the bargain.
     const early = withTable(
       ready(),
       [
@@ -494,8 +494,8 @@ describe('winning and losing', () => {
 
 describe('a whole frame', () => {
   it('plays to a finish, with the score adding up', () => {
-    // The player is driven by a fixed, dumb policy — always shoot at the
-    // nearest legal ball — so the frame is real but reproducible.
+    // The player is driven by a fixed, dumb policy, always shoot at the
+    // nearest legal ball, so the frame is real but reproducible.
     let state = ready(createPoolMatch({ seed: poolSeedFrom('whole-frame'), difficulty: 'normal' }));
     let guard = 0;
 
@@ -583,7 +583,7 @@ describe('time and pausing', () => {
 
   it('resumes a rolling shot exactly where it stopped', () => {
     // A "pause" is simply not calling `step`. Nothing in the match decays on a
-    // clock, and the world only advances when it is told to — so a frozen table
+    // clock, and the world only advances when it is told to, so a frozen table
     // stays exactly frozen for as long as nobody steps it.
     const struck = applyPlayerShot(ready(), 0, 1, world).state;
     const midway = runUntil(struck, (s) => s.elapsedMs > struck.elapsedMs + 400).state;
@@ -606,7 +606,7 @@ describe('recovery', () => {
   /**
    * A world that reports one recovery and then behaves.
    *
-   * Corrupting a ball is no longer something a test can do by editing state —
+   * Corrupting a ball is no longer something a test can do by editing state,
    * the bodies live in Planck, and the match only ever sees snapshots. So the
    * contract under test is the one that actually exists: **if the world says it
    * had to recover a ball, what does the match make of it?**

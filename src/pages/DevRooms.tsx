@@ -1,9 +1,9 @@
 /**
- * DevRooms — the ground-anchor room verification harness (dev-only route
+ * DevRooms: the ground-anchor room verification harness (dev-only route
  * `/dev/rooms`; excluded from production builds like DevArcade/DevTheater).
  *
  * Renders any room with its REAL background, walk boundary, depth ramp,
- * z-bands, spawn/exit markers and a locally-driven Blobbi actor — no login
+ * z-bands, spawn/exit markers and a locally-driven Blobbi actor; no login
  * required (the body uses an explicit visual). Debug overlays are forced on,
  * so the actor draws its ground-point crosshair, box outline, and
  * position/scale/z readout (see BlobbiActor), and the boundary is outlined by

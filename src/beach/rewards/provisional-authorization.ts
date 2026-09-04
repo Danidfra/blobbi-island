@@ -1,5 +1,5 @@
 /**
- * PROVISIONAL Beach reward authorization — the TEMPORARY, client-trusted
+ * PROVISIONAL Beach reward authorization, the TEMPORARY, client-trusted
  * issuance layer.
  *
  * ## What this is, and is not
@@ -9,7 +9,7 @@
  * AUTHORIZATION: this module decides locally, in the official client, that a
  * finished hunt deserves its Coins, and then asks the canonical wallet to
  * apply them. Nothing here is an official grant, proves the player honestly
- * completed the minigame, or resists a modified client — the ledger, locks
+ * completed the minigame, or resists a modified client, the ledger, locks
  * and read-backs protect against ACCIDENTAL duplication and loss, not
  * cheating. Do not describe it otherwise anywhere.
  *
@@ -33,7 +33,7 @@
  * Verifies round/result eligibility, fixes the deterministic amount in the
  * durable Beach ledger BEFORE any publish, and invokes the canonical Coin
  * wallet under the reservation's operation id (one id from reservation to
- * Coins — exactly-once end to end). It contains NO inventory serialization,
+ * Coins: exactly-once end to end). It contains NO inventory serialization,
  * relay handling or publish logic: that is the wallet's.
  */
 
@@ -61,7 +61,7 @@ export type AuthorizeOutcome =
   | { readonly status: 'failed'; readonly reward: TreasureHuntCoinReward; readonly message: string }
   /** The finished round does not qualify. No slot interaction here. */
   | { readonly status: 'ineligible'; readonly reason: string }
-  /** No usable reservation (missing/abandoned) — nothing to pay. */
+  /** No usable reservation (missing/abandoned): nothing to pay. */
   | { readonly status: 'no-reservation' };
 
 export interface TreasureHuntRewardAuthorizer {
@@ -100,7 +100,7 @@ export function createProvisionalTreasureHuntAuthorizer(
       }
 
       // Fix the amount durably BEFORE any grant. If this cannot land, no
-      // publish happens — the same no-record-no-publish rule as the wallet.
+      // publish happens: the same no-record-no-publish rule as the wallet.
       if (!finalizeBeachReward(pubkey, opId, reward.totalCoins, now())) {
         return {
           status: 'failed',

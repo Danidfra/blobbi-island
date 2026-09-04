@@ -1,16 +1,16 @@
 /**
- * Mine reward — the end-to-end regression for the reported overwrite bug.
+ * Mine reward: the end-to-end regression for the reported overwrite bug.
  *
  * > existing balance = 100, Mine reward = 20, observed result = 20.
  *
  * Two halves, because the bug could have lived in either:
  *
- * 1. **Behavioural** — the Mine's exact reward call, against a REAL canonical
+ * 1. **Behavioural**: the Mine's exact reward call, against a REAL canonical
  *    inventory event, asserting the whole resulting kind:31633 (Coins,
  *    Arcade Tickets and an unrelated consumable), plus the Mine's real
  *    exactly-once mechanism: ONE operation id minted at Start and reused by
  *    both finish paths.
- * 2. **Structural** — that `MiningGame.tsx` still calls the canonical wallet
+ * 2. **Structural**: that `MiningGame.tsx` still calls the canonical wallet
  *    with a DELTA under a per-session operation id, so a future edit cannot
  *    reintroduce an absolute write or a per-finish id.
  */

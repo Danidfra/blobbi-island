@@ -238,7 +238,7 @@ describe('the tiled cloud bands are gone', () => {
   /**
    * Strip comments before asserting.
    *
-   * These files deliberately *describe* the band model in prose — that history is
+   * These files deliberately *describe* the band model in prose; that history is
    * why the current design looks the way it does. What must not survive is the
    * band model in the code, so the assertions are made against code only.
    */
@@ -248,7 +248,7 @@ describe('the tiled cloud bands are gone', () => {
       .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
   it('leaves no trace of the band class, keyframes or repeat-x tiling', () => {
-    // The band model is what produced both reported defects — a blanket of
+    // The band model is what produced both reported defects, a blanket of
     // repeated puffs, and shapes permanently sliced at the tile boundary. A
     // leftover rule would quietly resurrect either one.
     for (const file of [
@@ -267,7 +267,7 @@ describe('the tiled cloud bands are gone', () => {
   it('grades world sprites without a transition that would clobber their own', () => {
     // `.bush-sway-target` declares `transition: transform 0.3s` on the bush IMAGE,
     // and the grade's selector outranks it. A `transition` in the grade rule would
-    // reset that longhand and silently kill the bush hover sway — so the rule
+    // reset that longhand and silently kill the bush hover sway, so the rule
     // deliberately omits one, and the grade steps imperceptibly instead.
     const css = read('src/index.css');
     const rule = /\[data-island-world-graded\] img \{([^}]*)\}/.exec(css)?.[1] ?? '';
@@ -287,7 +287,7 @@ describe('the tiled cloud bands are gone', () => {
   });
 
   it('disables travel for reduced motion by the new actor class', () => {
-    // jsdom applies no stylesheet, so the rule itself is what can be checked —
+    // jsdom applies no stylesheet, so the rule itself is what can be checked,
     // and it is the entire mechanism, in CSS by design so it needs no JS.
     const css = read('src/index.css');
     expect(css).toContain("[data-island-sky-reduced-motion='true'] .island-sky-cloud");

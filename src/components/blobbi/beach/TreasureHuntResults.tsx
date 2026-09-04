@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt — the findings summary, with the reward outcome.
+ * Treasure Hunt: the findings summary, with the reward outcome.
  *
  * Renders the pure `TreasureHuntResult` plus the reward view the controller
  * derived from the (provisional) authorization. Honest by construction:
@@ -60,7 +60,7 @@ function RewardPanel({
         className="mx-auto max-w-md rounded-2xl bg-island-warn/20 px-4 py-1.5 text-center text-xs text-island-ink"
         data-treasure-practice-notice
       >
-        Practice round — no Coins were awarded.
+        Practice round: no Coins were awarded.
       </p>
     );
   }
@@ -70,7 +70,7 @@ function RewardPanel({
         className="mx-auto max-w-md rounded-2xl bg-island-warn/20 px-4 py-1.5 text-center text-xs text-island-ink"
         data-treasure-reward-status="ineligible"
       >
-        This hunt ended too quickly to earn a reward — dig at least once and
+        This hunt ended too quickly to earn a reward, dig at least once and
         keep hunting a little longer next time!
       </p>
     );
@@ -113,7 +113,7 @@ function RewardPanel({
       {rewardView.phase === 'ambiguous' && (
         <p role="status" className="text-center text-xs text-island-wood-dark">
           Your reward is being confirmed. It is safely recorded and will not be
-          lost or doubled — check your balance in a moment.
+          lost or doubled: check your balance in a moment.
         </p>
       )}
       {rewardView.phase === 'failed' && (
@@ -156,7 +156,7 @@ export function TreasureHuntResults({
         <h4 id="treasure-cleanup-heading" className="text-sm font-semibold text-island-ink">
           🧹 Beach cleaned
         </h4>
-        <FindList finds={result.litterFinds} emptyLabel="No litter this time — the sand was already sparkling." />
+        <FindList finds={result.litterFinds} emptyLabel="No litter this time, the sand was already sparkling." />
       </section>
 
       <section aria-labelledby="treasure-found-heading" className="space-y-1.5">

@@ -17,13 +17,13 @@ function segmentsAlong(points: readonly { x: number; y: number }[]): WalkableAre
  * Every y-value constrains the Blobbi's GROUND-CONTACT POINT (feet), not the
  * legacy body center. The values below are the center-era boundaries shifted
  * down by the depth-scaled half body height at each edge
- * (`size_px/2 × scale(y) / 697 × 100` — see scripts note in
+ * (`size_px/2 × scale(y) / 697 × 100`: see scripts note in
  * docs/blobbi-ground-anchor-implementation.md), which preserves the previous
  * ON-SCREEN walkable floor exactly: the region where feet could visually land
  * is unchanged, only the stored coordinate now names it directly.
  *
  * Values > 100 clamp to 100 (feet cannot leave the room). The body may extend
- * ABOVE a boundary edge — only the ground point is constrained. Deliberately
+ * ABOVE a boundary edge; only the ground point is constrained. Deliberately
  * thin strips (the cave corridor, the mall's mid-level walkway) stay thin: they
  * match the artwork's floor bands.
  */
@@ -101,12 +101,12 @@ export const locationBoundaries: Record<string, Boundary> = {
     y: [61.5, 100],
   },
   /**
-   * Plaza interior — two floors joined by the staircase.
+   * Plaza interior: two floors joined by the staircase.
    *
    * Rebuilt from scratch against `plaza-inside.webp` (1536×1024, the world's
    * own 3:2, so image percentages are world percentages). Every band follows a
    * line probed on the plate or on the balcony/staircase overlay that is cut
-   * from it — the figures are in `plaza-inside-config.ts`.
+   * from it: the figures are in `plaza-inside-config.ts`.
    *
    * ## Ground floor
    *
@@ -114,7 +114,7 @@ export const locationBoundaries: Record<string, Boundary> = {
    * (y = 73.6, just under the bottom step at 72.9). The fountain, the two big
    * planters and the two sign boards that stand out past the threshold are
    * `MovementBlocker` rectangles (`plazaInsideBlockers`), not holes punched
-   * here — a composite clamps to its NEAREST area, so a hole makes the Blobbi
+   * here: a composite clamps to its NEAREST area, so a hole makes the Blobbi
    * slide round its rim while a blocker stops the walk and lets the route
    * planner take it round.
    *
@@ -122,7 +122,7 @@ export const locationBoundaries: Record<string, Boundary> = {
    *
    * The treads: a column between the stair rails, widening down the flight to
    * the newel posts and touching the ground floor at y = 73.6. The landing is
-   * its top, from y = 44.6 — the door's walk target and the room's spawn are on
+   * its top, from y = 44.6, the door's walk target and the room's spawn are on
    * it. The column is the rails' inner faces brought in by `PLAZA_STAIRS.railMargin`
    * on each side: the boundary constrains the Blobbi's ground point, and a
    * ground point on a rail's face is half a body over the rail.
@@ -131,7 +131,7 @@ export const locationBoundaries: Record<string, Boundary> = {
    *
    * The balcony floor is hidden behind its own parapet, so the corridor is a
    * LINE, not a band: a chain of `segment` areas along the centreline that
-   * `plazaCorridorPaths` samples from `PLAZA_CORRIDOR` — flat along the centre
+   * `plazaCorridorPaths` samples from `PLAZA_CORRIDOR`: flat along the centre
    * run at the landing's row, then climbing at the parapet's own slope along
    * each wing, with a short blend across the kink. The ordinary nearest-point
    * clamp projects any target above or below the line straight onto it, and
@@ -231,7 +231,7 @@ export const locationBoundaries: Record<string, Boundary> = {
   },
   'cave-inside.png': {
     // Deliberately thin: the corridor floor band in the art. Ground-anchor
-    // semantics make this workable — only the feet must stay in the band.
+    // semantics make this workable; only the feet must stay in the band.
     shape: 'rectangle',
     x: [16, 84],
     y: [80.2, 84.7],
@@ -244,7 +244,7 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [0, 7], y: [62.1, 90.6] },
       { type: 'triangle', points: [{ x: 7, y: 70.2 }, { x: 7, y: 90.6 }, { x: 10, y: 90.6 }] },
 
-      // The middle-level walkway strip (thin by design — matches the artwork).
+      // The middle-level walkway strip (thin by design, matches the artwork).
       { type: 'rectangle', x: [7, 100], y: [62.1, 63.1] },
 
       { type: 'rectangle', x: [93, 100], y: [32.5, 62.1] },
@@ -259,7 +259,7 @@ export const locationBoundaries: Record<string, Boundary> = {
     y: [72.8, 76.8], // Bottom area of booth (floor)
   },
   /**
-   * Clothing Store — the floor's OUTER PERIMETER only.
+   * Clothing Store: the floor's OUTER PERIMETER only.
    *
    * Rebuilt from scratch against `clothing-store.webp`, the furnished artwork
    * that replaced the empty shell the room used to be composed onto. The old
@@ -284,8 +284,8 @@ export const locationBoundaries: Record<string, Boundary> = {
    * blocker in `clothing-store-config.ts`.)
    *
    * The five bands step back with that line and stay strictly INSIDE it. The
-   * room's free-standing obstacles — both booths, the leaning mirror and the
-   * checkout — are `MovementBlocker` rectangles rather than holes punched here,
+   * room's free-standing obstacles; both booths, the leaning mirror and the
+   * checkout: are `MovementBlocker` rectangles rather than holes punched here,
    * for the reason the Care Store records: a composite clamps to its NEAREST
    * area, so a hole makes the Blobbi slide around the rim, while a blocker stops
    * the walk and lets the route planner take it round.
@@ -315,19 +315,19 @@ export const locationBoundaries: Record<string, Boundary> = {
     ],
   },
   /**
-   * Care Store — the floor's OUTER PERIMETER only.
+   * Care Store: the floor's OUTER PERIMETER only.
    *
    * The room's obstacles (toy box, checkout counter, pet bed, potted plant) are
    * `MovementBlocker` rectangles in `care-store-config.ts`, not holes punched in
    * this boundary. That split is deliberate: a composite boundary clamps to its
    * NEAREST area, so a hole makes the Blobbi slide around its rim, while a
    * blocker stops the walk where the object is and lets the player choose a way
-   * round — which is what the artwork's free-standing furniture should feel like.
+   * round: which is what the artwork's free-standing furniture should feel like.
    * The boundary therefore describes only where the FLOOR ends.
    *
    * Re-measured against the REVISED `care-store-inside.webp` (1600×1067, the
    * world's own 3:2, so image percentages are world percentages). The artwork
-   * was redrawn rather than edited — 94 % of its pixels changed — and the room
+   * was redrawn rather than edited: 94 % of its pixels changed, and the room
    * came out closer to the camera: the floor is about four percent deeper than
    * it was and reaches the frame edges lower down.
    *
@@ -342,13 +342,13 @@ export const locationBoundaries: Record<string, Boundary> = {
    * within a whisker of their previous blockers, so those were left alone.
    */
   /**
-   * Badges Store — the floor's OUTER PERIMETER only.
+   * Badges Store: the floor's OUTER PERIMETER only.
    *
    * Like the Care Store, the room's obstacles are `MovementBlocker` rectangles
    * (`badges-store-config.ts`) rather than holes punched in this boundary: a
    * composite clamps to its NEAREST area, so a hole makes the Blobbi slide
-   * around its rim, while a blocker stops the walk and now — with route
-   * planning — lets it go round.
+   * around its rim, while a blocker stops the walk and now, with route
+   * planning: lets it go round.
    *
    * `badges-store-inside.webp` is 1600×1103, aspect 1.4506 against the world's
    * 1.5007, so `object-cover` crops it top and bottom and image percentages are
@@ -367,7 +367,7 @@ export const locationBoundaries: Record<string, Boundary> = {
       // Front floor: open from frame edge to frame edge, in front of everything.
       { type: 'rectangle', x: [1, 99], y: [80, 99] },
 
-      // Mid floor: the band both display units stand in — they are blocked
+      // Mid floor: the band both display units stand in; they are blocked
       // within it, not excluded from it, so their aisles stay walkable.
       { type: 'rectangle', x: [4, 95], y: [64, 80] },
 
@@ -378,11 +378,11 @@ export const locationBoundaries: Record<string, Boundary> = {
     ],
   },
   /**
-   * Furniture Store — the floor's OUTER PERIMETER, which here is a funnel.
+   * Furniture Store: the floor's OUTER PERIMETER, which here is a funnel.
    *
    * The showroom is two RAISED display platforms either side of an aisle. They
    * are roped off, signed "do not touch" and set on their own carpets, so they
-   * are not floor at all — which makes them the boundary's business rather than
+   * are not floor at all, which makes them the boundary's business rather than
    * a pile of `MovementBlocker` rectangles. Excluding them by shape also gives
    * the walk the right feel: the composite clamps to its nearest band, so a
    * Blobbi aimed at a sofa slides along the platform's edge instead of stopping
@@ -432,7 +432,7 @@ export const locationBoundaries: Record<string, Boundary> = {
       { type: 'rectangle', x: [1.5, 97], y: [80, 86] },
 
       // Upper-mid floor: past the toy box on the left and the pet bed on the
-      // right — both of which stand INSIDE this band and are blocked, not
+      // right: both of which stand INSIDE this band and are blocked, not
       // excluded.
       { type: 'rectangle', x: [2, 94], y: [72, 80] },
 

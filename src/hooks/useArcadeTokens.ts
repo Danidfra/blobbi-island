@@ -1,15 +1,15 @@
 /**
  * Reading and buying Arcade Tokens.
  *
- * The balance is the Token quantity in the canonical kind:31633 inventory —
+ * The balance is the Token quantity in the canonical kind:31633 inventory,
  * the same query every other balance reads, so a confirmed write refreshes it
  * with no extra plumbing.
  *
  * The purchase is ONE canonical wallet operation: the Coin deduction and the
  * Token grant land in the SAME replacement event, so either the player pays
- * and receives, or nothing happens. It reuses the shop's machinery wholesale —
+ * and receives, or nothing happens. It reuses the shop's machinery wholesale,
  * `spendCoins` with `grantLines`, a durable spend intent for retry identity,
- * and the wallet's fresh authoritative balance read — because a Token purchase
+ * and the wallet's fresh authoritative balance read, because a Token purchase
  * is a shop purchase in every respect that matters.
  */
 
@@ -47,10 +47,10 @@ export interface TokenPurchaseResult {
   quantity: number;
   totalCost: number;
   /**
-   * `applied`   — Coins spent and Tokens granted, in one event.
-   * `ambiguous` — the publish MAY have landed; the intent is kept so buying
+   * `applied`: Coins spent and Tokens granted, in one event.
+   * `ambiguous`: the publish MAY have landed; the intent is kept so buying
    *               the same quantity again reconciles rather than charging.
-   * `blocked`   — a previous attempt is still unresolved; nothing new charged.
+   * `blocked`: a previous attempt is still unresolved; nothing new charged.
    */
   outcome: 'applied' | 'ambiguous' | 'blocked';
 }
@@ -64,7 +64,7 @@ export function useBuyArcadeTokens() {
   return useMutation({
     mutationFn: async ({ quantity }: { quantity: number }): Promise<TokenPurchaseResult> => {
       if (!user?.pubkey) throw new Error('User not logged in');
-      // The price is resolved here, from the one policy module — never taken
+      // The price is resolved here, from the one policy module; never taken
       // from the caller. Same boundary the shop enforces.
       const totalCost = arcadeTokenCoinCost(quantity);
 

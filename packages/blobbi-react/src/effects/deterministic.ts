@@ -9,12 +9,12 @@
  *
  * Properties this guarantees, all of them asserted by `deterministic.test.ts`:
  *
- *  - **pure** — same arguments, same number, forever, in any runtime;
- *  - **well spread** — successive indices do not produce successive values, so
+ *  - **pure**: same arguments, same number, forever, in any runtime;
+ *  - **well spread**: successive indices do not produce successive values, so
  *    a row of particles does not come out as a visible gradient;
- *  - **decorrelated per field** — a particle's `x` and its `delay` are drawn
+ *  - **decorrelated per field**: a particle's `x` and its `delay` are drawn
  *    from different streams, so nothing lines up diagonally by accident;
- *  - **bounded** — `unitFor` is always in `[0, 1)`, so every `lerp` below stays
+ *  - **bounded**: `unitFor` is always in `[0, 1)`, so every `lerp` below stays
  *    inside the range the caller declared.
  *
  * The hash is FNV-1a over the composed key. It is not cryptographic and does
@@ -49,7 +49,7 @@ export function unitFor(seed: string, index: number, field: string): number {
   // hash the same key and silently share a value.
   const hashed = hashString(`${seed}|${index}|${field}`);
   // A second mix stage. FNV alone leaves visible structure in the low bits for
-  // keys that differ only in their last character — which is exactly our case,
+  // keys that differ only in their last character, which is exactly our case,
   // since `index` usually differs by one.
   const mixed = (hashed ^ (hashed >>> 15)) >>> 0;
   return (Math.imul(mixed, 0x2545f491) >>> 8) / 0x01000000;

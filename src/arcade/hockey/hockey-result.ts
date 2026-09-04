@@ -18,7 +18,7 @@
  * ## Rewards are still not computed here
  *
  * `HOCKEY_REWARD_POLICY` (in `hockey-reward.ts`) is now active and reads the
- * `stats` keys below — exactly the join point this file promised. The division
+ * `stats` keys below, exactly the join point this file promised. The division
  * of labour is unchanged: this module SUMMARISES a match; the policy prices it;
  * and nothing in this module publishes, persists or awards anything.
  */
@@ -27,7 +27,7 @@ import type { ArcadeGameResult } from '../types';
 import type { HockeyDifficulty } from './ai';
 import type { HockeyMatchState, HockeyMatchStats } from './match';
 
-/** Win or loss. Air Hockey cannot draw — a match ends when someone reaches the target. */
+/** Win or loss. Air Hockey cannot draw, a match ends when someone reaches the target. */
 export type AirHockeyOutcome = 'win' | 'loss';
 
 /**
@@ -48,7 +48,7 @@ export interface AirHockeyMatchResult {
   /**
    * True when the match ended because someone reached the target, rather than
    * because the player left. A run that ends any other way never produces a
-   * result at all — the lifecycle reducer refuses one outside `playing` — so
+   * result at all, the lifecycle reducer refuses one outside `playing`, so
    * this is `true` for every result that exists today. It is recorded anyway,
    * because a future "best of" or timed mode would make it vary and a reward
    * policy must be able to ask.
@@ -77,7 +77,7 @@ export const HOCKEY_STAT_KEYS = {
  *
  * Deterministic given its input: no clock, no randomness, no I/O. Accepts a
  * match in ANY phase so the caller does not have to guard, but only an `over`
- * match can be `completedNaturally` — a summary of an unfinished match is a
+ * match can be `completedNaturally`: a summary of an unfinished match is a
  * loss-shaped record of what was on the board, and it is never handed to the
  * lifecycle.
  */
@@ -113,7 +113,7 @@ export interface BuildAirHockeyResultInput {
  *
  * `score` is the player's goal count, because that is the only number in this
  * game a player would call a score. The arcade contract requires it to be a
- * non-negative integer, which a goal count always is — the margin, which can be
+ * non-negative integer, which a goal count always is, the margin, which can be
  * negative, travels in `stats` where negatives are legal.
  *
  * `cleared` is a WIN, not a completion. Air Hockey's own clear condition is
@@ -157,7 +157,7 @@ export function buildAirHockeyResult(input: BuildAirHockeyResultInput): ArcadeGa
  * parallel copy the controller would have to keep in step. A round-trip test
  * pins the two together.
  *
- * Missing or malformed stats degrade to zero rather than throwing — a results
+ * Missing or malformed stats degrade to zero rather than throwing, a results
  * screen is not the place to discover a schema problem, and the validated
  * result that reached the reducer cannot have any.
  */

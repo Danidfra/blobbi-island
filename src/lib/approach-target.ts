@@ -1,8 +1,8 @@
 /**
  * Canonical interaction approach-target resolution (Phase 3).
  *
- * Every "walk to a point on/near this object, then act" interaction — doors,
- * kiosks, bushes, theater seats, arcade machines, chairs — needs the same
+ * Every "walk to a point on/near this object, then act" interaction, doors,
+ * kiosks, bushes, theater seats, arcade machines, chairs, needs the same
  * mechanics: read the object's LIVE rendered rect, map a configured fractional
  * aim point through the world surface into world percent, optionally push the
  * point onto the floor, and clamp it into the room's walk boundary so the walk
@@ -21,7 +21,7 @@
  * test/diagnostic mirrors of the same points.
  *
  * Output semantics: a GROUND-position {@link ApproachTarget} for
- * `requestInteraction` — never a pose anchor.
+ * `requestInteraction`: never a pose anchor.
  */
 
 import type { Position } from '@/lib/types';
@@ -64,7 +64,7 @@ export interface ResolveElementApproachTargetOptions {
   /**
    * Room walk boundary to clamp into. Clamping is EXPLICIT: omit it only for
    * elements whose aim point is known-walkable (`MovableBlobbi` still clamps
-   * each movement STEP, but an unreachable target never converges — see the
+   * each movement STEP, but an unreachable target never converges; see the
    * arcade counters incident).
    */
   boundary?: Boundary;
@@ -72,7 +72,7 @@ export interface ResolveElementApproachTargetOptions {
    * Explicit vertical ground offset in world percent, applied after the
    * fraction conversion and before clamping. A function receives the raw
    * converted y (for offsets that depend on depth, e.g. the arcade's
-   * half-body ground correction) — applied exactly once, here.
+   * half-body ground correction): applied exactly once, here.
    */
   yOffsetPercent?: number | ((rawYPercent: number) => number);
 }
@@ -138,7 +138,7 @@ const PROJECTION_DIRECTIONS = 16;
  * room's walk boundary, and it must not be INSIDE a blocker. A door on a
  * building's wall resolves to a point above the floor; a kiosk's base may sit
  * on the very rectangle registered to keep the Blobbi out of it. Either way
- * the walk never started and the door looked dead — the Town Stage, the Plaza
+ * the walk never started and the door looked dead, the Town Stage, the Plaza
  * building and the Nostr Station exterior all shipped that way.
  *
  * This is the ONE generic answer:
@@ -147,7 +147,7 @@ const PROJECTION_DIRECTIONS = 16;
  * 2. if that point is blocked, walk outward in rings and pick the nearest
  *    candidate that is on the floor and free, preferring the side the raw
  *    point was on;
- * 3. if nothing within the rings is free, return the clamped point — the
+ * 3. if nothing within the rings is free, return the clamped point, the
  *    planner will still refuse, and that refusal is the honest outcome.
  *
  * Nothing here is per-room or per-door: the boundary and the blockers are

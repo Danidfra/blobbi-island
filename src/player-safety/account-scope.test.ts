@@ -255,7 +255,7 @@ describe('duplicate submits', () => {
     setSafetyAccount(A);
     const now = 1_800_000_000_000;
     expect(fileReport(A, RUDE, 'r-1', now)).toBe(true);
-    // A retry mints a new id — which is exactly why dedupe cannot key on it.
+    // A retry mints a new id, which is exactly why dedupe cannot key on it.
     expect(fileReport(A, RUDE, 'r-2', now + 500)).toBe(true);
     expect(listReports()).toHaveLength(1);
   });

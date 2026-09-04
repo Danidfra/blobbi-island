@@ -1,5 +1,5 @@
 /**
- * The Mine policy — parity with the pre-extraction behaviour, and the economic
+ * The Mine policy, parity with the pre-extraction behaviour, and the economic
  * claim the model rests on.
  *
  * The first block is the important one: it pins the numbers that used to live
@@ -60,7 +60,7 @@ describe('parity with the pre-extraction Mine', () => {
 
   it('the drop table reproduces the original thresholds exactly', () => {
     // Sweep the whole unit interval finely, plus every boundary and the value
-    // immediately below it — a shifted threshold shows up as an inequality
+    // immediately below it, a shifted threshold shows up as an inequality
     // flip precisely there.
     const probes = new Set<number>();
     for (let i = 0; i < 10_000; i += 1) probes.add(i / 10_000);
@@ -125,7 +125,7 @@ describe('a deterministic set of finds pays a deterministic reward', () => {
  * The arbitrage check.
  *
  * If any purchasable item returned more Coins of mining than it cost, the Mine
- * would be an unbounded faucet — buy, mine, buy more, repeat — and energy
+ * would be an unbounded faucet, buy, mine, buy more, repeat, and energy
  * would stop being a boundary at all. This asserts the loop is closed at
  * CURRENT production prices and effects, and it fails if a future price cut or
  * effect buff opens it. That failure is the signal to re-audit the Mine, which

@@ -1,9 +1,9 @@
 /**
- * `<ClothingStoreModal>` — what the shop shows, and what a Buy click is allowed
+ * `<ClothingStoreModal>`: what the shop shows, and what a Buy click is allowed
  * to ask the purchase layer for.
  *
- * The purchase hook is faked here. What it does with a cart — one atomic
- * kind:31633 event, a uniqueness precondition inside the wallet's lock — is
+ * The purchase hook is faked here. What it does with a cart; one atomic
+ * kind:31633 event, a uniqueness precondition inside the wallet's lock, is
  * proven against the real wallet in `clothing-store-purchase.test.tsx`. What
  * this file proves is the CONTRACT the shop hands it, and the two states the
  * shop can be in: stocked, and honestly empty.
@@ -179,14 +179,14 @@ describe('what the stocked shop shows', () => {
     stock();
     await renderShop();
     for (const product of STOCKED) {
-      expect(buyButton(product.address).textContent).toBe(`Buy — ${product.price}`);
+      expect(buyButton(product.address).textContent).toBe(`Buy for ${product.price}`);
     }
   });
 
   it('labels each item with the slot its DEFINITION declares', async () => {
     stock();
     await renderShop();
-    // The slot appears on the card AND as its filter chip — both come from the
+    // The slot appears on the card AND as its filter chip; both come from the
     // definition, and neither is written in the shop.
     const card = (address: string) =>
       document
@@ -319,7 +319,7 @@ describe('when you cannot buy', () => {
     expect(purchase).not.toHaveBeenCalled();
   });
 
-  it('an unknown balance still allows a purchase — the wallet is the real gate', async () => {
+  it('an unknown balance still allows a purchase, the wallet is the real gate', async () => {
     coinBalance.value = null;
     stock();
     await renderShop();

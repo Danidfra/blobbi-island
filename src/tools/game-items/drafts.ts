@@ -1,8 +1,8 @@
 /**
  * Local, versioned drafts for the Item Studio.
  *
- * Authoring an item is slow work — artwork gets uploaded, markers get assigned,
- * effects get tuned — and none of it is on a relay until the user explicitly
+ * Authoring an item is slow work, artwork gets uploaded, markers get assigned,
+ * effects get tuned, and none of it is on a relay until the user explicitly
  * signs. Losing that to a reload would be the tool's worst behavior, so the
  * form is mirrored into `localStorage`.
  *
@@ -12,15 +12,15 @@
  *    event id, and the UI labels it as local. The `loaded` provenance block is
  *    kept because "I was editing the published carrot" is exactly what you want
  *    restored, but it describes an event that already exists, not this draft.
- * 2. A stored shape from an older build never corrupts a newer one — and never
+ * 2. A stored shape from an older build never corrupts a newer one, and never
  *    CRASHES one either. Two mechanisms, for two different kinds of change:
  *
  *    - **Additive** fields (a new optional input, a new sub-object key) are
  *      HYDRATED from the blank form's defaults on read ({@link hydrateStoredForm}).
  *      A draft written before the field existed simply gets the empty value,
  *      which is what "the author never touched it" means anyway.
- *    - **Incompatible** changes — a field whose default would be WRONG, a
- *      renamed key, a changed meaning — bump {@link DRAFT_SCHEMA_VERSION}, and
+ *    - **Incompatible** changes, a field whose default would be WRONG, a
+ *      renamed key, a changed meaning, bump {@link DRAFT_SCHEMA_VERSION}, and
  *      the whole store is discarded with a reason the UI shows.
  *
  *    Hydration is not a half-understood migration; it is the same defensive
@@ -28,8 +28,8 @@
  *    exists because the alternative was real: an old draft reaching a newer
  *    build's `visual.kind.trim()` took the entire studio down to the error
  *    boundary, losing the author's work to a field they never typed in.
- * 3. Nothing secret is ever written. The form has no key material in it — the
- *    signer is reached through the app's existing account, never copied — and
+ * 3. Nothing secret is ever written. The form has no key material in it, the
+ *    signer is reached through the app's existing account, never copied, and
  *    that is a property of the form model, checked by `drafts.test.ts`.
  */
 
@@ -43,7 +43,7 @@ import {
 } from './item-form-model';
 
 /**
- * Bump ONLY for a change an old draft cannot satisfy with defaults — a renamed
+ * Bump ONLY for a change an old draft cannot satisfy with defaults, a renamed
  * key, a changed meaning, a field whose empty value would be wrong. Purely
  * additive fields need no bump: {@link hydrateStoredForm} fills them in, and
  * bumping for those would throw away unpublished authoring work to avoid
@@ -78,7 +78,7 @@ export function emptyDraftStore(): DraftStore {
 export type DraftLoadOutcome =
   | { status: 'ok'; store: DraftStore }
   | { status: 'empty'; store: DraftStore }
-  /** Present but unusable — wrong version, malformed JSON, wrong shape. */
+  /** Present but unusable, wrong version, malformed JSON, wrong shape. */
   | { status: 'discarded'; store: DraftStore; reason: string };
 
 /** A plain object, as opposed to `null`, an array or a primitive. */
@@ -91,7 +91,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  *
  * Merged one level at a time, each level over its own blank: a stored value
  * wins where it exists, and a field the stored draft never heard of gets the
- * blank form's value. Shallow-per-level rather than a deep merge on purpose —
+ * blank form's value. Shallow-per-level rather than a deep merge on purpose,
  * the arrays (`images`, `topics`, `effects`, …) are the author's data and must
  * be taken whole, not element-wise reconciled against an empty list.
  *
@@ -135,7 +135,7 @@ function isStoredDraft(value: unknown): value is StoredDraft {
 /**
  * Read a store from its serialized form.
  *
- * Every failure mode collapses to "start empty and tell the user why" — a
+ * Every failure mode collapses to "start empty and tell the user why": a
  * corrupt draft must never throw during a render or wipe out the session.
  */
 export function parseDraftStore(raw: string | null): DraftLoadOutcome {
@@ -174,8 +174,8 @@ export function parseDraftStore(raw: string | null): DraftLoadOutcome {
       reason: 'The saved drafts were missing their draft list and have been discarded.',
     };
   }
-  // Hydrated on the way IN, so nothing downstream — the editor, autosave, the
-  // draft picker — ever holds a form from an older shape.
+  // Hydrated on the way IN, so nothing downstream, the editor, autosave, the
+  // draft picker: ever holds a form from an older shape.
   const drafts = store.drafts
     .filter(isStoredDraft)
     .map((draft) => ({ ...draft, form: hydrateStoredForm(draft.form) }));

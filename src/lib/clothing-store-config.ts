@@ -4,7 +4,7 @@
  *
  * ## The artwork is the room
  *
- * `clothing-store.webp` is a FURNISHED boutique — two curtained fitting rooms
+ * `clothing-store.webp` is a FURNISHED boutique, two curtained fitting rooms
  * on the left, a leaning mirror, wall shelving, a purple checkout island, a
  * clothing rack and a tall bookcase on the right, all painted in. It replaced
  * `clothing-store-inside.png`, which was an empty shell that nine separate
@@ -21,8 +21,8 @@
  *
  * World percent of the fixed 1046×697 design box, like every other room.
  *
- * `clothing-store.webp` is 1600×1103 — aspect 1.4506 against the world's
- * 1.5007 — so `object-cover` matches its WIDTH and crops it top and bottom.
+ * `clothing-store.webp` is 1600×1103, aspect 1.4506 against the world's
+ * 1.5007: so `object-cover` matches its WIDTH and crops it top and bottom.
  * Image x percentages are world x percentages; image y percentages are not.
  * Every number below was measured on the surviving crop (image rows 18…1085,
  * `worldY% = (imageY − 18.42) / 1066.16 × 100`), which is what the player
@@ -32,8 +32,8 @@
  * ## Ground-anchor semantics
  *
  * Blockers are tested against the Blobbi's GROUND point (its feet), like every
- * boundary in the game. Each rectangle is an object's floor FOOTPRINT — the
- * band of floor it stands on — not its painted height. A Blobbi's body may
+ * boundary in the game. Each rectangle is an object's floor FOOTPRINT, the
+ * band of floor it stands on; not its painted height. A Blobbi's body may
  * overlap a booth or a counter above the floor, which is what standing AT the
  * till looks like.
  *
@@ -72,7 +72,7 @@ export type ClothingStoreSurface = 'shop' | 'fitting-room';
  *
  * A hotspot rather than a sprite, because there is no sprite: the checkout and
  * both booths are part of the artwork. The room renders each as a real labelled
- * `<button>` over the region — keyboard reachable, named for what it opens, and
+ * `<button>` over the region, keyboard reachable, named for what it opens, and
  * already move-blocking via `BLOCK_UI_SELECTOR`, so a tap never also starts a
  * raw world walk. The Care Store's checkout established the shape.
  */
@@ -100,8 +100,8 @@ export interface ClothingStoreHotspot {
  *
  * It used to be two sprites: `clothing-store.png` plus a
  * `doors/clothing-store-door.png` overlay that carried the click. The new
- * artwork is an OPEN-FRONT storefront — awning, sign, and the boutique visible
- * behind it — with no door painted anywhere, so a door overlay would have been
+ * artwork is an OPEN-FRONT storefront, awning, sign, and the boutique visible
+ * behind it: with no door painted anywhere, so a door overlay would have been
  * a door-shaped affordance floating over a shop that has none. Both old sprites
  * are deleted and the whole storefront is the click target, exactly as the Care
  * and Badges Stores next to it already work.
@@ -119,7 +119,7 @@ export interface ClothingStoreHotspot {
  *   box left     = 50 − 0.0319 · W = 49.17 % → paints from x = 50.0, as before
  *   box bottom   = 38.5 − 0.0293 · W = 37.73 % → painted base on y = 61.5 %
  *
- * Painted extent: x 50.0 → 74.5 %, base y = 61.5 % — the same floor line the
+ * Painted extent: x 50.0 → 74.5 %, base y = 61.5 %, the same floor line the
  * Care and Badges facades stand on, measured the same way. It clears the Care
  * Store (which paints to x = 49.90 %) by the same whisker it always did.
  *
@@ -130,7 +130,7 @@ export interface ClothingStoreHotspot {
 export const CLOTHING_STORE_FACADE = {
   src: '/assets/locations/shop/clothing-store.webp',
   /** Names the action, not the picture: this is a way in. */
-  alt: 'Clothing Store — go inside',
+  alt: 'Clothing Store: go inside',
   containerClassName: 'absolute bottom-[37.73%] left-[49.17%] z-[15] w-[26.17%]',
   /**
    * Where the Blobbi stands to go in.
@@ -143,7 +143,7 @@ export const CLOTHING_STORE_FACADE = {
    * Stated rather than derived, for the reason `care-store-config.ts` records:
    * `InteractiveElement` would otherwise take the sprite's own base, and this
    * storefront is set back against the wall, so "the floor at this sprite's
-   * base" is not floor at all — it lands above the strip, off the mall's
+   * base" is not floor at all; it lands above the strip, off the mall's
    * walkable floor, and a route to a point outside the room is now correctly
    * refused rather than clamped and hoped for.
    */
@@ -171,14 +171,14 @@ export const CLOTHING_STORE_FACADE = {
 export const clothingStoreBlockers: readonly ClothingStoreBlocker[] = [
   {
     /**
-     * The LEFT fitting room — the one against the side wall, its curtain drawn
+     * The LEFT fitting room, the one against the side wall, its curtain drawn
      * back over a stool and a star mat.
      *
      * Measured: its purple frame's outer post occupies x 0.2–1.8 % and its inner
      * post x 9.7–11.4 %, both constant from the arch down. The booth's threshold
      * is not level, because it is seen at an angle: the outer post meets the
      * floor at y ≈ 73.8 % and the inner one at y ≈ 69.7 %. The rectangle takes
-     * the FRONT of that line rather than its average — a player reads the booth
+     * the FRONT of that line rather than its average, a player reads the booth
      * as one alcove, and clipping the near corner while being stopped at the far
      * one is the kind of collision that feels broken even when the maths is
      * right.
@@ -191,7 +191,7 @@ export const clothingStoreBlockers: readonly ClothingStoreBlocker[] = [
   },
   {
     /**
-     * The RIGHT fitting room — the second booth, half a step further back, so
+     * The RIGHT fitting room, the second booth, half a step further back, so
      * its whole footprint sits higher up the image than its neighbour's.
      *
      * Measured: frame posts at x 12.3–13.5 % and x 18.6–20.0 %, meeting the
@@ -221,13 +221,13 @@ export const clothingStoreBlockers: readonly ClothingStoreBlocker[] = [
   },
   {
     /**
-     * The checkout island — the room's one piece of free-standing furniture,
+     * The checkout island, the room's one piece of free-standing furniture,
      * and the only blocker the player will really notice.
      *
      * Measured: the gold plinth paints x 37.7–60.5 % and its front edge meets
      * the floor at y ≈ 69.3 % on the centre line, rising to y ≈ 68 % at either
      * end. The counter's back is wedged between the wall shelving on its left
-     * and the rack's bench on its right — there is no floor behind it, and the
+     * and the rack's bench on its right; there is no floor behind it, and the
      * rectangle reaches back past the wall line to say so. Walking round the
      * back of this till is not a route; standing in front of it is.
      */
@@ -247,8 +247,8 @@ export const clothingStoreBlockers: readonly ClothingStoreBlocker[] = [
  * The checkout.
  *
  * The hotspot covers the counter's whole visible body: from the gold worktop at
- * y ≈ 52 % — the monitor and the little star sign stand above that and are not
- * part of the target — down to the plinth's base at y ≈ 69.5 %, across the
+ * y ≈ 52 %, the monitor and the little star sign stand above that and are not
+ * part of the target, down to the plinth's base at y ≈ 69.5 %, across the
  * plinth's full painted width.
  *
  * Its stand point is on the CUSTOMER's side. y = 73 % is open floor 3.6 % below
@@ -258,7 +258,7 @@ export const clothingStoreBlockers: readonly ClothingStoreBlocker[] = [
  */
 export const CLOTHING_STORE_CHECKOUT: ClothingStoreHotspot = {
   id: 'clothing-store-checkout',
-  label: 'Checkout counter — browse clothing',
+  label: 'Checkout counter: browse clothing',
   className: 'absolute left-[37.5%] top-[52%] h-[17.5%] w-[23%] z-[12]',
   opens: 'shop',
   standPoint: { x: 49, y: 73 },
@@ -269,17 +269,17 @@ export const CLOTHING_STORE_CHECKOUT: ClothingStoreHotspot = {
  *
  * TWO hotspots and ONE modal. They are separate controls because they are
  * separate booths and each is walked to separately, but they open the same
- * `<FittingRoomModal>` from the same surface slot — see `ClothingStoreRoom`.
+ * `<FittingRoomModal>` from the same surface slot; see `ClothingStoreRoom`.
  * A second preview surface is not a feature, it is a second copy of the same
  * dialog waiting to disagree with the first.
  *
  * Each hotspot covers its own booth's painted arch and opening, and each stand
- * point is on the floor directly in front of that booth's threshold — clear of
+ * point is on the floor directly in front of that booth's threshold, clear of
  * its blocker, and far enough apart that the two are never confused.
  */
 export const CLOTHING_STORE_FITTING_ROOM_LEFT: ClothingStoreHotspot = {
   id: 'clothing-store-fitting-room-left',
-  label: 'Left fitting room — try clothes on your Blobbi',
+  label: 'Left fitting room; try clothes on your Blobbi',
   /** The booth's arch crowns at y ≈ 18.5 %; its outer post reaches y ≈ 73.5 %. */
   className: 'absolute left-[0%] top-[18.5%] h-[55%] w-[11.5%] z-[12]',
   opens: 'fitting-room',
@@ -288,7 +288,7 @@ export const CLOTHING_STORE_FITTING_ROOM_LEFT: ClothingStoreHotspot = {
 
 export const CLOTHING_STORE_FITTING_ROOM_RIGHT: ClothingStoreHotspot = {
   id: 'clothing-store-fitting-room-right',
-  label: 'Right fitting room — try clothes on your Blobbi',
+  label: 'Right fitting room; try clothes on your Blobbi',
   /** Set further back than its neighbour: arch at y ≈ 21.5 %, base at y ≈ 69 %. */
   className: 'absolute left-[12.2%] top-[21.5%] h-[47.5%] w-[8%] z-[12]',
   opens: 'fitting-room',
@@ -328,7 +328,7 @@ export function clothingStoreHotspot(id: string): ClothingStoreHotspot {
 }
 
 /**
- * The persistent Shop shortcut, lower-right — the Care and Badges Stores'
+ * The persistent Shop shortcut, lower-right, the Care and Badges Stores'
  * button in the same visual language, for the same reason: the painted checkout
  * is the immersive way in, and this is the discoverable one.
  *

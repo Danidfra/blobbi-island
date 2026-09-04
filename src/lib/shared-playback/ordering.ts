@@ -3,7 +3,7 @@
  *
  * `created_at` alone is never sufficient: a host can hit pause, seek and play
  * inside one second, and second-resolution timestamps cannot order those. `rev`
- * can — it is incremented once per canonical action, and both events for one
+ * can: it is incremented once per canonical action, and both events for one
  * action carry the same value. This mirrors the `seq` mechanism island presence
  * already uses for exactly the same reason (`src/lib/multiplayer.ts`).
  */
@@ -13,7 +13,7 @@ export interface RevisionOrder {
   rev: number;
   /** Unix seconds. */
   createdAt: number;
-  /** Hex event id — the final tie-break, so every client picks the same one. */
+  /** Hex event id, the final tie-break, so every client picks the same one. */
   eventId: string;
 }
 
@@ -41,7 +41,7 @@ export function isNewerCanonical(known: RevisionOrder | null, incoming: Revision
 
 /**
  * A command or state only ever *moves* the player when its revision is strictly
- * greater than the last one applied. Equal is a no-op — it is the matching half
+ * greater than the last one applied. Equal is a no-op; it is the matching half
  * of a pair already applied, or a publish retry. Lower is stale.
  */
 export function isStaleRevision(lastAppliedRev: number, rev: number): boolean {

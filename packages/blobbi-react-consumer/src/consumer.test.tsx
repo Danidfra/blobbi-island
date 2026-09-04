@@ -3,7 +3,7 @@
  *
  * This file is what an application that has never heard of Blobbi Island gets
  * when it installs `@blobbi/react`. It imports the package by NAME, from
- * outside the package's own source tree, and it renders — with:
+ * outside the package's own source tree, and it renders, with:
  *
  *   no QueryClient, no router, no Nostr client, no relay, no signer,
  *   no current-user hook, no app context, no theme provider,
@@ -13,7 +13,7 @@
  * kind. If one ever becomes necessary, the package has acquired a hidden
  * dependency and this file is where that shows up.
  *
- * Accessories come from `fixtures/accessory-fixtures.ts` — three tiny local
+ * Accessories come from `fixtures/accessory-fixtures.ts`: three tiny local
  * SVGs and plain placement data. Nothing here touches inventory, equipment
  * events, or any Nostr kind.
  */
@@ -210,7 +210,7 @@ describe('a consumer supplies its own accessory data and its own artwork', () =>
   });
 
   it('renders nothing rather than a broken image when no source exists', () => {
-    // The package's default resolver is "use the URL you gave me" — so a
+    // The package's default resolver is "use the URL you gave me": so a
     // placement with no URL resolves to an empty candidate list.
     const [placement] = normalizeAccessoryPlacements([
       { ...FIXTURE_STAR_BADGE, url: undefined },

@@ -1,8 +1,8 @@
 /**
  * Route planning around room furniture.
  *
- * These are GEOMETRIC tests, not animation snapshots. The planner is pure —
- * positions in, waypoints out — so what is asserted is what a route must be
+ * These are GEOMETRIC tests, not animation snapshots. The planner is pure,
+ * positions in, waypoints out, so what is asserted is what a route must be
  * true of: it never enters a blocker, it never leaves the floor, it ends at the
  * destination the caller asked for, and it terminates.
  *
@@ -129,7 +129,7 @@ describe('one blocker between start and target', () => {
     expect(route[0].y).toBeGreaterThan(shelf.y + shelf.height / 2);
   });
 
-  it('reaches floor directly BEHIND the blocker — the case that used to fail', () => {
+  it('reaches floor directly BEHIND the blocker, the case that used to fail', () => {
     // A click just past a display: the straight line hits it, a route exists.
     const route = expectValidRoute({ x: 50, y: 85 }, { x: 50, y: 20 }, OPEN_ROOM, [shelf]);
     expect(route.length).toBeGreaterThan(1);
@@ -152,7 +152,7 @@ describe('choosing a side', () => {
 
     const route = expectValidRoute({ x: 15, y: 20 }, { x: 15, y: 80 }, room, [wallShelf]);
     // Every waypoint is inside the room, so the impossible left side was not
-    // chosen — the audit above already proves it never leaves the floor.
+    // chosen: the audit above already proves it never leaves the floor.
     for (const point of route) {
       expect(point.x).toBeGreaterThanOrEqual(10);
       expect(point.x).toBeLessThanOrEqual(90);
@@ -164,7 +164,7 @@ describe('choosing a side', () => {
     const shelf: RouteBlocker = { x: 40, y: 40, width: 20, height: 20 };
     const route = planRoute({ x: 10, y: 50 }, { x: 90, y: 50 }, OPEN_ROOM, [shelf])!;
     const corner = route[0];
-    // Strictly outside the rectangle, not sitting on its edge — grazing is what
+    // Strictly outside the rectangle, not sitting on its edge, grazing is what
     // made the walk stall for a frame and read as scraping the furniture.
     expect(isBlocked(corner, [shelf])).toBe(false);
     const outside =
@@ -231,7 +231,7 @@ describe('when there is no way through', () => {
     expect(planRoute({ x: 50, y: 50 }, { x: 50, y: 200 }, room, [])).toBeNull();
   });
 
-  it('terminates — it does not search forever', () => {
+  it('terminates: it does not search forever', () => {
     // A maze the bounded planner cannot solve. If depth were unbounded this
     // would hang rather than fail.
     const maze: RouteBlocker[] = Array.from({ length: 9 }, (_, i) => ({

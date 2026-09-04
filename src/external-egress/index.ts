@@ -1,5 +1,5 @@
 /**
- * External egress — the one boundary for actions that leave Blobbi Island.
+ * External egress: the one boundary for actions that leave Blobbi Island.
  *
  * ```
  *   feature ──▶ requestEgress({ class, … }) ──▶ capability ──▶ URL validation

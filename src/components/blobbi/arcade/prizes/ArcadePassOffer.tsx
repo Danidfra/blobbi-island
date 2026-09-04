@@ -1,5 +1,5 @@
 /**
- * The Arcade Pass on the Prize Counter — the first LIVE redemption.
+ * The Arcade Pass on the Prize Counter, the first LIVE redemption.
  *
  * ## Why this is its own component and not part of the shelf
  *
@@ -142,7 +142,7 @@ export function ArcadePassOffer() {
       {isActive && (
         <p className="mt-2 text-xs text-island-ink-soft" data-pass-status>
           {isUsable
-            ? `Active — ${formatFreePlays(remainingFreePlays)}, ${formatPassRemaining(remainingMs)} left.`
+            ? `Active: ${formatFreePlays(remainingFreePlays)}, ${formatPassRemaining(remainingMs)} left.`
             : `Free plays used. This pass expires in ${formatPassRemaining(remainingMs)}.`}
         </p>
       )}

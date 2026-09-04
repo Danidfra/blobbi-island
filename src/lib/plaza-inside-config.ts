@@ -6,7 +6,7 @@
  * plate rather than composed from sprites, so what the room needs from code is
  * the part a picture cannot do: where the player may walk, what is in front of
  * them, and what happens when they press a storefront. This file holds every
- * number for that, in one place, for the reason `care-store-config.ts` gives —
+ * number for that, in one place, for the reason `care-store-config.ts` gives,
  * a stand point that lives in a component and a boundary that lives in a table
  * drift apart the first time either is touched.
  *
@@ -14,8 +14,8 @@
  *
  * WORLD PERCENT of the fixed 1046×697 design box, the same units
  * `locationBoundaries`, `MovementBlocker`, the depth bands and every approach
- * target use. The plate is 1536×1024 — the world's own 3:2 to within a
- * sub-pixel crop under `object-cover` — so image percentages ARE world
+ * target use. The plate is 1536×1024, the world's own 3:2 to within a
+ * sub-pixel crop under `object-cover`: so image percentages ARE world
  * percentages, and every figure below was probed on the plate's own pixels.
  *
  * ## What was measured
@@ -61,8 +61,8 @@ export interface PlazaInsideBlocker {
  * The one occluder in the room is the balcony-and-staircase overlay: a copy of
  * the plate's railing and stairs with everything else cut away, drawn above the
  * Blobbi so that a Blobbi on the upper corridor passes BEHIND the railing. A
- * Blobbi in front of that overlay — on the landing, on the stairs, on the
- * ground floor — takes {@link PLAZA_DEPTH.blobbiInFront}; one behind it takes
+ * Blobbi in front of that overlay, on the landing, on the stairs, on the
+ * ground floor: takes {@link PLAZA_DEPTH.blobbiInFront}; one behind it takes
  * {@link PLAZA_DEPTH.blobbiBehind}.
  */
 export const PLAZA_DEPTH = {
@@ -91,7 +91,7 @@ export const PLAZA_DEPTH = {
  *
  * `railsTop` / `railsBottom` are the inner faces of the two stair rails, at the
  * landing and at the newel posts. The walkable column is those faces brought
- * in by {@link PLAZA_STAIRS.railMargin} on each side — the Blobbi's GROUND
+ * in by {@link PLAZA_STAIRS.railMargin} on each side, the Blobbi's GROUND
  * POINT is what the boundary constrains, and a ground point on the rail's
  * inner face puts half a body over the rail. The `lg` rig is a 96 px box; on
  * the flight it is drawn at 0.7–0.85 depth scale, so its half-width is
@@ -130,7 +130,7 @@ export const PLAZA_STAIRS_WALK_BOTTOM: readonly [number, number] = [
  * The balcony corridor: ONE LINE, drawn along the parapet.
  *
  * The balcony floor is hidden behind its own parapet, so there is no floor to
- * walk on — only a line to walk along, and the line has to be where the eye
+ * walk on: only a line to walk along, and the line has to be where the eye
  * expects a Blobbi behind that parapet to be. It is a centreline, and the
  * Blobbi's feet ride it: any target above or below is projected straight onto
  * it by the ordinary boundary clamp (the line is a chain of `segment` areas,
@@ -141,7 +141,7 @@ export const PLAZA_STAIRS_WALK_BOTTOM: readonly [number, number] = [
  *
  * Probed on the overlay, the parapet's top edge is flat at y = 43.8 from
  * x = 27 to x = 73 and then rises in a straight line to y ≈ 37 at the frame
- * edges — 6.8 % of the world's height over 24 % of its width, the same on both
+ * edges: 6.8 % of the world's height over 24 % of its width, the same on both
  * sides. The corridor keeps a constant immersion behind it: on the centre run
  * the feet are at y = 46 (the landing's own row, so the door target and the
  * spawn are on the line and the walk from the door to a shop is one leg),
@@ -155,7 +155,7 @@ export const PLAZA_STAIRS_WALK_BOTTOM: readonly [number, number] = [
  * A line that stayed on y = 46 to the ends was tried first and put the Blobbi
  * behind a parapet that is 9.5 % of the world tall at the frame edges: from
  * x ≈ 15 outward nothing but the crown of the head showed. Following the
- * parapet instead keeps head and eyes above it everywhere — the parapet's
+ * parapet instead keeps head and eyes above it everywhere, the parapet's
  * pickets are see-through, only its plate is solid.
  *
  * The line runs to within a body's width of both frame edges; the plate
@@ -211,7 +211,7 @@ export function plazaCorridorPaths(): { left: Position[]; right: Position[] } {
 }
 
 /**
- * The point ON the walked corridor at `x` — on the sampled chain, not the
+ * The point ON the walked corridor at `x`: on the sampled chain, not the
  * curve it approximates, so a stand point placed with this is on the floor to
  * the last bit.
  */
@@ -234,7 +234,7 @@ export function plazaCorridorPointAt(x: number): Position {
 /**
  * Where the overlay's occlusion actually changes, in world y.
  *
- * `landingTop` is the top edge of the staircase's landing in the overlay — the
+ * `landingTop` is the top edge of the staircase's landing in the overlay, the
  * highest row at which the overlay paints anything between the stair rails.
  * `railingBase` is the bottom edge of the balcony railing's plate along its
  * centre run, the lowest row the overlay paints outside the stairs. Between
@@ -247,8 +247,8 @@ export const PLAZA_OCCLUSION = {
   /**
    * The staircase's horizontal extent within that band: the walkable stair
    * column at the landing ({@link PLAZA_STAIRS_WALK_TOP}). Inside it the
-   * Blobbi can only be on the landing, in front of the overlay; outside it —
-   * including the margin between the column and the rail's face — it can only
+   * Blobbi can only be on the landing, in front of the overlay; outside it,
+   * including the margin between the column and the rail's face; it can only
    * be on the corridor line, behind the railing.
    */
   stairsX: PLAZA_STAIRS_WALK_TOP,
@@ -313,7 +313,7 @@ export const PLAZA_DOOR = {
 // ---------------------------------------------------------------------------
 
 /**
- * The occluder. A 1536×1024 plate — the same size and grid as the background —
+ * The occluder. A 1536×1024 plate, the same size and grid as the background,
  * carrying only the balcony railing and the staircase, drawn with the same
  * `inset-0 object-cover` mapping as the background so the two are pixel-aligned.
  * Decorative: `pointer-events-none`, or it would swallow the door's hover and
@@ -345,7 +345,7 @@ const GROUND_STAND_Y = 76;
  *
  * `destination` is the whole navigation contract: a `LocationId` walks the
  * player to the shop and takes them inside on arrival; `null` walks them there
- * and shows a small "Coming soon" instead. Opening a shop later is one edit —
+ * and shows a small "Coming soon" instead. Opening a shop later is one edit,
  * fill in the id once its room exists.
  *
  * Each `box` is the storefront's painted bay: from its sign's top edge to its
@@ -406,17 +406,17 @@ export const plazaStorefronts: readonly StorefrontHotspotConfig[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * The fountain — the one prop still composed from sprites, because nothing
+ * The fountain: the one prop still composed from sprites, because nothing
  * like it is painted into the plate.
  *
  * It stands in the open floor below the rug, centred on the room, with its
  * plinth on y = 97 so that the strip of floor in front of it (y 97–99.5) is
  * still walkable. It was 15 % wide, which read as a garden ornament on a
  * floor this size; at 20 % it is the room's centrepiece without crowding the
- * flanks — 40 % of open floor remains on either side. The plinth then spans
+ * flanks: 40 % of open floor remains on either side. The plinth then spans
  * x 40–60, y ≈ 86–97 (the sprite is 207×75, so 20 % of the world's width is
  * 10.9 % of its height), the basin rises to y ≈ 82 and the spire's tip to
- * y ≈ 78, overlapping the lower edge of the rug (y 73.5–83.5) — which is
+ * y ≈ 78, overlapping the lower edge of the rug (y 73.5–83.5): which is
  * right for a thing standing in front of it.
  *
  * `blocker` is the plinth's floor footprint, which is what the Blobbi's feet
@@ -451,7 +451,7 @@ export const PLAZA_FOUNTAIN = {
 
 /**
  * What stands on the ground floor, as floor footprints. Everything else the
- * plate paints on the floor — the rug, the shop thresholds — is walkable.
+ * plate paints on the floor, the rug, the shop thresholds, is walkable.
  */
 export const plazaInsideBlockers: readonly PlazaInsideBlocker[] = [
   PLAZA_FOUNTAIN.blocker,

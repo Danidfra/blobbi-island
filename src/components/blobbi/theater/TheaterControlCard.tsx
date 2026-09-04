@@ -21,7 +21,7 @@ interface TheaterControlCardProps {
   role: TheaterRole;
   controller: TheaterPlaybackController | null;
   snapshot: TheaterPlaybackSnapshot;
-  /** The player could not be built at all — distinct from a bad video. */
+  /** The player could not be built at all, distinct from a bad video. */
   fatalError: MediaError | null;
   onRetryPlayer: () => void;
   onSubmit: (videoId: string, startSeconds?: number) => void;
@@ -46,8 +46,8 @@ const FULLSCREEN_DENIED_MESSAGE =
 /**
  * The theater's one piece of UI, on the stage wall below the screen.
  *
- * It holds BOTH halves of the interaction — choosing what to watch and
- * controlling it — because the theater artwork paints a curtain over the top of
+ * It holds BOTH halves of the interaction, choosing what to watch and
+ * controlling it: because the theater artwork paints a curtain over the top of
  * the screen. Controls placed on the screen itself are partly hidden by the
  * scenery, which is why nothing essential lives there.
  *
@@ -91,7 +91,7 @@ export function TheaterControlCard({
       data-theater-controls
       data-theater-status={state.status}
       data-block-move
-      // The BACKGROUND is what got lighter — `bg-black/45` instead of `/60` —
+      // The BACKGROUND is what got lighter, `bg-black/45` instead of `/60`,
       // so more of the room shows through the card. Everything drawn on top of
       // it (text, icons, buttons, inputs) keeps its own full opacity, and the
       // blur stays, which is what holds the contrast up over busy scenery.
@@ -132,7 +132,7 @@ export function TheaterControlCard({
         <div className="flex items-center gap-2 py-1">
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/70" />
           <p className="flex-1 text-xs text-white/70">
-            {snapshot.stalled ? 'Still loading — this one is taking a while…' : 'Loading video…'}
+            {snapshot.stalled ? 'Still loading; this one is taking a while…' : 'Loading video…'}
           </p>
           <button
             type="button"
@@ -144,7 +144,7 @@ export function TheaterControlCard({
         </div>
       )}
 
-      {/* Idle or failed: choose something. Host only — a guest cannot pick. */}
+      {/* Idle or failed: choose something. Host only, a guest cannot pick. */}
       {isHost && (state.status === 'seated-idle' || state.status === 'video-error') && !fatalError && (
         /*
           Which chooser exists is decided by the capability, not by disabling a

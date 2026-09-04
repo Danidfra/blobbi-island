@@ -1,5 +1,5 @@
 /**
- * Coin wallet — the currency-grade guarantees, proven against a fake relay.
+ * Coin wallet: the currency-grade guarantees, proven against a fake relay.
  *
  * The scenarios mirror the defects the Coin audit catalogued: stale-base
  * clobbering, timeout-as-success, additive retries after ambiguity, same-tab
@@ -264,7 +264,7 @@ describe('strict publish and ambiguity', () => {
     expect(relay.published).toHaveLength(0); // reconciliation is read-only
   });
 
-  it('an unclassifiable publish error is ambiguous too — never provably unsent', async () => {
+  it('an unclassifiable publish error is ambiguous too; never provably unsent', async () => {
     const relay = makeRelay(inventoryEvent(10, 1_000));
     relay.setPublishBehavior('error');
     const { wallet } = makeWallet(relay);
@@ -346,7 +346,7 @@ describe('readBalance', () => {
  * The crash window: signed, sent, no answer yet.
  *
  * `onSigned` records WHICH event may land before the send happens, so an
- * outcome the wallet never gets to write — the tab closes, the process dies —
+ * outcome the wallet never gets to write, the tab closes, the process dies,
  * still leaves reconcilable evidence behind. Every other test observes
  * `publishedEventId` on the TERMINAL record written after the send returns,
  * which cannot distinguish "recorded before the send" from "recorded after".

@@ -1,5 +1,5 @@
 /**
- * The geometry the game reasons with — the queries, not the solver.
+ * The geometry the game reasons with, the queries, not the solver.
  *
  * Since Planck arrived, integration, collision response, cushion rebounds and
  * pocket capture are `pool-physics-world.test.ts`'s subject. What is tested here
@@ -98,7 +98,7 @@ describe('recovery', () => {
   });
 
   it('clamps a NaN position back onto the cloth instead of propagating it', () => {
-    // A plain clamp does NOT do this — every comparison against NaN is false —
+    // A plain clamp does NOT do this; every comparison against NaN is false,
     // and one bad sample would otherwise reach a Planck body and poison the
     // whole world.
     const fixed = clampBall(ball(1, Number.NaN, Number.NaN, 10, 10));
@@ -212,7 +212,7 @@ describe('the aim guide', () => {
 
   it('reports a cushion when nothing is in the way', () => {
     // Deliberately not x = 100: that is the side pocket's own line, and aiming
-    // up it is a scratch rather than a cushion — which the next case checks.
+    // up it is a scratch rather than a cushion, which the next case checks.
     const path = predictCuePath({ x: 80, y: 50 }, { x: 0, y: -1 }, [ball(CUE_BALL, 80, 50)]);
     expect(path.end).toBe('cushion');
     expect(path.ballNumber).toBeNull();
@@ -234,7 +234,7 @@ describe('the aim guide', () => {
 
   it('sends a rail runner to the CORNER, never into the side pocket it passes', () => {
     // The asymmetry the mouth-plane model produces, and the guide shows the same
-    // one the physics applies — verified against the engine in
+    // one the physics applies, verified against the engine in
     // `pool-physics-world.test.ts`.
     const along = nearestMouthCrossing({ x: 40, y: BALL_RADIUS }, { x: 1, y: 0 });
     expect(along).not.toBeNull();

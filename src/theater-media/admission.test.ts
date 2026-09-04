@@ -1,5 +1,5 @@
 /**
- * Media admission — the pure decision every theater path consults.
+ * Media admission: the pure decision every theater path consults.
  *
  * The production catalog is empty, so the interesting cases all supply fixtures.
  * That is deliberate: what is being pinned is the RULE, and a rule tested only

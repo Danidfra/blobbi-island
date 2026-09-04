@@ -1,7 +1,7 @@
 /**
  * Cloud silhouettes: the ordinary cloud, plus four rare formations.
  *
- * Every variant is **real geometry**, not one SVG relabelled — each entry below is
+ * Every variant is **real geometry**, not one SVG relabelled; each entry below is
  * a different set of primitives with a different viewBox and a different aspect
  * ratio. `island-sky-cloud-shapes.test.ts` asserts that no two variants share a
  * part list, so "same shape, different `data-*`" cannot slip in.
@@ -9,7 +9,7 @@
  * ## The lobe-assembly correction
  *
  * The three character formations were first built the same way the ordinary cloud
- * is — a stack of circles, ellipses and rounded rects. In-app review found that
+ * is: a stack of circles, ellipses and rounded rects. In-app review found that
  * `blobbi-egg`, `blobbi-baby` and `blobbi-adult` **all read as poop clouds**, and
  * the cause was structural rather than a tuning miss: each was a set of rounded
  * tiers narrowing towards the top, which *is* the poop-swirl construction. Any
@@ -22,11 +22,11 @@
  * to read as a swirl.
  *
  * The accidental poop shape was too good to throw away, so `poop` is now a
- * deliberate formation — and the rarest of them all.
+ * deliberate formation: and the rarest of them all.
  *
  * ## Construction rules
  *
- * - **Rounded geometry only** — circles, ellipses, rounded rects, and `M`/`Q`
+ * - **Rounded geometry only**: circles, ellipses, rounded rects, and `M`/`Q`
  *   contours. No polygons, no sharp corners, no strokes, no text, no logos.
  * - **Characters use one continuous contour**, never a stack of lobes. `normal` and
  *   `heart` may still be assembled: neither is a character, so neither can be
@@ -45,24 +45,24 @@
  * These are simplifications of the project's own artwork, not invented characters.
  * References inspected:
  *
- * - **Baby** — `packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts`, body path
+ * - **Baby**: `packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts`, body path
  *   `M 50 15 Q 72 25 75 55 Q 75 80 50 88 Q 25 80 25 55 Q 28 25 50 15` in a 100×100
  *   viewBox: a narrow apex at (50, 15) widening to its full width around y≈55 and
  *   closing on a broad round base at y≈88. Squat, round, widest low.
- * - **Adult** — `packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts`, body path
+ * - **Adult**: `packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts`, body path
  *   `M 100 40 Q 70 60 60 90 Q 55 120 70 140 Q 85 155 100 160 Q 115 155 130 140
  *   Q 145 120 140 90 Q 130 60 100 40` in a 200×200 viewBox: a rounded apex at
  *   (100, 40), flanks bulging outward to x≈55/145 by y≈90–120, then a wide rounded
- *   base at y≈160. That is the onigiri silhouette — **convex sides and round
+ *   base at y≈160. That is the onigiri silhouette, **convex sides and round
  *   corners, which is exactly what stops it being a triangle.**
- * - **Egg** — the island has no egg SVG: `loadBlobbiSvg` falls back to the baby
+ * - **Egg**: the island has no egg SVG: `loadBlobbiSvg` falls back to the baby
  *   drawing for the egg stage, and `BlobbiHatchingCeremony` draws its egg as
  *   `borderRadius: '50%'` shapes behind a radial gradient. So the honest reference
  *   is the baby body's ovoid proportions with the tuft removed and the whole form
  *   stretched taller and narrower.
  *
  * Each formation keeps only the **outer contour**. No eyes, mouth, colours,
- * patterns, internal lines, accessories or outlines — a white cloud that happens
+ * patterns, internal lines, accessories or outlines, a white cloud that happens
  * to be shaped like the thing.
  */
 
@@ -93,7 +93,7 @@ export type IslandCloudPart =
   | { kind: 'ellipse'; cx: number; cy: number; rx: number; ry: number }
   | { kind: 'rect'; x: number; y: number; width: number; height: number; rx: number }
   /**
-   * A single continuous contour. This is how the character formations are drawn —
+   * A single continuous contour. This is how the character formations are drawn,
    * see the header for why lobe assembly was abandoned.
    */
   | { kind: 'path'; d: string };
@@ -107,7 +107,7 @@ export interface IslandCloudShapeGeometry {
   /**
    * Vertical placement for this formation, as a percentage of world height.
    *
-   * `undefined` means "use the actor's own path" — that is the normal cloud, whose
+   * `undefined` means "use the actor's own path": that is the normal cloud, whose
    * height is part of the actors' depth ladder. The formations are rare and tall,
    * so they get their own high placement instead: a tall shape on the large
    * actor's low path would break the upper-sky budget.
@@ -133,7 +133,7 @@ const NORMAL: IslandCloudShapeGeometry = {
  * The island has **no egg artwork at all**: `loadBlobbiSvg` falls back to the baby
  * drawing for the egg stage, and `BlobbiHatchingCeremony` draws its egg from
  * `borderRadius: '50%'` shapes. So this contour is the only one here that is
- * *derived* rather than copied — the baby ovoid with its pinched apex smoothed into
+ * *derived* rather than copied, the baby ovoid with its pinched apex smoothed into
  * a dome and the whole form drawn narrower and taller.
  *
  * The smooth dome is what separates it from the baby at a glance: the baby's real
@@ -153,7 +153,7 @@ const BLOBBI_EGG: IslandCloudShapeGeometry = {
 };
 
 /**
- * Baby — the **real** body path, verbatim.
+ * Baby: the **real** body path, verbatim.
  *
  * `packages/blobbi-react/src/artwork/baby-blobbi/lib/baby-svg-data.ts`, the shape carrying
  * `data-blobbi-body="true"` in `BABY_BASE_SVG`, in its own 100×100 viewBox. The
@@ -174,7 +174,7 @@ const BLOBBI_BABY: IslandCloudShapeGeometry = {
 };
 
 /**
- * Adult — the **real** body of the default adult form, verbatim.
+ * Adult: the **real** body of the default adult form, verbatim.
  *
  * `packages/blobbi-react/src/artwork/adult-blobbi/lib/adult-svg-data.ts`, the `data-blobbi-body="true"`
  * shape in `CATTI_BASE`: `ellipse cx="100" cy="120" rx="45" ry="60"` in a 200×200
@@ -183,7 +183,7 @@ const BLOBBI_BABY: IslandCloudShapeGeometry = {
  * ## Why this one, out of sixteen
  *
  * There is no shared adult path: each of the sixteen `ADULT_SVG_MAP` forms draws its
- * own body — circles (bloomi, cloudi, owli, pandi, rosey, leafy), ovals (catti,
+ * own body: circles (bloomi, cloudi, owli, pandi, rosey, leafy), ovals (catti,
  * froggi), a rounded rect (cacti), polygons (crysti, rocky, starri) and a few paths.
  * Reproducing them all is explicitly out of scope, so one has to stand for the rest.
  *
@@ -193,7 +193,7 @@ const BLOBBI_BABY: IslandCloudShapeGeometry = {
  *
  * ## Why not `DROPPI_BASE`'s path
  *
- * It was the first choice — a real contour, and it carries the same `Q x y x y`
+ * It was the first choice, a real contour, and it carries the same `Q x y x y`
  * opening quirk as the baby path, marking it as the baby ovoid at adult
  * proportions. That turned out to be the problem: rendered as a cloud it is
  * indistinguishable from `blobbi-baby`, because it is the same teardrop. The
@@ -211,7 +211,7 @@ const BLOBBI_ADULT: IslandCloudShapeGeometry = {
 };
 
 /**
- * Heart — two top lobes over a tapering body, closed with a soft round tip rather
+ * Heart: two top lobes over a tapering body, closed with a soft round tip rather
  * than a point.
  *
  * Deliberately imperfect: the right lobe is smaller and sits higher than the left,
@@ -235,13 +235,13 @@ const HEART: IslandCloudShapeGeometry = {
 };
 
 /**
- * Poop — deliberately, this time.
+ * Poop: deliberately, this time.
  *
  * The three Blobbi formations used to be built from stacked rounded mounds that got
  * smaller towards the top, and in-app review found they all read as poop clouds.
  * That was not bad luck: **tiers narrowing upward is the poop-swirl construction**,
  * so any character assembled that way lands on it. Diagnosing that is what moved
- * the Blobbi shapes onto real contours — and it also meant the island had an
+ * the Blobbi shapes onto real contours, and it also meant the island had an
  * accidental poop cloud worth keeping on purpose, as the rarest formation of all.
  *
  * One continuous contour with three tiers, so the shape is the silhouette rather
@@ -284,7 +284,7 @@ export function isSpecialCloudShape(shape: IslandCloudShape): boolean {
  *
  * Every coordinate pair in the `d` string, min/maxed. For quadratic curves the
  * true outline is inside the hull of its control points, so this is a
- * **conservative over-estimate** — never smaller than the real ink. That is the
+ * **conservative over-estimate**: never smaller than the real ink. That is the
  * right direction to be wrong in: the upper-sky budget and the
  * everything-inside-the-viewBox check both stay safe, and the only cost is a little
  * unused margin.

@@ -1,8 +1,8 @@
 /**
  * Event builders for both kinds.
  *
- * Both events for one action are built from ONE immutable snapshot — the same
- * `rev`, the same `updatedAt`, the same `position` — because invariant I2 says
+ * Both events for one action are built from ONE immutable snapshot, the same
+ * `rev`, the same `updatedAt`, the same `position`: because invariant I2 says
  * they describe the same state, and the only way to guarantee that is to never
  * recompute anything per event.
  *
@@ -27,9 +27,9 @@ import type {
 } from './types';
 
 export interface BuildSessionEventInput {
-  /** The `d` tag — a fresh UUIDv4, never reused across sessions. */
+  /** The `d` tag, a fresh UUIDv4, never reused across sessions. */
   sessionId: string;
-  /** The `r` tag — stable across sessions in the same room. */
+  /** The `r` tag, stable across sessions in the same room. */
   room: string;
   /** The `c` tag. Required while active; MAY be dropped on the final event. */
   code: string | null;

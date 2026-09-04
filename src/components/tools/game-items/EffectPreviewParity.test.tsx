@@ -3,7 +3,7 @@
  * come from.
  *
  * The report that prompted this file: an imported Bubble Bliss draft appeared
- * not to preview, while Golden Sparkles did — suggesting either a missing entry
+ * not to preview, while Golden Sparkles did, suggesting either a missing entry
  * in an effect map or draft state that was not normalized the way a loaded
  * event is. Neither turned out to be true, and these tests are what keeps it
  * that way: they assert that the four sources produce the SAME preview, and
@@ -12,7 +12,7 @@
  * ## Why parity is provable rather than argued
  *
  * There is one path. `ItemPreviewPanel` reads `content.visual.effect` and
- * `content.visual.effectSlot` — two strings — and hands them to
+ * `content.visual.effectSlot`: two strings, and hands them to
  * `resolveEffectPreview`. By the time anything renders, an import, a loaded
  * event, an autosaved draft and live typing are indistinguishable, because they
  * are literally the same two strings. These tests build a form each way and
@@ -98,7 +98,7 @@ const drawn = (c: HTMLElement) => [
     ),
   ),
 ];
-/** The effect subtree only — the comparable part between two sources. */
+/** The effect subtree only, the comparable part between two sources. */
 const effectHtml = (c: HTMLElement) =>
   [...c.querySelectorAll('[data-blobbi-effect-layer]')]
     .map((el) => el.outerHTML)
@@ -130,7 +130,7 @@ describe('an imported unsigned Bubble Bliss draft previews before publish', () =
     ],
   });
 
-  it('renders the effect from the import alone — nothing published, nothing signed', () => {
+  it('renders the effect from the import alone; nothing published, nothing signed', () => {
     const form = importForm(BUBBLE_BLISS);
     expect(form.loaded).toBeNull();
 
@@ -143,7 +143,7 @@ describe('an imported unsigned Bubble Bliss draft previews before publish', () =
 
   it('takes the same path Golden Sparkles takes', () => {
     // The original complaint in one assertion: same source, same pipeline, same
-    // observable result — the two differ only in which preset is drawn.
+    // observable result: the two differ only in which preset is drawn.
     const bubble = preview(importForm(BUBBLE_BLISS));
     const golden = preview(
       importForm(effectEventJson('golden-sparkles', 'ambient-particles')),

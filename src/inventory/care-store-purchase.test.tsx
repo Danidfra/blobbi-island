@@ -5,7 +5,7 @@
  * through the real `useBatchPurchase` (its normalization and its pricing
  * boundary), the real `createCoinWallet` (its fresh authoritative read, its
  * balance check and its operation ledger), and the real canonical inventory
- * builder — so what lands in the fake relay is the exact kind:31633 event
+ * builder: so what lands in the fake relay is the exact kind:31633 event
  * production would publish.
  *
  * That matters because the guarantees under test are not arithmetic, they are
@@ -94,7 +94,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 /*
   `useBatchPurchase` also holds a generic inventory mutation, for the zero-cost
   cart branch that the shipped price table makes unreachable. Only the HOOK is
-  replaced — every pure helper in the module (the canonical builder, the
+  replaced: every pure helper in the module (the canonical builder, the
   quantity reader, `applyMutation`) stays real, because the assertions below are
   made against events those helpers produce.
 */
@@ -224,7 +224,7 @@ describe('a Care Store purchase is one atomic inventory write', () => {
     expect(heldIn(stored, BLOBBI_COIN_ADDRESS)).toBe(500 - TEDDY.price);
   });
 
-  it('never spends an Arcade currency — Coins, and only Coins', async () => {
+  it('never spends an Arcade currency: Coins, and only Coins', async () => {
     relay = makeRelay(
       realInventoryEvent(
         [

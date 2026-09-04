@@ -1,4 +1,4 @@
-# Blobbi Island — themes
+# Blobbi Island: themes
 
 How the island changes its clothes without changing its components.
 
@@ -10,7 +10,7 @@ See [`design-system.md`](./design-system.md) for the token layers this sits on.
 
 A **palette**. Sixteen HSL channel triplets, and nothing else.
 
-Everything downstream is derived from them by reference — the shadcn semantic
+Everything downstream is derived from them by reference, the shadcn semantic
 tokens, every shadow, and all ~650 `text-island-ink` / `bg-island-cream` /
 `border-island-wood/30` utilities across the game. So a theme is data, and
 adding one is an entry in `src/lib/island-themes.ts`.
@@ -28,11 +28,11 @@ is the one outcome this system exists to prevent. An evening island is a
 `system` preference reaching `<html>` resolves to the active theme instead of a
 stale palette. Themes do not respond to `prefers-color-scheme`.
 
-**Not derived from three core colours — when it is authored here.** Ditto
+**Not derived from three core colours, when it is authored here.** Ditto
 derives its nineteen tokens from `{background, text, primary}`, which is right
 for a social client where any user-picked colour must still produce a usable UI.
-The island's BUILT-IN palettes are art direction — sand is not a computed tint of
-cream, it is a specific warm sand — so every colour is authored. A built-in theme
+The island's BUILT-IN palettes are art direction, sand is not a computed tint of
+cream, it is a specific warm sand, so every colour is authored. A built-in theme
 costs sixteen values instead of three, and buys the ability to be *designed*.
 
 An **external** theme gets no such luxury and does not need one: it arrives with
@@ -54,15 +54,15 @@ one touches the other.
 Lantern Night exists to prove the architecture, and was chosen to be the hardest
 case: it **inverts the lightness relationship the whole app was built on**.
 Panels become darker than the page is in Cozy Day, and text becomes light on
-dark. If a surface is hardcoding a colour, this is the theme that exposes it —
+dark. If a surface is hardcoding a colour, this is the theme that exposes it,
 so check any new surface under it before shipping.
 
 ## 4. Adding a theme
 
 1. Add an `IslandTheme` to `islandThemes` in `src/lib/island-themes.ts`.
 2. Copy the same palette into `THEMES` in `public/island-theme.js`. This
-   duplication is required — that script must run before the module graph loads
-   — and `island-themes.test.ts` asserts the two match value for value, so
+   duplication is required: that script must run before the module graph loads,
+   and `island-themes.test.ts` asserts the two match value for value, so
    forgetting fails a test rather than causing a silent flash.
 3. Nothing else. No component, no Tailwind class, no CSS.
 
@@ -77,7 +77,7 @@ Think in the **roles**, not the hues. `cream` means "the panel", `ink` means
 "text", `wood` means "the frame". A theme where `cream` is a dark violet is
 perfectly valid; a theme where `cream` and `ink` have similar lightness is not.
 
-- Keep `ink` vs `cream` at a comfortable contrast — body text sits on `cream`,
+- Keep `ink` vs `cream` at a comfortable contrast, body text sits on `cream`,
   and `ink-soft` sits on it too, so check the *muted* pairing, not just the
   strong one.
 - `wood-dark` is used as label text on `sand` as well as an edge. In a dark
@@ -88,7 +88,7 @@ perfectly valid; a theme where `cream` and `ink` have similar lightness is not.
   sea usually cannot. In a dark theme the same colour often serves both.
 - `grass` is a fill (the online dot, a tint); `grass-dark` is the green used as
   *text* on `cream`, so it must clear 4.5:1 there. In a dark theme `grass-dark`
-  is the *lighter* of the two — the name means "the readable one", not "the
+  is the *lighter* of the two, the name means "the readable one", not "the
   darker one". `wood-dark` works the same way.
 - `purple`, `grass`, `danger` and `warn` carry `cream` as their foreground via
   the `-foreground` semantic tokens, so they must contrast with `cream` in *this*
@@ -104,12 +104,12 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
 - **CSS custom properties as the only theming mechanism**, with Tailwind reading
   them. Components never branch on the theme.
 - **A pre-paint blocking boot script** that reads localStorage and applies the
-  palette before first paint, so there is no flash — including onto the
+  palette before first paint, so there is no flash, including onto the
   pre-React loading screen.
 - **Scoped palettes for previews.** Ditto's `ScopedTheme` applies a palette to a
   container; the island's theme cards apply one to a card, so a preview is built
   from the same tokens as the real thing and cannot drift from it.
-- **A theme registry with picker metadata** — id, label, emoji, description.
+- **A theme registry with picker metadata**: id, label, emoji, description.
 - **Storing theme in the app-config blob** rather than inventing a store.
 
 **Deliberately not adopted:**
@@ -120,7 +120,7 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
   named themes, full stop.
 - **`autoShareTheme` as a user-facing toggle.** Island publishes its selection
   unconditionally when signed in, because there is no second theme to keep
-  separate here — Ditto's toggle exists so a user can show one theme on their
+  separate here: Ditto's toggle exists so a user can show one theme on their
   profile and use another in the app. Island's selection *is* both.
 - **`titleFont` rendering.** Read, cached and republished; not applied. See the
   scope table in §5b.
@@ -128,7 +128,7 @@ Reference: `/Users/filemon/Developer/ditto`, `src/themes.ts`,
   Island has no progressive-load placeholder to spend them on.
 - **Ditto's own palettes.** Borrowing its violet-on-near-black for a BUILT-IN
   would make the island look like a Ditto skin. What was borrowed is the
-  discipline — and, now, the protocol.
+  discipline: and, now, the protocol.
 
 ## 5b. Themes on Nostr
 
@@ -148,14 +148,14 @@ the short version.
 > not. In Ditto, 16767 is read by `ProfilePage` and `FollowPage` to decorate a
 > profile; the theme Ditto *renders* is `theme` + `customTheme` inside the
 > NIP-78 blob at `d = "ditto/metadata"`. Publishing only a 16767 leaves a Ditto
-> account looking exactly as it did — which is precisely what happened. Island
+> account looking exactly as it did, which is precisely what happened. Island
 > now writes both, and reads the blob first.
 
-A theme is three colours — `background`, `text`, `primary`, hex-encoded in `c`
-tags with a role marker — plus an optional **font** (`f`) and **background
+A theme is three colours, `background`, `text`, `primary`, hex-encoded in `c`
+tags with a role marker, plus an optional **font** (`f`) and **background
 image** (`bg`). Island reads and republishes all of them. `island-theme-adapter.ts` expands them into the island's
 sixteen, **solving** every role that carries text against the surfaces it sits on
-until it clears its WCAG threshold — so a community theme is held to the same
+until it clears its WCAG threshold, so a community theme is held to the same
 contrast contract as a built-in one (`island-theme-adapter.test.ts` runs it
 against deliberately hostile palettes). Scenery blends the island's own hues a
 third of the way toward the theme's background rather than deriving from its
@@ -167,20 +167,20 @@ roles that mean the same thing in both models.
 
 **Identity.** Built-ins keep bare slugs (`cozy-day`); Nostr themes are
 `nostr:36767:<pubkey>:<d>`. A bare slug has no colon, so one `AppConfig.theme`
-field holds both without ambiguity — and built-ins were deliberately NOT renamed
+field holds both without ambiguity, and built-ins were deliberately NOT renamed
 to `builtin:*`, because every stored preference in the wild is a bare slug and a
 rename would have reset every player on a non-default theme.
 
 **Trust.** A theme is a stranger's data colouring the whole UI. A colour must
 match `#rgb`/`#rrggbb` and is then parsed into numbers and re-emitted from those
 numbers, so it cannot carry a payload. The two fields that *are* strings reaching
-a stylesheet — a font family and a media URL — get their own module
+a stylesheet: a font family and a media URL, get their own module
 (`island-theme-media.ts`): https-only URLs re-serialised by the URL parser, and
 families through a Unicode allowlist. Free text is stripped of control characters
 and capped. No arbitrary CSS from an event ever enters a `<style>` element.
 
-Contrast is *reported*, never enforced — the picker and the create form both say
-which pairing is short — because blocking would mean refusing themes Ditto
+Contrast is *reported*, never enforced, the picker and the create form both say
+which pairing is short, because blocking would mean refusing themes Ditto
 happily renders.
 
 ### Font and background scope
@@ -188,9 +188,9 @@ happily renders.
 | Field | Island behaviour |
 | --- | --- |
 | `colors` | Expanded into the sixteen-colour palette by the adapter. |
-| `font` (body) | **Applied**, via `--island-font-body` on `<html>`, with the island's own Comfortaa stack as the fallback and `font-display: swap` — a dead font host leaves the game readable. |
+| `font` (body) | **Applied**, via `--island-font-body` on `<html>`, with the island's own Comfortaa stack as the fallback and `font-display: swap`: a dead font host leaves the game readable. |
 | `titleFont` | **Applied**, via `--island-font-display`, to game-window titles and settings section headings only. |
-| `background` | **Applied to the page around the game window only.** Ditto puts it on `body`, which suits a feed scrolling over it. Town, Beach, Mine and the Arcade are drawn art — a theme may dress the room the game sits in, never the game. Both of Ditto's modes (`cover`, `tile`) are honoured. |
+| `background` | **Applied to the page around the game window only.** Ditto puts it on `body`, which suits a feed scrolling over it. Town, Beach, Mine and the Arcade are drawn art, a theme may dress the room the game sits in, never the game. Both of Ditto's modes (`cover`, `tile`) are honoured. |
 | `dimensions`, `mimeType`, `blurhash` | Read and republished; not used for rendering. Island has no progressive-load placeholder to spend a blurhash on. |
 
 #### Fonts: the URL Ditto does not send
@@ -199,19 +199,19 @@ Ditto **bundles** twenty-five curated families and loads them with a dynamic
 `import()`. Its `FontPicker` therefore stores the family ALONE:
 
 ```ts
-applyFont({ family });   // ditto/src/components/FontPicker.tsx — handleSelect
+applyFont({ family });   // ditto/src/components/FontPicker.tsx, handleSelect
 ```
 
 A URL appears only when a theme is *published*, where `resolveFontUrl`
-substitutes the fontsource CDN link. But Island prefers kind:30078 — the channel
-Ditto renders from — and that holds the unpublished value. So Island received
+substitutes the fontsource CDN link. But Island prefers kind:30078, the channel
+Ditto renders from: and that holds the unpublished value. So Island received
 `{ family: 'Playfair Display' }`, correctly declined to invent a URL, and the
 browser fell straight through to Comfortaa because Playfair Display is not
 installed on a normal machine. **Indistinguishable from no font at all**, which
 is exactly what manual testing found.
 
 `src/lib/theme-fonts.ts` mirrors Ditto's registry and supplies the same file
-Ditto would have published. Precedence: the theme's own URL, then the registry —
+Ditto would have published. Precedence: the theme's own URL, then the registry,
 and an explicit URL that fails validation falls back to the registry rather than
 costing the theme its font.
 
@@ -236,7 +236,7 @@ fails the build on a new one. The deliberate exceptions:
 | Exception | Why |
 | --- | --- |
 | `.font-mono` on hex addresses, event ids, filenames | A proportional face makes those genuinely harder to read. No theme should change them. |
-| `NostrHubModal` title | A glowing monospace terminal treatment — art direction, the same category as an arcade cabinet's display. |
+| `NostrHubModal` title | A glowing monospace terminal treatment, art direction, the same category as an arcade cabinet's display. |
 | Theme preview cards and the create-theme preview | Scoped previews, which is the point of them. |
 
 `font-bold` / `font-semibold` / `font-medium` are **weight**, not family, and are
@@ -265,7 +265,7 @@ untouched.
 | Create flow | `src/components/shell/ThemeCreateDialog.tsx` |
 | Entry point | Account menu → Appearance → Theme |
 
-`useTheme` is deliberately relay-free — the account menu row that shows the
+`useTheme` is deliberately relay-free, the account menu row that shows the
 current theme's name must not drag a signer, a mutation and a subscription into
 its dependency graph. Everything that needs a relay is in `useThemeSelection`,
 which only the picker uses.
@@ -274,7 +274,7 @@ which only the picker uses.
 
 **Source of truth.** The selection is `AppConfig.theme` in the `nostr:app-config`
 localStorage blob, and nothing else. kind:16767 and kind:30078 are how that
-choice TRAVELS — to another device, and to Ditto — not where it is kept. A
+choice TRAVELS: to another device, and to Ditto, not where it is kept. A
 reload restores the theme by reading the config; if that ever depends on a relay
 answering, the feature is broken.
 
@@ -287,7 +287,7 @@ answering, the feature is broken.
                           also applies the theme's font and background
        ↓
   IslandThemeSync         refreshes the cache from the live kind:36767, and
-                          adopts the ACCOUNT's selection — once per session,
+                          adopts the ACCOUNT's selection, once per session,
                           never on an unusable read, and never over a newer
                           local choice (below)
 ```
@@ -299,8 +299,8 @@ persistence once already.
 
 `AppConfig.theme` changes the instant the player clicks. The account's copy is
 published after a two-second debounce, and a reload, a closed picker or a dead
-relay can mean it never lands at all. So for a window after every selection —
-and permanently, if the write was lost — the relay is still advertising the
+relay can mean it never lands at all. So for a window after every selection,
+and permanently, if the write was lost, the relay is still advertising the
 theme the player just replaced. "The account says X, I say Y" is therefore **not
 evidence that X is what the player wants**.
 
@@ -328,14 +328,14 @@ comparison instead of needing a second rule.
 
 `themeChosenBy` is a PARAMETER of `setTheme` rather than something it reads,
 because reading the signed-in user there would mean requiring a login provider
-above every surface that merely displays the theme's name — which is the same
+above every surface that merely displays the theme's name, which is the same
 reason `useTheme` is relay-free. `useThemeSelection`, which every real chooser
 goes through, supplies it.
 
 **UNKNOWN is not absent.** Both remote reads throw on an unusable outcome rather
 than resolving empty, so reconciliation seeing nothing means "still loading" or
 "this account genuinely has no theme". Neither writes anything, and neither
-counts as having answered the question — the effect asks again when the reads
+counts as having answered the question, the effect asks again when the reads
 land. A boot **never** publishes and never rewrites the selection; only an
 explicit choice does.
 
@@ -356,20 +356,20 @@ theme, which is what gave reconciliation something stale to believe.
 Within that last step, the account is asked in this order:
 
 ```
-  kind:30078  theme === 'custom' ? customTheme : (a built-in mode — nothing to adopt)
+  kind:30078  theme === 'custom' ? customTheme : (a built-in mode; nothing to adopt)
        ↓  unreadable (no NIP-44 signer, or a relay carrying only public events)
   kind:16767  the self-contained config it carries
 ```
 
-A NAMED theme — one the event points at with an `a` tag, or one Island tagged
-itself — is adopted by name, so the island follows the author's later edits. A
+A NAMED theme: one the event points at with an `a` tag, or one Island tagged
+itself: is adopted by name, so the island follows the author's later edits. A
 name this build cannot resolve falls through to the colours rather than
 abandoning the event: an active-theme event is self-contained, and refusing to
 use it was the Ditto → Island bug.
 
 **Same-second selections.** Both writes use `nextReplaceableCreatedAt`, so a
 revision is always strictly newer than the one it replaces. Without it, NIP-01
-breaks a tie between two replaceable events on the lower event id — which has
+breaks a tie between two replaceable events on the lower event id, which has
 nothing to do with which one the player chose.
 
 The stored id is never overwritten by a failed read. A community theme survives
@@ -395,7 +395,7 @@ The zod schema `.catch()`es per field. `useLocalStorage` discards the whole blob
 when its deserializer throws, so without that a bad theme id would also cost the
 player their relay.
 
-The legacy `"light"` / `"dark"` / `"system"` values are **not migrated** — they
+The legacy `"light"` / `"dark"` / `"system"` values are **not migrated**: they
 take the same unknown-id path to the default.
 
 ### Application
@@ -406,7 +406,7 @@ defaults without `!important`, there is exactly one place the active palette
 lives, and it is trivially inspectable and assertable.
 
 Switching a theme is **only** that write. No component unmounts, no provider
-changes identity, no query is invalidated — so a player can change theme in the
+changes identity, no query is invalidated, so a player can change theme in the
 middle of a mining session or a rhythm track without disturbing it.
 `island-theme.test.tsx` holds that line.
 
@@ -432,7 +432,7 @@ For **each theme** (`cozy-day`, `lantern-night`):
 | My Blobbi stage | backdrop fills the box with no crop; the Blobbi stands on the floor |
 | Mine, Arcade, Beach | overlays over their own art |
 | Loading / empty / error | `StateCard`, `PageLoading` |
-| Focus | Tab through a dialog — the ring must be visible on every stop |
+| Focus | Tab through a dialog, the ring must be visible on every stop |
 | Reduced motion | OS setting on: no spinner spin, no card lift, states still change |
 
 Viewports: desktop, mobile portrait, mobile landscape.
@@ -448,7 +448,7 @@ whether it works.
 | Step | Expected |
 | --- | --- |
 | Select a built-in Ditto theme (light/dark), reload Island | Island adopts it as `ditto:active` |
-| Select a Ditto preset / edited palette, reload Island | same — this is the self-contained case |
+| Select a Ditto preset / edited palette, reload Island | same; this is the self-contained case |
 | Select a community 36767 in Ditto, reload Island | Island shows that named theme, checked in the picker |
 | Select a theme with a custom font | Island's body type changes |
 | Select a theme with a background image | image dresses the page around the frame, world art intact |
@@ -464,7 +464,7 @@ whether it works.
 
 ### Diagnosing a font that does not change
 
-Fonts are the one theme field that can fail *outside* the app — a host that
+Fonts are the one theme field that can fail *outside* the app, a host that
 refuses cross-origin requests is not something Island can fix. This sequence
 separates "Island did not apply it" from "the host would not serve it".
 
@@ -476,7 +476,7 @@ With DevTools open on a theme that has a custom body font:
 | 2 | Elements → `<head>` → `<style id="island-theme-font">` | `--island-font-body: "<Family>", Comfortaa, …` |
 | 3 | `<style id="island-theme-font-faces">` | one `@font-face` with an `https://` `src` and `font-display: swap` |
 | 4 | A modal title (`.island-display`) | the TITLE font when the theme sets one, else the body font |
-| 5 | Ordinary paragraph text, an Account-menu row, a button label | all the body font — a button showing Comfortaa while `<html>` shows the theme font means something re-declared the family |
+| 5 | Ordinary paragraph text, an Account-menu row, a button label | all the body font, a button showing Comfortaa while `<html>` shows the theme font means something re-declared the family |
 | 6 | Network → filter `Font` | one request for the `@font-face` URL |
 | 7 | That request's **Status** | `200`. A `404` means the URL is wrong |
 | 8 | That request's response headers | `access-control-allow-origin`. Missing ⇒ the host refuses cross-origin use |
@@ -523,19 +523,19 @@ adapter's contrast contract. What still needs eyes:
 | A theme with a title font | window titles + settings headings change; body copy does not |
 | A theme with a background image | dresses the page around the frame; the world art is untouched |
 | Stage background | picker lists both; switching does not remount the world |
-| Bag shortcut (🎒) | GONE — My Blobbi → Items is the only inventory |
+| Bag shortcut (🎒) | GONE: My Blobbi → Items is the only inventory |
 
-## 7b. Manual validation — the visible-redesign pass
+## 7b. Manual validation, the visible-redesign pass
 
 Automated tests cover the token contract, contrast in both themes, the window
 primitive's presentations, the row and tile semantics, and every migrated
 surface's behaviour. What they cannot cover is whether it LOOKS like one
-product. Nothing below was verified visually in the session that wrote it — no
-browser was available — so it is a checklist, not a report.
+product. Nothing below was verified visually in the session that wrote it; no
+browser was available: so it is a checklist, not a report.
 
 Walk it in **both themes** × **desktop / mobile portrait / mobile landscape**.
 
-### The window frame — check once, then spot-check
+### The window frame; check once, then spot-check
 
 Open any migrated surface and confirm the shared frame reads correctly:
 header band separated by a hairline, icon chip, title, muted subtitle, one
@@ -564,15 +564,15 @@ primary action on the right (desktop) or on top (mobile).
 
 ### Cross-cutting
 
-- **Loading / empty / error / pending** — open the bag with a slow relay, and
+- **Loading / empty / error / pending**: open the bag with a slow relay, and
   with nothing in it.
-- **Focus** — Tab through one window end to end. The ring must be visible on
+- **Focus**: Tab through one window end to end. The ring must be visible on
   every stop, including on the cream header band and on the sand plaque.
-- **Reduced motion** — turn the OS setting on. No spinner spin, no card lift,
+- **Reduced motion**: turn the OS setting on. No spinner spin, no card lift,
   no tile hop; every state still *changes*, just without the tween.
-- **Mobile portrait** — every migrated window is a bottom sheet. Check the
+- **Mobile portrait**: every migrated window is a bottom sheet. Check the
   footer clears the home indicator and nothing scrolls sideways.
-- **Long labels** — a long Blobbi name must truncate, not wrap the header.
+- **Long labels**: a long Blobbi name must truncate, not wrap the header.
 
 ### Known to look unmigrated
 
@@ -585,23 +585,23 @@ Every surface a player meets on the common journey, and where it stands.
 
 | Surface | Presentation | Status |
 | --- | --- | --- |
-| Account menu | dropdown / modal | **migrated** — SettingsRow + SettingsSection |
+| Account menu | dropdown / modal | **migrated**: SettingsRow + SettingsSection |
 | Theme picker | dialog | **migrated** |
 | Blobbi care sheet (`BlobbiInfoModal`) | in-frame `full` | **migrated** |
 | Island map | in-frame `full` | **migrated** |
-| Shop (`FoodShopModal`) | in-frame `lg` | **migrated** — ItemTile, sticky basket |
-| Item bag | in-frame `md` | **migrated** — ItemTile |
+| Shop (`FoodShopModal`) | in-frame `lg` | **migrated**: ItemTile, sticky basket |
+| Item bag | in-frame `md` | **migrated**: ItemTile |
 | Use item (`ConsumeItemModal`) | in-frame `sm` | **migrated** |
 | Arcade Pass | in-frame `sm` | **migrated** |
-| Elevator | in-frame `sm` | **migrated** — SettingsRow floors |
+| Elevator | in-frame `sm` | **migrated**: SettingsRow floors |
 | No Pass | in-frame `sm` | **migrated** |
 | Social share | in-frame `lg` | **migrated** |
 | Mine instructions / results / low energy | in-frame `sm` | **migrated** |
 | Mine in-cave status | HUD panel | **migrated** |
-| Beach treasure hunt HUD, docks, pause | in-place | **tokens only** — surface is correct, mechanism deliberately local |
-| Beach exit confirmation | in-place `alertdialog` | **tokens only** — see below |
+| Beach treasure hunt HUD, docks, pause | in-place | **tokens only**: surface is correct, mechanism deliberately local |
+| Beach exit confirmation | in-place `alertdialog` | **tokens only**: see below |
 | Arcade reward panel, prize counter, prize cards | in-place | **tokens only** |
-| Equipment / Effects panels | inside the care sheet | **partial** — inherit the frame, own chrome still stock |
+| Equipment / Effects panels | inside the care sheet | **partial**: inherit the frame, own chrome still stock |
 | Chest | hand-rolled overlay | **deferred** |
 | Refrigerator | hand-rolled overlay | **deferred** |
 | Photo booth | hand-rolled overlay | **deferred** |
@@ -609,7 +609,7 @@ Every surface a player meets on the common journey, and where it stands.
 | Nostr hub | dialog | **deferred** |
 | Theater controls / session / stage | in-place | **deferred** |
 | Hatching ceremony | full-bleed cinematic | **intentionally excluded** |
-| Game item tools, `/dev/*` harnesses | various | **last** — internal surfaces |
+| Game item tools, `/dev/*` harnesses | various | **last**: internal surfaces |
 
 ### Why the deferrals are deferrals and not laziness
 
@@ -622,7 +622,7 @@ Every surface a player meets on the common journey, and where it stands.
   treasure field's own stacking context. Portalling it out would put it behind
   the field. It wears the shared surface language without the shared mechanism,
   which is the right trade.
-- **Hatching ceremony** is a deliberate full-bleed cinematic — a dark space with
+- **Hatching ceremony** is a deliberate full-bleed cinematic, a dark space with
   its own light. It is art direction, not an unmigrated panel.
 - **Theater** is a coherent feature area of its own and deserves one batch, not
   a partial pass.
@@ -635,11 +635,11 @@ in a sweep of their own.
 
 Three, and only three:
 
-1. **Artwork** — sprite palettes, effect gradients, canvas draw calls. Pictures
+1. **Artwork**: sprite palettes, effect gradients, canvas draw calls. Pictures
    of things in the world, not UI surfaces.
-2. **Brand marks** — Facebook blue, Reddit orange in the share sheet. Facts
+2. **Brand marks**: Facebook blue, Reddit orange in the share sheet. Facts
    about other companies, not decisions this system gets to make.
-3. **Dev-harness overlays** — the treasure hunt's black-and-white diagnostic
+3. **Dev-harness overlays**: the treasure hunt's black-and-white diagnostic
    markers. Deliberately harsh, never shown to a player.
 
 Everything else that still holds a stock Tailwind colour is a migration

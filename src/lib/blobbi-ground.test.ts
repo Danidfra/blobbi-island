@@ -71,7 +71,7 @@ describe('isotropic world-px distance', () => {
   });
 
   it('is viewport-independent by construction (uses only the 1046×697 design space)', () => {
-    // Same percent delta always yields the same px distance — nothing about
+    // Same percent delta always yields the same px distance; nothing about
     // the browser window is consulted.
     expect(worldDistancePx({ x: 0, y: 0 }, { x: 100, y: 0 })).toBeCloseTo(WORLD_WIDTH, 6);
     expect(worldDistancePx({ x: 0, y: 0 }, { x: 0, y: 100 })).toBeCloseTo(WORLD_HEIGHT, 6);

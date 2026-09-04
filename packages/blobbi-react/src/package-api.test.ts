@@ -3,7 +3,7 @@
  *
  * An export list is a promise, and promises made by accident are the expensive
  * kind. This test exists so that widening the surface is a deliberate edit to a
- * literal list — not something that happens because a helper got re-exported to
+ * literal list: not something that happens because a helper got re-exported to
  * fix a test, or because somebody reached for `export *`.
  *
  * It also asserts what is deliberately NOT here. Internal SVG plumbing, the
@@ -84,7 +84,7 @@ describe('the public API is exactly what it claims to be', () => {
       'findRearViewRemovals',
       'REAR_VIEW_REMOVED_BLOCKS',
       // Effect INTERNALS. The presets are particle geometry, timings and
-      // palettes — the implementation of an effect, not its interface. A
+      // palettes: the implementation of an effect, not its interface. A
       // consumer names an effect by id; if the preset were public, a
       // hand-edited copy of one would become somebody's supported input.
       'BLOBBI_VISUAL_EFFECT_PRESETS',
@@ -102,7 +102,7 @@ describe('the public API is exactly what it claims to be', () => {
   });
 
   it('uses no wildcard re-exports, which would make the list above a lie', () => {
-    // Comments stripped first — the module doc discusses `export *` by name.
+    // Comments stripped first, the module doc discusses `export *` by name.
     const entry = readFileSync(join(PACKAGE_ROOT, 'src/index.ts'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '');

@@ -46,7 +46,7 @@ describe('ground ↔ wire-center conversion', () => {
   });
 });
 
-describe('buildPresence31950 — the single ground→wire boundary', () => {
+describe('buildPresence31950: the single ground→wire boundary', () => {
   it('serializes anchor and goal as legacy CENTER points on the wire', () => {
     const ground = { x: 50, y: 90 };
     const goalTo = { x: 60, y: 85 };

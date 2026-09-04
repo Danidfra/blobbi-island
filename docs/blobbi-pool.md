@@ -9,13 +9,13 @@ second one with physics.
 > the table you saw was not the table you played. §3 is the replacement; §4
 > covers what the migration did and did not touch.
 
-It runs on exactly one machine — `arcade-pool-table`, game id `blobbi-pool` —
+It runs on exactly one machine, `arcade-pool-table`, game id `blobbi-pool`,
 and nothing else in the arcade changed. The six generic cabinets still open a
 catalogue that is still honestly empty, Blobbi Dance and Air Hockey are
 untouched, and the shared lifecycle, loop, shell and launch rules were reused
 without modification.
 
-**It grants Arcade Tickets** (Arcade V1, client-trusted). See §8 — the join
+**It grants Arcade Tickets** (Arcade V1, client-trusted). See §8, the join
 point that section describes was exercised exactly as written.
 
 Read alongside: [the arcade foundation](./arcade-foundation.md) for the shared
@@ -31,10 +31,10 @@ pattern this game follows for the third time.
 src/arcade/pool/                   pure: no React, no DOM, no Nostr
 ├── table.ts                       the numbers a ball is tuned by
 ├── pool-physics-geometry.ts       the SHAPE of the table: cushions, jaws, mouths
-├── pool-physics-world.ts          the Planck adapter — the only file that imports it
+├── pool-physics-world.ts          the Planck adapter, the only file that imports it
 ├── physics.ts                     queries: the aim guide, blocked paths, placement
 ├── rack.ts                        the seeded legal rack + the PRNG
-├── rules.ts                       groups, fouls, turn resolution — the rule book
+├── rules.ts                       groups, fouls, turn resolution, the rule book
 ├── ai.ts                          the rival: a shot planner, 2 difficulties
 ├── match.ts                       phases, turns, and where a shot is judged
 ├── pool-result.ts                 match → ArcadeGameResult (and back)
@@ -72,7 +72,7 @@ omission is a choice.
 
 1. The table starts with a legal rack: the 8-ball in the middle of the third
    row, one solid and one stripe in the back corners, the rest shuffled.
-2. **The player always breaks.** No lag, no alternating break — one machine, one
+2. **The player always breaks.** No lag, no alternating break; one machine, one
    frame, and the interesting shot belongs to the person who walked up.
 3. Solids and stripes stay **unassigned until the first legal pot after the
    break**. Balls potted on the break count for whoever later owns them, and
@@ -121,7 +121,7 @@ The full rule set lives in the module header of `src/arcade/pool/rules.ts`, and
 
 ## 3. Physics
 
-**Engine: [Planck](https://piqnt.com/planck.js/) 1.5.0** — a TypeScript port of
+**Engine: [Planck](https://piqnt.com/planck.js/) 1.5.0**: a TypeScript port of
 Box2D 2.4. MIT, no runtime dependencies, first-party type declarations, a
 synchronous constructor and an ESM build Vite consumes without a plugin.
 
@@ -147,7 +147,7 @@ Two things decided it, and both are about **circles**:
 Rapier's solver is at least as good; it was rejected on integration cost. It
 would have meant WebAssembly, an `await init()` before a world can exist, and
 either a Vite plugin this repository does not have or a base64-inlined build
-three times Planck's size — to replace a synchronous one-line constructor.
+three times Planck's size, to replace a synchronous one-line constructor.
 
 Matter.js was the only serious bundle argument (≈21 kB gzip cheaper) and it lost
 on the circle approximation, which is the defect, not a detail.
@@ -162,7 +162,7 @@ than working around it. `.nvmrc` pins `24.18.0` (Krypton, the current LTS),
 `package.json` declares `engines.node: ">=24 <25"`, and both GitHub workflows read
 `node-version-file: .nvmrc` so there is one source of truth; `.gitlab-ci.yml` pins
 `node:24.18.0` by hand because a job image cannot read a version file. Nothing
-suppresses the requirement — on Node 22 `npm ci` warns `EBADENGINE` for both
+suppresses the requirement: on Node 22 `npm ci` warns `EBADENGINE` for both
 `planck` and the root package, which is the intended signal. Node 23 is excluded
 too, and correctly: it is an odd-numbered line that never became LTS.
 
@@ -171,7 +171,7 @@ too, and correctly: it is an odd-numbered line that never became LTS.
 `peerDependenciesMeta`, so npm treats it as required and installs `stage-js@1.0.1`
 into the tree. It is only needed by `planck/with-testbed`, Planck's debug renderer.
 This repository imports the `planck` root entry (`dist/planck.mjs`) and nothing
-else, and that build is fully self-contained — it has no import statements at all.
+else, and that build is fully self-contained; it has no import statements at all.
 Measured against the generated bundle: every string unique to stage-js
 (`textureAlpha`, its `back-out-in` / `bounce-out-in` easing names, `MAX_ELAPSE`)
 is absent from `dist/`, and no file under `src/` mentions it. It contributes zero
@@ -184,7 +184,7 @@ advisory.
 
 `pool-physics-geometry.ts` is the single description of the table. The physics
 world builds its bodies from it, the renderer draws it, and the aim guide
-queries it — so there is no second copy to drift.
+queries it: so there is no second copy to drift.
 
 ```
         nose                                  nose
@@ -199,7 +199,7 @@ queries it — so there is no second copy to drift.
 
 **Six cushion polygons, six real openings.** Two per long rail, one per short
 rail. Nothing spans a pocket mouth. Each cushion end is cut on an angle so the
-opening widens with depth — a real pocket facing — which is what makes a ball
+opening widens with depth, a real pocket facing, which is what makes a ball
 that catches a jaw deflect rather than stop dead.
 
 | | value | |
@@ -211,8 +211,8 @@ that catches a jaw deflect rather than stop dead.
 
 ### Pocket capture: a mouth plane, not a circle
 
-**A ball is pocketed when its centre crosses the mouth plane** — the straight
-line between the two cushion noses — by 0.5 units, within the mouth's own width
+**A ball is pocketed when its centre crosses the mouth plane**: the straight
+line between the two cushion noses, by 0.5 units, within the mouth's own width
 plus 2 units of slack.
 
 Not a circle around the pocket, and the reasons are the three reported bugs:
@@ -231,7 +231,7 @@ Not a circle around the pocket, and the reasons are the three reported bugs:
 This is the "equivalent non-solid detection region" the brief allows in place of
 a sensor fixture. A sensor was considered and rejected: a half-space slab is not
 expressible as a circle fixture, and Box2D sensor callbacks report *fixture
-overlap* rather than *centre containment* — so a sensor would have needed this
+overlap* rather than *centre containment*, so a sensor would have needed this
 same test afterwards anyway, with an extra frame of latency in between.
 
 A backstop exists under it: a ball more than `CUSHION_DEPTH + CORNER_MOUTH + 6`
@@ -242,15 +242,15 @@ recovery. Nothing should ever reach it.
 
 The game thinks in table units (200 × 100, ball radius 2.8). Box2D is tuned for
 metres and its tolerances are **absolute**. The world therefore runs at
-**0.1 m per table unit** — a 20 × 10 m table with 0.28 m balls — and the adapter
+**0.1 m per table unit**: a 20 × 10 m table with 0.28 m balls, and the adapter
 converts at the boundary. That scale was chosen so that **no Planck global has to
 be mutated**:
 
 | tolerance | default | in table units | verdict |
 | --- | --- | --- | --- |
-| `linearSlop` | 5 mm | 0.05 | 1.8% of a ball's radius — invisible |
+| `linearSlop` | 5 mm | 0.05 | 1.8% of a ball's radius, invisible |
 | `maxTranslation` | 2 m/step | 20/step | our worst case is 1.6 |
-| `velocityThreshold` | 1 m/s | 10 u/s | below it contacts are inelastic — and a ball under 10 u/s stops within 2 units anyway |
+| `velocityThreshold` | 1 m/s | 10 u/s | below it contacts are inelastic, and a ball under 10 u/s stops within 2 units anyway |
 
 ### Tuning
 
@@ -273,7 +273,7 @@ cushion (0.74) would rebound at 0.95 and the table would play like a trampoline.
 
 **Rolling friction is ours, not the engine's.** `linearDamping` is zero and a
 constant deceleration is applied after each step. Damping is exponential and
-never actually stops a ball — and "every ball has stopped" is the event the whole
+never actually stops a ball, and "every ball has stopped" is the event the whole
 turn structure hangs off. It also keeps `d = v² / 2a` true, which is the model
 the AI's power calculation is built from, so the migration did not have to retune
 the opponent.
@@ -287,20 +287,20 @@ A domain rule, not the engine's sleep:
 > (50 ms at 120 Hz).
 
 The hard stop makes "stopped" exact rather than asymptotic. The six-step hold is
-not there to wait for slow balls — it is there so that a ball momentarily
+not there to wait for slow balls; it is there so that a ball momentarily
 stationary between two frames of a contact being resolved cannot end the shot
 early. `MAX_SHOT_MS` (22 s) remains as a backstop; a real shot cannot reach it.
 
 ### Performance
 
-Measured headlessly over 20 full-power breaks on a full rack — 8,539 steps,
-averaging 427 steps (3.6 s) per break — timing `step` + `drain` + `snapshot`:
+Measured headlessly over 20 full-power breaks on a full rack: 8,539 steps,
+averaging 427 steps (3.6 s) per break, timing `step` + `drain` + `snapshot`:
 
 | | |
 | --- | --- |
 | mean | **0.026 ms** |
 | p50 / p95 / p99 | 0.020 / 0.051 / 0.133 ms |
-| worst single step | 2.96 ms (the first step of the first run — JIT warm-up) |
+| worst single step | 2.96 ms (the first step of the first run: JIT warm-up) |
 | budget at 120 Hz | 8.33 ms |
 
 So the simulation uses about **0.3% of its step budget**, and even the warm-up
@@ -318,15 +318,15 @@ outlier stays inside it.
 Two entry points, and the split matters. `stepPoolMatch` advances time and is
 the only thing that moves a ball. `applyPlayerShot`, `placePlayerCueBall` and
 `dragPlayerCueBall` are the player's discrete actions, and each **refuses
-outright** unless the match is in the phase that allows it — which is where "no
+outright** unless the match is in the phase that allows it, which is where "no
 input while balls are moving" is actually guaranteed. The UI also disables the
 controls; a disabled control is a courtesy and this is the rule.
 
 ### The adapter boundary
 
 Every one of those takes a `PoolPhysicsWorld`. **The match does not own the
-simulation and does not contain it.** `PoolMatchState` stays a plain JSON value —
-phases, timers, group ownership, statistics and a *snapshot* of the balls — while
+simulation and does not contain it.** `PoolMatchState` stays a plain JSON value,
+phases, timers, group ownership, statistics and a *snapshot* of the balls, while
 the Planck bodies live in the world the caller passes in. `PoolTable.tsx` builds
 one per run and disposes it on unmount.
 
@@ -340,8 +340,8 @@ PoolTable ──owns──► PoolPhysicsWorld ──wraps──► Planck
              └── pool-result.ts
 ```
 
-The adapter exposes nine verbs — `reset`, `setBall`, `strike`, `step`, `drain`,
-`snapshot`, `isSettled`, `resetSettling`, `dispose` — all in table units. No
+The adapter exposes nine verbs, `reset`, `setBall`, `strike`, `step`, `drain`,
+`snapshot`, `isSettled`, `resetSettling`, `dispose`: all in table units. No
 `Body`, `Fixture` or engine vector escapes it, which is why swapping the solver
 touched neither the rules, the AI, the result contract nor the UI.
 
@@ -352,7 +352,7 @@ scratched); `resolveShot` is asked once, when the world says the table has
 settled. No 8-ball rule lives in an engine callback.
 
 **A shot is resolved exactly once.** Resolution happens on the single transition
-out of `rolling`, calls `resolveShot` once, and lands in `banner` — a phase that
+out of `rolling`, calls `resolveShot` once, and lands in `banner`: a phase that
 cannot resolve anything. There is no incremental scoring, no per-step foul flag,
 and no second place a turn can change.
 
@@ -388,7 +388,7 @@ ball-in-hand the arrows slide the cue ball and space or enter confirms it.
 
 ### Ball-in-hand
 
-Drag the cue ball anywhere — the drag deliberately follows the finger even
+Drag the cue ball anywhere, the drag deliberately follows the finger even
 somewhere illegal, because a ball that refuses to go where you point feels
 broken long before the player works out why. A **"Place cue ball"** button
 confirms, and an illegal position is snapped to the nearest legal one rather
@@ -407,14 +407,14 @@ It deliberately does **not** show how far the object ball travels, whether it
 reaches the pocket, where the cue ball ends up, or anything past the first
 contact. A guide that answers "does this shot go in?" has played the shot for
 the player. The one exception is a red ring when the cue ball is headed straight
-down a pocket — the mistake a beginner cannot see coming.
+down a pocket: the mistake a beginner cannot see coming.
 
 ---
 
 ## 6. The rival
 
-A **shot planner**, called exactly once when its turn begins. It returns a plan —
-an angle, a power, and optionally where to put the cue ball — which the match
+A **shot planner**, called exactly once when its turn begins. It returns a plan,
+an angle, a power, and optionally where to put the cue ball, which the match
 then plays through the *same* strike path a human's drag produces.
 
 That structure is the whole safety argument: there is no "AI mode" in the physics
@@ -424,15 +424,15 @@ the same `resolveShot` the player is.
 
 ### How it thinks
 
-1. **Legal targets** — whatever the rules allow it to strike first.
-2. **Every target against every pocket** — ninety pairs at most.
-3. **The ghost ball** — where the cue ball's centre must be for the object ball
+1. **Legal targets**: whatever the rules allow it to strike first.
+2. **Every target against every pocket**: ninety pairs at most.
+3. **The ghost ball**: where the cue ball's centre must be for the object ball
    to set off toward that pocket. That single construction is all of pool aiming.
-4. **Rejections** — a cut too thin, a ghost ball off the cloth, a blocked path
+4. **Rejections**: a cut too thin, a ghost ball off the cloth, a blocked path
    to the ghost, a blocked path to the pocket.
-5. **A score** — favouring straight shots over thin cuts and short pots over
+5. **A score**: favouring straight shots over thin cuts and short pots over
    long ones, and penalising a shot that would scratch afterwards.
-6. **Error** — the chosen shot's angle and power are then knocked off target.
+6. **Error**: the chosen shot's angle and power are then knocked off target.
 7. **A fallback** if nothing survived.
 
 ### Why it is beatable
@@ -455,7 +455,7 @@ and the miss that ends it looks like a miss rather than a decision.
 
 Measured over 40 seeded frames with the planner in both seats: a Normal player
 beats an Easy rival about 68% of the time and a Normal rival about 58%. The pot
-rates are 15% and 18% of all shots — the rest are legal knocks with nothing on.
+rates are 15% and 18% of all shots, the rest are legal knocks with nothing on.
 
 ### Two things learned by playing it against itself
 
@@ -488,7 +488,7 @@ rotating a phone re-answers the question. Both transforms are proper rotations
 simulation computed and a shot aimed at a pocket goes to that pocket in both.
 Ball numbers are counter-rotated so they stay upright.
 
-A 2:1 table fitted landscape into an upright phone is 390 × 195 — a quarter of
+A 2:1 table fitted landscape into an upright phone is 390 × 195, a quarter of
 the screen, with the balls too small to tell apart. Turned a quarter it is
 350 × 700, nearly four times the playfield.
 
@@ -497,7 +497,7 @@ the screen, with the balls too small to tell apart. Turned a quarter it is
 This is the one place Pool deliberately differs from Air Hockey. Air Hockey uses
 an aspect-locked element; with `height: 100%` definite and `width: auto` from
 `aspect-ratio`, `max-width: 100%` clamps the width **without** reducing the
-height, so the element stretches whenever its ratio disagrees with its box —
+height, so the element stretches whenever its ratio disagrees with its box,
 which is what happens for the frame or two between a device rotating and the
 measurement catching up.
 
@@ -513,7 +513,7 @@ the canvas, so the picture is unchanged.
 
 Whose turn it is, each side's group, how many balls each has left, the status
 line, the last event's banner, and the balls already down. All of it is text in
-the DOM above the canvas — the canvas is `aria-hidden` — so nothing a player
+the DOM above the canvas, the canvas is `aria-hidden`, so nothing a player
 needs to read lives inside the picture, and nothing is communicated by colour
 alone. On a container wide enough for it the HUD moves beside the table rather
 than above it, which is where the desktop's wasted width was going.
@@ -536,7 +536,7 @@ does. A break therefore sounds like a break.
 Pool grants **Arcade Tickets**. `POOL_REWARD_POLICY` in
 `src/arcade/pool/pool-reward.ts` is `active`, the catalogue says
 `grantsTickets: true`, and `PoolMachine` carries the same claim wiring as the
-other two dedicated machines — the shared `useArcadeRewardController` hook
+other two dedicated machines, the shared `useArcadeRewardController` hook
 driving the shared `ArcadeRewardPanel` on the results screen. The simulation in
 `src/arcade/pool/` still imports no inventory, relay or Nostr module;
 `boundaries.test.ts` checks that against the real import graph. The trust model,
@@ -544,7 +544,7 @@ the shared economy table and the exactly-once claim rules live in
 [`arcade-reward-publication-boundary.md`](./arcade-reward-publication-boundary.md)
 §7.
 
-The policy's numbers (v1, flat shape — same reasons as the dance policy):
+The policy's numbers (v1, flat shape, same reasons as the dance policy):
 
 | line | tickets |
 | --- | --- |
@@ -554,11 +554,11 @@ The policy's numbers (v1, flat shape — same reasons as the dance policy):
 | legal 8-ball finish (you potted it properly) | +1 |
 | clean frame (no scratches, no fouls; on a victory) | +1 |
 | **maximum** | **8** |
-| completed loss — outdrawn, or your own early 8 (shared floor) | 2 |
+| completed loss: outdrawn, or your own early 8 (shared floor) | 2 |
 | abandoned frame (no result exists) | 0 |
 
 Balls pocketed, shots taken, duration and the longest run are deliberately not
-inputs — every one of them grows with time at the table, and paying for any of
+inputs: every one of them grows with time at the table, and paying for any of
 them makes the dominant strategy a long frame of harmless safety shots. Fouls
 cost the clean-frame bonus and nothing more; no award is ever negative. The
 numbers are pinned by `pool-reward.test.ts` and cross-checked against the other
@@ -584,12 +584,12 @@ The join point the policy reads is one object. The `ArcadeGameResult` handed to
 | `durationMs` | |
 
 `score` is the player's own balls potted (0–7) and `cleared` is a **win**, not a
-completion — losing 7–0 is a completed frame and an uncleared one.
+completion: losing 7–0 is a completed frame and an uncleared one.
 
 Enabling the reward was exactly the promised move: a policy registered in
 `reward-policy.ts`, `grantsTickets` flipped, and the shared claim wiring added
 to the controller. **No change to the simulation or to this game's result
-shape** — the one new file in `src/arcade/pool/` is the pure policy itself.
+shape**: the one new file in `src/arcade/pool/` is the pure policy itself.
 
 ---
 
@@ -600,14 +600,14 @@ shape** — the one new file in `src/arcade/pool/` is the pure policy itself.
 | file | covers |
 | --- | --- |
 | `pool/pool-physics-world.test.ts` | **the engine**: world creation, zero gravity, equal mass, reset and dispose, the 90° rule against the real solver, chains and clusters, cushion restitution measured across the contact, every pocket slow and fast, mouth-edge entry, jaw rejection, the rail-runner asymmetry, one event per collision, settling, a full break, determinism, and that the physical table matches the described one |
-| `pool/pool-scenarios.test.ts` | the 15 review layouts are all legal, settle, and — for the six that can be judged automatically — do what their sentence says |
+| `pool/pool-scenarios.test.ts` | the 15 review layouts are all legal, settle, and, for the six that can be judged automatically, do what their sentence says |
 | `pool/physics.test.ts` | the queries: the aim guide, blocked paths, legal placement, mouth crossings, NaN recovery, overlap separation, cue power |
-| `pool/rules.test.ts` | every branch of `resolveShot` — break, assignment, continuing, every foul, all four 8-ball endings — and the rack's legality |
+| `pool/rules.test.ts` | every branch of `resolveShot`: break, assignment, continuing, every foul, all four 8-ball endings, and the rack's legality |
 | `pool/match.test.ts` | phases, exactly-once resolution, exactly-once pocketing, settle-before-resolve, ball-in-hand, the 8-ball re-spot, determinism, pausing, recovery |
 | `pool/ai.test.ts` | legal targets only, a finite legal plan from every layout, shot preference, difficulty error, determinism under a seed, and that it never mutates a ball |
 | `pool/pool-result.test.ts` | the arcade contract, validation, JSON, the round trip, and that nothing reward-shaped is in it |
 | `pool/balance.test.ts` | whole seeded frames: they end, they take about three minutes, the rival is beatable |
-| `pool/pool-draw.test.ts` | the coordinate bridge — the inverse round-trips, both layouts are rotations not mirrors, numbers stay upright |
+| `pool/pool-draw.test.ts` | the coordinate bridge, the inverse round-trips, both layouts are rotations not mirrors, numbers stay upright |
 | `pool/PoolMachine.test.tsx` | the real controller, shell, reducer, simulation and loop: the pointer lifecycle, the minimum-shot threshold, cancellation, lost capture, multi-touch, keyboard, pause, resize, leaving, replay, one loop only |
 
 `balance.test.ts` is the one that matters most and the one a unit-test-only suite
@@ -647,7 +647,7 @@ chip sets the table up and prints the sentence to check against.
 - **Bundle cost.** Planck adds 209.34 kB raw / 46.18 kB gzipped, in its own
   `physics` chunk. That chunk is *not* in `index.html`'s modulepreload set, so the
   landing page does not pay for it; it arrives with the `BlobbiIsland` and
-  `PlayingView` route chunks. Within the world, though, Pool is not lazy-loaded —
+  `PlayingView` route chunks. Within the world, though, Pool is not lazy-loaded,
   anyone who opens the island downloads it even if they never walk to the pool
   table, because `native-games.tsx` deliberately imports its games statically, and
   a dynamic import there is a change to the launch resolver's security story
@@ -669,4 +669,4 @@ chip sets the table up and prints the sentence to check against.
 3. A pocket bag, so a ball can rattle in the jaws before dropping.
 4. A Hard rival, once there is play data to tune against.
 5. A shot clock, if frames against a deliberating human run long.
-6. Reward policy, when the ticket economy is ready — see §8.
+6. Reward policy, when the ticket economy is ready; see §8.

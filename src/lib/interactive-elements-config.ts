@@ -145,7 +145,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
       to occlude the Blobbi, so the line where that starts is a measurement,
       not a preference.
 
-      `mine-cave-config.ts` anchors the arch wrapper at `bottom: 24%` — so the
+      `mine-cave-config.ts` anchors the arch wrapper at `bottom: 24%`: so the
       rock meets the path at y = 76, which is `positionFromBottom = 24`. Below
       that line the Blobbi is on the path, nearer the camera than every painted
       rock, and must be in FRONT of the arch (z-15). Above it the Blobbi is
@@ -156,15 +156,15 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
       forward, which put the WHOLE walk corridor behind the arch. That was only
       ever invisible dead centre, where the arch is transparent: the corridor is
       `x 42–58` while the opening is barely `x 44–58` at body height and narrows
-      to `47–55` near its base, so a Blobbi at either end of the corridor —
-      standing on open path, its feet 9 % below the rock — had its head and half
+      to `47–55` near its base, so a Blobbi at either end of the corridor,
+      standing on open path, its feet 9 % below the rock, had its head and half
       its body cut away by the posts and the rock pile. A y-only band cannot say
       "behind the rock only while inside the opening", so it must not try: it
       draws the line where the rock actually stands.
 
       The upper band is currently unreachable (the walk boundary tops out at
       y = 79, three percent short of the arch) and is kept because it states the
-      true contract — if the corridor is ever pushed into the mouth, the reading
+      true contract: if the corridor is ever pushed into the mouth, the reading
       is already right.
     */
     backgroundFile: 'mine-open.webp',
@@ -189,14 +189,14 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   },
   {
     /*
-      Plaza interior. One occluder — the balcony railing + staircase overlay at
-      `PLAZA_DEPTH.overlay` — and one prop, the fountain at `PLAZA_DEPTH.fountain`.
+      Plaza interior. One occluder, the balcony railing + staircase overlay at
+      `PLAZA_DEPTH.overlay`: and one prop, the fountain at `PLAZA_DEPTH.fountain`.
       The lines are measurements from `plaza-inside-config.ts`, not preferences:
 
       - Below the fountain plinth's bottom edge (y = 97) the Blobbi is in front
         of the fountain.
-      - From there up to the railing's base (y = 49.3) — the whole ground floor
-        and the flight of stairs — it is in front of the overlay.
+      - From there up to the railing's base (y = 49.3): the whole ground floor
+        and the flight of stairs; it is in front of the overlay.
       - Between the railing's base and the landing's top edge (y = 44.6) the
         overlay is opaque on the corridor AND on the landing, and only x tells
         them apart: between the stair rails the Blobbi is on the landing, in
@@ -282,7 +282,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   },
   {
     // Furniture Store. Every fixture in the showroom is painted into
-    // `furniture-store-inside.webp` — the platforms, their sets, the desk — so
+    // `furniture-store-inside.webp`: the platforms, their sets, the desk, so
     // the Blobbi is always in FRONT of the scene and no band can, or should,
     // put a background pixel over it. These two only keep the Blobbi above the
     // checkout hotspot (z-12) and give the front of the room a slightly higher
@@ -296,7 +296,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
   {
     // Badges Store. Two bands, because the room has exactly one depth line that
     // matters: both display units paint their base at y = 90 % (position 10),
-    // and everything else in the room — shelving, checkout, rug, door — is
+    // and everything else in the room, shelving, checkout, rug, door, is
     // painted into the background behind the Blobbi.
     //
     // Standing in FRONT of that line the Blobbi must cover the units (z-26);
@@ -305,7 +305,7 @@ export const backgroundZIndexConfigs: BackgroundZIndexConfig[] = [
     //
     // The line moved from 11 to 10 when the displays were scaled to 3×: the two
     // painted bases were re-aligned onto y = 90 so a single threshold still
-    // serves both. Nothing else about the depth model needed changing — the
+    // serves both. Nothing else about the depth model needed changing, the
     // units grew upward and outward, not forward, so the floor line they stand
     // on is still the only place the ordering flips.
     backgroundFile: 'badges-store-inside.webp',

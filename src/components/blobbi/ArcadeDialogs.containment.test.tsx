@@ -15,7 +15,7 @@
  * The mechanism did. These three dialogs are now built on `BlobbiModal`
  * (`presentation="in-frame"`), which owns the frame, the sizing, the padding
  * and the scroll container, so the old `inFrameDialogPanelClass` literals it
- * used to assert — `p-5`, `w-[calc(100%-2rem)]`, `max-w-md` — no longer appear
+ * used to assert, `p-5`, `w-[calc(100%-2rem)]`, `max-w-md`, no longer appear
  * and asserting them would only pin a dead implementation.
  *
  * Every PROPERTY they protected is still asserted here, and now measured
@@ -37,7 +37,7 @@ import { ElevatorModal } from './ElevatorModal';
 import { StageOverlayContext } from '@/contexts/StageOverlayContext';
 
 // ---------------------------------------------------------------------------
-// Collaborators. Nothing here touches a relay — these tests are about layout.
+// Collaborators. Nothing here touches a relay; these tests are about layout.
 // ---------------------------------------------------------------------------
 
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -182,7 +182,7 @@ describe.each(DIALOGS)('$name', ({ Component, title }) => {
 
   it('puts padding around its content, so nothing touches the border', () => {
     // The other half of the original failure. It now lives on the body rather
-    // than the frame — the frame is `p-0` on purpose, because the header and
+    // than the frame, the frame is `p-0` on purpose, because the header and
     // footer bands run edge to edge.
     renderInStage();
     expect(scroller()!.className).toMatch(/(^|\s)p-4(\s|$)/);
@@ -218,7 +218,7 @@ describe.each(DIALOGS)('$name', ({ Component, title }) => {
   });
 
   it('gives every control a 44 px touch target', () => {
-    // The shared `Button` defaults to `h-10` — 40 px — so a dialog that wants
+    // The shared `Button` defaults to `h-10`: 40 px, so a dialog that wants
     // a 44 px target has to say so. The window's own close button is exempt:
     // it is 36 px by design and is not the surface's primary action.
     renderInStage();
@@ -236,7 +236,7 @@ describe('the shared window frame', () => {
   it('is one primitive, so the three cannot drift apart', () => {
     // Three dialogs that must keep looking like the same object. Rendering
     // each and comparing the frame's classes is the check a copy-pasted class
-    // list used to need — and it catches a divergence the old string
+    // list used to need, and it catches a divergence the old string
     // comparison could not, because it compares what actually rendered.
     const frames = DIALOGS.map(({ Component }) => {
       const { unmount } = render(

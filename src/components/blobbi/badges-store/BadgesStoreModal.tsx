@@ -29,7 +29,7 @@ import {
  * empty and this modal shows an empty state that says exactly that.
  *
  * Inventing six plausible badges would have filled the screen and put fiction
- * where a player reads facts — and unlike a layout mistake, a fabricated badge
+ * where a player reads facts, and unlike a layout mistake, a fabricated badge
  * that reaches a relay cannot be edited back out. The Clothing Store hit the
  * same wall from the other side and answered it the same way.
  *
@@ -45,8 +45,8 @@ import {
  * This module imports no publisher, no signer, no wallet and no inventory
  * mutation. The only door out is {@link acquireBadge}, which is itself
  * write-free today and refuses every branch with a reason. Browsing cannot
- * publish anything, and there is no local ownership store to drift out of sync
- * — `owned` comes from the record or stays `null`, which means UNKNOWN and is
+ * publish anything, and there is no local ownership store to drift out of sync,
+ * `owned` comes from the record or stays `null`, which means UNKNOWN and is
  * rendered as unknown rather than as "no".
  */
 
@@ -66,7 +66,7 @@ function cardState(badge: BadgeRecord): CardState {
     return badge.price === undefined ? 'unavailable' : 'available';
   }
   // Earned badges are claimable only when the source says the requirement is
-  // met. Unknown progress is LOCKED, never "ready" — a claim button that might
+  // met. Unknown progress is LOCKED, never "ready": a claim button that might
   // not work is worse than one that says why it cannot.
   return badge.progress === 1 ? 'available' : 'locked';
 }
@@ -159,7 +159,7 @@ export function BadgesStoreModal({ isOpen, onClose }: BadgesStoreModalProps) {
         {BADGE_CATALOG.length === 0 ? (
           /*
             The intentional empty state. It says what the store is for, and it
-            says plainly that no badge exists to hand over yet — rather than
+            says plainly that no badge exists to hand over yet, rather than
             filling the case with invented merchandise.
           */
           <div
@@ -170,7 +170,7 @@ export function BadgesStoreModal({ isOpen, onClose }: BadgesStoreModalProps) {
               🏅
             </span>
             <p role="status" className="text-sm text-island-ink-soft">
-              The cases are polished and empty. No badges have been minted yet —
+              The cases are polished and empty. No badges have been minted yet,
               when they are, this is where you will buy them, claim the ones you
               have earned, and collect your mission rewards.
             </p>
@@ -220,7 +220,7 @@ export function BadgesStoreModal({ isOpen, onClose }: BadgesStoreModalProps) {
                           : state === 'locked'
                             ? 'Not earned yet'
                             : badge.acquisition === 'purchase'
-                              ? `Buy — ${badge.price}`
+                              ? `Buy for ${badge.price}`
                               : 'Claim'}
                     </Button>
                   </ItemTile>

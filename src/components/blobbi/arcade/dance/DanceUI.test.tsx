@@ -1,9 +1,9 @@
 /**
- * Blobbi Dance — presentation contracts.
+ * Blobbi Dance: presentation contracts.
  *
  * `DanceMachine.test.tsx` owns the rules: the lifecycle, the judgement, the
  * reward arithmetic and the claim boundary. This file owns what the polish pass
- * is allowed to be judged on — and, more importantly, what it is **not** allowed
+ * is allowed to be judged on, and, more importantly, what it is **not** allowed
  * to break.
  *
  * The distinction matters because presentation is where honesty gets lost. A
@@ -71,9 +71,9 @@ vi.mock('@nostrify/react', async () => {
  * The machine and the game, kept apart but never mismatched.
  *
  * The machine says WHERE a run happened and the registry says WHAT was played.
- * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine` — it is a
- * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else
- * — so the harness uses the id the product uses. A brief corrective pass ran
+ * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine`: it is a
+ * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else,
+ * so the harness uses the id the product uses. A brief corrective pass ran
  * this game from a generic cabinet, which would have written a cabinet's id
  * into a ticket claim.
  */
@@ -226,7 +226,7 @@ describe('the start screen', () => {
     }
   });
 
-  it('names BOTH input methods — a phone player must not have to guess', () => {
+  it('names BOTH input methods, a phone player must not have to guess', () => {
     renderMachine();
     const preview = document.querySelector('[data-dance-preview]') as HTMLElement;
     expect(within(preview).getByText(/on a keyboard,/i)).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('the start screen', () => {
     expect(preview.textContent).toMatch(/arcade tickets/i);
     expect(preview.textContent).toMatch(/leaving early earns nothing/i);
     // The tuning table belongs at the results, where it describes something that
-    // happened — not on a start screen a child has to read past to play.
+    // happened: not on a start screen a child has to read past to play.
     expect(preview.textContent).not.toMatch(/full combo/i);
     expect(preview.textContent).not.toMatch(/\bat most\b/i);
     expect(preview.textContent).not.toMatch(/\d+ms/);
@@ -269,7 +269,7 @@ describe('the start screen', () => {
     expect(notice.textContent).toMatch(/placeholder/i);
   });
 
-  it('keeps ONE name and moves aria-pressed — a toggle whose name flips lies out loud', async () => {
+  it('keeps ONE name and moves aria-pressed, a toggle whose name flips lies out loud', async () => {
     // "Turn the music on, toggle button, pressed" is what an action-named toggle
     // announces once it is on, and it says the opposite of what it means. The
     // name is the control's function; `aria-pressed` is the state.
@@ -475,14 +475,14 @@ describe('the playfield', () => {
     expect(document.querySelector('[data-dance-judgment]')?.textContent).toBe('Miss');
     const left = document.querySelector('[data-dance-pulse="left"]') as HTMLElement;
     expect(left.className).not.toContain('dance-receptor-pulse');
-    // The lane still flashes — the player is told WHERE it went wrong.
+    // The lane still flashes, the player is told WHERE it went wrong.
     const flash = document.querySelector('[data-dance-lane-flash="left"]') as HTMLElement;
     expect(flash.className).toContain('dance-lane-flash');
   });
 
   it('scores exactly the same whether or not a decoration ran', async () => {
     // Reduced motion suppresses every animation above. The score must not move
-    // by one point because of it — decoration is decoration.
+    // by one point because of it, decoration is decoration.
     setReducedMotion(true);
     const { audio } = await play();
     audio.setSongTime(TINY_CHART.notes[0].timeMs);
@@ -498,7 +498,7 @@ describe('the playfield', () => {
     expect(
       (document.querySelector('[data-dance-lane-flash="left"]') as HTMLElement).className,
     ).not.toContain('dance-lane-flash');
-    // The mascot still stops dancing, because that is a class the stage adds —
+    // The mascot still stops dancing, because that is a class the stage adds,
     // but the reaction, which is information, still lands.
     expect(document.querySelector('[data-dance-mascot]')).toHaveAttribute('data-mood', 'perfect');
     expect(audio.engine.blips).toBe(1);
@@ -568,7 +568,7 @@ describe('the playfield', () => {
  *
  * That only works while React has **no opinion** about the properties being
  * written. React rewrites a DOM property when the corresponding prop differs
- * between renders — so an imperative write survives only if the element's props
+ * between renders: so an imperative write survives only if the element's props
  * are unchanged, or if React never rendered that property at all.
  *
  * Today every one of these holds. None of them is enforced by anything but the
@@ -576,7 +576,7 @@ describe('the playfield', () => {
  * branch, a status tint, a new variant) would silently start erasing whatever
  * the frame loop had just painted, and the symptom would be an animation that
  * "sometimes doesn't fire" rather than a failing build. That has already
- * happened once in this file's history — the receptor pulse was originally
+ * happened once in this file's history, the receptor pulse was originally
  * written onto the element whose className flips when a lane is held, so it was
  * wiped by the render its own key press caused.
  *
@@ -610,7 +610,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
   /**
    * Paint every surface, then freeze the loop.
    *
-   * Pausing stops the frame loop, so nothing repaints — which is what makes the
+   * Pausing stops the frame loop, so nothing repaints, which is what makes the
    * assertion meaningful. If React wipes a property, it stays wiped, and there
    * is no 16 ms later redraw to hide it.
    */
@@ -633,7 +633,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
     // A hit right on the freeze, so the transient surfaces (judgement word,
     // pulse, flash, mood) are still live when the loop stops.
     // A ghost input paints nothing, so the freezing hit must be a real LEFT
-    // note — that is the lane whose pulse and flash these tests read.
+    // note: that is the lane whose pulse and flash these tests read.
     const left = chart.notes.slice(hits).find((note) => note.lane === 'left');
     if (!left) throw new Error('the chart has no left note left to freeze on');
     view.audio.setSongTime(left.timeMs);
@@ -644,7 +644,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
     // live, so every note that has just entered the drawn window gets its first
     // position write before the loop stops. A note is mounted by the render that
     // follows the frame which decided it was visible, so it is positioned one
-    // frame later — expected, and invisible in play because a newcomer belongs
+    // frame later: expected, and invisible in play because a newcomer belongs
     // at the top of the field anyway.
     await tick(view.audio, left.timeMs + 50);
 
@@ -655,7 +655,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
     return view;
   }
 
-  it('survives a pause, a mute toggle and a resume — nothing React renders is wiped', async () => {
+  it('survives a pause, a mute toggle and a resume; nothing React renders is wiped', async () => {
     await paintThenFreeze(COMBO_CHART, 20);
     const before = painted();
 
@@ -683,7 +683,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
     expect(painted()).toEqual(before);
   });
 
-  it('survives a held lane — the render a key press causes must not erase its own feedback', async () => {
+  it('survives a held lane, the render a key press causes must not erase its own feedback', async () => {
     const view = await paintThenFreeze(COMBO_CHART, 20);
     const before = painted();
 
@@ -714,7 +714,7 @@ describe('imperative DOM writes survive the re-renders that really happen', () =
     const before = painted();
 
     // 20+ hits is the `blazing` tier, which is the first one that rings the
-    // field — the only imperative write that goes through `classList` rather
+    // field: the only imperative write that goes through `classList` rather
     // than a whole `className` assignment.
     expect(before.comboClass).toContain('scale-125');
     expect(before.fieldClass).toContain('ring-fuchsia-300/35');
@@ -988,7 +988,7 @@ describe('reduced motion removes decoration and nothing else', () => {
     expect(
       (document.querySelector('[data-dance-progress]') as HTMLElement).style.width,
     ).toBeTruthy();
-    // Notes still move — that is the gameplay, not a decoration.
+    // Notes still move; that is the gameplay, not a decoration.
     expect((document.querySelector('[data-dance-note]') as HTMLElement).style.transform).toMatch(
       /translate3d/,
     );
@@ -1030,7 +1030,7 @@ describe('reduced motion removes decoration and nothing else', () => {
  * A Tailwind class that is not in the generated stylesheet fails SILENTLY.
  *
  * Nothing throws, nothing logs, the class sits in the DOM and simply has no
- * rule behind it — so the only symptom is a colour that never appears. That is
+ * rule behind it, so the only symptom is a colour that never appears. That is
  * hard enough to notice in review at the best of times, and these classes are
  * worse than average: most of them live as bare strings in `dance-visuals.ts`
  * and are applied by the frame loop, so a reviewer never sees them next to the
@@ -1058,7 +1058,7 @@ describe('the styles the frame loop applies', () => {
         /\b(?:bg|text|border|ring|from|via|to|outline|divide|shadow|fill|stroke)-(?:white|black|[a-z]+-\d{2,3}|island-[a-z0-9-]+)\/(\d+)\b/g,
       );
       for (const match of matches) {
-        // `/[12%]` — an arbitrary value in brackets — is always generated; only
+        // `/[12%]`: an arbitrary value in brackets, is always generated; only
         // the bare-number form has to be on the scale.
         if (!OPACITY_SCALE.has(Number(match[1]))) offenders.push(`${name}: ${match[0]}`);
       }
@@ -1109,7 +1109,7 @@ describe('the styles the frame loop applies', () => {
 // ── Input ───────────────────────────────────────────────────────────────────
 
 describe('touch and keyboard', () => {
-  it('counts a real tap once — pointerdown plus the synthetic click that follows', async () => {
+  it('counts a real tap once, pointerdown plus the synthetic click that follows', async () => {
     const { audio } = await play();
     audio.setSongTime(TINY_CHART.notes[0].timeMs);
     const left = document.querySelector('[data-dance-touch="left"]') as HTMLElement;
@@ -1146,7 +1146,7 @@ describe('touch and keyboard', () => {
     expect(audio.engine.blips).toBe(1);
   });
 
-  it('accepts two lanes at once — a jump chart needs simultaneous hits', async () => {
+  it('accepts two lanes at once, a jump chart needs simultaneous hits', async () => {
     const view = await play({ chart: COMBO_CHART });
     const a = COMBO_CHART.notes[0]; // left
     const b = COMBO_CHART.notes[1]; // down, an eighth later
@@ -1189,7 +1189,7 @@ describe('touch and keyboard', () => {
     );
   });
 
-  it('lets the preview and the results scroll — they are longer than a phone', async () => {
+  it('lets the preview and the results scroll; they are longer than a phone', async () => {
     const content = () => document.querySelector('[data-arcade-content]') as HTMLElement;
     // ONE machine, walked through both states: mounting a second would leave two
     // shells in the document and make every query ambiguous.
@@ -1211,7 +1211,7 @@ describe('touch and keyboard', () => {
 describe('a narrow layout', () => {
   /**
    * jsdom has no layout engine, so "does it overflow at 320 px?" is not a
-   * question a unit test can answer — that one is checked in a real browser and
+   * question a unit test can answer; that one is checked in a real browser and
    * written down in `docs/blobbi-dance.md`.
    *
    * What IS checkable, and what actually regresses, is that the controls a
@@ -1221,8 +1221,8 @@ describe('a narrow layout', () => {
   it('keeps a way out, and a way to play, on the start screen', () => {
     renderMachine();
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
-    // Exactly ONE dismiss control, and it says where it goes. Two ghost buttons
-    // — a header "Leave" and a footer "Close" — did the same thing under
+    // Exactly ONE dismiss control, and it says where it goes. Two ghost buttons,
+    // a header "Leave" and a footer "Close": did the same thing under
     // different words until Phase 4 removed the second.
     const back = screen.getByRole('button', { name: /back to the arcade room/i });
     expect(back).toBeInTheDocument();
@@ -1234,7 +1234,7 @@ describe('a narrow layout', () => {
     await play();
     expect(screen.getByRole('button', { name: /^pause/i })).toBeInTheDocument();
     // Mid-run the same control abandons the run, so it says "Leave" rather than
-    // "Back to games" — one control, labelled for what it actually does here.
+    // "Back to games": one control, labelled for what it actually does here.
     const leave = screen.getByRole('button', { name: /leave blobbi dance and end this run/i });
     expect(leave).toHaveTextContent('Leave');
   });

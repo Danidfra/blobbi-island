@@ -1,5 +1,5 @@
 /**
- * Beach shack integration — the treasure hunt launches through the canonical
+ * Beach shack integration, the treasure hunt launches through the canonical
  * walk-to-interact flow, plays its arrival hop, and suppresses the actor
  * LOCALLY only: the published hidden pose (presence) is never touched.
  *
@@ -124,7 +124,7 @@ describe('treasure-hunt shack on the beach', () => {
     expect(clamped.y).toBeCloseTo(treasureShackStandPoint.y, 6);
   });
 
-  it('arrival plays the hop, then opens the hunt — without touching the hidden pose', async () => {
+  it('arrival plays the hop, then opens the hunt, without touching the hidden pose', async () => {
     const { onHideInSpot } = await renderBeach(() => treasureShackStandPoint);
 
     fireEvent.click(screen.getByAltText('Treasure Hunt Shack'));
@@ -154,13 +154,13 @@ describe('treasure-hunt shack on the beach', () => {
     );
 
     fireEvent.click(screen.getByAltText('Treasure Hunt Shack'));
-    // Intro open: the Island is still the scene — actor stays visible.
+    // Intro open: the Island is still the scene, actor stays visible.
     expect(onActorSuppressionChange).not.toHaveBeenCalledWith(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Practice Hunt' }));
     await waitFor(() => expect(onActorSuppressionChange).toHaveBeenCalledWith(true));
 
-    // Abandon mid-hunt: confirm, leave — the actor must come back.
+    // Abandon mid-hunt: confirm, leave, the actor must come back.
     fireEvent.click(screen.getByRole('button', { name: /Leave Beach Treasure Hunt/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Leave Hunt' }));
     await waitFor(() => {

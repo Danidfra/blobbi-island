@@ -3,7 +3,7 @@
  *
  * The document is a pure function of the canonical registry, so "is it stale?"
  * is answerable by re-rendering and comparing. Running with
- * `UPDATE_REGISTRY_DOC=1` rewrites it instead of failing — that is the
+ * `UPDATE_REGISTRY_DOC=1` rewrites it instead of failing; that is the
  * generator (`npm run docs:registry`); there is no separate build step to
  * forget to run.
  */
@@ -34,13 +34,13 @@ describe('generated protocol registry document', () => {
     expect(onDisk).toBe(rendered);
   });
 
-  it('is deterministic — rendering twice produces identical bytes', () => {
+  it('is deterministic: rendering twice produces identical bytes', () => {
     expect(renderRegistryMarkdown()).toBe(renderRegistryMarkdown());
   });
 
   it('marks itself as generated and names its source', () => {
     const rendered = renderRegistryMarkdown();
-    expect(rendered).toContain('Generated file — do not edit by hand');
+    expect(rendered).toContain('Generated file: do not edit by hand');
     expect(rendered).toContain(REGISTRY_SOURCE_PATH);
   });
 });
@@ -55,7 +55,7 @@ describe('NIP.md', () => {
   it('still carries prose explanation rather than being a generated dump', () => {
     // The high-level sections that explain WHY, which the generated document
     // deliberately does not reproduce.
-    expect(nip).toContain('## Kind 31950 — Island Presence');
+    expect(nip).toContain('## Kind 31950: Island Presence');
     expect(nip).toContain('Absolute positions only');
   });
 });

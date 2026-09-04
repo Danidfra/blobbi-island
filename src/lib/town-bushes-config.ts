@@ -10,7 +10,7 @@
  * Placement values mirror the original hard-coded Town markup so the visual
  * layout is unchanged. Positioning is expressed as raw Tailwind edge classes
  * (left/right/top/bottom) applied by <TownBush>; the stacking order is a fixed
- * numeric z-index that NEVER changes at runtime — hiding is an explicit
+ * numeric z-index that NEVER changes at runtime, hiding is an explicit
  * visibility state (the Blobbi visual is not rendered at all), not a z-index
  * illusion, so a bush can never incorrectly overlap another bush.
  */
@@ -31,7 +31,7 @@ export interface TownBushConfig {
    */
   positionClass: string;
   /**
-   * Fixed z-index of the bush. This is CONSTANT — it is never raised to occlude
+   * Fixed z-index of the bush. This is CONSTANT; it is never raised to occlude
    * the Blobbi.
    */
   zIndex: number;
@@ -39,12 +39,12 @@ export interface TownBushConfig {
    * Fractional offsets (0..1) into the bush's rendered rect, used to compute the
    * world-surface point the Blobbi walks toward when interacting with this bush.
    *
-   * `x` — fraction of the bush width  (0 = left edge, 1 = right edge).
-   * `y` — fraction of the bush height (0 = top edge,  1 = bottom edge).
+   * `x`: fraction of the bush width  (0 = left edge, 1 = right edge).
+   * `y`: fraction of the bush height (0 = top edge,  1 = bottom edge).
    *
    * `{ x: 0.5, y: 0.5 }` is the visual center. It is configurable per bush
    * because the artwork and dimensions differ, so the center of the foliage is
-   * not always the geometric center of the sprite box — and because parts of a
+   * not always the geometric center of the sprite box, and because parts of a
    * sprite can fall outside the walkable arch or inside a MovementBlocker.
    * The computed point is clamped into the Town walk boundary by <TownBush>.
    */
@@ -57,12 +57,12 @@ export interface TownBushConfig {
  */
 /**
  * GROUND-anchor semantics (Phase 2): the fraction names where the Blobbi's
- * FEET stop. Default aim: the bush's BASE half (y 0.85) — feet land at the
+ * FEET stop. Default aim: the bush's BASE half (y 0.85): feet land at the
  * foliage base so the body visibly walks INTO the bush and covers it, which is
  * what the center-era 0.5 produced on screen when the stored point still meant
  * the body center. The two bottom bushes override this with hand-fitted
  * fractions that steer their approach lines around the streetlight foot
- * plates (x 17.4–21.1 / 77.0–80.7, y 88.2–89.6) from every Town entry point —
+ * plates (x 17.4–21.1 / 77.0–80.7, y 88.2–89.6) from every Town entry point,
  * pinned by InteractiveElements.town-blockers.test.tsx.
  */
 export const BUSH_CENTER_TARGET = { x: 0.5, y: 0.85 } as const;
@@ -74,7 +74,7 @@ export const townBushes: TownBushConfig[] = [
     alt: 'Bush',
     positionClass: 'left-[0%] top-[64%] w-[16%]',
     zIndex: 10,
-    // Feet land at the foliage base (~8%, 80%) — inside the walkable arch,
+    // Feet land at the foliage base (~8%, 80%): inside the walkable arch,
     // far above the streetlight foot plates.
     interactionTarget: { ...BUSH_CENTER_TARGET },
   },

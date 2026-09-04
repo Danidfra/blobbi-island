@@ -1,9 +1,9 @@
 /**
- * Beach Treasure Hunt — the one place every tunable number lives.
+ * Beach Treasure Hunt, the one place every tunable number lives.
  *
  * Nothing in the model hardcodes a balance value; components later must read
  * this module too. The defaults below are the provisional V1 testing values
- * from `docs/beach-treasure-hunt-audit.md` §6.1 — 120 s, 9 targets, 5 digs —
+ * from `docs/beach-treasure-hunt-audit.md` §6.1: 120 s, 9 targets, 5 digs,
  * and are expected to change during Beach 3 balancing, which is exactly why
  * they are all here and nowhere else.
  *
@@ -11,7 +11,7 @@
  * programmer-facing error rather than silently clamping it: a policy is
  * authored configuration, so a bad one is a bug at the call site, not a
  * runtime condition to paper over. (Placement that merely *fails for a seed*
- * is different — that is a typed result from the generator, see
+ * is different: that is a typed result from the generator, see
  * `generator.ts`.)
  */
 
@@ -143,7 +143,7 @@ function deepFreezePolicy(policy: TreasureHuntPolicy): TreasureHuntPolicy {
  * sums to `targetCount`, in a fixed enumeration order (litter ascending, then
  * valuable ascending). The generator draws one of these with the seeded PRNG,
  * so composition is deterministic per seed. An empty list means the policy is
- * unsatisfiable — `validateTreasureHuntPolicy` rejects that outright.
+ * unsatisfiable, `validateTreasureHuntPolicy` rejects that outright.
  */
 export function validCompositions(policy: TreasureHuntPolicy): readonly TargetComposition[] {
   const { litter, valuable, special } = policy.categories;

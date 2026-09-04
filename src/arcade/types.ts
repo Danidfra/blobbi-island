@@ -1,14 +1,14 @@
 /**
- * Blobbi Island arcade — the shared, serialisable contracts every arcade game
+ * Blobbi Island arcade, the shared, serialisable contracts every arcade game
  * speaks.
  *
  * This module is the boundary between "a game ran" and "something happened as a
  * result". It is deliberately tiny and deliberately dumb:
  *
- *  - **no React** — no components, no refs, no hooks;
- *  - **no Nostr** — no events, no addresses, no signers;
- *  - **no inventory** — no quantities, no item addresses, no ticket counts;
- *  - **no functions** — everything here is data that survives `JSON.stringify`.
+ *  - **no React**: no components, no refs, no hooks;
+ *  - **no Nostr**: no events, no addresses, no signers;
+ *  - **no inventory**: no quantities, no item addresses, no ticket counts;
+ *  - **no functions**: everything here is data that survives `JSON.stringify`.
  *
  * A run's outcome is a plain object that can be written to `localStorage`,
  * compared, replayed in a test, and (much later, if the product decides so)
@@ -19,7 +19,7 @@
  *
  * A leaderboard shape. `ArcadeGameResult` is a *local* record; giving it a
  * publication shape now would invent protocol for a feature nobody has designed.
- * When a leaderboard exists it can be derived from this — additively.
+ * When a leaderboard exists it can be derived from this, additively.
  */
 
 /**
@@ -47,7 +47,7 @@ export function isArcadeDifficulty(value: unknown): value is ArcadeDifficulty {
  *
  * ## Per-game statistics
  *
- * `stats` is an open map of NUMBERS — `maxCombo`, `accuracy`, `perfects`,
+ * `stats` is an open map of NUMBERS, `maxCombo`, `accuracy`, `perfects`,
  * `timeMs`, whatever a given game measures. It is open because forcing every
  * game into one stat shape is how you end up with a rhythm game reporting
  * `laps: 0`. It is numbers-only because the results UI renders it generically
@@ -57,14 +57,14 @@ export function isArcadeDifficulty(value: unknown): value is ArcadeDifficulty {
 export interface ArcadeGameResult {
   /** Idempotency key, minted exactly once when the run begins. */
   readonly runId: string;
-  /** Stable game identity (e.g. `blobbi-dance`) — never an item id or address. */
+  /** Stable game identity (e.g. `blobbi-dance`): never an item id or address. */
   readonly gameId: string;
   /** Which physical machine the run happened on. */
   readonly machineId: string;
   readonly difficulty: ArcadeDifficulty;
   /** Did the player meet the game's own clear condition? */
   readonly cleared: boolean;
-  /** Game-local score. Scales are NOT comparable between games — by design. */
+  /** Game-local score. Scales are NOT comparable between games, by design. */
   readonly score: number;
   /** Epoch ms when play started (after the countdown). */
   readonly startedAt: number;
@@ -99,7 +99,7 @@ const isNonEmptyString = (v: unknown): v is string => typeof v === 'string' && v
 /**
  * Reject impossible or malformed results **before** any reward is evaluated.
  *
- * This is not anti-cheat — a client-authored score cannot be verified client
+ * This is not anti-cheat, a client-authored score cannot be verified client
  * side, and the docs say so plainly. It is a correctness gate: it stops `NaN`
  * scores, negative durations, `Infinity` stats and non-serialisable payloads
  * from reaching the reward policy, where they would produce a nonsense award or
@@ -187,7 +187,7 @@ export function findNonSerialisable(value: unknown, path = ''): string[] {
   return Object.entries(value as Record<string, unknown>).flatMap(([key, entry]) =>
     // An `undefined` PROPERTY is simply dropped by JSON and nothing is lost, so
     // an unset optional field (`seed`) is not a serialisation problem. An
-    // `undefined` inside an ARRAY becomes `null` and IS one — hence the split.
+    // `undefined` inside an ARRAY becomes `null` and IS one; hence the split.
     entry === undefined ? [] : findNonSerialisable(entry, path ? `${path}.${key}` : key),
   );
 }

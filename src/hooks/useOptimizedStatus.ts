@@ -200,7 +200,7 @@ export function useOptimizedStatus() {
   //
   // Depends on the two `refetch` FUNCTIONS, not on the whole `useQuery` result
   // objects. Those objects get a new identity on every render, which used to
-  // give `refreshFromRelay` a new identity on every render too — so a consumer
+  // give `refreshFromRelay` a new identity on every render too, so a consumer
   // doing `useEffect(() => refreshFromRelay(), [refreshFromRelay])` (the Mine)
   // re-fired the effect on EVERY render and issued two relay reads each time.
   // React Query guarantees `refetch` is referentially stable, so this callback

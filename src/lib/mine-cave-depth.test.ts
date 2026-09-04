@@ -4,7 +4,7 @@
  * ## The bug this file exists for
  *
  * The Blobbi rendered BEHIND the cave arch across the whole walk corridor, so a
- * player standing on open path — feet nine percent of the world below the rock —
+ * player standing on open path, feet nine percent of the world below the rock,
  * had their head and half their body sliced away by the arch's posts. It only
  * ever looked right dead centre, because that is where the arch is transparent.
  *
@@ -39,7 +39,7 @@ const ARCH_BASE_Y = 100 - mineCaveStructure.wrapper.bottomPercent;
 const ARCH_Z = mineCaveStructure.depth.front;
 const MOUTH_Z = mineCaveStructure.depth.mouth;
 
-/** A point the walk boundary does not have to move — i.e. somewhere reachable. */
+/** A point the walk boundary does not have to move; i.e. somewhere reachable. */
 function reachable(point: Position): boolean {
   const clamped = constrainPosition(point, boundary);
   return Math.abs(clamped.x - point.x) < 1e-6 && Math.abs(clamped.y - point.y) < 1e-6;
@@ -65,7 +65,7 @@ describe('the arch stands where the config says it does', () => {
   });
 
   it('the walk corridor is entirely in front of it', () => {
-    // The boundary's deepest point is y = 79 — three percent of the world short
+    // The boundary's deepest point is y = 79, three percent of the world short
     // of the rock. This is the fact the depth bands have to respect.
     const deepest = Math.min(...walkableLattice().map((p) => p.y));
     expect(deepest).toBeGreaterThan(ARCH_BASE_Y);
@@ -106,7 +106,7 @@ describe('the positions the bug was visible at', () => {
     { x: 43, y: 80 },
     { x: 57, y: 80 },
     { x: 50, y: 84 },
-    { x: 50, y: 80 },   // dead centre — the one place it used to look right
+    { x: 50, y: 80 },   // dead centre, the one place it used to look right
   ];
 
   it.each(WAS_BROKEN)('(%s) is reachable and now renders in front', (...args) => {
@@ -124,7 +124,7 @@ describe('the positions the bug was visible at', () => {
 
 describe('the depth model still has two bands, not one flat answer', () => {
   it('states the in-the-mouth reading for feet above the rock line', () => {
-    // Unreachable today — the corridor stops at y = 79 — but true, and the
+    // Unreachable today: the corridor stops at y = 79, but true, and the
     // reason this is a band table rather than a constant. A Blobbi whose feet
     // were inside the mouth belongs behind the arch and in front of the tunnel.
     const inside = calculateBlobbiZIndex(ARCH_BASE_Y - 4, MINE);

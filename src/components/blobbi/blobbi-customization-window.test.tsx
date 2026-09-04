@@ -2,7 +2,7 @@
  * The Blobbi customization window is the ONE customization surface.
  *
  * These are the regressions for the consolidation, not a re-test of what the
- * inventory renders — the `InventoryBrowser` suites already own that. What is
+ * inventory renders: the `InventoryBrowser` suites already own that. What is
  * asserted here is structural, and each assertion corresponds to a way the
  * previous shape could come back:
  *
@@ -95,7 +95,7 @@ describe('one canonical inventory', () => {
 });
 
 describe('customization window tabs', () => {
-  it('offers Blobbi, Wardrobe and Items — with no top-level Effects tab', async () => {
+  it('offers Blobbi, Wardrobe and Items, with no top-level Effects tab', async () => {
     render(
       <TestApp>
         <BlobbiInfoModal
@@ -110,7 +110,7 @@ describe('customization window tabs', () => {
       </TestApp>,
     );
 
-    // Read-only (no logged-in pet) shows the Blobbi tab alone — the tabs that
+    // Read-only (no logged-in pet) shows the Blobbi tab alone, the tabs that
     // publish must not be offered for somebody else's Blobbi.
     expect(await screen.findByRole('tab', { name: /blobbi/i })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /wardrobe/i })).toBeNull();
@@ -119,7 +119,7 @@ describe('customization window tabs', () => {
 
   it('opens on the tab it was asked for', () => {
     const modal = read('src/components/blobbi/BlobbiInfoModal.tsx');
-    // `defaultTab` still reaches the tab state — nothing in production passes
+    // `defaultTab` still reaches the tab state; nothing in production passes
     // anything but the default now that the shortcut is gone, but the window
     // remains addressable for a future caller and for tests.
     expect(modal).toMatch(/defaultTab\?: 'primary' \| 'wardrobe' \| 'items'/);
@@ -133,8 +133,8 @@ describe('stage geometry', () => {
     // The bug: a 2:3 backdrop in a 1:1 box, resolved by cropping a third of it.
     expect(modal).toMatch(/aspectRatio: STAGE_ASPECT_RATIO/);
     // The STAGE box must never be square again. `aspect-square` does appear in
-    // the file — on the Blobbi's own renderer box, which genuinely is square by
-    // contract — so the assertion is scoped to the stage element rather than
+    // the file: on the Blobbi's own renderer box, which genuinely is square by
+    // contract: so the assertion is scoped to the stage element rather than
     // banning the class outright.
     const stage = modal.match(/data-testid="blobbi-stage"[\s\S]{0,400}?>/)![0];
     expect(stage).not.toMatch(/aspect-square/);
@@ -205,7 +205,7 @@ describe('stage background slot', () => {
   it('persists the choice on the profile, not in a new event kind', () => {
     const hook = read('src/hooks/useStageBackground.ts');
     // The existing managed `background` tag of kind:11125. No new kind, and
-    // notably NOT kind:31634 — a backdrop is not worn by the Blobbi.
+    // notably NOT kind:31634, a backdrop is not worn by the Blobbi.
     expect(hook).toMatch(/KIND_BLOBBONAUT_PROFILE/);
     expect(hook).toMatch(/\['background', backgroundId\]/);
     expect(hook).not.toMatch(/31634|generate_kind/);
@@ -275,7 +275,7 @@ describe('legacy background map', () => {
   });
 });
 
-// Keep the fireEvent import honest — the tab-switch interaction below is the
+// Keep the fireEvent import honest, the tab-switch interaction below is the
 // only place it is used.
 describe('tab switching', () => {
   it('changes the visible panel', async () => {

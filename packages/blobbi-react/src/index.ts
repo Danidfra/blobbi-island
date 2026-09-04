@@ -1,5 +1,5 @@
 /**
- * `@blobbi/react` — the portable Blobbi renderer.
+ * `@blobbi/react`: the portable Blobbi renderer.
  *
  * Everything reachable from this file renders a Blobbi from PLAIN, SERIALIZABLE
  * DATA: no relay, no query client, no router, no current user, no world
@@ -7,7 +7,7 @@
  * that is the entire contract.
  *
  * The export list is written out by hand, one symbol at a time. There is no
- * `export *` anywhere in this package on purpose — a wildcard would make every
+ * `export *` anywhere in this package on purpose, a wildcard would make every
  * future internal helper public by accident, and `package-api.test.ts` asserts
  * this surface exactly, so growing it is a decision somebody makes rather than
  * something that happens.

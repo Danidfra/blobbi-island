@@ -3,7 +3,7 @@
  *
  * ## Where the selection lives
  *
- * In the `background` tag of the kind:11125 Blobbonaut profile — a MANAGED tag
+ * In the `background` tag of the kind:11125 Blobbonaut profile, a MANAGED tag
  * `parseOwnerProfile` has read and `mergeOwnerProfileTags` has written since
  * long before this feature, and which nothing had ever set. No new kind, no new
  * tag, and no second answer to "what did this player choose".
@@ -23,7 +23,7 @@
  * A relay outage is NOT destructive: `useBlobbonautProfile` throws rather than
  * resolving to `null` on an unusable read, so React Query keeps the last known
  * profile and the stage keeps the player's background. Only a genuinely empty
- * profile, or an id this build does not know, resolves to the default — and
+ * profile, or an id this build does not know, resolves to the default, and
  * neither erases what is stored.
  */
 
@@ -54,7 +54,7 @@ export interface StageBackgroundChoice {
 }
 
 export interface UseStageBackgroundResult {
-  /** The resolved active background. Never undefined — an unknown id resolves to the default. */
+  /** The resolved active background. Never undefined, an unknown id resolves to the default. */
   background: StageBackground;
   /** The id as STORED, which is not always `background.id`. Diagnostics. */
   storedId: string;

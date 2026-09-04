@@ -15,7 +15,7 @@
  * It is a corner-detour planner for axis-aligned rectangles, and nothing more.
  * Given a straight line that hits a blocker, it walks out to that blocker's
  * corners (plus a clearance margin), keeps the candidates that are on real floor
- * and outside every other blocker, and recurses — bounded — on the two halves.
+ * and outside every other blocker, and recurses, bounded, on the two halves.
  * The result is a short list of waypoints ending at the ORIGINAL target.
  *
  * ## Furniture is an obstruction; the room's own shape is not
@@ -23,19 +23,19 @@
  * This distinction is the whole architecture, and getting it wrong broke the
  * shopping mall. A `MovementBlocker` is impassable: no walk may cross one, so a
  * blocker in the way MUST be planned around or the route does not exist. A
- * BOUNDARY is a different kind of thing entirely — it is the room's contour, and
+ * BOUNDARY is a different kind of thing entirely; it is the room's contour, and
  * the movement loop has always followed it by clamping every step back onto the
  * floor. That clamp is what walks a Blobbi along a wall, round a corner, and up
  * the mall's staircase.
  *
  * So a leg is walkable when no BLOCKER crosses it. Leaving the walkable polygon
- * on the way is not an error here — it is the contour-following the movement
+ * on the way is not an error here; it is the contour-following the movement
  * loop does, and it is how a straight line between two valid points on different
  * mall levels resolves into a climb.
  *
  * The boundary still decides things, just not that one. Every detour waypoint
  * must be somewhere the Blobbi can actually stand, and a detour whose legs stay
- * on the floor is preferred over a shorter one that does not — see
+ * on the floor is preferred over a shorter one that does not; see
  * {@link OFF_FLOOR_PENALTY_PX}. Preference, not prohibition.
  *
  * It is NOT A*, a navmesh or a graph search, because the rooms do not need one:
@@ -48,7 +48,7 @@
  *
  * Nothing here touches React, rAF or the DOM: it is geometry in, waypoints out.
  * The controller consumes the list and animates it. That is what makes the
- * behaviour deterministic and testable without driving animation frames — the
+ * behaviour deterministic and testable without driving animation frames, the
  * tests assert routes, not frames.
  *
  * All coordinates are WORLD PERCENT, and both axes are treated in their own
@@ -76,7 +76,7 @@ export interface PlanRouteOptions {
    * How far outside a blocker a detour corner sits, in world-DESIGN pixels.
    *
    * Without it the route grazes the blocker's exact corner, which reads as the
-   * Blobbi scraping along the furniture — and any rounding in the animation
+   * Blobbi scraping along the furniture, and any rounding in the animation
    * puts the next step inside the rectangle, stopping the walk for a pixel. The
    * fix belongs here rather than in the blocker data: widening a blocker to buy
    * clearance would also push the player further away from the thing they are
@@ -89,8 +89,8 @@ export interface PlanRouteOptions {
    * Three is what the rooms actually need. Going round ONE rectangle costs two
    * turns whenever the obstacle spans the direct line (out past a corner, along,
    * and in again), and meeting a second obstacle on the way costs a third. Two
-   * was one short: a walk between two display units — the Badges Store's exact
-   * layout — found no route and refused to start.
+   * was one short: a walk between two display units, the Badges Store's exact
+   * layout: found no route and refused to start.
    *
    * The cap is what makes "unreachable" terminate rather than recurse forever,
    * and it is why a sealed-in Blobbi stops instead of hanging. Four candidates
@@ -108,15 +108,15 @@ const BOUNDARY_SAMPLE_PX = 6;
 /**
  * What a leg costs, in design px, for straying off the walkable polygon.
  *
- * Large enough that any on-floor detour beats any off-floor one — the world is
- * 1257 px corner to corner, so a single penalty outweighs several room lengths —
+ * Large enough that any on-floor detour beats any off-floor one, the world is
+ * 1257 px corner to corner, so a single penalty outweighs several room lengths,
  * and finite so that "off the floor" ranks a route DOWN rather than deleting it.
  *
  * That finiteness is the fix for the mall. Rejecting off-floor legs outright
  * made the planner declare every ground-to-upper-level walk impossible: the
  * mall's floors are joined by a narrow stair column, no straight line between
- * levels stays inside the polygon, and — with no furniture anywhere in the mall
- * — there was no blocker to detour around, so the planner returned `null` and
+ * levels stays inside the polygon, and, with no furniture anywhere in the mall,
+ * there was no blocker to detour around, so the planner returned `null` and
  * `goTo` refused to move at all.
  */
 const OFF_FLOOR_PENALTY_PX = 100_000;
@@ -139,7 +139,7 @@ export function isBlocked(
   return blockers.some((blocker) => pointInBlocker(point, blocker));
 }
 
-/** A point the walk boundary does not have to move — i.e. real floor. */
+/** A point the walk boundary does not have to move; i.e. real floor. */
 export function isOnFloor(point: Position, boundary: Boundary): boolean {
   const clamped = constrainPosition(point, boundary);
   return Math.abs(clamped.x - point.x) < 1e-6 && Math.abs(clamped.y - point.y) < 1e-6;
@@ -149,8 +149,8 @@ export function isOnFloor(point: Position, boundary: Boundary): boolean {
  * Does the segment `a → b` cross this rectangle?
  *
  * Liang–Barsky slab clipping. Chosen over sampling because a fast step can hop
- * over a thin blocker between two frames — the display tables' footprints are
- * barely two percent deep — and a sampled test would call that route clear.
+ * over a thin blocker between two frames, the display tables' footprints are
+ * barely two percent deep, and a sampled test would call that route clear.
  */
 export function segmentHitsBlocker(
   a: Position,
@@ -243,7 +243,7 @@ export function segmentStaysOnFloor(
  * Is `a → b` walkable as one straight leg?
  *
  * Blockers only. Whether the line stays inside the room is a question of cost
- * (see {@link legCostPx}), not of possibility — the movement loop clamps each
+ * (see {@link legCostPx}), not of possibility, the movement loop clamps each
  * step back onto the floor, which is how a walk follows a wall or climbs the
  * mall's stairs.
  */
@@ -304,7 +304,7 @@ function walkableAreas(boundary: Boundary): WalkableArea[] {
  *
  * Alternating projection: clamp into one, clamp the result into the other, and
  * repeat. For convex sets that converges on the closest pair, so if the two
- * meet, it lands in the intersection — including the common case here, where
+ * meet, it lands in the intersection, including the common case here, where
  * two rectangles share nothing but an edge and the intersection has no area at
  * all.
  *
@@ -337,7 +337,7 @@ function areaConnection(
  *
  * A breadth-first search over the boundary's convex pieces, returning one
  * crossing point per area boundary traversed. This is what climbs the mall's
- * stairs, and it is derived entirely from `locationBoundaries` — there is no
+ * stairs, and it is derived entirely from `locationBoundaries`: there is no
  * staircase in this file, no mall-specific branch, and nothing to keep in sync
  * with the artwork.
  *
@@ -346,8 +346,8 @@ function areaConnection(
  * player would call obvious, and the graph is far too small for the difference
  * to be worth a priority queue.
  *
- * Returns `[]` when the two points already share an area — the straight line is
- * then provably on-floor — and `null` when the floor is genuinely disconnected.
+ * Returns `[]` when the two points already share an area, the straight line is
+ * then provably on-floor, and `null` when the floor is genuinely disconnected.
  */
 function boundaryCorridor(
   start: Position,
@@ -411,7 +411,7 @@ function boundaryCorridor(
 /**
  * A walkable route from `start` to `target`, as the waypoints to walk in order.
  *
- * The last entry is always the ORIGINAL target — the caller's destination is
+ * The last entry is always the ORIGINAL target, the caller's destination is
  * never quietly replaced by somewhere easier to reach. `null` means no route
  * was found within {@link PlanRouteOptions.maxDepth}, and the caller should not
  * move at all.
@@ -431,7 +431,7 @@ export function planRoute(
 
   // ENDPOINT validity is the hard requirement, and it is only about the
   // endpoint. Walking INTO furniture is never a route, and neither is walking
-  // to somewhere outside the room — in both cases there is nowhere to arrive.
+  // to somewhere outside the room, in both cases there is nowhere to arrive.
   // The caller decides what to do instead; the movement controller simply
   // refuses the walk, which is what `goTo` has always done for a blocked
   // destination. Real world clicks are already clamped onto the floor by
@@ -468,7 +468,7 @@ export function planRoute(
 
     for (const candidate of detourCandidates(obstacle, clearancePx)) {
       // A corner the walk is already standing on, or that IS the destination,
-      // adds a zero-length leg — and a zero-length leg is how a walk stands
+      // adds a zero-length leg, and a zero-length leg is how a walk stands
       // still and re-plans itself forever.
       if (samePoint(candidate, a) || samePoint(candidate, b)) continue;
       if (isBlocked(candidate, blockers)) continue;
@@ -499,8 +499,8 @@ export function planRoute(
     ROOM TOPOLOGY first: if no straight line from here to there stays on the
     floor, the room's own shape is what has to be navigated, and
     `boundaryCorridor` returns the crossings that do it. Rooms where the direct
-    line is already fine — every shop interior, and most walks inside the mall's
-    own levels — skip this entirely and behave exactly as they did before.
+    line is already fine; every shop interior, and most walks inside the mall's
+    own levels: skip this entirely and behave exactly as they did before.
 
     FURNITURE second: each leg of that corridor is then planned around blockers
     in the usual way. A corridor leg lies inside one convex area, so detouring

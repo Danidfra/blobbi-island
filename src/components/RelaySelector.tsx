@@ -38,7 +38,7 @@ export function RelaySelector(props: RelaySelectorProps) {
 
   /*
     Presentation only. An experience that cannot change relays should not be
-    shown a relay picker — but hiding it is NOT what stops the change. The write
+    shown a relay picker, but hiding it is NOT what stops the change. The write
     itself is gated in `AppProvider.updateConfig`, which every mount of this
     component goes through, so the restriction holds even if this returned the
     picker anyway.

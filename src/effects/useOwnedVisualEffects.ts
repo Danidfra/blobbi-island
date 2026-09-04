@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the visual effects a player may actually manage right now.
+ * Blobbi Island: the visual effects a player may actually manage right now.
  *
  * The effect-management UI's catalog, built by INTERSECTION exactly like
  * `useEquippableCosmetics` builds the wearable one:
@@ -8,8 +8,8 @@
  * ∩ kind:31633 quantity > 0                           (do they own it)
  * ∩ registered forms include the current stage        (does it fit this Blobbi)
  *
- * The catalog definition (kind:31632) is joined for DISPLAY — name, artwork,
- * rarity, description — and deliberately not for eligibility: activation trust
+ * The catalog definition (kind:31632) is joined for DISPLAY, name, artwork,
+ * rarity, description: and deliberately not for eligibility: activation trust
  * lives in the registry, so a relay outage costs description text, never a
  * wrongly-active or wrongly-blocked effect.
  *
@@ -38,7 +38,7 @@ export interface OwnedVisualEffect {
   address: string;
   registration: AddressedVisualEffectItem;
   /**
-   * The catalog view of the item — fetched definition when available, bundled
+   * The catalog view of the item, fetched definition when available, bundled
    * fallback otherwise. Display only; never an activation input.
    */
   definition: ResolvedBlobbiItemDefinition | undefined;

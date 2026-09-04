@@ -70,7 +70,7 @@ describe('the effect id set', () => {
   });
 });
 
-describe('normalizeBlobbiVisualEffects — the happy path', () => {
+describe('normalizeBlobbiVisualEffects: the happy path', () => {
   it('resolves every single effect on its own', () => {
     for (const id of BLOBBI_VISUAL_EFFECT_IDS) {
       const [resolved, ...rest] = normalizeBlobbiVisualEffects([{ id }]);
@@ -109,7 +109,7 @@ describe('normalizeBlobbiVisualEffects — the happy path', () => {
   });
 });
 
-describe('normalizeBlobbiVisualEffects — order and determinism', () => {
+describe('normalizeBlobbiVisualEffects: order and determinism', () => {
   it('returns results in canonical slot order, not input order', () => {
     const forwards = normalizeBlobbiVisualEffects([
       { id: 'pixel-glitch' },
@@ -145,7 +145,7 @@ describe('normalizeBlobbiVisualEffects — order and determinism', () => {
   });
 });
 
-describe('normalizeBlobbiVisualEffects — duplicates and slot conflicts', () => {
+describe('normalizeBlobbiVisualEffects: duplicates and slot conflicts', () => {
   it('keeps the FIRST occurrence of a duplicated id, with its intensity', () => {
     const result = normalizeBlobbiVisualEffects([
       { id: 'love-burst', intensity: 0.3 },
@@ -192,7 +192,7 @@ describe('normalizeBlobbiVisualEffects — duplicates and slot conflicts', () =>
   });
 });
 
-describe('normalizeBlobbiVisualEffects — intensity', () => {
+describe('normalizeBlobbiVisualEffects: intensity', () => {
   it('clamps to the documented bounds', () => {
     const cases: Array<[number | undefined, number]> = [
       [1, 1],
@@ -221,7 +221,7 @@ describe('normalizeBlobbiVisualEffects — intensity', () => {
   });
 });
 
-describe('normalizeBlobbiVisualEffects — hostile and malformed input', () => {
+describe('normalizeBlobbiVisualEffects: hostile and malformed input', () => {
   it('returns an empty result for nothing at all', () => {
     expect(normalizeBlobbiVisualEffects(undefined)).toEqual([]);
     expect(normalizeBlobbiVisualEffects(null)).toEqual([]);

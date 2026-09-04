@@ -1,5 +1,5 @@
 /**
- * BlobbiHatchingCeremony — Island first-egg adoption ceremony.
+ * BlobbiHatchingCeremony: Island first-egg adoption ceremony.
  *
  * Adapted from Ditto's onboarding BlobbiHatchingCeremony: it reproduces the same
  * core interaction feeling (dark screen → breathing egg → click-to-crack with
@@ -28,7 +28,7 @@
  * real Nostr events, and no egg event is ever published.
  *
  * Layout: the ceremony is container-aware. Its root uses `absolute inset-0`, so
- * it fills its positioning parent — the BlobbiStage inside the game shell —
+ * it fills its positioning parent, the BlobbiStage inside the game shell,
  * rather than the browser viewport. On desktop (framed) it stays inside the
  * cozy game window; on mobile-landscape/immersive and when the game shell is
  * fullscreen, the stage already fills the screen, so the ceremony naturally
@@ -113,7 +113,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
   const eggSecondary = preview?.visualTraits.secondaryColor ?? '#fcd34d';
   const revealBg = useMemo(() => buildRevealGradient(eggColor), [eggColor]);
 
-  // Baby SVG for the reveal (Island renders eggs as baby — see task decision).
+  // Baby SVG for the reveal (Island renders eggs as baby; see task decision).
   const babySvg = useMemo(() => {
     if (!preview) return '';
     return loadBlobbiSvg(
@@ -140,7 +140,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
     let cancelled = false;
     // Small delay preserves the original dark "loading" beat before the egg
-    // appears — purely cosmetic; nothing is published.
+    // appears: purely cosmetic; nothing is published.
     const timer = setTimeout(() => {
       if (cancelled) return;
       try {
@@ -203,7 +203,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 
       // NOTE: We deliberately do NOT publish the baby here. The Island filters
       // out eggs from the collection, so the baby publish must be the single
-      // authoritative step that gates entering the island — and it must carry
+      // authoritative step that gates entering the island, and it must carry
       // the player-chosen name. Publishing here (with the placeholder name)
       // would be a duplicate publish that could also mask failures. The one and
       // only baby publish happens on naming submit (handleNameSubmit).
@@ -427,7 +427,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
               // game window rather than feeling oversized. The egg graphic still
               // fits INSIDE this slot at a fixed egg aspect (80% width / 100%
               // height), so the shell keeps its Ditto proportion and never
-              // stretches — only the slot size changed.
+              // stretches: only the slot size changed.
               'size-44 sm:size-52 md:size-60',
               eggVisible ? '' : 'opacity-0',
               eggVisible && isEggPhase && 'animate-egg-onboard-breathe',
@@ -505,7 +505,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
             }}
           />
 
-          {/* Sparkles — inner ring */}
+          {/* Sparkles: inner ring */}
           {Array.from({ length: 20 }).map((_, i) => {
             const angle = (i / 20) * Math.PI * 2;
             const r = 60 + (i % 4) * 26;
@@ -530,7 +530,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
             );
           })}
 
-          {/* Sparkles — outer ring */}
+          {/* Sparkles: outer ring */}
           {Array.from({ length: 16 }).map((_, i) => {
             const angle = (i / 16) * Math.PI * 2 + 0.3;
             const r = 128 + (i % 3) * 38;
@@ -576,7 +576,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
             );
           })}
 
-          {/* The baby blobbi — sized relative to the ceremony container (which
+          {/* The baby blobbi, sized relative to the ceremony container (which
               fills the game window/stage) rather than the browser viewport, so
               it scales correctly inside the framed desktop canvas as well as in
               mobile/fullscreen. Kept comfortably framed (not oversized): a touch
@@ -591,7 +591,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
         </div>
       )}
 
-      {/* ── Dialog text — separate mobile & desktop layouts ── */}
+      {/* ── Dialog text, separate mobile & desktop layouts ── */}
 
       {/* Mobile: a compact bottom panel. Text is centered (not bottom-aligned)
           inside a small fixed box, so it stays put while typing/wrapping and
@@ -616,7 +616,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                 )}
               </p>
             </div>
-            {/* Reserved indicator slot — never pushes the text upward. */}
+            {/* Reserved indicator slot; never pushes the text upward. */}
             <div className="h-4">
               {dialogTypewriter.done && (
                 <span className="text-[10px] text-white/30 animate-onboard-continue-pulse">&#9660;</span>
@@ -661,7 +661,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
         </div>
       )}
 
-      {/* ── Naming — separate mobile & desktop layouts ── */}
+      {/* ── Naming: separate mobile & desktop layouts ── */}
 
       {/* Mobile: compact bottom panel. Prompt centered in a small box; input +
           button sit below it, still low and out of the Blobbi. No blur. */}
@@ -696,7 +696,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
                 no text field in the tree at all, so there is nothing to
                 re-enable and nothing to explain.
 
-                Presentation only — `finalizeAdoption` validates the name again
+                Presentation only, `finalizeAdoption` validates the name again
                 before it signs anything.
               */
               <CuratedNameComposer
@@ -843,13 +843,13 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
 }
 
 /**
- * EggGraphic — Island-local egg, adapted directly from Ditto's
+ * EggGraphic: Island-local egg, adapted directly from Ditto's
  * `src/blobbi/egg/components/EggGraphic.tsx` so the shell keeps Ditto's exact
  * proportion and hatching feel. Only the pure presentation was copied; all
  * Island publish/router/toast logic stays out of here.
  *
  * What was replicated from Ditto (do NOT "simplify" back into a bespoke CSS
- * egg — that regressed the shape/cracks last time):
+ * egg: that regressed the shape/cracks last time):
  *   - The egg shell is `width: 80%; height: 100%` inside a SQUARE slot, with
  *     `borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%'`. That fixed 80%/100%
  *     ratio is what gives the correct egg proportion and keeps it from
@@ -867,7 +867,7 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
  * baseColor/secondaryColor from the seed-derived preview and a numeric
  * crackLevel (-1 = no crack yet, 0–3 = Ditto's crack stages) driven by the
  * ceremony phase. There is a single crack progression (no random
- * horizontal/vertical variant) — Ditto's ceremony egg likewise uses one
+ * horizontal/vertical variant): Ditto's ceremony egg likewise uses one
  * progressive crack path set, so none is invented here.
  */
 
@@ -986,10 +986,10 @@ function EggGraphic({
 
   return (
     <div className="relative flex size-full items-center justify-center">
-      {/* Main egg shape — fixed 80% width / 100% height keeps Ditto's egg
+      {/* Main egg shape, fixed 80% width / 100% height keeps Ditto's egg
           proportion regardless of the square slot's rendered size. During the
           burst the OUTER container (animate-egg-onboard-burst) fades/scales the
-          whole egg — shell + cracks — out together, so we don't run a second
+          whole egg: shell + cracks, out together, so we don't run a second
           shell-open animation here; `opening` only holds the crack at level 3. */}
       <div
         className="relative z-10 transition-all duration-500"
@@ -1002,7 +1002,7 @@ function EggGraphic({
           filter: level >= 1 ? 'brightness(1.1)' : 'brightness(1)',
         }}
       >
-        {/* Soft highlight, tinted (no white) — matches Ditto. */}
+        {/* Soft highlight, tinted (no white): matches Ditto. */}
         <div
           className="absolute"
           style={{
@@ -1016,7 +1016,7 @@ function EggGraphic({
           }}
         />
 
-        {/* Crack overlay — Ditto's viewBox / preserveAspectRatio and progressive
+        {/* Crack overlay: Ditto's viewBox / preserveAspectRatio and progressive
             paths, copied verbatim so the cracks align with the shell. */}
         {showCrack && (
           <svg

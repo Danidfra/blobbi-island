@@ -1,11 +1,11 @@
 /**
- * Blobbi Dance — the audio engine and the authoritative song clock.
+ * Blobbi Dance: the audio engine and the authoritative song clock.
  *
  * ## The clock
  *
  * `AudioContext.currentTime` is the only clock this game trusts. It is the same
  * timebase the sound is scheduled on, it advances in real seconds regardless of
- * what the renderer is doing, and it FREEZES when the context is suspended —
+ * what the renderer is doing, and it FREEZES when the context is suspended,
  * which is exactly the behaviour a paused rhythm game needs.
  *
  * What is deliberately not used as a clock: `Date.now()` (wall time, and it can
@@ -14,7 +14,7 @@
  * backgrounded, skipped under load), CSS animation events, and chained
  * `setTimeout`s (error accumulates on every link).
  *
- * `requestAnimationFrame` still drives RENDERING — it samples
+ * `requestAnimationFrame` still drives RENDERING; it samples
  * {@link DanceAudioEngine.songTimeMs} and draws whatever that says. A dropped
  * frame therefore costs a frame of animation and nothing else: the next frame
  * reads the true song time and the notes are where they should be.
@@ -35,7 +35,7 @@
  *
  * There is no audio asset. `NEON_HOP_TRACK` is a kick, a hat, a clap and a bass
  * line computed from oscillators and gain envelopes, so it carries no licence,
- * no download, and no takedown risk — see `track.ts` for why that decision was
+ * no download, and no takedown risk; see `track.ts` for why that decision was
  * forced and what would replace it.
  */
 
@@ -65,7 +65,7 @@ const PRE_ROLL_S = 0.12;
 export type DanceAudioState = 'idle' | 'playing' | 'paused' | 'stopped';
 
 export interface DanceAudioEngine {
-  /** Begin at song time zero. Idempotent — a second call is ignored. */
+  /** Begin at song time zero. Idempotent, a second call is ignored. */
   start(): void;
   /** Freeze the clock and silence the schedule. The song position is kept. */
   pause(): Promise<void>;
@@ -193,7 +193,7 @@ const VOICE_GAIN: Readonly<Record<Voice, number>> = {
  *
  * **Call from a user gesture.** `ensureArcadeAudio()` constructs the shared
  * context, and a context constructed outside a gesture starts suspended and
- * silently produces nothing — a bug that only appears on real devices.
+ * silently produces nothing, a bug that only appears on real devices.
  */
 export function createDanceAudioEngine(track: DanceTrack): CreateDanceAudioResult {
   const context = ensureArcadeAudio();

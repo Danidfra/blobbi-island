@@ -21,14 +21,14 @@ That is deliberate, and the reasoning matters:
 
 - hiding a link is not a boundary. Anybody can publish a kind:31632 event with
   any `d` from any Nostr client;
-- the real boundaries are the two that already exist — publishing requires a
+- the real boundaries are the two that already exist, publishing requires a
   **signature from an account the user controls**, and Blobbi Island's catalog
   **rejects every definition not signed by `OFFICIAL_ITEM_ISSUER_PUBKEY`**
   (`parseOfficialItemDefinition`, unchanged by this phase);
-- gating the route on `import.meta.env.DEV` — the convention used by
+- gating the route on `import.meta.env.DEV`: the convention used by
   `/dev/theater`, `/dev/arcade`, `/dev/rooms`, `/dev/equipment` and
-  `/dev/blobbi-effects` ([visual-effect preview](./blobbi-visual-effects.md#12-development-preview))
-  — would only prevent the official issuer from publishing from the deployed
+  `/dev/blobbi-effects` ([visual-effect preview](./blobbi-visual-effects.md#12-development-preview)),
+  would only prevent the official issuer from publishing from the deployed
   site.
 
 `src/dev-routes.test.ts` asserts the distinction stays intentional: the dev
@@ -43,8 +43,8 @@ its own lazy chunk (≈30 kB gzipped, loaded only on navigation).
 | Third-party signer | ✅ | ✅ | ✅ | ✅ | ✅ **with a warning** |
 | Official issuer | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-A third-party signer **may publish**. Refusing would be theatre — the event can
-be published from any other client anyway — so the honest behavior is to allow
+A third-party signer **may publish**. Refusing would be theatre, the event can
+be published from any other client anyway, so the honest behavior is to allow
 it under the user's own key and say plainly, in the header, in the review
 dialog and on every browser row, that the game will not resolve it. What the
 tool never does is let a third-party definition **look** official.
@@ -69,7 +69,7 @@ stays reachable.
 | `d` | `["d", …]` | **Required.** The item's identity. Locked after loading a published event. |
 | `name` | `["name", …]` | **Required.** |
 | `type` | `["type", …]` | **Required.** Select of the recommended values, plus free text. |
-| `category` | `["category", …]` | Free text with suggestions — deliberately not an enum. |
+| `category` | `["category", …]` | Free text with suggestions, deliberately not an enum. |
 | `symbol` | `["symbol", …]` | |
 | `rarity` | `["rarity", …]` | Display metadata only. |
 | `max_stack` | `["max_stack", …]` | Numeric input, published as a **string**. |
@@ -83,7 +83,7 @@ stays reachable.
 | derivations | `["a", addr, relay, "based_on"]` ×N | See §7. |
 | content | JSON body | See §5. |
 
-Everything else on a loaded event is **preserved** — see §8.
+Everything else on a loaded event is **preserved**: see §8.
 
 ### The `d` tag
 
@@ -114,7 +114,7 @@ The wire format is a repeatable tag:
 **The primary image is the image with no marker.** The marker select's first
 option is labelled `primary (unmarked)` and its value is the empty string;
 choosing it removes the marker. The literal string `"primary"` can never reach a
-tag — `form-event-conversion.ts` re-checks that on the way out, and
+tag, `form-event-conversion.ts` re-checks that on the way out, and
 `form-event-conversion.test.ts` asserts it.
 
 Markers this spec version defines: `front`, `back`, `side-right`, `side-left`,
@@ -146,7 +146,7 @@ builder, which this integration does not do.
 
 **Included**, reusing the app's existing uploader.
 
-`src/hooks/useUploadFile.ts` is the app's one Blossom client — a
+`src/hooks/useUploadFile.ts` is the app's one Blossom client, a
 `BlossomUploader` against `blossom.primal.net`, authorized by the current
 account, already used by the Photo Booth's share flow and the profile editor.
 `src/tools/game-items/image-upload.ts` calls that hook and adds only a queue:
@@ -154,7 +154,7 @@ account, already used by the Photo Booth's share flow and the profile editor.
 - drag-and-drop or file picker, one or many files;
 - per-file status (`queued` / `uploading` / `done` / `failed with reason`);
 - **marker suggestions from filenames**, shown for review before anything is
-  applied — `hat-back.png` proposes `back`, `hat-diagonal-front-right.png`
+  applied, `hat-back.png` proposes `back`, `hat-diagonal-front-right.png`
   proposes `diagonal-front-right` (longest patterns match first). Suggestions are
   always editable and never silently assigned;
 - files upload **sequentially**, because a signer prompting for five Blossom
@@ -177,7 +177,7 @@ The recommended shape:
 
 **Structured mode** edits `description`, context-keyed `effects`
 (`effects["game:blobbi"].hunger`), typed `metadata` (string / number / boolean /
-JSON), and `visual` — which has **two shapes**, see §5.1.
+JSON), and `visual`: which has **two shapes**, see §5.1.
 
 **JSON mode** edits the raw content, with inline parse errors, a Format action
 and a reset-to-recommended-shape action.
@@ -195,7 +195,7 @@ Keys the structured editor does not model are kept in `content.extra` (and
 `visual.extra`) and re-emitted on publish, and the UI lists them by name.
 
 `visual.slot` describes where a wearable **would** sit. It never asserts that
-anyone has equipped it — that is inventory data, and no Placement model exists.
+anyone has equipped it; that is inventory data, and no Placement model exists.
 
 ### 5.1 Two visual shapes: wearable and effect
 
@@ -206,9 +206,9 @@ for a reader.
 | | Wearable accessory | Visual effect |
 | --- | --- | --- |
 | `kind` | absent | `"blobbi-effect"` |
-| `slot` | `headwear`, `eyewear`, … | — |
-| `effect` | — | an effect id, e.g. `golden-sparkles` |
-| `effectSlot` | — | `aura` · `ground-local` · `ambient-particles` · `body-overlay` |
+| `slot` | `headwear`, `eyewear`, … |, |
+| `effect` |: | an effect id, e.g. `golden-sparkles` |
+| `effectSlot` |: | `aura` · `ground-local` · `ambient-particles` · `body-overlay` |
 | `forms` | shared | shared |
 
 ```json
@@ -237,14 +237,14 @@ suppressed and a leftover `slot` is flagged instead.
 **An `effect` is a NAME, never an implementation.** No animation, CSS or markup
 is carried in an event or read out of one. The effect code is local
 (`@blobbi/react`), and the game runs one only when a **trusted item address**
-resolves to it — a third party publishing `effect: "celestial-aura"` grants
+resolves to it: a third party publishing `effect: "celestial-aura"` grants
 nothing. See [`blobbi-visual-effects.md`](./blobbi-visual-effects.md) §§1–3.
 
 Where the vocabulary lives is a boundary decision: the four effect SLOT names
 are item-format vocabulary and sit in the tools' pure domain layer
 (`item-form-model.ts`), while the twelve effect IDS come from the renderer and
-therefore sit in the UI layer (`components/tools/game-items/effect-vocabulary.ts`)
-— the domain layer must not import `@blobbi/react`, or React ends up in the
+therefore sit in the UI layer (`components/tools/game-items/effect-vocabulary.ts`),
+the domain layer must not import `@blobbi/react`, or React ends up in the
 middle of event building. A test asserts the four slot names have not drifted
 from the renderer's own list, and `boundaries.test.ts` asserts the arrow.
 
@@ -269,8 +269,8 @@ without `equipable`, a stacked cosmetic.
 ### The one judgement call
 
 Two **different** unmarked image URLs appear **twice**: as an image warning
-(what the protocol thinks — the spec calls it a SHOULD-level authoring mistake)
-and as a blocking build error (what our builder can actually emit —
+(what the protocol thinks, the spec calls it a SHOULD-level authoring mistake)
+and as a blocking build error (what our builder can actually emit,
 `buildGameItemDefinitionEvent` refuses an ambiguous primary). Reimplementing the
 builder to get around that would violate the rule this integration is built on.
 
@@ -285,7 +285,7 @@ them, so those warn and publish.
 not editable.
 
 It records **lineage only**. It does not mean the other issuer approved
-anything, does not transfer ownership, and grants no trust — nothing in Blobbi
+anything, does not transfer ownership, and grants no trust; nothing in Blobbi
 Island resolves trust across a `based_on` edge.
 
 ---
@@ -319,7 +319,7 @@ asserts the same guarantees for a pasted event (§10.1).
 ## 9. Drafts
 
 Autosaved to `localStorage` under `blobbi-game-item-drafts`, debounced at
-700 ms — a pause is the unit of work, not a keystroke.
+700 ms: a pause is the unit of work, not a keystroke.
 
 - restored on reload, with the last-saved time shown;
 - duplicate and clear actions;
@@ -327,12 +327,12 @@ Autosaved to `localStorage` under `blobbi-game-item-drafts`, debounced at
 - the store is **schema-versioned**. A draft from another version, corrupt JSON,
   or a wrong shape is discarded with a visible reason rather than
   half-restored, and never throws during a render;
-- **a draft is never a publication** — it carries no signature and no event id;
+- **a draft is never a publication**: it carries no signature and no event id;
 - nothing secret is written. The form model has no key material in it, asserted
   structurally in `drafts.test.ts`.
 
 Cross-tab draft edits deliberately do **not** stomp an open editor. Published
-events do update live (§11) — those are facts about the network, not local
+events do update live (§11): those are facts about the network, not local
 scratch state.
 
 ---
@@ -360,7 +360,7 @@ and optionally records a `based_on` reference to the original.
 
 **Import event JSON** (next to *Load published*) is loading with the network
 taken out: paste a whole kind:31632 event and the form populates from it. It is
-for the case where the event already exists as text — authoring a batch of
+for the case where the event already exists as text, authoring a batch of
 official items, where every tag is decided and only the artwork is still in
 flux.
 
@@ -373,23 +373,23 @@ survive. What the importer adds is only what a pasted blob needs:
 
 - **Envelope validation.** Non-JSON, a non-object, a missing or non-31632
   `kind`, a missing/malformed `tags` array, or a `content` that is neither a
-  string nor an object are all **rejected with a specific reason** — "this is a
+  string nor an object are all **rejected with a specific reason**: "this is a
   kind:1 event" rather than "invalid". A malformed tag is an error, never a
   silently dropped field. A `content` given as an object (an easy slip in a
   hand-written draft) is serialized and reported rather than refused.
 - **Tolerance of an unsigned draft.** `id`, `pubkey`, `created_at` and `sig`
-  are all optional — pasting something not yet signed is the normal case.
+  are all optional: pasting something not yet signed is the normal case.
 
 **Provenance is reported, never attached.** A paste may carry an `id`, a
 `pubkey` and a `sig`; those say where the JSON came from, not that this editor
 is now editing that published event. Attaching them would lock `d` and make the
 studio announce that publishing "replaces" an address belonging to whoever
-signed the paste — wrong whenever that is not the current signer. So an import
+signed the paste: wrong whenever that is not the current signer. So an import
 produces a **fresh local draft** (`loaded: null`), the pasted identity is shown
 in the import summary, and publishing goes through the normal flow under the
 current signer.
 
-Importing **replaces the editor**, which autosaves into the same draft slot — so
+Importing **replaces the editor**, which autosaves into the same draft slot, so
 an editor holding real work gets a confirmation first, showing what was
 understood (identity, image count, preserved tags, provenance) *before* anything
 is replaced. With an empty or untouched editor it applies immediately.
@@ -434,7 +434,7 @@ After a successful publish:
 - the record is written straight into the definition query cache
   (`upsertDefinitionRecord`), so it appears in Published Items immediately;
 - de-duplication is **by address, newest wins**, so an update replaces its row
-  rather than adding a second one — exactly what a replaceable event does;
+  rather than adding a second one, exactly what a replaceable event does;
 - the editor rebinds to the event that now exists, so a follow-up publish is
   understood as replacing;
 - an **official** definition additionally invalidates the shared item catalog,
@@ -457,7 +457,7 @@ use-as-template, copy-address and raw-event inspection.
 
 **Identity is the address, never the `d`.** Two issuers publishing the same `d`
 are two items and always render as two rows. Only the official pubkey earns the
-`Official` badge — `published-items-view.test.ts` includes an impostor case.
+`Official` badge, `published-items-view.test.ts` includes an impostor case.
 
 These queries parse **without** an issuer filter, which is what lets the tool
 show third-party definitions. That widens nothing: none of it feeds the catalog,
@@ -472,7 +472,7 @@ definitions its addresses point at.
 
 Read-only is a hard property, not a current limitation: there is no quantity
 control, no grant button, and no path from this component to
-`useInventoryMutation` — asserted in `boundaries.test.ts`.
+`useInventoryMutation`: asserted in `boundaries.test.ts`.
 
 Each entry reports one of three sources, and the difference matters:
 
@@ -480,10 +480,10 @@ Each entry reports one of three sources, and the difference matters:
 | --- | --- |
 | `published definition` | A real kind:31632 event was found for this address |
 | `bundled fallback` | No event; Island ships fallback metadata for this official item |
-| `unresolved` | No event and no fallback — nothing describes this item |
+| `unresolved` | No event and no fallback; nothing describes this item |
 
-`bundled` is not a failure — Island ships metadata so the game works when relays
-are down — but a tool for verifying what is *actually published* must never let
+`bundled` is not a failure: Island ships metadata so the game works when relays
+are down: but a tool for verifying what is *actually published* must never let
 it masquerade as a publication.
 
 ### Two queries, regardless of item count
@@ -497,7 +497,7 @@ buildInspectorRows(...)           → pure, synchronous join
 Filters are grouped by author so each request is precise
 (`authors: [issuer], '#d': [...]`) rather than a cross product. A 50-item
 inventory costs the same two subscriptions as a 2-item one. `buildInspectorRows`
-is a pure function over data already in hand — there is nowhere in it to put a
+is a pure function over data already in hand; there is nowhere in it to put a
 query, which makes the N+1 shape structurally impossible rather than merely
 absent.
 
@@ -514,11 +514,11 @@ Four modes, because "does this look right?" is four questions:
 | Mode | What it answers | Helper used |
 | --- | --- | --- |
 | Card | What an inventory row / shop tile shows | `primaryItemImageUrl` |
-| Views | Every published `image` tag with its marker | — |
+| Views | Every published `image` tag with its marker |, |
 | Compare | primary / front / back side by side, published vs resolved | `itemImageByMarker`, `itemImageSourcesForView` |
-| On a Blobbi | The real renderer — the accessory worn, or the **effect drawn** | `itemImageSourcesForView` + `normalizeAccessoryPlacements`, or `BlobbiRendererView effects` |
+| On a Blobbi | The real renderer, the accessory worn, or the **effect drawn** | `itemImageSourcesForView` + `normalizeAccessoryPlacements`, or `BlobbiRendererView effects` |
 
-These are the **production** helpers, not lookalikes — a preview with different
+These are the **production** helpers, not lookalikes, a preview with different
 fallback rules would show a hat the game will not show. Nothing is invented: a
 view the item does not publish is reported as absent or as a fallback, and side
 / diagonal views are never substituted for a front or back pose.
@@ -526,7 +526,7 @@ view the item does not publish is reported as absent or as a fallback, and side
 ### Blobbi accessory preview
 
 Uses `@blobbi/react` with a **fixture** Blobbi (baby or adult) built from
-constants — never the player's companion. Front/back toggle, and preview-only
+constants: never the player's companion. Front/back toggle, and preview-only
 x / y / scale / rotation / flip controls that are **local component state**: not
 Placement protocol data, never serialized, gone on unmount.
 
@@ -536,7 +536,7 @@ One step of Island's full resolver is deliberately omitted: the legacy tail
 (`generateAccessoryUrl(code)` → `public/assets/.../<code>.webp` → `.png`) exists
 for accessories identified by legacy codes like `headwear-8`. An item being
 authored has a `d`, not a legacy code, so every one of those steps is guaranteed
-to miss — including them only emitted a warning and two doomed requests per
+to miss: including them only emitted a warning and two doomed requests per
 render.
 
 **A face-only accessory legitimately vanishes from behind.** `eyewear`,
@@ -547,7 +547,7 @@ read as broken.
 ### Blobbi effect preview
 
 For an **effect** item the same tab draws the EFFECT instead. An effect item's
-artwork is a token — a star charm, a mist bottle, a prism — that represents the
+artwork is a token, a star charm, a mist bottle, a prism, that represents the
 effect in an inventory row; pasting it onto a Blobbi's head would preview
 something the game never renders.
 
@@ -561,7 +561,7 @@ question is about the renderer, which the studio's domain layer cannot see
 **One resolver, every source.** `resolveEffectPreview(effect, effectSlot)` is
 the only thing that decides what gets drawn, and it takes two strings. An
 imported event, a *Load published* result, a restored autosave and live typing
-are therefore indistinguishable by the time anything renders — they are the same
+are therefore indistinguishable by the time anything renders; they are the same
 two strings. `EffectPreviewParity.test.tsx` builds the same item all four ways
 and asserts the rendered effect markup is **byte-identical**. Preview never
 requires a publish, a signer or a relay.
@@ -575,13 +575,13 @@ unknown effect borrows a real one from its declared `effectSlot`
 (`ambient-particles` → sparkles, `ground-local` → fog, `body-overlay` → glitch,
 `aura` → halo), badged **Approximate preview** and captioned with the fact that
 Blobbi Island would draw nothing for that id. It shows *where* the effect would
-sit — which is what the slot is for — without pretending the stand-in is the
+sit: which is what the slot is for, without pretending the stand-in is the
 item's artwork. A slot that is not one of the four falls back to
 `ambient-particles` and says so. An item naming neither an effect nor a slot
 draws nothing, because it is not an effect yet.
 
 Nothing is equipped, granted or published, and the item's address is never
-consulted — the author is asking what an id looks like, which needs no trust.
+consulted: the author is asking what an id looks like, which needs no trust.
 
 ---
 
@@ -595,7 +595,7 @@ Tags are labelled **`form field`** (regenerated) or **`preserved`** (untouched),
 which is the whole reason to look at raw tags here: it is how you verify the
 preservation promise in §8.
 
-Renders **collapsed by default** and only serializes while open — a form that
+Renders **collapsed by default** and only serializes while open, a form that
 re-renders per keystroke must not stringify a 4 kB event nobody is reading.
 
 ---
@@ -606,7 +606,7 @@ This phase added **none** of the following, and `boundaries.test.ts` asserts it:
 
 - Grant (no `GRANT_MARKER`, no grant tags, no receipts);
 - Placement or any equip protocol;
-- inventory mutation from the inspector — quantities are read-only;
+- inventory mutation from the inspector, quantities are read-only;
 - granting or equipping the authored item;
 - legacy equip-tag migration;
 - side or diagonal Blobbi actor poses;
@@ -634,32 +634,32 @@ writer are mocked wherever publishing is exercised.
 7. Drop the artwork into the image manager. Name the files
    `<item>-front.png` / `<item>-back.png` so the markers are suggested, then
    **check the suggested markers** and upload.
-8. Make sure exactly one row is **primary (unmarked)** — usually the front-facing
+8. Make sure exactly one row is **primary (unmarked)**: usually the front-facing
    hero image.
 9. In **Content → structured**, set `visual.slot` (e.g. `headwear`) and
    `visual.forms` (e.g. `baby`, `adult`), and write a `description`.
 10. Check the preview: **Compare** for primary/front/back, then **On a Blobbi**
     for both facings and both stages.
-11. Clear the validation panel's blocking layer, and read the warnings — they are
+11. Clear the validation panel's blocking layer, and read the warnings; they are
     advisory, but "no primary image" usually is not what you meant.
 12. **Review publication** → confirm the address and that it says *creates* (or
     *replaces*, if you are updating) → **Sign and publish**.
 13. Confirm the per-relay result. Copy the address.
 14. To make the accessory resolve in-game, map its legacy accessory code to the
-    new `d` in `src/inventory/accessory-item-identity.ts` — that mapping is
+    new `d` in `src/inventory/accessory-item-identity.ts`: that mapping is
     explicit on purpose (see that file's module note).
 
 ---
 
 ## See also
 
-- [`INVENTORY_ARCHITECTURE.md`](./INVENTORY_ARCHITECTURE.md) — the kind:31632 /
+- [`INVENTORY_ARCHITECTURE.md`](./INVENTORY_ARCHITECTURE.md): the kind:31632 /
   kind:31633 architecture these tools author against.
-- [`game-item-image-views.md`](./game-item-image-views.md) — how Island selects
+- [`game-item-image-views.md`](./game-item-image-views.md): how Island selects
   among an item's `image` tags.
-- [`blobbi-renderer-contract.md`](./blobbi-renderer-contract.md) — the
+- [`blobbi-renderer-contract.md`](./blobbi-renderer-contract.md): the
   `@blobbi/react` boundary the accessory preview respects.
-- [`accessory-definition-migration.md`](./accessory-definition-migration.md) —
+- [`accessory-definition-migration.md`](./accessory-definition-migration.md),
   the transitional accessory architecture, the mapping format, and the
   publish → activate checklist the activation panel below drives.
 
@@ -668,15 +668,15 @@ writer are mocked wherever publishing is exercised.
 A published **cosmetic** definition is not yet wearable. Publishing puts the item
 on relays; *activating* it means mapping a legacy `equip` code onto its address,
 and that is a reviewed source-code change. Between the two, the item is real and
-invisible — a gap that is silent if the tool does not say so.
+invisible: a gap that is silent if the tool does not say so.
 
 Each card in **Published Items** therefore carries an **Accessory activation**
 panel (`src/tools/game-items/activation-status.ts` for the logic,
 `ActivationStatusPanel.tsx` for the view). It reports:
 
 - Published; official issuer (or **not** the official issuer);
-- mapped to a legacy accessory code, and which one — or *not mapped*;
-- **Active in renderer** — mapped *and* resolving to **this** address;
+- mapped to a legacy accessory code, and which one, or *not mapped*;
+- **Active in renderer**: mapped *and* resolving to **this** address;
 - slot mismatch between `content.visual.slot` and the mapped code's prefix;
 - missing primary / front / back artwork.
 
@@ -685,7 +685,7 @@ snippet**. The snippet is an `OFFICIAL_COSMETIC_DEFINITIONS` entry for a human t
 paste, review and commit.
 
 The panel is **diagnostic only**. Nothing on it publishes an event, mutates an
-inventory, or edits the mapping — a browser that could write the trust mapping
+inventory, or edits the mapping, a browser that could write the trust mapping
 would defeat the point of having one. It renders for cosmetics only; a consumable
 is used, never worn, so it has no activation story.
 
@@ -695,7 +695,7 @@ the mapping resolves the official address and that event is not at it.
 ---
 
 **Phase 9.5 (hardened in 9.5a):** the tools gained a fourth tab, the
-**Equipment Lab** — the one sanctioned mutation surface inside the tools,
+**Equipment Lab**: the one sanctioned mutation surface inside the tools,
 over the two canonical kind:31633/31634 writers. Unlike the read-only tabs it
 is **build-flag gated and off by default**
 (`VITE_ENABLE_LIVE_INVENTORY_LAB=true`); default builds neither show the tab

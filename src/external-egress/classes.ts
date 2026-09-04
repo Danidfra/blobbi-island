@@ -11,15 +11,15 @@
  * apart, and neither can the confirmation the player reads.
  *
  * So the request carries INTENT. The class decides which capability applies,
- * what the player is shown, and whether they are asked first — and it does so in
+ * what the player is shown, and whether they are asked first, and it does so in
  * exactly one place, which is the point of the phase. Before this, six components
  * each built their own URL and called `window.open` themselves.
  *
  * ## Two shapes of egress, one capability table
  *
  * Three classes end in a browser API (a new tab, the OS share sheet). Two are
- * *surfaces* rather than destinations — changing the relay, reaching the
- * authoring tools — which do not open anything but are the same kind of
+ * *surfaces* rather than destinations, changing the relay, reaching the
+ * authoring tools: which do not open anything but are the same kind of
  * decision: "may this experience reach outside its own boundaries". They share
  * this table so the mapping is stated once; only the first three ever touch
  * `performEgress`.
@@ -31,8 +31,8 @@ import type { IslandSafetyPolicy } from '@/safety';
  * Every way out of Blobbi Island.
  *
  * Deliberately does NOT include the theater's media embed. A YouTube iframe has
- * its own concerns — an open catalog, host-controlled media replacement, embed
- * privacy, fullscreen, session consent — and calling it an `external-link` to
+ * its own concerns, an open catalog, host-controlled media replacement, embed
+ * privacy, fullscreen, session consent, and calling it an `external-link` to
  * make this phase look complete would bury all of them under a confirmation
  * dialog that does not address any of them. That is its own phase.
  */
@@ -52,7 +52,7 @@ export type EgressClass =
  * Which capability governs each class.
  *
  * The single source of this mapping. A feature asks for a CLASS; it never names
- * a capability, and it certainly never names a profile — that is the rule the
+ * a capability, and it certainly never names a profile; that is the rule the
  * whole safety layer is built on (`docs/family-safety-policy.md`).
  */
 export const EGRESS_CAPABILITY = Object.freeze({
@@ -87,7 +87,7 @@ export function isEgressAllowed(policy: IslandSafetyPolicy, egressClass: EgressC
  *  - **`native-share`** does not. The OS share sheet IS a confirmation, and a
  *    dialog in front of a dialog teaches players to dismiss both.
  *  - **`relay-management`** and **`authoring-tool`** do not, because they are not
- *    destinations — nothing opens, and the player stays where they are. They are
+ *    destinations: nothing opens, and the player stays where they are. They are
  *    gated, not announced.
  */
 export const EGRESS_REQUIRES_CONFIRMATION: Readonly<Record<EgressClass, boolean>> = Object.freeze({

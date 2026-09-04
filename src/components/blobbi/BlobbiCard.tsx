@@ -14,7 +14,7 @@ interface BlobbiCardProps {
 }
 
 /**
- * BlobbiCard — a cozy "creature card" for the Blobbi nest.
+ * BlobbiCard: a cozy "creature card" for the Blobbi nest.
  *
  * Shows the Blobbi art prominently on a warm sand/cream pedestal, the name,
  * and a small stage chip. The currently active companion gets an "Active"
@@ -89,7 +89,7 @@ export function BlobbiCard({
         </span>
       )}
 
-      {/* Art pedestal — a tiny layered diorama: sky, sun highlight, sandy
+      {/* Art pedestal: a tiny layered diorama: sky, sun highlight, sandy
           ground shelf, and a soft contact shadow so the Blobbi feels like it's
           standing in its own little nest rather than floating on a flat card. */}
       <div
@@ -113,8 +113,8 @@ export function BlobbiCard({
         {/* Blobbi + its ground shadow, stacked and anchored to the shelf so the
             shadow sits right at the creature's feet. The shadow is sized
             relative to the art container (≈64% of its width, a flat ellipse),
-            so it stays proportional to the Blobbi at every breakpoint —
-            including the smaller mobile-landscape size — instead of being a
+            so it stays proportional to the Blobbi at every breakpoint,
+            including the smaller mobile-landscape size, instead of being a
             generic fixed oval detached from the creature. */}
         <div className="absolute inset-x-0 bottom-[14%] flex flex-col items-center">
           <div className="relative size-[4.5rem] sm:size-[5.5rem] landscape:max-md:size-14">

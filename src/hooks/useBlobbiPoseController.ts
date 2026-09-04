@@ -1,5 +1,5 @@
 /**
- * useBlobbiPoseController — the LOCAL player's pose orchestration (Phase 3).
+ * useBlobbiPoseController: the LOCAL player's pose orchestration (Phase 3).
  *
  * Owns the state that decides the local Blobbi's {@link BlobbiActorPose}
  * (sleeping on the bed / seated in a theater seat / hidden in a bush /
@@ -11,13 +11,13 @@
  *    `TheaterSeat`); the stored position snaps to the seat's pose anchor so
  *    presence publishes the exact point every client draws.
  *  - BED: `requestBedSleep()` routes through the SAME pending-interaction
- *    system doors/seats/machines use — walk to the boundary-clamped ground
+ *    system doors/seats/machines use, walk to the boundary-clamped ground
  *    target beside the bed, then, on confirmed arrival, snap to the sleep
  *    pose. No coordinate checks in movement callbacks; the flow is inherently
  *    home-only because only the home's bed calls it. Dragging the bed while
  *    asleep re-snaps; any movement or wake detaches.
  *  - HIDE: `hideInSpot(spotId)` fires on confirmed arrival (from `TownBush`).
- *  - Any movement start clears all three (stand up / reveal / wake) — the
+ *  - Any movement start clears all three (stand up / reveal / wake): the
  *    exact rule PlayingView applied inline before.
  *  - Changing location resets everything (the actor remounts at the new
  *    room's spawn).
@@ -39,7 +39,7 @@ import { useCancelInteractionOnWorldClick } from '@/hooks/useCancelInteractionOn
 
 export interface BlobbiPoseControllerOptions {
   blobbiRef: React.RefObject<MovableBlobbiRef>;
-  /** Location key — changing it resets every pose and cancels pending walks. */
+  /** Location key: changing it resets every pose and cancels pending walks. */
   currentLocation: string;
   /** The room's walk boundary (clamps the bed's walk-approach target). */
   boundary: Boundary;
@@ -51,7 +51,7 @@ export interface BlobbiPoseControllerOptions {
 }
 
 export interface BlobbiPoseController {
-  /** The local actor's current pose — hand to `MovableBlobbi`. */
+  /** The local actor's current pose, hand to `MovableBlobbi`. */
   pose: BlobbiActorPose;
   /** Seat currently occupied (presence + seat occupancy wiring), or null. */
   sittingIn: string | null;
@@ -108,8 +108,8 @@ export function useBlobbiPoseController({
   latest.current = { onMoveStart, onMoveComplete, boundary, bedPosition, isSleeping };
 
   const handleMoveStart = useCallback((destination: GroundPosition) => {
-    // Any movement — a ground click, a walk-to-interact, another bush or seat
-    // — means the player is leaving whatever pose they were in: reveal, stand
+    // Any movement: a ground click, a walk-to-interact, another bush or seat,
+    // means the player is leaving whatever pose they were in: reveal, stand
     // up, wake. Seat-to-seat and bush-to-bush transitions route through here
     // (the walk starts first), so the old pose clears before the new arrival
     // sets the next one. MultiplayerLayer publishes the same transition.
@@ -132,7 +132,7 @@ export function useBlobbiPoseController({
    *
    * The snap target comes from the seat CONFIGURATION rather than the rendered
    * rect, so the Blobbi lands on exactly the point every other client will
-   * later draw it at — no sub-pixel divergence between who is sitting and
+   * later draw it at; no sub-pixel divergence between who is sitting and
    * where they appear to be sitting.
    */
   const sitInSeat = useCallback(
@@ -151,7 +151,7 @@ export function useBlobbiPoseController({
 
   /**
    * Walk to the GROUND point beside/below the bed (the sleep pose clamped into
-   * the walk boundary), then — on CONFIRMED ARRIVAL — snap onto the bed's
+   * the walk boundary), then, on CONFIRMED ARRIVAL, snap onto the bed's
    * sleep POSE anchor: an explicit exception that bypasses the walk boundary
    * (the bed is not floor). Arrival is the pending-interaction system's, so a
    * redirected or cancelled walk never puts the Blobbi to sleep.

@@ -13,7 +13,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
  *
  * Unlike the `/dev/*` harnesses below, this route SHIPS in production builds.
  * It is unlinked from the game's navigation, but that is discoverability rather
- * than a boundary — publishing an item definition requires a signature from an
+ * than a boundary, publishing an item definition requires a signature from an
  * account the user already controls, and the catalog rejects definitions from
  * any issuer but the official one regardless of which client produced them.
  * Gating the route on `import.meta.env.DEV` would only stop the issuer from
@@ -28,7 +28,7 @@ const GameItemTools = lazy(() =>
  *
  * `import.meta.env.DEV` is replaced by a literal `false` in a production build,
  * so each ternary below collapses to `null` and the dynamic import inside the
- * dead branch is dropped along with it — the pages are not merely unrouted in
+ * dead branch is dropped along with it, the pages are not merely unrouted in
  * production, their chunks are never emitted. `npm run build` is the check: no
  * `DevTheater` or `DevArcade` chunk may appear in `dist/`, which
  * `src/dev-routes.test.ts` asserts against the built output.
@@ -47,20 +47,20 @@ const DevRooms = import.meta.env.DEV
   : null;
 
 // Item / inventory / placement inspector. Drives the REAL 31632, 31633 and
-// 31634 service boundaries — see the module doc for why it has no local state.
+// 31634 service boundaries; see the module doc for why it has no local state.
 const DevEquipment = import.meta.env.DEV
   ? lazy(() => import("./pages/DevEquipment").then(m => ({ default: m.DevEquipment })))
   : null;
 
 // Visual-effect preview (Phase 8). Drives the PURE renderer with literal effect
-// data — no signer, relay, inventory or equip state — so it also serves as the
+// data: no signer, relay, inventory or equip state, so it also serves as the
 // standing proof that drawing an effect needs none of them.
 const DevBlobbiEffects = import.meta.env.DEV
   ? lazy(() => import("./pages/DevBlobbiEffects").then(m => ({ default: m.DevBlobbiEffects })))
   : null;
 
 // Beach Treasure Hunt harness (Beach 1B). Simulation-only: drives the pure
-// seeded model and the real UI with overlays and forced policies — no signer,
+// seeded model and the real UI with overlays and forced policies; no signer,
 // no relay, no inventory or profile writes.
 const DevTreasureHunt = import.meta.env.DEV
   ? lazy(() => import("./pages/DevTreasureHunt").then(m => ({ default: m.DevTreasureHunt })))
@@ -94,7 +94,7 @@ export function AppRouter() {
         <Route path="/tools/game-items" element={
           /*
             Route-level, not menu-level. The tools are unlinked from the game's
-            navigation, which is discoverability rather than a boundary — the
+            navigation, which is discoverability rather than a boundary, the
             path can simply be typed. An experience without `authoringTools`
             therefore must not be able to MOUNT this, not merely fail to find it.
           */

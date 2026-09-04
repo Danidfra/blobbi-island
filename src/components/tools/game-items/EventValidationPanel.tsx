@@ -3,8 +3,8 @@
  * different things.
  *
  * Errors are red and stop the publish button. Warnings are amber and do not.
- * Suggestions are muted and are opinions. Collapsing these into one list — the
- * usual temptation — would train the user to ignore all of them equally, and
+ * Suggestions are muted and are opinions. Collapsing these into one list, the
+ * usual temptation: would train the user to ignore all of them equally, and
  * the one that matters is the one that says "this event cannot be built".
  *
  * The counts are always visible even when a group is empty, so "no image
@@ -101,7 +101,7 @@ export function EventValidationPanel({ validation, className }: EventValidationP
                 {issues.map((issue) => (
                   // `break-words` is load-bearing, not decoration. Several
                   // messages quote the offending value back at the user, and an
-                  // image warning quotes a URL — a 130-character token with no
+                  // image warning quotes a URL, a 130-character token with no
                   // break opportunity. Without it that token set the width of
                   // this list, then of the panel, then of the page: at 375px the
                   // whole document scrolled sideways by ~320px.

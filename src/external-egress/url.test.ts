@@ -4,7 +4,7 @@
  * The scheme rejections are the security-relevant half: a `javascript:` URL
  * reaching `window.open` executes in this origin, and a `data:` URL renders
  * attacker-controlled content that the address bar presents as a page. Both used
- * to be reachable — the authoring tool rendered an author-typed URL straight
+ * to be reachable, the authoring tool rendered an author-typed URL straight
  * into an `<a href>`.
  */
 import { describe, expect, it } from 'vitest';

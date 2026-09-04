@@ -3,7 +3,7 @@
  * for: a published definition and a bundled fallback must never be reported as
  * the same thing.
  *
- * Also asserted here — structurally rather than by inspection — is that
+ * Also asserted here, structurally rather than by inspection, is that
  * building rows is a PURE join over data already in hand. `buildInspectorRows`
  * takes an inventory and a map; there is no way to hand it a fetcher, which is
  * what makes the N+1 shape impossible rather than merely absent today.

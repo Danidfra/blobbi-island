@@ -25,7 +25,7 @@ interface BlobbiActionDockProps {
 }
 
 /**
- * BlobbiActionDock — the bottom action dock integrated into the game frame.
+ * BlobbiActionDock: the bottom action dock integrated into the game frame.
  *
  * Establishes the visual pattern for future gameplay actions, but only wires
  * actions that already exist:
@@ -50,7 +50,7 @@ export function BlobbiActionDock({ compact = false, inWorld = true, className }:
     used to start folded and fold itself again on every room change, which is
     the same as hiding the controls from the people who need them most. Now it
     opens on entry and stays however the player left it: a room change, a
-    navigation transition, a remount of the shell — none of them touch it.
+    navigation transition, a remount of the shell; none of them touch it.
     Only the collapse arrow does, and that choice is remembered for this
     visit (`first-session.ts`).
   */
@@ -98,7 +98,7 @@ export function BlobbiActionDock({ compact = false, inWorld = true, className }:
     <div
       className={cn(
         // Outer row spans the full width but must NOT block world clicks in its
-        // transparent areas — only the visible pill below captures pointer events.
+        // transparent areas: only the visible pill below captures pointer events.
         "pointer-events-none flex items-center justify-center",
         compact
           ? "gap-1.5 px-2 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-2"

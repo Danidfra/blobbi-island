@@ -1,12 +1,12 @@
 /**
- * The two shipped policies — the only two capability literals in the codebase.
+ * The two shipped policies, the only two capability literals in the codebase.
  *
  * ## A capability answers "may this profile?", not "is it built?"
  *
  * `emotes: true` in both policies does not claim an emote system exists; it
  * records that neither profile forbids one. Reading it the other way would make
  * the matrix un-writable, because every future capability would have to start
- * `false` in Family — the exact profile it is being added for. Availability is a
+ * `false` in Family, the exact profile it is being added for. Availability is a
  * question for the feature; permission is a question for this file. The fields
  * that are permitted-but-unbuilt today are called out individually below.
  *
@@ -14,7 +14,7 @@
  *
  * It must state what Blobbi Island does **today**, capability for capability,
  * because it is what every existing player will resolve to. Tightening Standard
- * here would be shipping a silent product change disguised as a refactor — so
+ * here would be shipping a silent product change disguised as a refactor, so
  * where the audit recommended a Standard-mode improvement (an interstitial
  * before external links, for instance) this file still says `externalLinks:
  * true`, matching the shipped behaviour. Those improvements belong to the phase
@@ -28,7 +28,7 @@
  *
  * It exists, it is exhaustively tested, and **nothing can select it**. There is
  * no setting, no storage key, no URL parameter and no environment variable that
- * produces it — see `resolve.ts`, and `boundaries.test.ts` which proves no
+ * produces it: see `resolve.ts`, and `boundaries.test.ts` which proves no
  * module outside this directory even names it.
  */
 
@@ -59,7 +59,7 @@ export const STANDARD_POLICY: IslandSafetyPolicy = Object.freeze({
   ownFreeTextNaming: true,
 
   // Leaving the island. All three work today with no confirmation step. The
-  // audit recommends adding one for Standard too — as a visible change, in the
+  // audit recommends adding one for Standard too, as a visible change, in the
   // phase that builds the egress helper, not here.
   externalLinks: true,
   socialPlatformSharing: true,
@@ -88,7 +88,7 @@ export const STANDARD_POLICY: IslandSafetyPolicy = Object.freeze({
  * The reduced-risk experience.
  *
  * Shaped by one principle from the audit: **the risk is concentrated in
- * arbitrary text, arbitrary video and the exits — remove those three and keep
+ * arbitrary text, arbitrary video and the exits, remove those three and keep
  * the world.** Presence, co-play, the Arcade, the Beach, the Mine, the shop,
  * dressing up a Blobbi and sitting in the theater together are all untouched,
  * because none of them carries a channel a stranger can author into.
@@ -101,7 +101,7 @@ export const STANDARD_POLICY: IslandSafetyPolicy = Object.freeze({
  *   The intended replacement is an issuer-signed catalog of approved videos
  *   (audit Phase E), reusing the trust pattern `useItemCatalog.ts` already
  *   applies to items. Until that exists, Family may gather in the theater and
- *   not watch — a real gap, deliberately not papered over.
+ *   not watch: a real gap, deliberately not papered over.
  * - **`strangerAuthoredNames` is deferred, not unbuilt.** Phase F built the
  *   substitution and its boundary; the shipped Family policy then set the
  *   capability back to `true` while the social identity model (friends, local
@@ -121,7 +121,7 @@ export const FAMILY_POLICY: IslandSafetyPolicy = Object.freeze({
   profile: 'family',
 
   // Communication: substituted, not removed. Free text is refused in BOTH
-  // directions at the data boundary (`chat-admission.ts`) — including text sent
+  // directions at the data boundary (`chat-admission.ts`): including text sent
   // by Standard players and by third-party clients, which is the whole point.
   freeTextChat: false,
   predefinedPhrases: true,
@@ -132,16 +132,16 @@ export const FAMILY_POLICY: IslandSafetyPolicy = Object.freeze({
   //
   // `strangerAuthoredNames` is TEMPORARILY true, and deliberately so: it is the
   // one capability that currently distinguishes neither shipped profile. The
-  // mechanism behind it works and is tested — a policy with it false resolves
-  // every remote name to a deterministic alias (`resolveRemoteBlobbiDisplayName`)
-  // — but shipping it revealed a product question nobody has answered yet. An
+  // mechanism behind it works and is tested, a policy with it false resolves
+  // every remote name to a deterministic alias (`resolveRemoteBlobbiDisplayName`),
+  // but shipping it revealed a product question nobody has answered yet. An
   // island where every stranger is "Sunny Fox" and two of them share the alias
   // is not obviously better for a child than one where names are real; friends,
   // local nicknames and relationship-aware naming all change the answer.
   //
   // So the capability describes reality rather than an intention: a curated
-  // player currently sees the names other players chose. The alternative —
-  // leaving this false and rendering authored names anyway — would make the
+  // player currently sees the names other players chose. The alternative,
+  // leaving this false and rendering authored names anyway, would make the
   // matrix a lie, which is worse than an honest gap. Revisit when the social
   // identity model is decided; the boundary is already in place to switch back.
   strangerAuthoredNames: true,
@@ -159,14 +159,14 @@ export const FAMILY_POLICY: IslandSafetyPolicy = Object.freeze({
   openMediaEntry: false,
 
   // Publishing and configuration: no permanent public artefacts, and the relay
-  // stays where the experience was configured — a different relay is a
+  // stays where the experience was configured, a different relay is a
   // different population, which would undo every restriction above it.
   mediaUploads: false,
   publicNotePublishing: false,
   relaySelection: false,
   authoringTools: false,
 
-  // Playing together — preserved in full, at reduced presence detail.
+  // Playing together: preserved in full, at reduced presence detail.
   multiplayerPresence: true,
   sharedActivities: true,
   detailedPresence: false,

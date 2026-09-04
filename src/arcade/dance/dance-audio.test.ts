@@ -3,7 +3,7 @@
  *
  * `jsdom` has no `AudioContext`, so what is testable here is the part that
  * matters most anyway: the SCHEDULE. It is pure, it is derived from the track's
- * tempo, and it must be byte-identical between runs — a rhythm game whose music
+ * tempo, and it must be byte-identical between runs, a rhythm game whose music
  * differs from run to run is a rhythm game whose chart is wrong.
  *
  * The engine itself is exercised through a fake in the component tests; its real

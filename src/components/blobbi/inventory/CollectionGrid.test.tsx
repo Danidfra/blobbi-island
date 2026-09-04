@@ -6,8 +6,8 @@
  * the navigation that makes it usable, could quietly break.
  *
  * The clamping cases matter most. A page index is state that outlives the
- * collection it indexes — an item is used up, a filter changes, a cosmetic
- * stops fitting — and a stale index renders an empty grid with working arrows.
+ * collection it indexes, an item is used up, a filter changes, a cosmetic
+ * stops fitting: and a stale index renders an empty grid with working arrows.
  */
 
 import { describe, it, expect } from 'vitest';

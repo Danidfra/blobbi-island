@@ -2,8 +2,8 @@
  * Coverage for the THEATER SEATING state carried by presence (kind 31950).
  *
  * Seating is represented as an OPTIONAL, semantic field in the existing presence
- * content (`seatId: "theater-seat-a4"`) — no new event kind, no coordinate
- * guessing — exactly like `hiddenIn` before it. These tests pin when it is
+ * content (`seatId: "theater-seat-a4"`): no new event kind, no coordinate
+ * guessing: exactly like `hiddenIn` before it. These tests pin when it is
  * published, when it is absent, what the parser accepts, and that clients which
  * know nothing about it stay valid.
  *
@@ -92,9 +92,9 @@ describe('presence seating state', () => {
     // Sitting is not motion: `state` still describes movement and stays idle.
     expect(content.state).toBe('idle');
     expect(content.goal).toBeUndefined();
-    // Position stays truthful — the remote render ignores it, but presence must
+    // Position stays truthful, the remote render ignores it, but presence must
     // not start lying about where the player is.
-    // Phase 2: the WIRE keeps legacy CENTER semantics — the published anchor
+    // Phase 2: the WIRE keeps legacy CENTER semantics, the published anchor
     // is the internal ground point converted at the build boundary.
     const wire = groundToWireCenter({ x: 52.4, y: 87.6 }, PARAMS.location);
     expect(content.anchor.x).toBe(wire.x);
@@ -106,7 +106,7 @@ describe('presence seating state', () => {
     );
   });
 
-  it('never carries seatId on a movement publish — moving away clears it', async () => {
+  it('never carries seatId on a movement publish, moving away clears it', async () => {
     const c = collector();
     const nav = createWalkableApi('stage');
 
@@ -178,7 +178,7 @@ describe('presence seating state', () => {
     await publishHeartbeat(c.publish, PARAMS, { x: 52.4, y: 87.6 });
 
     // A client that publishes `seatId` and one that has never heard of it both
-    // produce valid presence — the field is additive.
+    // produce valid presence, the field is additive.
     expect(validatePresenceEvent(asEvent(c.events[0]))).toBe(true);
     expect(validatePresenceEvent(asEvent(c.events[1]))).toBe(true);
   });
@@ -204,7 +204,7 @@ describe('seat presence expiry (what stale-seat release actually rests on)', () 
     await publishSit(c.publish, PARAMS, { x: 52.4, y: 87.6 }, SEAT);
 
     // The documented stale-seat behaviour ("stop publishing and your seat frees
-    // itself") is not implemented by any seating code — it rests entirely on
+    // itself") is not implemented by any seating code; it rests entirely on
     // this tag plus the presence GC. If the tag ever went missing, seats would
     // be held by ghosts and nothing in the theater would notice.
     const expiration = c.events[0].tags.find(([n]) => n === 'expiration')?.[1];
@@ -264,13 +264,13 @@ describe('parseSeatId', () => {
 
   it('does NOT trim-normalize a padded id into a valid one', () => {
     // Returned unchanged so the exact-match registry rejects it downstream.
-    // Trimming would accept a second wire spelling of one seat — and occupancy
+    // Trimming would accept a second wire spelling of one seat, and occupancy
     // is keyed by this exact string.
     expect(parseSeatId(' theater-seat-a4 ')).toBe(' theater-seat-a4 ');
     expect(getTheaterSeat(' theater-seat-a4 ')).toBeUndefined();
   });
 
-  it('does not vet the id itself — that is the renderer\'s job', () => {
+  it('does not vet the id itself; that is the renderer\'s job', () => {
     // A transport parser must not import room furniture. Unknown and decorative
     // ids survive here and are rejected later by `resolveSeatedRender` /
     // `resolveRemoteSeatOccupancy`, which is where seat geometry lives.

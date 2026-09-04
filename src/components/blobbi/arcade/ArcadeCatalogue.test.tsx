@@ -174,7 +174,7 @@ describe('entries that must not be pressable', () => {
 
     expect(within(el).getByText('Coming soon')).toBeInTheDocument();
     expect(within(el).getByText(/not ready to play yet/i)).toBeInTheDocument();
-    // Not a disabled button — no button, so nothing announces itself as
+    // Not a disabled button; no button, so nothing announces itself as
     // pressable and nothing invites a click that does nothing.
     expect(within(el).queryByRole('button')).toBeNull();
     // Controls and duration are metadata for a game you cannot start.

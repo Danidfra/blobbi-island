@@ -2,7 +2,7 @@
  * Phase 1 coverage: the canonical renderer-box geometry contract and renderer
  * purity (docs/blobbi-renderer-contract.md).
  *
- * Every test renders `BlobbiRendererView` BARE — no providers, no mocks. That
+ * Every test renders `BlobbiRendererView` BARE; no providers, no mocks. That
  * is itself the purity proof: if the pure renderer called any Nostr, profile,
  * or equipment hook, these renders would throw.
  */
@@ -75,7 +75,7 @@ describe('renderer-box geometry contract', () => {
     expect(root.className).toContain('w-24');
 
     // Body and both accessory layer groups are inset-0 children of the SAME
-    // box — one shared local coordinate space.
+    // box: one shared local coordinate space.
     expect(bodyBox(container).parentElement).toBe(root);
     expect(bodyBox(container).className).toContain('inset-0');
     for (const group of Array.from(root.querySelectorAll('[data-accessory-layer-group]'))) {
@@ -127,7 +127,7 @@ describe('accessory sizing contract', () => {
         />,
       );
       const item = container.querySelector('[data-accessory-code="headwear-1"]') as HTMLElement;
-      // Percentage of the box — so the accessory/body ratio is identical for
+      // Percentage of the box, so the accessory/body ratio is identical for
       // every token, and resizing the renderer scales both together.
       expect(item.style.width).toBe(ACCESSORY_BASE_PERCENT);
       expect(item.style.height).toBe(ACCESSORY_BASE_PERCENT);

@@ -1,7 +1,7 @@
 /**
  * The Prize Counter WITHOUT a redeem slot, against seeded real state.
  *
- * This is the counter's own surface — selection, resolution and preview — and
+ * This is the counter's own surface, selection, resolution and preview, and
  * it must stay write-free even now that the arcade composes it with a live
  * redemption. Rendering `<PrizeCounter />` bare is what proves the component
  * itself sells nothing; the redeeming composition is covered by
@@ -220,7 +220,7 @@ describe('the shelf', () => {
 });
 
 describe('the detail panel and the preview', () => {
-  it('opens a detail with description, slot, rarity — and the honest disabled-redemption message', () => {
+  it('opens a detail with description, slot, rarity, and the honest disabled-redemption message', () => {
     const { container } = renderCounter({ tickets: 100 });
     fireEvent.click(
       container.querySelector('[data-prize-card="blobbi:effect:celestial-aura"]')!,
@@ -236,7 +236,7 @@ describe('the detail panel and the preview', () => {
         'Prize redemption is being prepared. You can preview rewards now.',
       ),
     ).toBeInTheDocument();
-    // No redeem control exists anywhere — not disabled: ABSENT.
+    // No redeem control exists anywhere; not disabled: ABSENT.
     expect(screen.queryByRole('button', { name: /redeem/i })).toBeNull();
   });
 

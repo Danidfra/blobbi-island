@@ -12,8 +12,8 @@ export type WalkableArea =
   | { type: 'triangle'; points: [{ x: number; y: number }, { x: number; y: number }, { x: number; y: number }] }
   /**
    * A walk LINE: the floor is the straight segment from `from` to `to` and
-   * nothing either side of it. For a walkway whose floor the artwork hides —
-   * the Plaza's balcony corridor behind its parapet — the Blobbi's feet should
+   * nothing either side of it. For a walkway whose floor the artwork hides,
+   * the Plaza's balcony corridor behind its parapet, the Blobbi's feet should
    * ride one drawn line, projected onto it from wherever the player clicks. A
    * chain of segments sharing endpoints is a path: each is convex, so the
    * route planner crosses them joint by joint exactly as it crosses any other
@@ -51,7 +51,7 @@ export function areaContains(point: Position, area: WalkableArea, epsilon = 1e-6
  * The nearest point of one walkable area to `position`.
  *
  * Extracted from {@link constrainPosition}'s composite branch, which now calls
- * it — the per-area clamp was already the interesting half, and route planning
+ * it: the per-area clamp was already the interesting half, and route planning
  * needs it on its own to find where two areas meet.
  */
 export function constrainToArea(position: Position, area: WalkableArea): Position {

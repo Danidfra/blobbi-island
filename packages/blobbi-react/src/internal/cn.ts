@@ -6,7 +6,7 @@
  * would drag Island styling vocabulary into a package that must not have any.
  * The two dependencies here (`clsx`, `tailwind-merge`) were already the
  * renderer's only className dependencies, and `tailwind-merge` semantics are
- * part of the renderer's public contract — callers override the canonical box
+ * part of the renderer's public contract, callers override the canonical box
  * through `className` (see `blobbi-render-size.ts`), which only works because
  * later utility classes win over earlier ones.
  */

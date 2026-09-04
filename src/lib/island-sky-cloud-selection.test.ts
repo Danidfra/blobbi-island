@@ -45,7 +45,7 @@ function allPassages(passagesPerActor = 3000) {
 }
 
 describe('the authored shape table', () => {
-  it('holds 16 special slots in a 300-passage period — a ~5% rate', () => {
+  it('holds 16 special slots in a 300-passage period, a ~5% rate', () => {
     expect(ISLAND_CLOUD_SHAPE_PERIOD).toBe(300);
     expect(ISLAND_CLOUD_SPECIAL_SLOTS).toHaveLength(16);
     const rate = ISLAND_CLOUD_SPECIAL_SLOTS.length / ISLAND_CLOUD_SHAPE_PERIOD;
@@ -167,7 +167,7 @@ describe('measured size distribution', () => {
 
   it('lets only the nearest actor be large', () => {
     // This is what makes "never all three large at once" structural rather than
-    // statistical — two of the three can never be large at all.
+    // statistical: two of the three can never be large at all.
     expect(A.allowedSizes).toContain('large');
     expect(B.allowedSizes).not.toContain('large');
     expect(C.allowedSizes).not.toContain('large');
@@ -234,7 +234,7 @@ describe('conflict resolution', () => {
     }
   });
 
-  it('does suppress lower-priority actors sometimes — the rule is not vacuous', () => {
+  it('does suppress lower-priority actors sometimes, the rule is not vacuous', () => {
     const suppressed = [B, C].flatMap((actor) =>
       Array.from({ length: 3000 }, (_, i) => islandCloudPassage(actor, W, i)).filter(
         (p) => p.suppressed,
@@ -350,7 +350,7 @@ describe('UTC-derived determinism', () => {
 
   it('does not front-load a formation at the sequence anchor', () => {
     // Index 0 is where each actor's authored walk begins. If a special sat there,
-    // the very first passage after the epoch — and any future re-anchoring — would
+    // the very first passage after the epoch, and any future re-anchoring, would
     // open with a formation.
     for (const actor of ISLAND_CLOUD_ACTORS) {
       expect(islandCloudPassage(actor, W, 0).shape, actor.id).toBe('normal');
@@ -360,7 +360,7 @@ describe('UTC-derived determinism', () => {
   it('does not guarantee a formation shortly after an arbitrary page load', () => {
     // The real requirement. A player loads at an arbitrary instant, so what matters
     // is that the chance of a formation being on screen in the first few minutes is
-    // low — not that some particular absolute time is quiet. Sampled across two
+    // low: not that some particular absolute time is quiet. Sampled across two
     // thousand unrelated load instants.
     let loadsWithFormation = 0;
     const loads = 2000;
@@ -388,7 +388,7 @@ describe('UTC-derived determinism', () => {
 
 describe('travel still clears every variant', () => {
   it('reserves travel width for the widest shape and size each actor can take', () => {
-    // The cycle duration must not depend on the size — otherwise the passage index,
+    // The cycle duration must not depend on the size; otherwise the passage index,
     // which is derived from the duration, would depend on the size it selects.
     for (const actor of ISLAND_CLOUD_ACTORS) {
       expect(actor.widthPx, actor.id).toBeGreaterThanOrEqual(

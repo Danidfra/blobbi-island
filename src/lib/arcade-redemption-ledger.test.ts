@@ -163,7 +163,7 @@ describe('the synchronous lock', () => {
   it('grants once per owner+prize and refuses the second taker', () => {
     expect(acquireRedemptionLock(OWNER, 'neon-star-glasses')).toBe(true);
     expect(acquireRedemptionLock(OWNER, 'neon-star-glasses')).toBe(false);
-    // A different prize — or a different owner — is a different lock.
+    // A different prize, or a different owner, is a different lock.
     expect(acquireRedemptionLock(OWNER, 'arcade-snack')).toBe(true);
     expect(acquireRedemptionLock(OTHER, 'neon-star-glasses')).toBe(true);
   });

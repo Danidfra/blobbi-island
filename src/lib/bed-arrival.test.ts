@@ -35,13 +35,13 @@ describe('bed pose and walk target', () => {
     expect(constrainPosition(walk, HOME_BOUNDARY)).toEqual(walk);
   });
 
-  it('the pose itself may sit OFF the walkable floor — reaching it requires the documented snap', () => {
+  it('the pose itself may sit OFF the walkable floor, reaching it requires the documented snap', () => {
     const pose = getBedSleepPose(DEFAULT_BED_POSITION);
     const clamped = constrainPosition(pose, HOME_BOUNDARY);
     // With the default bed position the pose lies above the arch floor line;
     // the walk stops at the clamped point and `snapTo(pose)` bridges the rest.
     // (If a future bed drag puts the pose on the floor, both points coincide
-    // and the snap is a no-op — also fine.)
+    // and the snap is a no-op, also fine.)
     expect(worldDistancePx(pose, clamped)).toBeGreaterThan(0);
   });
 

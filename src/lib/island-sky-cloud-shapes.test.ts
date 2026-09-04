@@ -65,7 +65,7 @@ describe('the shape set', () => {
 });
 
 describe('construction rules', () => {
-  it('uses only rounded geometry — no polygons, no sharp corners', () => {
+  it('uses only rounded geometry; no polygons, no sharp corners', () => {
     for (const shape of ISLAND_CLOUD_SHAPES) {
       for (const part of ISLAND_CLOUD_SHAPE_GEOMETRY[shape].parts) {
         expect(['circle', 'ellipse', 'rect', 'path'], shape).toContain(part.kind);
@@ -75,7 +75,7 @@ describe('construction rules', () => {
           expect(part.rx * 2, shape).toBeLessThanOrEqual(part.height + 0.001);
         }
         // A contour must curve. `L` would be a straight edge, which is what makes a
-        // silhouette read as a polygon — several adult forms in the artwork are
+        // silhouette read as a polygon, several adult forms in the artwork are
         // polygons and none of them belongs in the sky.
         if (part.kind === 'path') {
           expect(part.d, shape).toMatch(/Q/);
@@ -102,7 +102,7 @@ describe('construction rules', () => {
     /*
       The correction this pass exists for. `blobbi-egg`, `blobbi-baby` and
       `blobbi-adult` were assembled from rounded tiers narrowing upward, and all
-      three read as poop clouds — because that IS the poop-swirl construction. A
+      three read as poop clouds, because that IS the poop-swirl construction. A
       single contour cannot be read as a stack.
     */
     for (const shape of ['blobbi-egg', 'blobbi-baby', 'blobbi-adult', 'poop'] as const) {
@@ -125,7 +125,7 @@ describe('construction rules', () => {
   });
 
   it('keeps every formation within a comparable visual mass', () => {
-    // "Approximately the same visual mass as a normal cloud" — compared at medium,
+    // "Approximately the same visual mass as a normal cloud": compared at medium,
     // by bounding-box area, which is the crude but honest measure.
     const area = (shape: (typeof ISLAND_CLOUD_SHAPES)[number]) =>
       cloudShapeWidthPx(shape, 'medium') * cloudShapeHeightPx(shape, 'medium');
@@ -147,7 +147,7 @@ describe('construction rules', () => {
 
 describe('upper-sky placement', () => {
   it('gives the tall formations their own high placement', () => {
-    // The ordinary cloud rides its actor's path — that is the depth ladder. The
+    // The ordinary cloud rides its actor's path; that is the depth ladder. The
     // formations are taller, so a fixed high placement is what keeps them inside
     // the budget regardless of which actor is carrying them.
     expect(ISLAND_CLOUD_SHAPE_GEOMETRY.normal.topPercent).toBeUndefined();
@@ -233,7 +233,7 @@ describe('the Blobbi contours come from the production artwork', () => {
   });
 
   it('keeps the baby crown pinch, which is what separates it from the egg', () => {
-    // The production baby path opens `M 50 15 Q 50 10 50 15` — a pinch at the crown.
+    // The production baby path opens `M 50 15 Q 50 10 50 15`: a pinch at the crown.
     // The egg is the same ovoid with that pinch smoothed into a dome, so the pinch is
     // the whole distinction and must survive.
     expect(pathOf('blobbi-baby')).toContain('Q 50 10 50 15');

@@ -9,7 +9,7 @@
  *
  * ## Why the decoration is data rather than JSX
  *
- * Thirty sprites across three floors carried `alt="ticket counter"` — copy-paste
+ * Thirty sprites across three floors carried `alt="ticket counter"`: copy-paste
  * that made every neon sign, every piece of wall art, both tables and the
  * karaoke stage announce themselves to a screen reader as a ticket counter. The
  * microphone announced itself as "Right Chair". Listing them here, with the alt
@@ -43,12 +43,12 @@ const L1 = '/assets/locations/arcade/level-1';
 const GROUND = '/assets/locations/arcade/ground';
 
 /**
- * Basement decoration — a music venue: neon instruments, two wall pieces and
+ * Basement decoration: a music venue: neon instruments, two wall pieces and
  * the karaoke stage platform.
  *
  * The standing microphone (`mic.png`) is here, in the DECORATION list. It used
  * to be an `InteractiveElement` whose `onClick` was commented out, so it kept
- * `cursor-pointer` and `hover:scale-110` while doing nothing at all — the
+ * `cursor-pointer` and `hover:scale-110` while doing nothing at all, the
  * definition of a dead affordance. A karaoke game may one day claim it; until
  * then it is scenery, and it looks like scenery.
  */
@@ -73,7 +73,7 @@ export const arcadeBasementProps: readonly ArcadePropConfig[] = [
   { id: 'stage-microphone', src: `${B1}/mic.png`, className: 'absolute left-1/2 -translate-x-1/2 bottom-[18%] w-[3%] z-[30]' },
 ];
 
-/** Floor-1 decoration — a classic arcade: neon signage and two wall pieces. */
+/** Floor-1 decoration: a classic arcade: neon signage and two wall pieces. */
 export const arcadeFloor1Props: readonly ArcadePropConfig[] = [
   { id: 'trophy-neon', src: `${L1}/trophy-neon.png`, className: 'absolute top-[32%] left-[14%] w-[6%]' },
   { id: 'sword-neon', src: `${L1}/sword-neon.png`, className: 'absolute top-[26%] left-[6%] w-[5%] -rotate-12' },
@@ -88,7 +88,7 @@ export const arcadeFloor1Props: readonly ArcadePropConfig[] = [
   { id: 'retro-controller-neon', src: `${L1}/retro-controller-neon.png`, className: 'absolute top-[44%] right-[6%] w-[6%] rotate-12' },
 ];
 
-/** Ground-floor decoration — the commerce floor's wall art and signage. */
+/** Ground-floor decoration: the commerce floor's wall art and signage. */
 export const arcadeGroundProps: readonly ArcadePropConfig[] = [
   { id: 'wall-art-super-blobbi', src: `${GROUND}/wall-art-super-blobbi.png`, className: 'absolute top-[6%] right-[10%] w-[20%]' },
   { id: 'wall-art-game-boy', src: `${GROUND}/wall-art-game-boy.png`, className: 'absolute top-[12%] left-[2%] w-[10%]' },
@@ -108,7 +108,7 @@ export interface ArcadeSeatConfig {
   /** Stable, unique id across the whole room. */
   readonly id: string;
   readonly src: string;
-  /** Accessible name. Unique — four chairs previously shared two labels. */
+  /** Accessible name. Unique, four chairs previously shared two labels. */
   readonly alt: string;
   readonly className: string;
 }
@@ -149,7 +149,7 @@ function seatGroup(index: 1 | 2, containerClass: string): ArcadeSeatGroupConfig 
  * The two identical table-and-chairs clusters facing the karaoke stage.
  *
  * They were byte-identical blocks of JSX producing four chairs that shared two
- * `alt` values ("Left Chair" twice, "Right Chair" twice) — so a screen-reader
+ * `alt` values ("Left Chair" twice, "Right Chair" twice): so a screen-reader
  * user, and any test, saw two chairs where there are four.
  */
 export const arcadeBasementSeatGroups: readonly ArcadeSeatGroupConfig[] = [
@@ -166,7 +166,7 @@ export const arcadeBasementSeatGroups: readonly ArcadeSeatGroupConfig[] = [
  * alcove, so a Blobbi standing anywhere in the room is IN FRONT of them. The
  * lowest Blobbi depth band on any arcade floor is `z-9`
  * (`backgroundZIndexConfigs` in `interactive-elements-config.ts`), so the doors
- * sit at 8 — strictly below every band, with no tie to resolve.
+ * sit at 8, strictly below every band, with no tie to resolve.
  *
  * Previously the container was `z-10`, which tied with the ground floor's
  * `0–52 %` band and with nothing else; ties resolve by DOM order, and the doors
@@ -199,14 +199,14 @@ export const ARCADE_ELEVATOR_DOOR_SRC = `${B1}/elevator-door.png`;
  * Both counters are mounted HIGH on the back wall, well above the ground floor's
  * walkable band (`y ≥ 48`). The generic "aim at the element's base" rule
  * therefore produces a point off the floor, and clamping it merely moves it onto
- * the floor's top EDGE — which is worse: the edge runs straight through the
+ * the floor's top EDGE, which is worse: the edge runs straight through the
  * mouth of the narrow elevator alcove (`x ∈ [45,55], y ∈ [36,48]`), so a walk
  * along it can be captured by the alcove and never converge. Browser-reproduced:
  * the Blobbi slid along the back wall and the modal never opened, which is the
  * same symptom the audit recorded (§8.3).
  *
- * Picking the point deliberately — a comfortable distance onto open floor,
- * horizontally centred on the counter and clear of the alcove — removes the
+ * Picking the point deliberately, a comfortable distance onto open floor,
+ * horizontally centred on the counter and clear of the alcove, removes the
  * whole class of problem. `arcade-machines-config.test.ts` checks both.
  */
 export const ARCADE_COUNTER_STAND_Y = 69.2;
@@ -216,7 +216,7 @@ export const ARCADE_TICKET_COUNTER = {
   windowSrc: `${GROUND}/ticket-out.png`,
   containerClassName: 'relative left-[20%] top-[26%]',
   /** Accessible name for the interactive window. Names the action's target. */
-  alt: 'Token counter — buy Arcade Tokens',
+  alt: 'Token counter: buy Arcade Tokens',
   /** Roughly under the counter (its sprite spans x ≈ 20–28 %). */
   interactionPoint: { x: 24, y: ARCADE_COUNTER_STAND_Y },
 } as const;
@@ -224,7 +224,7 @@ export const ARCADE_TICKET_COUNTER = {
 /**
  * The PRIZES counter.
  *
- * Once a `console.log`, then an honest coming-soon notice — and now the real
+ * Once a `console.log`, then an honest coming-soon notice, and now the real
  * thing: walking up opens the Prize Counter, where Arcade Tickets are spent.
  * The `blurb` is the one-line description under the shell's title.
  */

@@ -2,7 +2,7 @@
  * The Ditto theme protocol, both directions.
  *
  * The fixtures below are Ditto's own event shapes, transcribed from
- * `src/lib/themeEvent.ts` in the Ditto client — the `c` tag encoding, the role
+ * `src/lib/themeEvent.ts` in the Ditto client, the `c` tag encoding, the role
  * markers, the tag order `buildThemeDefinitionTags` produces, the legacy
  * JSON-in-content format and the `a`-tag reference on an active theme. If Island
  * drifts from any of them, one of these fails and the interop claim is false.
@@ -170,7 +170,7 @@ describe('writing a theme Ditto can read', () => {
     expect(parsed.config.colors).toEqual(colors);
   });
 
-  it('slugs a title the way Ditto does — so editing REPLACES', () => {
+  it('slugs a title the way Ditto does, so editing REPLACES', () => {
     expect(titleToSlug('Harbour Dusk')).toBe('harbour-dusk');
     expect(titleToSlug('  Sun   & Sand!! ')).toBe('sun-sand');
     expect(titleToSlug('!!!')).toBe('');
@@ -212,7 +212,7 @@ describe('the active theme (kind:16767)', () => {
 
   it('stays a valid Ditto event when it names a BUILT-IN Island theme', () => {
     // A built-in has no address, and its sixteen authored colours do not fit in
-    // three — so Island adds one extra tag Ditto ignores. Everything Ditto
+    // three: so Island adds one extra tag Ditto ignores. Everything Ditto
     // reads must still be there and still be correct.
     const tags = buildActiveThemeTags({
       config: { colors, title: 'Cozy Day' },
@@ -265,7 +265,7 @@ describe('discovery resolution', () => {
 
   it('does not merge two authors\' themes with the same slug', () => {
     // The address includes the pubkey, so `harbour-dusk` from two people is two
-    // themes — not one that keeps overwriting the other.
+    // themes: not one that keeps overwriting the other.
     const resolved = resolveThemeDefinitions([
       base('dusk', 100, 'a'.repeat(64), AUTHOR),
       base('dusk', 100, 'b'.repeat(64), OTHER),

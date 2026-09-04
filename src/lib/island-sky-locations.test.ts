@@ -28,7 +28,7 @@ describe('sky location coverage', () => {
 
 /**
  * Interiors whose artwork has real windows cut out of it. An interior earns a
- * sky only by being on this list — see the guard below.
+ * sky only by being on this list; see the guard below.
  */
 const INTERIORS_WITH_WINDOWS: LocationId[] = ['plaza-inside'];
 
@@ -46,7 +46,7 @@ describe('the locations enabled in this phase', () => {
   });
 
   it('only enables "-open" exterior plates, or an interior whose windows are cut out', () => {
-    // Not a rule that the filename *grants* a sky — the interiors below prove the
+    // Not a rule that the filename *grants* a sky, the interiors below prove the
     // suffix is not sufficient. It is a guard that an interior plate never
     // silently ends up enabled: an interior gets in by being NAMED here, which
     // is a claim that its plate has transparent windows (`plaza-inside.webp`'s
@@ -128,17 +128,17 @@ describe('the locations deliberately left disabled', () => {
     // converting these plates to `.webp` one at a time, and a test that pins the
     // extension would contradict the very property this table exists to provide:
     // that a rename cannot change a location's sky. The stem is what carries the
-    // meaning — `-inside` is an interior plate, `-open` is an exterior one.
+    // meaning, `-inside` is an interior plate, `-open` is an exterior one.
     expect(LOCATION_BACKGROUNDS['cave-open']).toMatch(/^cave-inside\./);
     expect(isSkyEnabledLocation('cave-open')).toBe(false);
-    // …while `mine` — the exterior entrance to that same cave — is enabled.
+    // …while `mine`: the exterior entrance to that same cave, is enabled.
     expect(LOCATION_BACKGROUNDS.mine).toMatch(/^mine-open\./);
     expect(isSkyEnabledLocation('mine')).toBe(true);
   });
 });
 
 describe('artwork readiness', () => {
-  it('records every enabled scene as sky-ready — the migration is complete', () => {
+  it('records every enabled scene as sky-ready, the migration is complete', () => {
     // All six outdoor plates and the Plaza interior's windows expose a
     // transparent sky region. Verified against the actual files, not inferred
     // from the config.

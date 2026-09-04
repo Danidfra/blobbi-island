@@ -6,7 +6,7 @@
  *  - The API is a script-injection + global-callback API
  *    (`window.onYouTubeIframeAPIReady`) that must be loaded exactly once per
  *    page. A promise-memoised loader is the only sane React fit, and it is about
- *    thirty lines — not worth a dependency the project would have to audit.
+ *    thirty lines: not worth a dependency the project would have to audit.
  *  - It gives the playback controller a small, mockable surface
  *    ({@link MediaPlayerAdapter}) instead of a global. Every correctness-critical
  *    decision above this file can then be tested without a browser or a network.
@@ -111,7 +111,7 @@ export interface MediaError {
  * The honest sentence for everything the API cannot actually distinguish.
  *
  * YouTube reports `100` for "removed OR private", and `101`/`150` for "embedding
- * disabled" — but region blocks and age restrictions surface as `101`/`150` too.
+ * disabled": but region blocks and age restrictions surface as `101`/`150` too.
  * Naming one of those causes would be a guess presented as a diagnosis, and a
  * wrong diagnosis sends the user off to fix the wrong thing. Where the code does
  * not narrow it down, say what is certain (it will not play here) and what to do
@@ -135,7 +135,7 @@ export function mapYouTubeError(code: number): MediaError {
     // 5 = the HTML5 player itself failed. Unambiguous, and worth retrying.
     case 5:
       return { code: 'html5-error', message: 'The video player ran into a problem with this video.', retryable: true };
-    // 100 = "not found" — removed OR private, indistinguishable from here.
+    // 100 = "not found": removed OR private, indistinguishable from here.
     case 100:
       return { code: 'unavailable', message: AMBIGUOUS_PLAYBACK_MESSAGE, retryable: false };
     // 101/150 = documented as embedding-disabled, but also what region and age
@@ -152,7 +152,7 @@ export function mapYouTubeError(code: number): MediaError {
 }
 
 /**
- * A video that refuses to start reports no error code at all — it simply never
+ * A video that refuses to start reports no error code at all; it simply never
  * reaches PLAYING. That could be a region block, a silent embed refusal or a
  * dead network, so the inferred error uses the ambiguous copy too.
  */
@@ -177,7 +177,7 @@ const IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
 /**
  * The origin the player iframe is served from.
  *
- * `youtube-nocookie.com` rather than `youtube.com`, for BOTH experiences — this
+ * `youtube-nocookie.com` rather than `youtube.com`, for BOTH experiences; this
  * is a privacy improvement, not a Family restriction. YouTube's "privacy-enhanced
  * mode" defers the tracking cookies it would otherwise set on load, and since the
  * theater embeds a video on behalf of a player who did not ask to be measured,
@@ -186,7 +186,7 @@ const IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
  * It is a supported option of the IFrame Player API (`host`), not a URL rewrite:
  * the API script still loads from `www.youtube.com`, `postMessage` origin
  * handling is the API's own, and every player method behaves identically. The
- * CSP already allowed this host — `frame-src` names both — so nothing there
+ * CSP already allowed this host, `frame-src` names both, so nothing there
  * changes either.
  *
  * What it does NOT do is stop YouTube seeing the request. The embed is still a
@@ -351,7 +351,7 @@ export interface CreateYouTubeAdapterOptions {
    * The video to build the player around. **Required.**
    *
    * `new YT.Player(el)` without one builds an embed for no video at all, which
-   * the API answers with error 2 and no `onReady` — the player then never
+   * the API answers with error 2 and no `onReady`: the player then never
    * finishes constructing. Constructing a player is therefore something that
    * happens *because* a video was chosen, never in advance of one.
    */
@@ -376,7 +376,7 @@ export interface CreateYouTubeAdapterOptions {
 /**
  * Build a {@link MediaPlayerAdapter} backed by a real YouTube embed.
  *
- * Resolves once `onReady` has fired. The caller MUST call `destroy()` — leaving
+ * Resolves once `onReady` has fired. The caller MUST call `destroy()`: leaving
  * the iframe alive after leaving the theater would keep audio playing in a room
  * the player is no longer standing in.
  */
@@ -414,7 +414,7 @@ export async function createYouTubeAdapter({
             const iframe = instance.getIframe();
             // The Permissions-Policy for a cross-origin iframe; the API does not
             // set it. `fullscreen` and `picture-in-picture` are BOTH withheld
-            // when fullscreen is denied — picture-in-picture is the other way a
+            // when fullscreen is denied, picture-in-picture is the other way a
             // video leaves the island's frame.
             iframe.setAttribute(
               'allow',
@@ -468,7 +468,7 @@ export async function createYouTubeAdapter({
           // A rejected video is NOT a failed player. YouTube frequently reports
           // the error before `onReady` (a private or non-embeddable video never
           // becomes ready at all), and rejecting here used to turn "pick another
-          // video" into "the projector is broken" — with no controller built, so
+          // video" into "the projector is broken": with no controller built, so
           // no way to pick another video either. The player object is real; hand
           // it over and let the error travel as an error.
           if (!settled) {

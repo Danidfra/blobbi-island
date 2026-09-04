@@ -1,8 +1,8 @@
 /**
  * Coverage for REMOTE players sitting in theater seats.
  *
- * Remote seating must come from explicit presence state — the optional `seatId`
- * field of the existing kind 31950 content — never from "is the player standing
+ * Remote seating must come from explicit presence state, the optional `seatId`
+ * field of the existing kind 31950 content; never from "is the player standing
  * roughly where a chair is". These tests push real presence events through the
  * subscription and assert what MultiplayerLayer paints:
  *   - seated  → snapped to the CANONICAL seat anchor, rear-facing, at the row's
@@ -49,7 +49,7 @@ let publishFailuresRemaining = 0;
  * exists while a publish is outstanding: a real relay publish crosses a
  * WebSocket and takes milliseconds, during which this component re-renders many
  * times. With an instantly-resolving mock no render can interleave, so the
- * flood is invisible — which is exactly why it reached a browser.
+ * flood is invisible, which is exactly why it reached a browser.
  */
 let publishDelayMs = 0;
 const publishAttempts: Array<{ kind: number; content: string; tags: string[][] }> = [];
@@ -69,13 +69,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,
@@ -107,7 +107,7 @@ vi.mock('./CurrentBlobbiDisplay', () => ({
 }));
 /* Only the COMPONENT is stubbed. The rest of `@blobbi/react` is pure data
  * (`DEFAULT_STAGE`, the size table, the accessory normalizer) that the layer
- * under test genuinely uses, so the real module is spread back in — mocking the
+ * under test genuinely uses, so the real module is spread back in, mocking the
  * whole package would replace working code with `undefined`. */
 vi.mock('@blobbi/react', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@blobbi/react')>()),
@@ -357,7 +357,7 @@ describe('remote players seated in a theater seat', () => {
       presenceEvent({ ts: TS, seq: 1, state: 'idle', at: FLOOR, seatId: SEAT }),
     );
 
-    // Rear-facing markup has no face elements at all — CurrentBlobbiDisplay
+    // Rear-facing markup has no face elements at all: CurrentBlobbiDisplay
     // drops the pupils for `facing="back"`, exactly as it does locally.
     expect(facingOf(h.player()!)).toBe('back');
   });
@@ -377,7 +377,7 @@ describe('remote players seated in a theater seat', () => {
     expect(floatOf(el)).toBeNull();
   });
 
-  it('never scales the positioned anchor — chat bubbles portal into it', async () => {
+  it('never scales the positioned anchor, chat bubbles portal into it', async () => {
     const h = await setup();
     await h.push(
       presenceEvent({ ts: TS, seq: 1, state: 'idle', at: FLOOR, seatId: SEAT }),
@@ -385,7 +385,7 @@ describe('remote players seated in a theater seat', () => {
     expect(h.player()!.style.transform).toBe('translate(-50%, -100%)'); // ground anchor
   });
 
-  it('renders exactly ONE Blobbi for a seated remote — no floating copy', async () => {
+  it('renders exactly ONE Blobbi for a seated remote; no floating copy', async () => {
     const h = await setup();
     await h.push(
       presenceEvent({ ts: TS, seq: 1, state: 'idle', at: FLOOR, seatId: SEAT }),
@@ -418,7 +418,7 @@ describe('remote players seated in a theater seat', () => {
     );
     expect(h.player()!.getAttribute('data-seated-in')).toBe(SEAT);
 
-    // Walking away publishes a `moving` presence with no seatId — that IS the
+    // Walking away publishes a `moving` presence with no seatId; that IS the
     // stand-up, with no separate event to lose.
     await h.push(presenceEvent({ ts: TS + 2, seq: 2, state: 'moving', at: FLOOR }));
 
@@ -504,7 +504,7 @@ describe('remote players seated in a theater seat', () => {
       );
 
       // Exactly one seated Blobbi in the chair, chosen by a rule both clients
-      // compute identically — never two sprites stacked on one anchor.
+      // compute identically: never two sprites stacked on one anchor.
       expect(h.player('aa22', 's2')!.getAttribute('data-seated-in')).toBe(SEAT);
       const loser = h.player('ff11', 's1')!;
       expect(loser.hasAttribute('data-seated-in')).toBe(false);
@@ -541,8 +541,8 @@ describe('remote players seated in a theater seat', () => {
 
   describe('publishing the local seat', () => {
     it('publishes nothing while the player is only walking toward a seat', async () => {
-      // `sittingIn` stays null for the whole walk — TheaterSeat fires `onSit`
-      // from the ARRIVAL callback, never from the click — so there is nothing
+      // `sittingIn` stays null for the whole walk: TheaterSeat fires `onSit`
+      // from the ARRIVAL callback, never from the click, so there is nothing
       // here to advertise yet.
       const h = await setup();
       await h.setLocalSittingIn(null);
@@ -560,7 +560,7 @@ describe('remote players seated in a theater seat', () => {
       expect(content.seatId).toBe(SEAT);
       expect(content.location).toBe('stage');
       expect(content.state).toBe('idle');
-      // Reuses the presence kind and its tag shape — no new event kind.
+      // Reuses the presence kind and its tag shape; no new event kind.
       expect(sits[0].kind).toBe(31950);
       expect(sits[0].tags).toEqual(
         expect.arrayContaining([['t', 'blobbi:presence'], ['t', 'loc:stage']]),
@@ -605,7 +605,7 @@ describe('remote players seated in a theater seat', () => {
     it('drops the seat from presence the instant the player moves', async () => {
       // The clear is SYNCHRONOUS inside `moveTo`, before the move is published,
       // so observers never see the contradictory "seated in A4 while walking to
-      // the other side of the room" state — and no heartbeat racing the walk can
+      // the other side of the room" state, and no heartbeat racing the walk can
       // put the player back in the chair afterwards.
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
@@ -646,7 +646,7 @@ describe('remote players seated in a theater seat', () => {
     it('keeps advertising the seat on heartbeats AFTER arriving in the room', async () => {
       // Regression: entering the theater IS a location change, which rebuilds
       // the heartbeat interval. A rebuilt heartbeat that forgot to read the seat
-      // ejected every player from their chair ~25 s after they sat down — and
+      // ejected every player from their chair ~25 s after they sat down, and
       // only for players who had walked in, which is all of them. Found in a
       // real browser, not in jsdom, because it needs a location change followed
       // by a sit followed by a heartbeat.
@@ -654,7 +654,7 @@ describe('remote players seated in a theater seat', () => {
       try {
         const h = await setup();
         // A REAL location change (the harness starts in the theater, so walk out
-        // and back in). This is what rebuilds the heartbeat interval — the whole
+        // and back in). This is what rebuilds the heartbeat interval, the whole
         // point of the test; re-rendering with the same location would leave the
         // original interval in place and prove nothing.
         await h.goToLocation('town', null);
@@ -681,7 +681,7 @@ describe('remote players seated in a theater seat', () => {
 
     it('stops advertising the seat after a location change, even if the prop lags', async () => {
       // Defence in depth. PlayingView already clears `sittingIn` when the
-      // location changes, but presence clears its own copy independently — so a
+      // location changes, but presence clears its own copy independently, so a
       // player who walks out of the theater can never keep haunting a chair
       // there because one layer forgot.
       vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -711,7 +711,7 @@ describe('remote players seated in a theater seat', () => {
     it('retries promptly when the arrival publish fails, instead of waiting for a heartbeat', async () => {
       // Without this, the sit was marked "synchronized" before the publish
       // resolved, so a single relay hiccup meant nobody saw you sit down until
-      // the next heartbeat — up to 25 s of standing in front of your own chair.
+      // the next heartbeat, up to 25 s of standing in front of your own chair.
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
         const h = await setup();
@@ -755,14 +755,14 @@ describe('remote players seated in a theater seat', () => {
       }
     });
 
-    it('does not retry — or publish at all — for a seat that is not occupiable', async () => {
+    it('does not retry: or publish at all, for a seat that is not occupiable', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
         const h = await setup();
 
         // A decorative chair can never be reached through the UI; this covers a
         // future caller invoking the hook incorrectly. It must be refused at the
-        // outbound boundary, and refusal is PERMANENT — retrying it forever
+        // outbound boundary, and refusal is PERMANENT, retrying it forever
         // would be a publish loop with no possible success.
         await h.setLocalSittingIn(DECORATIVE);
         await act(async () => {
@@ -777,7 +777,7 @@ describe('remote players seated in a theater seat', () => {
 
     it('re-asserts the seat when the player swaps their Blobbi while seated', async () => {
       // Swapping your active Blobbi republishes presence as a "here I am" login,
-      // which carries no seatId — on its own that stands a seated player up on
+      // which carries no seatId, on its own that stands a seated player up on
       // every remote screen until the next heartbeat.
       const h = await setup();
       await h.setLocalSittingIn(SEAT);
@@ -816,8 +816,8 @@ describe('remote players seated in a theater seat', () => {
    * Cause: `sitAt` is a NEW function identity on every render of this component
    * (it closes over an inline `publish` arrow), and the component re-renders on
    * every remote position update. The effect therefore re-runs many times per
-   * second. Recording "I have published this seat" asynchronously — after the
-   * publish resolved — meant the effect's own guard never saw the claim before
+   * second. Recording "I have published this seat" asynchronously, after the
+   * publish resolved: meant the effect's own guard never saw the claim before
    * the next re-run, so it published again, forever.
    *
    * Every test here re-renders and pushes remote presence between assertions,
@@ -830,7 +830,7 @@ describe('remote players seated in a theater seat', () => {
         try { return typeof JSON.parse(e.content).seatId === 'string'; } catch { return false; }
       });
 
-    /** Re-render and deliver remote presence — the churn that drove the flood. */
+    /** Re-render and deliver remote presence, the churn that drove the flood. */
     const churn = async (h: Awaited<ReturnType<typeof setup>>, seat: string | null, ts: number) => {
       await h.setLocalSittingIn(seat);
       await h.push(presenceEvent({ ts, seq: ts, state: 'moving', at: FLOOR, pubkey: 'cccc' }));
@@ -840,7 +840,7 @@ describe('remote players seated in a theater seat', () => {
     /**
      * The reproduction condition: sit down, then re-render and deliver remote
      * presence repeatedly WHILE the arrival publish is still outstanding. Each
-     * re-render hands the effect a brand-new `sitAt` identity, so it re-runs —
+     * re-render hands the effect a brand-new `sitAt` identity, so it re-runs,
      * and must be stopped by its own guard, not by the publish having finished.
      */
     const sitWithChurnWhileInFlight = async (
@@ -927,7 +927,7 @@ describe('remote players seated in a theater seat', () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
         for (let i = 0; i < 5; i++) await churn(h, SEAT, TS + 200 + i);
 
-        // Exactly the bound — not "a lot but finite".
+        // Exactly the bound; not "a lot but finite".
         expect(seatAttempts()).toHaveLength(3);
         expect(sitPublishes()).toHaveLength(0);
       } finally {

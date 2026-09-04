@@ -4,8 +4,8 @@
  * Twelve presets is enough that "it looked fine when I added it" stops being a
  * review strategy. These tests read the catalogue's own numbers and enforce the
  * rules the phase committed to: bounded particle counts, no animation fast
- * enough to flicker, no keyframe that does not exist, and — the one a reviewer
- * cannot check by eye — no source file in the effect system that reaches for a
+ * enough to flicker, no keyframe that does not exist, and, the one a reviewer
+ * cannot check by eye; no source file in the effect system that reaches for a
  * timer, a frame loop or `Math.random()`.
  */
 import { describe, it, expect } from 'vitest';
@@ -59,7 +59,7 @@ const EFFECT_SOURCES = sourceFilesIn(EFFECTS_DIR);
  * statements rather than free text: these modules explain at length why they
  * do not call `Math.random()` and why rarity is Island's concern, and a
  * document that names the thing it forbids must not trip the check that
- * forbids it. Comments are the only thing stripped — no string in this
+ * forbids it. Comments are the only thing stripped; no string in this
  * directory contains `//`, so nothing else can be lost.
  */
 function codeOf(file: string): string {
@@ -116,7 +116,7 @@ describe('particle counts stay inside the documented caps', () => {
     }
   });
 
-  it('the worst possible Blobbi — the heaviest effect in every slot — fits the total cap', () => {
+  it('the worst possible Blobbi, the heaviest effect in every slot, fits the total cap', () => {
     // Not the sum of all twelve: at most one effect occupies each slot, so the
     // real ceiling is the heaviest member of each.
     const worst = EFFECT_SLOT_ORDER.reduce((total, slot) => {
@@ -168,7 +168,7 @@ describe('animation references and timing', () => {
     }
   });
 
-  it('gives every animated element a duration — a missing one would default to 0s', () => {
+  it('gives every animated element a duration, a missing one would default to 0s', () => {
     for (const preset of PRESETS) {
       for (const [i, group] of preset.groups.entries()) {
         if (group.track.animation) {
@@ -295,7 +295,7 @@ describe('the layer model', () => {
   });
 
   it('gives every effect at least one layer a rear-facing Blobbi still shows', () => {
-    // Nothing may live exclusively on a layer the rear view suppresses — and
+    // Nothing may live exclusively on a layer the rear view suppresses, and
     // in fact no layer is suppressed, which is the point: effects surround the
     // character rather than attaching to its face.
     for (const preset of PRESETS) {
@@ -336,7 +336,7 @@ describe('shapes', () => {
     }
   });
 
-  it('is used exhaustively — no shape is defined and then never drawn', () => {
+  it('is used exhaustively: no shape is defined and then never drawn', () => {
     const used = new Set(allGroups().map((g) => g.piece.kind));
     const unused = KINDS.filter((kind) => !used.has(kind));
     expect(unused, 'dead shapes should be deleted, not kept').toEqual([]);
@@ -363,7 +363,7 @@ describe('the stylesheet', () => {
     }
   });
 
-  it('removes every animation under prefers-reduced-motion — and ONLY animation', () => {
+  it('removes every animation under prefers-reduced-motion, and ONLY animation', () => {
     const block = /@media \(prefers-reduced-motion: reduce\)\{([\s\S]*?)\n\}/.exec(
       BLOBBI_EFFECT_STYLESHEET,
     );
@@ -372,8 +372,8 @@ describe('the stylesheet', () => {
     expect(rules).toContain('.blobbi-fx-track');
     expect(rules).toContain('.blobbi-fx-piece');
     expect(rules).toContain('animation:none !important');
-    // Deliberately NOT `transform:none`: a static transform is placement — a
-    // lightning segment's tilt, a radially arranged arc — and stripping it
+    // Deliberately NOT `transform:none`: a static transform is placement, a
+    // lightning segment's tilt, a radially arranged arc, and stripping it
     // would bend the resting composition into something never designed.
     // Animated transforms die with `animation:none` on their own.
     expect(rules).not.toContain('transform:none');
@@ -497,7 +497,7 @@ describe('the effect system runs no JavaScript at animation time', () => {
     }
   });
 
-  it('speaks no protocol vocabulary — the package stays effect-ids-only', () => {
+  it('speaks no protocol vocabulary, the package stays effect-ids-only', () => {
     for (const file of EFFECT_SOURCES) {
       const source = codeOf(file);
       const where = relative(PACKAGE_ROOT, file);

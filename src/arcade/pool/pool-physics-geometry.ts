@@ -1,5 +1,5 @@
 /**
- * Pool — the table's real geometry: cushions with gaps, jaws, and pocket mouths.
+ * Pool: the table's real geometry: cushions with gaps, jaws, and pocket mouths.
  *
  * **One table, described once.** The physics world builds its cushion bodies
  * from {@link POOL_CUSHIONS}, the renderer draws the same polygons, and the
@@ -14,7 +14,7 @@
  *
  *  - a ball crossing a pocket mouth rebounded off a rail that was not drawn;
  *  - a ball whose centre sat inside the drawn hole but more than 4.2 units from
- *    the pocket centre was neither pocketed nor able to move — it looked like it
+ *    the pocket centre was neither pocketed nor able to move; it looked like it
  *    had gone in and had not;
  *  - the "capture radius" was a circle around the corner point, so whether a
  *    ball dropped depended on a number with no visible counterpart.
@@ -32,15 +32,15 @@
  *   (a real gap: no body, no fixture, nothing)
  * ```
  *
- * Six cushion polygons — two per long rail, one per short rail — leaving six
+ * Six cushion polygons, two per long rail, one per short rail, leaving six
  * real openings. Each cushion end is cut on an angle so that the opening widens
  * with depth, which is what a real table's pocket facing does and what makes a
  * ball hitting the jaw deflect rather than stop dead.
  *
  * ## Capture: a mouth plane, not a circle
  *
- * A ball is pocketed when **its centre crosses the mouth plane** — the straight
- * line between the two cushion noses — by {@link POCKET_CAPTURE_DEPTH}, within
+ * A ball is pocketed when **its centre crosses the mouth plane**: the straight
+ * line between the two cushion noses, by {@link POCKET_CAPTURE_DEPTH}, within
  * the mouth's own width. Not a circle around the pocket, because:
  *
  *  - the drawn pocket well starts at exactly that plane, so *the dark region on
@@ -51,13 +51,13 @@
  *  - it gives the right answer for a ball running along a cushion. Past a
  *    **corner** it drops (the corner's mouth plane cuts across its path); past a
  *    **side pocket** it does not (the side mouth plane is parallel to its path
- *    and it never crosses it) — which is exactly how a real table plays.
+ *    and it never crosses it): which is exactly how a real table plays.
  *
  * This is the "equivalent non-solid detection region" the brief allows in place
  * of a sensor fixture, and it is preferred to one here: a half-space slab is not
  * expressible as a circle fixture, and Box2D sensor callbacks report *fixture
  * overlap* rather than *centre containment*, so a sensor would have needed this
- * same test afterwards anyway — with an extra frame of latency and an
+ * same test afterwards anyway, with an extra frame of latency and an
  * order-dependent contact list in between.
  */
 
@@ -82,7 +82,7 @@ export const SIDE_MOUTH = 6.6;
 
 /**
  * How far a cushion's back edge retreats from its nose, away from the adjacent
- * pocket — the angle of the jaw.
+ * pocket: the angle of the jaw.
  *
  * Larger means a more open pocket that accepts a worse angle. These give a
  * corner facing of about 30° off square and a side facing of about 22°.
@@ -104,7 +104,7 @@ export const POCKET_CAPTURE_DEPTH = 0.5;
  * How far outside the mouth's own width a ball may still be captured.
  *
  * A ball can only get past the mouth plane by going through the mouth, so this
- * is not a licence to pocket from the cloth — it is slack for a ball that
+ * is not a licence to pocket from the cloth; it is slack for a ball that
  * clipped a jaw on the way in and is drifting sideways as it drops.
  */
 export const POCKET_CAPTURE_MARGIN = 2;
@@ -113,8 +113,8 @@ export const POCKET_CAPTURE_MARGIN = 2;
  * How far beyond the cushions a ball must be before it counts as LOST rather
  * than pocketed.
  *
- * The backstop under the capture test. Nothing should ever reach it — a ball
- * past the mouth plane is captured on the same step — but a physics engine that
+ * The backstop under the capture test. Nothing should ever reach it, a ball
+ * past the mouth plane is captured on the same step, but a physics engine that
  * has been handed an impossible impulse must not be able to lose a ball.
  */
 export const TABLE_ESCAPE_MARGIN = CUSHION_DEPTH + CORNER_MOUTH + 6;
@@ -152,7 +152,7 @@ export interface PoolCushion {
    *
    * Stored rather than derived. Deriving it from the polygon means measuring
    * from a nose to a BACK vertex, and the back edge is deliberately splayed by
-   * the jaw — so the answer comes out tilted by the facing angle instead of
+   * the jaw: so the answer comes out tilted by the facing angle instead of
    * square to the rail.
    */
   readonly outward: Vec2;
@@ -200,7 +200,7 @@ const MID = TABLE_LENGTH / 2;
  * The six cushions, with six real gaps between them.
  *
  * Long rails are split by their side pocket; short rails are one piece. Nothing
- * spans a pocket mouth — that is the entire point.
+ * spans a pocket mouth; that is the entire point.
  */
 export const POOL_CUSHIONS: readonly PoolCushion[] = Object.freeze([
   cushion(
@@ -258,7 +258,7 @@ export const POOL_CUSHIONS: readonly PoolCushion[] = Object.freeze([
 export type PoolPocketKind = 'corner' | 'side';
 
 export interface PoolPocket {
-  /** Index into {@link POCKETS} — the id every event and test uses. */
+  /** Index into {@link POCKETS}, the id every event and test uses. */
   readonly index: number;
   readonly kind: PoolPocketKind;
   /** The nominal hole position: a table corner, or the middle of a long rail. */
@@ -277,7 +277,7 @@ export interface PoolPocket {
   /**
    * The radius of the pocket's well, in table units.
    *
-   * The distance from the pocket centre to each mouth end — so a circle of this
+   * The distance from the pocket centre to each mouth end, so a circle of this
    * radius passes exactly through both cushion noses, and the part of it beyond
    * the mouth chord is the hole. That makes the drawn opening reach the noses
    * without spilling a single pixel onto playable cloth, which is the property
@@ -317,7 +317,7 @@ const DIAG = Math.SQRT1_2;
  *
  * The mouth points are written from the same constants the cushions are built
  * from, and `pool-physics-geometry.test.ts` asserts every mouth point really is
- * a cushion nose — so the pockets cannot drift away from the gaps.
+ * a cushion nose, so the pockets cannot drift away from the gaps.
  */
 export const POOL_POCKETS: readonly PoolPocket[] = Object.freeze([
   pocket(
@@ -469,8 +469,8 @@ function rayHitsSegment(from: Vec2, direction: Vec2, a: Vec2, b: Vec2): number |
 /**
  * How far a ball's CENTRE can travel along a ray before it meets a cushion.
  *
- * Cast against the cushion noses offset inward by a ball's radius — the line a
- * centre can actually reach — rather than against the playfield rectangle. The
+ * Cast against the cushion noses offset inward by a ball's radius, the line a
+ * centre can actually reach, rather than against the playfield rectangle. The
  * difference is the whole point: a rectangle has no pocket mouths in it, so the
  * aim guide used to draw a cushion across a hole and refuse to warn about a
  * scratch straight down a side pocket.
@@ -504,7 +504,7 @@ export function nearestCushionContact(from: Vec2, direction: Vec2): number {
  * The one query behind two things that must agree: the aim guide's "you are
  * about to scratch" warning, and the AI's estimate of whether its own cue ball
  * will follow the object ball in. Both used to test against a circle around the
- * pocket centre — a different shape from the one the physics used, so the guide
+ * pocket centre: a different shape from the one the physics used, so the guide
  * could warn about a scratch that would not happen and the planner could walk
  * into one that would.
  *

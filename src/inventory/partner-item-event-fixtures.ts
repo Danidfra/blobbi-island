@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — published kind:31632 events from TRUSTED PARTNER issuers,
+ * Blobbi Island: published kind:31632 events from TRUSTED PARTNER issuers,
  * verbatim.
  *
  * FIXTURE / TEST DATA ONLY. Nothing in production imports this module, and a
@@ -9,7 +9,7 @@
  * EXISTING generic normalization (`resolveFromDefinition`) already understands
  * a definition written by another game, with no Blobbi-specific metadata in it
  * and no Blobbi-specific code added to read it. A hand-written approximation
- * could not prove that — it would only prove that Island understands the shape
+ * could not prove that; it would only prove that Island understands the shape
  * someone imagined the partner uses. So this is the signed event as fetched
  * from the wire, byte for byte, and the tests verify its id and signature
  * before asserting anything about how it resolves.
@@ -32,13 +32,13 @@ export interface PartnerItemEventFixture {
 }
 
 /**
- * The Farm's Strawberry — the first cross-game item Blobbi Island renders.
+ * The Farm's Strawberry, the first cross-game item Blobbi Island renders.
  *
  * Note what it does NOT contain: no `content.metadata`, no `content.effects`,
  * no Blobbi item id, no action, no stages, no slot. It is an ordinary Game Item
  * Definition that says what the item IS (`type`, `category`, `t` topics, art)
  * and says nothing about what any particular game should do with it. That is
- * the whole point — interoperability comes from the generic protocol, not from
+ * the whole point, interoperability comes from the generic protocol, not from
  * a partner embedding Blobbi vocabulary in their events.
  *
  * Fetched from `wss://relay.primal.net` and `wss://relay.ditto.pub`, which both

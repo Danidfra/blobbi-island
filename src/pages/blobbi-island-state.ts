@@ -1,5 +1,5 @@
 /**
- * The Island's player-state routing rule — pure, so the resilience invariant
+ * The Island's player-state routing rule, pure, so the resilience invariant
  * can be tested behaviourally instead of by reading the component's source.
  *
  * Lives outside `BlobbiIsland.tsx` so that file exports only its component
@@ -16,7 +16,7 @@ export interface GameStateInputs {
   isLoading: boolean;
   /**
    * The latest read could not be completed. Since `relay-read.ts`, this means
-   * UNKNOWN — not "empty" — and React Query still holds the last good data.
+   * UNKNOWN: not "empty", and React Query still holds the last good data.
    */
   hasReadError: boolean;
   /** The known pet list. `undefined` = never successfully read. */
@@ -28,7 +28,7 @@ export interface GameStateInputs {
 /**
  * The Island's routing rule.
  *
- * ## RESILIENCE INVARIANT — an active world is never torn down by doubt
+ * ## RESILIENCE INVARIANT, an active world is never torn down by doubt
  *
  * A relay read that could not be completed now surfaces as an ERROR (see
  * `src/lib/relay-read.ts`) with the last good data retained behind it. So
@@ -37,7 +37,7 @@ export interface GameStateInputs {
  *   - a CONFIRMED-empty pet list (`[]` can no longer come from a timeout), or
  *   - a known list that no longer contains a selectable companion.
  *
- * Uncertainty — loading, an unusable read, nothing read yet — keeps the player
+ * Uncertainty: loading, an unusable read, nothing read yet, keeps the player
  * exactly where they are. That is what stops a background refetch from
  * destroying a live Mine session.
  *

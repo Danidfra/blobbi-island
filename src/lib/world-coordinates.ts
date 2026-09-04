@@ -3,20 +3,20 @@
  *
  * Blobbi Island uses three coordinate systems:
  *
- *  1. WORLD PERCENT — `{ x, y }` in 0..100, relative to the world surface.
+ *  1. WORLD PERCENT, `{ x, y }` in 0..100, relative to the world surface.
  *     All stored positions (ground points, approach targets, pose anchors,
  *     boundaries) live here. Percent deltas are ANISOTROPIC: 1% of x and 1%
  *     of y are different physical lengths.
- *  2. WORLD-DESIGN PIXELS — the fixed {@link WORLD_WIDTH}×{@link WORLD_HEIGHT}
+ *  2. WORLD-DESIGN PIXELS, the fixed {@link WORLD_WIDTH}×{@link WORLD_HEIGHT}
  *     design space every asset was authored against. Movement speed and every
  *     distance/arrival decision are computed here so they are isotropic and
  *     viewport-independent.
- *  3. VIEWPORT (client) PIXELS — what pointer events report. The rendered
+ *  3. VIEWPORT (client) PIXELS, what pointer events report. The rendered
  *     world surface is the fixed design box under one uniform CSS scale, so
  *     `getBoundingClientRect()` fractions convert exactly to world percent.
  *
  * This module is the ONLY place these conversions are implemented. It is pure:
- * no clamping (boundary clamping is an explicit, separate operation — see
+ * no clamping (boundary clamping is an explicit, separate operation; see
  * `constrainPosition` in `src/lib/boundaries.ts`), no viewport breakpoints,
  * and no room-specific constants.
  */
@@ -24,7 +24,7 @@
 import type { Position } from '@/lib/types';
 
 /**
- * The world's fixed virtual design resolution — the single source of truth.
+ * The world's fixed virtual design resolution, the single source of truth.
  * All world art, object positions (percent) AND object sizes (px/rem) were
  * authored against this exact box. `VirtualWorld` renders the world at this
  * size and scales the whole layer uniformly.

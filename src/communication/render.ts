@@ -44,7 +44,7 @@ export type CommunicationBubble =
       readonly type: 'emote';
       readonly emote: string;
       readonly glyph: string;
-      /** Accessible name — an emote bubble is unreadable without it. */
+      /** Accessible name: an emote bubble is unreadable without it. */
       readonly label: string;
     };
 
@@ -53,7 +53,7 @@ export type CommunicationBubble =
  *
  * Returns `null` when anything is unresolvable, so a caller cannot accidentally
  * paint a half-built sentence with a hole in it. Note that no value from
- * `params` is ever placed on screen — only the LABEL this build holds for that
+ * `params` is ever placed on screen; only the LABEL this build holds for that
  * id.
  *
  * Exported because the phrase builder previews the same sentence it is about to
@@ -86,7 +86,7 @@ export function renderTemplateText(
  * cannot render it.
  *
  * `null` is not an error path. A message referencing a catalog entry this build
- * does not have — an older client meeting a newer phrase — is simply not shown,
+ * does not have, an older client meeting a newer phrase, is simply not shown,
  * which is the same outcome as never having received it.
  */
 export function renderMessage(message: IslandMessage): CommunicationBubble | null {

@@ -1,5 +1,5 @@
 /**
- * One rewarded Mine run at a time, per account, across tabs — and no ceiling
+ * One rewarded Mine run at a time, per account, across tabs, and no ceiling
  * on what a run may pay.
  *
  * The Mine's boundary is a Blobbi's energy, not a daily Coin budget. What
@@ -89,7 +89,7 @@ describe('overlapping Mine runs are prevented', () => {
 
     expect(first.ok).toBe(true);
     expect(second).toEqual({ ok: false, reason: 'session-in-progress' });
-    // Refused means no durable record — so no energy can ever be owed for it.
+    // Refused means no durable record, so no energy can ever be owed for it.
     expect(readMineSessions(PUBKEY).filter((r) => r.status === 'open')).toHaveLength(1);
   });
 
@@ -173,7 +173,7 @@ describe('overlapping Mine runs are prevented', () => {
 });
 
 /**
- * Energy is the boundary — nothing else trims a run.
+ * Energy is the boundary; nothing else trims a run.
  *
  * These are the counterparts of the removed daily-cap tests: what used to be
  * clamped must now be paid in full, and repeated runs must stay possible.
@@ -199,7 +199,7 @@ describe('a run pays its full value, with no account ceiling', () => {
     expect(coinCalls[0].amount).toBe(5_000);
   });
 
-  it('repeated sequential runs each pay in full — no budget accumulates', async () => {
+  it('repeated sequential runs each pay in full; no budget accumulates', async () => {
     const nowRef = { ms: DAY_ONE };
     const { settlement, coinCalls } = makeSettlement(nowRef);
 

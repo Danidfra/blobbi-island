@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
  * `DanceSoundToggle`. The two are visually similar and semantically different:
  * the dance toggle sits on a cream marquee and mutes MUSIC that the game keeps
  * time from; this one sits on a dark table and mutes IMPACT SOUNDS that nothing
- * depends on. They share the persisted `blobbi:arcade:audio-muted` flag — which
- * is the part that genuinely must be common, and already is — and nothing else.
+ * depends on. They share the persisted `blobbi:arcade:audio-muted` flag, which
+ * is the part that genuinely must be common, and already is, and nothing else.
  *
  * Extracting a generic `ArcadeSoundToggle` would mean a component parameterised
  * by surface colour and by what the word "sound" refers to, for two callers.

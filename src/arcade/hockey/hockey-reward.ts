@@ -1,10 +1,10 @@
 /**
- * Air Hockey — the production ticket policy.
+ * Air Hockey: the production ticket policy.
  *
  * The second `active` policy in the arcade, written against the fields
  * `hockey-result.ts` was built to expose: the win, the difficulty, the margin,
  * and whether the match actually finished. Like the dance policy it is a
- * client-trusted Arcade V1 number — the client computes it and the client writes
+ * client-trusted Arcade V1 number, the client computes it and the client writes
  * it, which a modified client can abuse. That is accepted for now; see
  * `docs/arcade-reward-publication-boundary.md` §1.
  *
@@ -36,7 +36,7 @@
  *
  * Paying per goal of margin would make grinding shutouts against the Easy rival
  * the dominant strategy. Two tiers keep a 7–0 clearly better than a 7–5 without
- * making it worth several other games' matches — the whole run is still capped
+ * making it worth several other games' matches, the whole run is still capped
  * at the same 8 the dance policy tops out at.
  *
  * ## Why match duration is not an input
@@ -50,7 +50,7 @@
  * The same reason the dance policy is: the app ships no first-clear ledger, no
  * personal-best store and no per-day rewarded-run counter, so a `scaled` policy
  * would advertise bonuses that can never fire. The Normal-opponent bonus lives
- * in `base` instead of the shared difficulty multiplier for the same honesty —
+ * in `base` instead of the shared difficulty multiplier for the same honesty,
  * this game has exactly two difficulties, and `+1` on a win says precisely what
  * it pays. The shared participation floor and caps still apply.
  *
@@ -99,7 +99,7 @@ export function marginTierTickets(margin: number): number {
 /**
  * Tickets for a WON match, before the shared floor and caps.
  *
- * Only called for `cleared` results — the shared layer pays every completed
+ * Only called for `cleared` results, the shared layer pays every completed
  * loss the participation floor without consulting the game. Missing stats
  * degrade to zero bonus rather than refusing: the validated result that reached
  * the reducer always carries them, and a hand-built one without them simply
@@ -118,7 +118,7 @@ export function hockeyBaseTickets(result: ArcadeGameResult): number {
 /**
  * The base, decomposed into the lines the results screen shows.
  *
- * Must add up to exactly what {@link hockeyBaseTickets} returns — the shared
+ * Must add up to exactly what {@link hockeyBaseTickets} returns, the shared
  * layer checks that and falls back to a single `Clear` line if it ever drifts,
  * so this function can only ever explain the number, never change it.
  */

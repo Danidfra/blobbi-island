@@ -1,8 +1,8 @@
 /**
- * Redemption contract tests — eligibility and the pure state machine.
+ * Redemption contract tests, eligibility and the pure state machine.
  *
  * Written the way the reward claim machine's tests are: every route to a
- * refusal, both sides of the verify equation, and — most importantly — the
+ * refusal, both sides of the verify equation, and, most importantly, the
  * transitions that must NOT exist (an unresolved spend that publishes again is
  * the exact defect class the reward boundary was rebuilt around).
  */
@@ -162,7 +162,7 @@ describe('the spend path', () => {
     expect(isSpendRetryable(timedOut)).toBe(false);
   });
 
-  it('lets a failed-before-spend attempt begin the spend again — same record', () => {
+  it('lets a failed-before-spend attempt begin the spend again, same record', () => {
     const spending = advanceRedemption(reserved(), {
       type: 'begin-spend',
       now: T0,
@@ -182,7 +182,7 @@ describe('the spend path', () => {
     expect(retried.attempts).toBe(2);
   });
 
-  it('REFUSES begin-spend from an unresolved record — the transition does not exist', () => {
+  it('REFUSES begin-spend from an unresolved record, the transition does not exist', () => {
     const spending = advanceRedemption(reserved(), {
       type: 'begin-spend',
       now: T0,
@@ -299,7 +299,7 @@ describe('delivery', () => {
     expect(r.status).toBe('confirmed');
   });
 
-  it('makes confirmed terminal — no event reopens it', () => {
+  it('makes confirmed terminal: no event reopens it', () => {
     let r = spent();
     r = advanceRedemption(r, { type: 'delivery-complete', now: T0 + 4 });
     expect(r.status).toBe('confirmed');
@@ -388,7 +388,7 @@ function unresolved(): ArcadePrizeRedemption {
 }
 
 describe('reconcile-atomic', () => {
-  it('holding the prize proves the event landed — and delivered', () => {
+  it('holding the prize proves the event landed, and delivered', () => {
     // The balance is deliberately WRONG for the spend. It does not matter: the
     // prize can only have come from this redemption's own event, and that
     // event carried the debit too.
@@ -469,7 +469,7 @@ describe('reconcile-atomic', () => {
     }
   });
 
-  it('keeps the ORIGINAL logical redemption — same id, same frozen price', () => {
+  it('keeps the ORIGINAL logical redemption, same id, same frozen price', () => {
     const before = unresolved();
     const after = advanceRedemption(before, {
       type: 'reconcile-atomic',

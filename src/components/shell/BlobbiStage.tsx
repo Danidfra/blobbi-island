@@ -7,14 +7,14 @@ interface BlobbiStageProps {
   children: ReactNode;
   className?: string;
   /**
-   * "framed"  — desktop: a centered, aspect-locked stage with breathing room.
-   * "fill"    — mobile landscape / embed: fill the available box (100%).
+   * "framed": desktop: a centered, aspect-locked stage with breathing room.
+   * "fill": mobile landscape / embed: fill the available box (100%).
    */
   fit?: "framed" | "fill";
 }
 
 /**
- * BlobbiStage — the responsive game stage.
+ * BlobbiStage: the responsive game stage.
  *
  * Replaces the old fixed-size game container which hardcoded 1046×697px. The
  * world inside is percent-based (PlaceBackground is w-full/h-full), so the stage

@@ -2,14 +2,14 @@
  * Blobbi Egg Preview / Tag Generation (first-egg adoption).
  *
  * Adapted from Ditto's onboarding/lib/blobbi-preview.ts. This module contains
- * ONLY pure data logic and depends solely on `@blobbi-kit/core` helpers — the
+ * ONLY pure data logic and depends solely on `@blobbi-kit/core` helpers, the
  * single source of truth for Blobbi identity, seed derivation, visual traits,
  * and canonical d-tags. No Ditto-specific publish/router/toast logic is copied.
  *
  * The preview is generated locally (no network, no publish) and drives the
  * ceremony's rendering. It is also the source of truth for the FINAL published
  * event: `previewToBabyTags` converts it directly into the kind 31124 baby tag
- * set with no regeneration. No egg (stage=egg) event is ever published — see
+ * set with no regeneration. No egg (stage=egg) event is ever published; see
  * useFirstEggAdoption for the rationale.
  */
 
@@ -27,7 +27,7 @@ import {
 
 /**
  * Complete preview data for a Blobbi egg before adoption.
- * This is the source of truth — the same data is used to build the final event.
+ * This is the source of truth, the same data is used to build the final event.
  */
 export interface BlobbiEggPreview {
   /** Random 10-char hex petId */
@@ -112,7 +112,7 @@ export function previewToBabyTags(preview: BlobbiEggPreview): string[][] {
     ['energy', '100'],
     ['last_interaction', now],
     ['last_decay_at', now],
-    // Visual trait tags — deterministic rendering.
+    // Visual trait tags, deterministic rendering.
     ['base_color', visualTraits.baseColor],
     ['secondary_color', visualTraits.secondaryColor],
     ['eye_color', visualTraits.eyeColor],

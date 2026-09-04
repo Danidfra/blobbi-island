@@ -49,7 +49,7 @@ describe('the shelf entry', () => {
   });
 
   it('names BOTH limits, never "24 hours" alone', () => {
-    // "24 hours" on its own reads as unlimited play for a day — precisely the
+    // "24 hours" on its own reads as unlimited play for a day, precisely the
     // pass this one replaced.
     expect(ARCADE_PASS_PRIZE.description).toContain(String(ARCADE_PASS_FREE_PLAYS));
     expect(ARCADE_PASS_PRIZE.description).toMatch(/free play/i);
@@ -190,7 +190,7 @@ describe('holding is about the pass RUNNING, not about having bought one', () =>
 // The cosmetics became real inventory ownership in the same phase this block
 // was written. The Pass deliberately did not, and its terms did not move. The
 // existing tests above express the terms through the constants, which is right
-// for them and useless as a regression guard — a rebalance would change both
+// for them and useless as a regression guard, a rebalance would change both
 // sides at once. These pin the LITERALS.
 
 describe('Arcade Pass regression', () => {
@@ -208,13 +208,13 @@ describe('Arcade Pass regression', () => {
 
   it('is a TEMPORARY entitlement, not inventory ownership', () => {
     // A `delivery.type` of `inventory` would route the Pass through the atomic
-    // cosmetic redeemer and mint it as a permanent kind:31633 item — which is
+    // cosmetic redeemer and mint it as a permanent kind:31633 item, which is
     // exactly what an expiring allowance must never become.
     expect(ARCADE_PASS_PRIZE.delivery.type).toBe('mock-ownership');
     expect(ARCADE_PASS_PRIZE.delivery).not.toHaveProperty('itemAddress');
   });
 
-  it('does not claim atomic delivery — its grant is a SECOND write', () => {
+  it('does not claim atomic delivery; its grant is a SECOND write', () => {
     // The entitlement store is local, not the ticket event, so the
     // paid-but-undelivered recovery path is load-bearing for the Pass and its
     // reconciliation must stay balance-based.

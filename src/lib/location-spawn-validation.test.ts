@@ -1,6 +1,6 @@
 /**
  * Table-driven validation of EVERY configured spawn and exit-return position
- * against the destination room's walk boundary — the generalization of
+ * against the destination room's walk boundary, the generalization of
  * `arcade-spawn.test.ts` called for by the Phase 0 actor-safety baseline
  * (docs/blobbi-actor-ui-audit.md §16.4, §22.1).
  *
@@ -13,7 +13,7 @@
  *
  * All coordinates are GROUND-ANCHOR semantics (Phase 2): the configured point
  * is where the Blobbi's FEET land, and the boundaries below constrain that
- * ground point — see docs/blobbi-actor-position-migration-notes.md.
+ * ground point: see docs/blobbi-actor-position-migration-notes.md.
  *
  * Deliberately NOT covered here (not ordinary walkable spawns):
  * - Theater seat cushion anchors (`seatAnchorPosition`): off-boundary by
@@ -43,7 +43,7 @@ import type { Position } from './types';
 /**
  * PlayingView's fallback for rooms with no `locationBoundaries` entry
  * (PlayingView.tsx, `boundary = locationBoundaries[background] || {...}`).
- * Every current background has an entry, so this is defensive only — but
+ * Every current background has an entry, so this is defensive only, but
  * validating through the same resolution keeps the test honest if a room is
  * added without a boundary.
  */
@@ -54,7 +54,7 @@ function boundaryFor(background: string): Boundary {
 }
 
 /**
- * A point is walkable when the walk boundary does not have to move it —
+ * A point is walkable when the walk boundary does not have to move it,
  * the same identity test `arcade-spawn.test.ts` established and the same
  * check the movement system itself performs each frame.
  */
@@ -127,7 +127,7 @@ describe('location spawn validation (ground-anchor semantics)', () => {
     // which mounts its own MovableBlobbi against the modal container using the
     // same boundary table. Validate the special-cased point against that
     // boundary. (The key being a filename rather than a LocationId is a known
-    // inconsistency — recorded in the migration notes, not changed here.)
+    // inconsistency: recorded in the migration notes, not changed here.)
     const background = 'photo-booth-inside.png';
     const point = getBlobbiInitialPosition(background);
     const boundary = boundaryFor(background);
@@ -142,7 +142,7 @@ describe('exit-return position validation (ground-anchor semantics)', () => {
   /**
    * Derived from the config itself (keys are
    * "<arrivingLocation>:<previousLocation>"), so a new EXIT_POSITIONS entry is
-   * validated automatically — nothing to keep in sync by hand.
+   * validated automatically: nothing to keep in sync by hand.
    */
   const exitTransitions: Array<[destination: LocationId, cameFrom: string]> = Object.keys(
     EXIT_POSITIONS,
@@ -174,7 +174,7 @@ describe('exit-return position validation (ground-anchor semantics)', () => {
     'exiting to "%s" from "%s" resolves the configured exit point',
     (destination, cameFrom) => {
       // `getBlobbiInitialPosition` must actually route these keys to the
-      // config entry — otherwise the boundary assertion above would silently
+      // config entry: otherwise the boundary assertion above would silently
       // validate the location default instead.
       const exitPoint = getBlobbiInitialPosition(destination, cameFrom);
       expect(exitPoint).toEqual(EXIT_POSITIONS[`${destination}:${cameFrom}`]);

@@ -1,5 +1,5 @@
 /**
- * The canonical Blobbi Coin wallet — the ONLY production interface that moves
+ * The canonical Blobbi Coin wallet, the ONLY production interface that moves
  * the Coin balance.
  *
  * A generalization of the arcade ticket writer's currency-grade guarantees
@@ -32,7 +32,7 @@
  * exactly as every other inventory write.
  *
  * The empty-base confirmation is not a nicety: kind:31633 is REPLACEABLE, so a
- * grant built on a relay's spurious "no events" answer does not lose a delta —
+ * grant built on a relay's spurious "no events" answer does not lose a delta,
  * it replaces the player's whole inventory with the reward amount. That is the
  * defect behind "my Mine reward replaced my balance instead of adding to it".
  *
@@ -41,7 +41,7 @@
  * The official Coin ITEM is real (issuer-signed kind:31632). The BALANCE is
  * the player's own kind:31633, and this client computes and publishes the
  * mutations. The ledger, locks, fresh reads and read-backs protect
- * operational correctness — exactly-once application, no stale clobbering,
+ * operational correctness: exactly-once application, no stale clobbering,
  * no accidental duplicates. They do NOT prove the player earned anything: a
  * modified client can publish any balance. This is a PROVISIONAL,
  * client-trusted issuance path; a future issuer-grant mechanism replaces the
@@ -53,7 +53,7 @@
  * is resolved by read-only reconciliation comparing against the recorded
  * pre-publish balance; if OTHER operations landed in between, the comparison
  * cannot prove anything and the operation stays `ambiguous` for the UI to
- * surface — never silently retried.
+ * surface: never silently retried.
  */
 
 import type { NUser } from '@nostrify/react/login';
@@ -86,7 +86,7 @@ import {
 /**
  * The narrow relay surface the wallet needs; trivial to fake in tests.
  *
- * Structurally the shared transaction surface — the wallet is one writer among
+ * Structurally the shared transaction surface, the wallet is one writer among
  * several on the same kind:31633 event, not a protocol of its own.
  */
 export type CoinWalletNostr = InventoryTransactionNostr;
@@ -120,7 +120,7 @@ export interface CoinOperation {
    * This is what makes a shop purchase atomic: the pre-cutover flow published
    * the item grant (kind:31633) and the charge (kind:11125) as two events and
    * had to document the "items granted but coins not charged" leak. With the
-   * Coin in the same inventory, one event carries both sides — either the
+   * Coin in the same inventory, one event carries both sides; either the
    * purchase happens or nothing does.
    */
   readonly grantLines?: readonly { address: string; amount: number }[];
@@ -134,7 +134,7 @@ export interface CoinOperation {
   /**
    * Evaluated on the FRESH in-lock inventory read that the replacement event
    * is built from. Returning `false` aborts the mutation with a `skipped`
-   * outcome — nothing is published and no ledger record is written. This is
+   * outcome: nothing is published and no ledger record is written. This is
    * how a caller makes eligibility and publication atomic: the economy-entry
    * allocation checks "marker still absent" on the exact base it would extend,
    * so a concurrent tab that already published the marker turns this attempt
@@ -146,7 +146,7 @@ export interface CoinOperation {
 export type CoinMutationOutcome =
   /** Published (≥1 relay accepted). `verified` = the read-back matched. */
   | { readonly status: 'applied'; readonly balance: number; readonly verified: boolean }
-  /** This opId was already applied earlier — idempotent success, no publish. */
+  /** This opId was already applied earlier, idempotent success, no publish. */
   | { readonly status: 'already-applied' }
   /** The op's `precondition` returned false on the fresh in-lock base. */
   | { readonly status: 'skipped' }
@@ -235,7 +235,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
     const meta = await readMeta();
 
     // Definitive proof first: the authoritative newest kind:31633 event IS
-    // the event this operation signed — the current state is the operation's
+    // the event this operation signed, the current state is the operation's
     // own replacement event, so it applied. This survives cases the balance
     // heuristic cannot decide (and read-back-failed `applied` verification).
     const newestEventId = meta.inventory.event?.id ?? null;
@@ -270,7 +270,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
       persistCoinOp(pubkey, applied);
       return applied;
     }
-    // The state neither matches "landed" nor can prove "did not land" —
+    // The state neither matches "landed" nor can prove "did not land",
     // nothing short of marker-grade proof can establish non-publication (see
     // `resolveCoinOpByAuthoritativeProof`), and a spend carries no marker.
     // Stays ambiguous; surfaced, never silently retried.
@@ -310,7 +310,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
         // read before it may become a publish base, so a relay that does not
         // carry the inventory can never turn a +N grant into a total of N.
         // A read that cannot be completed is `read-failed`, which callers
-        // (economy entry) branch on — keep the wallet's error vocabulary.
+        // (economy entry) branch on; keep the wallet's error vocabulary.
         let meta: InventoryWithMeta;
         try {
           meta = await ctx.readBase();
@@ -367,7 +367,7 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
         }
         const expected = kind === 'grant' ? balance + op.amount : balance - op.amount;
 
-        // No durable record, no publish — the rule the arcade learned.
+        // No durable record, no publish, the rule the arcade learned.
         const publishing = record({
           opId: op.opId,
           kind,
@@ -428,8 +428,8 @@ export function createCoinWallet(deps: CoinWalletDeps): CoinWallet {
           throw error;
         }
 
-        // Read-back verification. A mismatch does not un-publish anything —
-        // the publish provably reached a relay — so the outcome stays
+        // Read-back verification. A mismatch does not un-publish anything,
+        // the publish provably reached a relay, so the outcome stays
         // `applied` with `verified: false` for the caller to surface.
         let verified = false;
         try {

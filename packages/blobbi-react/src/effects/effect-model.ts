@@ -4,7 +4,7 @@
  * A visual effect is named by an ID and nothing else. The package knows a fixed
  * set of ids and how to draw them; it does not know what an id costs, who owns
  * it, which event described it, or whether the caller was allowed to ask. That
- * split is the whole point — see `docs/blobbi-visual-effects-audit.md` §3.
+ * split is the whole point; see `docs/blobbi-visual-effects-audit.md` §3.
  *
  * Everything a caller sends is PLAIN JSON: `{ id, intensity? }`. No component,
  * no class name, no CSS, no animation expression, no callback. An id this
@@ -16,7 +16,7 @@
  *
  * Effects compete for four visual slots. At most one effect occupies each, so a
  * player wearing two auras gets one aura rather than a soup. The winner is the
- * FIRST of its slot in the supplied order — a rule the caller can predict and
+ * FIRST of its slot in the supplied order, a rule the caller can predict and
  * control, unlike a rarity or priority table the caller cannot see.
  *
  * ## Order
@@ -49,10 +49,10 @@ export type BlobbiVisualEffectId = (typeof BLOBBI_VISUAL_EFFECT_IDS)[number];
 /**
  * The visual slot an effect occupies.
  *
- *  - `aura`              — a luminous field around/behind the whole body
- *  - `ambient-particles` — motes drifting in the air around the character
- *  - `body-overlay`      — something happening ON the body's silhouette
- *  - `ground-local`      — low-lying atmosphere pooling around the feet
+ *  - `aura`: a luminous field around/behind the whole body
+ *  - `ambient-particles`: motes drifting in the air around the character
+ *  - `body-overlay`: something happening ON the body's silhouette
+ *  - `ground-local`: low-lying atmosphere pooling around the feet
  */
 export type BlobbiEffectSlot =
   | 'aura'
@@ -61,7 +61,7 @@ export type BlobbiEffectSlot =
   | 'ground-local';
 
 /**
- * Canonical slot order — the DOM order of the resolved result.
+ * Canonical slot order, the DOM order of the resolved result.
  *
  * Read outward-in: the aura is the widest and most background-ish, ground fog
  * pools beneath, ambient particles fill the air, and the body overlay sits
@@ -144,12 +144,12 @@ function clampIntensity(value: number | undefined): number {
  *
  * The pipeline, in order:
  *
- *  1. **filter** — drop anything that is not a known effect id;
- *  2. **dedupe** — first occurrence of an id wins, later ones are dropped
+ *  1. **filter**: drop anything that is not a known effect id;
+ *  2. **dedupe**: first occurrence of an id wins, later ones are dropped
  *     (so `[a(0.2), a(1)]` renders `a` at 0.2, matching "first wins" below);
- *  3. **slot resolution** — first occupant of a slot wins, later competitors
+ *  3. **slot resolution**: first occupant of a slot wins, later competitors
  *     for the same slot are dropped;
- *  4. **order** — the survivors are sorted into {@link EFFECT_SLOT_ORDER}.
+ *  4. **order**: the survivors are sorted into {@link EFFECT_SLOT_ORDER}.
  */
 export function normalizeBlobbiVisualEffects(
   effects: readonly BlobbiVisualEffect[] | null | undefined,

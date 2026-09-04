@@ -3,7 +3,7 @@
  *
  * The DOM-based runtime path (`resolveElementApproachTarget`, fed live rects)
  * and the DOM-free config helpers (`seatApproachPosition`,
- * `machineAnchorPosition`) must compute the SAME points — the config helpers
+ * `machineAnchorPosition`) must compute the SAME points, the config helpers
  * are what tests and dev diagnostics trust, the live rects are what players
  * click. These tests build the element rects straight from the configs and
  * prove the two paths agree.
@@ -73,7 +73,7 @@ function resolve(opts: Omit<ResolveElementApproachTargetOptions, 'element'> & { 
   return resolveElementApproachTarget({ element, ...rest });
 }
 
-describe('resolveElementApproachTarget — mechanics', () => {
+describe('resolveElementApproachTarget: mechanics', () => {
   it('resolves ELEMENT_BASE_FRACTION to the floor at the element base', () => {
     // A 10%×10% door whose top-left is at (45%, 60%).
     const result = resolve({
@@ -207,7 +207,7 @@ describe('projectIntoWalkableFloor', () => {
     expect(projectIntoWalkableFloor({ x: 50, y: 80 }, room, () => false)).toEqual({ x: 50, y: 80 });
   });
 
-  it('clamps a point above the floor onto it — a door on a wall becomes its doorstep', () => {
+  it('clamps a point above the floor onto it, a door on a wall becomes its doorstep', () => {
     const projected = projectIntoWalkableFloor({ x: 50, y: 20 }, room);
     expect(projected).toEqual({ x: 50, y: 60 });
     expect(planRoute({ x: 50, y: 90 }, projected, room, [])).not.toBeNull();

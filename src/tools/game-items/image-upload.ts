@@ -6,7 +6,7 @@
  * authorization with the current account, and returns NIP-94 tags whose first
  * entry carries the URL. The Photo Booth's share flow and the profile editor
  * both go through it. This module adds NO second uploader, no second server
- * list and no credential handling — it queues files, calls that hook once per
+ * list and no credential handling; it queues files, calls that hook once per
  * file, and maps results onto image rows.
  *
  * WHAT THIS ADDS over calling the hook directly:
@@ -35,7 +35,7 @@ import { PRIMARY_MARKER, nextRowId } from './item-form-model';
  * Ordered longest-pattern-first: `hat-diagonal-front-right.png` must not match
  * the `front` rule, and `hat-side-left.png` must not match a bare `left`.
  * Returns {@link PRIMARY_MARKER} when nothing matches, which is the correct
- * default — an unmarked image is the primary one.
+ * default: an unmarked image is the primary one.
  */
 export function suggestMarkerFromFilename(filename: string): string {
   const name = filename.toLowerCase().replace(/\.[a-z0-9]+$/, '');
@@ -93,7 +93,7 @@ export interface ItemImageUploadApi {
  *
  * Files upload sequentially rather than in parallel. Each upload signs a
  * Blossom authorization, and a NIP-07 extension or a remote bunker prompting
- * for five signatures at once is a worse experience than five in a row — and on
+ * for five signatures at once is a worse experience than five in a row, and on
  * some signers it simply fails.
  */
 export function useItemImageUpload(): ItemImageUploadApi {

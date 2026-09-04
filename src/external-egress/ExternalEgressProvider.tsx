@@ -9,7 +9,7 @@
  *
  * Six components used to open windows; putting a confirmation in each would have
  * meant six dialogs to keep consistent and six chances to skip one. One dialog,
- * mounted once, cannot be skipped — the only path to `performEgress` runs
+ * mounted once, cannot be skipped, the only path to `performEgress` runs
  * through it.
  *
  * ## The pending promise
@@ -103,7 +103,7 @@ export function ExternalEgressProvider({ children }: { children: ReactNode }) {
         >
           <p className="text-sm text-island-ink">
             This will open{' '}
-            {/* The HOST, parsed from the URL that is about to be opened — never a
+            {/* The HOST, parsed from the URL that is about to be opened; never a
                 label a caller passed in. A wrong label can mislabel a button; it
                 must never be able to mis-state where the player is going. */}
             <span className="font-semibold" data-testid="egress-destination">

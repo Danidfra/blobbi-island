@@ -1,4 +1,4 @@
-# Blobbi Island — Inventory Manual Validation Checklist
+# Blobbi Island: Inventory Manual Validation Checklist
 
 Final pre-commit manual validation for the kind:31633 inventory implementation.
 Run against the real app with two prepared Nostr accounts.
@@ -13,7 +13,7 @@ Run against the real app with two prepared Nostr accounts.
 - Official item relays: `wss://relay.ditto.pub`, `wss://relay.dreamith.to`.
 - Coin balance: the **official Blobbi Coin quantity inside kind:31633**
   (`31632:<issuer>:blobbi:currency:coin`). Since the Coin cutover, kind:11125
-  `coins` is OBSOLETE historical data — never read for economic decisions,
+  `coins` is OBSOLETE historical data; never read for economic decisions,
   never displayed, never written; it rides the unknown-tag passthrough
   verbatim.
 - Non-inventory profile (`has[]`, `current_companion`, achievements, accessory
@@ -29,7 +29,7 @@ Run against the real app with two prepared Nostr accounts.
       tags) so profile + accessory preservation can be diffed after every
       write. **No write in this checklist may change any of them.**
 - [ ] Record Account A + B current **31633 quantities verbatim** (Blobbi Coin,
-      Arcade Tickets, every consumable) — the Coin balance lives here now, and
+      Arcade Tickets, every consumable): the Coin balance lives here now, and
       every write must preserve the entries it does not target.
 - [ ] Open a relay event monitor subscribed to both accounts for kinds
       `[1124, 11125, 31124, 31632, 31633]`.
@@ -62,10 +62,10 @@ Run against the real app with two prepared Nostr accounts.
 
 ## 3. Purchase (per item + reload)
 
-For each: food, toy, medicine, hygiene, energy —
+For each: food, toy, medicine, hygiene, energy,
 - [ ] Purchase 1 unit.
 - [ ] The Blobbi Coin quantity in **31633** decreases by the local shop price,
-      and the item quantity increases — **in ONE replacement event**.
+      and the item quantity increases, **in ONE replacement event**.
 - [ ] Quantity persists in **31633** after reload.
 - [ ] kind:11125 is **not published at all** (no new 11125 event in the
       monitor); accessories (`inv`), `current_companion`, `has[]`,
@@ -78,7 +78,7 @@ Edge cases:
       toast, no 31633 write at all.
 - [ ] Rapid double-click on Buy → serialized; quantity increments correctly (no
       lost/duplicated grant); coins deducted per successful purchase only.
-- [ ] Atomicity: the charge and the item grant are the SAME kind:31633 event —
+- [ ] Atomicity: the charge and the item grant are the SAME kind:31633 event,
       there is no ordering to observe and no partial-success state. A failed
       publish leaves BOTH the balance and the item quantity unchanged.
 
@@ -120,9 +120,9 @@ cache is reconciled (rollback or invalidation), and retry is understandable.
 - [ ] Signing rejection → mutation fails cleanly; optimistic rollback; no event.
 - [ ] Relay publication rejection (hard error, not timeout) → failure surfaced;
       rollback. Note: publish TIMEOUT is treated as partial success by
-      `useNostrPublish` — verify UI messaging for that path too.
+      `useNostrPublish`: verify UI messaging for that path too.
 
-## 6. Multi-instance behavior (documented limitation — do NOT fix here)
+## 6. Multi-instance behavior (documented limitation, do NOT fix here)
 
 Using two tabs or two clients on the same account, both holding the SAME final
 unit:

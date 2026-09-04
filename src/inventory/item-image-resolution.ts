@@ -1,15 +1,15 @@
 /**
- * Blobbi Island — context-specific selection among a definition's `image` tags.
+ * Blobbi Island: context-specific selection among a definition's `image` tags.
  *
  * `@nostr-games/inventory@0.2.0` parses the repeatable kind:31632 `image` tag
  * into an ordered `GameItemImage[]` (URL + optional view marker) and answers ONE
- * question for us: which entry is the primary/default. Everything else — "which
+ * question for us: which entry is the primary/default. Everything else, "which
  * picture does a compact inventory row want?", "which picture does a Blobbi seen
- * from behind want?" — is a Blobbi Island product decision, and lives here.
+ * from behind want?": is a Blobbi Island product decision, and lives here.
  *
  * This module is PURE: no React, no Nostr, no asset paths, no fetching. It takes
  * already-parsed images and returns plain URLs. That is what lets the accessory
- * adapter stay synchronous and lets `@blobbi/react` stay protocol-agnostic — the
+ * adapter stay synchronous and lets `@blobbi/react` stay protocol-agnostic, the
  * renderer receives strings and never learns that a marker existed.
  *
  * TWO DISTINCT CONSUMERS, TWO DISTINCT POLICIES:
@@ -28,8 +28,8 @@
  * not different qualities of the same angle. Dropping a side-view hat onto a
  * front-facing Blobbi is a worse answer than dropping the primary image on it,
  * so they are never chosen *as* a front or back view. They remain reachable
- * through the generic "first valid image" last resort — which exists only so an
- * item that ships nothing but, say, a diagonal view still renders something —
+ * through the generic "first valid image" last resort, which exists only so an
+ * item that ships nothing but, say, a diagonal view still renders something,
  * and through {@link itemImagesByMarker} for future work.
  */
 
@@ -90,10 +90,10 @@ function imageSourceOf(
  * item detail headers, list rows, HUD chips.
  *
  * Resolution order (the package's rule, then Island's compatibility step):
- *   1. the first unmarked `image` tag — the published primary;
+ *   1. the first unmarked `image` tag, the published primary;
  *   2. the first valid `image` tag, when the item ships only marked views;
  *   3. the flattened legacy `image` field, for models with no collection;
- *   4. `undefined` — the caller renders its existing emoji/placeholder.
+ *   4. `undefined`: the caller renders its existing emoji/placeholder.
  *
  * Steps 1 and 2 are `getPrimaryItemImage` verbatim; Island does not restate
  * them. Step 2 is why "only marked images" is a valid definition rather than an
@@ -114,7 +114,7 @@ export function primaryItemImageUrl(
  * Every image carrying `marker`, in tag order.
  *
  * Exposed so side/diagonal views stay REACHABLE while no actor pose consumes
- * them (see the module doc). Duplicate markers are preserved, not collapsed —
+ * them (see the module doc). Duplicate markers are preserved, not collapsed,
  * an issuer that published two `front` views published two `front` views.
  */
 export function itemImagesByMarker(
@@ -174,7 +174,7 @@ export function dedupeImageSources(
  * resort is kept because it is the documented contract and because it also
  * covers a definition whose primary is unusable.
  *
- * Returns a de-duplicated list, possibly empty. An empty list is not a failure —
+ * Returns a de-duplicated list, possibly empty. An empty list is not a failure,
  * it means this item contributes nothing, and the caller appends its own
  * fallbacks (see `island-accessory-sources.ts`).
  */

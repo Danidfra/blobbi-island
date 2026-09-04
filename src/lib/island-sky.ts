@@ -1,8 +1,8 @@
 /**
  * The island sky as a pure function of the clock.
  *
- * Everything the day/night visuals need — colours, opacities, the sun's place in
- * its arc, how much the artwork should darken — is derived here from a single
+ * Everything the day/night visuals need, colours, opacities, the sun's place in
+ * its arc, how much the artwork should darken, is derived here from a single
  * number in `[0, 1)`. No React, no DOM, no timers. That split is the point: the
  * timing formulas are the part most likely to be wrong and the part hardest to
  * see with your eyes, so they live where a test can pin them down, and the
@@ -10,8 +10,8 @@
  *
  * ## Phases are spans, not switches
  *
- * `IslandDayPhase` exists so that the rest of the app can *say* "it is sunset"
- * — for a label, a future ambience hook, a test. It is deliberately **not** how
+ * `IslandDayPhase` exists so that the rest of the app can *say* "it is sunset",
+ * for a label, a future ambience hook, a test. It is deliberately **not** how
  * the visuals are computed. If the renderer branched on the phase, every
  * boundary would be a visible cut. Instead the visuals come from an interpolated
  * table of authored keyframes (§ {@link ISLAND_SKY_KEYFRAMES}) whose last entry
@@ -38,7 +38,7 @@ export type IslandDayPhase = 'dawn' | 'day' | 'sunset' | 'night';
 
 /**
  * Where each phase begins and ends, in island minutes. Contiguous and covering
- * `[0, 120)` — `islandPhaseAt` relies on both, and a test asserts them.
+ * `[0, 120)`: `islandPhaseAt` relies on both, and a test asserts them.
  */
 export const ISLAND_PHASE_SPANS = [
   { phase: 'dawn', startMinute: 0, endMinute: 10 },
@@ -67,8 +67,8 @@ export const ISLAND_MOON_SET_MINUTE = 11;
 
 /**
  * Fraction of each body's arc spent fading in at the horizon, and out again at
- * the other side. Keeping visibility a function of arc position — rather than a
- * separate keyframed opacity — is what guarantees a body is invisible whenever
+ * the other side. Keeping visibility a function of arc position, rather than a
+ * separate keyframed opacity, is what guarantees a body is invisible whenever
  * its position is parked outside the arc, so a hidden body can never flash into
  * view at the wrong end of the sky.
  */
@@ -101,7 +101,7 @@ export interface IslandSkyGradient {
 interface IslandSkyKeyframe extends IslandSkyGradient {
   /** Island minute this keyframe describes. Must be ascending. */
   minute: number;
-  /** Human label — documentation and DEV panel readout only. */
+  /** Human label: documentation and DEV panel readout only. */
   label: string;
   starOpacity: number;
   cloudBrightness: number;
@@ -388,7 +388,7 @@ export function islandCelestialPosition(
 /**
  * The whole visual state for one position in the island day.
  *
- * Deterministic, allocation-light and free of `Date.now()` — the caller supplies
+ * Deterministic, allocation-light and free of `Date.now()`: the caller supplies
  * the position, so tests can walk the entire cycle and the DEV harness can
  * scrub it.
  */
@@ -466,7 +466,7 @@ export function hexToRgba(hex: string, alpha: number): string {
  * an opaque vertical gradient.
  *
  * Every layer being fully opaque is what makes the renderer's stacked-crossfade
- * exactly equal to a two-colour interpolation — see `IslandSkyLayer`.
+ * exactly equal to a two-colour interpolation; see `IslandSkyLayer`.
  */
 export function islandSkyKeyframeBackground(keyframe: IslandSkyGradient): string {
   const glow = hexToRgba(keyframe.horizonGlow, keyframe.horizonGlowAlpha);
@@ -484,7 +484,7 @@ export function islandSkyKeyframeBackground(keyframe: IslandSkyGradient): string
  * to the artwork `<img>` rather than as an overlay for one reason: a filter leaves
  * fully transparent pixels transparent, so the ground darkens at night while the
  * sky showing through the cut-out keeps the colours it was authored with. A tint
- * layer cannot do that — it has no way to follow the image's alpha channel.
+ * layer cannot do that; it has no way to follow the image's alpha channel.
  *
  * The function list is fixed so consecutive values interpolate under a CSS
  * transition; `extra` is prepended for the letterbox copy, which also needs its
@@ -503,7 +503,7 @@ export function islandArtworkFilter(
 }
 
 /**
- * The middle of a phase, as day progress — what the DEV harness jumps to when a
+ * The middle of a phase, as day progress, what the DEV harness jumps to when a
  * phase button is pressed. Midpoints, because the interesting part of a phase is
  * rarely its edge.
  */

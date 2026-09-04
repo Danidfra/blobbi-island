@@ -2,9 +2,9 @@
  * The local Blobbi appears exactly once.
  *
  * Presence is a broadcast: every event this client publishes comes straight
- * back down its own subscription. These tests wire that loop up for real — the
+ * back down its own subscription. These tests wire that loop up for real, the
  * publish mock stamps the author onto the template and pushes it into the live
- * subscription, exactly as a relay does — because the duplication bug lived in
+ * subscription, exactly as a relay does, because the duplication bug lived in
  * that round trip and nowhere else.
  *
  * The local actor itself is `MovableBlobbi`'s, rendered by `PlayingView`
@@ -41,13 +41,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,
@@ -248,7 +248,7 @@ describe('the local player is never a remote actor', () => {
   it('draws no copy when the local identity resolves late', async () => {
     // THE REPRODUCTION. The subscription is opened once at init; if it captured
     // an empty pubkey, every later event from the player's own key looked like
-    // a stranger — wearing the player's own Blobbi, walking the player's own
+    // a stranger: wearing the player's own Blobbi, walking the player's own
     // path a beat behind them.
     currentUser = undefined;
     const view = render(<Harness />);
@@ -297,7 +297,7 @@ describe('the local player is never a remote actor', () => {
   it('draws no copy when the signer signs with a key the app does not know about', async () => {
     // A NIP-07 extension can be switched to another account WITHOUT the app's
     // stored login changing, so every event we publish comes back authored by a
-    // key we do not recognise as ours. Identity cannot catch that one — the
+    // key we do not recognise as ours. Identity cannot catch that one, the
     // session id we generated and published is the only thing that still proves
     // the event is ours.
     const w = await world();
@@ -305,7 +305,7 @@ describe('the local player is never a remote actor', () => {
     expect(w.actors()).toEqual([]);
   });
 
-  it('keeps publishing movement — the fix refuses actors, not events', async () => {
+  it('keeps publishing movement: the fix refuses actors, not events', async () => {
     const w = await world();
     const before = published.length;
     await w.push(presenceEvent(LOCAL, LOCAL_BLOBBI, w.ownSession(), { x: 61, y: 71 }));

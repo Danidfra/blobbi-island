@@ -5,7 +5,7 @@
  * something, so what matters here is what happens when the spend goes wrong.
  * The flow itself (`useArcadePrizeRedemption`) is hardened and tested; these
  * tests drive it with a substituted writer to prove the PASS wiring inherits
- * every guarantee — one debit per redemption, no re-spend when the outcome is
+ * every guarantee: one debit per redemption, no re-spend when the outcome is
  * unknown, and a paid-but-undelivered pass that can still be delivered.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -230,8 +230,8 @@ describe('an unresolved spend is never respent', () => {
 describe('paid but not delivered is recoverable without a second debit', () => {
   it('finishes the delivery, spending nothing more', async () => {
     // The spend lands; storage then refuses the pass. The tickets are gone and
-    // the player has nothing — the exact case the ledger exists for.
-    // ONLY the pass write fails. The ledger's own writes must keep working —
+    // the player has nothing, the exact case the ledger exists for.
+    // ONLY the pass write fails. The ledger's own writes must keep working,
     // it is the record that makes the recovery possible.
     const realSetItem = Storage.prototype.setItem.bind(localStorage);
     const failPassWrite = vi
@@ -251,7 +251,7 @@ describe('paid but not delivered is recoverable without a second debit', () => {
     expect(readArcadePass(PUBKEY)).toBeNull();
 
     // Storage recovers; the player finishes what they already paid for.
-    // Scoped to the storage spy — restoring everything would also wipe the
+    // Scoped to the storage spy, restoring everything would also wipe the
     // spend counter this test exists to check.
     failPassWrite.mockRestore();
     await act(async () => {

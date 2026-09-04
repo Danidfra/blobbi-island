@@ -3,12 +3,12 @@
  * canonical pending-interaction system.
  *
  * The legacy flow computed its own rect math and fired the Nostr Hub modal
- * IMMEDIATELY on click — while the Blobbi was still walking (or standing on
+ * IMMEDIATELY on click, while the Blobbi was still walking (or standing on
  * the far side of the room). These tests pin the migrated contract:
  *
  *  - a chair click starts a WALK to the accepted `{50, 85}` pseudo-sit point
  *    (boundary-clamped, via the canonical resolver);
- *  - the action (Nostr Hub) fires only on confirmed arrival — immediately
+ *  - the action (Nostr Hub) fires only on confirmed arrival, immediately
  *    only when the Blobbi is already at the chair;
  *  - shop chairs walk with no action at all;
  *  - a world tap cancels the pending chair interaction.
@@ -88,7 +88,7 @@ afterEach(() => {
 });
 
 describe('Nostr Station chairs', () => {
-  it('a click far from the chair walks first — the Nostr Hub does NOT open on click', async () => {
+  it('a click far from the chair walks first, the Nostr Hub does NOT open on click', async () => {
     const { goTo, chair } = await renderAt('nostr-station-inside', () => ({ x: 90, y: 95 }));
 
     fireEvent.click(chair('Nostr Station Chair 1'));
@@ -111,7 +111,7 @@ describe('Nostr Station chairs', () => {
     expect(screen.getByText(/NOSTR HUB/)).toBeInTheDocument();
   });
 
-  it('a world tap after a chair click cancels the pending interaction — the modal never opens', async () => {
+  it('a world tap after a chair click cancels the pending interaction, the modal never opens', async () => {
     let pos = { x: 90, y: 95 };
     const { chair, surface } = await renderAt('nostr-station-inside', () => pos);
 

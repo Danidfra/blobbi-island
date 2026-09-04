@@ -1,10 +1,10 @@
 /**
- * Communication V2 — the one surface a player says anything from.
+ * Communication V2: the one surface a player says anything from.
  *
  * ## What replaced what
  *
  * The dock used to transform in place into a single text field. That gave
- * everyone exactly one way to communicate — typing — which is slow on a phone,
+ * everyone exactly one way to communicate, typing, which is slow on a phone,
  * impossible for a child who cannot yet spell, and the only class of message
  * that can carry anything at all. This panel adds three faster ways to say the
  * common things and keeps typing as the fourth.
@@ -12,7 +12,7 @@
  * The Family consequence falls out of that rather than being bolted onto it:
  * when `freeTextChat` is off, the Message tab is **absent** and the other three
  * are untouched. Not a disabled box, not an explanation of what the player may
- * not do — three tabs of things they can. A restricted experience that reads as
+ * not do: three tabs of things they can. A restricted experience that reads as
  * a punishment is one a child works around.
  *
  * ## Why the tabs are built from the policy, not hidden by it
@@ -32,7 +32,7 @@
  * A bottom-anchored sheet on a phone and a bottom-anchored panel on a desktop
  * are the same component with a width cap. Nothing depends on hover, every
  * target is at least 44 px, and the panel sits inside the game frame rather than
- * in a portal — the island can be fullscreen, and a portalled overlay would land
+ * in a portal, the island can be fullscreen, and a portalled overlay would land
  * outside it.
  */
 
@@ -85,7 +85,7 @@ export function CommunicationPanel({ open, onClose, onSend, className }: Communi
   const [active, setActive] = useState<TabId>(() => tabs[0]?.id ?? 'quick');
 
   // A capability change (or an empty tab list) must never leave a tab selected
-  // that no longer exists — the panel would render nothing at all.
+  // that no longer exists, the panel would render nothing at all.
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === active)) setActive(tabs[0]?.id ?? 'quick');
   }, [tabs, active]);
@@ -156,8 +156,8 @@ export function CommunicationPanel({ open, onClose, onSend, className }: Communi
                 'transition-transform duration-150 ease-cozy active:scale-95',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 // Both states use pairs the theme contract guarantees
-                // (`contrastReport`): cream on wood-dark for the selected tab
-                // — cream on ocean was 1.9:1 in Cozy Day — and ink on the
+                // (`contrastReport`): cream on wood-dark for the selected tab,
+                // cream on ocean was 1.9:1 in Cozy Day, and ink on the
                 // cream panel for the rest.
                 active === tab.id
                   ? 'bg-island-wood-dark text-island-cream'

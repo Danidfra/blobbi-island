@@ -14,7 +14,7 @@ import type { Position } from '@/lib/types';
  *
  * Everything positional lives here rather than in JSX so the structure can be
  * nudged without touching the interaction code. **These are hand-picked starting
- * values — they are meant to be tuned.** Each one says what it is measured
+ * values: they are meant to be tuned.** Each one says what it is measured
  * against, because the two coordinate spaces are easy to confuse: the wrapper is
  * a percentage of the virtual world (1046×697), while the mouth is a percentage
  * of the WRAPPER, so the opening stays aligned when the cave is resized.
@@ -45,7 +45,7 @@ export const mineCaveStructure = {
     bottomPercent: 24,
     /**
      * Width; the height follows the artwork's own 1271×642 aspect ratio, so at
-     * 70% of a 1046×697 world the cave is ≈732×370px — it spans y ≈ 23%–76%,
+     * 70% of a 1046×697 world the cave is ≈732×370px; it spans y ≈ 23%–76%,
      * which is where the `cave` entry in `interactive-elements-config.ts` gets
      * its recorded top edge.
      */
@@ -60,7 +60,7 @@ export const mineCaveStructure = {
    * is deliberately a little wider and taller than that hole (x 41%–65%, from
    * y 44% down to 5% off the bottom): the surplus falls behind the arch's own
    * opaque rock, so the black backing cannot leak out around the sprite at any
-   * scale. It was widened by hand against the artwork at world scale — treat
+   * scale. It was widened by hand against the artwork at world scale, treat
    * these as tuned values, not as measurements.
    *
    * The same box positions the black backing, the entrance preview and the
@@ -80,7 +80,7 @@ export const mineCaveStructure = {
    * How `mine-open-cave-entrance.webp` is framed inside the opening.
    *
    * The tunnel sprite is far wider than the arch (1.82 vs ≈0.4 aspect), so it is
-   * drawn with `object-fit: cover` and cropped to its centre — which is exactly
+   * drawn with `object-fit: cover` and cropped to its centre, which is exactly
    * the lit passage. Pushing the vertical anchor past 50% keeps the tunnel floor
    * and its nearest lantern in the slot instead of the pale ceiling rock;
    * checked against the real artwork at world scale.
@@ -92,7 +92,7 @@ export const mineCaveStructure = {
    *
    * The Mine's walk boundary is a narrow corridor (`x 42–58, y 68–75`) leading
    * up to the cave, so this sits just inside its top end. The previous cave
-   * derived its target from the sprite's rect and landed at ≈ y 67.7 — outside
+   * derived its target from the sprite's rect and landed at ≈ y 67.7, outside
    * the corridor, which the movement system can only approach and never reach,
    * leaving the entry to be rescued by stall detection.
    */
@@ -101,7 +101,7 @@ export const mineCaveStructure = {
   /**
    * Depth, in the world surface's own stacking context.
    *
-   * The wrapper deliberately creates NO stacking context — no `z-index`, and
+   * The wrapper deliberately creates NO stacking context; no `z-index`, and
    * equally no `transform`, `filter`, `opacity`, `isolation`, `contain` or
    * `will-change`. Any one of them would trap these three values inside the cave
    * and leave the whole structure to be sorted against the Blobbi as a single
@@ -111,10 +111,10 @@ export const mineCaveStructure = {
    * `mine-open.webp` gives a Blobbi standing at the entrance z-10 (see
    * `interactive-elements-config.ts`), so:
    *
-   *   9  opening  — behind the Blobbi, so it appears to stand IN the mouth
-   *   15 arch     — in front of it, so the rock and posts occlude it exactly
+   *   9  opening: behind the Blobbi, so it appears to stand IN the mouth
+   *   15 arch: in front of it, so the rock and posts occlude it exactly
    *                 where they are opaque. Same depth as Town's buildings.
-   *   16 hotspot  — above the art it covers, and invisible.
+   *   16 hotspot: above the art it covers, and invisible.
    *
    * A Blobbi further down the path resolves to z-20 and passes in front of the
    * whole cave, which is correct: it is nearer the camera.

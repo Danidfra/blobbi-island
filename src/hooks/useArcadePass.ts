@@ -5,7 +5,7 @@
  * on a slow tick so an expiry that passes while the player is looking at the
  * screen actually takes effect. One minute is the right granularity: the
  * remaining time is shown in hours and minutes, and a pass that lapses is
- * re-checked at every game start regardless — this tick only keeps the DISPLAY
+ * re-checked at every game start regardless; this tick only keeps the DISPLAY
  * honest, never the entitlement itself.
  *
  * The PLAY count needs no tick at all: it only changes when a play is
@@ -30,7 +30,7 @@ const TICK_MS = 60 * 1000;
 export interface ArcadePassView {
   /**
    * The pass has not expired. Says nothing about whether it still buys
-   * anything — an exhausted pass is `isActive` right up to its expiry, which
+   * anything: an exhausted pass is `isActive` right up to its expiry, which
    * is what lets the UI show "free plays used" instead of silently vanishing.
    */
   readonly isActive: boolean;

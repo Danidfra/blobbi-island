@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — kind:31634 equipment write API.
+ * Blobbi Island: kind:31634 equipment write API.
  *
  * The single mutation layer for equipment. It deliberately mirrors
  * `useInventoryMutation`: per-subject serialization, a FRESH relay read as the
@@ -93,7 +93,7 @@ export type EquipmentMutation =
    *
    * The Inventory & Equipment Lab's bulk actions (apply the test loadout,
    * unequip all effects) fold their changes through this so a seven-slot
-   * change is one replaceable event with one incremented revision — never
+   * change is one replaceable event with one incremented revision; never
    * seven racing writes to the same address. Slot semantics per slot are
    * identical to the single-slot mutations: `setEquippedPlacementForSlot`
    * last-wins replacement, `removeEquippedPlacementFromSlot` removal;
@@ -254,7 +254,7 @@ function applyTransformPatch(
  *
  * The revision is incremented from the state actually read from the relay, so
  * two clients that both write from revision 4 produce two revision-5 documents
- * with different content — which `compareGameItemPlacementRevisions` reports as
+ * with different content, which `compareGameItemPlacementRevisions` reports as
  * a `conflict` rather than silently letting the later `created_at` win.
  */
 export function buildEquipmentTemplate(
@@ -305,7 +305,7 @@ export interface EquipmentMutationVariables {
  *
  * Ownership gate: equipping requires the item in the player's kind:31633
  * inventory with quantity > 0, checked against a FRESH inventory read at write
- * time rather than a cached one. Unequipping has no such gate — a player must
+ * time rather than a cached one. Unequipping has no such gate, a player must
  * always be able to take off something they no longer own.
  */
 export function useEquipmentMutation() {
@@ -325,7 +325,7 @@ export function useEquipmentMutation() {
       }
       const pubkey = user.pubkey;
 
-      // Every entry being EQUIPPED this write, whatever the mutation shape —
+      // Every entry being EQUIPPED this write, whatever the mutation shape,
       // the ownership gate below applies to all of them uniformly.
       const equippedEntries =
         mutation.type === 'equip'

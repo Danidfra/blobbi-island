@@ -88,7 +88,7 @@ export function getAvailableAdultForms(): readonly AdultForm[] {
  * Preload all adult SVGs for quick switching
  */
 export function preloadAdultSvgs(): void {
-  // All SVGs are inlined constants — this function exists for API consistency
+  // All SVGs are inlined constants; this function exists for API consistency
   // This function exists for API consistency
   for (const form of ADULT_FORMS) {
     getAdultBaseSvg(form);

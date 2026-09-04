@@ -3,7 +3,7 @@
  *
  * The bug this file exists for: with a session open, the player jumped back to
  * the beginning every few seconds and the session was unwatchable. The mechanism
- * was the passive drift check running on the HOST — correcting the host's own
+ * was the passive drift check running on the HOST, correcting the host's own
  * player toward the host's own last published anchor. Whenever the two
  * disagreed (the commonest way being a play started from YouTube's own controls,
  * which publishes nothing), the check dragged the player back to the canonical
@@ -129,7 +129,7 @@ interface RunningPlayer {
   /** Position at the last state change, plus elapsed time while playing. */
   anchor: number;
   anchorAt: number;
-  /** Start playing WITHOUT going through the controller — YouTube's own button. */
+  /** Start playing WITHOUT going through the controller: YouTube's own button. */
   nativePlay: () => void;
   position: () => number;
 }
@@ -266,7 +266,7 @@ async function hostASession() {
 describe('the host is never corrected against its own state', () => {
   it('does not drag the player back when playback started outside our controls', async () => {
     // The exact reported case: the user pressed play on the YouTube embed, so
-    // nothing was published and canonical is still "paused at 0" — while the
+    // nothing was published and canonical is still "paused at 0": while the
     // player is happily advancing.
     await hostASession();
     act(() => player().nativePlay());
@@ -325,7 +325,7 @@ describe('the host is never corrected against its own state', () => {
     const keepalives = sessions().filter((e) => contentOf(e).rev === 1);
     const last = contentOf(keepalives[keepalives.length - 1]);
     // Honest about where the host actually is, instead of pretending the
-    // timeline advanced — which would leave every guest ahead of the host.
+    // timeline advanced: which would leave every guest ahead of the host.
     expect(last.playback.position).toBeCloseTo(stalledAt, 0);
     expect(last.rev).toBe(1);
   });
@@ -510,7 +510,7 @@ describe('a player rebuilt after a seat change', () => {
     await settle(4);
     await advance(KEEPALIVE_INTERVAL_MS * 2 + 1000);
 
-    // Nothing publishes once the theater is gone, so the last anchor stands —
+    // Nothing publishes once the theater is gone, so the last anchor stands,
     // and it is never rewound by a player that is not there.
     const latest = contentOf(sessions()[sessions().length - 1]).playback.position;
     expect(latest).toBeGreaterThanOrEqual(anchorBefore);

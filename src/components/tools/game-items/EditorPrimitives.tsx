@@ -126,7 +126,7 @@ export function TextField({
 /**
  * Clickable suggestions.
  *
- * Every place this appears, the underlying field remains free text — the chips
+ * Every place this appears, the underlying field remains free text, the chips
  * are a shortcut, never a closed vocabulary. That distinction matters for
  * `category`, `type` and topics, where a closed list would block whatever the
  * next accessory needs.

@@ -2,7 +2,7 @@
  * The outbound side: turning a message into the kind 21201 `content` string.
  *
  * One builder for all four classes, so the envelope is written once and cannot
- * drift between them. The alternative — a publisher per class — is how four
+ * drift between them. The alternative, a publisher per class, is how four
  * slightly different events end up on the wire claiming to be one protocol.
  *
  * ## What a structured payload deliberately does not contain
@@ -86,7 +86,7 @@ export function buildMessagePayload(
  * understand this kind.
  *
  * Built from the LOCAL rendering, never from the payload, and truncated. For a
- * structured message this is the only place its words appear on the wire — as
+ * structured message this is the only place its words appear on the wire, as
  * documentation of the event, not as data any receiver in this app reads back.
  */
 export function messageAltText(summary: string): string {

@@ -3,7 +3,7 @@
  * kind:31632 definitions its addresses point at.
  *
  * Pure and synchronous. It takes an already-parsed inventory and an
- * already-fetched definition map and produces rows — no fetching, no hooks, no
+ * already-fetched definition map and produces rows; no fetching, no hooks, no
  * per-row anything. That shape is what makes the N+1 problem structurally
  * impossible rather than merely avoided: there is nowhere in this file to put a
  * query.
@@ -12,7 +12,7 @@
  *
  *   published  a real kind:31632 event was found for this address
  *   bundled    no event; Island ships fallback metadata for this official item
- *   unknown    no event and no fallback — the inventory references something
+ *   unknown    no event and no fallback, the inventory references something
  *              this client has never heard of
  *
  * `bundled` is not a failure state. Blobbi Island deliberately ships metadata
@@ -25,7 +25,7 @@
  *
  * `isOfficialIssuer` is computed from the address's pubkey against
  * `OFFICIAL_ITEM_ISSUER_PUBKEY`. The inspector will happily show a definition
- * signed by anybody — that is inspection — but it always says who signed it,
+ * signed by anybody, that is inspection, but it always says who signed it,
  * and the game's own resolution path is unaffected by anything here.
  */
 

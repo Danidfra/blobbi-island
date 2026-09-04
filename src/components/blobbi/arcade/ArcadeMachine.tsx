@@ -12,7 +12,7 @@ import {
 import { locationBoundaries } from '@/lib/location-boundaries';
 
 /**
- * ArcadeMachine — one machine in the arcade, and the walk-to-interact contract
+ * ArcadeMachine: one machine in the arcade, and the walk-to-interact contract
  * every one of them now shares.
  *
  * Sibling of `TheaterSeat` and `TownBush`, following the pattern those two
@@ -31,7 +31,7 @@ import { locationBoundaries } from '@/lib/location-boundaries';
  * `machineAnchorPosition()` computes the same point from configuration alone,
  * and the config test uses it to prove every anchor lands on walkable floor. At
  * runtime the rect is authoritative instead, because it is correct no matter how
- * the world is scaled or letterboxed — the same reasoning `TownBush` uses.
+ * the world is scaled or letterboxed, the same reasoning `TownBush` uses.
  *
  * ## Why nothing opens on click
  *
@@ -57,7 +57,7 @@ import { locationBoundaries } from '@/lib/location-boundaries';
  * target means a machine that never opens.
  *
  * GROUND semantics (Phase 2 hardening): the anchor fraction was authored for
- * the body CENTER; the feet stop half a depth-scaled body lower — on the open
+ * the body CENTER; the feet stop half a depth-scaled body lower, on the open
  * floor in FRONT of the machine, not inside its artwork. The offset is shared
  * with the DOM-free `machineAnchorPosition` and applied exactly once, here,
  * via the canonical resolver's `yOffsetPercent`.
@@ -78,7 +78,7 @@ interface ArcadeMachineProps {
   /**
    * Fired on CONFIRMED ARRIVAL with the machine's stable id.
    *
-   * The id — not a component, not a modal, not a piece of copy — is the whole
+   * The id: not a component, not a modal, not a piece of copy, is the whole
    * payload, so what a machine DOES can change without touching where it sits.
    */
   onActivate: (machineId: string) => void;
@@ -108,7 +108,7 @@ export function ArcadeMachine({ config, requestInteraction, onActivate, decorati
         target,
         touch: isTouch,
         action: onArrive,
-        // Walk abandoned — the player tapped elsewhere or chose another machine.
+        // Walk abandoned: the player tapped elsewhere or chose another machine.
         // Nothing opened, so there is nothing to undo.
         onCancel: () => {},
       });

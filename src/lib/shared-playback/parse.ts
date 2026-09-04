@@ -3,13 +3,13 @@
  *
  * **The kind number is a routing hint, never proof of provenance.** Nostr has no
  * kind registry with allocation authority, so anything at all may arrive under
- * `31951` / `21951` — from another application that picked the same numbers, or
+ * `31951` / `21951`: from another application that picked the same numbers, or
  * from someone deliberately publishing junk. Every rule below exists so that a
  * hostile or merely foreign event is a no-op rather than a bug:
  *
  *  - structural validation (§4.4, §5.4) before anything is believed;
  *  - `version` gating, so a future schema is ignored rather than guessed at;
- *  - signature-derived authority — a command is accepted only from the pubkey
+ *  - signature-derived authority, a command is accepted only from the pubkey
  *    embedded in the session address it targets (§5.4 (4)), which is the entire
  *    "guests cannot control playback" guarantee;
  *  - numeric bounds, so a 10^9-second position can never reach a player.
@@ -48,8 +48,8 @@ const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
  * Media validation.
  *
  * The theater ships an OPEN catalog (see `docs/theater-local-implementation.md`
- * §3), so the protocol document's optional application-layer rule §4.4 (13) —
- * "media.id ∈ curated catalog" — has no catalog to check against and is
+ * §3), so the protocol document's optional application-layer rule §4.4 (13),
+ * "media.id ∈ curated catalog": has no catalog to check against and is
  * deliberately not implemented. Shape validation still applies: an id that
  * cannot be a YouTube id is refused before it can reach a player.
  */
@@ -135,8 +135,8 @@ export interface ParseSessionOptions {
   /**
    * The host of the session this client is already tracking, when there is one.
    *
-   * The host of an address can never change — the pubkey is *inside* the
-   * address — so this is a consistency check against a spoofed address arriving
+   * The host of an address can never change, the pubkey is *inside* the
+   * address: so this is a consistency check against a spoofed address arriving
    * through UI input or presence content, not a trust decision.
    */
   knownHostPubkey?: string;
@@ -256,7 +256,7 @@ export function parseCommandEvent(
   if (!target) return fail('wrong-session');
 
   // THE authority check. Not a UI rule, not a convention: the relay's signature
-  // verification plus this comparison is what stops a guest — or a stranger —
+  // verification plus this comparison is what stops a guest, or a stranger,
   // from steering someone else's session.
   if (event.pubkey !== target.hostPubkey) return fail('unauthorized-signer');
 

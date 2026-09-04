@@ -6,7 +6,7 @@ interface BlobbiLoadingScreenProps {
 }
 
 /**
- * BlobbiLoadingScreen — the cozy "peeking into the nest" loader.
+ * BlobbiLoadingScreen: the cozy "peeking into the nest" loader.
  *
  * Used while the player's Blobbis are being fetched (and as the game's initial
  * loading state). The mascot greets the player and a soft grid of card-shaped

@@ -1,14 +1,14 @@
 /**
- * Blobbi Island — single import surface for `@nostr-games/inventory`.
+ * Blobbi Island: single import surface for `@nostr-games/inventory`.
  *
  * All Island code imports package symbols from here so the dependency boundary
- * is explicit and easy to audit. This file adds NO behavior — it only
+ * is explicit and easy to audit. This file adds NO behavior; it only
  * re-exports the package's public API plus the Island-level constants that name
  * the same kinds.
  *
  * The package is the source of truth for parsing, validation, building,
  * addressing, quantities, duplicate handling, parse modes, result/error types,
- * and — since 0.2.0 — the repeatable `image` tag model with its view markers.
+ * and: since 0.2.0, the repeatable `image` tag model with its view markers.
  * Island never re-parses an `image` tag; it selects among already-parsed
  * `GameItemImage` entries (see `item-image-resolution.ts`).
  */
@@ -73,7 +73,7 @@ export {
   addInventoryItemQuantity,
   removeInventoryItemQuantity,
   getInventoryItems,
-  // Item placement (31634) — where owned items are equipped or placed.
+  // Item placement (31634): where owned items are equipped or placed.
   //
   // The package treats `content.placements` as authoritative and the `a` tags
   // as a derived index. It decides NOTHING about authorization: whether the

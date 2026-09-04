@@ -5,7 +5,7 @@
  * ## Not a grammar engine
  *
  * Five templates, three value catalogs, and a segment list per template. There
- * is no parser, no inflection, no agreement, no pluralisation — a template is a
+ * is no parser, no inflection, no agreement, no pluralisation, a template is a
  * fixed sequence of literal fragments and named holes, and rendering is a
  * `map`. That is enough to say the handful of things players actually need to
  * coordinate, and it keeps the receive-side validation to "is this id in this
@@ -14,7 +14,7 @@
  * ## Segments rather than string interpolation
  *
  * A template renders by walking `segments` and substituting a *locally resolved
- * label* for each parameter. Nothing from the wire is ever interpolated — the
+ * label* for each parameter. Nothing from the wire is ever interpolated, the
  * wire supplies an id, this module supplies every character that reaches the
  * screen. Splitting the sentence this way also leaves the door open for
  * translation, where word order changes and a format string would not survive.
@@ -25,7 +25,7 @@
  * floors, or private rooms. Exposing them would let a phrase name somewhere a
  * player cannot meaningfully be met, and would leak the world's internal
  * structure into a sentence a child reads. So this module keeps its own list of
- * six public destinations and maps each to a canonical id — the same six the Map
+ * six public destinations and maps each to a canonical id, the same six the Map
  * modal offers, minus `home` (which is private, so "meet me at Home" is a
  * sentence with no true reading) and plus the Arcade.
  *
@@ -76,8 +76,8 @@ export const TIME_VALUES: readonly TemplateParamValue[] = Object.freeze([
 /**
  * Things there is actually something to play.
  *
- * Every entry corresponds to a real activity in the world — the three arcade
- * cabinets, the beach hunt, the mine, and hiding in the Town bushes — so an
+ * Every entry corresponds to a real activity in the world, the three arcade
+ * cabinets, the beach hunt, the mine, and hiding in the Town bushes, so an
  * invitation is never to something that does not exist.
  */
 export const ACTIVITY_VALUES: readonly TemplateParamValue[] = Object.freeze([

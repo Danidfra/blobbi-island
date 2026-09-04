@@ -23,7 +23,7 @@ For every file under `public/assets/` the whole repository (`.ts`, `.tsx`, `.js`
    every file inside that directory is considered reachable.
 
 Only files with **zero** hits from all three checks were archived. This is why none of the
-accessory sprites were archived even though no source file names them literally — they are
+accessory sprites were archived even though no source file names them literally: they are
 resolved at runtime from Nostr inventory data.
 
 ## Contents

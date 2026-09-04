@@ -1,15 +1,15 @@
 /**
  * Ground-anchor geometry for the Blobbi actor (Phase 2).
  *
- * THE CONTRACT — final semantics (see docs/blobbi-actor-position-migration-notes.md):
+ * THE CONTRACT: final semantics (see docs/blobbi-actor-position-migration-notes.md):
  *
  *  - A stored actor `Position` is the Blobbi's GROUND-CONTACT POINT: the
  *    world-percent x/y of the point where the Blobbi touches the floor.
  *  - The visual rig grows UPWARD from that point (anchor transform
  *    `translate(-50%, -100%)`, depth scaling around `bottom center`).
  *  - The ground shadow is centered on that point.
- *  - World boundaries constrain that point (documented pose snaps — theater
- *    seats, the bed sleeping pose — may bypass them via `goTo(..., true)`).
+ *  - World boundaries constrain that point (documented pose snaps, theater
+ *    seats, the bed sleeping pose, may bypass them via `goTo(..., true)`).
  *  - Interaction targets are desired ground points.
  *  - Local and remote actor wrappers consume identical semantics via
  *    `BlobbiActor`.
@@ -20,7 +20,7 @@
  * `GroundPosition` is a documentation alias of `Position` rather than a
  * branded type: position values flow through dozens of existing signatures
  * (movement, boundaries, presence, gaze) and a brand would force churn without
- * preventing the real hazard — the wire boundary — which is instead confined
+ * preventing the real hazard, the wire boundary, which is instead confined
  * to the two conversion helpers in `useIslandPresence`.
  */
 

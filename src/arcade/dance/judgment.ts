@@ -1,5 +1,5 @@
 /**
- * Blobbi Dance — judgement and scoring. Pure, deterministic, no clock.
+ * Blobbi Dance: judgement and scoring. Pure, deterministic, no clock.
  *
  * Every function here takes the song time as an ARGUMENT. Nothing reads
  * `Date.now()`, `performance.now()` or `AudioContext.currentTime`; the caller
@@ -15,7 +15,7 @@
  *    again, so no amount of spamming can re-score it.
  * 3. **Eligibility is bounded by the widest window.** An input more than
  *    {@link DANCE_JUDGMENT_WINDOWS.okay} milliseconds from every unresolved note
- *    in its lane resolves nothing at all — it is not a miss, and it does not
+ *    in its lane resolves nothing at all; it is not a miss, and it does not
  *    consume the next note. This is the rule that stops early spam from eating
  *    the chart: a player mashing left at 2 Hz destroys their combo through the
  *    notes they then fail to hit, not by pre-consuming notes they cannot see.
@@ -37,7 +37,7 @@ import type { DanceChart, DanceLane, DanceNote } from './chart';
  * Starting values from the phase brief, kept unchanged: at 120 BPM an eighth
  * note is 250 ms, so the widest window (±180 ms) stays comfortably inside one
  * slot and a late hit can never drift into the next note's territory. Perfect at
- * ±60 ms is about four frames at 60 Hz — demanding but not frame-perfect.
+ * ±60 ms is about four frames at 60 Hz, demanding but not frame-perfect.
  */
 export const DANCE_JUDGMENT_WINDOWS = {
   perfect: 60,
@@ -80,7 +80,7 @@ export const DANCE_JUDGMENT_POINTS: Readonly<Record<DanceJudgment, number>> = {
  *
  * A hit at combo *n* earns `min(n, cap) × step` extra points on top of its base,
  * where *n* is the combo BEFORE this hit. So the bonus is bounded at 200 points
- * per note — a fifth of a Perfect — and a long streak is worth having without
+ * per note: a fifth of a Perfect, and a long streak is worth having without
  * letting one early run of luck decide the whole result. It is additive rather
  * than multiplicative for the same reason: a multiplier compounds, and a
  * compounding reward is one an early streak dominates.
@@ -112,7 +112,7 @@ export const DANCE_GRADE_THRESHOLDS: readonly { grade: DanceGrade; minAccuracy: 
 /**
  * Grade from accuracy alone.
  *
- * Nothing downstream may treat the grade as a reward input — the reward policy
+ * Nothing downstream may treat the grade as a reward input, the reward policy
  * reads the explicit validated metrics instead. A grade is a letter for a player
  * to read, and turning a letter into money is how a presentation change becomes
  * an economy change.
@@ -220,7 +220,7 @@ export function selectNoteForInput(
 
 export interface DanceInputOutcome {
   readonly state: DanceRunState;
-  /** Null when the input matched nothing — a ghost input. */
+  /** Null when the input matched nothing, a ghost input. */
   readonly event: DanceJudgmentEvent | null;
 }
 
@@ -229,7 +229,7 @@ export interface DanceInputOutcome {
  *
  * Returns the SAME state object when nothing changed except the ghost counter…
  * no: a ghost input does change the counter, so the object is new. What does not
- * change is any note, any score, and the combo — a ghost input is free.
+ * change is any note, any score, and the combo, a ghost input is free.
  */
 export function applyDanceInput(
   state: DanceRunState,
@@ -294,7 +294,7 @@ export function advanceDanceRun(state: DanceRunState, atMs: number): DanceTimeOu
   for (let i = state.cursor; i < state.notes.length; i += 1) {
     const entry = state.notes[i];
     // Strictly PAST the window. A note exactly `okay` milliseconds old is still
-    // hittable — `judgeOffset` would call it Okay — so expiring it here would
+    // hittable, `judgeOffset` would call it Okay, so expiring it here would
     // steal a note the player could legitimately still answer.
     if (entry.note.timeMs >= deadline) break;
     if (entry.status !== 'pending') continue;
@@ -357,7 +357,7 @@ export interface DanceRunSummary {
 }
 
 /**
- * Reduce a run to the numbers a result — and therefore the reward policy — is
+ * Reduce a run to the numbers a result, and therefore the reward policy, is
  * built from.
  *
  * Accuracy uses BASE points only. Including the combo bonus would mean a player

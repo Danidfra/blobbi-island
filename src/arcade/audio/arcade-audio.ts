@@ -14,7 +14,7 @@
  * | --- | --- | --- |
  * | examples | button blips, coin drop, results sting | the track a rhythm game is judged against |
  * | mechanism | `useSfx` (`HTMLAudioElement`) | `AudioContext` |
- * | clock | none needed | `AudioContext.currentTime` — **never** `setTimeout`/rAF |
+ * | clock | none needed | `AudioContext.currentTime`: **never** `setTimeout`/rAF |
  * | tolerance | tens of ms | single-digit ms |
  *
  * `useSfx` stays exactly as it is for the first column: it is autoplay-safe,
@@ -30,7 +30,7 @@
  * Browsers create an `AudioContext` in the `suspended` state unless it is
  * constructed (or resumed) inside a user-gesture handler. Constructing one at
  * module load therefore yields a context that silently produces nothing until
- * something resumes it — a bug that only appears on real devices. So the context
+ * something resumes it, a bug that only appears on real devices. So the context
  * is created by {@link ensureArcadeAudio}, which the shell calls from the click
  * that starts a run, and never at import time.
  *
@@ -90,7 +90,7 @@ export function peekArcadeAudio(): AudioContext | null {
 /**
  * The authoritative clock for musical timing, in seconds.
  *
- * Returns `null` when no context exists — callers must NOT fall back to
+ * Returns `null` when no context exists, callers must NOT fall back to
  * `performance.now()`, because a schedule half-built on one clock and half on
  * another is worse than no schedule at all.
  */
@@ -127,7 +127,7 @@ export async function resumeArcadeAudio(): Promise<void> {
 /**
  * Drop the shared context.
  *
- * Only for tests and the DEV harness — production keeps one context for the
+ * Only for tests and the DEV harness, production keeps one context for the
  * document's lifetime, because repeatedly constructing them leaks hardware
  * handles on some platforms.
  */
@@ -157,7 +157,7 @@ function writeStorage(key: string, value: string | null): void {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
   } catch {
-    /* private mode / storage disabled — the setting simply does not persist */
+    /* private mode / storage disabled, the setting simply does not persist */
   }
 }
 

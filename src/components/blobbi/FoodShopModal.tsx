@@ -37,7 +37,7 @@ const CATEGORY_LABELS: Record<ItemCategoryName, string> = {
 
 /**
  * Bundled artwork for the five food items, used when their definitions carry no
- * `image` tag of their own — which is the case for all 20 published official
+ * `image` tag of their own, which is the case for all 20 published official
  * definitions today.
  *
  * These are INFERRED local paths, not published facts, so a definition's own
@@ -68,7 +68,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     while the confirm dialog was on top of the shop.
   */
 
-  // General store: sell all official items, grouped by category. Kept minimal —
+  // General store: sell all official items, grouped by category. Kept minimal,
   // food keeps its images; other categories use their emoji.
   //
   // A shop card is a compact, unposed cell, so it asks for the definition's
@@ -96,7 +96,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
    * Derived from the canonical category list so a category added to the
    * registry can never be silently DROPPED from the shop: an unlabelled
    * category still gets a section (titled by its own name) rather than
-   * disappearing. In practice the shop only ever contains purchasable items —
+   * disappearing. In practice the shop only ever contains purchasable items,
    * `SHOP_ENTRIES` excludes anything with no coin price, so currency never
    * appears here and its section renders as nothing.
    */
@@ -120,7 +120,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
   //
   // `unitPrice`/`lineCost` here are for the on-screen summary ONLY. They come
   // from the same canonical catalog the purchase hook prices against, so the
-  // numbers agree — but the hook resolves its own prices from the item
+  // numbers agree: but the hook resolves its own prices from the item
   // addresses and never accepts these. Display value is not spendable truth.
   const selectedLines = useMemo(() => {
     return Object.entries(quantities)
@@ -140,7 +140,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
 
   // A null balance is UNKNOWN, not zero: purchases stay disabled until the
   // canonical inventory balance loads. The wallet re-validates on spend
-  // anyway — this is presentation-side honesty, not the guard.
+  // anyway: this is presentation-side honesty, not the guard.
   const canAfford = userCoins !== null && userCoins >= totalCost;
 
   const handleQuantityChange = (address: string, value: string) => {
@@ -169,7 +169,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
    * landing in the same tick both pass it and both start a purchase. The ref
    * flips synchronously before the first `await` and is therefore the actual
    * gate; the disabled button and `isPending` are UI courtesies on top of it.
-   * It is FIRST-LINE protection only — financial retry safety (one debit per
+   * It is FIRST-LINE protection only, financial retry safety (one debit per
    * logical purchase) is the spend intent's job, not this ref's.
    */
   const inFlightRef = useRef(false);
@@ -198,7 +198,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     }
 
     // ONE true multi-item purchase: a single canonical inventory event
-    // carrying the total Coin deduction AND every item grant — atomic since
+    // carrying the total Coin deduction AND every item grant, atomic since
     // the Coin cutover.
     inFlightRef.current = true;
     try {
@@ -218,14 +218,14 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
             ? {
                 title: 'Already at the Limit',
                 description:
-                  'One of these items is already at its maximum — nothing was charged.',
+                  'One of these items is already at its maximum; nothing was charged.',
                 variant: 'destructive',
               }
             : result.outcome === 'blocked'
             ? {
                 title: 'Previous Purchase Still Unresolved',
                 description:
-                  'Your earlier attempt at this purchase is still being verified — nothing new was charged. Try again in a moment.',
+                  'Your earlier attempt at this purchase is still being verified; nothing new was charged. Try again in a moment.',
                 variant: 'destructive',
               }
             : {
@@ -248,7 +248,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
       });
       return;
     } finally {
-      // Released on EVERY outcome — success, ambiguous/blocked, failure —
+      // Released on EVERY outcome, success, ambiguous/blocked, failure,
       // because a deliberate later confirm must always be possible: that
       // retry is exactly how the spend intent reconciles an unresolved
       // operation without a second debit.

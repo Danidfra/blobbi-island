@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * A BOUNDED, paged collection grid — the game-panel answer to a long scroll.
+ * A BOUNDED, paged collection grid, the game-panel answer to a long scroll.
  *
  * ## Why paging and not scrolling
  *
@@ -17,9 +17,9 @@ import { cn } from '@/lib/utils';
  *
  * Recalculated after the tile contract became explicit (every tile is now the
  * same PINNED geometry: 64px art zone + a reserved two-line title zone =
- * 118px, with a 10px grid gap). The grids run at **four columns** from `sm` up — the
+ * 118px, with a 10px grid gap). The grids run at **four columns** from `sm` up, the
  * Items surface keeps four all the way, the Wardrobe drops to three only while
- * its detail sidebar is beside it — and at three columns on a phone.
+ * its detail sidebar is beside it, and at three columns on a phone.
  *
  *     4 columns × 2 rows = 8       ← two FULL rows in the four-column grids
  *     3 columns → 3 rows (3/3/2)   ← ~330px, bounded on a phone
@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
  *
  * - the grid reserves the same height whether it holds 1 item or 8, so nothing
  *   below it moves when the page changes;
- * - the controls disappear entirely for a single-page collection — a player
+ * - the controls disappear entirely for a single-page collection, a player
  *   with four items never sees pagination chrome;
  * - the page index is CLAMPED to the collection, so using up the last item on
  *   the last page lands on a real page rather than an empty one.
@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 
 export interface CollectionGridProps<T> {
   items: readonly T[];
-  /** Stable identity per item — also the React key. */
+  /** Stable identity per item, also the React key. */
   keyOf: (item: T) => string;
   renderItem: (item: T) => React.ReactNode;
   /**
@@ -95,8 +95,8 @@ export function CollectionGrid<T>({
   /*
     Clamp rather than trust.
 
-    The collection shrinks under this component — the last apple is eaten, a
-    cosmetic stops fitting after a life-stage change — and a page index left
+    The collection shrinks under this component, the last apple is eaten, a
+    cosmetic stops fitting after a life-stage change, and a page index left
     pointing past the end would render an empty grid with working arrows.
   */
   useEffect(() => {
@@ -138,7 +138,7 @@ export function CollectionGrid<T>({
         {visible.map((item) => (
           /*
             The wrapper is itself `display: grid`, so the tile fills the cell
-            by GRID STRETCH — the default alignment of a grid item — rather
+            by GRID STRETCH: the default alignment of a grid item, rather
             than by `height: 100%`. A percentage height here would have to
             resolve against a height this wrapper only acquires by being
             stretched, which is the circular case engines settle differently;
@@ -167,7 +167,7 @@ export function CollectionGrid<T>({
  * Page controls, shaped like a game's rather than a data table's.
  *
  * Two arrows and a readout. The readout is `aria-live="polite"` so a page
- * change is announced — the grid contents change without focus moving, which a
+ * change is announced, the grid contents change without focus moving, which a
  * screen reader would otherwise not mention. The arrows carry real labels and
  * disable at the ends rather than wrapping, because silently looping a
  * collection is disorienting when you cannot see its size.

@@ -5,7 +5,7 @@ import { ArcadeGameShell } from './ArcadeGameShell';
 import { ArcadeMachinePanel } from './ArcadeMachinePanel';
 
 /**
- * A dedicated machine whose game is not built yet — the pool table, the air
+ * A dedicated machine whose game is not built yet, the pool table, the air
  * hockey table.
  *
  * One component, used by the room and by the DEV harness, so the panel a

@@ -1,11 +1,11 @@
 /**
- * Care Store geometry — tested as BEHAVIOUR, not as a snapshot of numbers.
+ * Care Store geometry, tested as BEHAVIOUR, not as a snapshot of numbers.
  *
  * Nothing here asserts "the toy box blocker is at x = 0". A coordinate table
  * that matches itself proves nothing: the numbers could all be wrong together
  * and still pass. What the room actually promises is a set of movement
- * outcomes — the open floor is reachable, the furniture is not, and the gaps
- * between them still are — so every case below runs the REAL clamp
+ * outcomes: the open floor is reachable, the furniture is not, and the gaps
+ * between them still are, so every case below runs the REAL clamp
  * (`constrainPosition`) and the REAL blocker rule (the point-in-rect test
  * `MovementBlockerContext` performs) against the REAL config.
  *
@@ -49,7 +49,7 @@ function isBlocked(point: Position): boolean {
   );
 }
 
-/** A point the walk boundary does not have to move — i.e. real floor. */
+/** A point the walk boundary does not have to move; i.e. real floor. */
 function onFloor(point: Position, b: Boundary = boundary): boolean {
   const clamped = constrainPosition(point, b);
   return Math.abs(clamped.x - point.x) < 1e-6 && Math.abs(clamped.y - point.y) < 1e-6;
@@ -63,7 +63,7 @@ function standable(point: Position): boolean {
 /**
  * Can the Blobbi walk from `from` to `to` without being stopped?
  *
- * This mirrors what the movement loop does: there is NO pathfinding — it steps
+ * This mirrors what the movement loop does: there is NO pathfinding; it steps
  * along the straight line, clamping each step into the boundary and halting the
  * moment a step lands inside a blocker. So a reachable destination means the
  * whole straight line is standable.
@@ -135,7 +135,7 @@ describe('the open floor is walkable', () => {
 });
 
 describe('the furniture cannot be walked through', () => {
-  it('the back shelving stops the Blobbi — the wall is not floor', () => {
+  it('the back shelving stops the Blobbi, the wall is not floor', () => {
     // Deep inside the left shelf unit and the right display cabinet.
     expect(onFloor({ x: 28, y: 50 })).toBe(false);
     expect(onFloor({ x: 72, y: 55 })).toBe(false);

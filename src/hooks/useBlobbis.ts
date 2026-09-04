@@ -35,8 +35,8 @@ export interface Blobbi {
   adultType?: string; // For adult stage Blobbis (bloomi, breezy, etc.)
   /**
    * Raw event tags from the original Nostr event. Preserved (read-only) so UI
-   * code can inspect tags that aren't promoted to typed fields — e.g. `seed`
-   * and `client` — to distinguish modern Blobbis from legacy ones without
+   * code can inspect tags that aren't promoted to typed fields, e.g. `seed`
+   * and `client`: to distinguish modern Blobbis from legacy ones without
    * re-querying or mutating any data.
    */
   rawTags?: string[][];
@@ -75,7 +75,7 @@ function petStateToLegacyBlobbi(petState: PetState): Blobbi {
 }
 
 /**
- * Deadline for reaching EOSE. Unchanged from the previous implementation — the
+ * Deadline for reaching EOSE. Unchanged from the previous implementation, the
  * fix is that exceeding it is now reported as UNKNOWN instead of as "no
  * Blobbis", not that the read is given longer.
  */

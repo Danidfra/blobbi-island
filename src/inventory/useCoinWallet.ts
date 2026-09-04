@@ -1,17 +1,17 @@
 /**
  * React bindings for the canonical Coin wallet.
  *
- * - {@link useCoinBalance} — the ONE production balance reader. Derives the
+ * - {@link useCoinBalance}, the ONE production balance reader. Derives the
  *   Blobbi Coin quantity from the canonical kind:31633 inventory query, so
  *   the HUD, the shops and the pass all render the same number from the same
- *   cache. `balance` is `null` while unknown — an unavailable balance must
+ *   cache. `balance` is `null` while unknown, an unavailable balance must
  *   never look like a real zero.
- * - {@link useCoinWallet} — the wallet factory bound to the session, with
+ * - {@link useCoinWallet}, the wallet factory bound to the session, with
  *   cache invalidation after any outcome that may have changed the relay
  *   state. Optimistic presentation is the CALLER's concern; the wallet's
  *   returned outcome is the truth to render.
  *
- * kind:11125 `coins` is not read anywhere here — after the bootstrap, the
+ * kind:11125 `coins` is not read anywhere here, after the bootstrap, the
  * inventory quantity is the only canonical balance.
  */
 
@@ -78,7 +78,7 @@ export function useCoinWallet(): CoinWalletApi {
         try {
           return await run(op);
         } finally {
-          // Whatever happened — applied, ambiguous, or a pre-publish throw —
+          // Whatever happened: applied, ambiguous, or a pre-publish throw,
           // the cache re-reads the authoritative state rather than guessing.
           queryClient.invalidateQueries({ queryKey: inventoryQueryKey(user.pubkey) });
         }

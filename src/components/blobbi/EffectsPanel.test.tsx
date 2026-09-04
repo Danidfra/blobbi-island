@@ -1,5 +1,5 @@
 /**
- * EffectsPanel — behavioral tests for the player effect-management UI.
+ * EffectsPanel: behavioral tests for the player effect-management UI.
  *
  * What must hold:
  *
@@ -120,7 +120,7 @@ beforeEach(() => {
  * Select an effect's tile, revealing its detail panel.
  *
  * The panel became a paged tile grid with a detail area, so the verbs moved out
- * of every card and into the one selected item — the same selection→detail
+ * of every card and into the one selected item, the same selection→detail
  * pattern the rest of the wardrobe uses. Every assertion below is the same;
  * they just have to pick something up before acting on it.
  */
@@ -192,7 +192,7 @@ describe('what is actionable', () => {
     expect(detail).toHaveTextContent(/celestial halo/);
     expect(screen.getByTestId('equip-celestial-aura')).toBeInTheDocument();
 
-    // Unowned: no card, no equip control — only the locked list names it.
+    // Unowned: no card, no equip control; only the locked list names it.
     expect(screen.queryByTestId('effect-card-solar-radiance')).toBeNull();
     expect(screen.queryByTestId('equip-solar-radiance')).toBeNull();
     expect(screen.getByText(/Solar Radiance/)).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe('equip, replace, remove', () => {
     expect(
       screen.getByTestId('replace-warning-solar-radiance'),
     ).toHaveTextContent(
-      // "Activating", since the tile grid replaced the card list — the verb on
+      // "Activating", since the tile grid replaced the card list, the verb on
       // the button is Replace either way.
       'Activating Solar Radiance will replace Celestial Aura in the Aura slot.',
     );
@@ -264,7 +264,7 @@ describe('equip, replace, remove', () => {
     });
     expect(
       (selectEffect('celestial-aura'), screen.getByTestId('effect-detail')),
-    // The badge reads "Active" since the polish pass — "equipped" is what a
+    // The badge reads "Active" since the polish pass, "equipped" is what a
     // developer calls it, "Active" is what the effect IS to a player.
     ).toHaveTextContent('Active');
     fireEvent.click(screen.getByTestId('remove-celestial-aura'));

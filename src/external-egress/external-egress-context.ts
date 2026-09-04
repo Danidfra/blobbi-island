@@ -3,7 +3,7 @@
  *
  * One function, `requestEgress`, which resolves to whether the player actually
  * went. Awaiting it covers the confirmation round trip, so a caller can close
- * its own modal only once the answer is known — without knowing a dialog was
+ * its own modal only once the answer is known, without knowing a dialog was
  * involved.
  */
 
@@ -15,8 +15,8 @@ export interface ExternalEgressApi {
   /**
    * Ask to leave. Resolves `true` only if the egress actually happened.
    *
-   * `false` covers every other outcome — denied by policy, an invalid
-   * destination, a cancelled confirmation, a dismissed share sheet — because
+   * `false` covers every other outcome, denied by policy, an invalid
+   * destination, a cancelled confirmation, a dismissed share sheet, because
    * from the caller's point of view they are the same thing: nothing happened,
    * and the caller should not act as though it did.
    */

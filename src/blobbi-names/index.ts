@@ -1,5 +1,5 @@
 /**
- * Blobbi names — whose words reach a screen, and what a player may publish.
+ * Blobbi names: whose words reach a screen, and what a player may publish.
  *
  * Two independent protections, both structural rather than filter-based:
  * a curated experience never displays a stranger's authored name, and it can

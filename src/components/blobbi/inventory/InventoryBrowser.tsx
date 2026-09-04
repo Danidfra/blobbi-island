@@ -27,12 +27,12 @@ import {
 } from './useInventoryCollection';
 
 /**
- * InventoryBrowser — the island's collection of things, and the one place to
+ * InventoryBrowser: the island's collection of things, and the one place to
  * look at them.
  *
  * ## What this replaced, and why
  *
- * Two stacked panels — `Wearables` over `Items` — each with its own header,
+ * Two stacked panels, `Wearables` over `Items`, each with its own header,
  * its own nested tabs, its own empty state and its own idea of what a tile
  * looks like. It worked, and it read like an admin screen: a player scrolled
  * past a wardrobe to reach a sandwich, every tile carried a name, a slot, a
@@ -58,13 +58,13 @@ import {
  *
  * ## One collection language, two INTERACTIONS
  *
- * Cosmetics and consumables look alike and behave differently — but the
+ * Cosmetics and consumables look alike and behave differently, but the
  * difference is now in the CLICK, not in a shared detail panel:
  *
  * ```
  *   consumable   click → the consume dialog opens immediately
  *   wearable     click → select → Wear / Take off / Adjust in the detail
- *   currency     display only — there is nothing to do with it here
+ *   currency     display only; there is nothing to do with it here
  * ```
  *
  * The intermediate "select a sandwich, read a card, press Use it" step was
@@ -80,7 +80,7 @@ import {
  *
  * Nothing. Which cosmetics may be worn is `placement/policy.ts`' answer via
  * `useEquippableCosmetics`; using an item is `useUseItem`'s; equipping is the
- * caller's `onEquip`. This component publishes nothing and grants nothing — it
+ * caller's `onEquip`. This component publishes nothing and grants nothing; it
  * is a view over `useInventoryCollection` with a selection on top.
  */
 
@@ -98,7 +98,7 @@ export interface InventoryBrowserProps {
    * Which categories this browser is responsible for.
    *
    * The window shows wearables in the WARDROBE and everything else in ITEMS,
-   * because wearing a hat and eating a sandwich are not the same activity —
+   * because wearing a hat and eating a sandwich are not the same activity,
    * one is customization with the Blobbi as feedback, the other is care. One
    * collection model still backs both (`useInventoryCollection`); this is the
    * lens each surface looks at it through.
@@ -175,8 +175,8 @@ export function InventoryBrowser({
   /**
    * The consumable whose consume dialog is open, or `null`.
    *
-   * Deliberately NOT the selection: a consumable is never "selected" — its
-   * click IS the action — so closing the dialog leaves no stale highlighted
+   * Deliberately NOT the selection: a consumable is never "selected": its
+   * click IS the action, so closing the dialog leaves no stale highlighted
    * tile behind.
    */
   const [useEntry, setUseEntry] = useState<CollectionEntry | null>(null);
@@ -205,8 +205,8 @@ export function InventoryBrowser({
 
   /*
     The dialog reads the LIVE row, not the row as it was when clicked. An
-    external inventory can change while the dialog is open — the owner folds,
-    a spend from another device lands — and the available quantity has to
+    external inventory can change while the dialog is open, the owner folds,
+    a spend from another device lands, and the available quantity has to
     follow. If the row disappears (consumed elsewhere, inventory unresolved)
     the dialog closes rather than offering something that is no longer there.
   */
@@ -222,7 +222,7 @@ export function InventoryBrowser({
    * Whether this surface selects things at all.
    *
    * Only wearables have a selection model (several verbs, a stage feedback
-   * loop). A surface whose categories exclude them — the Items tab — is a pure
+   * loop). A surface whose categories exclude them, the Items tab, is a pure
    * game inventory: no detail column, no aria-selected, direct actions.
    */
   const selectable = !allowed || allowed.includes('wearable');
@@ -237,7 +237,7 @@ export function InventoryBrowser({
   /*
     Keep the selection honest.
 
-    An item can leave the collection while it is selected — the last one is
+    An item can leave the collection while it is selected, the last one is
     used up, a cosmetic stops fitting after a life stage change, a filter hides
     it. Holding a stale selection would leave the detail panel describing
     something the player no longer has.
@@ -258,7 +258,7 @@ export function InventoryBrowser({
     Selecting shows an item; ADJUSTING arms its slot.
 
     The armed slot drives the stage's drag handles and the transform sliders,
-    and it used to be armed by mere selection — so looking at a worn hat put the
+    and it used to be armed by mere selection, so looking at a worn hat put the
     editor on screen and 120px of controls into the layout. Now the detail
     panel offers "Adjust", and only that arms it. Selecting anything else
     disarms, because the overlay must never keep handles on an item nobody is
@@ -281,7 +281,7 @@ export function InventoryBrowser({
   };
 
   /**
-   * Use a consumable. Lifted verbatim from the panel this replaced — the
+   * Use a consumable. Lifted verbatim from the panel this replaced, the
    * redesign changes where the action is offered, never what it does.
    */
   const handleUse = (entry: CollectionEntry, quantity: number) => {
@@ -319,7 +319,7 @@ export function InventoryBrowser({
             title: 'Could Not Use Item',
             description: playerFacingMessage(
               error,
-              "We couldn't use that item right now. Nothing was changed — try again in a moment.",
+              "We couldn't use that item right now. Nothing was changed; try again in a moment.",
             ),
             variant: 'destructive',
           });
@@ -334,7 +334,7 @@ export function InventoryBrowser({
    * A double-click cannot start a second spend: the mutation's own pending
    * state disables the dialog, and the consumption serializes per inventory
    * and resumes any unfinished spend for the row before it would sign a new
-   * one. Every outcome after the spend may exist is a STATUS, not an error —
+   * one. Every outcome after the spend may exist is a STATUS, not an error,
    * the toasts below say what is owed and that the next tap finishes it.
    */
   const handleUseExternal = (entry: CollectionEntry, petId: string, quantity: number) => {
@@ -372,14 +372,14 @@ export function InventoryBrowser({
           if (result.status === 'spend-unconfirmed') {
             toast({
               title: 'Not Confirmed Yet',
-              description: `We couldn't confirm the ${entry.definition.name} just now. Nothing was applied — tap it again to retry; it will not be spent twice.`,
+              description: `We couldn't confirm the ${entry.definition.name} just now. Nothing was applied; tap it again to retry; it will not be spent twice.`,
               variant: 'destructive',
             });
             return;
           }
           toast({
             title: 'Almost There',
-            description: `The ${entry.definition.name} was spent but ${petName}'s update was not confirmed. Tap it again to finish — it will not be spent twice.`,
+            description: `The ${entry.definition.name} was spent but ${petName}'s update was not confirmed. Tap it again to finish; it will not be spent twice.`,
             variant: 'destructive',
           });
         },
@@ -388,7 +388,7 @@ export function InventoryBrowser({
             title: 'Could Not Use Item',
             description: playerFacingMessage(
               error,
-              "We couldn't use that item right now. Nothing was spent — try again in a moment.",
+              "We couldn't use that item right now. Nothing was spent; try again in a moment.",
             ),
             variant: 'destructive',
           });
@@ -400,8 +400,8 @@ export function InventoryBrowser({
   /*
     `isLoading` is deliberately NOT an early return.
 
-    Three queries feed this browser — the catalog, the placement document and
-    the inventory — and blanking the whole tab until the slowest settles hides
+    Three queries feed this browser, the catalog, the placement document and
+    the inventory: and blanking the whole tab until the slowest settles hides
     the diagnostics below, which are the honest explanation for why a cosmetic
     is missing. The spinner belongs where the grid goes, and nowhere else.
   */
@@ -435,7 +435,7 @@ export function InventoryBrowser({
           message={
             emptyMessage ??
             (collection.catalogIsEmpty
-              ? 'Items appear here once the official issuer publishes them — nothing is shown from local data.'
+              ? 'Items appear here once the official issuer publishes them; nothing is shown from local data.'
               : 'Buy something from the shop and it will show up here.')
           }
         />
@@ -479,7 +479,7 @@ export function InventoryBrowser({
           >
             {/* ── The grid ──────────────────────────────────────────────────
                 BOUNDED and paged. Owning more hats must not make the window
-                taller — the window is a character card, not a document. Every
+                taller: the window is a character card, not a document. Every
                 tile is the same `CollectionTile` geometry: a page must read as
                 a uniform grid of slots, and a long name or a worn marker must
                 never make one card taller than its neighbour. */}
@@ -523,7 +523,7 @@ export function InventoryBrowser({
                   selected={selectable && entry.key === selectedKey}
                   /* A non-actionable tile gets NO handler at all: `ItemTile`
                      renders a plain <div> without one, so there is no dead
-                     button pretending a coin does something — or that an item
+                     button pretending a coin does something, or that an item
                      held in an inventory Blobbi only reads can be spent. */
                   onClick={entry.action === 'none' ? undefined : () => activate(entry)}
                   art={<ItemArt definition={entry.definition} />}
@@ -537,9 +537,9 @@ export function InventoryBrowser({
                   )}
                   /* One pill, and what it says depends on what is worth
                      saying: a worn hat announces that it is worn; an item
-                     from another game announces where from — unless its
+                     from another game announces where from, unless its
                      balance is not current, in which case THAT is the thing
-                     worth saying. A wearable can never be both — it is worn
+                     worth saying. A wearable can never be both; it is worn
                      HERE. */
                   stateLabel={
                     entry.equipped
@@ -611,8 +611,8 @@ export function InventoryBrowser({
                   <li key={item.address} className="text-island-ink-soft">
                     <span className="font-medium text-island-ink">
                       {item.definition?.name ?? item.address}
-                    </span>{' '}
-                    — {explainUnavailable(item.reason)}
+                    </span>{': '}
+                    {explainUnavailable(item.reason)}
                   </li>
                 ))}
               </ul>
@@ -621,7 +621,7 @@ export function InventoryBrowser({
               <ul className="mt-1 space-y-0.5 text-island-ink-soft">
                 {collection.warnings.map((w, i) => (
                   <li key={`${w.code}-${i}`}>
-                    <code>{w.code}</code> — {w.message}
+                    <code>{w.code}</code>: {w.message}
                   </li>
                 ))}
               </ul>
@@ -637,7 +637,7 @@ export function InventoryBrowser({
           definition={liveUseEntry.definition}
           /* Available = what the player has (live effective quantity for an
              external row); the selection may be any number up to it. Both
-             the Island path and the spend path consume N in ONE action —
+             the Island path and the spend path consume N in ONE action,
              one debit (a local 31633 write or ONE kind:1416 carrying
              quantity N), one effect scaled N times, one receipt. Waste is
              allowed exactly as it is for Island food: the dialog shows the
@@ -774,7 +774,7 @@ function ItemDetail({
               Take it off
             </Button>
             {/* PROGRESSIVE DISCLOSURE. The transform controls are three
-                controls and a paragraph — around 120px — and a player who is
+                controls and a paragraph, around 120px, and a player who is
                 not adjusting anything should not pay that height. */}
             <Button
               className="flex-1"

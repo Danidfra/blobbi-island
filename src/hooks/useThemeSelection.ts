@@ -11,7 +11,7 @@ import type { IslandTheme } from '@/lib/island-themes';
  * `useTheme` plus everything that needs a relay.
  *
  * The split is deliberate. `useTheme` is a small hook over `AppConfig` that any
- * surface may read — the account menu shows the current theme's name in a row,
+ * surface may read, the account menu shows the current theme's name in a row,
  * and that row should not pull a signer, a mutation and a subscription into its
  * dependency graph. THIS hook is for the one surface that actually chooses a
  * theme: it adds the live definition read (so a community theme's edits show
@@ -33,7 +33,7 @@ export interface UseThemeSelectionResult extends ReturnType<typeof useTheme> {
    * The INTEROPERABLE config travels rather than the derived palette: for a
    * theme that came from Nostr that is the author's own colours, font and
    * background, so a hop through the island costs nothing. For a built-in it is
-   * the three colours plus the name — a complete, valid Ditto theme.
+   * the three colours plus the name, a complete, valid Ditto theme.
    */
   selectTheme: (theme: IslandTheme) => void;
 }
@@ -56,7 +56,7 @@ export function useThemeSelection(): UseThemeSelectionResult {
       // place that both knows who is signed in and is a deliberate choice
       // rather than a reconciliation. `IslandThemeSync` compares it against the
       // signed-in account to decide whether a remote selection outranks this
-      // one — see `remoteWins`.
+      // one: see `remoteWins`.
       base.setTheme(next, user?.pubkey ?? null);
       publishSelection(next, themeConfigFromIslandTheme(next));
     },

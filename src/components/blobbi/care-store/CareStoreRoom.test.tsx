@@ -1,16 +1,16 @@
 /**
- * `<CareStoreRoom>` — the room's contract with the movement system.
+ * `<CareStoreRoom>`: the room's contract with the movement system.
  *
  * Three things are actually being asserted here, and none of them is a
  * coordinate:
  *
  *  1. the room registers its collision furniture with the SHARED movement
  *     blocker context (not a private list only this component can see);
- *  2. the checkout walks the Blobbi over and opens the shop ON ARRIVAL — never
+ *  2. the checkout walks the Blobbi over and opens the shop ON ARRIVAL; never
  *     on the click, which is the failure every walk-to-interact object in this
  *     game has had at least once;
  *  3. leaving is the ordinary back arrow, and closing the shop is not leaving;
- *  4. the counter and the corner Shop button are two CONTROLS over ONE shop —
+ *  4. the counter and the corner Shop button are two CONTROLS over ONE shop,
  *     never two shops.
  *
  * The shop modal is stubbed: this file is about the room. What the modal does
@@ -56,8 +56,8 @@ vi.mock('@/hooks/useLocation', () => ({
 
 /*
   The shop window needs a relay pool, a query client and a login context for its
-  balance, its catalog and its purchase hook. This file tests the ROOM — that
-  the checkout OPENS it — so the surface is stubbed here and exercised for real
+  balance, its catalog and its purchase hook. This file tests the ROOM; that
+  the checkout OPENS it, so the surface is stubbed here and exercised for real
   in `CareStoreModal.test.tsx` against a fake purchase hook.
 */
 vi.mock('./CareStoreModal', () => ({
@@ -191,7 +191,7 @@ describe('the persistent Shop shortcut', () => {
     expect(shopButton().className).toMatch(/\bright-\[\d+(\.\d+)?%\]/);
   });
 
-  it('opens the shop immediately — no walk, that is the point of it', () => {
+  it('opens the shop immediately; no walk, that is the point of it', () => {
     renderRoom();
     fireEvent.click(shopButton());
 
@@ -225,7 +225,7 @@ describe('two controls, one shop', () => {
     expect(screen.getAllByTestId('care-store-modal')).toHaveLength(1);
   });
 
-  it('the counter re-uses the shop the shortcut already opened — it does not mount a second one', () => {
+  it('the counter re-uses the shop the shortcut already opened; it does not mount a second one', () => {
     renderRoom();
     fireEvent.click(shopButton());
     expect(modalMounts).toHaveLength(1);
@@ -248,7 +248,7 @@ describe('two controls, one shop', () => {
   });
 
   it('opening from EITHER entry point stays purely presentational', () => {
-    // The room's import graph carries no writer at all — asserted here as
+    // The room's import graph carries no writer at all, asserted here as
     // behaviour: neither control can reach a mutation, because the only
     // financial surface in this tree is the stub above.
     renderRoom();

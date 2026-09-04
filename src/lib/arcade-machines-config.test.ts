@@ -140,9 +140,9 @@ describe('machine classification', () => {
 
   it('leaves no dedicated machine on a coming-soon screen', () => {
     // All three dedicated machines now have a game. The `dedicated-preview`
-    // branch is kept for the next machine that needs it — the rule it encodes
+    // branch is kept for the next machine that needs it, the rule it encodes
     // (a machine with no game still talks about ITS OWN game, never a menu and
-    // never another game's) is unchanged — but nothing ships on it today.
+    // never another game's) is unchanged, but nothing ships on it today.
     for (const machine of dedicatedMachines()) {
       expect(machine.activation.type, machine.id).toBe('dedicated-game');
     }
@@ -238,7 +238,7 @@ describe('floor ownership and render order', () => {
       const zIndexes = arcadeMachinesForFloor(floor).map((m) => m.zIndex);
       expect(zIndexes).toEqual([...zIndexes].sort((a, b) => a - b));
     }
-    // Stable across calls — the same array contents every time.
+    // Stable across calls, the same array contents every time.
     expect(arcadeMachinesForFloor('floor-1').map((m) => m.id)).toEqual(
       arcadeMachinesForFloor('floor-1').map((m) => m.id),
     );
@@ -283,7 +283,7 @@ describe('placement', () => {
       const constrained = constrainPosition(anchor, boundary);
 
       // If the anchor were outside the walk boundary, `constrainPosition` would
-      // move it — and the Blobbi would stop somewhere other than the machine.
+      // move it: and the Blobbi would stop somewhere other than the machine.
       expect(constrained.x).toBeCloseTo(anchor.x, 6);
       expect(constrained.y).toBeCloseTo(anchor.y, 6);
     }
@@ -293,7 +293,7 @@ describe('placement', () => {
    * The reachability guards.
    *
    * A report that walking to the air hockey table sometimes ended in a room
-   * corner without opening anything turned out to be an environment artifact —
+   * corner without opening anything turned out to be an environment artifact,
    * `requestAnimationFrame` was stalled in an occluded automation window, and
    * the walk animation, the arrival watcher and the stall detector all run on
    * it. The target itself was measured in a live browser as
@@ -331,7 +331,7 @@ describe('placement', () => {
 
   it('computes an anchor that cannot depend on the viewport', () => {
     // Everything the anchor is made of is a percentage of the world box, so the
-    // same point comes out at every surface size — which is why the runtime
+    // same point comes out at every surface size, which is why the runtime
     // rect-based target and this DOM-free one agreed exactly in a live browser.
     // A pixel creeping into the arithmetic would break that silently.
     for (const machine of arcadeMachines) {
@@ -345,7 +345,7 @@ describe('placement', () => {
 
     // The air hockey table specifically: the center-era browser measurement
     // (61.25, 89.40) plus the Phase 2 ground offset (half a 1.2-scaled lg body,
-    // 8.263…) — same on-screen stop point, now named by the feet.
+    // 8.263…): same on-screen stop point, now named by the feet.
     const airHockey = machineAnchorPosition(getArcadeMachine('arcade-air-hockey')!);
     expect(airHockey.x).toBeCloseTo(61.25, 2);
     expect(airHockey.y).toBeCloseTo(97.66, 2);
@@ -372,7 +372,7 @@ describe('decorative art is not represented as a machine', () => {
     }
   });
 
-  it('gives props no label at all — they cannot carry a wrong one', () => {
+  it('gives props no label at all; they cannot carry a wrong one', () => {
     for (const floor of FLOORS) {
       for (const prop of arcadePropsByFloor[floor]) {
         expect(prop).not.toHaveProperty('alt');

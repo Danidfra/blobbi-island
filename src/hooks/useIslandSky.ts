@@ -11,7 +11,7 @@
  * ## Why this does not use requestAnimationFrame
  *
  * Nothing here is frame-rate work. The sky is recomputed every
- * {@link ISLAND_TICK_MS} — 720 times per island day — and the gap between two
+ * {@link ISLAND_TICK_MS}: 720 times per island day, and the gap between two
  * values is bridged by CSS transitions of the same duration, so the *pixels*
  * change continuously at whatever rate the compositor likes while React does two
  * renders a minute. A `requestAnimationFrame` loop would burn a frame budget to
@@ -38,7 +38,7 @@ import type { LocationId } from '@/lib/location-types';
 
 /**
  * Cached snapshot. `useSyncExternalStore` compares snapshots by identity, so this
- * must be a stable object that is only replaced when the value really changed —
+ * must be a stable object that is only replaced when the value really changed,
  * returning a fresh `computeIslandSkyState(...)` on every read would loop.
  */
 let snapshot: IslandSkyState = computeIslandSkyState(islandDayProgressAt(Date.now()));
@@ -110,7 +110,7 @@ export function useIslandClockState(): IslandSkyState {
  * The UTC instant of the current tick, from the same shared store.
  *
  * Cloud variation is keyed off absolute time rather than the island-day phase, so
- * that a passage index is a plain function of UTC — the property that makes two
+ * that a passage index is a plain function of UTC, the property that makes two
  * players see the same cloud. Ten-second resolution is ample: a passage lasts
  * minutes.
  */
@@ -160,7 +160,7 @@ export function useIslandSkyState(): IslandSkyState {
  *
  * Matching the tick makes the interpolation linear in time and invisible. While
  * the DEV harness holds a fixed position the value is being *dragged*, so a
- * ten-second ease would make the slider feel broken — it drops to something
+ * ten-second ease would make the slider feel broken; it drops to something
  * responsive instead.
  */
 export function useIslandSkyTransitionMs(): number {
@@ -172,7 +172,7 @@ export function useIslandSkyTransitionMs(): number {
  * The `filter` / `transition` pair to apply to a location's background artwork.
  *
  * `filter` is `undefined` for locations that are not part of the day/night system,
- * which leaves their artwork byte-for-byte as it renders today — an unsupported
+ * which leaves their artwork byte-for-byte as it renders today, an unsupported
  * scene cannot be changed by this feature, not even subtly.
  *
  * `extraFilter` is prepended for the letterbox copy, which must keep its blur.

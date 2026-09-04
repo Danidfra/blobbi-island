@@ -1,5 +1,5 @@
 /**
- * The `set-many` inventory mutation — ONE canonical kind:31633 publish for a
+ * The `set-many` inventory mutation: ONE canonical kind:31633 publish for a
  * bulk quantity change (Phase 9.5, the Inventory & Equipment Lab's writer).
  *
  * What must hold: one publish however many targets, unrelated entries and
@@ -230,7 +230,7 @@ describe('the hook publishes ONE canonical event per bulk action', () => {
     });
 
     // The second write read the first write's event (stateful relay mock), so
-    // the final published inventory holds BOTH — no lost update.
+    // the final published inventory holds BOTH; no lost update.
     const published = lastPublishedInventory();
     expect(getInventoryItemQuantity(published, CAP)).toBe(1);
     expect(getInventoryItemQuantity(published, AURA)).toBe(1);

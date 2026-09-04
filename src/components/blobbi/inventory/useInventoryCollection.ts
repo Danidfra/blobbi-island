@@ -2,7 +2,7 @@
  * One collection, two kinds of thing.
  *
  * The Inventory tab used to be two stacked panels with two headers, two empty
- * states and two vocabularies — wearables above, carried items below — because
+ * states and two vocabularies, wearables above, carried items below, because
  * they came from two different windows and were merely moved into the same tab.
  * They are still two different FACTS (a cosmetic is worn, a sandwich is eaten)
  * but they are one COLLECTION, and a player browsing their things should not
@@ -20,21 +20,21 @@
  * and produces a flat, sorted list of {@link CollectionEntry}. It decides
  * nothing about policy: which cosmetics are equippable is
  * `useEquippableCosmetics`' answer, which is `placement/policy.ts`' answer, and
- * neither is second-guessed here. What this adds is a single presentation model
- * — a category, an action verb, and an equipped flag — so the UI can render one
+ * neither is second-guessed here. What this adds is a single presentation model,
+ * a category, an action verb, and an equipped flag, so the UI can render one
  * grid instead of two lists.
  *
  * ## Several inventories, one collection, no merging
  *
  * A player's things are not all in Blobbi's inventory. kind:31633 is scoped by
- * a `d`, and another game credits its own context under the same player key —
+ * a `d`, and another game credits its own context under the same player key,
  * so `useExternalInventoryView` finds those, and their items join this list.
  *
  * They JOIN it; they are not folded into it. Every entry records the inventory
  * it came from ({@link CollectionEntry.sourceInventoryId}) and keeps its own
  * row, so the same item address owned in two contexts produces two entries
  * rather than one summed number that belongs to neither. Nothing here writes,
- * combines, or reconciles ownership state — this is a view, and the ownership
+ * combines, or reconciles ownership state; this is a view, and the ownership
  * stays exactly where its owner put it.
  */
 
@@ -71,7 +71,7 @@ import type { UnavailableCosmetic } from '@/placement/useEquippableCosmetics';
  * The filter chips over the grid.
  *
  * Six, not the seven sections the old panel stacked: `medicine`, `hygiene` and
- * `energy` are one idea to a player — things that fix a Blobbi — and three
+ * `energy` are one idea to a player, things that fix a Blobbi, and three
  * chips for three items each is category overload, which the reference study
  * flagged as the failure mode of an over-sectioned inventory. The underlying
  * item categories are untouched; only the chip groups them.
@@ -92,9 +92,9 @@ export type CollectionAction =
 /**
  * Where an entry's ownership actually lives.
  *
- * - `'island'` — Blobbi's own kind:31633 (`blobbi:island`). The one inventory
+ * - `'island'`: Blobbi's own kind:31633 (`blobbi:island`). The one inventory
  *   this game reads AND writes.
- * - `'external'` — another game's inventory, discovered author-wide. Read only:
+ * - `'external'`: another game's inventory, discovered author-wide. Read only:
  *   Blobbi never publishes a replacement for a context it does not own.
  *
  * This is the property the actionability rule keys on. It is deliberately about
@@ -108,12 +108,12 @@ export type CollectionSource = 'island' | 'external';
 /**
  * Whether an entry's quantity is the CURRENT balance.
  *
- * - `'ready'` — the balance is derived and current: for Island rows, the
+ * - `'ready'`: the balance is derived and current: for Island rows, the
  *   inventory this game writes; for external rows, the snapshot with every
  *   pending kind:1416 spend applied through the kind:1417 fold chain.
- * - `'loading'` — the external inventory's spends/folds have not answered
+ * - `'loading'`: the external inventory's spends/folds have not answered
  *   yet. The quantity shown is the owner's last consolidated statement.
- * - `'unresolved'` — the snapshot references a fold chain that could not be
+ * - `'unresolved'`: the snapshot references a fold chain that could not be
  *   verified (or could not be read). There IS no balance. The quantity shown
  *   is the last consolidated statement, labelled as such, and nothing may be
  *   spent against it.
@@ -126,8 +126,8 @@ export interface CollectionEntry {
   /**
    * Stable identity for React and for selection: `<sourceInventoryId>|<address>`.
    *
-   * The address alone is NOT unique across a multi-inventory collection — the
-   * same item can be owned in two contexts — so keying on it would collide two
+   * The address alone is NOT unique across a multi-inventory collection, the
+   * same item can be owned in two contexts, so keying on it would collide two
    * real rows into one and make the detail panel describe the wrong one.
    */
   key: string;
@@ -137,7 +137,7 @@ export interface CollectionEntry {
   sourceInventoryId: string;
   source: CollectionSource;
   /**
-   * A short player-facing name for where an external item came from — "Farm".
+   * A short player-facing name for where an external item came from, "Farm".
    * `undefined` for this game's own items, which need no provenance label.
    */
   sourceLabel?: string;
@@ -159,7 +159,7 @@ export interface CollectionEntry {
   compatibility?: ExternalItemCompatibility;
   /**
    * For an external row with a `compatibility`, this is the issuer's
-   * definition WITH Island's action/effects/stages applied — what the consume
+   * definition WITH Island's action/effects/stages applied, what the consume
    * dialog shows and what the gameplay effect uses.
    */
   definition: ResolvedBlobbiItemDefinition;
@@ -334,7 +334,7 @@ export function useInventoryCollection(options: {
     // may already have debited the owner's last consolidated numbers. While
     // that derivation is loading, or when the fold chain cannot be verified,
     // the raw quantity is shown as "the last consolidated statement" with the
-    // row marked accordingly — visible, counted, never actionable.
+    // row marked accordingly, visible, counted, never actionable.
     for (const source of external ?? []) {
       const state = externalStates.get(source.address);
       const availability: CollectionAvailability =
@@ -382,7 +382,7 @@ export function useInventoryCollection(options: {
           source: 'external',
           availability,
           // The issuer's own player-facing name. Never the `d`, never the
-          // inventory id, never a pubkey — a player is owed "Farm", not
+          // inventory id, never a pubkey, a player is owed "Farm", not
           // `farm:main` and certainly not hex.
           sourceLabel: getTrustedItemIssuer(issuer)?.label,
           ...(compatibility ? { compatibility } : {}),
@@ -395,7 +395,7 @@ export function useInventoryCollection(options: {
             Actionable only when BOTH hold: Island has an interpretation for
             the item (compatibility policy) AND the source inventory's balance
             is current. A compatible item in an unresolved inventory is not
-            pressable — Blobbi must never spend against a balance it cannot
+            pressable: Blobbi must never spend against a balance it cannot
             verify. Everything else is `'none'`, the same representation
             currency uses: no click handler, no consume dialog, no debit.
 
@@ -409,7 +409,7 @@ export function useInventoryCollection(options: {
     }
 
     // Stable order: chip order, then equipped first inside wearables, then name.
-    // Equipped-first matters — what the Blobbi is wearing is what the player
+    // Equipped-first matters: what the Blobbi is wearing is what the player
     // came to look at. The key breaks remaining ties so two same-named items
     // from different inventories never swap places between renders.
     entries.sort((a, b) => {
@@ -436,7 +436,7 @@ export function useInventoryCollection(options: {
         "empty bag" flash before the discovery answered. Both reads throw on an
         unusable relay answer (bounded timeouts) rather than pending forever,
         so neither can leave a permanent spinner. Live updates to the external
-        store replace it in place and re-derive — they never send the
+        store replace it in place and re-derive; they never send the
         collection back through this loading state.
 
         The catalog and the placement document are deliberately NOT gated on:

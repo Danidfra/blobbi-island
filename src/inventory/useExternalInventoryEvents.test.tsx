@@ -1,7 +1,7 @@
 /**
  * The live store hook: initial fetch + live tail, and the lifecycle around
- * it. Relays are fakes; everything else — the store, the merge, the
- * derivation, the query — is real.
+ * it. Relays are fakes; everything else, the store, the merge, the
+ * derivation, the query, is real.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -101,7 +101,7 @@ function makeFakeRelay(url: string): FakeRelay {
 
 /** Network behaviour knobs for the authoritative reads. */
 const network = {
-  /** How many discovery (kind:31633) reads happened — the count of authoritative fetches. */
+  /** How many discovery (kind:31633) reads happened, the count of authoritative fetches. */
   discoveryReads: 0,
   /** How many by-id fold reads happened. */
   byIdReads: 0,
@@ -227,7 +227,7 @@ describe('initial state', () => {
 });
 
 describe('the live tail', () => {
-  it('opens ONE subscription per relay with the batched filters — never per inventory or item', async () => {
+  it('opens ONE subscription per relay with the batched filters; never per inventory or item', async () => {
     const { result } = renderView();
     await waitFor(() => expect(strawberryQty(result)).toBe(4));
     await waitFor(() => expect(live().map((r) => r.filters.length)).toEqual([1, 1]));
@@ -348,7 +348,7 @@ describe('the live tail', () => {
   });
 });
 
-describe('a refetch reconciles — it never makes the client forget', () => {
+describe('a refetch reconciles: it never makes the client forget', () => {
   it('a live spend survives a stale refetch that does not return it: effective stays 3', async () => {
     const { result } = renderView();
     await waitFor(() => expect(strawberryQty(result)).toBe(4));
@@ -432,7 +432,7 @@ describe('a refetch reconciles — it never makes the client forget', () => {
   });
 
   it('there is no missed-event window between the fetch and the tail: the tail replays', async () => {
-    // Lands on the relay right after the fetch's discovery read answered —
+    // Lands on the relay right after the fetch's discovery read answered,
     // before the ledger read, before the tail attached.
     network.afterFirstDiscovery = () => {
       stored.spends = [spend('between')];
@@ -445,8 +445,8 @@ describe('a refetch reconciles — it never makes the client forget', () => {
 
 describe('the last window: a live event between the query result and its commit', () => {
   /**
-   * Hook the ONE place TanStack writes a completed fetch — `Query.setData`
-   * without `manual` — and, right before it commits, deliver a live event
+   * Hook the ONE place TanStack writes a completed fetch, `Query.setData`
+   * without `manual`: and, right before it commits, deliver a live event
    * through the production path (`applyLiveEvent` → `setQueryData`, which is
    * a `manual` write through the same method). That is exactly "the query
    * function has already returned; the result has not been committed yet".
@@ -481,7 +481,7 @@ describe('the last window: a live event between the query result and its commit'
     await refetch();
     await waitFor(() => expect(seen.committed).not.toBeNull());
     expect(seen.injected).toBe(true);
-    // The COMMITTED value itself carries s4 — not a later re-merge.
+    // The COMMITTED value itself carries s4; not a later re-merge.
     expect(seen.committed!.spends.map((e) => e.id)).toEqual([hex('s4')]);
     await settle();
     expect(strawberryQty(result)).toBe(3);
@@ -527,7 +527,7 @@ describe('recovery', () => {
     await waitFor(() => expect(strawberryQty(result)).toBe(3));
   });
 
-  it('the first (bootstrap) EOSE does not invalidate, and a reconnect EOSE invalidates exactly once — no loop', async () => {
+  it('the first (bootstrap) EOSE does not invalidate, and a reconnect EOSE invalidates exactly once; no loop', async () => {
     const { result } = renderView();
     await waitFor(() => expect(strawberryQty(result)).toBe(4));
     await waitFor(() => expect(live().every((r) => r.filters.length === 1)).toBe(true));
@@ -574,9 +574,9 @@ describe('missing folds', () => {
     expect(strawberryQty(result)).toBeNull(); // never the raw number
 
     // The by-id relays come back, holding the manifest (it is ONLY reachable
-    // by id here — the ledger read still does not have it). After the
-    // unanswered wait, a recovery trigger — here the view changing because a
-    // live spend arrived — makes the manifest eligible again.
+    // by id here, the ledger read still does not have it). After the
+    // unanswered wait, a recovery trigger; here the view changing because a
+    // live spend arrived, makes the manifest eligible again.
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
     network.byId = () => ({ events: [fold('m1', [hex('x1')])], answered: true });
@@ -593,9 +593,9 @@ describe('missing folds', () => {
     let calls = 0;
     network.byId = () => {
       calls += 1;
-      // 1: the authoritative fetch's own by-id round — answered, absent.
+      // 1: the authoritative fetch's own by-id round, answered, absent.
       if (calls === 1) return { events: [], answered: true };
-      // 2: the view's read — a read that never comes back (the relay hangs).
+      // 2: the view's read, a read that never comes back (the relay hangs).
       if (calls === 2) return new Promise(() => {}) as unknown as { events: NostrEvent[]; answered: boolean };
       // 3+: the retry finds it.
       return { events: [fold('m1', [hex('x1')])], answered: true };
@@ -685,7 +685,7 @@ describe('missing folds: the one-shot wake-up', () => {
     expect(network.byIdReads).toBe(3); // resolved: no further reads, no timer
   });
 
-  it('repeated failures back off exponentially — 5 s, 10 s, 20 s — and never hammer', async () => {
+  it('repeated failures back off exponentially: 5 s, 10 s, 20 s, and never hammer', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     unresolvedFarm();
     scriptById(() => ({ events: [], answered: false }));

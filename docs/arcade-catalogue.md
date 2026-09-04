@@ -1,4 +1,4 @@
-# Blobbi Island — Arcade Machines and the Shared Catalogue (Phase 4)
+# Blobbi Island: Arcade Machines and the Shared Catalogue (Phase 4)
 
 > **What changed in one sentence.** The six generic cabinets now open a shared
 > catalogue; the dance machine, the pool table and the air hockey table stay
@@ -8,8 +8,8 @@
 > **Since then:** the air hockey table's game shipped, and then the pool
 > table's. Both activations are now `dedicated-game` rather than
 > `dedicated-preview`, so **no machine ships on `dedicated-preview` today**. The
-> rule this document establishes is unchanged — a dedicated machine is one game
-> and can never be another — and the tables below are updated. The
+> rule this document establishes is unchanged, a dedicated machine is one game
+> and can never be another, and the tables below are updated. The
 > `dedicated-preview` branch is kept for the next machine that needs it. See
 > [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
 > [`docs/blobbi-pool.md`](./blobbi-pool.md).
@@ -27,17 +27,17 @@ broke the three machines that are not interchangeable.
 
 The arcade is not nine boxes with screens. It is:
 
-- **six generic cabinets** — pink, black, classic, green, purple, red — whose
+- **six generic cabinets**: pink, black, classic, green, purple, red, whose
   screens can show anything, so they show a list;
-- **three dedicated machines** — a dance pad, a pool table, an air hockey table —
+- **three dedicated machines**: a dance pad, a pool table, an air hockey table,
   each of which *is* one physical game and can never be another.
 
 Sending all nine to one catalogue produced three concrete defects:
 
 1. A **pool table opened a menu** and said nothing about pool. Its own
    coming-soon copy, written in Phase 2, stopped being reachable.
-2. **Blobbi Dance was launchable from any cabinet**, so a run's `machineId` —
-   the value a ticket claim records as "where this happened" — could be a pool
+2. **Blobbi Dance was launchable from any cabinet**, so a run's `machineId`,
+   the value a ticket claim records as "where this happened": could be a pool
    table's.
 3. The catalogue **used Blobbi Dance to look full**. A player at a pink cabinet
    was offered a game that lives two floors down.
@@ -59,7 +59,7 @@ Read before editing: the machine registry, `ArcadeRoom`, `ArcadeMachinePanel`,
 | How does a cabinet click select a machine? | `ArcadeMachine` computes a walk target from the live rect → `requestInteraction` → **on confirmed arrival** → `onActivate(machineId)` → `ArcadeRoom.handleMachineArrival`. Nothing opens on click. |
 | Where was `gameId` stored? | On the machine, in `arcade-machines-config.ts`. Also carried in lifecycle state, set from the machine at `open`. |
 | Did the lifecycle assume one game per machine? | Only through its CALLER. The reducer takes `machineId` and `gameId` as independent fields on `open`; the room happened to derive the second from the first. **The reducer needed no change.** |
-| What closed the machine panel? | `ArcadeRoom.closeShell` — `dispatch({type:'close'})` plus clearing a local `target`. The shell's `open` was `lifecycle.status !== 'closed'`. |
+| What closed the machine panel? | `ArcadeRoom.closeShell`: `dispatch({type:'close'})` plus clearing a local `target`. The shell's `open` was `lifecycle.status !== 'closed'`. |
 | How was Dance mounted? | `ArcadeRoom` found the open machine whose `gameId === BLOBBI_DANCE_GAME_ID` and rendered `<DanceMachine>`, which brings its own `ArcadeGameShell`. |
 | How were coming-soon machines represented? | `gameId: null` + `availability` + `blurb` on the machine, rendered by `ArcadeMachinePanel` inside the generic shell. |
 | What could become catalogue-level? | Game identity, category, availability, controls, duration, ticket eligibility, and every word of product copy about a GAME. |
@@ -69,7 +69,7 @@ The headline finding: **`gameId` on a machine had become a second source of trut
 about what is playable**, and the first thing a second source of truth does is
 disagree.
 
-The first pass removed it — and `availability` and `blurb` with it — and replaced
+The first pass removed it, and `availability` and `blurb` with it, and replaced
 it with nothing, which is how a pool table became a menu. The corrective pass
 replaced all three with **one** field, `activation`, that says what a machine
 does in a form a type-checker and a test can both read.
@@ -80,7 +80,7 @@ does in a form a type-checker and a test can both read.
 
 Two registries, and keeping them apart is the point.
 
-### The machine registry — `src/lib/arcade-machines-config.ts`
+### The machine registry, `src/lib/arcade-machines-config.ts`
 
 ```ts
 type ArcadeMachineActivation =
@@ -90,7 +90,7 @@ type ArcadeMachineActivation =
 ```
 
 One discriminated field per machine, and `ArcadeRoom.handleMachineArrival` is a
-single `switch` over it with no other branch — no test on an id, a filename, a
+single `switch` over it with no other branch; no test on an id, a filename, a
 display name or a piece of artwork. That is what makes "a pool table opens pool"
 a property of the data rather than a convention a component happens to follow.
 
@@ -112,12 +112,12 @@ unchanged. No asset changed.
 **The dance machine's name.** It was "Dance Dance Blobbi", the first pass renamed
 it "Dance Pad Cabinet" to satisfy the universal rule, and it is now **"Blobbi
 Dance Machine"**. A dedicated machine should be findable by reading the room, so
-it is named for the game it hosts — and named the *same* as that game, because
+it is named for the game it hosts, and named the *same* as that game, because
 having a cabinet called "Dance Dance Blobbi" host a game called "Blobbi Dance"
 was a second name for one thing. A test forbids a generic cabinet being named
 after any game, and forbids the dance machine losing its game name.
 
-### The game registry — `src/arcade/catalogue.ts`
+### The game registry, `src/arcade/catalogue.ts`
 
 Pure data. No React, no hooks, no components, no Nostr, no relay, no package URL,
 no reward arithmetic. `catalogue.test.ts` asserts those absences **against the
@@ -178,7 +178,7 @@ the catalogue screen is designed around it (§7). It is not padded out.
 ### Design decisions worth stating
 
 - **`machineIds` is now load-bearing.** It was an optional, unused field in the
-  first pass — which is precisely why the rule it was meant to express was
+  first pass: which is precisely why the rule it was meant to express was
   enforced nowhere. It is the input to `canLaunchArcadeGame`, required for every
   dedicated entry, and cross-checked against the machine registry by a test.
 - **`disabled` exists as well as `coming-soon`.** A withdrawn game is not "coming
@@ -218,13 +218,13 @@ canLaunchArcadeGame({ game, machineId, surface }): boolean
 
 Three rules, all of which must hold:
 
-1. **`isNativeLaunchable`** — an island game, a `native` launch mode, and
+1. **`isNativeLaunchable`**: an island game, a `native` launch mode, and
    `playable`. A guest game is refused on CATEGORY first, before launch mode is
    even considered, so a guest entry mislabelled `launchMode: 'native'` and
    `availability: 'playable'` still fails.
 2. **A dedicated game only starts on its own machine.** Blobbi Dance names
    `arcade-dance-machine` and nothing else, so a generic cabinet, the pool table
-   and the air hockey table are all refused by one clause — and a *result* can
+   and the air hockey table are all refused by one clause, and a *result* can
    therefore only ever carry the dance machine's id.
 3. **Surface and host must agree.** A dedicated game is never launchable from
    the shared catalogue; a shared-cabinet game is never launchable as if it were
@@ -251,9 +251,9 @@ neither the reward hook nor the inventory layer.
 
 ---
 
-## 4. Navigation — three flows
+## 4. Navigation: three flows
 
-`src/arcade/arcade-navigation.ts` — a second, tiny state machine, kept apart from
+`src/arcade/arcade-navigation.ts`: a second, tiny state machine, kept apart from
 the lifecycle reducer on purpose. That reducer owns a **run**; this owns a
 **screen**. Merging them would mean inventing lifecycle statuses like `browsing`
 that no game will ever be in.
@@ -286,12 +286,12 @@ type ArcadeView =
 1. **A catalogue game is only reachable from a catalogue**, and a dedicated game
    only from its machine. `launchGame` refuses from anywhere but a catalogue;
    `openDedicatedGame` is the only other way to reach `game`.
-2. **The machine id survives the whole stack** — which, for a dedicated game,
+2. **The machine id survives the whole stack**: which, for a dedicated game,
    makes its machine id *always* its own.
 3. **Exit goes where the player came from.** `exitGame` reads `from`: a
    catalogue-launched game returns to its catalogue, a dedicated machine's game
    goes out to the room. **Blobbi Dance is the second kind**, so leaving it
-   returns the player to the arcade — not to a list that does not contain it,
+   returns the player to the arcade; not to a list that does not contain it,
    which is what the first pass did.
 4. **Only `closeArcadeView` reaches `closed`**, from anywhere.
 
@@ -299,10 +299,10 @@ type ArcadeView =
 
 Three handlers in `ArcadeRoom`, and no fourth place changes either:
 
-- `handleMachineArrival` — one `switch` on `activation`. A `dedicated-game`
+- `handleMachineArrival`: one `switch` on `activation`. A `dedicated-game`
   dispatches `open` **and** sets the game view, with no menu in between.
-- `handleSelectGame` — the shared-catalogue path, unreachable today.
-- `handleExitGame` — `dispatch({type:'close'})` (which aborts a live run and
+- `handleSelectGame`: the shared-catalogue path, unreachable today.
+- `handleExitGame`: `dispatch({type:'close'})` (which aborts a live run and
   records it as aborted) **and** `setView(exitGame(...))`.
 
 Arriving at a generic cabinet or a table starts **no run at all**: the lifecycle
@@ -314,12 +314,12 @@ stays `closed` and the shell renders no `data-arcade-status`.
 | --- | --- | --- |
 | Shared catalogue | **Close** ("Close and go back to the arcade") | Arcade Room |
 | Dedicated coming-soon (no machine today) | **Close** ("Close and go back to the arcade") | Arcade Room |
-| Dedicated playable games — preview, results, aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
+| Dedicated playable games, preview, results, aborted | **Back to the arcade** ("Back to the arcade room") | Arcade Room |
 | A catalogue-launched game, not mid-run | **Back to games** ("Back to the game list") | Catalogue |
 | Any live run (`countdown`, `playing`) | **Leave** ("Leave *game* and end this run") | Aborts, then as above |
 | Prize counter | **Close** | Arcade Room |
 
-One dismiss control per dialog, labelled by whoever knows the destination — the
+One dismiss control per dialog, labelled by whoever knows the destination, the
 room passes `exitLabel` / `exitAriaLabel` into the game. The footer holds exactly
 one action: Start or Play again.
 
@@ -342,7 +342,7 @@ a coming-soon panel are screens and not runs; when it is absent there is no
 `data-arcade-status` and no pause control. `closeLabel` / `closeAriaLabel` come
 from the caller, because only the caller knows the destination.
 
-### Containment — the root cause, and the fix
+### Containment: the root cause, and the fix
 
 **The defect.** The shell used a plain Radix `DialogContent` with no `container`
 and no `inFrame`, so it portaled to `document.body`, took the `fixed inset-0`
@@ -356,7 +356,7 @@ not merely the wrong size. Constraining a body-level modal leaves it floating
 over the page, unaligned with the game window, and still covering browser
 furniture on a short viewport. The containment root had to move.
 
-**The fix — a stage overlay host.** `BlobbiFrame` now renders one extra element
+**The fix: a stage overlay host.** `BlobbiFrame` now renders one extra element
 inside the cream bezel, level with the world:
 
 ```tsx
@@ -368,22 +368,22 @@ and provides it through `StageOverlayContext`. The shell reads it with
 `useStageOverlayHost()` and passes it as Radix's `container`, together with
 `inFrame` (which switches the overlay to `absolute inset-0` with the island's
 soft backdrop instead of `fixed inset-0` with a black one). Its own box is
-`absolute inset-0 … sm:inset-3` — measured against the stage, never the viewport.
+`absolute inset-0 … sm:inset-3`: measured against the stage, never the viewport.
 
 Four properties this buys, each with a test:
 
-- **desktop** — the overlay fills the framed canvas; frame, header, footer and
+- **desktop**: the overlay fills the framed canvas; frame, header, footer and
   page stay visible and untouched;
-- **immersive / fullscreen** — the same box IS the screen, so one rule covers
+- **immersive / fullscreen**: the same box IS the screen, so one rule covers
   every presentation and there is no second code path to keep in step;
-- **not inside the world subtree** — so this does not reintroduce the scale-
+- **not inside the world subtree**: so this does not reintroduce the scale-
   transform bug `GameModal` had in Phase 1;
-- **no host** (a unit test rendering a room alone) — `undefined` falls back to
+- **no host** (a unit test rendering a room alone): `undefined` falls back to
   `document.body`, Radix's default, so nothing has to guard.
 
 The `pointer-events` split is load-bearing: the host always covers the whole
 stage, so without it an EMPTY host would swallow every click-to-move in the
-world. `z-40` puts it above the HUD and dock (`z-30`) — a machine's screen should
+world. `z-40` puts it above the HUD and dock (`z-30`): a machine's screen should
 not leave the action dock pokable behind it.
 
 The same host is now used by `ArcadePassModal`, `ElevatorModal` and
@@ -395,7 +395,7 @@ browser to leave the same world node (and the same Blobbi) in place.
 
 ---
 
-## 6. The reward boundary — unchanged
+## 6. The reward boundary, unchanged
 
 No reward formula, no inventory behaviour and no publication semantics changed in
 this phase. What the corrective pass *restored* is the guarantee that a Blobbi
@@ -403,18 +403,18 @@ Dance claim records the right machine:
 
 - **Only `arcade-dance-machine` can create a Blobbi Dance run.**
   `canLaunchArcadeGame` refuses the game on every other machine and from the
-  shared catalogue, checked at three layers — registry test, resolver test, and
+  shared catalogue, checked at three layers, registry test, resolver test, and
   the room's own render-time re-check with the same surface the view was opened
   from. So `machineId` in a result and in a claim is always the dance machine's.
 - **The shared catalogue computes nothing and claims nothing.** It renders cards
   and calls `onSelect(gameId)`. `catalogue.test.ts` asserts the registry's source
   contains no reference to `reward-policy`, `calculateTicketAward` or
   `calculateArcadeReward`.
-- **The pool preview has no reward path at all** — no Start, no lifecycle, no
+- **The pool preview has no reward path at all**: no Start, no lifecycle, no
   result, nothing to claim.
 - **All three dedicated games now pay tickets** (Arcade V1, client-trusted):
   each has an `active` policy and `grantsTickets: true`, which the registry test
-  still enforces in both directions — playable and paying remain independent
+  still enforces in both directions, playable and paying remain independent
   facts, and a fourth game starts at `false` until a policy is deliberately
   promoted. See [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) §7 and
   [`docs/blobbi-pool.md`](./blobbi-pool.md) §8.
@@ -422,7 +422,7 @@ Dance claim records the right machine:
   Refused on category, before launch mode.
 - **Returning to the room cannot reset an unresolved claim.** Leaving goes
   through `close`, which never clears the reducer's `rewardedRunIds`, and the
-  durable claim ledger is keyed by `runId` and owner — neither is touched by a
+  durable claim ledger is keyed by `runId` and owner; neither is touched by a
   view change.
 - `src/arcade/boundaries.test.ts` still enforces, against the real import graph,
   that `src/arcade/` reaches neither the inventory layer nor a Nostr client, and
@@ -444,17 +444,17 @@ It is built for being empty, because it is empty: every game the arcade has
 belongs to a dedicated machine.
 
 - a friendly panel using **the cabinet the player is standing at** as its
-  illustration — no new artwork, different at every cabinet, and it makes the
+  illustration: no new artwork, different at every cabinet, and it makes the
   screen belong to the thing they walked up to;
 - one heading, "Arcade Games";
 - one sentence: *"New games are being prepared for these cabinets."* plus
-  *"Come back another day — the Pink Cabinet will be ready for you."*;
+  *"Come back another day, the Pink Cabinet will be ready for you."*;
 - two short **notes**, not two sections: Island Games can earn tickets, Guest
   Games are just for fun, never give tickets, and official ones are coming soon;
 - one Close.
 
 What it deliberately is not: two headings over two empty grids with badges and
-"0 results", which is what the first pass rendered — an administrative form
+"0 results", which is what the first pass rendered, an administrative form
 rather than a child's game menu. There are no placeholder cards, and no Blobbi
 Dance borrowed from another machine to fill the space.
 
@@ -465,7 +465,7 @@ that can actually be started; metadata for a game you cannot play is noise.
 
 ### Dedicated coming-soon (no machine uses this today)
 
-`ArcadeDedicatedPreview` — one component, used by the room and by the DEV
+`ArcadeDedicatedPreview`: one component, used by the room and by the DEV
 harness, so what is reviewed is what ships. Its whole job is to be about the
 RIGHT game: the title, the sentence and the artwork come from the machine and
 from that machine's own registry entry, so a pool table could only ever talk
@@ -474,7 +474,7 @@ about pool. No Start control, no catalogue, one Close to the room.
 The air hockey table used this screen until its game shipped, and the pool table
 used it until its own did. That is exactly the transition this design was built
 for: a machine moves from `dedicated-preview` to `dedicated-game` and nothing
-else about it changes — no new component, no new route, no change to the room's
+else about it changes; no new component, no new route, no change to the room's
 `switch`. Both moves cost one line in the machine registry.
 
 The branch and the component are kept for the machine that needs them next. See
@@ -488,12 +488,12 @@ panel, and it no longer touches the game lifecycle at all.
 
 ---
 
-## 8. Guest Games — presentation only
+## 8. Guest Games, presentation only
 
 `src/arcade/guest-game-trust.ts` records the product decision and nothing else.
 
 When Guest Game discovery is built, Blobbi Island will initially accept packages
-published by the **official Blobbi issuer** and nobody else — not because a wider
+published by the **official Blobbi issuer** and nobody else; not because a wider
 set is undesirable, but because a wider set needs a review process, a revocation
 story and a runtime that has been attacked at least once, and none of those
 exist.
@@ -504,7 +504,7 @@ a name that says what it is trusted for rather than writing the key out again;
 `guest-game-trust.test.ts` asserts the module's source contains no 64-hex
 literal, that the key encodes to the npub the decision was taken against
 (`npub1nmac6vz9hf6n7dny65pnpz6f0qe4dvn2d405h9ztltzz8xh7vw5sg0wu5e`), and that
-**no other module in `src/` references the constant** — so "recorded, not wired
+**no other module in `src/` references the constant**: so "recorded, not wired
 up" is checked, not claimed.
 
 `GUEST_GAME_RUNTIME_AVAILABLE` is `false` and is not a feature flag: flipping it
@@ -521,13 +521,13 @@ rendered catalogue contains none of `webxdc`, `nostr`, `npub`, `kind:`,
 ## 9. Accessibility
 
 - The catalogue panel is a `<section aria-labelledby>` pointing at its one `<h3>`.
-  One heading, not a stack — the categories are sentences now.
+  One heading, not a stack, the categories are sentences now.
 - A game card is an `<article aria-labelledby>` naming the game, inside an `<li>`.
-- **A coming-soon card has no button at all** — not a disabled one, which a
+- **A coming-soon card has no button at all**: not a disabled one, which a
   screen reader still announces as a button and a mouse user still tries to
   click. Same for a Guest Game card.
 - The dedicated coming-soon panel announces itself with `role="status"`, so a
-  screen-reader user learns "*machine* — coming soon" at the moment a sighted one
+  screen-reader user learns "*machine*, coming soon" at the moment a sighted one
   does. No machine is on that branch today (§1), so this is the contract the next
   `dedicated-preview` machine inherits rather than something on screen now.
 - Every interactive control in the dialog declares `min-h-[44px]`, including the
@@ -547,14 +547,14 @@ rendered catalogue contains none of `webxdc`, `nostr`, `npub`, `kind:`,
 
 Verified in a real browser at **386 × 840**, rendered in an iframe so CSS media
 queries genuinely evaluate narrow (the automated browser refuses to resize its
-window below ~1120 px — the same limitation `docs/arcade-foundation.md` §14
+window below ~1120 px, the same limitation `docs/arcade-foundation.md` §14
 records). `matchMedia` was patched inside the probe to report a touch-first
-device, so the **immersive** presentation could be measured too — a desktop
+device, so the **immersive** presentation could be measured too, a desktop
 Chrome iframe never triggers it on its own.
 
 | Check | Immersive @ 386 × 840 | Desktop @ 1120 × 813 |
 | --- | --- | --- |
-| Overlay host | 386 × 840 — the whole screen | 1016 × 641 — the game window only |
+| Overlay host | 386 × 840, the whole screen | 1016 × 641, the game window only |
 | Shell computed inset | `0 / 0 / 0 / 0` | `absolute`, `sm:inset-3` |
 | Inside the host | yes | yes |
 | Covers the browser page | **no** | **no** |
@@ -582,17 +582,17 @@ collapses to zero.
 `/dev/arcade` stays DEV-only twice over (the route is behind
 `import.meta.env.DEV`, and `src/dev-routes.test.ts` proves the built output
 contains no reference to it). Its arcade surfaces now render **inside**
-`BlobbiAppShell`, where the real room's do — they used to be siblings of it,
+`BlobbiAppShell`, where the real room's do; they used to be siblings of it,
 outside the frame's overlay host, so the harness could not show the containment
 it exists to verify.
 
-- **Dedicated machines** — Blobbi Dance opening directly, and the pool and air
+- **Dedicated machines**: Blobbi Dance opening directly, and the pool and air
   hockey tables opening `ArcadeDedicatedPreview`, the real component. A readout
   shows `dedicated=3 · generic=6`.
-- **Catalogue cabinet (generic only)** — the six generic cabinets, and only
+- **Catalogue cabinet (generic only)**: the six generic cabinets, and only
   those. A chip that let you open the shared catalogue "from" the dance machine
   would demonstrate something the product refuses to do.
-- **Catalogue** — four entry sets: `real` (the shipped registry, which offers no
+- **Catalogue**: four entry sets: `real` (the shipped registry, which offers no
   cabinet game and says so), `future-game` (a hypothetical shared-cabinet game so
   the card layout is reviewable), `with-guest` (a Guest Game claiming to be
   playable, which must get no Play button and no ticket badge), and
@@ -615,7 +615,7 @@ it exists to verify.
   re-confirmed against an unmodified checkout of the previous commit, which
   behaves identically. The arrival CONTRACT is covered by `ArcadeRoom.test.tsx`,
   which drives the real arrival callback for every machine on every floor.
-- **The DEV panel is unusable while a modal is open** — Radix marks the rest of
+- **The DEV panel is unusable while a modal is open**: Radix marks the rest of
   the document inert, so a click on the panel dismisses the dialog instead of
   activating a chip. Pre-existing; the workflow is close → change chip → reopen.
 - The immersive measurements come from a patched `matchMedia` in an iframe, not
@@ -626,30 +626,30 @@ it exists to verify.
 
 ---
 
-## 13. Phase 5 — the Guest Game Runtime
+## 13. Phase 5, the Guest Game Runtime
 
 Exactly what this phase deferred, and nothing else:
 
-1. **Discovery** — query the official issuer's published Guest Game events, parse
+1. **Discovery**: query the official issuer's published Guest Game events, parse
    them into `ArcadeCatalogueEntry` records with `category: 'guest'` and
    `launchMode: 'guest-runtime'`, and merge them into the catalogue behind a
    validation gate. This is where `OFFICIAL_GUEST_GAME_PUBLISHER_PUBKEY` is
    finally used, and where the "no other module references it" test is deleted
    with intent.
-2. **Package handling** — fetch, verify and cache a WebXDC-style package. Nothing
+2. **Package handling**: fetch, verify and cache a WebXDC-style package. Nothing
    executes at this step.
-3. **The restricted runtime** — a Blobbi-owned sandbox with **no signer, no
+3. **The restricted runtime**: a Blobbi-owned sandbox with **no signer, no
    inventory, no coins, no profile and no Arcade Ticket access**, and a
    capability surface small enough to enumerate in this document.
 4. **A guest launch path** in the resolver, separate from the native one, that
-   `isNativeLaunchable` still refuses — a guest game must never reach a native
+   `isNativeLaunchable` still refuses: a guest game must never reach a native
    component.
-5. **Revocation and review** — how a package is withdrawn (`availability:
+5. **Revocation and review**: how a package is withdrawn (`availability:
    'disabled'` already exists for it) and what "curated" means operationally.
 
 Explicitly **not** Phase 5: the first shared-cabinet game, Pool gameplay, the
 Prize Shop, leaderboards, latency calibration, or opening the publisher set
 beyond the official issuer. (Air Hockey and Pool, both listed here as out of
 scope when this was written, have since shipped as the arcade's second and third
-Island Games — [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
+Island Games: [`docs/blobbi-air-hockey.md`](./blobbi-air-hockey.md) and
 [`docs/blobbi-pool.md`](./blobbi-pool.md).)

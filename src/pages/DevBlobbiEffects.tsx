@@ -1,18 +1,18 @@
 /**
- * DevBlobbiEffects — the visual-effect harness (dev-only route
+ * DevBlobbiEffects: the visual-effect harness (dev-only route
  * `/dev/blobbi-effects`; excluded from production builds like the other
  * `/dev/*` pages).
  *
  * WHAT IT DRIVES. `BlobbiRendererView` directly, with a hand-written visual and
  * a literal `effects` array. There is no login, no signer, no relay, no query
- * client, no inventory, no equip state and no `CurrentBlobbiDisplay` — which is
+ * client, no inventory, no equip state and no `CurrentBlobbiDisplay`: which is
  * the point: if drawing an effect ever needed any of those, this page would
  * stop rendering, and that failure is the test.
  *
  * WHAT IT DOES NOT DO. It publishes nothing, mutates no inventory, grants
  * nothing and never touches the player's Blobbi. The trusted item registry is
  * displayed as reference data (`d` tag, rarity, address) and is not used to
- * activate anything — activation is a later phase.
+ * activate anything: activation is a later phase.
  *
  * REDUCED MOTION is simulated with CSS rather than by patching `matchMedia`,
  * because the package's reduced-motion support IS a `@media` block: there is no
@@ -184,7 +184,7 @@ export function DevBlobbiEffects() {
       <ReducedMotionOverride />
 
       <header className="mb-4">
-        <h1 className="text-xl font-semibold">Blobbi visual effects — dev harness</h1>
+        <h1 className="text-xl font-semibold">Blobbi visual effects, dev harness</h1>
         <p className="text-xs text-neutral-400">
           Renders <code>BlobbiRendererView</code> directly from plain data. No login, no relay,
           no inventory, no publishing. Nothing here activates or grants anything.
@@ -278,14 +278,14 @@ export function DevBlobbiEffects() {
         </div>
         <p className="mb-3 max-w-3xl text-sm text-neutral-300">{selectedInfo.description}</p>
         <p className="mb-4 text-[11px] text-neutral-500">
-          Official item: <code>{selectedItem?.d}</code> — address{' '}
-          <code className="break-all">{selectedItem?.address}</code> — current published
+          Official item: <code>{selectedItem?.d}</code>: address{' '}
+          <code className="break-all">{selectedItem?.address}</code>: current published
           revision <code className="break-all">{fixtureByD(selectedItem?.d ?? '')?.event.id ?? '?'}</code>{' '}
           (the event id changes on every republish; the address is the identity)
         </p>
 
         <div className="flex flex-wrap gap-4">
-          {/* Side-by-side baseline comparison — the reference for "did this
+          {/* Side-by-side baseline comparison, the reference for "did this
               change anything it should not have?" */}
           <figure>
             <Stage {...stageProps} size={focusSize} effects={undefined} instanceId="focus-none" className="h-80 w-80" />
@@ -366,7 +366,7 @@ export function DevBlobbiEffects() {
       <section className="mb-8 rounded-lg bg-neutral-800 p-4">
         <h2 className="mb-1 text-lg font-semibold">Slot behaviour</h2>
         <p className="mb-3 text-xs text-neutral-400">
-          One effect per slot. When several compete, the FIRST in the supplied order wins — so
+          One effect per slot. When several compete, the FIRST in the supplied order wins, so
           the two conflict cards below differ only in the order they were asked for.
         </p>
         <div className="flex flex-wrap gap-4">
@@ -378,7 +378,7 @@ export function DevBlobbiEffects() {
               className="h-72 w-72"
             />
             <figcaption className="mt-1 w-72 text-center text-xs text-neutral-400">
-              four different slots — all four render
+              four different slots: all four render
             </figcaption>
           </figure>
           <figure>
@@ -389,7 +389,7 @@ export function DevBlobbiEffects() {
               className="h-72 w-72"
             />
             <figcaption className="mt-1 w-72 text-center text-xs text-neutral-400">
-              four auras — solar-radiance wins (first)
+              four auras: solar-radiance wins (first)
             </figcaption>
           </figure>
           <figure>
@@ -400,7 +400,7 @@ export function DevBlobbiEffects() {
               className="h-72 w-72"
             />
             <figcaption className="mt-1 w-72 text-center text-xs text-neutral-400">
-              same four, reordered — void-whispers wins
+              same four, reordered: void-whispers wins
             </figcaption>
           </figure>
           <figure>
@@ -411,7 +411,7 @@ export function DevBlobbiEffects() {
               className="h-72 w-72"
             />
             <figcaption className="mt-1 w-72 text-center text-xs text-neutral-400">
-              all twelve asked for — four drawn
+              all twelve asked for, four drawn
             </figcaption>
           </figure>
         </div>
@@ -443,11 +443,11 @@ export function DevBlobbiEffects() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 9 — activation diagnostics.
+// Phase 9: activation diagnostics.
 //
 // Everything below drives the PURE resolver (`resolveActiveBlobbiEffects`) on
 // simulated inventory/placement/form state. No signer, no query client, no
-// relay, no publish — the same guarantees as the rest of this harness. The
+// relay, no publish, the same guarantees as the rest of this harness. The
 // registry table also cross-checks the bundled fixture events (the currently
 // published revisions) against the trusted registry, through the real parser.
 // ---------------------------------------------------------------------------
@@ -614,7 +614,7 @@ function ActivationDiagnostics({
                 setEquippedBySlot((prev) => ({ ...prev, [slot]: e.target.value }))
               }
             >
-              <option value="">— none —</option>
+              <option value="">(none)</option>
               {ADDRESSED_VISUAL_EFFECT_ITEMS.filter(
                 (i) => i.effectSlot === slot,
               ).map((i) => (
@@ -658,18 +658,18 @@ function ActivationDiagnostics({
           <ul className="space-y-1 text-xs">
             {resolution.active.map((a) => (
               <li key={a.registration.address} className="text-emerald-300">
-                ✓ {a.registration.name} — active in {a.registration.effectSlot}
+                ✓ {a.registration.name}: active in {a.registration.effectSlot}
               </li>
             ))}
             {resolution.rejected.map((r, i) => (
               <li key={`${r.registration.address}-${i}`} className="text-amber-300">
-                ✗ {r.registration.name} ({r.entry.id}) — {r.reason}:{' '}
+                ✗ {r.registration.name} ({r.entry.id}): {r.reason}:{' '}
                 {explainEffectRejection(r.reason)}
               </li>
             ))}
             {ignored.map((entry) => (
               <li key={entry.id} className="text-neutral-400">
-                ○ {entry.id} — not an official effect item (wearable-policy business:
+                ○ {entry.id}: not an official effect item (wearable-policy business:
                 untrusted issuer / unknown item)
               </li>
             ))}
@@ -739,8 +739,8 @@ function ActivationDiagnostics({
                   <td className="pr-3"><code>{item.d}</code></td>
                   <td className="pr-3">{item.effectSlot}</td>
                   <td className="pr-3"><code>{item.effectId}</code></td>
-                  <td className="pr-3"><code>{resolved?.effectVisual?.effect ?? '—'}</code></td>
-                  <td className="pr-3"><code>{resolved?.effectVisual?.effectSlot ?? '—'}</code></td>
+                  <td className="pr-3"><code>{resolved?.effectVisual?.effect ?? '-'}</code></td>
+                  <td className="pr-3"><code>{resolved?.effectVisual?.effectSlot ?? '-'}</code></td>
                   <td className={agrees ? 'pr-3 text-emerald-300' : 'pr-3 text-red-400'}>
                     {agrees ? '✓' : '✗'}
                   </td>

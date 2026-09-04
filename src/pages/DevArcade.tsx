@@ -83,7 +83,7 @@ import { addInventoryItemQuantity } from '@/inventory/package';
 import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry';
 
 /**
- * Development-only arcade harness — `/dev/arcade`.
+ * Development-only arcade harness, `/dev/arcade`.
  *
  * **Not a production route.** `AppRouter` registers it behind
  * `import.meta.env.DEV`, which Vite replaces with a literal `false` in a build,
@@ -91,8 +91,8 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  * signs nothing, publishes nothing and reads no private data.
  *
  * It exists because the arcade's real entry path needs a Nostr key, a published
- * kind:31124 Blobbi on a live relay, a walk across Town, and — for two of the
- * three floors — twenty coins spent on a pass. Verifying that a pool table no
+ * kind:31124 Blobbi on a live relay, a walk across Town, and, for two of the
+ * three floors: twenty coins spent on a pass. Verifying that a pool table no
  * longer opens a dance game should not require any of that. The audit built a
  * throwaway version of this and deleted it; this is the real one.
  *
@@ -110,32 +110,32 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  * Everything below writes to the TanStack cache or to `sessionStorage`. Nothing
  * publishes:
  *
- *  - **ticket balance** — seeds `['blobbi-inventory-31633', undefined]` directly;
- *  - **fetched vs fallback definitions** — seeds the catalog query with
+ *  - **ticket balance**: seeds `['blobbi-inventory-31633', undefined]` directly;
+ *  - **fetched vs fallback definitions**: seeds the catalog query with
  *    `source: 'definition'` or the bundled fallback, so the two render paths can
  *    be compared side by side;
- *  - **image failure** — seeds a definition whose `image` points nowhere, to
+ *  - **image failure**: seeds a definition whose `image` points nowhere, to
  *    exercise the emoji degradation path;
- *  - **lifecycle fixtures** — drives the real reducer through countdown, pause,
+ *  - **lifecycle fixtures**: drives the real reducer through countdown, pause,
  *    abort and results without a game existing;
- *  - **the catalogue** — the REAL shared catalogue in the REAL shell, for any
+ *  - **the catalogue**: the REAL shared catalogue in the REAL shell, for any
  *    of the six GENERIC cabinets, with four entry sets: the shipped registry
  *    (which offers no cabinet game, and says so), one with a hypothetical
  *    future cabinet game so the card layout can be reviewed, one with a Guest
  *    Game (which must get no Play button), and one listing a game with no
  *    implementation (which must fail safely and say so). Only the first exists
  *    in the shipped registry;
- *  - **dedicated machines** — Blobbi Dance, Pool and Air Hockey opening
+ *  - **dedicated machines**: Blobbi Dance, Pool and Air Hockey opening
  *    DIRECTLY, in their real controllers on their real machine ids. None ever
  *    shows the shared catalogue, which is the thing to check here;
- *  - **overlay containment** — every surface above is portaled into the frame's
+ *  - **overlay containment**: every surface above is portaled into the frame's
  *    stage overlay host, so what a reviewer sees is a panel inside the game
  *    window rather than one covering the browser page;
- *  - **anchors** — draws each machine's configured walk-to point on the floor;
- *  - **claims** — every dedicated machine (dance, hockey, pool) runs the REAL
+ *  - **anchors**: draws each machine's configured walk-to point on the floor;
+ *  - **claims**: every dedicated machine (dance, hockey, pool) runs the REAL
  *    claim boundary with a FAKE `ArcadeRewardWriter` whose balance is ADDITIVE,
  *    like the real kind:31633 grant. Every claim outcome is
- *    reachable — confirmed, signer-refused, timed out, verified against the
+ *    reachable: confirmed, signer-refused, timed out, verified against the
  *    wrong quantity, unverifiable, and **`lagging-relay`, which reproduces the
  *    duplicate-grant defect exactly**: the publish lands and the verification
  *    read is a beat behind. The writer log shows every publish and every read,
@@ -170,7 +170,7 @@ const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
 /**
  * A fixture owner for the seeded inventory. The package refuses to build an
- * inventory address for an empty pubkey, and the harness has no signed-in user —
+ * inventory address for an empty pubkey, and the harness has no signed-in user,
  * so it supplies an obviously-fake one. It is never signed with, never
  * published, and never used as a query key (the key still keys off the real,
  * absent user).
@@ -190,8 +190,8 @@ const BROKEN_CHART: DanceChart = { ...DEFAULT_DANCE_CHART, version: 99 };
  * Catalogue fixtures, for the states the shipped registry cannot be in.
  *
  * The registry has no Guest Game and no broken entry, and it must not gain one
- * to make them reviewable. These are passed as the catalogue's `entries` prop —
- * the same prop, the same component, the same cards — so what is reviewed here
+ * to make them reviewable. These are passed as the catalogue's `entries` prop,
+ * the same prop, the same component, the same cards, so what is reviewed here
  * is the real presentation of a hypothetical row.
  */
 type CatalogueFixture = 'real' | 'future-game' | 'with-guest' | 'unresolvable';
@@ -206,7 +206,7 @@ const CATALOGUE_FIXTURES: readonly CatalogueFixture[] = [
 /**
  * A hypothetical future game that a GENERIC cabinet could offer.
  *
- * The shipped registry has none — every game belongs to a dedicated machine —
+ * The shipped registry has none; every game belongs to a dedicated machine,
  * so the card layout the catalogue is built to grow into has nothing to render
  * it with. This is that card, and it must never be added to the real registry:
  * the empty state is the honest one until a shared-cabinet game actually
@@ -283,8 +283,8 @@ const WRITER_OUTCOMES: readonly WriterOutcome[] = [
  * A fake `ArcadeRewardWriter`.
  *
  * The whole point of the writer being an INTERFACE rather than a hook: every
- * branch of the claim boundary — including the two that must never be reported
- * as success — is reachable here with no key, no relay and no published event.
+ * branch of the claim boundary, including the two that must never be reported
+ * as success: is reachable here with no key, no relay and no published event.
  */
 function createDevWriter(
   outcome: WriterOutcome,
@@ -330,8 +330,8 @@ function createDevWriter(
  * Dance result fixtures.
  *
  * A run is sixty-eight seconds long, and there is no way to shorten one without
- * changing the chart. Reviewing the results screen — every metric, every grade
- * band, and the zero-ticket outcome — by playing the song through each time is
+ * changing the chart. Reviewing the results screen; every metric, every grade
+ * band, and the zero-ticket outcome, by playing the song through each time is
  * how a results screen ends up reviewed once and never again.
  *
  * These dispatch a REAL `finish` into the REAL lifecycle reducer with a
@@ -392,7 +392,7 @@ function danceFixtureResult(
 }
 
 /**
- * Air Hockey result fixtures — representative awards, no match needed.
+ * Air Hockey result fixtures, representative awards, no match needed.
  *
  * Same idea as the dance fixtures: a REAL `finish` through the REAL reducer
  * with a hand-built result, so the reward panel that renders is the production
@@ -435,7 +435,7 @@ function hockeyFixtureResult(
 }
 
 /**
- * Pool result fixtures — representative awards, no frame needed.
+ * Pool result fixtures, representative awards, no frame needed.
  *
  * `clean-win` is the 8-ticket maximum; `scrappy-win` shows the clean-frame and
  * legal-8 bonuses withheld; `loss` is the participation floor.
@@ -602,14 +602,14 @@ export function DevArcade() {
    * The catalogue entry the harness drives, and the cabinet it pretends the
    * player walked to.
    *
-   * A cabinet no longer owns a game, so the harness picks one of each — which is
+   * A cabinet no longer owns a game, so the harness picks one of each, which is
    * also what makes "the same game, launched from a different machine id" a
    * thing this panel can demonstrate.
    */
   const danceEntry = getCatalogueEntry(BLOBBI_DANCE_GAME_ID)!;
   /**
    * Blobbi Dance's machine is not a choice. It is a DEDICATED machine's game,
-   * and `canLaunchArcadeGame` refuses it anywhere else — so a harness chip that
+   * and `canLaunchArcadeGame` refuses it anywhere else, so a harness chip that
    * let you pick a cabinet would demonstrate something the product refuses to
    * do, which is the exact false confidence a harness exists to prevent.
    */
@@ -624,7 +624,7 @@ export function DevArcade() {
   // Reaching Pool through the ROOM means walking a Blobbi to the table, which
   // needs a signed-in pet and several seconds of animation. That is the right
   // path for a player and the wrong one for a reviewer checking a rebound angle,
-  // so — exactly as with Blobbi Dance — the harness opens the real controller,
+  // so: exactly as with Blobbi Dance, the harness opens the real controller,
   // with the real lifecycle, on the real machine id, directly.
   const [poolOpen, setPoolOpen] = useState(false);
   const [poolLifecycle, poolDispatch] = useReducer(
@@ -639,7 +639,7 @@ export function DevArcade() {
    * The physics review scenario to open Pool with, or `null` for a real frame.
    *
    * A scenario replaces the RACK, not the game: the same controller, the same
-   * lifecycle, the same rules and the same physics world — just a table laid out
+   * lifecycle, the same rules and the same physics world, just a table laid out
    * to put one behaviour in front of a reviewer. See `pool-scenarios.ts`.
    */
   const [poolScenarioId, setPoolScenarioId] = useState<string | null>(null);
@@ -721,14 +721,14 @@ export function DevArcade() {
   /**
    * Which dedicated coming-soon screen is open, if any.
    *
-   * The REAL component the room renders, not a copy — a harness that rebuilds
+   * The REAL component the room renders, not a copy, a harness that rebuilds
    * the panel it is meant to review proves nothing about the panel.
    */
   const [dedicatedPreview, setDedicatedPreview] = useState<string | null>(null);
   /**
    * The room's three card dialogs, openable without walking anywhere.
    *
-   * All three open on ARRIVAL — at the ticket counter, at the elevator — and
+   * All three open on ARRIVAL, at the ticket counter, at the elevator, and
    * arrival needs a walk, which needs `requestAnimationFrame`. That makes their
    * LAYOUT unreviewable in any automated browser (rAF is starved there) and
    * tedious in a real one. They are also the three that regressed when the
@@ -775,7 +775,7 @@ export function DevArcade() {
   /**
    * Drop the dance machine straight onto its results screen.
    *
-   * A real `finish` through the real reducer, with a hand-built result — so the
+   * A real `finish` through the real reducer, with a hand-built result, so the
    * reward panel that renders is the production one, calculated by the
    * production policy, with the fake writer still standing between it and any
    * relay.
@@ -791,7 +791,7 @@ export function DevArcade() {
         // only way to reach `already-claimed` without publishing anything.
         //
         // The ledger is keyed by OWNER, so this needs the same pubkey the reward
-        // hook will read with. Read-only, and it signs nothing — but it does
+        // hook will read with. Read-only, and it signs nothing, but it does
         // mean the state is unreachable in a signed-out browser, which the
         // harness says out loud rather than showing a chip that quietly does
         // nothing.
@@ -829,7 +829,7 @@ export function DevArcade() {
   );
 
   /**
-   * Drop the air-hockey machine straight onto its results screen — the same
+   * Drop the air-hockey machine straight onto its results screen, the same
    * pattern as {@link showDanceResult}, priced by the production hockey policy,
    * with the fake writer standing between the claim and any relay.
    */
@@ -871,7 +871,7 @@ export function DevArcade() {
    * Force `prefers-reduced-motion` on for this tab.
    *
    * `useReducedMotion` reads `matchMedia` through `useSyncExternalStore`, and a
-   * patched `matchMedia` cannot notify existing subscribers — so the harness
+   * patched `matchMedia` cannot notify existing subscribers, so the harness
    * remounts the machine rather than pretending the change propagated.
    */
   const toggleReducedMotion = useCallback(() => {
@@ -971,7 +971,7 @@ export function DevArcade() {
       if (!launchable) {
         setNote(
           `${fixtureEntry.title} cannot be launched from ${machine.displayName}, so the reducer ` +
-            'refuses to start a run — select Blobbi Dance and the Blobbi Dance Machine.',
+            'refuses to start a run, select Blobbi Dance and the Blobbi Dance Machine.',
         );
         return;
       }
@@ -1006,7 +1006,7 @@ export function DevArcade() {
 
   const award = useMemo(() => {
     if (!lifecycle.result) return null;
-    // The fixture entry decides which game's policy prices the result — all
+    // The fixture entry decides which game's policy prices the result; all
     // three dedicated games have one now.
     const policy = getRewardPolicy(lifecycle.result.gameId);
     if (!policy) return null;
@@ -1025,7 +1025,7 @@ export function DevArcade() {
           real room's do.
 
           They used to be siblings of `BlobbiAppShell`, which put them outside
-          the frame's stage-overlay host — so they portaled to `document.body`
+          the frame's stage-overlay host, so they portaled to `document.body`
           and covered the whole browser page. That made the harness incapable of
           showing the containment it exists to verify: a panel reviewed here
           would look nothing like the one a player gets.
@@ -1052,7 +1052,7 @@ export function DevArcade() {
 
       {/*
         Pool, in the real controller with the real lifecycle and the real claim
-        boundary — and the FAKE writer, because Pool pays tickets now and a
+        boundary: and the FAKE writer, because Pool pays tickets now and a
         harness claim must never publish.
       */}
       {poolOpen && poolLifecycle.status !== 'closed' && (
@@ -1079,7 +1079,7 @@ export function DevArcade() {
       {/*
         The Prize Counter, in the REAL notice shell with the REAL counter
         surface. Preview-only since Phase 9.5: it can neither spend nor grant,
-        so the harness needs no fakes — seed the caches below to drive its
+        so the harness needs no fakes, seed the caches below to drive its
         ticket balance and definition states.
       */}
       {prizeOpen && (
@@ -1127,7 +1127,7 @@ export function DevArcade() {
       {/*
         The REAL shared catalogue, in the REAL shell, for whichever cabinet is
         selected. Selecting Blobbi Dance here goes through the same resolver the
-        room uses, with the same machine id — which is what makes "the same game
+        room uses, with the same machine id, which is what makes "the same game
         from a different cabinet" checkable without walking anywhere.
       */}
       {/* The REAL room dialogs, in the REAL stage overlay host. */}
@@ -1162,7 +1162,7 @@ export function DevArcade() {
             // Resolved against the entries being RENDERED, not the shipped
             // registry: a fixture entry is not in the registry, and looking it up
             // there would report "not in the arcade" for the one case this
-            // fixture exists to show — a listed game with no implementation.
+            // fixture exists to show, a listed game with no implementation.
             const entry = catalogueEntries.find((e) => e.id === gameId) ?? null;
             if (!entry) {
               setCatalogueError('That game is not in the arcade.');
@@ -1242,10 +1242,10 @@ export function DevArcade() {
           </Button>
           {/*
             Collapsible because the panel is 45 vh tall and the arcade shell it
-            drives is centred — reviewing the bottom half of a game screen from
+            drives is centred: reviewing the bottom half of a game screen from
             behind the controls that opened it is not a review.
           */}
-          /dev/arcade — DEV only. Nothing here publishes to a relay.
+          /dev/arcade: DEV only. Nothing here publishes to a relay.
         </p>
 
         <Section title="Floor">
@@ -1309,7 +1309,7 @@ export function DevArcade() {
         <Section title="Dedicated machines">
           {/*
             These are NOT cabinets. Each opens its own experience and never the
-            shared catalogue — the correction this section exists to make
+            shared catalogue: the correction this section exists to make
             visible.
 
             The `dedicated-preview` loop below is now empty, because every
@@ -1346,8 +1346,8 @@ export function DevArcade() {
         <Section title="Pool physics review">
           {/*
             The fifteen manual acceptance scenarios from the Planck migration.
-            Each one lays the table out for one behaviour — a jaw graze, a rail
-            run past a side pocket, a full break — in the REAL game, so what a
+            Each one lays the table out for one behaviour, a jaw graze, a rail
+            run past a side pocket, a full break, in the REAL game, so what a
             reviewer judges is what a player gets.
           */}
           {POOL_SCENARIOS.map((scenario) => (
@@ -1424,7 +1424,7 @@ export function DevArcade() {
           ))}
           <Chip onClick={() => dispatch({ type: 'close' })}>close</Chip>
           <span className="ml-2 font-mono">
-            status={lifecycle.status} run={lifecycle.runId ?? '—'}
+            status={lifecycle.status} run={lifecycle.runId ?? '-'}
             {award ? ` award=${award.total}` : ''}
           </span>
         </Section>
@@ -1464,8 +1464,8 @@ export function DevArcade() {
             reduced motion: {forceReducedMotion ? 'on' : 'off'}
           </Chip>
           <span className="ml-2 font-mono">
-            status={danceLifecycle.status} run={danceLifecycle.runId ?? '—'} machine=
-            {danceLifecycle.machineId ?? '—'}
+            status={danceLifecycle.status} run={danceLifecycle.runId ?? '-'} machine=
+            {danceLifecycle.machineId ?? '-'}
           </span>
         </Section>
 
@@ -1581,7 +1581,7 @@ export function DevArcade() {
 
       {/*
         Shell-box overrides, for eyeballing the mobile layout without resizing
-        the window. They constrain the BOX only — CSS media queries still
+        the window. They constrain the BOX only: CSS media queries still
         evaluate at the real viewport width, so genuine narrow-viewport checks
         need device emulation. Saying so beats a harness that quietly proves less
         than it appears to.
@@ -1595,8 +1595,8 @@ export function DevArcade() {
       {showGallery && <DancePresentationGallery reducedMotion={forceReducedMotion} />}
 
       {/*
-        The REAL dance machine — real chart, real judgement, real lifecycle, real
-        claim boundary — with a fake writer. It publishes nothing: `rewardWriter`
+        The REAL dance machine, real chart, real judgement, real lifecycle, real
+        claim boundary: with a fake writer. It publishes nothing: `rewardWriter`
         replaces the only component that could.
       */}
     </LocationProvider>
@@ -1623,7 +1623,7 @@ function ResultsFixture({ award }: { award: ReturnType<typeof calculateTicketAwa
         Total: {award.total} tickets{award.capped ? ' (capped)' : ''}
       </p>
       <p className="text-xs opacity-70">
-        Calculated only — granting happens on the dedicated machines&rsquo; own results screens,
+        Calculated only: granting happens on the dedicated machines&rsquo; own results screens,
         through the real claim boundary and the fake writer.
       </p>
     </div>
@@ -1638,14 +1638,14 @@ function ResultsFixture({ award }: { award: ReturnType<typeof calculateTicketAwa
  * arrive only when a player earns them, which makes "does Miss read clearly?"
  * and "is the top combo tier too loud?" questions nobody can answer by playing.
  *
- * This renders them from the SAME helpers the live renderer calls —
- * `judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS` — so what is
+ * This renders them from the SAME helpers the live renderer calls,
+ * `judgmentReadoutClass`, `comboTier`, `DANCE_LANE_VISUALS`: so what is
  * reviewed here is what ships. It is DEV-only twice over: the whole module is
  * behind `import.meta.env.DEV`, and nothing in the arcade imports it.
  */
 function DancePresentationGallery({ reducedMotion }: { reducedMotion: boolean }) {
   /**
-   * The live readout ends its pop at `opacity: 0` — it is meant to vanish. That
+   * The live readout ends its pop at `opacity: 0`: it is meant to vanish. That
    * makes the animated class useless for SIDE-BY-SIDE comparison, so the gallery
    * shows the settled form by default and replays the real animation on demand.
    */

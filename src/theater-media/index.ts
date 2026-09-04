@@ -1,5 +1,5 @@
 /**
- * Theater media safety — what may appear on the theater screen.
+ * Theater media safety, what may appear on the theater screen.
  *
  * The catalog is bundled (no relay, no unknown state); admission is pure and is
  * consulted by every path that can put media on screen, not only by the input.

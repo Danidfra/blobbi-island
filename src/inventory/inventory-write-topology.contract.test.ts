@@ -1,5 +1,5 @@
 /**
- * kind:31633 writer topology — the structural contract.
+ * kind:31633 writer topology, the structural contract.
  *
  * kind:31633 is a REPLACEABLE event holding the Coin balance, the Arcade
  * Ticket balance and every consumable at once. A writer that builds its event
@@ -14,11 +14,11 @@
  * |---|---|
  * | `inventory-transaction.ts` | the ONE lock + serialize + authoritative read + monotonic `created_at` + strict publish primitive |
  * | `useInventoryMutation.ts`  | the React item-mutation hook + optimistic cache; its write path runs a transaction |
- * | `coin-wallet.ts`           | Coin grants/spends — runs a transaction |
- * | `arcade-reward-writer.ts`  | Arcade Ticket grants — runs a transaction |
- * | `arcade-prize-spend-writer.ts` | Arcade Ticket spends — runs a transaction |
+ * | `coin-wallet.ts`           | Coin grants/spends, runs a transaction |
+ * | `arcade-reward-writer.ts`  | Arcade Ticket grants, runs a transaction |
+ * | `arcade-prize-spend-writer.ts` | Arcade Ticket spends, runs a transaction |
  *
- * EVERY production kind:31633 writer runs inside `runInventoryTransaction` —
+ * EVERY production kind:31633 writer runs inside `runInventoryTransaction`,
  * no writer may lock, read, timestamp, sign or publish on its own, and none
  * may publish through `useNostrPublish` (which treats a timeout as success).
  * Nothing else may build, sign or publish a kind:31633 event.
@@ -63,7 +63,7 @@ const TEMPLATE_BUILDERS = [
   'src/inventory/inventory-transaction.ts', // the shared primitive
 ];
 
-/** EVERY production kind:31633 writer — all must run inside the transaction. */
+/** EVERY production kind:31633 writer; all must run inside the transaction. */
 const TRANSACTION_WRITERS = [
   'src/inventory/useInventoryMutation.ts',
   'src/inventory/coin-wallet.ts',
@@ -108,7 +108,7 @@ describe('every kind:31633 writer joins the shared transaction boundary', () => 
 
   it('no kind:31633 writer publishes through useNostrPublish', () => {
     // `useNostrPublish` swallows a publish timeout and reports the event as
-    // success — acceptable for fire-and-forget kinds, never for the
+    // success: acceptable for fire-and-forget kinds, never for the
     // balance-bearing replaceable inventory. Only the transaction's STRICT
     // publish (timeout = AMBIGUOUS) is allowed.
     for (const writer of [...TRANSACTION_WRITERS, 'src/inventory/inventory-transaction.ts']) {
@@ -122,7 +122,7 @@ describe('every kind:31633 writer joins the shared transaction boundary', () => 
     const source = read('src/inventory/useInventoryMutation.ts');
     expect(source).toMatch(/export function serializeInventoryWrite/);
     expect(source).toMatch(/serializeByKey\(`inventory:\$\{pubkey\}`/);
-    // The transaction primitive reuses that exact chain — not a second one.
+    // The transaction primitive reuses that exact chain; not a second one.
     expect(read('src/inventory/inventory-transaction.ts')).toMatch(
       /serializeInventoryWrite\(pubkey,/,
     );
@@ -188,7 +188,7 @@ describe('replaceable-event ordering is one shared policy', () => {
     expect(transaction).toMatch(/export function nextInventoryCreatedAt/);
     expect(transaction).toMatch(/created_at: nextInventoryCreatedAt\(now\(\), meta\.createdAt\)/);
 
-    // No inventory writer may stamp a bare wall-clock second of its own — that
+    // No inventory writer may stamp a bare wall-clock second of its own; that
     // is how two writes inside one second tie and one silently loses.
     for (const writer of TRANSACTION_WRITERS) {
       expect(readCode(writer), `${writer} must not stamp its own created_at`).not.toMatch(
@@ -205,7 +205,7 @@ describe('replaceable-event ordering is one shared policy', () => {
  * games. Those are replaceable events belonging to another application, and
  * there is no cross-origin lock, no compare-and-swap and no shared revision
  * protocol that would make a second writer safe. So Island reads them and stops
- * there — and "stops there" is asserted here against the source tree rather
+ * there: and "stops there" is asserted here against the source tree rather
  * than left to a code review to notice.
  */
 describe('external inventories are read, never written', () => {
@@ -226,7 +226,7 @@ describe('external inventories are read, never written', () => {
   ];
 
   /**
-   * The two modules that WRITE about a foreign inventory — and the only thing
+   * The two modules that WRITE about a foreign inventory, and the only thing
    * they may write is a player-signed kind:1416 (plus the Blobbi's own
    * kind:31124 / kind:1124). They sign, so the no-signing rule does not apply;
    * every other wall does.
@@ -246,7 +246,7 @@ describe('external inventories are read, never written', () => {
 
   it.each(EXTERNAL_MODULES)('%s cannot build a kind:1417 fold manifest', (module) => {
     // Folding is the OWNER's act. Island reads manifests; it never writes one
-    // for an inventory it does not own — and it owns none of the external ones.
+    // for an inventory it does not own, and it owns none of the external ones.
     const code = readCode(module);
     expect(code).not.toMatch(/buildGameInventoryFoldEvent/);
     expect(code).not.toMatch(/toBuildGameInventoryFoldInput/);
@@ -309,7 +309,7 @@ describe('external inventories are read, never written', () => {
     expect(hook).toMatch(/relayUrls\.map\(\(url\) => openLiveRelay\(url\)\)/);
   });
 
-  it('a batch consumption signs ONE spend for N units — no per-unit loop', () => {
+  it('a batch consumption signs ONE spend for N units; no per-unit loop', () => {
     const consume = readCode('src/inventory/useConsumeExternalItem.ts');
     expect(consume.match(/signSpend\(/g)).toHaveLength(1);
     expect(consume.match(/buildSpendTemplate\(/g)).toHaveLength(1);
@@ -320,7 +320,7 @@ describe('external inventories are read, never written', () => {
   it('every cache write RECONCILES with the latest held store, at commit time', () => {
     // The reconciliation is the query's `structuralSharing`: TanStack applies
     // it inside `Query.setData` against `state.data` as it is when the write
-    // happens — for a completed fetch and for every setQueryData — so nothing
+    // happens: for a completed fetch and for every setQueryData, so nothing
     // can forget a live event that landed after the query function returned.
     const hook = readCode('src/inventory/useExternalInventoryEvents.ts');
     expect(hook).toMatch(/structuralSharing: \(held: unknown, next: unknown\) =>\s*reconcileExternalInventoryStores\(/);
@@ -410,7 +410,7 @@ describe('external inventories are read, never written', () => {
 
   it('production never imports the partner fixture data', () => {
     // Fixtures are captured wire events for tests. A production import would
-    // turn one partner's published items into bundled Blobbi knowledge — the
+    // turn one partner's published items into bundled Blobbi knowledge, the
     // second-authoritative-catalog failure this architecture exists to avoid.
     const offenders = PRODUCTION_FILES.filter((file) =>
       /partner-item-event-fixtures/.test(stripComments(readFileSync(file, 'utf8'))),
@@ -423,7 +423,7 @@ describe('external inventories are read, never written', () => {
  * Trust stayed where it was.
  *
  * Adding a partner issuer must not have widened any gate that decides what a
- * Blobbi item IS — the catalog, the shop, equipping, renderer effects. Those
+ * Blobbi item IS, the catalog, the shop, equipping, renderer effects. Those
  * all key on the official issuer or on full official addresses, and none of
  * them may consult the cross-game trust table.
  */

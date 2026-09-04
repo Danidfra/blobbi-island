@@ -2,7 +2,7 @@
  * FRONT/BACK accessory artwork, end to end through the real renderer.
  *
  * The unit tests next to `item-image-resolution.ts` and
- * `island-accessory-sources.ts` prove the policy; this file proves the WIRING —
+ * `island-accessory-sources.ts` prove the policy; this file proves the WIRING,
  * that `facing` actually reaches the resolver, that the resolved URL actually
  * reaches the `<img>`, and that the item definitions arrive through the shared
  * context rather than a fetch inside the component.
@@ -19,7 +19,7 @@
  * Since the kind:31634 migration an accessory is identified by its ITEM
  * ADDRESS, and there is no filename-convention fallback left: an address with
  * no published definition resolves to no artwork at all. That is the point of
- * the clean cut — artwork comes from an issuer, never from a guessed path.
+ * the clean cut, artwork comes from an issuer, never from a guessed path.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
@@ -153,7 +153,7 @@ describe('the definition changes the PICTURE, never the POLICY', () => {
     // The goggles have no definition. Before the kind:31634 migration a stored
     // URL or a filename guess would have covered for that; now an item whose
     // issuer has not said what it looks like simply has no picture. The
-    // placement still exists — this is a missing asset, not a hidden accessory.
+    // placement still exists; this is a missing asset, not a hidden accessory.
     const { container } = renderWorn('front');
     expect(srcOf(container, GOGGLES)).toBe('');
   });

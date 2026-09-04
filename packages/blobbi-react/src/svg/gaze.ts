@@ -45,7 +45,7 @@ function markShapesInBlock(block: string): string {
  * @returns SVG markup with marked pupils and an injected gaze `<style>`.
  */
 export function applyGazeMarkup(svgText: string, maxPx: number = 2): string {
-  // Already processed — avoid double-injecting the style.
+  // Already processed: avoid double-injecting the style.
   if (svgText.includes('data-blobbi-gaze-style')) {
     return svgText;
   }
@@ -54,7 +54,7 @@ export function applyGazeMarkup(svgText: string, maxPx: number = 2): string {
   let modified = svgText;
   const blockMatch = modified.match(PUPILS_BLOCK_REGEX);
   if (!blockMatch) {
-    // No pupil block (e.g. sleeping variants with closed eyes) — nothing to move.
+    // No pupil block (e.g. sleeping variants with closed eyes): nothing to move.
     return modified;
   }
   const original = blockMatch[0];

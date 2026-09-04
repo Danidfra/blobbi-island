@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the kind:1416 spends THIS TAB has established.
+ * Blobbi Island: the kind:1416 spends THIS TAB has established.
  *
  * ## Why this exists
  *
@@ -8,13 +8,13 @@
  * query for an inventory may be refetched (focus, stale time) before the
  * event propagates. Without this record the effective quantity would drop on
  * publish and then briefly BOUNCE BACK UP when a refetch answered without the
- * new spend — an inventory that appears to refund a strawberry is a bug even
+ * new spend: an inventory that appears to refund a strawberry is a bug even
  * if it corrects itself a second later.
  *
  * This is the spend-side counterpart of `confirmed-inventory.ts`: the
  * derivation always merges what this tab knows it established with what the
  * relays returned, deduplicated by id. Because a spend is immutable and
- * identified by id, merging it in forever is harmless — once the owner folds
+ * identified by id, merging it in forever is harmless, once the owner folds
  * it, the chain excludes it and it stops counting on its own.
  *
  * ## What it is not

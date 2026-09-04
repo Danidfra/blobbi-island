@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — kind:31633 inventory read model + hook (Phase 4).
+ * Blobbi Island: kind:31633 inventory read model + hook (Phase 4).
  *
  * The protocol representation stays ADDRESS-BASED (the package `GameInventory`
  * with `31632:<issuer>:<d>` item addresses). This module adds an Island view
@@ -143,13 +143,13 @@ const INVENTORY_READ_TIMEOUT_MS = 3000;
  * Fetch the newest valid kind:31633 together with its `created_at`.
  *
  * CORRECTION (this phase): the previous comment here claimed a timeout/abort
- * makes `nostr.query` reject. It does not — `NPool.query` swallows every
+ * makes `nostr.query` reject. It does not, `NPool.query` swallows every
  * failure and resolves with partial results, usually `[]`. That is why the
  * read now goes through {@link readRelayEventsOrThrow}, which reports an
  * unusable read as {@link RelayReadUnknownError} instead of as "no inventory".
  * Every caller already treats a throw as "unknown": the Coin wallet maps it to
  * `read-failed`, the read-back verification to `verified: false`, and the
- * economy-entry service to "cannot confirm — publish nothing".
+ * economy-entry service to "cannot confirm, publish nothing".
  *
  * NOTE this is the SINGLE read. Anything that will become a PUBLISH BASE must
  * use {@link readAuthoritativeInventoryBase} instead.
@@ -183,7 +183,7 @@ function selectNewestInventory(
  * Read the base a REPLACEMENT event may safely be built from.
  *
  * kind:31633 is replaceable: a publish does not patch the inventory, it
- * replaces it. So an empty base is not merely a missing delta — it erases
+ * replaces it. So an empty base is not merely a missing delta; it erases
  * every item the player owns. And a resolved-empty read is NOT proof of an
  * empty inventory: "new account" and "this relay does not carry (or has not
  * caught up with) the event" look identical over Nostr.
@@ -192,7 +192,7 @@ function selectNewestInventory(
  *
  * - first read returns an event    ⇒ use it;
  * - first read empty, second returns an event ⇒ use it (the first answer was
- *   wrong; without this the player's whole inventory would be replaced —
+ *   wrong; without this the player's whole inventory would be replaced,
  *   the reported "Mine reward replaced my balance" bug);
  * - both reads empty               ⇒ genuinely no inventory; an empty base is
  *   correct and a first-ever write still works;
@@ -200,7 +200,7 @@ function selectNewestInventory(
  *   Publishing from an unconfirmed empty base is exactly the defect.
  *
  * (Before this phase the "unknown" branch relied on `nostr.query` rejecting on
- * timeout. It never does — see `src/lib/relay-read.ts` — so the guarantee was
+ * timeout. It never does, see `src/lib/relay-read.ts`, so the guarantee was
  * only as strong as "two consecutive timeouts are unlikely". It is now real.)
  */
 export async function readAuthoritativeInventoryBase(

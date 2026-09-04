@@ -1,5 +1,5 @@
 /**
- * The `apply-set` equipment mutation — ONE canonical kind:31634 publish for a
+ * The `apply-set` equipment mutation: ONE canonical kind:31634 publish for a
  * bulk slot change (Phase 9.5, the Inventory & Equipment Lab's writer).
  *
  * What must hold: one publish however many slots move, one revision increment,
@@ -239,7 +239,7 @@ describe('the hook publishes ONE canonical document per bulk action', () => {
     expect(doc.contentJson.note).toBe('from-another-client');
   });
 
-  it('refuses the whole set when ANY equipped entry is unowned — nothing partial publishes', async () => {
+  it('refuses the whole set when ANY equipped entry is unowned; nothing partial publishes', async () => {
     seedInventory([{ address: CAP, quantity: 1 }]); // aura NOT owned
     const { result } = makeHook();
 

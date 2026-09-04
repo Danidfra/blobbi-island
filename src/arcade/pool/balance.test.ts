@@ -1,5 +1,5 @@
 /**
- * Pool — is it a game worth playing?
+ * Pool: is it a game worth playing?
  *
  * Correctness is covered by `match.test.ts` and `rules.test.ts`. This file asks
  * the questions those cannot: **does a frame end?**, **does it end in a
@@ -121,7 +121,7 @@ beforeAll(() => {
 
 function tally(rival: PoolDifficulty, seat: PoolDifficulty): Tally {
   const cached = TALLIES.get(`${rival}/${seat}`);
-  if (!cached) throw new Error(`no tally for ${rival}/${seat} — add it to MATCHUPS`);
+  if (!cached) throw new Error(`no tally for ${rival}/${seat}, add it to MATCHUPS`);
   return cached;
 }
 
@@ -168,7 +168,7 @@ describe('a frame always ends', () => {
 
   it('ends even when both sides are weak', () => {
     // Two Easy planners refuse thin cuts, so they fall through to the fallback
-    // knock far more often — which is exactly the situation that used to
+    // knock far more often, which is exactly the situation that used to
     // deadlock.
     expect(tally('easy', 'easy').unfinished).toBe(0);
   });
@@ -200,8 +200,8 @@ describe('the rival is beatable, and worth beating', () => {
     There is deliberately no assertion here on "the player WINS more often
     against Easy".
 
-    It is true — measured over 40 seeds it is about 68% against Easy and 58%
-    against Normal — but it is not a signal a test can stand on. A frame's
+    It is true: measured over 40 seeds it is about 68% against Easy and 58%
+    against Normal: but it is not a signal a test can stand on. A frame's
     outcome is dominated by who happens to get the first run of three or four
     pots, so the win count carries roughly ±10 points of noise at any seed count
     this suite can afford, and the difference it is trying to detect is about
@@ -212,8 +212,8 @@ describe('the rival is beatable, and worth beating', () => {
   */
 
   it('is beatable without being a pushover', () => {
-    // A Normal player against a Normal rival should be winning more than half —
-    // they get the break — but nowhere near all of them.
+    // A Normal player against a Normal rival should be winning more than half,
+    // they get the break, but nowhere near all of them.
     const result = tally('normal', 'normal');
     expect(result.wins / result.frames).toBeGreaterThan(0.4);
     expect(result.wins / result.frames).toBeLessThan(0.85);

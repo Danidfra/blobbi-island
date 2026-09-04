@@ -2,12 +2,12 @@
  * The renderer's input-normalization contract (Phase 4).
  *
  * `normalizeBlobbiRenderModel` is the ONE place loose external visual data
- * becomes renderable state, so the rules it encodes — defaults, clamping, rear
- * facing, id sanitization — are asserted here rather than through the DOM.
+ * becomes renderable state, so the rules it encodes, defaults, clamping, rear
+ * facing, id sanitization, are asserted here rather than through the DOM.
  * Being pure, none of this needs React, a DOM, or a browser.
  *
  * Accessory numeric hardening lives alongside it: an equip tag is external data
- * that lands directly in CSS, and a non-finite value there does not throw — it
+ * that lands directly in CSS, and a non-finite value there does not throw; it
  * silently deletes the declaration, teleporting or erasing an accessory.
  */
 import { describe, it, expect } from 'vitest';
@@ -49,7 +49,7 @@ describe('stage and adult-type resolution', () => {
     expect(model({ visual: { stage: 'baby', adultType: 'catti' } }).adultType).toBeUndefined();
   });
 
-  it('leaves absent colors undefined — meaning "the artwork\'s own colors"', () => {
+  it('leaves absent colors undefined, meaning "the artwork\'s own colors"', () => {
     const resolved = model();
     expect(resolved.baseColor).toBeUndefined();
     expect(resolved.secondaryColor).toBeUndefined();
@@ -78,7 +78,7 @@ describe('facing, eyes and gaze', () => {
     expect(model({ eyeOffset: { x: NaN, y: Infinity } }).gaze).toEqual({ x: 0, y: 0 });
   });
 
-  it('drops gaze entirely when rear-facing — that drawing has no pupils', () => {
+  it('drops gaze entirely when rear-facing; that drawing has no pupils', () => {
     expect(model({ facing: 'back', eyeOffset: { x: 1, y: 1 } }).gaze).toBeNull();
   });
 

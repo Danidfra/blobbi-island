@@ -88,7 +88,7 @@ type PlayerLike = {
 type GazeOffset = { x: number; y: number };
 
 /**
- * Total attempts at the arrival "I am sitting here" presence — one immediate,
+ * Total attempts at the arrival "I am sitting here" presence; one immediate,
  * then up to two retries. Small on purpose: this is a latency optimization over
  * a backstop that already exists (the heartbeat), not a delivery guarantee.
  */
@@ -105,9 +105,9 @@ const LOCAL_ATTENTION_KEY = LOCAL_GAZE_KEY;
  *
  * Extracted into its own component so it can call the `useIdleGaze` hook
  * per-player (hooks can't run inside the render `.map()`). Gaze priority:
- *   1. nearbyOffset  — glance toward a nearby moving Blobbi
- *   2. movementOffset — look where it's walking
- *   3. idle gaze      — subtle micro-movements while standing still
+ *   1. nearbyOffset: glance toward a nearby moving Blobbi
+ *   2. movementOffset: look where it's walking
+ *   3. idle gaze, subtle micro-movements while standing still
  *
  * Self-sufficient by design: the sprite resolves its own gaze on every render
  * by reading shared refs (nearby target + heading), so its built-in
@@ -142,13 +142,13 @@ function RemoteBlobbiSprite({
   idSuffix: string;
   /**
    * Which way this Blobbi is turned. `'back'` for a seated theater-goer, whose
-   * rear-facing markup has no face at all — `CurrentBlobbiDisplay` drops the
+   * rear-facing markup has no face at all, `CurrentBlobbiDisplay` drops the
    * pupils, so the gaze resolved below is simply unused rather than specially
    * suppressed here. Identical to the local seated path.
    */
   facing?: 'front' | 'back';
   /**
-   * Sprite size for the CURRENT ROOM — the same `getBlobbiSizeForLocation`
+   * Sprite size for the CURRENT ROOM, the same `getBlobbiSizeForLocation`
    * value `MovableBlobbi` uses for the local player.
    *
    * This used to be hardcoded to `"lg"`, which drew every remote Blobbi a size
@@ -165,7 +165,7 @@ function RemoteBlobbiSprite({
 }) {
   // Idle gaze is active whenever the Blobbi is standing still. While idle it
   // drives ~60fps re-renders of *this* sprite only, and each render re-reads
-  // the shared refs below — so a stationary Blobbi keeps reacting to passers.
+  // the shared refs below, so a stationary Blobbi keeps reacting to passers.
   const idleGaze = useIdleGaze(!isMoving);
 
   // Resolve gaze priority on every render (self-intent first), identical to the
@@ -261,7 +261,7 @@ interface MultiplayerLayerProps {
    * Shared ref holding the local Blobbi's attention *decision* (target
    * identity), written here by the throttled gaze pass. MovableBlobbi reads it
    * together with {@link livePositionsRef} to resolve the target's *live*
-   * position each frame, so the local Blobbi tracks a moving target smoothly —
+   * position each frame, so the local Blobbi tracks a moving target smoothly,
    * the same mechanism RemoteBlobbiSprite uses.
    */
   localAttentionRef?: React.MutableRefObject<AttentionState>;
@@ -316,7 +316,7 @@ interface MultiplayerLayerProps {
    * Address of the shared watch session the local player is participating in,
    * or null. Owned by PlayingView, which gets it from the theater.
    *
-   * Published as presence `activity` — the ADDRESS STRING only, never any
+   * Published as presence `activity`: the ADDRESS STRING only, never any
    * playback state (`docs/protocol/shared-playback-session.md` §14.2). It
    * answers "who is watching this together?" and nothing else.
    */
@@ -326,7 +326,7 @@ interface MultiplayerLayerProps {
    * including the local one.
    *
    * Derived here for the same reason seat occupancy is: this layer holds the
-   * live presence map. Advisory and self-expiring — the session event carries no
+   * live presence map. Advisory and self-expiring, the session event carries no
    * participant list by design (§14.1), so this is a count of who is in the room
    * and claiming the session, not an authoritative roster.
    */
@@ -362,7 +362,7 @@ export function MultiplayerLayer({
   const { mutateAsync: publishEvent } = useNostrPublish();
   // Presence has its own publisher: signing and sending are separate stages,
   // so a signer refusal is recognisable (and stops the lifecycle) while a slow
-  // relay stays best-effort. Stable identity — the presence hook keys effects
+  // relay stays best-effort. Stable identity, the presence hook keys effects
   // on it. See `src/lib/presence-publish.ts`.
   const presencePublish = useMemo(
     () =>
@@ -386,8 +386,8 @@ export function MultiplayerLayer({
 
   // Live gaze position source (key -> current percent position), including the
   // local Blobbi under LOCAL_ATTENTION_KEY. Written every animation frame by the
-  // presence rAF loop (remotes) and by the local Blobbi each frame — never via
-  // React render — so watchers track moving targets smoothly with no extra
+  // presence rAF loop (remotes) and by the local Blobbi each frame; never via
+  // React render: so watchers track moving targets smoothly with no extra
   // re-renders. Declared before useIslandPresence so the loop can write into it.
   const internalLivePositionsRef = React.useRef(new Map<string, Position>());
   const livePositionsRef = livePositionsRefProp ?? internalLivePositionsRef;
@@ -403,7 +403,7 @@ export function MultiplayerLayer({
   const pendingTargetRef = useRef<Position | null>(null);
   const consecutiveFailureCountRef = useRef<number>(0);
   const cooldownActiveRef = useRef<boolean>(false);
-  /** Last send time per message class — the per-class cooldowns live in `@/communication`. */
+  /** Last send time per message class, the per-class cooldowns live in `@/communication`. */
   const lastSendAtRef = useRef<Partial<Record<IslandMessageClass, number>>>({});
   /**
    * Per-sender flood control for INBOUND messages.
@@ -559,7 +559,7 @@ export function MultiplayerLayer({
     // THE stranger-name boundary.
     //
     // This is where another player's authored text becomes `BlobbiVisual.name`,
-    // and every display of a remote name reads that field — the hover label, its
+    // and every display of a remote name reads that field, the hover label, its
     // `title` and `aria-label`, the actor tooltip, the read-only info modal. So
     // the substitution happens here rather than in six components, and a seventh
     // added later is safe without knowing this exists.
@@ -784,8 +784,8 @@ export function MultiplayerLayer({
    * check to drift apart, and the wire would end up carrying four dialects of
    * one protocol.
    *
-   * Returns whether the message was published. A refusal — by capability, by
-   * cooldown, or because this build cannot render what was asked for — is a
+   * Returns whether the message was published. A refusal, by capability, by
+   * cooldown, or because this build cannot render what was asked for, is a
    * `false`, not an exception: none of those is exceptional, and the composer
    * only needs to know whether to clear itself. A genuine publish failure still
    * throws, exactly as before.
@@ -868,12 +868,12 @@ export function MultiplayerLayer({
    *  - **Structure** (`parseIslandChatPayload`) validates against this build's
    *    own catalogs and keeps only ids. A spoofed
    *    `{"type":"quick","phrase":"want-to-play","text":"<abuse>"}` loses its
-   *    `text` here — nothing downstream can see a field the parser did not copy.
+   *    `text` here: nothing downstream can see a field the parser did not copy.
    *  - **Capability** (`admitChatMessage`) decides whether this CLASS of message
    *    is allowed at all, from the resolved policy and nothing else.
    *
    * Then the words are rebuilt locally by `renderMessage`, so the only class
-   * whose text came from the sender is free text — which is exactly the class
+   * whose text came from the sender is free text, which is exactly the class
    * the `freeTextChat` capability governs.
    */
   const processChatEvent = useCallback((event: NostrEvent) => {
@@ -885,9 +885,9 @@ export function MultiplayerLayer({
 
       // MUTE / BLOCK, before anything is parsed.
       //
-      // Placed here for two reasons. It is the cheapest check available — a
-      // local map lookup against parsing an arbitrary attacker-supplied payload
-      // — so a blocked sender's flood costs almost nothing to discard. And it is
+      // Placed here for two reasons. It is the cheapest check available, a
+      // local map lookup against parsing an arbitrary attacker-supplied payload,
+      // so a blocked sender's flood costs almost nothing to discard. And it is
       // sender-level, which is a different question from the capability gate
       // further down: that one asks "may this KIND of message be shown", this
       // one asks "may THIS PERSON be heard". Blocking implies muting, and the
@@ -928,7 +928,7 @@ export function MultiplayerLayer({
 
       // 2. Duplicate DELIVERY, keyed on the event id.
       //    It used to key on `pubkey:sessionId`, which suppressed every second
-      //    message from a sender within the window — including two different
+      //    message from a sender within the window, including two different
       //    ones, so "wave" then "heart" would have silently lost the heart. The
       //    rate limit that key was accidentally providing is now step 4, stated
       //    where it can be reasoned about.
@@ -939,7 +939,7 @@ export function MultiplayerLayer({
 
       // 3. CAPABILITY. The data boundary: what a player is allowed to be shown,
       //    decided before anything can present it. The sender is not
-      //    necessarily this build, so this — not the composer — is the check
+      //    necessarily this build, so this, not the composer, is the check
       //    that protects a Family player.
       if (!admitChatMessage(safetyPolicy, parsed.message).admitted) return;
 
@@ -959,7 +959,7 @@ export function MultiplayerLayer({
       // Evidence for a possible report, remembered at the moment the message is
       // accepted. Kind 21201 expires in ~10 s, so by the time a player opens the
       // card and picks Report the event is gone from everywhere else. Memory
-      // only, one message per sender — see `recent-messages.ts`.
+      // only, one message per sender; see `recent-messages.ts`.
       rememberMessage(event.pubkey, {
         event,
         messageClass: parsed.message.type,
@@ -1080,7 +1080,7 @@ export function MultiplayerLayer({
       return;
     }
 
-    // Check if this click should trigger world movement — the SAME shared
+    // Check if this click should trigger world movement, the SAME shared
     // policy MovableBlobbi's input adapter uses (src/lib/world-input.ts), so
     // the local walk and the presence publish can never disagree about what
     // counts as a world tap.
@@ -1240,7 +1240,7 @@ export function MultiplayerLayer({
 
   // Walk-to-interact (e.g. clicking a door) walks the local Blobbi to a target
   // and only then changes location. That walk goes through usePendingInteraction
-  // (local-only), so without this remotes never saw the walk — the Blobbi just
+  // (local-only), so without this remotes never saw the walk, the Blobbi just
   // vanished when the new-location presence arrived. Forward the broadcast walk
   // target to presence `moveTo` (publishMove) so remotes animate the walk-to-door
   // first; by the time the location change removes this player, the remote walk
@@ -1271,7 +1271,7 @@ export function MultiplayerLayer({
   //
   // Clear path: leaving always starts with movement, and every local movement
   // publishes a `moving` presence WITHOUT `hiddenIn` (via `moveTo`, from the
-  // world-click handler or the walk-to-interact broadcast above) — that is what
+  // world-click handler or the walk-to-interact broadcast above): that is what
   // reveals the Blobbi remotely. Here we only need to drop the local flag so
   // subsequent heartbeats stop advertising a spot the player already left.
   //
@@ -1306,7 +1306,7 @@ export function MultiplayerLayer({
   // it. Remotes then snap this Blobbi to the seat's canonical anchor.
   //
   // Clear path: standing up always starts with movement, and every local
-  // movement publishes a `moving` presence WITHOUT `seatId` (via `moveTo`) —
+  // movement publishes a `moving` presence WITHOUT `seatId` (via `moveTo`),
   // that is what stands the Blobbi up remotely, immediately, with no separate
   // event that could arrive out of order. Leaving the room does the same via the
   // location-change login publish. Both of those already null the hook's own
@@ -1322,7 +1322,7 @@ export function MultiplayerLayer({
   //
   // Retry: the arrival publish is the ONLY thing that seats you remotely in a
   // timely way. If it fails (relay hiccup, offline for a moment) the next
-  // heartbeat still carries the seat — but that is up to HEARTBEAT_INTERVAL_MS
+  // heartbeat still carries the seat, but that is up to HEARTBEAT_INTERVAL_MS
   // away, so everyone else would watch you stand in front of your chair for ~25
   // seconds. So the seat is marked synchronized only once it is actually
   // published, and a transient failure schedules a bounded retry.
@@ -1331,9 +1331,9 @@ export function MultiplayerLayer({
   // invalid and would fail identically forever, and after the attempt cap the
   // heartbeat remains the backstop. Neither path can turn into a publish loop.
   // ⚠️ THE CLAIM MUST BE TAKEN SYNCHRONOUSLY. `sitAt` gets a NEW identity on
-  // every single render of this component — it closes over the `publish` arrow
+  // every single render of this component; it closes over the `publish` arrow
   // built inline in the `useIslandPresence({...})` call below, which is a fresh
-  // object each render — and this component re-renders constantly (every remote
+  // object each render, and this component re-renders constantly (every remote
   // player position update). So this effect re-runs many times per second, and
   // the ONLY thing standing between that and a publish flood is the guard above
   // seeing its own claim already recorded.
@@ -1341,7 +1341,7 @@ export function MultiplayerLayer({
   // Recording the claim inside the `await`'s `.then()` instead is what caused a
   // real flood: the effect re-ran (new `sitAt`) before the publish resolved, so
   // the claim was never recorded, so the guard never matched, so it published
-  // again — several times per second, forever. Worse, `syncedSeatIdRef` being
+  // again: several times per second, forever. Worse, `syncedSeatIdRef` being
   // stuck at `null` also made the `!sittingIn` branch a no-op on stand-up, so
   // `clearSit()` never ran and heartbeats kept advertising a seat the player had
   // already walked away from.
@@ -1392,7 +1392,7 @@ export function MultiplayerLayer({
         return; // Claim stands: stop trying. The heartbeat is the backstop.
       }
 
-      // Release the claim so the retry can re-enter, and wake the effect — its
+      // Release the claim so the retry can re-enter, and wake the effect; its
       // deps would otherwise only change on an unrelated re-render.
       syncedSeatIdRef.current = null;
       sitRetryTimerRef.current = setTimeout(() => {
@@ -1403,7 +1403,7 @@ export function MultiplayerLayer({
     // `sitRetryTick` is the retry trigger; see above.
   }, [sittingIn, sitAt, clearSit, disabled, user, sitRetryTick]);
 
-  // Drop a pending retry on unmount only — NOT on every effect re-run, which is
+  // Drop a pending retry on unmount only: NOT on every effect re-run, which is
   // what would cancel the in-flight publish this whole design depends on.
   useEffect(() => () => {
     if (sitRetryTimerRef.current) clearTimeout(sitRetryTimerRef.current);
@@ -1443,12 +1443,12 @@ export function MultiplayerLayer({
   // ── Theater seat occupancy ──────────────────────────────────────────────
   // Which REMOTE claim wins each seat. Derived fresh from the live presence map,
   // so a player who walks away, changes room or simply stops publishing releases
-  // their seat through the existing presence expiry — there is no separate
+  // their seat through the existing presence expiry; there is no separate
   // occupancy record to go stale, and nothing here to garbage-collect.
   //
   // `resolveRemoteSeatOccupancy` owns the duplicate-claim policy in full (local
   // player keeps their own seat; otherwise lowest hex pubkey wins; losers fall
-  // back to normal rendering) — see `src/lib/theater-occupancy.ts`.
+  // back to normal rendering): see `src/lib/theater-occupancy.ts`.
   const remoteSeatWinners = React.useMemo(() => {
     const claims: RemoteSeatClaim[] = [];
     for (const p of visiblePlayers) {
@@ -1484,8 +1484,8 @@ export function MultiplayerLayer({
   // player moves, so without the claim guard the effect would republish the same
   // session several times a second.
   //
-  // No retry loop here, deliberately. Unlike a sit — where 25 s of standing in
-  // front of your chair is very visible — the only thing a lost activity publish
+  // No retry loop here, deliberately. Unlike a sit, where 25 s of standing in
+  // front of your chair is very visible, the only thing a lost activity publish
   // costs is a participant count that is briefly one short, and the next
   // heartbeat carries it anyway. `setActivity` never throws.
   const syncedActivityRef = useRef<string | null>(null);
@@ -1496,7 +1496,7 @@ export function MultiplayerLayer({
     void setActivity(activitySession);
   }, [activitySession, disabled, setActivity, user]);
 
-  // How many visible players claim this same session. Presence only — a player
+  // How many visible players claim this same session. Presence only, a player
   // who closed their laptop ages out through the existing expiry, with no second
   // timer and no way for this count to disagree with who is in the room.
   const participantCount = React.useMemo(() => {
@@ -1521,7 +1521,7 @@ export function MultiplayerLayer({
   visiblePlayersRef.current = visiblePlayers;
 
   // Per-Blobbi attention *decision* (key -> AttentionState), refreshed by the
-  // throttled timer below — never per animation frame. Stores target IDENTITY
+  // throttled timer below; never per animation frame. Stores target IDENTITY
   // (targetKey), not a frozen position, so sprites can resolve the target's
   // *live* position at render time and track a moving Blobbi continuously.
   const nearbyGazeRef = React.useRef(new Map<string, AttentionState>());
@@ -1532,7 +1532,7 @@ export function MultiplayerLayer({
   const attentionRef = React.useRef(new Map<string, AttentionState>());
   // Last movement heading (normalized) per player, used by the sprite to look
   // where it is walking. Updated in render (cheap) since position only changes
-  // while moving — which already re-renders the parent.
+  // while moving: which already re-renders the parent.
   const headingRef = React.useRef(new Map<string, GazeOffset>());
   const NEARBY_GAZE_INTERVAL_MS = 400;
   const NEARBY_GAZE_THRESHOLD = 18; // percent-units distance
@@ -1544,10 +1544,10 @@ export function MultiplayerLayer({
 
     // Unified candidate set: every remote Blobbi PLUS the local Blobbi. Each
     // entry exposes its position and activity so the same attention resolver
-    // applies uniformly — this is what lets remotes notice and look at the
+    // applies uniformly: this is what lets remotes notice and look at the
     // local Blobbi when it walks nearby (and vice-versa).
     // Players hidden inside a hiding spot are not part of the scene visually, so
-    // they must not attract anyone's gaze — otherwise every nearby Blobbi would
+    // they must not attract anyone's gaze; otherwise every nearby Blobbi would
     // stare straight at the bush and give the hiding player away.
     const candidates: GazeCandidate[] = remotes
       .filter((p) => !p.hiddenIn)
@@ -1571,8 +1571,8 @@ export function MultiplayerLayer({
 
     // Run the shared attention resolver for one "self": pull its remembered
     // AttentionState, resolve against all candidates, store the updated state.
-    // All gaze decisions go through resolveAttention — the single source of
-    // truth — so future activity kinds (emotes, interactions, actions) are
+    // All gaze decisions go through resolveAttention, the single source of
+    // truth: so future activity kinds (emotes, interactions, actions) are
     // picked up everywhere automatically via activityPriority.
     const attention = attentionRef.current;
     const seenKeys = new Set<string>();
@@ -1616,7 +1616,7 @@ export function MultiplayerLayer({
 
     // Local Blobbi: resolve its attention *decision* (target identity) under the
     // reserved local key and store it. MovableBlobbi resolves the live target
-    // position each frame from localAttentionRef + livePositionsRef — the same
+    // position each frame from localAttentionRef + livePositionsRef, the same
     // identity-based path remote Blobbis use.
     if (localCandidate) {
       localAttentionRef.current = resolveFor(localCandidate, LOCAL_ATTENTION_KEY);
@@ -1642,7 +1642,7 @@ export function MultiplayerLayer({
     return () => clearInterval(id);
   }, [computeNearbyGaze]);
 
-  // Background file for the current location — the canonical resolver, the
+  // Background file for the current location, the canonical resolver, the
   // same one PlayingView renders with, so a remote Blobbi's depth/z math can
   // never disagree with the room the local player is looking at.
   const backgroundFile = useMemo(() => getBackgroundForLocation(currentLocation), [currentLocation]);
@@ -1652,7 +1652,7 @@ export function MultiplayerLayer({
     return locationBoundaries[backgroundFile];
   }, [backgroundFile]);
 
-  // Sprite size for this room — the SAME value MovableBlobbi gives the local
+  // Sprite size for this room, the SAME value MovableBlobbi gives the local
   // player, so a remote Blobbi is drawn at the size its owner sees.
   const blobbiSize = useMemo(() => getBlobbiSizeForLocation(currentLocation), [currentLocation]);
 
@@ -1712,7 +1712,7 @@ export function MultiplayerLayer({
 
         // Remote pose, derived from EXPLICIT presence fields only (never from
         // coordinates): a hiding spot id means hidden; a seat id means seated
-        // only if this player WON the seat (see theater-occupancy) — a seat
+        // only if this player WON the seat (see theater-occupancy): a seat
         // lost to another claimant, and any unknown/stale/decorative id, falls
         // back to standing at the presence position rather than snapping to
         // some arbitrary chair.
@@ -1770,8 +1770,8 @@ export function MultiplayerLayer({
         }
 
         // This player is hidden inside a hiding spot (explicit presence state,
-        // never inferred from position). Render ONLY the positioned anchor — no
-        // sprite, no ground shadow, no name label — so nothing of their Blobbi
+        // never inferred from position). Render ONLY the positioned anchor; no
+        // sprite, no ground shadow, no name label, so nothing of their Blobbi
         // exists in the DOM while hidden. The anchor stays so their chat bubbles
         // still have somewhere to portal into.
         //
@@ -1780,7 +1780,7 @@ export function MultiplayerLayer({
         // for both wrappers (the local `MovableBlobbi` already reads
         // `render.visualHidden`), so the two paths cannot drift if the pose →
         // visual mapping ever gains a case. Presence interpretation is
-        // unchanged — `hiddenIn` still, and only, produces the hidden pose above.
+        // unchanged, `hiddenIn` still, and only, produces the hidden pose above.
         const isHiddenInSpot = render.visualHidden;
 
         return (
@@ -1796,7 +1796,7 @@ export function MultiplayerLayer({
             visualHidden={render.visualHidden}
             hideShadow={render.hideShadow}
             disableFloat={render.disableFloat}
-            // Remote positions are integrated per-frame by the presence rAF —
+            // Remote positions are integrated per-frame by the presence rAF,
             // the anchor itself never eases.
             positionTransition={false}
             className={cn(

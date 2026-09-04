@@ -24,7 +24,7 @@ function Swatch({ background }: { background: StageBackground }) {
 }
 
 /**
- * StageBackgroundPicker — My Blobbi → the stage's own "change background".
+ * StageBackgroundPicker: My Blobbi → the stage's own "change background".
  *
  * ## Why the control is on the stage
  *
@@ -40,8 +40,8 @@ function Swatch({ background }: { background: StageBackground }) {
  * A backdrop the player has not unlocked renders with its picture and a lock,
  * disabled. Hiding it would make the slot look like it has two options forever;
  * showing it is what makes a future unlockable backdrop legible as something to
- * get. No production backdrop is locked today — both built-ins are always
- * available — but the gate is the one `isStageBackgroundOwned` applies, so the
+ * get. No production backdrop is locked today; both built-ins are always
+ * available: but the gate is the one `isStageBackgroundOwned` applies, so the
  * first unlockable one needs no UI change.
  */
 export function StageBackgroundPicker({

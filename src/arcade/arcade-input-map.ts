@@ -1,5 +1,5 @@
 /**
- * Arcade input — the pure half.
+ * Arcade input: the pure half.
  *
  * Event → action mapping lives here, with no React and no DOM, so it can be
  * tested exhaustively without simulating a keyboard. `useArcadeInput.ts` is a
@@ -63,7 +63,7 @@ export const ARCADE_PREVENT_DEFAULT_KEYS: ReadonlySet<string> = new Set([
   'Spacebar',
 ]);
 
-/** Keys that request a pause. Escape is NOT one — Escape closes the shell. */
+/** Keys that request a pause. Escape is NOT one: Escape closes the shell. */
 export const ARCADE_PAUSE_KEYS: ReadonlySet<string> = new Set(['p', 'P']);
 
 export interface KeyEventLike {
@@ -80,7 +80,7 @@ export interface KeyEventLike {
  * here.
  *
  * Auto-repeat is dropped: holding an arrow must not machine-gun presses at the
- * OS repeat rate. A modifier combination is dropped too — `Cmd+R` is a reload,
+ * OS repeat rate. A modifier combination is dropped too, `Cmd+R` is a reload,
  * not a left-lane hit.
  */
 export function resolveKeyAction(

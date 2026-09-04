@@ -78,7 +78,7 @@ describe('the Items surface is a pure game inventory', () => {
     withItems([[APPLE, 3]]);
     await screen.findByText('Apple');
 
-    // No prompt, no master-detail chrome — chips, grid, pager, done. The
+    // No prompt, no master-detail chrome, chips, grid, pager, done. The
     // consume dialog carries everything the detail card used to.
     expect(screen.queryByTestId('item-detail')).toBeNull();
     expect(screen.queryByText(/pick something/i)).toBeNull();
@@ -93,8 +93,8 @@ describe('the Items surface is a pure game inventory', () => {
 
   it('is a group of action buttons, not a listbox', async () => {
     /*
-      A listbox promises a selection model. The bag has none — a tile's click
-      IS its action — so the grid is a labelled group and tiles carry no
+      A listbox promises a selection model. The bag has none, a tile's click
+      IS its action: so the grid is a labelled group and tiles carry no
       aria-selected that would announce a selection state that cannot exist.
     */
     withItems([[APPLE, 3]]);
@@ -109,7 +109,7 @@ describe('the Items surface is a pure game inventory', () => {
 describe('one tile geometry for every item on a page', () => {
   /*
     THE regression: on a real screen, "Ball" rendered a visibly smaller card
-    than "Calcium Supplement" even though their class strings were identical —
+    than "Calcium Supplement" even though their class strings were identical,
     the geometry was implicit (content-sized zones, a `height: 100%` resolving
     through a class-less wrapper), so it was at the mercy of engine layout
     subtleties jsdom cannot see. These tests assert the EXPLICIT contract that
@@ -126,7 +126,7 @@ describe('one tile geometry for every item on a page', () => {
     const ball = screen.getByTestId(`item-${BALL}`);
     const calcium = screen.getByTestId(`item-${CALCIUM}`);
 
-    // The shells carry the same class string — nothing per-item.
+    // The shells carry the same class string; nothing per-item.
     expect(ball.className).toBe(calcium.className);
 
     for (const tile of [ball, calcium]) {
@@ -167,7 +167,7 @@ describe('one tile geometry for every item on a page', () => {
   it('stretches every tile to its grid cell without percentage heights', async () => {
     /*
       The wrapper is `display: grid`, so the tile fills the cell by grid
-      STRETCH — default alignment — rather than by `height: 100%` resolving
+      STRETCH: default alignment, rather than by `height: 100%` resolving
       against a stretch-derived height, which is the circular case engines
       settle differently. The rows themselves are equalised by `auto-rows-fr`.
     */
@@ -192,7 +192,7 @@ describe('one tile geometry for every item on a page', () => {
     expect(tile).toMatch(/h-16 w-full shrink-0 grow-0/);
     expect(tile).toMatch(/h-8 w-full shrink-0 grow-0/);
     expect(tile).toMatch(/line-clamp-2/);
-    // No footnote, no price, no percentage height — the channels that made
+    // No footnote, no price, no percentage height, the channels that made
     // height vary. Comments are stripped first (the docblock legitimately
     // EXPLAINS the removal), and `max-h-full` is exempt: it CLAMPS artwork
     // inside the fixed art zone, the opposite of a content-driven height.
@@ -215,7 +215,7 @@ describe('the category strip', () => {
     withItems([[APPLE, 3], [VITAMINS, 1]]);
     await screen.findByText('Apple');
 
-    // Two items, one per category — the count is items, not quantities.
+    // Two items, one per category, the count is items, not quantities.
     expect(screen.getByRole('tab', { name: /All/ })).toHaveTextContent('2');
     expect(screen.getByRole('tab', { name: /Food/ })).toHaveTextContent('1');
   });

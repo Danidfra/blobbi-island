@@ -26,7 +26,7 @@ import { FurnitureStoreModal } from './FurnitureStoreModal';
  * Not one sprite. Every sofa, bed, lamp and wardrobe is painted into
  * `furniture-store-inside.webp`, and the two roped-off display platforms they
  * stand on are excluded by the walk boundary's own shape rather than by a pile
- * of blocker rectangles — so this component renders collision, two controls and
+ * of blocker rectangles, so this component renders collision, two controls and
  * a back arrow, and that is all. An `<img>` appearing in this tree would be the
  * showroom drawn twice.
  *
@@ -38,7 +38,7 @@ import { FurnitureStoreModal } from './FurnitureStoreModal';
  * `BLOCK_UI_SELECTOR` already treats `button` as move-blocking, so tapping it
  * never also starts a raw world walk. It routes through the SAME
  * `requestInteraction` path every door uses, so the Blobbi walks up the aisle
- * and the modal opens ON ARRIVAL — never on the click.
+ * and the modal opens ON ARRIVAL; never on the click.
  *
  * Its affordance is a tint and an inset ring, never a transform: a hotspot has
  * no artwork of its own to brighten, and the background must not appear to move
@@ -49,8 +49,8 @@ import { FurnitureStoreModal } from './FurnitureStoreModal';
  * The desk is the immersive route; the corner button is the obvious one. They
  * are two CONTROLS, not two shops: both set the single `isShopOpen` flag this
  * component owns, and there is exactly one `<FurnitureStoreModal>` in the tree.
- * The only difference between them is the walk — the desk makes you go to the
- * till, the shortcut does not — which is the whole point of having both.
+ * The only difference between them is the walk, the desk makes you go to the
+ * till, the shortcut does not, which is the whole point of having both.
  *
  * `open()` is idempotent because a walk OUTLIVES the click that started it: an
  * arrival landing after the player already opened the modal must change
@@ -59,7 +59,7 @@ import { FurnitureStoreModal } from './FurnitureStoreModal';
  * ## Presentation here, money elsewhere
  *
  * This component imports no inventory writer, no wallet and no publisher. The
- * shopping surface arrives as `<FurnitureStoreModal>`, mounted only while open —
+ * shopping surface arrives as `<FurnitureStoreModal>`, mounted only while open,
  * and that modal is deliberately a foundation with no catalog and no prices
  * yet.
  */
@@ -108,7 +108,7 @@ export function FurnitureStoreRoom({
       ))}
 
       {/*
-        The checkout. Invisible at rest — the artwork already looks like a desk —
+        The checkout. Invisible at rest, the artwork already looks like a desk,
         and it tints and rings on hover, focus-visible and press alike, so
         pointer, keyboard and touch all get the same answer.
       */}
@@ -126,7 +126,7 @@ export function FurnitureStoreRoom({
       />
 
       {/*
-        The persistent shortcut. Opens where the player stands — no walk —
+        The persistent shortcut. Opens where the player stands; no walk,
         because its job is convenience, not immersion. Same handler, same state,
         same modal as the desk above.
       */}

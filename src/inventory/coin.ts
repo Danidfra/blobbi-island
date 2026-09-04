@@ -1,18 +1,18 @@
 /**
- * Blobbi Coin — the ONE identity/config module for the official currency.
+ * Blobbi Coin: the ONE identity/config module for the official currency.
  *
  * Everything Coin-shaped in production imports these constants; nothing else
  * may hardcode the address, the `d`, or the issuer. The definition itself is
  * registered once in `src/protocol/event-registry.ts` and resolved through
  * the established official item path (relay fetch with exact-issuer trust,
- * bundled fallback otherwise) — this module deliberately does NOT duplicate
+ * bundled fallback otherwise): this module deliberately does NOT duplicate
  * the event JSON.
  *
  * ## Identity
  *
  * The canonical identity is the STABLE ADDRESS
  * `31632:<issuer>:blobbi:currency:coin`. The event id of the currently
- * published revision is recorded below for diagnostics/verification only —
+ * published revision is recorded below for diagnostics/verification only,
  * a definition can be republished (new id, same address) without anything
  * about ownership changing. Never use the event id as identity.
  *
@@ -34,10 +34,10 @@ import {
 
 export const BLOBBI_COIN_D = REGISTRY_COIN_D;
 
-/** The official issuer — same trust root as every official item. */
+/** The official issuer, same trust root as every official item. */
 export const BLOBBI_COIN_ISSUER = OFFICIAL_ISSUER_PUBKEY;
 
-/** `31632:<issuer>:blobbi:currency:coin` — derived, never hand-written. */
+/** `31632:<issuer>:blobbi:currency:coin`: derived, never hand-written. */
 export const BLOBBI_COIN_ADDRESS = officialItemAddress(BLOBBI_COIN_D);
 
 export const BLOBBI_COIN_NAME = 'Blobbi Coin';
@@ -49,13 +49,13 @@ export { BLOBBI_COIN_IMAGE_URL, BLOBBI_COIN_IMAGE_BACK_URL };
 
 /**
  * Event id of the CURRENTLY OBSERVED published definition revision.
- * Diagnostics and publication verification only — never identity.
+ * Diagnostics and publication verification only; never identity.
  */
 export const BLOBBI_COIN_DEFINITION_EVENT_ID =
   'fe3fce5a69d3fd93341a4b2d689bf3c97a986882fd5380d39ea1de8176d82797';
 
 /**
- * Application-level balance ceiling — far above any legitimate balance, far
+ * Application-level balance ceiling, far above any legitimate balance, far
  * below `Number.MAX_SAFE_INTEGER` so additions can never approach unsafe
  * arithmetic. A grant that would exceed it is rejected loudly.
  */

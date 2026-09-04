@@ -11,10 +11,10 @@ export interface GazeOffset {
  * drifting continuously.
  *
  * Behaviour (a small state machine driven by one requestAnimationFrame loop):
- *  - pick a gaze point — frequently the neutral center, otherwise a random
+ *  - pick a gaze point, frequently the neutral center, otherwise a random
  *    point biased toward left/right with a slight up/down component;
  *  - smoothly ease toward that point;
- *  - hold it for a random duration (longer when at neutral — the resting
+ *  - hold it for a random duration (longer when at neutral, the resting
  *    baseline that future emotions build on);
  *  - then pick a new point and repeat.
  *

@@ -36,7 +36,7 @@ export interface BrowserFilterOptions {
 /**
  * Which trust bucket a record falls into.
  *
- * `official` is decided by the issuer pubkey alone — not by the `d` tag, not by
+ * `official` is decided by the issuer pubkey alone; not by the `d` tag, not by
  * the item's name, and not by which relay served it.
  */
 export function issuerBucket(

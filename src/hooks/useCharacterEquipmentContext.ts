@@ -1,7 +1,7 @@
 /**
  * Read the local player's resolved companion equipment (kind:31634).
  *
- * Never throws when no provider is mounted — it returns stable empty equipment,
+ * Never throws when no provider is mounted; it returns stable empty equipment,
  * so a Blobbi still renders (bare) in a test, a preview, or any screen that has
  * not been wrapped. See `src/contexts/CharacterEquipmentContext.ts`.
  */

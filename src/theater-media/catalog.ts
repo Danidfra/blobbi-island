@@ -1,12 +1,12 @@
 /**
- * The approved-media catalog — the single source of what a curated theater may
+ * The approved-media catalog, the single source of what a curated theater may
  * show.
  *
  * ## It is bundled, not fetched, and that is a safety decision
  *
  * A catalog that arrives over the network has a state nobody wants:
  * *unknown*. A relay times out, a query returns partial results, the app boots
- * offline — and a curated experience is left holding an empty list it cannot
+ * offline: and a curated experience is left holding an empty list it cannot
  * distinguish from "nothing is approved". Fail-closed on that is correct but
  * makes the theater unusable on a bad connection; fail-open is unthinkable.
  *
@@ -23,7 +23,7 @@
  *
  * Deciding which videos are appropriate for children is editorial work with real
  * consequences, and it needs a person who can watch them and sign off. It is not
- * something to be invented alongside the code that will show them — an
+ * something to be invented alongside the code that will show them, an
  * engineering guess here would be a list of videos this project asserts are safe
  * for a nine-year-old on no evidence at all.
  *
@@ -33,8 +33,8 @@
  *
  * ## Trusted identity, trusted title
  *
- * An entry is `(provider, providerMediaId)` — the canonical identity of the
- * media — plus a `title` that belongs to THIS file. That second half matters:
+ * An entry is `(provider, providerMediaId)`: the canonical identity of the
+ * media: plus a `title` that belongs to THIS file. That second half matters:
  * the session protocol carries only a provider and an id, so a host cannot
  * supply words, and a curated client never renders a name anybody else chose.
  */
@@ -52,7 +52,7 @@ export interface ApprovedMedia {
    */
   readonly id: string;
   readonly provider: ApprovedMediaProvider;
-  /** The provider's own identifier — an 11-character YouTube video id. */
+  /** The provider's own identifier, an 11-character YouTube video id. */
   readonly providerMediaId: string;
   /**
    * What a curated client displays. **Trusted**, because it comes from here.
@@ -82,7 +82,7 @@ const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
  * Structural validity of a catalog entry.
  *
  * Applied to the bundled list by its own test, so a typo in an id fails the
- * build rather than silently approving nothing — an entry that can never match
+ * build rather than silently approving nothing, an entry that can never match
  * is indistinguishable from an entry that was never added.
  */
 export function isWellFormedApprovedMedia(entry: ApprovedMedia): boolean {
@@ -99,7 +99,7 @@ export function isWellFormedApprovedMedia(entry: ApprovedMedia): boolean {
 /**
  * The approved entry for a piece of media, or `null`.
  *
- * Matching is on the canonical identity — provider AND provider id — never on
+ * Matching is on the canonical identity, provider AND provider id, never on
  * the title, and never on a URL. A caller holding a URL parses it first
  * (`youtube-url.ts`); this function only ever sees a resolved id.
  *

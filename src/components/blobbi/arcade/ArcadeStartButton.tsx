@@ -1,11 +1,11 @@
 /**
- * The one control that commits a Token — and says so BEFORE it is pressed.
+ * The one control that commits a Token, and says so BEFORE it is pressed.
  *
  * Every paid machine used to offer a bare "Start": the price was only
  * discoverable by pressing it and being refused. The label now carries the
  * cost the entry model will actually charge ("Play · 1 Token"), drops it when
  * the run is free or a Pass waives it ("Start"), and, when the balance is
- * known to be short, says so underneath — while leaving the button live, so
+ * known to be short, says so underneath, while leaving the button live, so
  * the entry model's own refusal (which also knows about "unavailable",
  * "busy" and "unconfirmed") remains the single authority. No economy rule
  * lives here: cost, pass and balance all come from `ArcadeGameEntry`.
@@ -52,7 +52,7 @@ export function ArcadeStartButton({
       </button>
       {short && (
         <span data-arcade-start-short className="text-xs font-medium text-island-ink-soft">
-          Not enough Tokens yet — you have {entry.tokenBalance}.
+          Not enough Tokens yet; you have {entry.tokenBalance}.
         </span>
       )}
     </div>

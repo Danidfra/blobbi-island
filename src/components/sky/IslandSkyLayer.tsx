@@ -16,8 +16,8 @@
  * above is at `0`. Because every layer is fully opaque, that composite is exactly
  * a two-colour interpolation between the two authored moments.
  *
- * The gain over the obvious approach — one layer whose gradient colours are CSS
- * variables — is that **`opacity` interpolates in every browser**, whereas
+ * The gain over the obvious approach; one layer whose gradient colours are CSS
+ * variables: is that **`opacity` interpolates in every browser**, whereas
  * interpolating a colour held in a custom property requires `@property`
  * registration and would degrade to a visible step every ten seconds where that
  * is unsupported. So React sets a handful of numbers twice a minute and the
@@ -27,7 +27,7 @@
  *
  * When the cycle wraps, the keyframe index jumps from last to first. If the
  * layers being switched off animated, the composite would briefly show a blend of
- * the whole stack — a muddy flash at the exact moment the loop is supposed to be
+ * the whole stack, a muddy flash at the exact moment the loop is supposed to be
  * seamless. Giving only the two active layers a transition duration makes the
  * others snap, and the snap is invisible because the wrap keyframe is authored to
  * be identical to the first one.
@@ -62,7 +62,7 @@ import type { LocationId } from '@/lib/location-types';
 
 /**
  * A fixed, hand-scattered star field. Two dozen entries as CSS gradient stops
- * inside two elements — not two dozen DOM nodes, and not a random layout that
+ * inside two elements; not two dozen DOM nodes, and not a random layout that
  * would rearrange itself on every render.
  *
  * `[xPercent, yPercent, diameterPx, alpha]`, positioned within the star band.
@@ -92,7 +92,7 @@ function starFieldBackground(stars: readonly [number, number, number, number][])
 /**
  * One cloud, as a single connected silhouette.
  *
- * The geometry comes from `ISLAND_CLOUD_SHAPE_GEOMETRY` — five genuinely different
+ * The geometry comes from `ISLAND_CLOUD_SHAPE_GEOMETRY`: five genuinely different
  * part lists, not one drawing relabelled. All parts are opaque white inside the SVG
  * and the actor's opacity is applied to the wrapper, so overlaps leave no internal
  * seams or darker patches. Every part sits inside its own viewBox (asserted by
@@ -169,7 +169,7 @@ export function IslandSkyLayer({ location, className }: IslandSkyLayerProps) {
   });
 
   // Warm and dim the clouds through the day. The 1.2px blur is the whole of the
-  // "soft edges" treatment — enough to take the vector hardness off the
+  // "soft edges" treatment, enough to take the vector hardness off the
   // silhouette, far short of turning a cloud into fog. The function list is
   // constant so the browser interpolates it component-by-component; changing its
   // shape between renders would make the filter snap instead.
@@ -210,7 +210,7 @@ export function IslandSkyLayer({ location, className }: IslandSkyLayerProps) {
         );
       })}
 
-      {/* Stars — behind the clouds, above the gradient. */}
+      {/* Stars: behind the clouds, above the gradient. */}
       {showStars && (
         <div
           className="absolute inset-x-0 top-0 h-[58%]"
@@ -247,7 +247,7 @@ export function IslandSkyLayer({ location, className }: IslandSkyLayerProps) {
         }}
       />
 
-      {/* Moon. No phases — the brief rules out real lunar cycles for this phase. */}
+      {/* Moon. No phases, the brief rules out real lunar cycles for this phase. */}
       <div
         className="absolute rounded-full"
         style={{
@@ -265,7 +265,7 @@ export function IslandSkyLayer({ location, className }: IslandSkyLayerProps) {
       />
 
       {/*
-        Clouds — three individual actors, above the celestial bodies so the sun
+        Clouds: three individual actors, above the celestial bodies so the sun
         can pass behind one.
 
         Each actor is `left: 0` and moved purely by `translate3d`, so its start and
@@ -320,7 +320,7 @@ export function IslandSkyLayer({ location, className }: IslandSkyLayerProps) {
                 // Preview parks the actor on screen instead of waiting for its
                 // passage to come round, so the animation is switched off for it.
                 ...(parkPx !== null ? { animationName: 'none' } : null),
-                // The resting position, used when the animation is off — either for
+                // The resting position, used when the animation is off; either for
                 // reduced motion or for a preview park. An animation overrides it
                 // while it is running.
                 transform: `translate3d(${parkPx ?? actor.restPx}px, 0, 0)`,

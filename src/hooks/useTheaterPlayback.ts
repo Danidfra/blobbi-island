@@ -64,7 +64,7 @@ export interface UseTheaterPlaybackResult {
  *  - The screen used to build a player at mount with no video id. The IFrame API
  *    answers `new YT.Player(el, { videoId: undefined })` with error 2 and never
  *    fires `onReady`, so construction always failed and the room permanently
- *    displayed the player-build error — including to people who had not sat down
+ *    displayed the player-build error, including to people who had not sat down
  *    or chosen anything.
  *  - Because construction always failed, `controller` was always null, so the
  *    "Load Video" button called `controller?.setMedia(...)` on nothing and did
@@ -81,7 +81,7 @@ export interface UseTheaterPlaybackOptions {
   /**
    * The publication seam. Called for every command the LOCAL controller
    * produces, including the `set-media` issued while adopting a freshly built
-   * player — which is exactly the event shared playback needs when a host
+   * player: which is exactly the event shared playback needs when a host
    * changes video, and is why the listener is installed at construction rather
    * than attached by a later effect.
    *
@@ -182,7 +182,7 @@ export function useTheaterPlayback(
 
     // An error raised while the player is still being constructed (a private or
     // non-embeddable video never becomes ready) has no controller to land on
-    // yet. Hold it and replay it — losing it would leave a spinner forever.
+    // yet. Hold it and replay it, losing it would leave a spinner forever.
     const held: { error: MediaError | null } = { error: null };
 
     createYouTubeAdapter({
@@ -251,15 +251,15 @@ export function useTheaterPlayback(
       // construction can leave the placeholder behind.
       host.replaceChildren();
     };
-    // A different video is a different player. The alternative — keeping the
-    // embed and re-cueing it — buys nothing here, because every path that
+    // A different video is a different player. The alternative, keeping the
+    // embed and re-cueing it, buys nothing here, because every path that
     // changes the video (Change video, standing up, leaving) already passes
     // through "no request", which tears the player down anyway. One rule instead
     // of two, and no way for a stale player to survive a state it does not match.
   }, [videoId, startSeconds, attempt]);
 
   // Live position for the timeline. A local interval, never a rAF loop and never
-  // a publish — the same discipline the shared drift check will follow.
+  // a publish: the same discipline the shared drift check will follow.
   useEffect(() => {
     if (!controller) return;
     const id = window.setInterval(() => controller.tick(), TICK_INTERVAL_MS);

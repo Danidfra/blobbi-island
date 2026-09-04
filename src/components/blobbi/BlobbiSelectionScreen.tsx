@@ -34,7 +34,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
 
   // Only modern Blobbis appear in the collection UI. Legacy Blobbis (old format
-  // without a seed / proper d-tag) are excluded — never deleted or mutated.
+  // without a seed / proper d-tag) are excluded; never deleted or mutated.
   const modernBlobbis = useMemo(
     () => (blobbis ?? []).filter(isModernBlobbi),
     [blobbis],
@@ -48,7 +48,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
     return !modernBlobbis.some((b) => b.id === currentCompanionId);
   }, [currentCompanionId, modernBlobbis]);
 
-  // Set initial selection based on current companion — but only if that
+  // Set initial selection based on current companion, but only if that
   // companion is a modern Blobbi that's actually selectable in the grid.
   useEffect(() => {
     if (currentCompanionId && !selectedBlobbi) {
@@ -83,7 +83,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
   //
   // `useBlobbis` now throws on an unusable read instead of resolving `[]`, so
   // React Query keeps the last good list behind `error`. That means "we have
-  // pets AND a failed refetch" must keep showing the pets — replacing them
+  // pets AND a failed refetch" must keep showing the pets, replacing them
   // with an error screen would be the same destructive downgrade in a
   // friendlier costume.
   const hasKnownPets = (blobbis?.length ?? 0) > 0;
@@ -105,7 +105,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
           {/* Deliberately no transport detail: the product only needs
               "we could not establish the state". Reasons stay in logs/tests. */}
           <p className="mt-1 text-sm text-island-ink-soft">
-            We couldn't reach your Blobbis right now. Your Blobbis are safe —
+            We couldn't reach your Blobbis right now. Your Blobbis are safe,
             this is a connection problem, not a missing nest.
           </p>
           <Button
@@ -154,7 +154,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-gradient-to-b from-island-sky/55 via-island-cream to-island-sand/60">
-      {/* Persistent close/back control — always visible when this screen was
+      {/* Persistent close/back control, always visible when this screen was
           opened from the HUD during play, so the user can return to the game
           without selecting a different Blobbi. */}
       {canClose && (
@@ -224,7 +224,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
             ))}
           </div>
         ) : isConfirmedEmpty ? (
-          /* CONFIRMED empty — a completed read, confirmed by a second completed
+          /* CONFIRMED empty: a completed read, confirmed by a second completed
              read, found no modern Blobbis (whether the nest is truly empty or
              only holds older-format Blobbis). This is the ONLY path allowed to
              tell the player they do not have a Blobbi. */
@@ -241,7 +241,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
               <div className="mt-1 space-y-2 text-sm text-island-ink-soft">
                 <p>You don't have a Blobbi yet.</p>
                 <p>
-                  Hatch your very first Blobbi right here on the island — no need
+                  Hatch your very first Blobbi right here on the island; no need
                   to leave.
                 </p>
               </div>
@@ -257,7 +257,7 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
             </div>
           </div>
         ) : (
-          /* Nothing known and the read is not usable — say so, never "empty". */
+          /* Nothing known and the read is not usable, say so, never "empty". */
           <div className="flex h-full items-center justify-center">
             <div className="w-full max-w-sm rounded-3xl border-2 border-dashed border-island-wood/35 bg-island-cream/80 p-8 text-center shadow-cozy-soft">
               <h3 className="text-lg font-bold text-island-ink">

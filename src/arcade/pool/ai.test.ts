@@ -1,5 +1,5 @@
 /**
- * The opponent — what it may aim at, and what it may not do.
+ * The opponent: what it may aim at, and what it may not do.
  *
  * Two kinds of claim are being checked here, and the second matters more than
  * the first:
@@ -70,7 +70,7 @@ describe('difficulties', () => {
     const normal = poolAiProfile('normal');
     expect(easy.aimErrorRad).toBeGreaterThan(normal.aimErrorRad);
     expect(easy.powerError).toBeGreaterThan(normal.powerError);
-    // A higher cosine floor means it refuses thinner cuts — fewer shots seen.
+    // A higher cosine floor means it refuses thinner cuts, fewer shots seen.
     expect(easy.minCutCos).toBeGreaterThan(normal.minCutCos);
     expect(easy.rankingNoise).toBeGreaterThan(normal.rankingNoise);
     expect(easy.scratchAversion).toBeLessThan(normal.scratchAversion);
@@ -171,7 +171,7 @@ describe('every plan is playable', () => {
  * one line, with room behind the object for the cue ball to be.
  *
  * Built rather than written out, because hand-picked coordinates put balls on
- * `y = 0` in an earlier pass — which is the rail, not the cloth, and produced a
+ * `y = 0` in an earlier pass, which is the rail, not the cloth, and produced a
  * layout with no legal shot in it at all.
  */
 const CORNER = POCKETS[2]; // (200, 0)
@@ -409,7 +409,7 @@ describe('it cannot touch the table', () => {
 
 describe('ball-in-hand', () => {
   const balls = [
-    ball(CUE_BALL, 40, 50, true), // scratched — it is off the table
+    ball(CUE_BALL, 40, 50, true), // scratched; it is off the table
     ball(1, 120, 40),
     ball(2, 80, 70),
     ball(EIGHT_BALL, 150, 50),

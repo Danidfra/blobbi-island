@@ -6,7 +6,7 @@ import type { ResolvedArcadePrize } from './useOfficialArcadePrizes';
 /**
  * One official prize on the shelf.
  *
- * A single BUTTON — selecting is the only thing a card does; everything else
+ * A single BUTTON, selecting is the only thing a card does; everything else
  * (preview, the redemption-disabled notice) lives in the detail panel, so a
  * stray tap on the shelf can never do anything at all.
  *

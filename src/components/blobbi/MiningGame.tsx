@@ -83,7 +83,7 @@ export function MiningGame() {
   const finishedRef = useRef(false);
 
   // Track the Blobbi's energy for the pre-run display. Once a run is under way
-  // the local value is authoritative for gameplay — a background refetch must
+  // the local value is authoritative for gameplay, a background refetch must
   // not rewind the player's progress mid-session.
   useEffect(() => {
     if (currentPet && gameState === 'instructions') {
@@ -96,7 +96,7 @@ export function MiningGame() {
   // honest client no longer mines against a 30-second-old snapshot.)
   useEffect(() => {
     refreshFromRelay();
-    // `refreshFromRelay` is genuinely stable now — it depends on React Query's
+    // `refreshFromRelay` is genuinely stable now; it depends on React Query's
     // referentially-stable `refetch` functions rather than on the whole query
     // result objects, so this runs ONCE per mount. It previously re-fired on
     // every render (measured: 11 calls / 22 relay reads in one session).
@@ -146,7 +146,7 @@ export function MiningGame() {
 
   /**
    * Freeze the run's numbers, then settle: Coins first, energy second. Both
-   * live in the durable session, so an unmount here does not lose them — the
+   * live in the durable session, so an unmount here does not lose them, the
    * next visit resumes under the same operation ids.
    */
   const settleRun = async (rawCoins: number, energyDelta: number) => {
@@ -169,7 +169,7 @@ export function MiningGame() {
 
   /**
    * `finalEnergy` is passed explicitly by the auto-finish path, because that
-   * runs inside the same click handler that just lowered the energy — the
+   * runs inside the same click handler that just lowered the energy, the
    * `currentEnergy` in this closure is still the PRE-click value, and reading
    * it would silently drop the last click from the delta.
    */
@@ -198,7 +198,7 @@ export function MiningGame() {
 
   // While a run is being played, keep its durable record marked live. This is
   // what lets another tab tell "someone is mining right now" from "a tab died
-  // mid-run and left debris" — without either holding a lock for the whole
+  // mid-run and left debris": without either holding a lock for the whole
   // session or silently voiding a run in progress.
   useEffect(() => {
     if (gameState !== 'playing') return;
@@ -244,7 +244,7 @@ export function MiningGame() {
     setClicks(prev => prev + 1);
 
     // Energy is spent LOCALLY. No kind:31124 publish, no pet-query
-    // invalidation, no optimistic global pet update — the whole run's cost is
+    // invalidation, no optimistic global pet update, the whole run's cost is
     // settled once at the end as a single delta. Cost per click is unchanged.
     const newEnergy = Math.max(0, currentEnergy - MINE_ENERGY_PER_DIG);
     setCurrentEnergy(newEnergy);
@@ -309,7 +309,7 @@ export function MiningGame() {
       return acc;
     }, {} as Partial<Record<MineGemKind, number>>);
 
-    // What the wall gave up — and, once settlement has frozen it, the same
+    // What the wall gave up, and, once settlement has frozen it, the same
     // number read back from the session.
     const rawCoins = mineRunReward(minedItems.map((item) => item.type));
     const creditedCoins = reward.phase === 'idle' ? rawCoins : reward.amount;
@@ -369,7 +369,7 @@ export function MiningGame() {
           {/*
             `data-mine-reward-status` is the settlement state, read by
             MiningGame.session.test.tsx. The phase values and every line of
-            copy below are unchanged — this pass restyles the panel and does
+            copy below are unchanged; this pass restyles the panel and does
             not touch what settlement says or when.
           */}
           <div
@@ -391,20 +391,20 @@ export function MiningGame() {
               )}
               {reward.phase === 'energy-pending' && (
                 <p className="text-sm text-island-ink-soft">
-                  Reward saved — we're still finishing your Blobbi's energy
+                  Reward saved: we're still finishing your Blobbi's energy
                   update. It's safe to leave.
                 </p>
               )}
               {reward.phase === 'coin-pending' && (
                 <p className="text-sm text-island-ink-soft">
-                  We're still confirming your mining trip. It's safe to leave —
+                  We're still confirming your mining trip. It's safe to leave,
                   nothing will be lost or counted twice.
                 </p>
               )}
               {reward.phase === 'unresolved' && (
                 <p className="text-sm text-island-ink-soft">
                   We couldn't finish saving your mining trip just yet. It's safe
-                  to leave — we'll pick it up next time.
+                  to leave: we'll pick it up next time.
                 </p>
               )}
             </div>
@@ -485,7 +485,7 @@ export function MiningGame() {
         className="rounded-panel border border-island-wood/20 bg-island-cream-2/60 p-3 text-sm text-island-ink"
         data-mine-session-in-progress
       >
-        You already have a mining trip in progress. Finish it first — or if you
+        You already have a mining trip in progress. Finish it first, or if you
         closed that window, wait a moment and try again.
       </p>
     </BlobbiModal>

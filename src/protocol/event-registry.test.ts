@@ -295,7 +295,7 @@ describe('Arcade Ticket (published)', () => {
   });
 
   it('is ACTIVE: the issuer-signed definition is published on both relays', () => {
-    // `active` means "the definition is on the relays" — it was promoted only
+    // `active` means "the definition is on the relays": it was promoted only
     // after the event was fetched back from wss://relay.ditto.pub AND
     // wss://relay.dreamith.to with a verified signature and matching payload.
     // The pinned bytes live in src/inventory/arcade-ticket-published.test.ts.
@@ -347,7 +347,7 @@ describe('issuer material', () => {
     // a 64-hex sha256 AS A PATH SEGMENT (`https://…/<sha256>.webp`). That is the
     // hash of a public image, not key material, so a hex immediately preceded by
     // `/` is exempt. Every other 64-hex run must still be the issuer's PUBLIC
-    // key — which is what makes an accidentally-pasted nsec or event id fail.
+    // key: which is what makes an accidentally-pasted nsec or event id fail.
     for (const source of [registrySource, generatedDoc]) {
       const hexes = source.match(/(?<!\/)\b[0-9a-f]{64}\b/g) ?? [];
       for (const hex of hexes) {

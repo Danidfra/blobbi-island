@@ -23,7 +23,7 @@ describe('ConsumeItemModal', () => {
     );
 
     // The window names itself; the item's own name and how many the player has
-    // are content. "Available: 5" is what the player HAS — distinct from the
+    // are content. "Available: 5" is what the player HAS, distinct from the
     // quantity they select for this one use, which starts at 1.
     expect(await screen.findByRole('dialog')).toHaveAccessibleName('Use item');
     expect(screen.getByRole('heading', { name: 'Apple' })).toBeInTheDocument();

@@ -2,7 +2,7 @@
  * The decoupling rule (protocol §14.3), enforced rather than documented.
  *
  * ```
- *   src/lib/shared-playback/**        pure protocol — no React, no DOM,
+ *   src/lib/shared-playback/**        pure protocol; no React, no DOM,
  *      ▲                              no theater / seats / presence / rendering
  *      │
  *   src/hooks/useSharedPlayback.ts    React lifecycle, relay I/O
@@ -11,7 +11,7 @@
  * ```
  *
  * This is what lets a watch session work for a seated Blobbi, a standing one, or
- * a future room with no Blobbi in it at all — and what keeps the protocol's
+ * a future room with no Blobbi in it at all, and what keeps the protocol's
  * correctness provable without a browser. A single convenience import of, say,
  * the seat registry would quietly delete that property, so the direction is
  * checked by reading the source.

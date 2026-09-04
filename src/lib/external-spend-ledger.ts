@@ -1,12 +1,12 @@
 /**
- * The external-spend ledger — the durable half of "one kind:1416 per player
+ * The external-spend ledger, the durable half of "one kind:1416 per player
  * action, and one Blobbi effect per kind:1416".
  *
  * A kind:1416 Game Inventory Spend is immutable and identified by its event
  * id. That id is the durable identity of a consumption: it is what a retry
  * republishes, what the Blobbi effect is keyed to, and what a reconciliation
  * looks for. This ledger keeps, per signed-in pubkey, every spend this browser
- * signed together with the SIGNED EVENT ITSELF — so a retry after an
+ * signed together with the SIGNED EVENT ITSELF, so a retry after an
  * ambiguous publish can offer the exact same bytes again instead of signing a
  * semantically equivalent second spend, which would be a second debit.
  *
@@ -35,7 +35,7 @@
  *
  * ## Honest limits
  *
- * Durable per browser profile only. Another device has an empty ledger — and
+ * Durable per browser profile only. Another device has an empty ledger, and
  * also no signed event to replay, so it cannot duplicate this one; it can
  * only sign its own, which the protocol's deterministic order then applies or
  * rejects. Storage that silently drops writes is detected by read-back, and a
@@ -202,7 +202,7 @@ const RANK: Record<ExternalSpendStatus, number> = {
  * - a possibly-published record (`publishing`, `unconfirmed`, `established`,
  *   `effect-ambiguous`) never regresses to `signed`;
  * - `failed` is reachable from `signed`/`publishing` (definite refusal) and
- *   from `unconfirmed` (definite refusal on republish) — never from
+ *   from `unconfirmed` (definite refusal on republish): never from
  *   `established` or later, because the debit exists.
  */
 export function persistExternalSpendOp(

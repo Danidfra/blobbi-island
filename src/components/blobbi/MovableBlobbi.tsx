@@ -1,13 +1,13 @@
 /**
- * MovableBlobbi — the LOCAL player's actor wrapper (Phase 3 shape).
+ * MovableBlobbi: the LOCAL player's actor wrapper (Phase 3 shape).
  *
  * A thin composition of three consolidated pieces:
  *
- *  - `useBlobbiMovementController` — movement state, the rAF walk loop,
+ *  - `useBlobbiMovementController`: movement state, the rAF walk loop,
  *    `goTo`/`snapTo`/`stop` (src/hooks/useBlobbiMovementController.ts);
- *  - the shared world-input policy — which taps mean "walk there"
+ *  - the shared world-input policy, which taps mean "walk there"
  *    (src/lib/world-input.ts);
- *  - the shared pose resolver — what the current {@link BlobbiActorPose}
+ *  - the shared pose resolver, what the current {@link BlobbiActorPose}
  *    means visually, identical for local and remote actors
  *    (src/lib/blobbi-pose.ts);
  *
@@ -46,7 +46,7 @@ export interface MovableBlobbiRef {
   goTo: (target: GroundPosition) => void;
   /**
    * Snap immediately to an explicit pose anchor (seat cushion, bed sleep pose,
-   * dev spawn). Bypasses the walk boundary — the EXPLICIT special-pose entry
+   * dev spawn). Bypasses the walk boundary, the EXPLICIT special-pose entry
    * point; never use it for ordinary movement.
    */
   snapTo: (pose: PoseAnchor) => void;
@@ -59,7 +59,7 @@ export interface MovableBlobbiProps {
   containerRef: React.RefObject<HTMLElement>;
   isVisible?: boolean;
   /**
-   * What the actor is doing (standing / sleeping / seated / hidden) — ONE
+   * What the actor is doing (standing / sleeping / seated / hidden): ONE
    * coherent presentation description, resolved through the same
    * `resolveActorRender` the remote layer uses so local and remote actors
    * cannot diverge. Owned by the room orchestrator (PlayingView); this
@@ -161,18 +161,18 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     //
     // The eyeOffset is computed every *render* from localAttentionRef +
     // livePositionsRef. But while standing still, the only thing that drives
-    // re-renders is useIdleGaze — and that intentionally STOPS emitting new
+    // re-renders is useIdleGaze, and that intentionally STOPS emitting new
     // offsets (returns the previous reference, so React bails out) whenever it
     // is holding a gaze point (the majority of the time, 0.8–2.5s per hold).
     // During those holds MovableBlobbi does not re-render, so the gaze code
     // below never re-reads the watched target's CURRENT live position and the
-    // eyes freeze on a stale snapshot — exactly the "start → frozen → final"
+    // eyes freeze on a stale snapshot, exactly the "start → frozen → final"
     // bug for the local Blobbi watching a moving remote.
     //
     // Fix: while we have an active attention target (i.e. we are watching some
     // Blobbi) drive a dedicated rAF that forces a cheap re-render every frame,
     // independent of idle gaze. This makes the local Blobbi track the target's
-    // CURRENT animated position continuously — the same smoothness remotes get
+    // CURRENT animated position continuously, the same smoothness remotes get
     // from the parent's per-frame re-render cascade. Idle gaze is untouched.
     const [, forceGazeFrame] = useState(0);
     useEffect(() => {
@@ -189,7 +189,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
         // Force a re-render so the gaze resolution (eyeOffset) below re-reads
         // the target's CURRENT live position every frame. Also force exactly
-        // one render when the target changes — in particular on RELEASE
+        // one render when the target changes, in particular on RELEASE
         // (targetKey -> null): without it nothing re-renders the component, so
         // the eyes would keep the stale attention direction until the next
         // idle-gaze emission (up to ~2.5s). When there is no active target and
@@ -206,11 +206,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     // Publish the local Blobbi's position + activity to the shared ref so
     // MultiplayerLayer can treat it as a nearby gaze target for remotes.
     // Updates whenever position changes (every frame while moving) or when the
-    // moving flag flips — so remotes stop looking once the local Blobbi stops.
+    // moving flag flips, so remotes stop looking once the local Blobbi stops.
     // Also mirror the position into the shared live-positions map under the
     // reserved local key, so remotes watching the local Blobbi track its CURRENT
     // position live (same source MovableBlobbi reads for remotes). Ref writes
-    // only — no re-render is triggered by this.
+    // only: no re-render is triggered by this.
     useEffect(() => {
       if (localActiveRef) {
         localActiveRef.current = {
@@ -263,7 +263,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
         onWakeUp?.();
 
-        // Asleep on the bed: a world tap wakes the Blobbi and nothing more —
+        // Asleep on the bed: a world tap wakes the Blobbi and nothing more,
         // the pose transition is the orchestrator's job, not a walk.
         if (poseRef.current.kind === 'sleeping') return;
 

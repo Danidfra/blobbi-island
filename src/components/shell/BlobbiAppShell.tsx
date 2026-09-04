@@ -16,7 +16,7 @@ type ShellScreen = "login" | "loading" | "selection" | "hatching" | "playing";
 interface BlobbiAppShellProps {
   /** The current game screen (login / loading / selection / playing). */
   children: ReactNode;
-  /** Which screen is showing — drives which global header controls appear. */
+  /** Which screen is showing, drives which global header controls appear. */
   screen?: ShellScreen;
   /** Show the in-world HUD/dock (true only while playing). */
   showGameChrome?: boolean;
@@ -31,16 +31,16 @@ interface BlobbiAppShellProps {
 }
 
 /**
- * BlobbiAppShell — the Blobbi Island game shell.
+ * BlobbiAppShell: the Blobbi Island game shell.
  *
- * Desktop (framed): a cozy browser-game layout inspired by classic web games —
+ * Desktop (framed): a cozy browser-game layout inspired by classic web games,
  * a lightweight header on top carrying GLOBAL controls (account, change-Blobbi,
  * settings, fullscreen), a centered game canvas (intentionally smaller than the
  * full viewport so it feels placed, not lost), and a reserved contextual strip
  * below for tips / CTA / status. A fullscreen control makes the canvas
  * immersive on demand.
  *
- * Mobile landscape AND desktop fullscreen (immersive): no header/footer chrome —
+ * Mobile landscape AND desktop fullscreen (immersive): no header/footer chrome,
  * the canvas fills the screen so it feels like a game, not a webpage. Global
  * controls remain reachable through the in-canvas HUD there, and a subtle exit
  * button is overlaid when in desktop fullscreen.
@@ -72,7 +72,7 @@ export function BlobbiAppShell({
 
   // Overlays (account menu, dialogs, sheets) portal INTO the game shell root
   // element rather than document.body. This keeps them visually inside the game
-  // window — the auth dialogs read like they appear inside Blobbi Island, and
+  // window: the auth dialogs read like they appear inside Blobbi Island, and
   // their backdrop only covers the game window, not the whole browser page.
   // It is ALSO required for fullscreen: when fullscreen is active the shell root
   // is the fullscreened element, so anything in document.body would render
@@ -84,7 +84,7 @@ export function BlobbiAppShell({
 
   // In-canvas HUD/Dock are GAMEPLAY chrome. On desktop framed mode the global
   // controls live in the header, so the HUD's global cluster (settings, switch-
-  // Blobbi) is redundant — hide it there. In immersive (mobile landscape / no
+  // Blobbi) is redundant, hide it there. In immersive (mobile landscape / no
   // header) and fullscreen, the HUD keeps those controls so they stay reachable.
   const desktopFramed = !immersive && !isFullscreen;
   const hud = showGameChrome ? (
@@ -108,11 +108,11 @@ export function BlobbiAppShell({
   // structurally different tree: the framed layout has the header at child
   // index 0, the fill layout has the frame there. React matches state by
   // POSITION, so every toggle of `isFullscreen` unmounted the entire game and
-  // mounted a fresh copy — new `PlayingView` (Blobbi back at its spawn point,
+  // mounted a fresh copy, new `PlayingView` (Blobbi back at its spawn point,
   // seat lost), new `MultiplayerLayer` (new presence session id, ghost player
   // on every other screen until the old one expired), new `TheaterStage` (the
   // YouTube player destroyed and the watch session dropped, orphaning a host's
-  // own session). Nothing navigated and nothing reloaded — it was a remount,
+  // own session). Nothing navigated and nothing reloaded; it was a remount,
   // and it looked exactly like a reload.
   //
   // So the chain is now identical in both presentations: the header and footer

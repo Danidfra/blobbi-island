@@ -2,12 +2,12 @@
  * Read the theme out of Ditto's encrypted app settings (NIP-78 kind:30078).
  *
  * This is the read half of the channel that actually decides which theme Ditto
- * is rendering — see `src/lib/ditto-settings.ts` for why 16767 is not it.
+ * is rendering: see `src/lib/ditto-settings.ts` for why 16767 is not it.
  *
  * ## Why the read is completion-aware and the failure is silent
  *
  * `NPool.query()` cannot fail: a timeout, a dead socket and a genuinely empty
- * relay all return `[]`. For THIS read that difference is the whole story — a
+ * relay all return `[]`. For THIS read that difference is the whole story, a
  * false empty would say "you have never chosen a theme anywhere", and the sync
  * that consumes it would have no way to tell that from the truth. So the read
  * throws on an unusable outcome and React Query keeps the last good value.

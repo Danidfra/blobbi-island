@@ -24,7 +24,7 @@ export function useBlobbonautProfile() {
       if (!user?.pubkey) return null;
 
       // CONFIRMED-EMPTY read. `current_companion` lives here, and losing it
-      // routes an active player back to the selection screen — so an unusable
+      // routes an active player back to the selection screen, so an unusable
       // read must throw (React Query then keeps the last known profile) rather
       // than resolve to `null`. Only a completed empty answer, confirmed by a
       // second completed read, means "this account has no profile".
@@ -40,7 +40,7 @@ export function useBlobbonautProfile() {
 
       // Always reconcile against the LATEST replaceable event. Relays / multiple
       // kinds can return events out of order, so pick the highest created_at
-      // rather than trusting array position — otherwise an older profile could
+      // rather than trusting array position; otherwise an older profile could
       // win and revert a freshly-switched current_companion.
       const validEvents = events
         .filter(validateOwnerProfileEvent)
@@ -74,7 +74,7 @@ export function useSetCurrentCompanion() {
       // Deterministic latest-event selection: relays return replaceable
       // events in arbitrary order, and republishing whichever arrived first
       // used to be able to resurrect a STALE profile (including the historic
-      // `coins` tag) — the balance-rollback hazard the Coin audit flagged.
+      // `coins` tag): the balance-rollback hazard the Coin audit flagged.
       const latest = events
         .filter(validateOwnerProfileEvent)
         .sort((a, b) => b.created_at - a.created_at)[0];
@@ -148,7 +148,7 @@ export function useSetCurrentCompanion() {
       }
     },
     onSuccess: async (blobbiId) => {
-      // Reconcile with the relays — but the optimistic selection stays
+      // Reconcile with the relays, but the optimistic selection stays
       // AUTHORITATIVE until the relay confirms the same value. A naive
       // invalidate() would let a stale read (the relay hasn't surfaced the new
       // replaceable event yet) overwrite the user's choice and visibly revert
@@ -159,7 +159,7 @@ export function useSetCurrentCompanion() {
 
       const confirmed = await confirmCompanionOnRelay(nostr, user.pubkey, blobbiId);
       if (confirmed) {
-        // Relay now serves the new event — safe to refetch authoritative data
+        // Relay now serves the new event, safe to refetch authoritative data
         // for both profile caches without risking a revert.
         queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile', user.pubkey] });
         queryClient.invalidateQueries({ queryKey: ['owner-profile', user.pubkey] });

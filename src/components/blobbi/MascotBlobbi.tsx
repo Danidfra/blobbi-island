@@ -3,7 +3,7 @@ import { loadBlobbiSvg } from "@blobbi/react";
 import { cn } from "@/lib/utils";
 
 /**
- * MascotBlobbi — the original purple Blobbi used as Blobbi Island's mascot/guide.
+ * MascotBlobbi: the original purple Blobbi used as Blobbi Island's mascot/guide.
  *
  * Renders via the standalone SVG core (no Nostr / no hooks), so it can appear
  * in onboarding, the portrait-rotate screen, and empty/error states without

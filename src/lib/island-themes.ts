@@ -1,11 +1,11 @@
 /**
- * Blobbi Island — theme registry.
+ * Blobbi Island: theme registry.
  *
  * ## What a theme is
  *
  * A theme is a palette and nothing else: the sixteen HSL channel triplets that
- * `--island-*` resolves to. Everything downstream — the shadcn semantic tokens,
- * every shadow, every `bg-island-cream` in the game — is derived from those by
+ * `--island-*` resolves to. Everything downstream, the shadcn semantic tokens,
+ * every shadow, every `bg-island-cream` in the game, is derived from those by
  * reference (see the token block at the top of `src/index.css`).
  *
  * That is the whole point of the architecture. Adding a theme is adding an
@@ -22,25 +22,25 @@
  * - **Not derived from three core colours.** Ditto derives its nineteen tokens
  *   from `{background, text, primary}`, which is right for a social client
  *   where any user-picked colour must produce a usable UI. The island's palette
- *   is art direction — sand is not a computed tint of cream, it is a specific
- *   warm sand — so every colour is authored. The cost is that a theme is
+ *   is art direction, sand is not a computed tint of cream, it is a specific
+ *   warm sand: so every colour is authored. The cost is that a theme is
  *   sixteen values instead of three; the benefit is that a theme can be
  *   *designed*. An EXTERNAL theme does not get that luxury and does not need
- *   it — see `island-theme-adapter.ts` for how three colours become sixteen.
+ *   it: see `island-theme-adapter.ts` for how three colours become sixteen.
  *
  * ## Two sources, one shape
  *
- * A theme is either BUILT IN — authored here, sixteen colours, in the bundle —
+ * A theme is either BUILT IN, authored here, sixteen colours, in the bundle,
  * or it comes from **Nostr**: a kind:36767 definition published by anybody,
  * carrying the three colours Ditto's theme protocol defines, with the other
  * thirteen derived by `island-theme-adapter.ts`. Both end up as an
- * {@link IslandTheme}, because everything downstream — the picker, the applier,
- * the boot cache — must not care which it is holding.
+ * {@link IslandTheme}, because everything downstream, the picker, the applier,
+ * the boot cache, must not care which it is holding.
  *
  * ## Identity
  *
  * A built-in's id is a bare slug (`cozy-day`). A Nostr theme's id is
- * `nostr:36767:<pubkey>:<d>` — the protocol address, namespaced. The two
+ * `nostr:36767:<pubkey>:<d>`: the protocol address, namespaced. The two
  * vocabularies cannot collide because a built-in slug contains no colon, and
  * that is the whole reason built-in ids were NOT renamed to `builtin:cozy-day`
  * when Nostr themes arrived: every stored preference in the wild is a bare
@@ -73,7 +73,7 @@ export interface IslandPalette {
   /** Secondary surface. */
   sand: string;
   /**
-   * The frame. A decorative fill, not an action colour — `--primary` is
+   * The frame. A decorative fill, not an action colour, `--primary` is
    * `wood-dark`, because a button has to carry readable text and the frame
    * does not.
    */
@@ -88,7 +88,7 @@ export interface IslandPalette {
   /** The muted panel surface one step down from `cream`. */
   'cream-2': string;
   /**
-   * Mascot accent — the accent CTA, highlights, active state, and prices.
+   * Mascot accent: the accent CTA, highlights, active state, and prices.
    *
    * Deep enough to be readable in BOTH directions: as text on `cream`, and as
    * a surface under `cream`. That constraint is why it is a shade deeper than
@@ -105,7 +105,7 @@ export interface IslandPalette {
    * Caution and cost.
    *
    * Held to 3:1 rather than 4.5:1 and used only as an icon tint and a low-alpha
-   * border — it has no text call sites. Deepening it to text contrast would
+   * border: it has no text call sites. Deepening it to text contrast would
    * turn the warning amber brown for no reader's benefit; if it ever carries
    * text, it has to be deepened first.
    */
@@ -155,7 +155,7 @@ export interface IslandTheme {
   /** `36767:<pubkey>:<d>`, for a Nostr theme. */
   address?: string;
   /**
-   * The INTEROPERABLE source this theme was derived from — Ditto's
+   * The INTEROPERABLE source this theme was derived from: Ditto's
    * `ThemeConfig`: three colours, optional fonts, optional background media.
    *
    * Present for every theme that came from Nostr, and it is what gets
@@ -169,7 +169,7 @@ export interface IslandTheme {
 /**
  * The id for a self-contained theme belonging to the account.
  *
- * Ditto's own model has no name for the theme you are using — its mode is
+ * Ditto's own model has no name for the theme you are using; its mode is
  * literally `'custom'`, with the colours in `customTheme`. There is nothing to
  * address, because there is no definition. Island mirrors that with one
  * reserved id: what it points at lives in the palette cache and changes
@@ -219,7 +219,7 @@ const cozyDay: IslandTheme = {
  *
  * The second theme exists to prove the architecture rather than to fill a
  * picker, and it was chosen to be the *hardest* case: it inverts the lightness
- * relationship the whole app was built on — panels become darker than the page
+ * relationship the whole app was built on, panels become darker than the page
  * is in Cozy Day, and text becomes light on dark. If a surface were hardcoding
  * a colour, this is the theme that exposes it.
  *
@@ -269,7 +269,7 @@ export const islandThemeIds: readonly string[] = islandThemes.map((t) => t.id);
  * `IslandThemeId` is `string` rather than a union of the current ids: a stored
  * preference outlives the build that wrote it. A player who picked a seasonal
  * theme that has since been removed, or who is running an older cached bundle,
- * gets Cozy Day — not a crash, and not an unstyled island.
+ * gets Cozy Day; not a crash, and not an unstyled island.
  */
 export function resolveIslandTheme(id: string | undefined): IslandTheme {
   return (id ? themesById.get(id) : undefined) ?? themesById.get(DEFAULT_ISLAND_THEME_ID)!;
@@ -298,7 +298,7 @@ export function islandThemeDeclarations(theme: IslandTheme): Array<[string, stri
 }
 
 /**
- * Apply a theme to an element — `document.documentElement` in the app.
+ * Apply a theme to an element, `document.documentElement` in the app.
  *
  * Written as inline custom properties rather than a swapped `<style>` element
  * or a class, for three reasons:

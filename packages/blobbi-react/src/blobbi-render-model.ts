@@ -1,7 +1,7 @@
 /**
  * The renderer's INPUT NORMALIZATION boundary (Phase 4).
  *
- * `BlobbiRendererView` accepts loose, partially-populated visual data — it is
+ * `BlobbiRendererView` accepts loose, partially-populated visual data; it is
  * fed by relay events, presence payloads, editor previews and test fixtures,
  * none of which can be trusted to be complete. This module is the single pure
  * function that turns that into a fully-resolved {@link BlobbiRenderModel}: the
@@ -9,7 +9,7 @@
  *
  * Everything here is pure and React-free, so the same normalization runs in the
  * world, in the profile-modal preview, in the accessory editor and in a plain
- * Node test — which is what makes "local and remote render identically" a
+ * Node test: which is what makes "local and remote render identically" a
  * structural fact rather than a convention.
  *
  * Documented fallback behavior for incomplete input:
@@ -27,7 +27,7 @@
  */
 import type { NormalizedAccessoryPlacement } from './accessory-normalize';
 
-/** The visual identity of a Blobbi — everything the pure renderer needs. */
+/** The visual identity of a Blobbi; everything the pure renderer needs. */
 export interface BlobbiRenderVisual {
   stage?: 'egg' | 'baby' | 'adult';
   adultType?: string;
@@ -98,7 +98,7 @@ function clampGazeAxis(value: number): number {
  * Sanitize an id namespace to the characters that are safe in an SVG `id`.
  *
  * Matches the transformation `uniquifySvgIds` applies internally, so doing it
- * here is idempotent and changes no existing id — it only makes the rule part
+ * here is idempotent and changes no existing id; it only makes the rule part
  * of the public contract instead of an implementation detail.
  */
 export function normalizeInstanceId(instanceId: string | undefined): string {

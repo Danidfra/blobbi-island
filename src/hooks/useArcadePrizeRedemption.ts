@@ -1,10 +1,10 @@
 /**
- * `useArcadePrizeRedemption` — the Prize Counter's redemption boundary.
+ * `useArcadePrizeRedemption`: the Prize Counter's redemption boundary.
  *
  * The spend-side sibling of `useArcadeReward`, built on the same hard-won
  * rules: a durable record BEFORE anything is published, a synchronous lock
  * against same-tick double-clicks, strict publish with verify read-back, and
- * an unresolved outcome that can only ever be reconciled read-only — never
+ * an unresolved outcome that can only ever be reconciled read-only; never
  * respent. `-40` retried after a publish that actually landed is `-80`.
  *
  * ## The sequence, and why it is in this order
@@ -28,31 +28,31 @@
  * `ownership`), which is what lets the same sequence serve prizes with very
  * different physics:
  *
- *  - **Arcade Pass** — the spend writes kind:31633 and the delivery writes a
+ *  - **Arcade Pass**: the spend writes kind:31633 and the delivery writes a
  *    local expiring entitlement. Two writes, a real gap between them, and the
  *    `spent`/`delivering` states plus the per-redemption-id idempotent retry
  *    are what make that gap survivable.
- *  - **Cosmetic prizes** — the ticket debit and the item grant are quantities
+ *  - **Cosmetic prizes**: the ticket debit and the item grant are quantities
  *    in the SAME replaceable event, published together
  *    (`arcade-cosmetic-redeemer.ts`). The "delivery" step writes nothing: it
  *    VERIFIES the prize arrived, because it arrived on the spend's own event.
  *    Such a store sets `atomicWithSpend`, and this hook then reconciles an
- *    ambiguous spend against the PRIZE — evidence only that event could have
- *    produced — instead of against a ticket balance every other writer moves.
+ *    ambiguous spend against the PRIZE, evidence only that event could have
+ *    produced: instead of against a ticket balance every other writer moves.
  *
  * ## Every persistence point, classified by consequence
  *
  * | write | on failure |
  * | --- | --- |
- * | `reserved` | refuse — publish nothing (retryable, `ledger-unavailable`) |
- * | `spending` (with the baseline) | refuse — publish nothing. This record IS the reconciliation evidence; a spend that published without it could never be reconciled after a refresh |
- * | pre-publish failure transitions | best-effort. The durable record stays `spending`, which hydrates as UNRESOLVED — the safe side; never presented as "may have been spent" in-memory when it provably was not |
- * | post-publish transitions (`spent`, unresolved) | best-effort, and NEVER downgraded to retryable — the durable `spending` record keeps the refusal alive across a refresh |
+ * | `reserved` | refuse, publish nothing (retryable, `ledger-unavailable`) |
+ * | `spending` (with the baseline) | refuse, publish nothing. This record IS the reconciliation evidence; a spend that published without it could never be reconciled after a refresh |
+ * | pre-publish failure transitions | best-effort. The durable record stays `spending`, which hydrates as UNRESOLVED, the safe side; never presented as "may have been spent" in-memory when it provably was not |
+ * | post-publish transitions (`spent`, unresolved) | best-effort, and NEVER downgraded to retryable, the durable `spending` record keeps the refusal alive across a refresh |
  * | `delivering` | best-effort. The durable `spent` record plus per-id-idempotent delivery is what guarantees no re-spend |
  * | `confirmed` | REQUIRED for the confirmed UI. Ownership is kept, nothing is spent again, and the state stays a recoverable finalization until the record persists |
  *
  * Tickets are spent BEFORE ownership is granted, so the failure mode the order
- * allows is "paid but not yet delivered" — which the ledger keeps as a
+ * allows is "paid but not yet delivered": which the ledger keeps as a
  * `delivering` record that `finishDelivery` can complete WITHOUT spending
  * again. The opposite order could hand out a prize whose payment then failed,
  * and there is no clawback for that. An ATOMIC delivery cannot reach that
@@ -70,7 +70,7 @@
  * state and the recovery path are for.
  *
  * None of this is anti-fraud. It protects an honest player from application
- * bugs — double-clicks, remounts, refreshes, ambiguous publishes — and a
+ * bugs: double-clicks, remounts, refreshes, ambiguous publishes, and a
  * modified client can bypass all of it.
  */
 
@@ -113,7 +113,7 @@ export type PrizeRedemptionPhase =
   | 'reserving'
   /** The strict spend publish (and its verify read) is in flight. */
   | 'spending'
-  /** The spend MAY have been published. Reconcile-only — NEVER respent. */
+  /** The spend MAY have been published. Reconcile-only: NEVER respent. */
   | 'spend-unresolved'
   /** A read-only spend-status check is running. */
   | 'checking'
@@ -150,11 +150,11 @@ const UNRESOLVED_COPY =
 
 const RECOVERY_COPY =
   'Your tickets were spent, but the prize delivery did not finish. ' +
-  'Nothing is lost — you can finish the delivery without paying again.';
+  'Nothing is lost: you can finish the delivery without paying again.';
 
 const FINALIZE_COPY =
   'Your prize is delivered, but this browser could not record the redemption as finished. ' +
-  'Finishing up completes the record — you will not be charged again.';
+  'Finishing up completes the record; you will not be charged again.';
 
 const FAILURE_COPY: Readonly<Record<PrizeSpendFailure, string>> = {
   'sign-failed': 'Your signer refused the request, so nothing was spent. You can try again.',
@@ -175,7 +175,7 @@ const FAILURE_COPY: Readonly<Record<PrizeSpendFailure, string>> = {
 
 /**
  * Classify what the spend writer threw. Only PROVABLE pre-publish reasons
- * retry — and the proof is `ArcadePrizeSpendError` itself, which the writer
+ * retry: and the proof is `ArcadePrizeSpendError` itself, which the writer
  * throws exclusively from guards that run before `nostr.event()`.
  *
  * `publish-rejected` deserves its own note, because it is the classification
@@ -183,13 +183,13 @@ const FAILURE_COPY: Readonly<Record<PrizeSpendFailure, string>> = {
  * against the actual client (the same audit `useArcadeReward` documents):
  * `NPool.event` is `Promise.any(relays…)` and rejects with an AggregateError
  * only when every relay's promise rejects, with no per-relay OK/failure
- * breakdown — and `NRelay1.event` throws an indistinguishable plain `Error`
+ * breakdown: and `NRelay1.event` throws an indistinguishable plain `Error`
  * for both an explicit `OK false` and a socket that died AFTER the EVENT
  * frame was written, in which case the relay may well have stored it. So the
  * PRODUCTION writer never throws `publish-rejected`: a generic publication
  * error lands in the `verify-unavailable` fallthrough below and the spend is
  * UNRESOLVED, reconcile-only. The classification exists for writers that CAN
- * prove it — the DEV harness's fake, the tests', or a future client with a
+ * prove it: the DEV harness's fake, the tests', or a future client with a
  * per-relay contract.
  */
 function classifySpendError(error: unknown): PrizeSpendFailure {
@@ -308,7 +308,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
   }, [refreshOwned]);
 
   /**
-   * Adopt whatever durable state exists for a prize — called when a prize is
+   * Adopt whatever durable state exists for a prize, called when a prize is
    * selected, so an unresolved spend or an undelivered redemption survives
    * closing the counter, remounting, and a refresh instead of presenting a
    * fresh Redeem button over tickets that may already be spent.
@@ -356,19 +356,19 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
 
   /**
    * Complete the delivery half of a redemption whose spend is already
-   * confirmed. Publishes nothing and spends nothing — it may run any number of
+   * confirmed. Publishes nothing and spends nothing; it may run any number of
    * times for the same record, because the ownership store is idempotent per
    * REDEMPTION ID: retrying this attempt can never grant twice, and (for a
    * repeatable prize) can never eat a later attempt's legitimate increment.
    *
    * The explicit sequence, per the delivery contract:
    *
-   *   1. transition to `delivering`, persist best-effort — a failure here is
+   *   1. transition to `delivering`, persist best-effort, a failure here is
    *      safe because the durable `spent` record plus per-id idempotency
    *      already guarantee a refresh can finish without spending again;
    *   2. grant ownership for THIS redemption id;
    *   3. VERIFY the delivery was recorded (`hasDelivery`), never assume it;
-   *   4. transition to `confirmed` and persist WITH read-back — only that
+   *   4. transition to `confirmed` and persist WITH read-back; only that
    *      makes the confirmed UI true. If the final record will not persist,
    *      ownership is kept, nothing is respent, and the state remains a
    *      recoverable finalization instead of a false "done".
@@ -421,7 +421,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
       const confirmed = advanceRedemption(working, { type: 'delivery-complete', now: Date.now() });
       if (!persistRedemption(pubkey, confirmed)) {
         // Ownership IS granted and verified; only the final record refused to
-        // stick. Never presented as fully confirmed — and never respent: the
+        // stick. Never presented as fully confirmed, and never respent: the
         // durable record stays spent/delivering, and a retry re-runs this
         // sequence where the grant is a per-id no-op.
         await refreshOwned();
@@ -564,7 +564,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
         });
         // ── The SPENDING record is a prerequisite for publishing, exactly as
         //    the reserved one is. It carries the baseline, the in-flight
-        //    status, the attempt count and the price — the only evidence a
+        //    status, the attempt count and the price, the only evidence a
         //    refresh-mid-spend can ever reconcile against. `persistRedemption`
         //    writes AND reads back; if that round trip fails, NOTHING is
         //    published, and the failure is a provably-pre-spend refusal (the
@@ -607,7 +607,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
           // fails, the durable record remains `spending`, which hydrates as
           // UNRESOLVED after a refresh. For a post-publish failure that is
           // exactly right; for a provably-pre-publish one it is merely
-          // conservative — never the reverse, and never a downgrade of a
+          // conservative: never the reverse, and never a downgrade of a
           // possibly-published spend to retryable.
           persistRedemption(pubkey, redemption);
           return settle({
@@ -637,7 +637,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
           });
         }
 
-        // The machine — not this hook — decides whether the numbers prove it.
+        // The machine: not this hook, decides whether the numbers prove it.
         redemption = advanceRedemption(redemption, {
           type: 'spend-confirmed',
           now: Date.now(),
@@ -711,7 +711,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
         // ATOMIC delivery: the debit and the grant are one kind:31633 event, so
         // the PRIZE is evidence about this redemption in a way a balance never
         // is. A read that failed leaves `owned` false, and the machine's
-        // negative rule needs a readable balance too — so an unreadable
+        // negative rule needs a readable balance too, so an unreadable
         // inventory stays unresolved rather than guessing either way.
         const owned =
           quantityNow === null ? false : await ownership.hasPrize(pubkey, prize.id);
@@ -731,7 +731,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
         return deliver(prize, working);
       }
 
-      // The atomic negative proof — prize absent AND balance untouched — is a
+      // The atomic negative proof, prize absent AND balance untouched, is a
       // definitive "nothing was spent", so the record goes back to retryable
       // and the UI must offer the redemption again rather than a dead end.
       if (working.status === 'failed-before-spend') {
@@ -740,7 +740,7 @@ export function useArcadePrizeRedemption(options: UseArcadePrizeRedemptionOption
           prizeId: prize.id,
           redemption: working,
           failure: null,
-          message: 'Your tickets are untouched — that redemption never went through. You can try again.',
+          message: 'Your tickets are untouched; that redemption never went through. You can try again.',
         };
         safeSet(cleared);
         return cleared;

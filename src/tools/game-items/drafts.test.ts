@@ -3,7 +3,7 @@
  *
  * The behaviors worth protecting are the defensive ones: a corrupt or
  * older-schema draft must never throw during a render and must never silently
- * become a half-restored form. And nothing key-shaped may ever be written —
+ * become a half-restored form. And nothing key-shaped may ever be written,
  * asserted structurally against a fully-populated form rather than by reading
  * the source.
  */
@@ -199,7 +199,7 @@ describe('row ids survive a page reload without colliding', () => {
   it('advances the counter past ids restored from a previous session', async () => {
     // THE BUG: the counter lives in module scope and restarts at 0 on every page
     // load, but draft rows are persisted and come back carrying `image-1`,
-    // `image-2`, … Adding a row after a reload minted `image-1` a second time —
+    // `image-2`, … Adding a row after a reload minted `image-1` a second time,
     // React reported duplicate keys, and two DRAFTS sharing an id is worse.
     const { nextRowId, reserveRowIds } = await import('./item-form-model');
 
@@ -230,7 +230,7 @@ describe('row ids survive a page reload without colliding', () => {
  * The failure this pins down was real and user-reported: a draft saved before
  * `visual` grew `kind` / `effect` / `effectSlot` came back without them, a
  * newer build called `visual.kind.trim()`, and the entire Item Studio went to
- * the error boundary — "Cannot read properties of undefined (reading 'trim')".
+ * the error boundary, "Cannot read properties of undefined (reading 'trim')".
  * The author's unpublished work was unreachable until localStorage was cleared.
  *
  * The fixture below is the exact previous shape, written out literally rather
@@ -244,7 +244,7 @@ describe('drafts written by an older build', () => {
   /**
    * `visual` is passed EXPLICITLY, with no default: a default would swallow the
    * `undefined` case below and quietly test the legacy visual instead of a
-   * missing one — which is the case most likely to crash.
+   * missing one: which is the case most likely to crash.
    */
   const legacyStore = (visual: unknown) =>
     JSON.stringify({

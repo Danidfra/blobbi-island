@@ -1,9 +1,9 @@
 /**
- * `<FurnitureStoreModal>` — the foundation, and the fact that it IS only that.
+ * `<FurnitureStoreModal>`: the foundation, and the fact that it IS only that.
  *
  * This modal is deliberately empty: the Furniture Store's economy has not been
  * designed, and a placeholder price is how a placeholder becomes a promise. So
- * the tests below check two different things — that the dialog works as a
+ * the tests below check two different things; that the dialog works as a
  * dialog, and that it does NOT yet do any of the things a shop does.
  */
 

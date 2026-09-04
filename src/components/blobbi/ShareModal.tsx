@@ -42,7 +42,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
   /*
     What the button will actually do, rather than what the browser happens to
     support. An experience that does not permit the share sheet should say
-    "Choose social network", because that is what pressing it will produce —
+    "Choose social network", because that is what pressing it will produce,
     a label that promised a sheet nobody will see would be a lie the UI told.
   */
   const canUseShareSheet = policy.nativeShareSheet && canNativeShare({ files: [] });
@@ -140,7 +140,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
       // No Web Share API, or the sheet was dismissed. Falling back to the social
       // panel is safe: it is gated by its OWN capability, so an experience that
       // refuses the share sheet does not get social platforms through the back
-      // door — it gets a panel whose buttons are equally refused.
+      // door: it gets a panel whose buttons are equally refused.
       setIsSocialPanelOpen(true);
     } catch {
       setIsSocialPanelOpen(true);
@@ -222,7 +222,7 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
 
     setIsPosting(true);
     /*
-      The whole sequence — permission, upload, note — belongs to `usePhotoShare`,
+      The whole sequence: permission, upload, note, belongs to `usePhotoShare`,
       which decides before anything leaves the device. This component's job is to
       turn one outcome into one message.
     */
@@ -489,14 +489,14 @@ export function ShareModal({ isOpen, onClose, capturedPhoto: _capturedPhoto, cap
                 </Dialog>
 
                 {/*
-                  Post to Relay — Nostr.
+                  Post to Relay: Nostr.
 
                   Omitted entirely where the experience does not permit public
                   sharing, rather than shown disabled: a composer the player can
                   fill in and then be refused is a worse experience than one that
                   was never offered, and a row of dead controls invites an
                   explanation nobody should have to write. The local half of the
-                  PhotoBooth — capture, preview, download — is untouched.
+                  PhotoBooth: capture, preview, download, is untouched.
 
                   Presentation only. `usePhotoShare` refuses the operation and
                   `useUploadFile` refuses the upload independently, so removing

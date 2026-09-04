@@ -1,8 +1,8 @@
 /**
  * The CARRIED half of the inventory: consumables and currency.
  *
- * Confirms that medicine, hygiene and energy items — which have no dedicated
- * furniture — are visible and usable through the canonical `InventoryBrowser`,
+ * Confirms that medicine, hygiene and energy items, which have no dedicated
+ * furniture: are visible and usable through the canonical `InventoryBrowser`,
  * which opens the shared `ConsumeItemModal`.
  *
  * Migrated from `InventoryPanel.test.tsx` when the two stacked panels became one
@@ -82,7 +82,7 @@ describe('carried items are reachable', () => {
     expect(await screen.findByText('Vitamins')).toBeInTheDocument();
     expect(screen.getByText('Soap')).toBeInTheDocument();
     expect(screen.getByText('Energy Drink')).toBeInTheDocument();
-    // All three sit under one `Care` chip — but a surface showing a SINGLE
+    // All three sit under one `Care` chip, but a surface showing a SINGLE
     // category offers no filter at all, so the strip is absent here.
     expect(screen.queryByRole('tablist', { name: 'Item categories' })).toBeNull();
   });
@@ -117,7 +117,7 @@ describe('carried items are reachable', () => {
 
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
 
-    // A consumable is never "selected" — its click is the action — so closing
+    // A consumable is never "selected": its click is the action, so closing
     // the dialog must not leave a highlighted tile pretending otherwise.
     expect(screen.queryByRole('dialog', { name: 'Use item' })).toBeNull();
     const tile = screen.getByTestId(`item-${itemIdToAddress('food_apple')}`);
@@ -159,11 +159,11 @@ describe('carried items are reachable', () => {
  * Currency.
  *
  * A currency is held in the same kind:31633 inventory as consumables, so the
- * collection is the natural place to show it — but it must be visibly a
+ * collection is the natural place to show it, but it must be visibly a
  * BALANCE, not something you can feed to a Blobbi. The property that matters is
  * unchanged by the redesign: there is NO path from currency into the consume
  * flow. What changed is that a currency tile is now selectable like every other
- * tile — selecting it explains what it is for, and offers no verb.
+ * tile: selecting it explains what it is for, and offers no verb.
  */
 describe('currency', () => {
   function renderWithTickets(quantity: number, alsoConsumables = false) {

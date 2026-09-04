@@ -4,7 +4,7 @@ import type { Position } from '@/lib/types';
  * Minimal shape needed to decide whether a Blobbi is an eligible gaze target.
  *
  * "Active" currently means *moving*, but this is intentionally an object (not a
- * bare boolean) so additional activity sources — emotes, animations, actions —
+ * bare boolean) so additional activity sources, emotes, animations, actions,
  * can be added later without touching every call site. Extend this interface
  * and {@link activityPriority} together when new activity kinds are introduced;
  * the attention resolver picks them up everywhere automatically.
@@ -38,7 +38,7 @@ export function isBlobbiActive(activity: BlobbiActivity): boolean {
  *   0 = not active (nothing worth looking at)
  *   higher = more attention-grabbing, wins over lower priorities
  *
- * Movement is the lowest positive priority — anything intentional (an emote,
+ * Movement is the lowest positive priority, anything intentional (an emote,
  * an interaction) should outrank a Blobbi simply walking past.
  */
 export function activityPriority(activity: BlobbiActivity): number {
@@ -52,7 +52,7 @@ export function activityPriority(activity: BlobbiActivity): number {
 }
 
 // ---------------------------------------------------------------------------
-// Attention resolver — the single source of truth for "what is this Blobbi
+// Attention resolver: the single source of truth for "what is this Blobbi
 // looking at?". Pure and deterministic (output depends only on inputs + the
 // supplied `now`), so it scales to many Blobbis and is trivial to reason about.
 // ---------------------------------------------------------------------------
@@ -102,14 +102,14 @@ export function emptyAttention(): AttentionState {
  *
  * Selection rules (deterministic):
  *  1. Among active candidates in range, pick the highest {@link activityPriority}.
- *  2. Break ties by most-recent activity, then by nearest distance — so when a
+ *  2. Break ties by most-recent activity, then by nearest distance, so when a
  *     second Blobbi starts moving nearby, attention shifts to the newcomer
  *     rather than locking on the closest one forever.
  *  3. Follow-through: `maxDistSq` is an *acquisition* radius only. The target
  *     currently being watched is exempt from the range gate while it stays
  *     active, so a Blobbi that caught our eye nearby is followed through its
  *     WHOLE movement (even across the room) instead of being dropped the
- *     moment it crosses the radius — which froze the watcher's gaze mid-move
+ *     moment it crosses the radius, which froze the watcher's gaze mid-move
  *     and made it "jump" on re-acquisition.
  *  4. If nothing is active right now, KEEP the previous target (refreshing its
  *     position if we can still see it) until {@link ATTENTION_HOLD_MS} elapses
@@ -199,7 +199,7 @@ export function resolveAttention(
  * (keyed the same way as candidates / attention state).
  *
  * Falls back to the snapshot `targetPosition` when the target isn't present in
- * the live map — e.g. during the post-activity hold window if it left range —
+ * the live map, e.g. during the post-activity hold window if it left range,
  * so the gaze still points somewhere sensible until attention releases.
  *
  * The local Blobbi is represented by a `null` candidate key; pass `localKey` to

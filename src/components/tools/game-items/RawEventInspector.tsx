@@ -78,7 +78,7 @@ export interface RawEventInspectorProps {
   /** Relays this event was seen on / accepted by, when known. */
   relays?: readonly string[];
   title?: string;
-  /** Start expanded. Off by default — see the module note. */
+  /** Start expanded. Off by default; see the module note. */
   defaultOpen?: boolean;
   className?: string;
 }
@@ -142,18 +142,18 @@ export function RawEventInspector({
 
       <CollapsibleContent className="space-y-4 border-t px-4 py-4">
         <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-          <Field label="id" value={event.id || '— (assigned at signing)'} mono />
-          <Field label="pubkey" value={event.pubkey || '— (the signer)'} mono />
+          <Field label="id" value={event.id || '(assigned at signing)'} mono />
+          <Field label="pubkey" value={event.pubkey || '(the signer)'} mono />
           <Field
             label="created_at"
             value={
               event.created_at
                 ? `${event.created_at} · ${new Date(event.created_at * 1000).toLocaleString()}`
-                : '— (stamped at signing)'
+                : '(stamped at signing)'
             }
             mono
           />
-          <Field label="sig" value={event.sig || '— (not signed)'} mono />
+          <Field label="sig" value={event.sig || '(not signed)'} mono />
           {relays.length > 0 && <Field label="relays" value={relays.join(', ')} />}
         </dl>
 
@@ -201,7 +201,7 @@ export function RawEventInspector({
             <ul className="space-y-1 text-xs text-amber-700 dark:text-amber-400">
               {warnings.map((warning, index) => (
                 <li key={`${warning.code}-${index}`}>
-                  <span className="font-mono">{warning.code}</span> — {warning.message}
+                  <span className="font-mono">{warning.code}</span>: {warning.message}
                 </li>
               ))}
             </ul>

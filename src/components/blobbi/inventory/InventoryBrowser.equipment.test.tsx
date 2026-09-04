@@ -2,7 +2,7 @@
  * The WEARABLE half of the inventory, end to end through the real service
  * boundary.
  *
- * The relay is mocked; everything above it is real — `useEquippableCosmetics`,
+ * The relay is mocked; everything above it is real, `useEquippableCosmetics`,
  * `usePlacementState`, `useEquipmentMutation` and the package itself. What is
  * asserted is the behavior a player experiences AND the events that behavior
  * produces, because a surface that looks right while publishing the wrong kind
@@ -15,7 +15,7 @@
  * Migrated from `EquipmentPanel.test.tsx` when the two stacked inventory panels
  * became one browser. Every policy assertion is the same; what changed is that
  * an action now lives in the detail panel, so the tests select an item before
- * acting on it — which is the redesign's whole point.
+ * acting on it, which is the redesign's whole point.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
@@ -56,7 +56,7 @@ vi.mock('@/hooks/useAppContext', () => ({
 
 /**
  * The catalog fans out over its own relay pool rather than the app's `useNostr`
- * client, so it is mocked at that boundary — the same seam
+ * client, so it is mocked at that boundary, the same seam
  * `usePublishItemDefinition.test.tsx` already uses.
  */
 const definitionEvents = vi.fn<() => NostrEvent[]>(() => []);
@@ -218,7 +218,7 @@ describe('the wearables in the inventory browser', () => {
   it('does not offer a cosmetic the player does not own', async () => {
     relay({ inventory: 0 });
     renderPanel();
-    // Owning none of it means the collection is empty — and the reason the
+    // Owning none of it means the collection is empty, and the reason the
     // cosmetic is not there is still stated, in the diagnostics.
     await waitFor(() => expect(screen.getByText(/your bag is empty/i)).toBeInTheDocument());
     expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull();
@@ -233,7 +233,7 @@ describe('the wearables in the inventory browser', () => {
       expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull(),
     );
     // FOUR official cosmetics now share this state in the empty-catalog
-    // harness (cap, necklace, bow tie, glasses) — at least one row shows it.
+    // harness (cap, necklace, bow tie, glasses): at least one row shows it.
     expect(
       screen.getAllByText(/official definition has not been published/i).length,
     ).toBeGreaterThan(0);
@@ -291,7 +291,7 @@ describe('the wearables in the inventory browser', () => {
     await waitFor(() => expect(screen.getByText(/your bag is empty/i)).toBeInTheDocument());
     expect(screen.queryByTestId(`item-${CAP_ADDRESS}`)).toBeNull();
     // The name still appears in the diagnostics, naming what could not be
-    // resolved — that is the honesty the test is about, not silence.
+    // resolved: that is the honesty the test is about, not silence.
     expect(
       screen.getAllByText(/official definition has not been published/i).length,
     ).toBeGreaterThan(0);
@@ -300,7 +300,7 @@ describe('the wearables in the inventory browser', () => {
   it('marks what is worn, read from the kind:31634 document', async () => {
     relay({ equipped: true });
     renderPanel();
-    // Worn state is on the TILE — no separate list, no nested tabs.
+    // Worn state is on the TILE; no separate list, no nested tabs.
     const tile = await screen.findByTestId(`item-${CAP_ADDRESS}`);
     expect(tile).toHaveAttribute('data-equipped', 'headwear');
     expect(tile).toHaveTextContent('Worn');
@@ -351,7 +351,7 @@ describe('the wearables in the inventory browser', () => {
     expect(onEquip).toHaveBeenCalledWith(CAP_ADDRESS, 'headwear');
   });
 
-  it('publishes nothing by itself — the browser is not a write path', async () => {
+  it('publishes nothing by itself, the browser is not a write path', async () => {
     relay({ equipped: false, inventory: 1 });
     renderPanel();
     await selectItem(CAP_ADDRESS);

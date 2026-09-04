@@ -3,7 +3,7 @@
  *
  * Every RULE here is the package's (`resolveGameInventoryState`); what these
  * tests pin is that Island feeds it the right inputs and presents the answer
- * honestly — and, above all, the transition the whole design hinges on:
+ * honestly: and, above all, the transition the whole design hinges on:
  *
  *   raw 3 + pending S1        → effective 2
  *   raw 2 + S1 folded by 1417 → effective 2   (never 1)

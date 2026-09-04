@@ -18,8 +18,8 @@
  * resolve against the ELEMENT'S OWN size. A 3 %-wide mote asked to
  * `translateY(-45%)` moves by 45 % of 3 %. Put the travel on a box-sized track
  * and `-45%` means 45 % of the box, which is what "drifts up past the head"
- * requires. It also gives each particle two independent animation timelines —
- * travel and twinkle — with no keyframe combinatorics.
+ * requires. It also gives each particle two independent animation timelines,
+ * travel and twinkle, with no keyframe combinatorics.
  *
  * ## Why it cannot affect anything around it
  *
@@ -27,7 +27,7 @@
  * carries `pointer-events: none`. Nothing is in flow, so no effect can change a
  * measurement; nothing hit-tests, so no effect can steal a click from the
  * Blobbi underneath. Layers may extend beyond the box (an aura is 1.7× the
- * body) — the renderer has always clipped nothing, and overflow is not layout.
+ * body): the renderer has always clipped nothing, and overflow is not layout.
  *
  * ## Determinism
  *
@@ -79,7 +79,7 @@ function fromRange(
 /**
  * The CSS `animation` shorthand for one element, or `undefined` for none.
  *
- * Built from the preset's own fields only — there is no code path by which a
+ * Built from the preset's own fields only; there is no code path by which a
  * caller-supplied string reaches this. That matters: `animation` accepts a
  * name, and an arbitrary name from outside would be a way to invoke CSS the
  * package did not write.
@@ -99,7 +99,7 @@ function animationShorthand(
 interface PieceNodeProps {
   group: EffectPieceGroup;
   seed: string;
-  /** Index WITHIN the effect (not within the group) — see `pieceSeedIndex`. */
+  /** Index WITHIN the effect (not within the group): see `pieceSeedIndex`. */
   index: number;
   /** Clamped caller intensity, folded into each piece's resting opacity. */
   intensity: number;
@@ -155,7 +155,7 @@ function EffectPieceNode({ group, seed, index, intensity }: PieceNodeProps) {
     // Centring by negative margin rather than by `translate(-50%, -50%)`,
     // because `transform` belongs to the animation. The box is square, so a
     // percentage margin (which always resolves against WIDTH) is the same
-    // fraction of the height — the piece lands centred on (x, y) exactly.
+    // fraction of the height, the piece lands centred on (x, y) exactly.
     marginLeft: `${-size / 2}%`,
     marginTop: `${-size / 2}%`,
     animation: animationShorthand(
@@ -172,7 +172,7 @@ function EffectPieceNode({ group, seed, index, intensity }: PieceNodeProps) {
   // The one visibility number, resolved in JS rather than in CSS: the authored
   // opacity times the caller's clamped intensity. Every keyframe expresses
   // opacity as `var(--fx-o)` or a fraction of it, so an animation can never
-  // override what the caller asked for — and with animations off (reduced
+  // override what the caller asked for, and with animations off (reduced
   // motion) the base rule's `opacity: var(--fx-o)` is what remains on screen.
   setVar(
     pieceStyle,
@@ -208,7 +208,7 @@ function setVar(style: CSSProperties, name: string, value: string): void {
  *
  * Group-local indices would make the first piece of every group share a seed,
  * and three groups' first pieces would then sit at the same relative spot. The
- * offset is the sum of preceding group counts — stable, and derived from the
+ * offset is the sum of preceding group counts, stable, and derived from the
  * preset rather than from render order.
  */
 function pieceSeedIndex(
@@ -225,7 +225,7 @@ export interface BlobbiEffectLayerProps {
   /** Already normalized: known ids, one per slot, in canonical slot order. */
   effects: readonly ResolvedBlobbiVisualEffect[];
   layer: EffectLayer;
-  /** The renderer's instance id — half of the particle seed. */
+  /** The renderer's instance id, half of the particle seed. */
   instanceId: string;
 }
 
@@ -234,7 +234,7 @@ export interface BlobbiEffectLayerProps {
  *
  * Renders nothing at all when no active effect has pieces on this layer, so an
  * effect-free Blobbi produces exactly the DOM it produced before this system
- * existed — the property `BlobbiRendererView.effects.test.tsx` asserts against
+ * existed: the property `BlobbiRendererView.effects.test.tsx` asserts against
  * the Phase-6 baseline.
  */
 export function BlobbiEffectLayer({
@@ -252,7 +252,7 @@ export function BlobbiEffectLayer({
     // stroke that no generic piece walk can express, so it mounts as its own
     // renderer on the mid layer (over the body, under the front accessories),
     // alongside the effect's ordinary spark pieces. The special case is named
-    // here, once, rather than smuggled into the data model as a component —
+    // here, once, rather than smuggled into the data model as a component,
     // presets stay plain data.
     const structural =
       effect.id === 'electric-charge' && layer === 'mid' ? (
@@ -319,7 +319,7 @@ const GROUP_STYLE: CSSProperties = { position: 'absolute', inset: 0 };
  *
  * Emitted next to the layers, containing ONLY the keyframes those effects use,
  * and nothing when there are no effects. Duplicated identically if several
- * effect-bearing Blobbis are on screen — see `BLOBBI_EFFECT_STYLESHEET` for the
+ * effect-bearing Blobbis are on screen; see `BLOBBI_EFFECT_STYLESHEET` for the
  * hoist-it-once alternative, and the audit §7 for why the package owns its CSS
  * as text at all.
  */

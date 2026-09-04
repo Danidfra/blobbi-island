@@ -7,7 +7,7 @@
  * halves live in different stores: Arcade Tickets are quantities in kind:31633,
  * an expiring Pass is not. Between those two writes there is a real gap, and
  * `useArcadePrizeRedemption` spends a lot of its machinery keeping that gap
- * survivable — the `spent`/`delivering` states, the durable ledger record, the
+ * survivable: the `spent`/`delivering` states, the durable ledger record, the
  * idempotent-per-redemption-id retry.
  *
  * A cosmetic prize has no such gap to survive, because BOTH halves are
@@ -25,7 +25,7 @@
  * no window in which tickets are gone and the prize is missing, and exactly one
  * confirmed-inventory reconciliation for the UI to render.
  *
- * The two-stage lifecycle is not discarded — it is what the Pass still needs,
+ * The two-stage lifecycle is not discarded; it is what the Pass still needs,
  * and it is what makes an AMBIGUOUS publish recoverable for either kind of
  * prize. This module simply collapses the delivery half into a VERIFICATION:
  * {@link ArcadePrizeOwnership.grantPrize} here writes nothing at all, because
@@ -41,8 +41,8 @@
  *
  * {@link readNewestKnownInventory} therefore reads the relay authoritatively
  * (with the empty-confirmed rule, so a cold read is never fabricated as an
- * empty inventory) and then folds in this tab's confirmed event — the exact
- * event a relay accepted — exactly as `useIslandInventory` already does for
+ * empty inventory) and then folds in this tab's confirmed event, the exact
+ * event a relay accepted, exactly as `useIslandInventory` already does for
  * display. The fold can only ever appear after a DEFINITE accept, so the
  * ambiguous path it matters for reads pure relay state and nothing is laundered:
  * `recordConfirmedInventory` is not called on a timeout.
@@ -78,7 +78,7 @@ import { parseInventoryEvent } from './protocol-adapter';
 import { applyMutation, getQuantity } from './useInventoryMutation';
 import type { GameInventory } from './package';
 
-/** Canonical Arcade Ticket address — derived, never a literal. */
+/** Canonical Arcade Ticket address, derived, never a literal. */
 const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
 /** The relay surface an atomic redemption needs: the shared read + publish. */
@@ -103,7 +103,7 @@ export interface ArcadeCosmeticRedeemerDeps {
   readonly nostr: ArcadeCosmeticRedeemerNostr;
   readonly user: Pick<NUser, 'pubkey' | 'signer'>;
   /**
-   * The prize. Its `delivery` MUST be `{ type: 'inventory', itemAddress }` —
+   * The prize. Its `delivery` MUST be `{ type: 'inventory', itemAddress }`,
    * that address is the single source of what gets granted.
    */
   readonly prize: ArcadePrize;
@@ -121,7 +121,7 @@ export function inventoryPrizeAddress(prize: ArcadePrize): string | null {
  *
  * Authoritative relay read (which throws rather than reporting an unusable
  * read as "no inventory"), folded with an event a relay has definitely
- * accepted. Throws whatever the read threw — a failed READ is never an empty
+ * accepted. Throws whatever the read threw, a failed READ is never an empty
  * inventory.
  */
 async function readNewestKnownInventory(
@@ -137,7 +137,7 @@ async function readNewestKnownInventory(
 /**
  * Build the atomic redeemer for one prize and one signed-in user.
  *
- * A factory, not a hook — so the tests and the DEV harness can substitute a
+ * A factory, not a hook, so the tests and the DEV harness can substitute a
  * relay that never exists, and so the redemption hook stays free of any
  * knowledge of how a cosmetic is actually delivered.
  */
@@ -233,7 +233,7 @@ export function createArcadeCosmeticRedeemer(
             ],
           });
           // STRICT: resolving means at least one relay accepted this exact
-          // event — debit and grant together. A timeout is NOT resolved
+          // event: debit and grant together. A timeout is NOT resolved
           // through as "probably fine".
           await ctx.publish(next);
         });
@@ -274,7 +274,7 @@ export function createArcadeCosmeticRedeemer(
      * the redemption id deliberately plays no part: kind:31633 records
      * quantities, not the operation that produced them, and inventing a
      * delivery identity it does not carry would be a fiction the recovery path
-     * then trusted. It does not need one — the grant cannot exist without the
+     * then trusted. It does not need one, the grant cannot exist without the
      * debit that shares its event, so presence is the whole proof.
      */
     async hasDelivery(pubkey: string, prizeId: string): Promise<boolean> {

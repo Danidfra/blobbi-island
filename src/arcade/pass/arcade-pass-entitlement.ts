@@ -1,13 +1,13 @@
 /**
- * The Arcade Pass — an account-scoped entitlement with TWO limits.
+ * The Arcade Pass, an account-scoped entitlement with TWO limits.
  *
  * ```
  *   24 hours from redemption          ── whichever runs out first
  *   15 free game starts               ──
  * ```
  *
- * Both are enforced here. {@link hasUsableArcadePass} — time left AND plays
- * left — is the question the turnstile asks; {@link hasActiveArcadePass} asks
+ * Both are enforced here. {@link hasUsableArcadePass}, time left AND plays
+ * left: is the question the turnstile asks; {@link hasActiveArcadePass} asks
  * only about time, and answers "is there still a pass record worth showing",
  * which is a display question, not a billing one. Confusing the two is how a
  * pass with zero plays left would keep waiving Token costs forever.
@@ -30,7 +30,7 @@
  * ## Not inventory, deliberately
  *
  * The pass is NOT a kind:31633 quantity. That inventory is durable item
- * OWNERSHIP — a thing you have until you spend it — and an expiring
+ * OWNERSHIP: a thing you have until you spend it, and an expiring
  * entitlement is a different domain. Modelling it as `arcade-pass: 1` would
  * mean either a quantity that silently rots (an item that stops working while
  * still sitting in the bag) or a background writer deleting the player's
@@ -42,7 +42,7 @@
  * ## Scoped by pubkey
  *
  * One browser, many accounts. The record is keyed by pubkey so signing in as
- * somebody else never inherits their pass — and signing back in recovers your
+ * somebody else never inherits their pass, and signing back in recovers your
  * own, if it has not expired.
  *
  * ## Honest limits
@@ -50,7 +50,7 @@
  * Local to this browser profile: a pass redeemed here does not follow the
  * player to another device. That is the same limitation every ledger in this
  * app has. It is also why the redemption records its Ticket spend durably
- * first — see `src/arcade/prizes/arcade-pass-prize.ts` and the redemption
+ * first: see `src/arcade/prizes/arcade-pass-prize.ts` and the redemption
  * ledger behind it, which is what makes a paid-but-not-delivered pass
  * recoverable rather than lost.
  */
@@ -82,7 +82,7 @@ const STORAGE_KEY = 'blobbi:arcade:pass';
 
 /**
  * The cross-tab lock namespace. Per pubkey, so two accounts in two tabs never
- * queue behind each other — and deliberately NOT the inventory lock: consuming
+ * queue behind each other, and deliberately NOT the inventory lock: consuming
  * a free play writes no inventory, and sharing that lock would make every
  * Pass-admitted game wait behind unrelated relay round-trips.
  */
@@ -151,7 +151,7 @@ export function readArcadePass(pubkey: string | undefined): ArcadePassRecord | n
  * Is there an unexpired pass record for this account?
  *
  * TIME ONLY. A pass whose free plays are gone is still "active" by this
- * question — which is why this is a DISPLAY predicate ("show the pass chip,
+ * question: which is why this is a DISPLAY predicate ("show the pass chip,
  * it has not expired yet") and never a billing one. Use
  * {@link hasUsableArcadePass} to decide whether a play is free.
  */
@@ -216,25 +216,25 @@ export function canRedeemArcadePass(pubkey: string | undefined, nowMs: number): 
 /**
  * Spend one free play, atomically across tabs.
  *
- * Returns `true` only when this call is the one that consumed it — the caller
+ * Returns `true` only when this call is the one that consumed it, the caller
  * may then start the game for free. `false` means charge Tokens instead: the
  * pass expired, ran out, or another tab took the last play first.
  *
  * ## Why this is async when a localStorage write is not
  *
  * Because two tabs are two readers. A synchronous read-modify-write can
- * interleave — both tabs read `remainingFreePlays: 1`, both write `0`, and one
+ * interleave: both tabs read `remainingFreePlays: 1`, both write `0`, and one
  * free play admits two games. The Web Lock this borrows from the wallet
  * ({@link withQueuedCrossTabLock}) makes the whole read-decide-write one
  * critical section, and it QUEUES rather than refusing, so the loser is
  * serialised behind the winner and then correctly finds nothing left.
  *
  * Where Web Locks is unavailable the lock degrades to per-tab ordering only,
- * exactly as the wallet's does — and the honest statement of what that costs
+ * exactly as the wallet's does, and the honest statement of what that costs
  * is: the count can still never go negative or rise (the read-back below
  * guarantees that), but two tabs racing for the LAST play could each be told
  * they won it. One extra free play on an unsupported browser is a bounded,
- * one-off loss, and the alternative — a polled localStorage lease — is worse
+ * one-off loss, and the alternative, a polled localStorage lease, is worse
  * machinery for the same guarantee.
  */
 export async function consumeArcadeFreePlay(
@@ -273,7 +273,7 @@ function consumeUnderLock(pubkey: string, nowMs: number): boolean {
  * Grant a pass, and prove the write landed.
  *
  * Returns `false` when the pass was NOT delivered. The caller must treat that
- * as undelivered and keep its redemption open — a player charged Tickets for a
+ * as undelivered and keep its redemption open, a player charged Tickets for a
  * pass they did not get is the one outcome worth engineering against, and the
  * redemption ledger's `delivering` state exists to let a retry finish the job
  * without spending again.
@@ -288,7 +288,7 @@ function consumeUnderLock(pubkey: string, nowMs: number): boolean {
  *    expires, and the retry then succeeds.
  * 3. No pubkey.
  *
- * Delivering the SAME redemption twice is idempotent — the second call sees
+ * Delivering the SAME redemption twice is idempotent, the second call sees
  * its own id and reports success without touching the record, so a retried
  * delivery cannot reset an allowance the player has been spending.
  */
@@ -300,7 +300,7 @@ export function grantArcadePass(
   const store = readStore();
   const existing = store[pubkey];
 
-  // Already delivered. Not a fresh grant — the count must not be reset.
+  // Already delivered. Not a fresh grant, the count must not be reset.
   if (existing?.redemptionId === input.redemptionId) return true;
 
   // No stacking. A usable pass is untouchable; this delivery is deferred, not

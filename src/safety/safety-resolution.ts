@@ -7,7 +7,7 @@
  * the shape that has no word for "still asking" answers "Standard" in the
  * meantime. One frame of Standard is one frame in which a stranger's text can
  * be admitted, an upload can start, or a presence event can be published at
- * full detail — and none of those can be taken back.
+ * full detail: and none of those can be taken back.
  *
  * So the states are named now, while the only profile is Standard and getting
  * it wrong costs nothing:

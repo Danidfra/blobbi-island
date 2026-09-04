@@ -3,8 +3,8 @@
  *
  * Two writes, for the two different questions the protocol separates:
  *
- *   `publishTheme`     kind:36767 — "here is a theme, anyone may use it"
- *   `publishSelection` kind:16767 — "this is the theme I am using"
+ *   `publishTheme`     kind:36767, "here is a theme, anyone may use it"
+ *   `publishSelection` kind:16767, "this is the theme I am using"
  *
  * ## Editing is republishing
  *
@@ -12,7 +12,7 @@
  * second event with the same `d` REPLACES the first. There is therefore no
  * update path and no update endpoint: "edit my theme" is `publishTheme` with
  * the identifier it already has. The one thing that must not happen is
- * accidentally minting a NEW `d` while the player believes they are editing —
+ * accidentally minting a NEW `d` while the player believes they are editing,
  * which is why `identifier` is an explicit parameter and only defaults to a
  * slug of the title when there is genuinely no existing theme.
  *
@@ -22,11 +22,11 @@
  * pieces of state and Island has to write both:
  *
  * ```
- *   kind:16767            PUBLIC. "here is my palette" — what Ditto renders on
+ *   kind:16767            PUBLIC. "here is my palette": what Ditto renders on
  *                         your profile page, and what it pulls into
  *                         `customTheme` on pageload.
  *   kind:30078 (NIP-78)   PRIVATE. `d = "ditto/metadata"`, NIP-44 to self.
- *                         Holds `theme` and `customTheme` — the ONLY state that
+ *                         Holds `theme` and `customTheme`: the ONLY state that
  *                         decides which theme Ditto actually renders.
  * ```
  *
@@ -96,7 +96,7 @@ export function usePublishTheme() {
       if (!identifier) {
         // A title of nothing but punctuation slugs to the empty string, and an
         // empty `d` is a different addressable event, not this theme.
-        throw new Error('That name cannot be used as an identifier — add a letter or number.');
+        throw new Error('That name cannot be used as an identifier, add a letter or number.');
       }
 
       await createEvent({
@@ -129,7 +129,7 @@ export function usePublishTheme() {
  *
  * The palette is reduced to the three colours the protocol carries. For a
  * community theme those are the ORIGINAL three from its definition, not a
- * re-derivation of them — round-tripping sixteen derived colours back down to
+ * re-derivation of them, round-tripping sixteen derived colours back down to
  * three would drift the theme every time it was re-selected.
  */
 export function usePublishThemeSelection() {
@@ -144,14 +144,14 @@ export function usePublishThemeSelection() {
     FLUSHED on unmount, not dropped.
 
     The debounce exists so a player flipping through themes does not publish
-    twelve events — but this hook lives in the picker, and closing the picker is
+    twelve events: but this hook lives in the picker, and closing the picker is
     the most ordinary thing a player does after choosing. Cancelling here meant
     a selection made in the last two seconds before the dialog closed never
     reached a relay at all: the choice applied locally, the account kept
     advertising the PREVIOUS theme, and the next reconciliation had every reason
     to believe the old one was current.
 
-    The work is a module-level async job — no state, no render — so running it
+    The work is a module-level async job, no state, no render, so running it
     from a cleanup is safe.
   */
   useEffect(
@@ -173,7 +173,7 @@ export function usePublishThemeSelection() {
    * `created_at` is monotonic against whatever is already on the relay
    * (`nextReplaceableCreatedAt`). A replaceable event with the same second as
    * its predecessor is resolved by NIP-01 on the LOWER id, which has nothing to
-   * do with which one the player chose — so selecting A and then B inside one
+   * do with which one the player chose, so selecting A and then B inside one
    * second could leave A winning. Island already had this primitive for
    * inventory and pet state; the theme writer had been missing it.
    */
@@ -217,8 +217,8 @@ export function usePublishThemeSelection() {
    *
    * `theme: 'custom'` plus the config under `customTheme`, which is precisely
    * what Ditto's own `applyCustomTheme` writes. Everything else in the blob is
-   * carried through untouched, and the write is ABANDONED — not attempted with
-   * a fresh object — when the existing blob cannot be read, because publishing
+   * carried through untouched, and the write is ABANDONED; not attempted with
+   * a fresh object, when the existing blob cannot be read, because publishing
    * a settings event containing only a theme would erase the user's feed
    * settings, filters and relay preferences.
    */
@@ -237,7 +237,7 @@ export function usePublishThemeSelection() {
         try {
           decrypted = await signer.nip44.decrypt(pubkey, existingEvent.content);
         } catch {
-          // Could not read it — so we do not know what is in it, so we must not
+          // Could not read it, so we do not know what is in it, so we must not
           // replace it. Silence here costs cross-app sync for this write; the
           // alternative costs the user their settings.
           return;
@@ -293,7 +293,7 @@ export function usePublishThemeSelection() {
  *
  * Both an `e` and an `a` tag: the `e` names the event a relay is holding, the
  * `a` names the address so a relay that has since seen a replacement deletes
- * that too. Neither guarantees anything — deletion on Nostr is a request — which
+ * that too. Neither guarantees anything, deletion on Nostr is a request, which
  * is why the picker's copy says "asked to remove" rather than "deleted".
  */
 export function useDeleteTheme() {

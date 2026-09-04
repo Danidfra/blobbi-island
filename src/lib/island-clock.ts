@@ -1,5 +1,5 @@
 /**
- * The Blobbi Island clock — one accelerated day, shared by every player.
+ * The Blobbi Island clock; one accelerated day, shared by every player.
  *
  * ## Why not the real time of day
  *
@@ -12,7 +12,7 @@
  *
  * So the island runs an **accelerated day derived from UTC**: two real hours per
  * island day, measured as an offset from a fixed epoch. Every client computes the
- * same number from `Date.now()` alone — no backend, no Nostr events, no relay
+ * same number from `Date.now()` alone; no backend, no Nostr events, no relay
  * round-trip, nothing persisted. Refreshing the page cannot restart the cycle
  * because there is no state to restart; the phase is a pure function of the
  * instant you ask.
@@ -30,7 +30,7 @@ export const ISLAND_DAY_MS = 2 * 60 * 60 * 1000;
  * Island day 0 begins at 1 January 2026, 00:00 UTC.
  *
  * Fixed forever. Moving it would rotate the sky for every player at once, and
- * because nothing is persisted there would be no migration — just a jump.
+ * because nothing is persisted there would be no migration, just a jump.
  */
 export const ISLAND_EPOCH_MS = Date.UTC(2026, 0, 1);
 

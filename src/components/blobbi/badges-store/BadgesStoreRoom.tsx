@@ -32,7 +32,7 @@ import { BadgesStoreModal } from './BadgesStoreModal';
  * The three fixtures walk the Blobbi to a stand point and open on ARRIVAL; the
  * corner button opens where the player stands, because its job is convenience
  * rather than immersion. All four flip one boolean, so there is no state in
- * which two badge dialogs exist — the Clothing Store needed a slot for that
+ * which two badge dialogs exist, the Clothing Store needed a slot for that
  * (it has two surfaces); this room has one, and one boolean says it.
  *
  * A walk OUTLIVES the click that started it, so `open()` is idempotent: an
@@ -42,7 +42,7 @@ import { BadgesStoreModal } from './BadgesStoreModal';
  *
  * The case and the rack come from `badges-store-config.ts` with their own ids,
  * artwork, placement, footprint and interaction. The checkout is not in that
- * list because it is PAINTED INTO the background — there is no sprite to wrap,
+ * list because it is PAINTED INTO the background; there is no sprite to wrap,
  * so it gets a hotspot button over the artwork instead, exactly as the Clothing
  * Store's does.
  *
@@ -119,7 +119,7 @@ export function BadgesStoreRoom({
 
       {/*
         The checkout. A hotspot rather than a sprite, because the counter is
-        part of the background artwork — see BADGES_STORE_CHECKOUT.
+        part of the background artwork; see BADGES_STORE_CHECKOUT.
       */}
       <button
         type="button"
@@ -165,7 +165,7 @@ export function BadgesStoreRoom({
       />
 
       {/*
-        The persistent shortcut. Opens where the player stands — no walk — and
+        The persistent shortcut. Opens where the player stands, no walk, and
         flips the same flag the three fixtures do.
       */}
       <button

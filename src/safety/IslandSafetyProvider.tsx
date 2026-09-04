@@ -9,7 +9,7 @@
  * The `profile` prop defaults to {@link ACTIVE_EXPERIENCE_PROFILE}, which is the
  * literal `'standard'`. `App.tsx` passes nothing. There is no setting, no
  * storage read, no URL parameter and no environment variable behind it, so a
- * deployed build resolves to Standard deterministically — this phase defines the
+ * deployed build resolves to Standard deterministically; this phase defines the
  * Family policy and deliberately leaves it unreachable.
  *
  * The prop exists so tests can mount the real component tree under a real
@@ -51,7 +51,7 @@ export function IslandSafetyProvider({
     being "nobody answered, so Standard" and becomes "Standard was chosen",
     which are the same pixels and completely different guarantees.
 
-    When a guardian-owned value ships, this is the one place that grows a read —
+    When a guardian-owned value ships, this is the one place that grows a read,
     and everything downstream already knows how to wait for it, because
     `SafetyGate` is already refusing to mount the world until this says
     `resolved`.

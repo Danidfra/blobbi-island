@@ -25,7 +25,7 @@ interface TheaterSessionPanelProps {
  * theater you are already sitting in, so it is a row under the controls rather
  * than a dialog over them.
  *
- * The invitation code is presented as a **handle, never a password** — it is an
+ * The invitation code is presented as a **handle, never a password**: it is an
  * indexed tag on a public relay and anyone can enumerate it (protocol §13.4).
  * Nothing here implies otherwise: no "keep this secret", no masking, no lock.
  */

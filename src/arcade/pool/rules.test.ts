@@ -1,5 +1,5 @@
 /**
- * The rule book — every branch of `resolveShot`, and the rack it starts from.
+ * The rule book; every branch of `resolveShot`, and the rack it starts from.
  *
  * `resolveShot` is the only thing in the game that decides who shoots next, who
  * owns which group and who has won. It is pure, so every rule in the ten-point
@@ -90,7 +90,7 @@ describe('groups', () => {
     expect(remainingInGroup(table, 'stripes')).toEqual([9]);
     expect(groupCleared(table, 'solids')).toBe(false);
     expect(groupCleared(tableWith(EIGHT_BALL, 9), 'solids')).toBe(true);
-    // An open table is never "cleared" — there is nothing to clear yet.
+    // An open table is never "cleared": there is nothing to clear yet.
     expect(groupCleared(table, null)).toBe(false);
   });
 });

@@ -4,7 +4,7 @@
  * The requirement is narrow and important: the action fires when the Blobbi
  * reaches the FINAL requested target, and never when it passes through a detour
  * waypoint on the way. Detour waypoints sit at a blocker's corner, and a corner
- * can easily be within arrival threshold of something — so "close to somewhere"
+ * can easily be within arrival threshold of something, so "close to somewhere"
  * must not be mistaken for "arrived".
  *
  * The Blobbi is driven along a REAL planned route rather than a scripted line,
@@ -114,7 +114,7 @@ function makeWalker(route: Position[]) {
 describe('a routed walk fires its interaction at the destination', () => {
   const route = planRoute(START, TARGET, ROOM, [SHELF])!;
 
-  it('the route really does detour — otherwise this file proves nothing', () => {
+  it('the route really does detour; otherwise this file proves nothing', () => {
     expect(route.length).toBeGreaterThan(1);
     expect(route[route.length - 1]).toEqual(TARGET);
   });
@@ -143,7 +143,7 @@ describe('a routed walk fires its interaction at the destination', () => {
 
     expect(action).toHaveBeenCalledTimes(1);
     expect(firedAt).not.toBeNull();
-    // At the destination — not at any waypoint the route passed through.
+    // At the destination; not at any waypoint the route passed through.
     expect(Math.hypot(firedAt!.x - TARGET.x, firedAt!.y - TARGET.y)).toBeLessThan(6);
     for (const waypoint of route.slice(0, -1)) {
       expect(
@@ -216,7 +216,7 @@ describe('a routed walk fires its interaction at the destination', () => {
  *
  * A furniture detour turns one corner. Climbing the mall's stairs crosses two
  * area boundaries before it ever reaches the storefront, so it is the honest
- * test of "fires at the destination, not on the way" — the stair mouth and the
+ * test of "fires at the destination, not on the way": the stair mouth and the
  * top of the column are both places the walk visibly stops turning, and neither
  * is where the player asked to go.
  */
@@ -291,14 +291,14 @@ describe('climbing to a storefront fires only at the storefront', () => {
 
     // The contract is a DISTANCE to the destination, not a leg index. The last
     // stair crossing lands on the walkway a couple of percent from the
-    // storefront — the strip is barely a percent tall — so arriving there is
+    // storefront: the strip is barely a percent tall, so arriving there is
     // arriving, and firing is correct. Asserting "on the final leg" would have
     // been a claim about this geometry rather than about the behaviour.
     expect(
       worldDistancePx(firedAt!, STOREFRONT),
     ).toBeLessThanOrEqual(PENDING_INTERACTION_THRESHOLD);
 
-    // What must never happen is firing at the STAIR MOUTH — the first crossing,
+    // What must never happen is firing at the STAIR MOUTH, the first crossing,
     // at the foot of the column, a whole level below the shop. The walk stands
     // on it at the end of its first leg.
     expect(firedOnLeg).toBeGreaterThan(0);
@@ -336,7 +336,7 @@ describe('climbing to a storefront fires only at the storefront', () => {
     // Nor does the replacement fire: this replay walks the old waypoints, so it
     // never reaches the ground floor the new request asked for. It settles far
     // from that target and the stall guard cancels it, which is the correct
-    // outcome — what matters is that the abandoned storefront never opened.
+    // outcome: what matters is that the abandoned storefront never opened.
     expect(elsewhere).not.toHaveBeenCalled();
   });
 });

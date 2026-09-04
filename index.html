@@ -31,17 +31,17 @@
       CSP
 
       The theater embeds YouTube through the official IFrame Player API, which
-      needs exactly two additions — both exact hosts, no wildcards:
+      needs exactly two additions; both exact hosts, no wildcards:
 
-      * script-src https://www.youtube.com  — `/iframe_api` itself, which the
+      * script-src https://www.youtube.com, `/iframe_api` itself, which the
         theater injects into this page, plus the widget bundle it then pulls from
         `/s/player/<hash>/www-widgetapi.vflset/www-widgetapi.js`.
-      * script-src https://s.ytimg.com      — the legacy host that same bundle is
+      * script-src https://s.ytimg.com: the legacy host that same bundle is
         still served from for some clients (`/yts/jsbin/www-widgetapi-*.js`).
 
       Nothing else is required. A cross-origin iframe runs under its OWN policy,
       so the video's connections, images and media streams are governed by
-      youtube.com's CSP and not by this one — `connect-src`, `img-src` and
+      youtube.com's CSP and not by this one, `connect-src`, `img-src` and
       `media-src` are deliberately untouched.
 
       `frame-src` is TIGHTENED here rather than widened: it was `'self' https:`,
@@ -78,7 +78,7 @@
       sees the default island flash first. It is a handful of property writes on
       an element that already exists, so the parser stall is negligible.
 
-      It is also best-effort — AppProvider re-applies the palette
+      It is also best-effort: AppProvider re-applies the palette
       authoritatively on mount. See the file header for why the palettes are
       duplicated there and what guards the duplication.
     -->

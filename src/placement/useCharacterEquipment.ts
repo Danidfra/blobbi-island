@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the one hook the renderer asks "what is this Blobbi wearing?".
+ * Blobbi Island: the one hook the renderer asks "what is this Blobbi wearing?".
  *
  * It joins the three events that answer that question, in the order their
  * responsibilities require:
@@ -55,7 +55,7 @@ export interface CharacterEquipment {
   accessories: AccessoryPlacementInput[];
   /**
    * Renderer input for the ACTIVE visual effects, in the renderer's canonical
-   * slot order. Plain `{ id }` data — exactly what `BlobbiRendererView.effects`
+   * slot order. Plain `{ id }` data, exactly what `BlobbiRendererView.effects`
    * takes. Empty (the same frozen array) whenever nothing is active, so the
    * no-effect render path stays byte-identical to the Phase-8 baseline.
    */
@@ -97,12 +97,12 @@ const EMPTY_EQUIPMENT: CharacterEquipment = {
  *
  * `ownerPubkey` defaults to the logged-in user. When another player's Blobbi is
  * rendered (the multiplayer layer), pass their pubkey: the placement is read
- * from them, and — because Island policy requires author === owner — a
+ * from them, and, because Island policy requires author === owner, a
  * placement they did not sign is not drawn.
  *
  * NOTE on ownership for other players: their kind:31633 inventory is not read,
  * so `quantityByAddress` is empty and every entry is refused as `not-owned`.
- * That is intentional for now — rendering a stranger's claim that they own a
+ * That is intentional for now, rendering a stranger's claim that they own a
  * hat, without checking, is exactly the trust hole this architecture avoids.
  * Widening it means reading their inventory too, which is a deliberate change
  * to make here rather than an accident to inherit.
@@ -175,7 +175,7 @@ export function useCharacterEquipment(
       }
     }
 
-    // Everything policy refused, with its reason — including entries that lost
+    // Everything policy refused, with its reason, including entries that lost
     // a slot conflict, which `selectRenderablePlacements` resolves last-wins.
     for (const entry of wearableEntries) {
       if (renderableEntryIds.has(entry)) continue;

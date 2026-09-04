@@ -15,8 +15,8 @@ import { ArcadeRewardPanel } from '../ArcadeRewardPanel';
 /**
  * The result of one frame.
  *
- * The frame half — who won and HOW, which is the part pool has more to say
- * about than air hockey does — is this component's own. "You win 7–3" and "you
+ * The frame half, who won and HOW, which is the part pool has more to say
+ * about than air hockey does, is this component's own. "You win 7–3" and "you
  * win 7–3 by potting the 8-ball off a four-ball run" are different frames, and
  * the second one is worth telling somebody about.
  *
@@ -150,7 +150,7 @@ export function PoolResults({
         isLoggedIn={isLoggedIn}
         showDebugDetails={showDebugDetails}
         dataPrefix="pool"
-        ineligibleHint="Play the frame through to the 8-ball and the tickets are yours — win or lose."
+        ineligibleHint="Play the frame through to the 8-ball and the tickets are yours, win or lose."
       />
 
       <p

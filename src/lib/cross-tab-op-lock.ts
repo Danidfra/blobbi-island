@@ -1,18 +1,18 @@
 /**
- * A QUEUED cross-tab exclusive lock — the wallet's counterpart to the arcade
+ * A QUEUED cross-tab exclusive lock, the wallet's counterpart to the arcade
  * claim lock.
  *
  * The arcade's `withClaimLock` refuses when the lock is held (`ifAvailable`),
  * because a second tab running the SAME claim after the first finished is
  * exactly the duplicate it exists to prevent. A currency wallet wants the
  * opposite: two DIFFERENT operations (a spend in one tab, a grant in another)
- * are both legitimate and must both run — just not interleaved, because each
+ * are both legitimate and must both run, just not interleaved, because each
  * one is a read-modify-write against the same replaceable event. So this lock
  * QUEUES: the second holder waits and then proceeds against the fresh state
  * the first one left behind. Idempotency of same-operation retries is the
  * durable op ledger's job, not this lock's.
  *
- * Where the Web Locks API is missing there is NO cross-tab protection — the
+ * Where the Web Locks API is missing there is NO cross-tab protection, the
  * caller's per-tab serialization still holds, and that limitation is
  * documented rather than papered over (a localStorage lease cannot QUEUE
  * without polling, and a polling lease is worse than an honest fallback).

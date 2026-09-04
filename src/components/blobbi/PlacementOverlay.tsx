@@ -1,5 +1,5 @@
 /**
- * PlacementOverlay — the interactive editing surface for kind:31634 equipment.
+ * PlacementOverlay: the interactive editing surface for kind:31634 equipment.
  *
  * Replaces the legacy `AccessoryOverlay`. The drag/wheel maths is unchanged
  * (it was correct and is documented in `docs/blobbi-renderer-contract.md`);
@@ -7,7 +7,7 @@
  * equip tag keyed by accessory code.
  *
  * Coordinate contract: `containerRef` must wrap exactly the canonical renderer
- * box, so the drag percentages are percentages OF THAT BOX — the same space
+ * box, so the drag percentages are percentages OF THAT BOX, the same space
  * `ISLAND_PLACEMENT_REFERENCE` declares (`2d`, `percent`, `top-left`, 100x100).
  * No conversion happens anywhere; that is the point of choosing that reference.
  *
@@ -32,7 +32,7 @@ import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback'
 export interface PlacementOverlayProps {
   className?: string;
   /**
-   * Renderer-ready accessories, already filtered by Island policy — the exact
+   * Renderer-ready accessories, already filtered by Island policy, the exact
    * value the world renders. The editor never re-decides what may be shown.
    */
   accessories: readonly AccessoryPlacementInput[];
@@ -156,7 +156,7 @@ function PlacementItem({
       }}
       onMouseDown={handleMouseDown}
       onWheel={handleWheel}
-      title={`${slot} — click to select, drag to move, scroll to scale, shift+scroll to rotate`}
+      title={`${slot}: click to select, drag to move, scroll to scale, shift+scroll to rotate`}
     >
       {imageUrl ? (
         <img

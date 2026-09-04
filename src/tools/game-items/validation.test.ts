@@ -1,7 +1,7 @@
 /**
  * The layering rule, asserted: only the blocking layer may stop a publication.
  *
- * Most of these cases exist to prove a NEGATIVE — that a missing primary image,
+ * Most of these cases exist to prove a NEGATIVE; that a missing primary image,
  * an unknown marker, an odd canvas size or an absent `alt` produce a warning
  * and leave `isPublishable` true. It is easy to write a validator that is
  * quietly stricter than the protocol, and those are the assertions that catch
@@ -317,13 +317,13 @@ describe('preview event', () => {
 });
 
 /**
- * The studio works SIGNED OUT — the page says so in as many words.
+ * The studio works SIGNED OUT, the page says so in as many words.
  *
  * A signed-out preview event carries an empty pubkey, and an addressable event
  * with no author has no address, so `parseGameItemDefinitionResult` throws
  * instead of warning. That threw inside a `useMemo` and took the entire Item
  * Studio down to the error boundary the moment a signed-out author had filled
- * in `d`, `name` and `type` — which is the first thing anybody does.
+ * in `d`, `name` and `type`: which is the first thing anybody does.
  */
 describe('validating without a signer', () => {
   const signedOutForm = (): ItemFormState => ({
@@ -357,7 +357,7 @@ describe('validating without a signer', () => {
   });
 
   it('reports the protocol layer again as soon as there is a signer', () => {
-    // Same form, same event — the only difference is an author. Nothing about
+    // Same form, same event, the only difference is an author. Nothing about
     // the withheld layer depended on who that author is.
     expect(() => validateWith('a'.repeat(64))).not.toThrow();
   });

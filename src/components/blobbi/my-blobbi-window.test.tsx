@@ -6,14 +6,14 @@
  *   1. the tabs are Blobbi / Wardrobe / Items, and Effects is not one of them;
  *   2. wearables live in the Wardrobe and nowhere else, carried items in Items;
  *   3. the Blobbi is sized as a FRACTION of its stage, so it stays the
- *      protagonist at every viewport — and its accessories scale with it,
+ *      protagonist at every viewport, and its accessories scale with it,
  *      because they are percentages of the same box.
  *
  * Claim 3 is asserted against the source and the contract rather than through
  * jsdom: jsdom has no layout, so a rendered `h-[46%]` measures zero and any
  * pixel assertion would be theatre. What CAN be pinned is that the box is a
  * percentage of a square parent, that the overlay measures that same element,
- * and that the renderer's own geometry is percentage-based — which together are
+ * and that the renderer's own geometry is percentage-based, which together are
  * exactly why the scaling is safe.
  */
 
@@ -47,7 +47,7 @@ describe('tab architecture', () => {
     */
     expect(modal).not.toMatch(/<TabsTrigger value="effects"/);
     expect(modal).not.toMatch(/<EffectsPanel/);
-    // It is reachable — through the wardrobe, which does mount it.
+    // It is reachable, through the wardrobe, which does mount it.
     expect(read('src/components/blobbi/inventory/WardrobePanel.tsx')).toMatch(/<EffectsPanel/);
   });
 
@@ -125,7 +125,7 @@ describe('what lives where', () => {
 
   it('arms the placement overlay from the Wardrobe, not from Items', () => {
     expect(modal).toMatch(/selectedTab === 'wardrobe' && \(/);
-    // And the Blobbi keeps wearing what it wears while you dress it — that is
+    // And the Blobbi keeps wearing what it wears while you dress it; that is
     // the feedback loop.
     expect(modal).toMatch(/showAccessories\s*\n/);
   });
@@ -135,12 +135,12 @@ describe('the Blobbi owns its stage', () => {
   it('sizes the renderer box so the VISIBLE body dominates the banner', () => {
     /*
       Two fixes, because the first fixed the wrong number. `size="xl"` was 128
-      real pixels — under a quarter of the stage. `h-[46%]` made the BOX ~69%
+      real pixels: under a quarter of the stage. `h-[46%]` made the BOX ~69%
       of the stage width, and it still read small, because the drawn body only
-      fills ~55% (adult) / ~68% (baby) of its square box — the rest is the
+      fills ~55% (adult) / ~68% (baby) of its square box, the rest is the
       coordinate space accessories overflow into. `h-[68%]` puts the box at
       ~102% of the stage width and the visible body at ≈56% / ≈69% of the
-      banner — about the two thirds asked for, for BOTH forms, with no
+      banner: about the two thirds asked for, for BOTH forms, with no
       form-specific override.
     */
     expect(modal).toMatch(/ref=\{stageRef\}\s+className="relative aspect-square h-\[68%\]"/);
@@ -189,7 +189,7 @@ describe('the Blobbi owns its stage', () => {
       ONE size, every tab. The density pass stepped the stage down on Items
       (24%/22%, 18dvh) and manual review showed what that looks like: switching
       tabs visibly squashes the Blobbi into the corner. The stage column now
-      carries a single static class string — no conditional on the selected
+      carries a single static class string; no conditional on the selected
       tab, and no width/height transition, because a stage that eases between
       sizes is a stage that changes size.
     */

@@ -70,7 +70,7 @@ function code(value: string): string {
 }
 
 function codeList(values: readonly string[]): string {
-  return values.length > 0 ? values.map(code).join(', ') : '—';
+  return values.length > 0 ? values.map(code).join(', ') : '-';
 }
 
 function effectsList(effects: Readonly<Record<string, number>>): string {
@@ -86,7 +86,7 @@ function kindSummaryTable(kinds: readonly ApplicationEventKind[]): string[] {
       k.name,
       CLASS_LABEL[k.eventClass],
       k.ownership === 'external-package'
-        ? `External — ${code(k.owningPackage ?? 'unknown')}`
+        ? `External: ${code(k.owningPackage ?? 'unknown')}`
         : 'Blobbi Island',
       CLIENT_STATUS_LABEL[k.clientStatus],
       PROTOCOL_STATUS_LABEL[k.protocolStatus],
@@ -101,7 +101,7 @@ function kindSummaryTable(kinds: readonly ApplicationEventKind[]): string[] {
 
 function kindDetail(k: ApplicationEventKind): string[] {
   const lines: string[] = [];
-  lines.push(`### Kind ${k.kind} — ${k.name}`);
+  lines.push(`### Kind ${k.kind}: ${k.name}`);
   lines.push('');
   lines.push(k.purpose);
   lines.push('');
@@ -115,7 +115,7 @@ function kindDetail(k: ApplicationEventKind): string[] {
   lines.push(`- **This client:** ${CLIENT_STATUS_LABEL[k.clientStatus]}`);
   lines.push(
     `- **Protocol status:** ${PROTOCOL_STATUS_LABEL[k.protocolStatus]}${
-      k.protocolStatusEvidence ? ` — ${k.protocolStatusEvidence}` : ''
+      k.protocolStatusEvidence ? `: ${k.protocolStatusEvidence}` : ''
     }`,
   );
   lines.push(
@@ -141,7 +141,7 @@ function itemSummaryTable(items: readonly AddressedOfficialItem[]): string[] {
       code(i.d),
       i.name,
       i.category,
-      i.action ? code(i.action) : '—',
+      i.action ? code(i.action) : '-',
       ITEM_STATUS_LABEL[i.status],
     ].join(' | '),
   );
@@ -154,7 +154,7 @@ function itemSummaryTable(items: readonly AddressedOfficialItem[]): string[] {
 
 function itemDetail(i: AddressedOfficialItem): string[] {
   const lines: string[] = [];
-  lines.push(`### ${i.name} — ${code(i.d)}`);
+  lines.push(`### ${i.name}: ${code(i.d)}`);
   lines.push('');
   if (i.description) {
     lines.push(i.description);
@@ -163,12 +163,12 @@ function itemDetail(i: AddressedOfficialItem): string[] {
   lines.push(`- **Address:** ${code(i.address)}`);
   lines.push(`- **Status:** ${ITEM_STATUS_LABEL[i.status]}`);
   lines.push(`- **Category:** ${code(i.category)} · **Type:** ${code(i.type)}`);
-  lines.push(`- **Action:** ${i.action ? code(i.action) : 'none — cannot be used on a Blobbi'}`);
+  lines.push(`- **Action:** ${i.action ? code(i.action) : 'none, cannot be used on a Blobbi'}`);
   lines.push(`- **Stages:** ${codeList(i.stages)}`);
   lines.push(`- **Effects:** ${effectsList(i.effects)}`);
   lines.push(`- **Emoji fallback:** ${i.emoji}`);
   lines.push(
-    `- **Image:** ${i.image ? code(i.image) : '— (none published; the emoji fallback is used)'}`,
+    `- **Image:** ${i.image ? code(i.image) : 'none published (the emoji fallback is used)'}`,
   );
   lines.push(`- **Topics:** ${codeList(i.topics)}`);
   lines.push(`- **Stackable:** ${i.stackable ? 'yes' : 'no'}`);
@@ -189,10 +189,10 @@ function itemDetail(i: AddressedOfficialItem): string[] {
 export function renderRegistryMarkdown(): string {
   const lines: string[] = [];
 
-  lines.push('# Blobbi Island — Official Event & Item Registry');
+  lines.push('# Blobbi Island: Official Event & Item Registry');
   lines.push('');
   lines.push(
-    `> **Generated file — do not edit by hand.** Every value below is derived from ${code(
+    `> **Generated file: do not edit by hand.** Every value below is derived from ${code(
       REGISTRY_SOURCE_PATH,
     )}.`,
   );
@@ -205,17 +205,17 @@ export function renderRegistryMarkdown(): string {
   );
   lines.push('');
 
-  // 1 — application kinds summary
+  // 1: application kinds summary
   lines.push('## 1. Application event kinds');
   lines.push('');
   lines.push(
-    'Two independent status axes. **This client** says what the code in this repository does with the kind. **Protocol** says what the wider Blobbi protocol says about it, and may only read *Superseded* when a document here names the replacement — the citation is shown in §4. A kind can be "not implemented by this client" while its protocol status is *Undetermined*: absence of code here is not evidence that another Blobbi client stopped using it.',
+    'Two independent status axes. **This client** says what the code in this repository does with the kind. **Protocol** says what the wider Blobbi protocol says about it, and may only read *Superseded* when a document here names the replacement, the citation is shown in §4. A kind can be "not implemented by this client" while its protocol status is *Undetermined*: absence of code here is not evidence that another Blobbi client stopped using it.',
   );
   lines.push('');
   lines.push(...kindSummaryTable(APPLICATION_EVENT_KINDS));
   lines.push('');
 
-  // 2 — address formats
+  // 2: address formats
   lines.push('## 2. Address formats');
   lines.push('');
   lines.push(
@@ -231,7 +231,7 @@ export function renderRegistryMarkdown(): string {
   }
   lines.push('');
 
-  // 3 — authority
+  // 3: authority
   lines.push('## 3. Ownership and authority');
   lines.push('');
   lines.push(
@@ -251,14 +251,14 @@ export function renderRegistryMarkdown(): string {
   }
   lines.push('');
 
-  // 4 — lifecycle + status detail
+  // 4: lifecycle + status detail
   lines.push('## 4. Lifecycle and implementation status');
   lines.push('');
   for (const k of APPLICATION_EVENT_KINDS) {
     lines.push(...kindDetail(k));
   }
 
-  // 5 — issuer + relays
+  // 5: issuer + relays
   lines.push('## 5. Official item issuer and relays');
   lines.push('');
   lines.push(
@@ -273,21 +273,21 @@ export function renderRegistryMarkdown(): string {
   );
   lines.push('');
 
-  // 6 — item summary
+  // 6: item summary
   lines.push('## 6. Official item definitions');
   lines.push('');
   lines.push(
-    'Status meanings: **Active** — the issuer-signed kind:31632 event is published. **Reserved** — the identity is claimed and the client already resolves it from the bundled fallback, but the official event is not published yet. **Deprecated** — no longer offered, still resolvable so existing inventories render.',
+    'Status meanings: **Active**: the issuer-signed kind:31632 event is published. **Reserved**, the identity is claimed and the client already resolves it from the bundled fallback, but the official event is not published yet. **Deprecated**, no longer offered, still resolvable so existing inventories render.',
   );
   lines.push('');
   lines.push(
-    '> **Prices are not listed here, by design.** A coin price is Island-local economy configuration, not a kind:31632 definition fact: it is never published to a relay, it changes on its own schedule, and a second currency (arcade tickets) will have its own prices. The coin price table lives in `src/inventory/shop-catalog.ts` and is validated against this registry at module load — an item that is not an official registered consumable cannot be priced.',
+    '> **Prices are not listed here, by design.** A coin price is Island-local economy configuration, not a kind:31632 definition fact: it is never published to a relay, it changes on its own schedule, and a second currency (arcade tickets) will have its own prices. The coin price table lives in `src/inventory/shop-catalog.ts` and is validated against this registry at module load, an item that is not an official registered consumable cannot be priced.',
   );
   lines.push('');
   lines.push(...itemSummaryTable(ADDRESSED_OFFICIAL_ITEMS));
   lines.push('');
 
-  // 7 — canonical addresses
+  // 7: canonical addresses
   lines.push('## 7. Canonical kind:31632 addresses');
   lines.push('');
   lines.push('Derived from the issuer public key and the `d` tag; never hardcoded.');
@@ -299,14 +299,14 @@ export function renderRegistryMarkdown(): string {
   }
   lines.push('');
 
-  // 8 — item detail
+  // 8: item detail
   lines.push('## 8. Item detail');
   lines.push('');
   for (const i of ADDRESSED_OFFICIAL_ITEMS) {
     lines.push(...itemDetail(i));
   }
 
-  // 9 — recovery boundary
+  // 9: recovery boundary
   lines.push('## 9. Recovery boundary');
   lines.push('');
   lines.push('**This registry CAN preserve / restore:**');

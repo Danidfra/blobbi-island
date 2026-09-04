@@ -1,11 +1,11 @@
 /**
- * Blobbi Island — kind:31634 placement identity.
+ * Blobbi Island: kind:31634 placement identity.
  *
  * TWO DIFFERENT IDENTITIES, DELIBERATELY NOT ONE.
  *
  * A placement event is addressable as `31634:<author>:<d>`, and the `d` names a
  * placement-state DOCUMENT. What that document points at is the `target`, and
- * the two are not interchangeable — the package is explicit that a `d` must
+ * the two are not interchangeable, the package is explicit that a `d` must
  * never be assumed to equal a character id, room id or map id. Island honours
  * that split here:
  *
@@ -48,7 +48,7 @@ export const ISLAND_PLACEMENT_NAMESPACE = 'blobbi-island';
  */
 export const ISLAND_PLACEMENT_CONTEXT = 'game:blobbi-island';
 
-/** The `t` topic tag written on equipment documents — relay-indexable. */
+/** The `t` topic tag written on equipment documents, relay-indexable. */
 export const ISLAND_PLACEMENT_TOPIC = 'equipment';
 
 /**
@@ -76,7 +76,7 @@ export function characterEquipmentPlacementD(characterId: string): string {
  *
  * `authorPubkey` is whoever signed the placement, which for Island is always
  * the player. Whether that author is ALLOWED to dress this Blobbi is a separate
- * question, answered by `src/placement/policy.ts` — building an address never
+ * question, answered by `src/placement/policy.ts`: building an address never
  * implies permission.
  */
 export function characterEquipmentPlacementAddress(

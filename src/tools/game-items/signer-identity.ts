@@ -9,7 +9,7 @@
  *
  * A third-party signer may publish. Refusing would be theatre: anybody can
  * publish a kind:31632 event with any `d` from any client, and Blobbi Island
- * already defends itself the only way that works — `parseOfficialItemDefinition`
+ * already defends itself the only way that works, `parseOfficialItemDefinition`
  * rejects every non-official issuer before a definition can reach the catalog.
  * So the honest behavior is to let the event be published under the user's own
  * key and to say plainly, everywhere it matters, that the game will not resolve

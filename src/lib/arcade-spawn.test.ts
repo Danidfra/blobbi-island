@@ -2,8 +2,8 @@
  * The arcade ground-floor spawn points.
  *
  * The audit reproduced a hard failure in a browser: with an Arcade Pass held,
- * `getBlobbiInitialPosition('arcade')` returned `{50, 48}` — the elevator
- * alcove's own boundary line — and from there clicking the ticket counter
+ * `getBlobbiInitialPosition('arcade')` returned `{50, 48}`: the elevator
+ * alcove's own boundary line, and from there clicking the ticket counter
  * produced no movement for 7+ seconds and the modal never opened. The walk
  * stalled far from its target and `usePendingInteraction` cancelled itself, by
  * design.
@@ -31,7 +31,7 @@ const BOUNDARY = locationBoundaries['arcade-inside.png'];
  * A point is walkable when the walk boundary does not have to move it.
  *
  * `constrainPosition` returns the closest point inside the boundary, so an
- * unchanged result means the point was already inside one of its areas — the
+ * unchanged result means the point was already inside one of its areas, the
  * same test the movement system itself performs.
  */
 function isWalkable(point: Position): boolean {

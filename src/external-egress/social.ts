@@ -16,7 +16,7 @@
  * ## Labels come from here, destinations come from the URL
  *
  * `label` is what the confirmation calls the platform. It is trusted because it
- * is written here — but it is never the authority on where the player is going.
+ * is written here, but it is never the authority on where the player is going.
  * That comes from parsing the built URL (`url.ts`), so a wrong label can mislabel
  * a button and can never mis-state a destination.
  */
@@ -52,7 +52,7 @@ const encode = encodeURIComponent;
 
 /**
  * The catalog. Every entry produces an `https:` URL, which
- * `classifyDestination` then validates like any other — a catalog entry gets no
+ * `classifyDestination` then validates like any other, a catalog entry gets no
  * special trust just because it is local.
  */
 export const SOCIAL_SHARE_TARGETS: readonly SocialShareTarget[] = Object.freeze([

@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — item consumption / Blobbi actions (Phase 8).
+ * Blobbi Island: item consumption / Blobbi actions (Phase 8).
  *
  * Resolves the gameplay behavior of an item from its kind:31632 definition
  * (fetched or bundled fallback) and applies it:
@@ -183,7 +183,7 @@ export function useUseItem() {
         await mutateInventory({ type: 'remove', address, amount: quantity });
       } catch (err) {
         inventoryDecremented = false;
-        // An ambiguous publish MAY have landed — never describe it as a
+        // An ambiguous publish MAY have landed; never describe it as a
         // definite non-decrement; the settled-state invalidation reconciles
         // the cache with whatever the relay actually holds.
         warning = isAmbiguousInventoryPublish(err)

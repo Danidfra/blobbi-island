@@ -1,11 +1,11 @@
 /**
- * Beach Treasure Hunt — dig resolution, as one pure function.
+ * Beach Treasure Hunt, dig resolution, as one pure function.
  *
  * ## The rules
  *
  * 1. A dig at a non-finite point is **rejected** (`invalid-position`); a dig
  *    outside the field is **rejected** (`out-of-field`). Neither consumes a
- *    shovel use — the model refuses bad input, it never silently clamps a dig
+ *    shovel use: the model refuses bad input, it never silently clamps a dig
  *    to somewhere the player did not aim.
  * 2. With no shovel uses remaining the dig is **rejected**
  *    (`no-shovel-uses`) and consumes nothing. (The reducer normally ends the
@@ -14,7 +14,7 @@
  * 3. A valid attempt consumes **exactly one** use, hit or miss.
  * 4. Eligible targets are the unresolved ones whose distance to the dig point
  *    is within their own `digRadius`. Only the **closest** eligible target is
- *    revealed — never more than one, however tightly targets overlap.
+ *    revealed: never more than one, however tightly targets overlap.
  * 5. Distance ties resolve to the earlier target in array order, which is
  *    placement order and therefore deterministic per seed.
  * 6. A found target is never eligible again, so nothing can be dug up twice.

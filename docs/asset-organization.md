@@ -54,7 +54,7 @@ public/assets/
 │
 ├── characters/             Everything that is a character, not scenery
 │   ├── blobbi/
-│   │   ├── accessories/      <slot>/<code>.png — filenames are Nostr data ids
+│   │   ├── accessories/      <slot>/<code>.png, filenames are Nostr data ids
 │   │   ├── animations/       (reserved)
 │   │   └── backgrounds/      Portrait backdrops, keyed by background id
 │   └── npc/                  (reserved)
@@ -100,7 +100,7 @@ produced folders that described *when* an asset was made rather than *what it do
 | `interactive/` | Meant "has a click handler". That is a *code* concern, not an asset concern, so it collected doors, food, toys, furniture, arcade cabinets and gems side by side. |
 | `scenario/` | Overlapped `interactive/` with no rule for which one a decoration belonged in. |
 | `places/` | Held only backgrounds, but the name suggested it held everything about a place. |
-| `map/` | Mixed the actual island map with login/title branding — two unrelated domains. |
+| `map/` | Mixed the actual island map with login/title branding, two unrelated domains. |
 | `baby-stage/`, `adult-stage/` | Life-stage folders left over from an earlier design. One held a single cursor; the other was empty. |
 | `interactive/builds/shop-old.png` | Version history encoded in a filename. |
 
@@ -130,7 +130,7 @@ location-scoped.
 
 1. **`kebab-case` only.** Lowercase, hyphen-separated, no spaces, no underscores, no
    capitals: `self-service-kiosk-on.png`.
-2. **The folder is context — do not repeat it.** `locations/plaza/chill-lounge.png`, not
+2. **The folder is context, do not repeat it.** `locations/plaza/chill-lounge.png`, not
    `locations/plaza/plaza-chill-lounge.png`. Duplicate basenames across folders are fine
    and expected (`locations/stage/chair.png` and `locations/nostr-station/chair.png`).
 3. **State goes in a suffix, not a new folder.** Use the base name plus a state suffix so
@@ -143,12 +143,12 @@ location-scoped.
 5. **Numbered variants are `-1`, `-2`, ... with no padding**: `bush-1.png` … `bush-4.png`.
 6. **Some filenames are data identifiers and must never be renamed.** If the name appears
    in Nostr event data or in a lookup table keyed by name, it is a contract:
-   - `characters/blobbi/accessories/<slot>/<code>.png` — `<code>` is the accessory code
+   - `characters/blobbi/accessories/<slot>/<code>.png`: `<code>` is the accessory code
      published in `inv` / `equip` tags.
-   - `characters/blobbi/backgrounds/blobbi-bg-default.png` — the background id stored on
+   - `characters/blobbi/backgrounds/blobbi-bg-default.png`: the background id stored on
      the pet.
-   - `minigames/mining/{stone,gem-1,gem-2,gem-3}.png` — keys of `GEM_VALUES`.
-   - `world/backgrounds/*.png` — values of `LOCATION_BACKGROUNDS`.
+   - `minigames/mining/{stone,gem-1,gem-2,gem-3}.png`: keys of `GEM_VALUES`.
+   - `world/backgrounds/*.png`: values of `LOCATION_BACKGROUNDS`.
 
    Renaming any of these silently breaks existing player data. Add a mapping layer instead.
 
@@ -167,7 +167,7 @@ A sprite placed once in one scene can be an inline literal. This is the common c
 ### `src/lib/asset-paths.ts` for computed paths
 
 **Any path built at runtime from data must go through `@/lib/asset-paths`.** This is the
-rule that makes future reorganizations cheap — before it existed, the accessory directory
+rule that makes future reorganizations cheap, before it existed, the accessory directory
 was interpolated in four separate places with two different spellings.
 
 ```ts
@@ -183,7 +183,7 @@ If you add a new domain folder, add it to `ASSET_DIRS` in the same commit.
 
 ### Non-obvious reference sites
 
-When moving assets, these are easy to miss — check all of them:
+When moving assets, these are easy to miss; check all of them:
 
 | Location | What it references |
 | --- | --- |
@@ -211,7 +211,7 @@ When moving assets, these are easy to miss — check all of them:
 | Shaders | `effects/shaders/` | `.glsl` / `.frag` / `.vert`. |
 | Character animations | `characters/blobbi/animations/` or `characters/npc/<name>/animations/` | Keep the sheet and its frame JSON adjacent. |
 | NPC art | `characters/npc/<npc-name>/` | Self-contained: portrait, sprites, animations. |
-| UI icons | `ui/icons/<feature>/` | Group by feature (`ui/icons/nostr-hub/`), not by shape. Prefer `lucide-react` for generic glyphs — only add files for custom art. |
+| UI icons | `ui/icons/<feature>/` | Group by feature (`ui/icons/nostr-hub/`), not by shape. Prefer `lucide-react` for generic glyphs; only add files for custom art. |
 | Cursors | `ui/cursors/` | Remember to register the hotspot in `tailwind.config.ts`. |
 | Achievements / badges | `ui/achievements/` | Filename should equal the achievement id. |
 | Accessories | `characters/blobbi/accessories/<slot>/` | Filename **must** equal the accessory code. |
@@ -232,7 +232,7 @@ This is the distinction people get wrong most often, so it has one explicit rule
 **Put it in a shared folder (`world/props/`, `items/`, `ui/`) only once a second place
 actually uses it.**
 
-Start location-scoped and *promote* when reuse appears — do not pre-emptively generalize.
+Start location-scoped and *promote* when reuse appears, do not pre-emptively generalize.
 Promotion is cheap and mechanical:
 
 ```sh
@@ -250,7 +250,7 @@ Consequences of this rule worth knowing:
   as generic set dressing.
 - `locations/plaza/floor.png` is used by both `plaza` and `plaza-inside`. Those are two
   `LocationId`s in the same *place*, so it sits at the place root rather than being
-  duplicated. **Never duplicate a file to satisfy the folder structure** — put it at the
+  duplicated. **Never duplicate a file to satisfy the folder structure**: put it at the
   nearest shared ancestor.
 - Multi-floor places nest by floor (`locations/arcade/{ground,level-1,level-b1}/`).
   Anything shared across floors goes at `locations/arcade/`.
@@ -293,7 +293,7 @@ used as the static prefix of a template literal as fully reachable.
 
 - Don't create a folder named after a sprint, a person, a date, or a life stage.
 - Don't add `-old` / `-v2` / `-final` files. Use git, or `archive/`.
-- Don't interpolate an asset directory inline — add a helper to `src/lib/asset-paths.ts`.
+- Don't interpolate an asset directory inline, add a helper to `src/lib/asset-paths.ts`.
 - Don't rename a file whose name is a data identifier (see §4.6).
 - Don't commit `.DS_Store`. It is gitignored; keep it that way.
 

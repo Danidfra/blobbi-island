@@ -11,9 +11,9 @@
  *
  * Ditto's own theme feed queries by KIND with a limit and pages backwards on
  * `until`; it does not filter on `#t: ['theme']` even though it writes that
- * tag. Island reuses the kind filter — an unfiltered kind query bounded by a
+ * tag. Island reuses the kind filter, an unfiltered kind query bounded by a
  * limit is not "querying the whole Nostr universe", it is asking one relay for
- * its most recent N events of one narrow, low-volume kind — because filtering
+ * its most recent N events of one narrow, low-volume kind, because filtering
  * on `#t` here would silently hide every theme published by a client that does
  * not write the tag, which is the opposite of interoperating.
  *
@@ -24,7 +24,7 @@
  *
  * ## Why these reads are completion-aware
  *
- * `NPool.query()` cannot fail — a timeout, a dead socket and a genuinely empty
+ * `NPool.query()` cannot fail, a timeout, a dead socket and a genuinely empty
  * relay all return `[]` (see `src/lib/relay-read.ts`). For a browse list that
  * is survivable, but for the read that resolves the theme the player is
  * CURRENTLY USING it is not: a false empty would say "your theme no longer
@@ -72,7 +72,7 @@ export function themeFromDefinition(definition: NostrThemeDefinition): IslandThe
 
 export interface DiscoveredThemes {
   themes: IslandTheme[];
-  /** Parsed definitions, keyed by address — the picker needs the core colours. */
+  /** Parsed definitions, keyed by address, the picker needs the core colours. */
   definitions: Map<string, NostrThemeDefinition>;
 }
 
@@ -136,7 +136,7 @@ export function useMyThemes() {
  *
  * This is the read that keeps a chosen community theme alive across reloads,
  * and the one that must not lie. It throws on an unusable outcome so React
- * Query retains the previous value — and the palette cache means the island is
+ * Query retains the previous value, and the palette cache means the island is
  * already painted correctly before this resolves at all.
  */
 export function useSelectedNostrTheme(themeId: string | undefined) {
@@ -175,7 +175,7 @@ export function useSelectedNostrTheme(themeId: string | undefined) {
  * This is the cross-device half of the selection: `AppConfig.theme` is what
  * this browser is showing, and 16767 is what the player last chose ANYWHERE.
  * Reconciliation happens in `IslandThemeSync`, and it is one-directional on
- * boot — a newer remote selection adopts, an unreachable relay changes nothing.
+ * boot: a newer remote selection adopts, an unreachable relay changes nothing.
  */
 export function useActiveThemeEvent() {
   const { nostr } = useNostr();

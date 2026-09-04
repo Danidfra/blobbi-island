@@ -20,7 +20,7 @@ import {
   lerpHexColor,
 } from './island-sky';
 
-/** Day progress for an island minute — the unit the phase table is authored in. */
+/** Day progress for an island minute, the unit the phase table is authored in. */
 const at = (minute: number): IslandSkyState =>
   computeIslandSkyState(minute / ISLAND_DAY_MINUTES);
 
@@ -342,7 +342,7 @@ describe('night', () => {
     expect(at(114.9).inFinalTransition).toBe(false);
     expect(at(ISLAND_FINAL_TRANSITION_START_MINUTE).inFinalTransition).toBe(true);
     expect(at(119.9).inFinalTransition).toBe(true);
-    // Still called night — the type has four phases, not five.
+    // Still called night, the type has four phases, not five.
     expect(at(119.9).phase).toBe('night');
   });
 

@@ -10,7 +10,7 @@ import { PoolSoundToggle } from './PoolSoundToggle';
  *
  *  1. **Teach the gesture in one picture.** The whole control is "pull the cue
  *     back and let go", and a diagram of exactly that teaches it faster than any
- *     paragraph — which matters, because it is the one thing a player cannot
+ *     paragraph: which matters, because it is the one thing a player cannot
  *     discover by pressing buttons.
  *  2. **Say the rules, in six lines.** Not the real rule book. Pool's reputation
  *     for being complicated is entirely about the rules nobody explains, and the
@@ -76,7 +76,7 @@ export function PoolPreview({
       </div>
 
       {/* Difficulty. A radio group, because these are alternatives rather than
-          switches — and because that is what a keyboard user expects to arrow
+          switches: and because that is what a keyboard user expects to arrow
           between. */}
       <fieldset className="rounded-2xl border-2 border-island-wood/25 bg-island-cream/60 p-3">
         <legend className="px-1 text-xs font-bold uppercase tracking-widest text-island-ink-soft">
@@ -200,7 +200,7 @@ export function PoolPreview({
  *
  * Static and decorative, so it is markup rather than a canvas: it never
  * animates, it costs nothing, and it scales with the card. It shows the one
- * thing a player cannot guess — that you drag AWAY from the ball and the shot
+ * thing a player cannot guess; that you drag AWAY from the ball and the shot
  * goes the other way.
  */
 function CueDiagram() {

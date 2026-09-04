@@ -24,14 +24,14 @@
  * Delivery. Every other prize is granted into the temporary local ownership
  * store; a Pass is granted into the entitlement store instead, because an
  * expiring allowance is not ownership. {@link createArcadePassOwnership} is
- * that substitution and nothing else — it satisfies the same four-method
+ * that substitution and nothing else; it satisfies the same four-method
  * contract, with the same per-redemption-id idempotency the delivery retry
  * depends on.
  *
  * ## Repeatable, but not stackable
  *
  * `repeatable: true` so a confirmed redemption never permanently blocks the
- * next one — a Pass is a consumable and buying another later is the point.
+ * next one: a Pass is a consumable and buying another later is the point.
  * What stops two Passes running at once is the entitlement itself
  * (`canRedeemArcadePass`), which is where the rule belongs: the ledger tracks
  * REDEMPTIONS, and "is a pass currently running" is a question about the
@@ -83,11 +83,11 @@ export const ARCADE_PASS_PRIZE: ArcadePrize = Object.freeze({
  * it unchanged. The contract's guarantees map cleanly:
  *
  * - `grantPrize` is idempotent per redemption id, so the delivery retry after
- *   a paid-but-undelivered redemption cannot grant twice — and cannot reset an
+ *   a paid-but-undelivered redemption cannot grant twice, and cannot reset an
  *   allowance the player has already started spending.
  * - `hasDelivery` is the VERIFICATION the flow runs after every grant, and it
  *   asks the store, never the caller's optimism.
- * - A refused grant throws, which keeps the redemption in `delivering` — paid,
+ * - A refused grant throws, which keeps the redemption in `delivering`: paid,
  *   recoverable, and never respent.
  */
 export function createArcadePassOwnership(
@@ -120,7 +120,7 @@ export function createArcadePassOwnership(
         // redemption open; the message says which of the two reasons it was.
         throw new Error(
           hasUsableArcadePass(pubkey, now())
-            ? 'A pass is already running — this one will be delivered once it is used up or expires.'
+            ? 'A pass is already running; this one will be delivered once it is used up or expires.'
             : 'This browser would not store the pass. Free some storage and finish the delivery.',
         );
       }

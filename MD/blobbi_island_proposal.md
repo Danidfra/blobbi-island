@@ -1,5 +1,5 @@
 
-# 🏝️ Blobbi Island — App Design Proposal
+# 🏝️ Blobbi Island: App Design Proposal
 
 ## 📌 Overview
 

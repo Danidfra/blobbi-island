@@ -4,8 +4,8 @@
  * ```
  * 1. compute the resulting canonical state (rev, media, state, position, rate)
  * 2. apply it OPTIMISTICALLY to the host's own player      ← caller, via `optimistic`
- * 3. publish 21951  (ephemeral command)  — fire-and-forget
- * 4. publish 31951  (canonical state)    — awaited, retried with backoff
+ * 3. publish 21951  (ephemeral command): fire-and-forget
+ * 4. publish 31951  (canonical state): awaited, retried with backoff
  * 5. commit rev
  * ```
  *
@@ -44,7 +44,7 @@ import type {
 export type PublishFn = (event: UnsignedSharedEvent) => Promise<void>;
 
 export interface SessionPublisherOptions {
-  /** Signs and sends. Must reject on failure — a swallowed error is a lie. */
+  /** Signs and sends. Must reject on failure, a swallowed error is a lie. */
   publish: PublishFn;
   hostPubkey: string;
   sessionId: string;
@@ -141,7 +141,7 @@ export class SessionPublisher {
   /**
    * Publish `rev 0`: paused, at zero.
    *
-   * Awaited and retried — until this lands there is no session, so there is
+   * Awaited and retried, until this lands there is no session, so there is
    * nothing to be optimistic about.
    */
   async create(media: SharedMediaRef): Promise<SharedPlaybackSessionContent | null> {
@@ -158,7 +158,7 @@ export class SessionPublisher {
    * Register a host action.
    *
    * `optimistic` receives the resulting state BEFORE anything is published and
-   * may veto it by returning `false` — the host's player refusing to start is
+   * may veto it by returning `false`: the host's player refusing to start is
    * the autoplay case, and publishing "playing" for a player that is not playing
    * would desynchronize every guest to a state that does not exist.
    */
@@ -215,14 +215,14 @@ export class SessionPublisher {
    * The 20 s keepalive: same revision, refreshed anchor and expiration.
    *
    * `live` is the host player's ACTUAL position. Given it, the anchor is
-   * re-stated from the player rather than extrapolated from the previous anchor
-   * — the difference matters the moment the host's playback stalls, buffers or
+   * re-stated from the player rather than extrapolated from the previous anchor,
+   * the difference matters the moment the host's playback stalls, buffers or
    * is nudged outside our controls: extrapolation would keep publishing a
    * timeline the host is no longer on, and every guest would follow the fiction
    * instead of the host. Without it (no player, not ready), the arithmetic
    * re-anchor is still correct and is used.
    *
-   * Skipped while a control publish is pending — that publish supersedes it and
+   * Skipped while a control publish is pending; that publish supersedes it and
    * carries a fresher expiration anyway.
    */
   async keepalive(live?: { position: number }): Promise<void> {
@@ -322,8 +322,8 @@ export class SessionPublisher {
   ): Promise<boolean> {
     for (let attempt = 0; attempt < this.opts.retries; attempt += 1) {
       if (this.disposed && attempt > 0) return false;
-      // Rebuilt each attempt so `expiration` stays fresh; the CONTENT — rev,
-      // position, updatedAt — is byte-identical, which is what makes the retry
+      // Rebuilt each attempt so `expiration` stays fresh; the CONTENT, rev,
+      // position, updatedAt: is byte-identical, which is what makes the retry
       // idempotent against an addressable replacement.
       const event = buildSessionEvent({
         sessionId: this.sessionId,

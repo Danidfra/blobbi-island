@@ -1,5 +1,5 @@
 /**
- * Author-wide kind:31633 discovery — selection, exclusion, and containment.
+ * Author-wide kind:31633 discovery, selection, exclusion, and containment.
  *
  * The read that finds a player's other inventories asks a deliberately open
  * question (`{kinds:[31633], authors:[player]}`), so the discipline has to live
@@ -114,7 +114,7 @@ describe('newest valid event per inventory context', () => {
 });
 
 describe('what is excluded', () => {
-  it("leaves out Blobbi's own inventory — it has a canonical reader", () => {
+  it("leaves out Blobbi's own inventory; it has a canonical reader", () => {
     const result = selectNewestInventoryPerContext([
       inventoryEvent({ d: ISLAND_INVENTORY_D, created_at: 50, items: [[CARROT, '', '4']] }),
       inventoryEvent({ d: 'farm:main', created_at: 10, items: [[STRAWBERRY, '', '1']] }),
@@ -178,8 +178,8 @@ describe('what is preserved', () => {
 
     // The read model exposes identity, contexts, items, and the parsed
     // package snapshot the spend-aware derivation is handed (which carries
-    // the event verbatim, as the package requires). No other field surfaces
-    // — nothing here re-reads a `revision` or a partner's harvest marker.
+    // the event verbatim, as the package requires). No other field surfaces,
+    // nothing here re-reads a `revision` or a partner's harvest marker.
     expect(Object.keys(inventory).sort()).toEqual([
       'address',
       'contexts',

@@ -10,8 +10,8 @@
  *
  * `stats` is `Record<string, number>` by contract (Phase 2, `types.ts`), which
  * the results UI renders generically and the reward policy reads from. Two facts
- * the policy needs are logically boolean — "did the run finish naturally?" and
- * "was it a full combo?" — so they travel as `1` / `0`. That is a real cost in
+ * the policy needs are logically boolean, "did the run finish naturally?" and
+ * "was it a full combo?": so they travel as `1` / `0`. That is a real cost in
  * legibility, and it buys something worth more: no change to a persisted,
  * validated result shape that Phase 2 shipped and that a stored pending claim
  * must still parse after a refresh.
@@ -64,7 +64,7 @@ export interface BuildDanceResultInput {
   /**
    * True only when the song reached its end.
    *
-   * A run that was closed, quit or interrupted never reaches this function — the
+   * A run that was closed, quit or interrupted never reaches this function, the
    * lifecycle reducer refuses a result outside `playing` and an aborted run has
    * none. The flag exists so the reward policy can state its eligibility rule in
    * terms of the RESULT rather than in terms of a lifecycle state it cannot see.

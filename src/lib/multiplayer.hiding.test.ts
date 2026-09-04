@@ -2,7 +2,7 @@
  * Coverage for the hiding-spot state carried by presence (kind 31950).
  *
  * Hiding is represented as an OPTIONAL, semantic field in the existing presence
- * content (`hiddenIn: "<hiding-spot-id>"`) — no new event kind, no coordinate
+ * content (`hiddenIn: "<hiding-spot-id>"`): no new event kind, no coordinate
  * guessing. These tests pin when it is published, when it is absent, and that
  * clients which know nothing about it stay valid.
  */
@@ -70,7 +70,7 @@ describe('presence hiding state', () => {
     const content = c.lastContent();
     expect(content.hiddenIn).toBe('town-bush-3');
     expect(content.state).toBe('idle');
-    // Position stays truthful — hiding does not move the player out of the
+    // Position stays truthful, hiding does not move the player out of the
     // world. Phase 2: the WIRE keeps legacy CENTER semantics, so the published
     // anchor is the internal ground point converted at the build boundary.
     const wire = groundToWireCenter({ x: 8, y: 91 }, PARAMS.location);
@@ -81,7 +81,7 @@ describe('presence hiding state', () => {
     expect(c.events[0].kind).toBe(31950);
   });
 
-  it('never carries hiddenIn on a movement publish — moving away clears it', async () => {
+  it('never carries hiddenIn on a movement publish, moving away clears it', async () => {
     const c = collector();
     const nav = createWalkableApi('town');
 
@@ -117,7 +117,7 @@ describe('presence hiding state', () => {
     await publishHeartbeat(c.publish, PARAMS, { x: 8, y: 91 });
 
     // A client that publishes `hiddenIn` and one that has never heard of it both
-    // produce valid presence — the field is additive, so old clients simply
+    // produce valid presence, the field is additive, so old clients simply
     // ignore it and keep rendering the Blobbi.
     expect(validatePresenceEvent(asEvent(c.events[0]))).toBe(true);
     expect(validatePresenceEvent(asEvent(c.events[1]))).toBe(true);
@@ -202,7 +202,7 @@ describe('presence update ordering', () => {
   });
 
   it('falls back to created_at when either side has no seq', () => {
-    // Legacy publisher: exactly the previous behavior — strictly older dropped,
+    // Legacy publisher: exactly the previous behavior, strictly older dropped,
     // same second applied.
     expect(isSupersededPresence(order(100), order(99))).toBe(true);
     expect(isSupersededPresence(order(100), order(100))).toBe(false);

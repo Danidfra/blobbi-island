@@ -53,7 +53,7 @@ function playing(): ArcadeMachineState {
   );
 }
 
-describe('arcade lifecycle — the legal path', () => {
+describe('arcade lifecycle: the legal path', () => {
   it('runs closed → preview → countdown → playing → results → claiming → rewarded', () => {
     let s = INITIAL_ARCADE_MACHINE_STATE;
     expect(s.status).toBe('closed');
@@ -110,7 +110,7 @@ describe('arcade lifecycle — the legal path', () => {
   });
 });
 
-describe('arcade lifecycle — run identity', () => {
+describe('arcade lifecycle: run identity', () => {
   it('mints exactly one runId per run and refuses to replace it', () => {
     const started = reduce(
       INITIAL_ARCADE_MACHINE_STATE,
@@ -171,7 +171,7 @@ describe('arcade lifecycle — run identity', () => {
   });
 });
 
-describe('arcade lifecycle — result immutability', () => {
+describe('arcade lifecycle: result immutability', () => {
   it('accepts one result and ignores every later one', () => {
     const first = arcadeMachineReducer(playing(), { type: 'finish', result: result() });
     const second = arcadeMachineReducer(first, {
@@ -219,7 +219,7 @@ describe('arcade lifecycle — result immutability', () => {
   });
 });
 
-describe('arcade lifecycle — abort', () => {
+describe('arcade lifecycle: abort', () => {
   it.each(['countdown', 'playing', 'paused'] as const)('aborts from %s', (status) => {
     let s = reduce(
       INITIAL_ARCADE_MACHINE_STATE,
@@ -293,7 +293,7 @@ describe('arcade lifecycle — abort', () => {
   });
 });
 
-describe('arcade lifecycle — reward claiming', () => {
+describe('arcade lifecycle: reward claiming', () => {
   const finished = () => arcadeMachineReducer(playing(), { type: 'finish', result: result() });
 
   it('blocks a second claim for a run that was already rewarded', () => {
@@ -335,7 +335,7 @@ describe('arcade lifecycle — reward claiming', () => {
     expect(reopened.rewardedRunIds).toEqual(['run-1']);
   });
 
-  it('never stores a ticket amount — the reducer computes no rewards', () => {
+  it('never stores a ticket amount, the reducer computes no rewards', () => {
     const rewarded = reduce(finished(), { type: 'claim' }, { type: 'claim-succeeded' });
     const keys = Object.keys(rewarded);
     expect(keys).not.toContain('tickets');
@@ -344,7 +344,7 @@ describe('arcade lifecycle — reward claiming', () => {
   });
 });
 
-describe('arcade lifecycle — illegal transitions', () => {
+describe('arcade lifecycle: illegal transitions', () => {
   const every: ArcadeEvent[] = [
     { type: 'start', runId: 'x' },
     { type: 'countdown-complete' },
@@ -385,7 +385,7 @@ describe('arcade lifecycle — illegal transitions', () => {
   });
 });
 
-describe('arcade lifecycle — nothing but a finished run is claimable', () => {
+describe('arcade lifecycle: nothing but a finished run is claimable', () => {
   /** One state per status, reached the way production would reach it. */
   const statesByStatus = (): Record<string, ArcadeMachineState> => {
     const preview = arcadeMachineReducer(INITIAL_ARCADE_MACHINE_STATE, {
@@ -462,7 +462,7 @@ describe('arcade lifecycle — nothing but a finished run is claimable', () => {
   });
 });
 
-describe('arcade lifecycle — the state is plain data', () => {
+describe('arcade lifecycle: the state is plain data', () => {
   it('stays JSON-serialisable through the whole lifecycle', () => {
     const states = [
       INITIAL_ARCADE_MACHINE_STATE,

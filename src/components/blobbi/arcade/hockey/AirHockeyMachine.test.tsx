@@ -1,5 +1,5 @@
 /**
- * Air Hockey — lifecycle and integration coverage.
+ * Air Hockey: lifecycle and integration coverage.
  *
  * The REAL controller, the REAL shell, the REAL lifecycle reducer, the REAL
  * simulation and the REAL fixed-step loop. Three things are substituted, and
@@ -7,14 +7,14 @@
  *
  *  - **`requestAnimationFrame` and the clock**, so a match is driven by hand
  *    rather than by waiting for real frames. This is not a shortcut around the
- *    loop — the loop under test is the shipping one, and it is what turns those
+ *    loop: the loop under test is the shipping one, and it is what turns those
  *    driven frames into fixed simulation steps.
  *  - **the audio engine**, because jsdom has no `AudioContext`.
  *  - **the 2D canvas context**, which jsdom does not implement. The picture is
  *    the only thing lost: the simulation, the HUD and every control still work,
  *    which is itself worth knowing.
  *
- * The match played here is a real one — first to one goal, played out by the
+ * The match played here is a real one, first to one goal, played out by the
  * real opponent against a stationary player mallet. Nothing about the result is
  * forged.
  */
@@ -231,7 +231,7 @@ beforeEach(() => {
   // every driven frame reports a delta of zero and the simulation never moves.
   nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => clock);
   // jsdom has no 2D context and logs a "not implemented" error if asked for
-  // one. Returning null is the same answer, quietly — and it exercises the
+  // one. Returning null is the same answer, quietly, and it exercises the
   // component's own null-context path.
   getContextSpy = vi
     .spyOn(HTMLCanvasElement.prototype, 'getContext')

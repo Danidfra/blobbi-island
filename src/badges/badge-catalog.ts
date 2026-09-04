@@ -1,5 +1,5 @@
 /**
- * The badge domain — normalized, and deliberately empty.
+ * The badge domain, normalized, and deliberately empty.
  *
  * ## What the audit found
  *
@@ -8,7 +8,7 @@
  *
  * | Question                              | Answer in this repository                       |
  * | ------------------------------------- | ----------------------------------------------- |
- * | Badge definition kind?                | None. `src/protocol/event-registry.ts` enumerates every kind Island reads or writes — 1124, 11125, 31125, 31124, 21201, 31950, 31951, 21951, 31632, 31633, 31634 — and none of them is a badge. NIP-58 (kinds 8 / 30008 / 30009) is neither imported nor queried. |
+ * | Badge definition kind?                | None. `src/protocol/event-registry.ts` enumerates every kind Island reads or writes: 1124, 11125, 31125, 31124, 21201, 31950, 31951, 21951, 31632, 31633, 31634, and none of them is a badge. NIP-58 (kinds 8 / 30008 / 30009) is neither imported nor queried. |
  * | Badge inside kind:31632?              | No. `ITEM_CATEGORIES` is `food, toy, medicine, hygiene, energy, currency`. A Game Item Definition has no badge category and no badge-shaped fields. |
  * | Ownership / award representation?     | None. kind:31633 holds item quantities, not awards; there is no accepted-award event and no issuer convention. |
  * | Award or claim logic?                 | None. No code grants, claims or revokes a badge. |
@@ -21,7 +21,7 @@
  * The store is built, walkable and wired end to end. What it cannot do is
  * invent the merchandise. Publishing fabricated badges, minting a kind number,
  * or writing mission requirements nobody has specified would put fiction into
- * production data — and unlike a layout mistake, fiction that reaches a relay
+ * production data: and unlike a layout mistake, fiction that reaches a relay
  * cannot be edited back out.
  *
  * The Clothing Store hit the same wall from the other side (real wearables, no
@@ -49,7 +49,7 @@ export const BADGE_ACQUISITION_LABELS: Record<BadgeAcquisition, string> = {
 };
 
 /**
- * One badge, as the store needs it — whatever it turns out to be made of.
+ * One badge, as the store needs it, whatever it turns out to be made of.
  *
  * This is the NORMALIZED shape: the modal renders this and nothing else, so a
  * future protocol adapter has one target to map onto and the UI never learns
@@ -87,8 +87,8 @@ export interface BadgeRecord {
  * Empty, and not as a stub: see the table above. This array is the single
  * place a real catalog arrives, whether it is resolved from a future badge
  * kind, from kind:31632 definitions once they carry badges, or from a
- * canonical bundled list. Everything downstream — the tabs, the counts, the
- * empty state — is derived from it.
+ * canonical bundled list. Everything downstream, the tabs, the counts, the
+ * empty state: is derived from it.
  */
 export const BADGE_CATALOG: readonly BadgeRecord[] = [];
 

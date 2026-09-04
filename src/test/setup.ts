@@ -22,8 +22,8 @@ globalThis.TextEncoder = RealmSafeTextEncoder as typeof globalThis.TextEncoder;
  * `window.matchMedia`, which jsdom does not implement.
  *
  * Installed fresh before EVERY test rather than once at module load. A test
- * that calls `vi.restoreAllMocks()` in its own `afterEach` — a reasonable thing
- * to do after spying on something else — also resets this `vi.fn()` to a stub
+ * that calls `vi.restoreAllMocks()` in its own `afterEach`: a reasonable thing
+ * to do after spying on something else, also resets this `vi.fn()` to a stub
  * that returns `undefined`, and the next test to render anything responsive
  * then dies on `mql.addEventListener is not a function`.
  *

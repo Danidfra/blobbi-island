@@ -1,5 +1,5 @@
 /**
- * The turnstile CONTRACT — pure types and the free-play default.
+ * The turnstile CONTRACT, pure types and the free-play default.
  *
  * The interface lives here, on the pure side of `src/arcade`, so the three
  * machines can depend on "something that admits runs" without any of them
@@ -16,12 +16,12 @@
 export type ArcadeEntryOutcome =
   /**
    * Play. The turnstile decides WHETHER a run may start and what it costs; it
-   * does not name the run — that identity is the machine's, and already
+   * does not name the run; that identity is the machine's, and already
    * injectable for tests.
    */
   | {
       readonly ok: true;
-      /** Tokens actually spent — `0` under an active Pass. */
+      /** Tokens actually spent, `0` under an active Pass. */
       readonly charged: number;
       readonly waivedByPass: boolean;
     }
@@ -41,7 +41,7 @@ export interface ArcadeGameEntry {
   /** Tokens held, or `null` while unknown. Never a fake zero. */
   readonly tokenBalance: number | null;
   /**
-   * True while a Pass will waive the NEXT start — unexpired and with at least
+   * True while a Pass will waive the NEXT start, unexpired and with at least
    * one free play left. An expired or exhausted pass reports `false`, so a
    * surface reading this never promises a free play that no longer exists.
    */
@@ -49,7 +49,7 @@ export interface ArcadeGameEntry {
   /** Tokens this game costs before any waiver. */
   costFor(gameId: string): number;
   /**
-   * Admit a run that costs NOTHING AT ALL — a game with no Token price.
+   * Admit a run that costs NOTHING AT ALL, a game with no Token price.
    *
    * Synchronous on purpose: a genuinely free admission is a pure decision with
    * no I/O, and the DEV harness and every machine test run entirely on this
@@ -57,7 +57,7 @@ export interface ArcadeGameEntry {
    * must then await {@link admit}.
    *
    * A Pass start is NOT free in this sense. The Pass carries a finite
-   * allowance, so admitting under it decrements a stored count — a write, and
+   * allowance, so admitting under it decrements a stored count, a write, and
    * one that has to be serialised against other tabs. That belongs at the same
    * commitment boundary as the Token charge, which is {@link admit}.
    */
@@ -69,7 +69,7 @@ export interface ArcadeGameEntry {
 /**
  * A turnstile that charges nothing.
  *
- * The default for a machine rendered without one — the DEV harness, a test, or
+ * The default for a machine rendered without one, the DEV harness, a test, or
  * any surface that is not the arcade proper. Free play is the safe default: a
  * machine that silently charged because somebody forgot to wire an entry would
  * be taking money by omission.

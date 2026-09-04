@@ -1,5 +1,5 @@
 /**
- * Result — a pure, economy-neutral projection of a finished round.
+ * Result: a pure, economy-neutral projection of a finished round.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -117,7 +117,7 @@ describe('buildTreasureHuntResult', () => {
     expect(result.rawCleanupValue).toBe(0);
   });
 
-  it('exposes exactly the economy-neutral contract — no grant/address/Coin fields', () => {
+  it('exposes exactly the economy-neutral contract; no grant/address/Coin fields', () => {
     const result = buildTreasureHuntResult(playScriptedRound());
     expect(Object.keys(result).sort()).toEqual(
       [

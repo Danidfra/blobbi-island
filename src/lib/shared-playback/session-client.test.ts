@@ -172,7 +172,7 @@ describe('ingestCanonical', () => {
     expect(ingestCanonical(guest(), foreign, T).ignored).toBe('wrong-host');
   });
 
-  it('refuses an older revision — a stale event cannot rewind the player', () => {
+  it('refuses an older revision, a stale event cannot rewind the player', () => {
     const created = createSessionContent(MEDIA, T);
     const seeked = transition(created, { type: 'seek', position: 600 }, T + 1000).content;
     const synced = ingestCanonical(guest(), record(seeked), T + 1000).state;
@@ -232,7 +232,7 @@ describe('ingestCommand', () => {
     expect(result.state.lastAppliedRev).toBe(1);
   });
 
-  it('ignores the matching canonical event that follows — same rev, already applied', () => {
+  it('ignores the matching canonical event that follows, same rev, already applied', () => {
     const created = createSessionContent(MEDIA, T);
     const { content, command } = transition(created, { type: 'play', position: 0 }, T + 1000);
     const afterCommand = ingestCommand(synced(), command, T + 1000).state;
@@ -259,7 +259,7 @@ describe('ingestCommand', () => {
     expect(late.state.content?.playback.position).toBe(600);
   });
 
-  it('survives a revision jump — a missed command needs no replay', () => {
+  it('survives a revision jump, a missed command needs no replay', () => {
     const created = createSessionContent(MEDIA, T);
     let content = created;
     for (const position of [0, 100, 200]) {
@@ -324,7 +324,7 @@ describe('expectedNow / evaluateDrift', () => {
     expect(result.target).toBe(130);
   });
 
-  it('suspends correction while buffering — a stalled player has no honest position', () => {
+  it('suspends correction while buffering, a stalled player has no honest position', () => {
     const result = evaluateDrift(playing(), {
       ...READY,
       buffering: true,

@@ -6,7 +6,7 @@
  * background artwork, and introducing a single z-index into a branch where the
  * curtain has none can silently reorder the whole room.
  *
- * The second is the one that actually shipped broken — **the room must be inert
+ * The second is the one that actually shipped broken, **the room must be inert
  * until somebody sits down.** `TheaterStage` is deliberately NOT mocked here, so
  * these tests fail if merely entering the theater starts building a player.
  */
@@ -27,7 +27,7 @@ import { THEATER_Z } from '@/lib/theater-layout';
  * The theater now needs the Nostr providers: a seated player can start or join a
  * watch session, so `TheaterStage` reads the signer. `NostrLoginProvider` reads
  * its storage through a promise and renders nothing until it resolves, which is
- * why this helper is async — a synchronous render would assert against an empty
+ * why this helper is async, a synchronous render would assert against an empty
  * document.
  */
 async function renderTheater(sittingIn: string | null = null) {
@@ -75,7 +75,7 @@ describe('theater room', () => {
     expect(theaterSeats.length - occupiableTheaterSeats.length).toBe(2);
   });
 
-  it('gives every occupiable chair a distinct id — the old markup gave all 28 the same one', async () => {
+  it('gives every occupiable chair a distinct id, the old markup gave all 28 the same one', async () => {
     const { container } = await renderTheater();
     const ids = [...container.querySelectorAll('[data-seat-id]')].map((el) => el.getAttribute('data-seat-id'));
     expect(new Set(ids).size).toBe(THEATER_OCCUPIABLE_SEAT_COUNT);
@@ -84,7 +84,7 @@ describe('theater room', () => {
 
   it('shows nothing but scenery before anybody sits down', async () => {
     const { container } = await renderTheater(null);
-    // No control card, no video surface, no error — an empty theater is idle.
+    // No control card, no video surface, no error, an empty theater is idle.
     expect(container.querySelector('[data-theater-controls]')).toBeNull();
     expect(container.querySelector('[data-theater-screen]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -105,7 +105,7 @@ describe('theater room', () => {
     expect(container.querySelector('[data-theater-curtain]')).toHaveAttribute('data-curtain-open', 'false');
   });
 
-  it('ignores a decorative chair id — sitting on scenery is not a state', async () => {
+  it('ignores a decorative chair id, sitting on scenery is not a state', async () => {
     const { container } = await renderTheater('theater-seat-b1');
     // The stage still opens its card (the seat system owns validity), but no
     // Blobbi can ever be pinned there; `resolveSeatedRender` is the guard and is

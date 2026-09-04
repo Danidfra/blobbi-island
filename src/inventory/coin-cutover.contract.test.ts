@@ -1,5 +1,5 @@
 /**
- * Coin cutover — repository-wide source contracts.
+ * Coin cutover: repository-wide source contracts.
  *
  * After the cutover there is exactly ONE canonical production balance (the
  * official Blobbi Coin quantity in kind:31633) and exactly ONE mutation
@@ -49,7 +49,7 @@ describe('one canonical Coin balance', () => {
   });
 
   it('legacy profile coins are never read for economic decisions', () => {
-    // Parsed-profile `.coins` access — the dual-read fallback shape. Only the
+    // Parsed-profile `.coins` access, the dual-read fallback shape. Only the
     // parser and the type definition may mention the field (compat data, acted
     // on by NOTHING). Shop PRICES named `coins:` and UI copy are not balance
     // reads and are deliberately not matched.
@@ -110,7 +110,7 @@ describe('one canonical Coin balance', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the initial allocation has ONE constant and ONE stable op id — never minted randomly', () => {
+  it('the initial allocation has ONE constant and ONE stable op id; never minted randomly', () => {
     // The amount and identity live only in economy-entry.ts; nothing else may
     // define a second 200 or route the allocation through mintCoinOpId.
     const definitions = PRODUCTION_FILES.filter((file) => {
@@ -191,7 +191,7 @@ describe('one canonical Coin balance', () => {
         /\[\s*['"]coins['"]\s*,/,
       );
     }
-    // The shared serializer no longer manages `coins` — it must ride the
+    // The shared serializer no longer manages `coins`: it must ride the
     // unknown-tag passthrough instead.
     const parsers = readFileSync(join(ROOT, 'src/lib/blobbi-parsers.ts'), 'utf8');
     const managedBlock = parsers.slice(

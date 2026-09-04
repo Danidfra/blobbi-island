@@ -1,9 +1,9 @@
 /**
- * Blobbi Island — Official item registry (address/id projection).
+ * Blobbi Island: Official item registry (address/id projection).
  *
  * The canonical identity of an item is its full kind:31632 address
  * (`31632:<issuer>:<d>`). The legacy `itemId` (e.g. `food_apple`) is retained
- * ONLY as a compatibility/UI identifier — it is never used as protocol
+ * ONLY as a compatibility/UI identifier; it is never used as protocol
  * identity. The item `name` is likewise never used as identity.
  *
  * This module no longer HOLDS the item list. It is a projection of the single
@@ -146,8 +146,8 @@ export function isOfficialCosmeticAddress(address: string): boolean {
 //
 // Projected from the same canonical registry. Effect items are cosmetics in
 // the published events' `type` tag but a separate identity list here: they are
-// never care items, never image-drawn wearables, and what they unlock — a
-// locally implemented renderer effect — is authorized through
+// never care items, never image-drawn wearables, and what they unlock, a
+// locally implemented renderer effect, is authorized through
 // `src/effects/official-visual-effect-items.ts` by FULL address only.
 
 const EFFECT_ENTRIES = ADDRESSED_OFFICIAL_EFFECT_ITEMS;

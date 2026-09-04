@@ -204,7 +204,7 @@ describe('IslandWorldLight', () => {
 describe('composition inside PlaceBackground', () => {
   /**
    * `TestApp`'s login provider renders `null` until it has read stored logins, so
-   * the world tree only appears after that effect — hence the `await`. Returns the
+   * the world tree only appears after that effect; hence the `await`. Returns the
    * scaled world box, whose direct children are the paint order under test.
    */
   async function renderWorld(location: LocationId = 'town') {
@@ -265,7 +265,7 @@ describe('composition inside PlaceBackground', () => {
 
   it('publishes the grade WITHOUT adding a wrapper around the world content', async () => {
     // A `filter` on a wrapper would create a stacking context and flatten this
-    // layer's z-indexes — and the Blobbi's z-index is derived from its Y position
+    // layer's z-indexes: and the Blobbi's z-index is derived from its Y position
     // precisely so it can walk behind a bush. The grade therefore rides on the
     // existing surface element, and the children stay its direct descendants.
     const { container, getByTestId } = await renderWorld();
@@ -294,7 +294,7 @@ describe('composition inside PlaceBackground', () => {
   });
 
   it('paints the world-lighting veil AFTER the world content', async () => {
-    // Above the players on purpose, so the shared grade reaches them — see
+    // Above the players on purpose, so the shared grade reaches them; see
     // IslandWorldLight's header for why, and why its alpha is capped.
     const { layers } = await renderWorld();
 
@@ -463,7 +463,7 @@ describe('cloud shapes and sizes', () => {
   });
 
   it('leaves the other actors on production selection while one is forced', () => {
-    // Placement stays automatic here, so the other two still render — and must be
+    // Placement stays automatic here, so the other two still render, and must be
     // untouched by the override.
     const production = render(<IslandSkyLayer location="town" />);
     const productionOf = (container: HTMLElement, id: string) => {

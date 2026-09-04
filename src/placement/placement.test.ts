@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — placement identity, policy and render-model tests.
+ * Blobbi Island: placement identity, policy and render-model tests.
  *
  * These are the PURE halves of the equipment system: what a placement document
  * is called, whether an entry is allowed to render, and how an allowed entry

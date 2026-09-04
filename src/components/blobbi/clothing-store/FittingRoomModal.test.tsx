@@ -1,14 +1,14 @@
 /**
- * `<FittingRoomModal>` — a preview that changes nothing.
+ * `<FittingRoomModal>`: a preview that changes nothing.
  *
  * The claim this file exists for is a NEGATIVE one, and negatives need two
  * kinds of proof:
  *
- *  1. STRUCTURAL — the module's import graph reaches no writer. Every purchase
+ *  1. STRUCTURAL: the module's import graph reaches no writer. Every purchase
  *     hook, inventory mutation, wallet and publisher is stubbed with a spy that
  *     fails the test if it is ever constructed, so "we do not call it" is
  *     replaced by "it is not there to call";
- *  2. BEHAVIOURAL — opening, trying things on, resetting and closing publish no
+ *  2. BEHAVIOURAL: opening, trying things on, resetting and closing publish no
  *     event, because the fake relay's `event()` is a spy that must stay unused.
  *
  * Everything else here is about the preview being HONEST: it composes the same
@@ -283,7 +283,7 @@ describe('the preview', () => {
     fireEvent.click(tryButton(BOW_TIE.address)); // neckwear
     fireEvent.click(tryButton(NECKLACE.address)); // neckwear too
 
-    // Exactly what equipping would do — one thing per slot.
+    // Exactly what equipping would do; one thing per slot.
     expect(wornCodes()).toHaveLength(1);
     expect(tile(BOW_TIE.address).dataset.tryingOn).toBe('no');
     expect(tile(NECKLACE.address).dataset.tryingOn).toBe('yes');
@@ -347,7 +347,7 @@ describe('the rail never implies ownership', () => {
     ).toBe('Preview only');
   });
 
-  it('lets you try on something you do not own — that is what a fitting room is', async () => {
+  it('lets you try on something you do not own; that is what a fitting room is', async () => {
     await renderFittingRoom();
     expect(tile(GLASSES.address).dataset.owned).toBe('no');
 

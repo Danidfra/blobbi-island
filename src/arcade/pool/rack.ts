@@ -1,5 +1,5 @@
 /**
- * Pool — building a legal rack, and the seeded shuffle behind it.
+ * Pool: building a legal rack, and the seeded shuffle behind it.
  *
  * Pure and deterministic: the same seed builds the same table, which is what
  * lets a match be reproduced from `(seed, shots)` and what lets `rules.test.ts`
@@ -35,7 +35,7 @@ export const SOLID_NUMBERS: readonly number[] = Object.freeze([1, 2, 3, 4, 5, 6,
 export const STRIPE_NUMBERS: readonly number[] = Object.freeze([9, 10, 11, 12, 13, 14, 15]);
 
 /**
- * mulberry32 — the same small PRNG `hockey/match.ts` uses, for the same reasons:
+ * mulberry32: the same small PRNG `hockey/match.ts` uses, for the same reasons:
  * nine lines, no cryptographic strength needed, and a match's determinism should
  * not depend on a package version.
  */
@@ -115,8 +115,8 @@ export interface RackResult {
  * Build a full, legal, at-rest table: the cue ball on the head spot and fifteen
  * object balls racked on the foot spot.
  *
- * `separateOverlaps` runs at the end. It should never have anything to do —
- * {@link RACK_GAP} leaves air between every pair — and it runs anyway, because a
+ * `separateOverlaps` runs at the end. It should never have anything to do,
+ * {@link RACK_GAP} leaves air between every pair, and it runs anyway, because a
  * rack that starts a thousandth of a unit interpenetrating is a rack that
  * explodes gently on the first step, and the cost of being certain is six passes
  * over 120 pairs, once per match.

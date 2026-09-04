@@ -3,18 +3,18 @@
  *
  * Presence is a broadcast. Every kind 31950 the local client publishes comes
  * straight back down its own subscription, so "is this someone else?" is not a
- * detail of the ingest function — it is the boundary that decides whether an
+ * detail of the ingest function; it is the boundary that decides whether an
  * actor exists at all. Get it wrong and the player watches a second copy of
  * their own Blobbi trail them around the island, drawn from their own kind
  * 31124, moving along their own published path a beat behind them.
  *
  * TWO INDEPENDENT INVARIANTS, because they fail in different ways:
  *
- *   1. `event.pubkey === localPubkey` — the canonical identity rule. One
+ *   1. `event.pubkey === localPubkey`: the canonical identity rule. One
  *      account is one actor (see §multi-session below), so our own key is
  *      never a remote player.
  *
- *   2. the presence carries OUR session id — the backstop. The session id is
+ *   2. the presence carries OUR session id, the backstop. The session id is
  *      generated per mounted presence hook and published in the `d` tag, so an
  *      event carrying it came from this very client no matter what the first
  *      rule believes about our key. This is the check that holds when the
@@ -25,8 +25,8 @@
  *
  *   0. an unknown local identity admits NOBODY. If we cannot say who we are,
  *      we cannot say that somebody else is not us, and the safe answer to "is
- *      this a stranger?" is no. Presence is advisory and self-healing — the
- *      next heartbeat, ~25 s away at worst, arrives once identity is known —
+ *      this a stranger?" is no. Presence is advisory and self-healing, the
+ *      next heartbeat, ~25 s away at worst, arrives once identity is known,
  *      so the cost of refusing is a brief empty room, against drawing a
  *      phantom that never leaves.
  *
@@ -35,7 +35,7 @@
  * evicts the rest. Opening a second tab, or the same account on a phone, moves
  * that account's Blobbi to the newer session rather than showing two. So there
  * is no legitimate case where the local player's own key should appear as a
- * remote actor — not another tab, not another device, not a reconnect.
+ * remote actor: not another tab, not another device, not a reconnect.
  */
 
 /** Why a presence event may not become a remote actor. */

@@ -1,5 +1,5 @@
 /**
- * useBlobbiMovementController — the local Blobbi's canonical movement engine
+ * useBlobbiMovementController: the local Blobbi's canonical movement engine
  * (Phase 3).
  *
  * Extracted from `MovableBlobbi` so the component is an input/gaze adapter and
@@ -24,7 +24,7 @@
  *  - unmount cancels the rAF loop.
  *
  * Boundary semantics (unchanged from the historical component): `goTo` does
- * NOT clamp its target — each animation STEP is clamped, so an unreachable
+ * NOT clamp its target; each animation STEP is clamped, so an unreachable
  * target makes the walk slide along the boundary edge (interaction targets are
  * pre-clamped by `resolveElementApproachTarget` for exactly this reason).
  * `snapTo` deliberately bypasses the boundary: pose anchors (seat cushions,
@@ -72,7 +72,7 @@ export interface BlobbiMovementController {
   goTo: (target: GroundPosition) => void;
   /**
    * Snap immediately to an explicit pose anchor / spawn point, cancelling any
-   * active walk and firing `onMoveComplete` once. Bypasses the walk boundary —
+   * active walk and firing `onMoveComplete` once. Bypasses the walk boundary,
    * the EXPLICIT special-pose entry point (seats, bed, dev harness).
    */
   snapTo: (pose: PoseAnchor) => void;
@@ -106,7 +106,7 @@ export function useBlobbiMovementController({
    * A straight walk is a one-entry route, so the ordinary case is exactly what
    * it always was. When furniture is in the way the planner puts corner
    * waypoints in front of it, and the loop retargets through them without ever
-   * completing — `onMoveComplete` and every pending interaction belong to the
+   * completing, `onMoveComplete` and every pending interaction belong to the
    * final entry alone.
    */
   const routeRef = useRef<GroundPosition[]>([]);
@@ -119,7 +119,7 @@ export function useBlobbiMovementController({
 
   // Latest-ref pattern for everything the rAF loop reads: the loop's identity
   // stays STABLE across parent re-renders and prop churn, so an in-flight walk
-  // is never restarted, stalled, or double-completed by React updates — the
+  // is never restarted, stalled, or double-completed by React updates, the
   // historical failure mode this controller exists to prevent.
   const optionsRef = useRef({ movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked, blockers });
   optionsRef.current = { movementSpeed, boundary, showTrail, onMoveStart, onMoveComplete, isPositionBlocked, blockers };
@@ -161,7 +161,7 @@ export function useBlobbiMovementController({
 
         if (distance < MOVEMENT_SNAP_PX) {
           // A waypoint, or the destination? Advancing keeps the walk in one
-          // continuous motion — no pause at a corner, and no completion until
+          // continuous motion: no pause at a corner, and no completion until
           // the route is spent.
           if (routeRef.current.length > 1) {
             routeRef.current = routeRef.current.slice(1);
@@ -204,7 +204,7 @@ export function useBlobbiMovementController({
         if (isPositionBlocked(newPercentPos.x, newPercentPos.y)) {
           // Still blocked with a route in hand: the geometry moved under us
           // (a blocker mounted mid-walk), or the clearance was not enough for
-          // this step. Stopping safely is right — but the destination is kept
+          // this step. Stopping safely is right, but the destination is kept
           // so the caller's pending interaction can still decide for itself.
           reached = true;
           return currentPos;
@@ -243,14 +243,14 @@ export function useBlobbiMovementController({
   }, [animateMovement, cancelFrame]);
 
   // Unmount: cancel the loop. `animateMovement` is stable (latest-ref), so
-  // this effect runs exactly once — an in-flight walk survives every parent
+  // this effect runs exactly once, an in-flight walk survives every parent
   // re-render and dies with the component.
   useEffect(() => cancelFrame, [cancelFrame]);
 
   const goTo = useCallback(
     (target: GroundPosition) => {
       const { isPositionBlocked, boundary, blockers } = optionsRef.current;
-      // Walking into furniture is still refused outright — unchanged.
+      // Walking into furniture is still refused outright, unchanged.
       if (isPositionBlocked(target.x, target.y)) return;
 
       /*
@@ -277,7 +277,7 @@ export function useBlobbiMovementController({
       isMovingRef.current = true;
       startAnimation();
       // The caller asked for the DESTINATION, and that is what presence and the
-      // pose controller are told — never an internal waypoint.
+      // pose controller are told; never an internal waypoint.
       optionsRef.current.onMoveStart?.(target);
     },
     [startAnimation],

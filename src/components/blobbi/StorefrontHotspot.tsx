@@ -15,20 +15,20 @@ import {
  * ## A button, not a sprite
  *
  * The Care Store's checkout established the pattern: when the thing to press
- * is painted into the plate, the hotspot is a real `<button>` over it — keyboard
+ * is painted into the plate, the hotspot is a real `<button>` over it, keyboard
  * reachable, carrying its own accessible name, and already move-blocking via
  * `BLOCK_UI_SELECTOR` so a tap never also starts a raw world walk. It routes
  * through the SAME `requestInteraction` path every door uses: the Blobbi walks
  * to the shop's stand point, and only on arrival does anything happen.
  *
- * ## The feedback has to be legible — and it must not draw a box
+ * ## The feedback has to be legible, and it must not draw a box
  *
  * The mall's facades warm and glow by a few percent on hover, which reads on a
  * bright sprite against a dim wall and does not read on a bay that is already
  * the brightest thing in the frame. The first version of this hotspot answered
  * with a cream ring around its rectangle, which was legible and wrong: the
- * painted bays are not rectangles — awnings, sign boards and planters spill
- * past their frames — so the ring traced a box the picture does not have.
+ * painted bays are not rectangles, awnings, sign boards and planters spill
+ * past their frames, so the ring traced a box the picture does not have.
  *
  * So the cue is LIGHT rather than an outline: a soft, blurred, elliptical bloom
  * screened over the bay, so the shop itself appears to brighten from within
@@ -37,7 +37,7 @@ import {
  * - **"You can press this."** Pointing at or focusing the bay lights it up and
  *   raises the shop's name on a small sign at its threshold.
  * - **"You pressed it."** The press pops the sign, and the light begins a slow
- *   pulse; both STAY that way for the whole walk — the pending interaction, not
+ *   pulse; both STAY that way for the whole walk, the pending interaction, not
  *   a timer, decides when they clear. On a touch screen, which never gets
  *   `:hover`, that held state is the whole affordance.
  *
@@ -49,7 +49,7 @@ import {
  *
  * `config.destination` decides what arrival does. A location takes the player
  * inside; `null` turns the sign into "Coming soon" for a moment and then lets
- * it fade. Same walk, same feedback, same component — a shop opens by filling
+ * it fade. Same walk, same feedback, same component, a shop opens by filling
  * in one field.
  */
 
@@ -72,7 +72,7 @@ export function StorefrontHotspot({ config, zIndex, requestInteraction, onEnter 
   /*
    * Whether the LAST press was a touch. `requestInteraction` uses it to pick
    * the more forgiving arrival threshold, exactly as `InteractiveElement` does
-   * from its `onTouchStart` — here the click arrives after the pointer, so the
+   * from its `onTouchStart`: here the click arrives after the pointer, so the
    * pointer type is remembered rather than branched on. Both `pointerdown`
    * (with its `pointerType`) and `touchstart` set it: a touch fires both, in
    * that order, and a mouse fires only the first.
@@ -169,7 +169,7 @@ export function StorefrontHotspot({ config, zIndex, requestInteraction, onEnter 
       {/*
         The sign. Hidden until the bay is pointed at, focused or pressed; once
         pressed it stays up for the walk. It is `aria-hidden` because the button
-        already names the shop and what pressing it does — the sign is the
+        already names the shop and what pressing it does, the sign is the
         visual half of that, not a second announcement.
       */}
       <span

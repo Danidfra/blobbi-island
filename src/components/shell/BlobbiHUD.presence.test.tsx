@@ -35,7 +35,7 @@ describe('the HUD and presence', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('says one plain thing when the player declined to sign presence — no kinds, signers or relays', async () => {
+  it('says one plain thing when the player declined to sign presence; no kinds, signers or relays', async () => {
     setPresenceStatus('signer-declined');
     render(<TestApp><Located><BlobbiHUD /></Located></TestApp>);
     const status = await screen.findByRole('status');

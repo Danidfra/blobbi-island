@@ -4,7 +4,7 @@
  * ## Why this exists
  *
  * Every inventory writer invalidates the canonical query, and that was always
- * the intent — but invalidation only asks the relay again, and a relay does
+ * the intent: but invalidation only asks the relay again, and a relay does
  * not serve a replaceable event the instant it accepts it. The refetch
  * therefore raced propagation and usually won: it returned the event we had
  * just replaced, React Query stored that as fresh, and `staleTime` suppressed
@@ -14,7 +14,7 @@
  * The information was never missing. `runInventoryTransaction` builds, signs
  * and publishes the exact event that lands; it simply threw that away and
  * asked the relay instead. This module is where it is kept instead, so the
- * confirmed result — not a race — decides what the UI shows.
+ * confirmed result: not a race, decides what the UI shows.
  *
  * ## What it is not
  *

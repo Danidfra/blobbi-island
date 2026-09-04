@@ -3,15 +3,15 @@
  *
  * ## Why capture at all
  *
- * Island communication is kind 21201 — ephemeral, with a ~10 second NIP-40
+ * Island communication is kind 21201, ephemeral, with a ~10 second NIP-40
  * expiration. By the time anyone looks at a report, the event it is about is
  * gone from the relay and gone from this client. A report that only says "this
  * player, this category" is a report nobody can act on and nobody can check.
  *
  * So a report taken about a message captures the message: the **signed original
  * event**, plus what this build actually rendered from it. Both, because they
- * answer different questions. The signed event is verifiable — anyone can check
- * the signature and confirm that pubkey really said it — but for a structured
+ * answer different questions. The signed event is verifiable, anyone can check
+ * the signature and confirm that pubkey really said it, but for a structured
  * message it is only ids (`{"type":"quick","phrase":"hi"}`), which means nothing
  * to a reviewer. The rendered text is readable but unverifiable on its own.
  * Together they are evidence; either alone is half of it.
@@ -27,7 +27,7 @@
  * ## Where reports go today: nowhere
  *
  * They are stored locally and nothing publishes them. That is stated here
- * because the alternative — implying a moderation team exists — would be a lie
+ * because the alternative, implying a moderation team exists, would be a lie
  * told to a child at the moment they most need to be told the truth. See
  * `docs/player-safety-controls.md` for the standards analysis behind that, and
  * for what would have to exist before publication makes sense.
@@ -45,7 +45,7 @@ const REPORT_SCHEMA_VERSION = 1;
  * A window in which the same report from the same reporter is the same report.
  *
  * A double-tapped button, a retry after a slow save, a re-submit of a dialog
- * that did not visibly close — none of those are two complaints, and a store
+ * that did not visibly close; none of those are two complaints, and a store
  * capped at fifty cannot afford to treat them as such.
  */
 const DEDUPE_WINDOW_MS = 60_000;
@@ -135,7 +135,7 @@ function parseStoredReport(value: unknown): PlayerReport | null {
 /** Reports kept locally. Oldest are dropped first. */
 export const MAX_STORED_REPORTS = 50;
 
-/** Kind 21201 — the only event class a report may carry as evidence today. */
+/** Kind 21201: the only event class a report may carry as evidence today. */
 const COMMUNICATION_KIND = 21201;
 
 const PUBKEY_PATTERN = /^[0-9a-f]{64}$/i;
@@ -162,8 +162,8 @@ export interface ReportCategorySpec {
    * report is directly translatable if publication is ever built.
    *
    * The mapping is lossy in one direction that matters: **NIP-56 has no report
-   * type for grooming or predatory contact.** Its vocabulary — nudity, malware,
-   * profanity, illegal, spam, impersonation, other — predates child-safety use
+   * type for grooming or predatory contact.** Its vocabulary, nudity, malware,
+   * profanity, illegal, spam, impersonation, other, predates child-safety use
    * cases, so the category children most need lands on `other`. The precise
    * meaning survives in {@link PlayerReport.category}, and NIP-32 labels (which
    * NIP-56 explicitly allows) are where it would go on the wire.
@@ -218,7 +218,7 @@ export function reportCategoryById(id: string): ReportCategorySpec | null {
  *
  * ## Minimal on purpose
  *
- * This used to be the whole signed event, verbatim — content, every tag, the
+ * This used to be the whole signed event, verbatim, content, every tag, the
  * signature. That is an attacker-controlled blob written to a child's device
  * because they asked for help, and almost none of it was ever read: nothing in
  * this build verifies a signature, and there is no reviewer to verify one for.
@@ -230,7 +230,7 @@ export function reportCategoryById(id: string): ReportCategorySpec | null {
  *
  * ## What is deliberately absent
  *
- * `content`, `tags` and `sig`. Their absence is the feature — see §C of
+ * `content`, `tags` and `sig`. Their absence is the feature; see §C of
  * `docs/family-activation-readiness.md`.
  */
 export interface ReportedMessageEvidence {
@@ -246,7 +246,7 @@ export interface ReportedMessageEvidence {
    * What this build actually put on screen, capped.
    *
    * For a structured message the signed event carries only ids, which nobody
-   * can read back. This is the local reconstruction of what those ids meant —
+   * can read back. This is the local reconstruction of what those ids meant,
    * and for a free-text message it is the only readable record, which is why it
    * is attached only when the reporter explicitly chose to include it.
    */
@@ -312,13 +312,13 @@ function newReportId(): string {
 }
 
 /**
- * Validate and assemble a report. Pure — it stores nothing and publishes nothing.
+ * Validate and assemble a report. Pure; it stores nothing and publishes nothing.
  *
  * The evidence checks are the interesting ones. A report may only carry a kind
  * 21201 event, and that event's author **must be the player being reported**:
  * without that check a client could attach somebody else's signed message to a
- * report about a third party, which would turn the evidence — the one part of a
- * report that is verifiable — into a way to frame people.
+ * report about a third party, which would turn the evidence, the one part of a
+ * report that is verifiable, into a way to frame people.
  */
 export function buildPlayerReport(input: BuildPlayerReportInput): ReportBuildResult {
   if (!PUBKEY_PATTERN.test(input.reportedPubkey ?? '')) {
@@ -351,7 +351,7 @@ export function buildPlayerReport(input: BuildPlayerReportInput): ReportBuildRes
       return { ok: false, reason: 'evidence-wrong-author' };
     }
     /*
-      REDUCED HERE, at the boundary — the raw event never reaches storage.
+      REDUCED HERE, at the boundary, the raw event never reaches storage.
 
       Everything the report needs is derived from fields this builder has
       already validated; `content`, `tags` and `sig` are dropped on the floor.
@@ -393,8 +393,8 @@ function readStored(): PlayerReport[] {
 
     /*
       A BARE ARRAY is the shape that shipped before the version tag; a
-      versioned object is this one. Anything else — a `v: 2` written by a build
-      that keeps different fields — yields an EMPTY list rather than being
+      versioned object is this one. Anything else, a `v: 2` written by a build
+      that keeps different fields, yields an EMPTY list rather than being
       read as though it were this schema. Interpreting a future record with
       today's rules is how a report about one player ends up filed against
       another.
@@ -474,7 +474,7 @@ export const PLAYER_REPORT_STORAGE_KEY = STORAGE_KEY;
   Switching account switches the reports, and drops the signed-out ones.
 
   The store reads through `reportsKey()` on every call, so there is no cache to
-  invalidate — but the memory bucket must not survive into the account that
+  invalidate: but the memory bucket must not survive into the account that
   just signed in, which is the leak `account-scope.ts` exists to close.
 */
 subscribeSafetyAccount(() => {

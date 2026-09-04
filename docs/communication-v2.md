@@ -1,7 +1,7 @@
-# Communication V2 — structured Island messages
+# Communication V2: structured Island messages
 
-**Status:** implemented. Kind `21201` now carries four classes of message —
-free text, quick phrases, filled-in templates and emotes — instead of only free
+**Status:** implemented. Kind `21201` now carries four classes of message,
+free text, quick phrases, filled-in templates and emotes, instead of only free
 text. Nothing about Standard's behaviour changed: it can send and render all
 four, and free text is byte-compatible with what shipped before.
 
@@ -24,7 +24,7 @@ them.
 **Free text is the only class that can carry anything at all.** A quick phrase
 is a reference into a catalog this build ships; the receiver produces the words.
 That is what makes it safe to show a player in a profile that does not permit
-free text — and it is why Family mode is a *substitution* rather than a removal.
+free text: and it is why Family mode is a *substitution* rather than a removal.
 Three of the four classes survive.
 
 ---
@@ -39,7 +39,7 @@ routing than a free-text one: same ephemeral range, same NIP-40 expiry, same
 second protocol to document and maintain in exchange for nothing.
 
 The extension point was already there. The deployed receiver rejects any payload
-whose `content.type` is not `"chat"`, so new `type` values are invisible to it —
+whose `content.type` is not `"chat"`, so new `type` values are invisible to it,
 an older tab ignores a phrase rather than mis-rendering it.
 
 **Emotes ride on 21201, not on presence.** Kind `31950` reserves
@@ -104,7 +104,7 @@ that prefers the clearer name interoperates; this client emits `"chat"`.
 Tags are unchanged: `d` (session), `l` (location), `i` (island), `p` (author),
 `expiration` (~10 s), `alt`. The `alt` tag carries the LOCAL rendering as a
 NIP-31 description for clients that do not know this kind. **No receiver in this
-app reads it back** — it is documentation of the event, not data.
+app reads it back**: it is documentation of the event, not data.
 
 ### What a structured payload deliberately does not contain
 
@@ -113,7 +113,7 @@ No `text`. No `fallback`. No display label. No localized string.
 This is the property everything else rests on: **the discriminant is
 unambiguous**. A message either *is* free text, or it is a reference into a local
 catalog. A payload carrying both would force every receiver to hold the invariant
-"ignore `text` when `phrase` is present" — a rule one careless edit from being
+"ignore `text` when `phrase` is present": a rule one careless edit from being
 violated, in the exact code path that decides what a child is shown.
 
 A `fallback` string was considered for legacy rendering and **rejected**: an old
@@ -138,7 +138,7 @@ parsing on clients that have never heard of it.
 | Sender | Receiver | Result |
 |---|---|---|
 | old client, free text | new client, Standard | renders, exactly as before |
-| old client, free text | new client, Family | **refused** — it is free text |
+| old client, free text | new client, Family | **refused**: it is free text |
 | new client, free text | old client | renders, exactly as before |
 | new client, quick / template / emote | old client | **silently ignored** (`type !== "chat"`) |
 | new client, structured | new client | renders from the local catalog |
@@ -146,7 +146,7 @@ parsing on clients that have never heard of it.
 | any client, unknown phrase/emote/template id | new client | ignored |
 
 **The known limitation:** a structured message does not render on a client that
-predates Communication V2. That cost is bounded and was accepted deliberately —
+predates Communication V2. That cost is bounded and was accepted deliberately,
 Blobbi Island is a web app, so the "old client" population is a stale tab or a
 third-party client, not an install base. Free text, which is what those clients
 can render, is unaffected.
@@ -160,7 +160,7 @@ parser reports `legacy` as information rather than as a decision.
 
 ## 6. Validation
 
-`src/communication/parse.ts` — pure, and it never throws (it runs inside the
+`src/communication/parse.ts`: pure, and it never throws (it runs inside the
 multiplayer receive loop, where an exception would take out the subscription for
 everyone in the room).
 
@@ -169,7 +169,7 @@ bytes, checked before `JSON.parse`), malformed JSON, non-objects, missing or
 non-string `type`, unknown `type`, unrecognised `v`, non-string or empty text,
 unknown phrase id, unknown emote id, unknown template id, non-object `params`,
 a missing parameter, an **unexpected** parameter, a non-string parameter value,
-and a value outside its parameter's catalog — including a value from the *wrong*
+and a value outside its parameter's catalog, including a value from the *wrong*
 catalog.
 
 Unexpected parameters are refused rather than ignored: a passenger field is
@@ -187,7 +187,7 @@ So a spoofed payload:
 ```
 
 parses to exactly `{ type: 'quick', phrase: 'want-to-play' }`. The `text` field
-is not copied, not read, and not reachable from anything downstream — it is
+is not copied, not read, and not reachable from anything downstream; it is
 *gone*, not ignored. The bubble says "Want to play?" because that is what
 `quick-phrases.ts` says, in Standard and in Family alike.
 
@@ -199,14 +199,14 @@ exactly what `freeTextChat` governs.
 ## 7. Catalogs
 
 Ids are the protocol; text is presentation. `'want-to-play'` travels on the
-wire, `'Want to play?'` never does — which is both the safety property above and
+wire, `'Want to play?'` never does, which is both the safety property above and
 the thing that keeps translation possible without invalidating a single
 published event.
 
-**Quick phrases** (10) — `hi`, `bye`, `want-to-play`, `lets-go`, `good-game`,
+**Quick phrases** (10): `hi`, `bye`, `want-to-play`, `lets-go`, `good-game`,
 `follow-me`, `wait-for-me`, `brb`, `nice-blobbi`, `thank-you`.
 
-**Emotes** (7) — `wave`, `heart`, `laugh`, `clap`, `celebrate`, `thumbs-up`,
+**Emotes** (7): `wave`, `heart`, `laugh`, `clap`, `celebrate`, `thumbs-up`,
 `question`. Each has a glyph *and* an accessible label; the glyph is one way to
 draw the emote, replaceable with Blobbi artwork without touching the protocol.
 
@@ -226,15 +226,15 @@ draw the emote, replaceable with Blobbi artwork without touching the protocol.
 | `time` | `5m`, `10m`, `15m`, `30m` |
 | `activity` | `dance`, `pool`, `air-hockey`, `treasure-hunt`, `mining`, `hide-and-seek` |
 
-Templates are a fixed sequence of literal fragments and named holes — no parser,
+Templates are a fixed sequence of literal fragments and named holes; no parser,
 no inflection, no agreement. A small typed registry, not a grammar engine.
 
 ### Locations are a curated destination list, not `LocationId`
 
 The world has sixteen `LocationId`s, most of them interiors, arcade floors or
 private rooms. The template catalog keeps its own list of six public
-destinations — the same six the Map modal offers, minus `home` (private, so
-"meet me at Home" is a sentence with no true reading) and plus the Arcade — and
+destinations: the same six the Map modal offers, minus `home` (private, so
+"meet me at Home" is a sentence with no true reading) and plus the Arcade, and
 maps each to a canonical id.
 
 **A phrase can never carry transient private state.** There is no way to express
@@ -246,7 +246,7 @@ place at the granularity a map already shows publicly.
 ## 8. Safety admission
 
 `admitChatMessage(policy, message)` in `src/safety/chat-admission.ts`, extended
-from Phase A to discriminate on message class. It reads **capabilities only** —
+from Phase A to discriminate on message class. It reads **capabilities only**,
 never a profile.
 
 | class | capability | Standard | Family |
@@ -267,11 +267,11 @@ fails closed.
 
 ### Both boundaries
 
-**Outbound** (`MultiplayerLayer.sendMessage`) — refusing to send stops the app
+**Outbound** (`MultiplayerLayer.sendMessage`): refusing to send stops the app
 offering an input whose output it would discard, and it sits below the composer
 so no other holder of the send ref can route around it.
 
-**Inbound** (`MultiplayerLayer.processChatEvent`) — the one that actually
+**Inbound** (`MultiplayerLayer.processChatEvent`): the one that actually
 protects a player, because the sender is not necessarily this build. A Standard
 player in the same room, or any third-party client, will emit whatever it likes
 regardless of what this client's UI looks like.
@@ -291,7 +291,7 @@ presentation layer entirely.
 
 It never inspects content: no length, no filter, no term list. Structure and
 bounds are the parser's job; capability is admission's. Keeping them apart is
-what makes the security claim checkable — the spoofing attack is defeated in the
+what makes the security claim checkable, the spoofing attack is defeated in the
 parser, and admission then sees an ordinary quick phrase because that is all
 that is left of it.
 
@@ -304,7 +304,7 @@ dock's **Talk** button. The dock is now a launcher: it used to transform in plac
 into a text field, which made it the owner of a composition surface it had no
 other reason to know about.
 
-Tabs are **derived from capabilities before render** — a tab that is not allowed
+Tabs are **derived from capabilities before render**: a tab that is not allowed
 does not exist in the tablist, has no panel, and cannot be reached by arrow keys
 or by a stale `value`. Hiding it with CSS would leave a composer mounted, and a
 mounted composer is one `onSend` away from being reachable.
@@ -324,7 +324,7 @@ a punishment is one a child works around. A test asserts the panel contains no
 **One layout for both pointers.** A bottom-anchored sheet on a phone and a
 bottom-anchored panel on a desktop are the same component with a width cap.
 Nothing depends on hover, every target is at least 44 px, and the panel renders
-inside the game frame rather than in a portal — the island can be fullscreen, and
+inside the game frame rather than in a portal, the island can be fullscreen, and
 a portalled overlay would land outside it.
 
 **Accessibility.** Real `<button>`s throughout; `role="dialog"` with a label;
@@ -332,7 +332,7 @@ a portalled overlay would land outside it.
 closes; emote controls are named by their label with the glyph `aria-hidden`;
 bubbles are `role="status"` with an `aria-label` carrying the text equivalent, so
 an emote reaches a screen reader as "Clap" rather than as a stray character. The
-phrase builder uses native `<select>` — the best touch control on every phone,
+phrase builder uses native `<select>`: the best touch control on every phone,
 keyboard- and screen-reader-correct by default, and it renders in place rather
 than through a portal.
 
@@ -359,7 +359,7 @@ rate limit and tapping is not.
 interval. A send cooldown lives in the client the sender controls, so it protects
 nobody; this is the half that bounds what a player is subjected to. It is sized
 below the *fastest* send cooldown so a player typing quickly is never throttled
-by a receiver, and it is a minimum-interval gate rather than a token bucket — a
+by a receiver, and it is a minimum-interval gate rather than a token bucket, a
 bucket would let a sender bank silence and spend it as a burst, which is exactly
 "say nothing for a minute, then put twenty emotes over someone's head".
 
@@ -370,7 +370,7 @@ flood. Throttle memory is bounded (TTL plus a tracked-sender cap).
 
 Duplicate delivery now keys on the **event id**. It used to key on
 `pubkey:sessionId` within 2 s, which suppressed every second message from a
-sender in that window — including two *different* ones. That was duplicate
+sender in that window, including two *different* ones. That was duplicate
 suppression doing rate limiting by accident and doing both badly: it would have
 made "wave, then heart" silently lose the heart. The rate limit it was
 accidentally providing is now stated explicitly above, and is more permissive
@@ -390,7 +390,7 @@ one), so a flood cannot accumulate on screen.
 - **A Family player and a Standard player in the same room have an asymmetric
   conversation**: the Standard player's free text is not shown to the Family
   player, and nothing tells either of them so. Surfacing "someone said something
-  we don't show here" is a deliberate open question, not an oversight — see the
+  we don't show here" is a deliberate open question, not an oversight; see the
   `ChatRejectionReason` carried by every refusal, which exists for it.
 - **The receive path now bounds payload size (2 KiB) where it previously did
   not.** This is a small, intentional Standard behaviour change, closing audit

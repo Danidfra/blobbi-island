@@ -1,5 +1,5 @@
 /**
- * Pool — the table, and every number the simulation is tuned by.
+ * Pool: the table, and every number the simulation is tuned by.
  *
  * ## Table units, not pixels
  *
@@ -11,14 +11,14 @@
  * coordinates back at input time; nothing between those two edges has an
  * opinion about size.
  *
- * The box is described here as LANDSCAPE — 200 along, 100 across — with the
+ * The box is described here as LANDSCAPE: 200 along, 100 across, with the
  * break end (the "kitchen") at `x = 0` and the rack end at `x = 200`. Every
  * constant, every physics function and every test in this directory speaks that
  * language. The portrait presentation a phone gets is a quarter turn applied at
  * draw time and nowhere else.
  *
  * 2:1 is a real pool table's proportion, and it is the one number here that is
- * not negotiable — it is what makes the picture read as pool at a glance.
+ * not negotiable: it is what makes the picture read as pool at a glance.
  *
  * ## Why these numbers
  *
@@ -35,12 +35,12 @@
  *
  * Rolling friction is modelled as **constant deceleration** rather than
  * exponential decay, and that is the one place this file disagrees with
- * `hockey/table.ts` on purpose. An exponential decay never actually stops — it
- * asymptotes — which is fine for a puck that is always in play and wrong for
+ * `hockey/table.ts` on purpose. An exponential decay never actually stops; it
+ * asymptotes: which is fine for a puck that is always in play and wrong for
  * pool, where "all the balls have stopped" is the event the entire turn
  * structure hangs off. Constant deceleration stops a ball at a predictable
  * distance, which is also what a player's intuition about a real rolling ball
- * expects — and `d = v² / 2a` is the model the AI aims by.
+ * expects: and `d = v² / 2a` is the model the AI aims by.
  *
  * It survived the move to Planck for exactly that reason: `linearDamping` is
  * left at zero and the deceleration is applied by the adapter after each solver
@@ -50,7 +50,7 @@
  *
  * The table's SHAPE. Cushion polygons, pocket mouths and jaw angles live in
  * `pool-physics-geometry.ts`, which the physics world, the renderer and the aim
- * guide all read — so the table a ball bounces off is the table on the screen.
+ * guide all read, so the table a ball bounces off is the table on the screen.
  * This file is the numbers a ball is tuned by.
  */
 
@@ -71,7 +71,7 @@ export const BALL_DIAMETER = BALL_RADIUS * 2;
 
   Both were circles centred on the points below, and neither matched anything a
   player could see. The drawn hole was one radius, the capture was a smaller one,
-  and the cushions were an unbroken rectangle that ignored both — so a ball could
+  and the cushions were an unbroken rectangle that ignored both, so a ball could
   sit visibly inside the hole, be too far from its centre to drop, and be held
   there by a rail that was not drawn.
 
@@ -85,7 +85,7 @@ export const BALL_DIAMETER = BALL_RADIUS * 2;
  * Where the six pockets ARE, in table units: four corners and two in the middle
  * of the long rails.
  *
- * Nominal positions only — a name for each hole, used by the AI when it scores a
+ * Nominal positions only, a name for each hole, used by the AI when it scores a
  * pot and by the result when it reports one. The SHAPE of a pocket, and whether
  * a ball has gone down it, is `pool-physics-geometry.ts`'s business.
  */
@@ -103,7 +103,7 @@ export const POCKETS: readonly Vec2[] = Object.freeze([
  *
  * Tuned against the table rather than against physics: a ball struck at
  * {@link MAX_SHOT_SPEED} covers `v² / 2a ≈ 660` units before stopping, which is
- * a shade over three table lengths — enough for a break to scatter the rack and
+ * a shade over three table lengths, enough for a break to scatter the rack and
  * for the cue ball to come back, and not so much that every shot takes ten
  * seconds to settle.
  */
@@ -140,7 +140,7 @@ export const CUSHION_RESTITUTION = 0.74;
  * Ball-on-ball restitution. Near-elastic, as polished resin on polished resin
  * very nearly is.
  *
- * Kept high and kept purely NORMAL — no tangential friction, no spin. That is
+ * Kept high and kept purely NORMAL; no tangential friction, no spin. That is
  * what preserves the "90° rule" a player's intuition runs on (a full ball sends
  * the object ball along the line of centres and the cue ball off at a right
  * angle), and it is what makes the aim assistance honest rather than
@@ -176,7 +176,7 @@ export const RACK_GAP = 0.08;
  * A backstop, not a rule. Constant deceleration guarantees a ball stops within
  * `MAX_BALL_SPEED / ROLLING_DECEL ≈ 7.3` seconds, and collisions only ever
  * remove energy, so a real shot cannot reach this. It exists so that a
- * pathological state — two balls trading a jitter impulse forever — costs one
+ * pathological state: two balls trading a jitter impulse forever, costs one
  * turn rather than freezing the match.
  */
 export const MAX_SHOT_MS = 22_000;
@@ -184,7 +184,7 @@ export const MAX_SHOT_MS = 22_000;
 /**
  * How long the break-setup beat lasts before the player may shoot, in ms.
  *
- * Pool's answer to Blobbi Dance's "3 — 2 — 1". A numeric countdown would be
+ * Pool's answer to Blobbi Dance's "3: 2, 1". A numeric countdown would be
  * absurd on a table nobody is racing, but the arcade lifecycle still needs a
  * moment between "Start" and "playing", and the player still needs to be told
  * whose break it is before a cue appears under their finger.
@@ -243,8 +243,8 @@ export const BALL_BOUNDS: PoolBounds = Object.freeze({
  * How far back the cue must be pulled before a shot registers at all, in table
  * units.
  *
- * The accidental-tap guard. A pointer-down and pointer-up a few pixels apart —
- * which is what a tap on a phone actually produces — must not fire the cue, and
+ * The accidental-tap guard. A pointer-down and pointer-up a few pixels apart,
+ * which is what a tap on a phone actually produces, must not fire the cue, and
  * a mouse that twitches while the dialog is opening must not either. Inside the
  * dead zone the drag still re-aims, which turns the guard into a feature: a tap
  * behind the cue ball is how you aim without shooting.

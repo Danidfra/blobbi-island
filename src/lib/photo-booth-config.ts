@@ -24,7 +24,7 @@ import type { Position } from '@/lib/types';
  * the left). Centring that in the bay puts its box at `left-[56.8%]`.
  *
  * `bottom-[12%]` matches the Coffee Shop exactly, and needs no correction here
- * because the booth sprite has NO transparent film below its artwork — its
+ * because the booth sprite has NO transparent film below its artwork; its
  * painted base is its box base. (The Care Store's does, which is why that one
  * carries an offset anchor; see `care-store-config.ts`.)
  */
@@ -40,7 +40,7 @@ export const MALL_PHOTO_BOOTH = {
    * Where the Blobbi stands to use the booth.
    *
    * Stated rather than derived, and new with the move. On the middle level the
-   * derived base point landed ~24 world px from the walkway — inside the 40 px
+   * derived base point landed ~24 world px from the walkway, inside the 40 px
    * arrival threshold, so the booth worked by luck of proximity. On the ground
    * floor the same derivation lands ~36 px away: still under the threshold, but
    * with almost nothing to spare, and it would have been one layout tweak away

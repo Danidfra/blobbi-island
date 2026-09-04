@@ -1,5 +1,5 @@
 /**
- * Pool — the match: phases, turns, and the one place a shot is judged.
+ * Pool: the match: phases, turns, and the one place a shot is judged.
  *
  * ```
  *   ready ──1.5s──► aiming ──shot──► rolling ──settle──► banner ──┬─► aiming
@@ -15,15 +15,15 @@
  *  - **{@link applyPlayerShot}, {@link placePlayerCueBall},
  *    {@link dragPlayerCueBall}** are the player's discrete actions. Each refuses
  *    outright unless the match is in the phase that allows it, which is where
- *    "no input while balls are moving" is actually guaranteed — the UI also
+ *    "no input while balls are moving" is actually guaranteed, the UI also
  *    disables the controls, but a disabled control is a courtesy and this is the
  *    rule.
  *
  * ## The world is a parameter, not a field
  *
  * Every one of those takes a {@link PoolPhysicsWorld}. The match does not own
- * the simulation and does not contain it: `PoolMatchState` is a plain JSON value
- * — phases, timers, group ownership, statistics and a SNAPSHOT of the balls —
+ * the simulation and does not contain it: `PoolMatchState` is a plain JSON value,
+ * phases, timers, group ownership, statistics and a SNAPSHOT of the balls,
  * and the Planck bodies live in the world the caller passes in.
  *
  * That split is what survived the engine change. `rules.ts` never learned that
@@ -34,7 +34,7 @@
  *
  * The state stays serialisable, so a whole match is still `toEqual`-comparable
  * in a test and could still be persisted. It is no longer reproducible from
- * `(seed, actions)` ALONE — it needs the same sequence of world steps too — but
+ * `(seed, actions)` ALONE, it needs the same sequence of world steps too, but
  * Planck is deterministic given identical inputs, so two runs of the same
  * actions against two fresh worlds still agree.
  *
@@ -42,7 +42,7 @@
  *
  * 1. **A shot is resolved exactly once.** Resolution happens on the single
  *    transition out of `rolling`, calls {@link resolveShot} once, and lands in
- *    `banner` — a phase that cannot resolve anything. There is no incremental
+ *    `banner`: a phase that cannot resolve anything. There is no incremental
  *    scoring and no flag to forget to clear.
  * 2. **A turn never changes while a ball is moving.** `rolling` is the only
  *    phase that steps the world, and it is the only phase that cannot change
@@ -235,7 +235,7 @@ export interface PoolMatchState {
    * Who played the last resolved shot.
    *
    * Not derivable from `turn`, which has already moved on by the time anybody
-   * asks — and the difference decides whether an early 8-ball was the player's
+   * asks: and the difference decides whether an early 8-ball was the player's
    * own mistake or the opponent's gift.
    */
   readonly lastShooter: PoolPlayer | null;
@@ -271,7 +271,7 @@ export interface CreatePoolMatchOptions {
  * A fresh match: a legal rack, the cue ball on the head spot, and the player to
  * break.
  *
- * The player always breaks — see the rule list in `rules.ts`. There is no lag
+ * The player always breaks; see the rule list in `rules.ts`. There is no lag
  * and no coin toss, because one machine plus one match plus the most interesting
  * shot in the game equals "give it to the person standing there".
  *
@@ -316,7 +316,7 @@ export function createPoolMatch({
  * Deliberately permissive: it accepts an illegal position and simply clamps the
  * ball onto the cloth. The renderer tints an illegal placement red and
  * {@link placePlayerCueBall} snaps it, so the drag can follow a finger exactly
- * rather than fighting it — a ball that refuses to go where you are pointing
+ * rather than fighting it, a ball that refuses to go where you are pointing
  * feels broken long before the player works out why.
  */
 export function dragPlayerCueBall(
@@ -336,8 +336,8 @@ export function dragPlayerCueBall(
 /**
  * Commit the cue ball's position and go back to aiming.
  *
- * `at` is a REQUEST. An illegal one — inside another ball, over a pocket, off
- * the cloth — is snapped to the nearest legal spot rather than refused, so the
+ * `at` is a REQUEST. An illegal one, inside another ball, over a pocket, off
+ * the cloth: is snapped to the nearest legal spot rather than refused, so the
  * confirm button always works. That is the "safe default placement if the player
  * does not understand the interaction" the brief asks for, and it is also what
  * makes the whole interaction skippable: press the button without dragging and
@@ -508,7 +508,7 @@ function stepBanner(
  * The opponent's one decision, made here and nowhere else.
  *
  * Planning happens on ENTRY to `thinking` rather than on exit, for two reasons.
- * It is what makes "one committed decision per turn" true — there is no second
+ * It is what makes "one committed decision per turn" true; there is no second
  * moment at which the plan could be recomputed against a table that has since
  * changed. And when the plan includes a cue-ball placement, applying it now
  * means the player watches the opponent put the ball down and then take aim,
@@ -566,8 +566,8 @@ function stepThinking(
 
   const plan = state.plan;
   if (!plan) {
-    // Nothing to play. Cannot happen — `beginOpponentTurn` always produces a
-    // plan — but a match must never be able to stall, so hand the table back.
+    // Nothing to play. Cannot happen, `beginOpponentTurn` always produces a
+    // plan: but a match must never be able to stall, so hand the table back.
     return {
       state: { ...state, phase: 'aiming', timerMs: 0, turn: 'player' },
       events: [{ type: 'turn', to: 'player', ballInHand: false }],
@@ -601,7 +601,7 @@ function absorb(
   for (const contact of frame.contacts) {
     next = { ...next, ballContacts: next.ballContacts + 1 };
     // The world always reports the lower ball number as `a`, and the cue ball is
-    // 0 — so `a === CUE_BALL` is exactly "the cue ball was involved".
+    // 0: so `a === CUE_BALL` is exactly "the cue ball was involved".
     if (contact.a === CUE_BALL && firstContact === null) firstContact = contact.b;
     events.push({
       type: 'collide',
@@ -644,7 +644,7 @@ function absorb(
 /**
  * Advance the shot by one step, then ask whether it is over.
  *
- * All of the physics is behind `world.step`. What is left here is bookkeeping —
+ * All of the physics is behind `world.step`. What is left here is bookkeeping,
  * which is the whole point of the adapter boundary, and the reason this function
  * lost sixty lines when Planck arrived.
  */
@@ -669,8 +669,8 @@ function stepRolling(
   const progress: ShotProgress = { ...absorbed.shot, rollingMs };
   const balls = world.snapshot();
 
-  // The world's settling rule — every ball stopped for several consecutive
-  // steps — plus a backstop for a shot that somehow will not end.
+  // The world's settling rule; every ball stopped for several consecutive
+  // steps: plus a backstop for a shot that somehow will not end.
   const settled = world.isSettled() || rollingMs >= MAX_SHOT_MS;
   if (!settled) {
     return {
@@ -694,7 +694,7 @@ function stepRolling(
  * Everything a turn changes happens here, once: assignment, whose shot it is,
  * ball-in-hand, the 8-ball re-spot, the statistics, the banner and the winner.
  * The state that comes out is always `banner`, which is a phase that resolves
- * nothing — so there is no path by which a second resolution could occur.
+ * nothing: so there is no path by which a second resolution could occur.
  */
 function finishShot(
   state: PoolMatchState,
@@ -719,7 +719,7 @@ function finishShot(
   });
 
   // Both of the corrections below put a ball back on the table, so both go
-  // through the world — a snapshot edit would leave the body where it was and
+  // through the world, a snapshot edit would leave the body where it was and
   // the next step would undo it.
   let touched = false;
 

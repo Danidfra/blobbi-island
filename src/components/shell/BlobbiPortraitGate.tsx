@@ -2,7 +2,7 @@ import { RotateCw } from "lucide-react";
 import { MascotBlobbi } from "@/components/blobbi/MascotBlobbi";
 
 /**
- * BlobbiPortraitGate — cozy, welcoming screen shown on mobile portrait.
+ * BlobbiPortraitGate: cozy, welcoming screen shown on mobile portrait.
  *
  * Frames the landscape-first requirement as a friendly invitation rather than a
  * technical warning: the mascot greets the player, then a gentle rotate hint

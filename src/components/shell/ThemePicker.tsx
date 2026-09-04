@@ -16,7 +16,7 @@ import { contrastFailures } from "@/lib/island-theme-adapter";
 import { ThemeCreateDialog } from "@/components/shell/ThemeCreateDialog";
 
 /**
- * ThemePicker — Settings › Appearance › Themes.
+ * ThemePicker: Settings › Appearance › Themes.
  *
  * ## Where this sits
  *
@@ -30,8 +30,8 @@ import { ThemeCreateDialog } from "@/components/shell/ThemeCreateDialog";
  *
  * ```
  *   Built in       ships with the game, always available, never unreachable
- *   Yours          kind:36767 events you published — editable, removable
- *   Community      kind:36767 events anyone published — usable, not yours
+ *   Yours          kind:36767 events you published, editable, removable
+ *   Community      kind:36767 events anyone published, usable, not yours
  * ```
  *
  * They are sections of one list rather than tabs because the question the
@@ -45,7 +45,7 @@ import { ThemeCreateDialog } from "@/components/shell/ThemeCreateDialog";
  * `island-*` tokens every surface in the game uses. Nothing is hand-coloured,
  * so a preview cannot drift from what choosing the theme actually does; if a
  * card looks wrong, the theme IS wrong. This is the same scoping trick as
- * Ditto's `ScopedTheme`, applied to a card instead of a container — and,
+ * Ditto's `ScopedTheme`, applied to a card instead of a container, and,
  * crucially, it is scoped: looking at a community theme cannot repaint the app.
  * Only pressing it does.
  */
@@ -89,14 +89,14 @@ function ThemeCard({
     A player could previously choose a theme without any hint that their whole
     UI was about to change typeface. `previewFontStack` declares the face and
     returns a `font-family` value; nothing global moves, so looking at a theme
-    still cannot restyle the island — only choosing it can.
+    still cannot restyle the island; only choosing it can.
   */
   const bodyFont = previewFontStack(theme.config?.font);
   const displayFont = previewFontStack(theme.config?.titleFont ?? theme.config?.font);
 
   // A community theme is a stranger's three colours run through the adapter.
   // The adapter solves for contrast, but a genuinely impossible palette (a
-  // mid-grey everything) can still come out short — so the card says so rather
+  // mid-grey everything) can still come out short, so the card says so rather
   // than letting the player find out after applying it.
   const failures = useMemo(() => contrastFailures(theme.palette), [theme.palette]);
 
@@ -208,12 +208,12 @@ export function ThemePicker({
 
   /*
     Applying a Nostr theme needs nothing extra any more: a parsed theme carries
-    its own interoperable `config` — the author's colours, font and background —
+    its own interoperable `config`: the author's colours, font and background,
     so `selectTheme` republishes exactly what arrived rather than a
     re-derivation of Island's derivation of it.
   */
 
-  // The player's own themes are excluded from the community list — they are
+  // The player's own themes are excluded from the community list; they are
   // already in "Yours" above it, and the same card twice reads as a duplicate.
   const communityThemes = useMemo(() => {
     const ownAddresses = new Set((mine.data?.themes ?? []).map((t) => t.id));
@@ -265,7 +265,7 @@ export function ThemePicker({
               <div className="space-y-1">
                 <p className="font-semibold">Your theme could not be loaded</p>
                 <p className="text-island-ink-soft">
-                  The island is showing {active.name} for now. Your choice is remembered — it will
+                  The island is showing {active.name} for now. Your choice is remembered; it will
                   come back when the relay does.
                 </p>
               </div>
@@ -348,7 +348,7 @@ export function ThemePicker({
           {/*
             Applied on click, with no Save and no confirmation. A theme is a
             display preference that is fully described by looking at the result,
-            and it is reversible in one more click — a commit step would only add
+            and it is reversible in one more click, a commit step would only add
             a decision to a choice that is already visible.
           */}
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-island-ink-soft">

@@ -7,19 +7,19 @@ import { useStageOverlayHost } from '@/contexts/StageOverlayContext';
 import type { ArcadeStatus } from '@/arcade/arcade-machine-state';
 
 /**
- * ArcadeGameShell — the one dialog surface the arcade puts on screen.
+ * ArcadeGameShell: the one dialog surface the arcade puts on screen.
  *
  * Three things are shown inside it, and it knows the difference only as a
  * `surface` string: the shared game **catalogue**, a running **game**, and a
  * **notice** panel for something that is not a game at all (the prize counter).
- * One dialog for all three is the point — nested modals that fight each other
+ * One dialog for all three is the point, nested modals that fight each other
  * over focus and Escape were the alternative.
  *
  * Replaces `GameModal`, which was a plain `absolute inset-0` div rendered INSIDE
  * `VirtualWorld`. That put it inside the world's uniform scale transform and
  * clipped it to the fixed 1046 × 697 box, so on a narrow viewport its text was
  * scaled down with the room and a game could never use the full screen. So it
- * became a Radix `Dialog` — and then overcorrected, portaling to `document.body`
+ * became a Radix `Dialog`: and then overcorrected, portaling to `document.body`
  * and covering the entire browser page.
  *
  * ## Where it renders now: inside the game window
@@ -30,11 +30,11 @@ import type { ArcadeStatus } from '@/arcade/arcade-machine-state';
  * shell portals into the stage overlay host that `BlobbiFrame` provides
  * (`src/contexts/StageOverlayContext.tsx`) and lays itself out against THAT box:
  *
- *  - **desktop** — the overlay fills the framed canvas. The wood frame, the shell
+ *  - **desktop**: the overlay fills the framed canvas. The wood frame, the shell
  *    header and footer, and the page behind them stay visible and untouched;
- *  - **immersive / fullscreen** — the same host IS the screen, so one rule covers
+ *  - **immersive / fullscreen**: the same host IS the screen, so one rule covers
  *    every presentation and there is no second code path to keep in step;
- *  - **no host** (a unit test rendering a room on its own) — `undefined` falls
+ *  - **no host** (a unit test rendering a room on its own): `undefined` falls
  *    back to `document.body`, which is Radix's default, so nothing has to guard.
  *
  * The host sits OUTSIDE the world's subtree, so this does not reintroduce the
@@ -69,7 +69,7 @@ import type { ArcadeStatus } from '@/arcade/arcade-machine-state';
 export interface ArcadeGameShellProps {
   open: boolean;
   /**
-   * Dismissal. The controller decides what that MEANS — mid-run it must abort
+   * Dismissal. The controller decides what that MEANS, mid-run it must abort
    * the run, which is the lifecycle reducer's job, not this component's.
    */
   onClose: () => void;
@@ -240,7 +240,7 @@ export function ArcadeGameShell({
               // Radix warns without a description; an empty one keeps the DOM
               // honest rather than inventing copy.
               <DialogDescription className="sr-only">
-                {title} — arcade machine
+                {title}: arcade machine
               </DialogDescription>
             )}
           </div>

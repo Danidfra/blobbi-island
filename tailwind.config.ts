@@ -76,7 +76,7 @@ export default {
 				// ── The Island palette ────────────────────────────────────────
 				// Every entry reads the ACTIVE THEME rather than a literal, which
 				// is what makes `text-island-ink`, `bg-island-cream` and
-				// `border-island-wood/30` — some 650 call sites across the game —
+				// `border-island-wood/30`: some 650 call sites across the game,
 				// switch with the theme without a single component edit.
 				//
 				// `<alpha-value>` is the placeholder Tailwind substitutes when a
@@ -85,7 +85,7 @@ export default {
 				// `-island-*/NN` class in the codebase.
 				//
 				// The variables hold bare HSL channels ("27 40% 54%"), never
-				// colours — see the token block at the top of src/index.css.
+				// colours: see the token block at the top of src/index.css.
 				island: {
 					page: 'hsl(var(--island-page) / <alpha-value>)',
 					sky: 'hsl(var(--island-sky) / <alpha-value>)',
@@ -138,7 +138,7 @@ export default {
 				sm: 'calc(var(--radius) - 4px)',
 				// Game surfaces are rounder than form controls. `rounded-panel`
 				// is a cozy card, `rounded-frame` a framed modal or the wood
-				// frame itself — the two literals that were being written as
+				// frame itself: the two literals that were being written as
 				// `rounded-[1.25rem]` / `rounded-[1.5rem]` / `rounded-3xl`.
 				panel: 'var(--radius-panel)',
 				frame: 'var(--radius-frame)'

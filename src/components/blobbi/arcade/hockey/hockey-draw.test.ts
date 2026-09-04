@@ -7,7 +7,7 @@
  * somewhere other than under the player's finger and no amount of tuning fixes
  * it.
  *
- * There are now TWO layouts, which doubles the ways that can happen — a rotation
+ * There are now TWO layouts, which doubles the ways that can happen, a rotation
  * applied in one direction and not the other, a mirror instead of a rotation, an
  * inverse that ignores which layout is in force. Every test below runs against
  * both.
@@ -39,7 +39,7 @@ const LAYOUTS: HockeyOrientation[] = ['landscape', 'portrait'];
  * A minimal stand-in for the 2D context, recording only the transform.
  *
  * Enough to check the matrix without pulling a canvas implementation into the
- * test environment — and the matrix is the whole claim.
+ * test environment: and the matrix is the whole claim.
  */
 function fakeContext() {
   let matrix = [1, 0, 0, 1, 0, 0];
@@ -208,7 +208,7 @@ describe('pointer input round-trips', () => {
 
   it.each(LAYOUTS)('%s is a rotation, never a mirror', (orientation) => {
     // A mirrored matrix would draw every rebound as its opposite while the
-    // simulation computed the correct one — the hardest possible bug to see.
+    // simulation computed the correct one, the hardest possible bug to see.
     const { ctx, matrix } = fakeContext();
     applyTableTransform(ctx, fitTable(400, 250, orientation), 1);
     const [a, b, c, d] = matrix;

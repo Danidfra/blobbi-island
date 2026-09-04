@@ -1,11 +1,11 @@
 /**
- * The arcade's game registry — every game the arcade knows about, as data.
+ * The arcade's game registry; every game the arcade knows about, as data.
  *
  * ## Registry, not "the catalogue"
  *
  * This module is the GLOBAL registry: one record per game, whatever machine it
- * belongs to. The *shared cabinet catalogue* — the list a player sees when they
- * walk up to one of the six generic cabinets — is a SUBSET of it, produced by
+ * belongs to. The *shared cabinet catalogue*, the list a player sees when they
+ * walk up to one of the six generic cabinets, is a SUBSET of it, produced by
  * {@link sharedCabinetCatalogue}. Conflating the two was the defect this file
  * was corrected for: it put Blobbi Dance, which is a dedicated machine's game,
  * into a list offered by every cabinet in the building.
@@ -14,7 +14,7 @@
  *
  * The arcade is not nine interchangeable boxes. It has **generic cabinets**
  * (pink, black, classic, green, purple, red) whose screens can show anything,
- * and **dedicated machines** — a dance pad, a pool table, an air hockey table —
+ * and **dedicated machines**: a dance pad, a pool table, an air hockey table,
  * which are physical objects that are one specific game and can never be
  * another. `host` records which kind a game belongs to, and
  * {@link canLaunchArcadeGame} is the one function that answers "may this game
@@ -36,7 +36,7 @@
  *   this phase downloads, parses or executes one.
  *
  * The category is therefore a TRUST boundary, not a section header, and
- * {@link isNativeLaunchable} refuses a guest entry on category alone — before it
+ * {@link isNativeLaunchable} refuses a guest entry on category alone, before it
  * ever looks at `launchMode`. A mislabelled guest entry fails closed.
  *
  * ## What this module deliberately is not
@@ -66,9 +66,9 @@ export type ArcadeGameCategory = 'island' | 'guest';
 /**
  * How ready a game is for a player.
  *
- * - `playable` — it can be launched right now.
- * - `coming-soon` — designed or intended, not built. Shown, never launchable.
- * - `disabled` — withdrawn (broken, or pulled). Hidden from the catalogue
+ * - `playable`: it can be launched right now.
+ * - `coming-soon`: designed or intended, not built. Shown, never launchable.
+ * - `disabled`: withdrawn (broken, or pulled). Hidden from the catalogue
  *   entirely rather than shown as a mystery, and never launchable.
  */
 export type ArcadeGameAvailability = 'playable' | 'coming-soon' | 'disabled';
@@ -76,9 +76,9 @@ export type ArcadeGameAvailability = 'playable' | 'coming-soon' | 'disabled';
 /**
  * How a game is executed.
  *
- * - `native` — a React component inside this app, resolved by the launch
+ * - `native`: a React component inside this app, resolved by the launch
  *   resolver in `native-games.tsx`.
- * - `guest-runtime` — a package inside the future restricted runtime. There is
+ * - `guest-runtime`: a package inside the future restricted runtime. There is
  *   no such runtime in this phase, so nothing with this launch mode can start.
  */
 export type ArcadeGameLaunchMode = 'native' | 'guest-runtime';
@@ -86,11 +86,11 @@ export type ArcadeGameLaunchMode = 'native' | 'guest-runtime';
 /**
  * Where a game can be reached from.
  *
- * - `shared-cabinet` — offered by every generic arcade cabinet, through the
+ * - `shared-cabinet`: offered by every generic arcade cabinet, through the
  *   shared catalogue. Nothing ships with this yet, and that is honest: the
  *   catalogue says games are being prepared rather than borrowing one that
  *   belongs to a machine down the hall.
- * - `dedicated-machine` — belongs to specific physical machines, named in
+ * - `dedicated-machine`: belongs to specific physical machines, named in
  *   `machineIds`. A dedicated game is NEVER listed in the shared catalogue and
  *   can never be launched from a generic cabinet.
  */
@@ -122,7 +122,7 @@ export interface ArcadeCatalogueControl {
 export interface ArcadeCatalogueEntry {
   /**
    * Stable game identity. The same string the lifecycle, the result, the reward
-   * policy and the claim ledger all use — never an alias, never a Nostr address,
+   * policy and the claim ledger all use; never an alias, never a Nostr address,
    * never an item id.
    */
   readonly id: string;
@@ -156,7 +156,7 @@ export interface ArcadeCatalogueEntry {
   readonly host: ArcadeGameHost;
   /**
    * The machines this game belongs to. **Required and non-empty when `host` is
-   * `dedicated-machine`**, meaningless otherwise — a registry test enforces
+   * `dedicated-machine`**, meaningless otherwise, a registry test enforces
    * both directions.
    *
    * This was an unused optional field in the first Phase 4 pass, which is
@@ -170,8 +170,8 @@ export interface ArcadeCatalogueEntry {
 /**
  * Blobbi Dance's stable id, and the single definition of it.
  *
- * It was declared twice before this phase — once in the machine registry and
- * once in the reward policy — with a comment in each saying it mirrored the
+ * It was declared twice before this phase, once in the machine registry and
+ * once in the reward policy, with a comment in each saying it mirrored the
  * other. One of the two is now this constant and the other imports it.
  */
 export const BLOBBI_DANCE_GAME_ID = 'blobbi-dance';
@@ -192,7 +192,7 @@ export const BLOBBI_POOL_GAME_ID = 'blobbi-pool';
  * Declared here rather than imported from `@/lib/arcade-machines-config`, in
  * that direction only: the machine registry imports THIS module (it needs the
  * game ids for its activation records), so importing back would be a cycle. The
- * registry test asserts both files agree, which is the check that matters — a
+ * registry test asserts both files agree, which is the check that matters, a
  * string that only one side knows is a bug either way round.
  */
 export const BLOBBI_DANCE_MACHINE_ID = 'arcade-dance-machine';
@@ -212,7 +212,7 @@ export const ARCADE_AIR_HOCKEY_MACHINE_ID = 'arcade-air-hockey';
  * so rather than borrowing the dance machine's.
  *
  * All three are `playable` and all three now grant Arcade Tickets. Those are
- * separate facts and this registry is where the difference is kept honest — see
+ * separate facts and this registry is where the difference is kept honest; see
  * `grantsTickets`, which may only be true where an ACTIVE reward policy exists.
  */
 export const ARCADE_CATALOGUE: readonly ArcadeCatalogueEntry[] = Object.freeze([
@@ -327,11 +327,11 @@ export function arcadeCatalogueByCategory(
  * Three independent conditions, all of which must hold, checked in the order
  * that fails safest:
  *
- *  1. it is an **island** game — a guest game may never reach a native
+ *  1. it is an **island** game, a guest game may never reach a native
  *     component, whatever else its record claims;
- *  2. its launch mode is **native** — `guest-runtime` has no runtime in this
+ *  2. its launch mode is **native**: `guest-runtime` has no runtime in this
  *     phase and must not silently fall back to one that exists;
- *  3. it is **playable** — `coming-soon` and `disabled` cannot start.
+ *  3. it is **playable**: `coming-soon` and `disabled` cannot start.
  *
  * The resolver checks this before looking a component up, and the room checks it
  * before changing view, so an entry that lies about itself fails at the boundary
@@ -347,7 +347,7 @@ export function isNativeLaunchable(entry: ArcadeCatalogueEntry | null | undefine
 /**
  * The games a GENERIC arcade cabinet offers.
  *
- * This — not {@link ARCADE_CATALOGUE} — is what the shared catalogue renders.
+ * This: not {@link ARCADE_CATALOGUE}, is what the shared catalogue renders.
  * Today it is empty, because every game the arcade has belongs to a dedicated
  * machine. An empty list is the correct product state and the UI is built for
  * it; padding it out with the dance machine's game is the mistake this function
@@ -387,11 +387,11 @@ export interface ArcadeLaunchRequest {
  * an invariant rather than a convention. It is checked by the launch resolver
  * and again by the room, and it enforces three separate rules:
  *
- *  1. **{@link isNativeLaunchable}** — a guest game, a coming-soon game or a
+ *  1. **{@link isNativeLaunchable}**: a guest game, a coming-soon game or a
  *     withdrawn game never starts, whatever asked for it.
  *  2. **A dedicated game only starts on its own machine.** Blobbi Dance names
  *     `arcade-dance-machine` and nothing else, so a generic cabinet, the pool
- *     table and the air hockey table are all refused by the same clause — and a
+ *     table and the air hockey table are all refused by the same clause, and a
  *     *result* can therefore only ever carry the dance machine's id.
  *  3. **A dedicated game is never launchable from the shared catalogue**, and a
  *     shared-cabinet game is never launchable as if it were a machine's own.

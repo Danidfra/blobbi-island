@@ -3,7 +3,7 @@
  *
  * The bug this file pins down: the structured editor modelled `visual` as a
  * wearable and nothing else, so an effect item published a `visual` containing
- * only `forms` — the effect's `kind`, `effect` and `effectSlot` were typed
+ * only `forms`: the effect's `kind`, `effect` and `effectSlot` were typed
  * nowhere and therefore never reached the wire. These tests assert the three
  * properties that fix requires and one that it must not break:
  *
@@ -12,7 +12,7 @@
  *   3. structured ⇄ JSON round-trips without losing an effect field;
  *   4. wearables with `visual.slot` behave exactly as before.
  *
- * Everything here is the real conversion and validation code — no mocks. The
+ * Everything here is the real conversion and validation code; no mocks. The
  * package builder decides tag order and required fields, as it does in
  * production.
  */
@@ -32,7 +32,7 @@ import {
 } from './item-form-model';
 // A TEST may import the renderer freely; the domain layer under test may not
 // (`boundaries.test.ts`). That asymmetry is what lets the four slot names be
-// written out in `item-form-model.ts` without risking drift — see below.
+// written out in `item-form-model.ts` without risking drift; see below.
 import { EFFECT_SLOT_ORDER } from '@blobbi/react';
 import {
   EFFECT_ID_SUGGESTIONS,
@@ -221,7 +221,7 @@ describe('choosing the effect category seeds the effect shape', () => {
     expect(patched?.visual.slot).toBe('');
   });
 
-  it('seeds only an unclaimed visual — it never rewrites typed content', () => {
+  it('seeds only an unclaimed visual; it never rewrites typed content', () => {
     const hat = partyHatForm().content;
     expect(contentPatchForCategory(hat, EFFECT_CATEGORY)).toBeNull();
 

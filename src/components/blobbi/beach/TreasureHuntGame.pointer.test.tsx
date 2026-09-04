@@ -1,5 +1,5 @@
 /**
- * Playfield input — pointer capture, the clamped detector rule, the strict
+ * Playfield input: pointer capture, the clamped detector rule, the strict
  * shovel rule, and tool switching, exercised through real pointer events.
  *
  * The container measures a stubbed 800 × 500 rect (jsdom cannot lay out), so
@@ -315,7 +315,7 @@ describe('detector docking', () => {
     expect(Number(detector.style.opacity)).toBeLessThan(Number(activeOpacity));
 
     fireEvent.click(screen.getByRole('button', { name: /metal detector/i }));
-    // Presentation returned to the LOGICAL coil position — never overwritten.
+    // Presentation returned to the LOGICAL coil position; never overwritten.
     expect(detector.dataset.docked).toBeUndefined();
     expect(detector.style.left).toBe(activeLeft);
   });
@@ -356,7 +356,7 @@ describe('desktop shovel cursor', () => {
     expect(surface.style.cursor).toBe('none');
   });
 
-  it('never renders outside the sand — water strip, letterbox, or after leaving', () => {
+  it('never renders outside the sand, water strip, letterbox, or after leaving', () => {
     const { container } = render(<Harness round={startedRound()} initialTool="shovel" />);
     const surface = field(container);
 

@@ -1,22 +1,22 @@
 import { cn } from '@/lib/utils';
 
 interface TheaterCurtainProps {
-  /** Driven by the theater state machine — never by hover, never by touch. */
+  /** Driven by the theater state machine; never by hover, never by touch. */
   open: boolean;
 }
 
 /**
  * The theater's two curtain layers.
  *
- * **Yellow curtain — movable.** It rises exactly when the state machine says a
+ * **Yellow curtain: movable.** It rises exactly when the state machine says a
  * video is ready and falls when the video is replaced or the seat is left. It
  * used to slide on `mouseenter`, which meant three wrong things at once: the
  * screen was revealed to anyone brushing past with a mouse, it was permanently
  * shut on touch devices (the parent passed an explicit `isHovered`, which
  * bypasses `InteractiveElement`'s own touch fallback), and it re-closed the
- * moment the pointer left — mid-film. Curtains follow the film, not the cursor.
+ * moment the pointer left, mid-film. Curtains follow the film, not the cursor.
  *
- * **Red curtain — static.** Painted scenery framing the proscenium. Unchanged.
+ * **Red curtain: static.** Painted scenery framing the proscenium. Unchanged.
  *
  * The whole block is `pointer-events-none`: it is decoration in front of the
  * screen, and swallowing clicks would stop the Blobbi from walking underneath it.

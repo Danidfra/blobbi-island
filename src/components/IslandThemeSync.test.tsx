@@ -140,7 +140,7 @@ describe('adopting a selection made elsewhere', () => {
   });
 
   it('adopts a community theme named by the `a` tag alone', async () => {
-    // A selection published by Ditto has no `island-theme` tag — only the
+    // A selection published by Ditto has no `island-theme` tag; only the
     // address of the definition it came from. That is enough.
     seedTheme('cozy-day');
     stored = [
@@ -196,7 +196,7 @@ describe('refusing to adopt', () => {
   });
 
   it('changes nothing when the relay is unreachable', async () => {
-    // The read reports `unknown`, not empty — so there is no false "you have no
+    // The read reports `unknown`, not empty, so there is no false "you have no
     // active theme" to act on.
     relayDown = true;
     seedTheme('lantern-night');
@@ -214,8 +214,8 @@ describe('refusing to adopt', () => {
       Corrected in the interop phase.
 
       This used to assert "do nothing", which was wrong twice over. An active
-      theme event is SELF-CONTAINED — it carries the colours regardless of
-      whether it also names a definition — so an id this build cannot resolve
+      theme event is SELF-CONTAINED; it carries the colours regardless of
+      whether it also names a definition, so an id this build cannot resolve
       is a reason to ignore the NAME, not the event. Leaving the player on a
       theme their account is not using, while holding a perfectly applicable
       palette, was the shape of the Ditto → Island bug.

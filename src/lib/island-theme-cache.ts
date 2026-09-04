@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the last-known palette of the selected theme.
+ * Blobbi Island: the last-known palette of the selected theme.
  *
  * ## Why a cache exists at all
  *
@@ -12,7 +12,7 @@
  *   - the default island *permanently* whenever the relay is unreachable.
  *
  * The second is the serious one. A relay outage must not repaint the player's
- * island, and it must ABSOLUTELY not be recorded as "they changed their mind" —
+ * island, and it must ABSOLUTELY not be recorded as "they changed their mind",
  * so this cache holds the derived palette, and the selection itself stays in
  * `AppConfig.theme` regardless. Losing the cache costs a flash of the default;
  * losing the selection would cost the choice.
@@ -20,7 +20,7 @@
  * ## Why the DERIVED palette and not the three core colours
  *
  * Because the pre-paint boot script (`public/island-theme.js`) is what uses it,
- * and that script runs before the module graph loads — it cannot call the
+ * and that script runs before the module graph loads; it cannot call the
  * adapter. Sixteen ready-to-apply triplets is the one form it can consume with
  * a `for` loop. The adapter is deterministic, so the cached palette and a fresh
  * derivation always agree.
@@ -53,7 +53,7 @@ import { parseDittoThemeSettings } from '@/lib/ditto-settings';
  * Separate from `nostr:app-config` on purpose: the config is the player's
  * PREFERENCES and a corrupt entry there costs them their relay too (the whole
  * blob is discarded when deserialization throws). This is a disposable
- * derivative, so it gets its own key and its own failure mode — a bad value is
+ * derivative, so it gets its own key and its own failure mode, a bad value is
  * simply ignored.
  */
 export const ISLAND_THEME_CACHE_KEY = 'nostr:island-theme-cache';
@@ -65,7 +65,7 @@ export interface CachedIslandTheme {
   description: string;
   palette: IslandPalette;
   /**
-   * The interoperable source — Ditto's `ThemeConfig`.
+   * The interoperable source: Ditto's `ThemeConfig`.
    *
    * Cached alongside the derived palette because it is what gets REPUBLISHED.
    * Without it, an offline boot followed by a re-selection would publish a
@@ -79,8 +79,8 @@ export interface CachedIslandTheme {
  * Validate an unknown value as a cached theme.
  *
  * Exported because the boot script's test asserts the two agree about what a
- * valid entry is. Everything is checked — every palette key present, every
- * value a parseable HSL triplet — because this value is written straight into
+ * valid entry is. Everything is checked; every palette key present, every
+ * value a parseable HSL triplet, because this value is written straight into
  * custom properties by a script that has no error handling of its own.
  */
 export function parseCachedIslandTheme(value: unknown): CachedIslandTheme | null {
@@ -141,7 +141,7 @@ export function readIslandThemeCache(): CachedIslandTheme | null {
  * Fired after every cache write.
  *
  * The reserved id {@link DITTO_ACTIVE_THEME_ID} names "whatever theme this
- * account is currently using", so its CONTENT changes while its id does not —
+ * account is currently using", so its CONTENT changes while its id does not,
  * which means a consumer memoising on the id alone would never repaint. This is
  * how they find out. A plain DOM event rather than a store because the cache is
  * a module-level side effect on `localStorage`, not React state.
@@ -155,7 +155,7 @@ export function subscribeToIslandThemeCache(listener: () => void): () => void {
   return () => window.removeEventListener(ISLAND_THEME_CACHE_EVENT, listener);
 }
 
-/** A value that changes whenever the cache does — the snapshot for a store. */
+/** A value that changes whenever the cache does, the snapshot for a store. */
 export function islandThemeCacheVersion(): string {
   if (typeof localStorage === 'undefined') return '';
   try {
@@ -170,7 +170,7 @@ function announce(): void {
   window.dispatchEvent(new Event(ISLAND_THEME_CACHE_EVENT));
 }
 
-/** Write the cached theme. Silent on failure — a full quota is not an error here. */
+/** Write the cached theme. Silent on failure, a full quota is not an error here. */
 export function writeIslandThemeCache(theme: IslandTheme): void {
   if (typeof localStorage === 'undefined') return;
   try {

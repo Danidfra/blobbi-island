@@ -61,7 +61,7 @@ describe('the browser escape hatches have one owner', () => {
 
     expect(
       offenders,
-      `${label} belongs to src/external-egress/ alone — a feature should request egress by class, so the capability check, the confirmation and the opener isolation all happen once. Found in: ${offenders.join(', ')}`,
+      `${label} belongs to src/external-egress/ alone, a feature should request egress by class, so the capability check, the confirmation and the opener isolation all happen once. Found in: ${offenders.join(', ')}`,
     ).toEqual([]);
   });
 
@@ -104,7 +104,7 @@ describe('the authoring route is guarded where it mounts', () => {
 describe('NoteContent is gone', () => {
   it('no longer exists anywhere in src/', () => {
     // It linkified arbitrary URLs with `target="_blank"` and rendered stranger
-    // kind:0 metadata, with no production importer — a dormant helper one
+    // kind:0 metadata, with no production importer, a dormant helper one
     // careless import away from putting a stranger-controlled exit inside a
     // chat bubble (audit M-3).
     const survivors = sourceFiles(SRC).filter((file) => /NoteContent/.test(file)).map(relative);
@@ -112,7 +112,7 @@ describe('NoteContent is gone', () => {
   });
 
   it('is referenced by nothing', () => {
-    // This file names it, which is why it is excluded — the check is about
+    // This file names it, which is why it is excluded, the check is about
     // production code acquiring an importer, not about the test that guards it.
     const referrers = sourceFiles(SRC)
       .filter((file) => file !== join(EGRESS, 'boundaries.test.ts'))

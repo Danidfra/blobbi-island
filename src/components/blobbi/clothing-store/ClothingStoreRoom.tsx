@@ -23,7 +23,7 @@ import { FittingRoomModal } from './FittingRoomModal';
  *
  * ## The room is a picture; this component is what you can do to it
  *
- * `clothing-store.webp` paints the whole boutique — booths, mirror, shelving,
+ * `clothing-store.webp` paints the whole boutique, booths, mirror, shelving,
  * checkout, rack, bookcase, rug. There is no scene list any more and nothing to
  * render for it: the nine sprites this component used to compose (rug, posters,
  * sign, hat shelf, checkout, fitting room, two display tables) drew furniture
@@ -44,7 +44,7 @@ import { FittingRoomModal } from './FittingRoomModal';
  *
  * TWO booths and ONE preview modal; TWO shop controls and ONE shop modal. There
  * is exactly one `<ClothingStoreModal>` and one `<FittingRoomModal>` in this
- * tree, and `openSurface` decides which — see below for why that is a slot
+ * tree, and `openSurface` decides which; see below for why that is a slot
  * rather than a pair of booleans.
  *
  * The three hotspots walk the Blobbi over and open on ARRIVAL; the corner Shop
@@ -54,7 +54,7 @@ import { FittingRoomModal } from './FittingRoomModal';
  * ## Nothing here transforms on hover
  *
  * The furniture is background pixels, so there is nothing to lift even if we
- * wanted to — and the Care Store facade settled that we do not: a thing that
+ * wanted to: and the Care Store facade settled that we do not: a thing that
  * moves off its own floor when you point at it reads as broken. The hotspots
  * tint and ring in place instead, on hover, on focus-visible and on press
  * alike, so pointer, keyboard and touch all get the same answer.
@@ -77,8 +77,8 @@ interface ClothingStoreRoomProps {
  *
  * A tint and a ring rather than a filter, because a hotspot is a transparent
  * region: there is nothing of its own to brighten, so the highlight has to be
- * the overlay itself. It is invisible at rest — the artwork already looks like a
- * counter and like two fitting rooms — and appears on hover, on `focus-visible`
+ * the overlay itself. It is invisible at rest, the artwork already looks like a
+ * counter and like two fitting rooms, and appears on hover, on `focus-visible`
  * and on press. No transform, no scale, no translation: the background never
  * moves.
  */
@@ -156,7 +156,7 @@ export function ClothingStoreRoom({
       ))}
 
       {/*
-        The persistent shortcut. Opens where the player stands — no walk — and
+        The persistent shortcut. Opens where the player stands, no walk, and
         flips the same slot the checkout does, to the same value.
       */}
       <button
@@ -192,7 +192,7 @@ export function ClothingStoreRoom({
  * handler, because there is no image: the counter and both booths are part of
  * the background. `BLOCK_UI_SELECTOR` already treats `button` as move-blocking,
  * so a tap never also starts a raw world walk, and the walk it does start goes
- * through the SAME `requestInteraction` path every door in the game uses — the
+ * through the SAME `requestInteraction` path every door in the game uses, the
  * surface opens on arrival, never on the click.
  */
 function Hotspot({

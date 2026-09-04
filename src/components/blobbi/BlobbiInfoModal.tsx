@@ -36,7 +36,7 @@ import type { BlobbiVisual } from '@/lib/multiplayer';
  * Three repeated treatments, named once.
  *
  * They are module constants rather than components because each is a plain
- * class string applied to markup that already exists — extracting components
+ * class string applied to markup that already exists, extracting components
  * would restructure the modal, and this pass is deliberately presentation-only.
  */
 const TAB_TRIGGER =
@@ -50,7 +50,7 @@ const TAB_TRIGGER =
 /**
  * What the Items tab is responsible for: everything you can USE or spend.
  *
- * Wearables are deliberately absent — they live in the Wardrobe, beside the
+ * Wearables are deliberately absent; they live in the Wardrobe, beside the
  * Blobbi they go on. One collection model still backs both surfaces.
  */
 const ITEM_CATEGORIES: readonly CollectionCategory[] = ['food', 'toy', 'care', 'currency'];
@@ -60,7 +60,7 @@ interface BlobbiInfoModalProps {
   onClose: () => void;
   /**
    * Force a specific stage backdrop, by id. Left alone the player's own choice
-   * is used — see `useStageBackground`. This exists for previews and tests, and
+   * is used: see `useStageBackground`. This exists for previews and tests, and
    * for a future "look at this Blobbi in that scene" flow; it is NOT how the
    * player picks one.
    */
@@ -90,7 +90,7 @@ interface BlobbiInfoModalProps {
    * Blobbi opens into: it carries the Mute / Block / Report row.
    *
    * A slot rather than the actions themselves, because this component knows
-   * about a Blobbi and nothing about the person behind it — the pubkey, the
+   * about a Blobbi and nothing about the person behind it, the pubkey, the
    * room and the report context all live in `PlayingView`, which is also where
    * the card is closed when a block makes it stale.
    */
@@ -125,7 +125,7 @@ export function BlobbiInfoModal({
     `backgroundKey` is an OVERRIDE, not the source of truth: left undefined the
     player's own selection is used, which is what turns the old hardcoded PNG
     into a real slot. A read-only view of somebody else's Blobbi deliberately
-    keeps the local player's stage rather than guessing at theirs — the same
+    keeps the local player's stage rather than guessing at theirs, the same
     honesty rule the accessory preview follows.
   */
   const stageSelection = useStageBackground();
@@ -147,7 +147,7 @@ export function BlobbiInfoModal({
   const { accessories, definitionsByAddress } = useCharacterEquipmentContext();
   const [selectedTab, setSelectedTab] = useState<'primary' | 'wardrobe' | 'items'>(readOnly ? 'primary' : defaultTab);
   /**
-   * Effect PREVIEW state — purely visual, never persisted. Non-null while the
+   * Effect PREVIEW state, purely visual, never persisted. Non-null while the
    * player is previewing an effect from the Effects tab; drawn through the
    * real renderer path via `effectsOverride` and cleared on cancel, on tab
    * change and whenever a real equip/remove lands (the persisted state is then
@@ -187,7 +187,7 @@ export function BlobbiInfoModal({
     } catch (error) {
       // Kept in `pendingUpdates` so the player does not lose their edits, and
       // surfaced in the panel rather than only in a toast that scrolls away.
-      const message = playerFacingMessage(error, "We couldn't save that right now. Your edits are kept — try again in a moment.");
+      const message = playerFacingMessage(error, "We couldn't save that right now. Your edits are kept; try again in a moment.");
       setPublishError(message);
       toast({ title: 'Save failed', description: message, variant: 'destructive' });
     }
@@ -346,13 +346,13 @@ export function BlobbiInfoModal({
         THE WINDOW HAS AN IDEAL SIZE, AND STOPS THERE.
 
         `size="full"` alone is `calc(100% - 1.5rem)` of the stage host in BOTH
-        axes — the window grew with the game frame and, on a large desktop,
+        axes: the window grew with the game frame and, on a large desktop,
         occupied almost the whole game window. It stopped reading as a window
-        INSIDE Blobbi Island. The caps below are derived from the Blobbi tab —
-        the reference screen — not picked as a viewport fraction:
+        INSIDE Blobbi Island. The caps below are derived from the Blobbi tab,
+        the reference screen: not picked as a viewport fraction:
 
           • 58rem wide: at the stage's stable `lg:w-[30%]` column this gives
-            the 2:3 stage ~267px of width and the content pane ~600px — room
+            the 2:3 stage ~267px of width and the content pane ~600px, room
             for the pet card, and for the wardrobe grid beside its detail rail.
           • 36rem tall: header band + tab strip + mood, five needs,
             progression, traits and the coins/scene footer fit WITHOUT the
@@ -364,7 +364,7 @@ export function BlobbiInfoModal({
         the host), so laptops and small frames behave as before. `md:` scopes
         the caps to the desktop dialog: below `md` this modal is a sheet
         (useIsMobile's 768px), whose sizing stays untouched. All three tabs
-        share this ONE outer contract — nothing below sizes per tab.
+        share this ONE outer contract; nothing below sizes per tab.
       */
       className="md:w-[min(calc(100%-1.5rem),58rem)] md:h-[min(calc(100%-1.5rem),36rem)]"
       title={readOnly ? blobbiData.name : (currentPet ? getBlobbiDisplayName(currentPet) : 'Blobbi')}
@@ -379,7 +379,7 @@ export function BlobbiInfoModal({
          so the frame's default padding and single scroller are handed back.
 
          STACKED on a phone, side-by-side from `sm` up. It used to be `flex-row`
-         at every width, which on a 375px sheet gave the stage a 110px column —
+         at every width, which on a 375px sheet gave the stage a 110px column,
          a Blobbi the size of a favicon next to a squeezed tab strip. Stacking
          gives the stage the sheet's full width and the tabs the rest. */
       bodyClassName="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row sm:gap-4 lg:gap-5 lg:p-4"
@@ -401,7 +401,7 @@ export function BlobbiInfoModal({
               grid pays for that stability by owning the full width of its pane
               (it has no detail sidebar), not by shrinking the protagonist.
 
-              No `transition-[width]` either — there is nothing left to
+              No `transition-[width]` either: there is nothing left to
               animate, and a stage that eases between sizes is a stage that
               changes size.
             */
@@ -411,7 +411,7 @@ export function BlobbiInfoModal({
               THE STAGE BOX, and the geometry fix.
 
               It is sized by HEIGHT (`h-full`) with `aspect-ratio` deriving the
-              width, so the box always has the backdrop's own proportions —
+              width, so the box always has the backdrop's own proportions,
               whatever height the modal happens to have. It used to be
               `aspect-square w-full max-h-full`: a square box for a 2:3 portrait
               backdrop, which `object-cover` resolved by cropping a third of the
@@ -419,13 +419,13 @@ export function BlobbiInfoModal({
               then silently broke even the square on a short viewport, because
               clamping the height of a `w-full` box does not narrow it.
 
-              `max-w-full` is the guard for the reverse case — a very tall, very
-              narrow container — and the parent's `overflow-hidden` is the
+              `max-w-full` is the guard for the reverse case, a very tall, very
+              narrow container: and the parent's `overflow-hidden` is the
               backstop.
             */}
             {/* `max-h-[25rem]` is the stage's own stop: height-driven as
                 documented above, the box now grows with the modal only until
-                400px — 1.5 × the ~267px the `lg:w-[30%]` column gives it at
+                400px: 1.5 × the ~267px the `lg:w-[30%]` column gives it at
                 the window's 58rem ideal, so at full size the 2:3 portrait is
                 exactly as wide as its column and never cropped. Any spare
                 column height simply centers the stage (`items-center` on the
@@ -446,36 +446,36 @@ export function BlobbiInfoModal({
               </div>
 
               {/*
-                THE BLOBBI, and the size fix — the second one, because the
+                THE BLOBBI, and the size fix, the second one, because the
                 first fixed the wrong number.
 
                 The box is a FRACTION OF THE STAGE rather than a fixed 128px,
-                and everything the renderer paints is a percentage OF the box —
-                accessory x/y, accessory base size, every effect shape — so the
+                and everything the renderer paints is a percentage OF the box,
+                accessory x/y, accessory base size, every effect shape, so the
                 Blobbi and everything on it scale as ONE unit. `size="xl"` is
                 still passed: it is the token the renderer reports; only the
                 box is overridden.
 
                 WHY 68% AND NOT 46%. At `h-[46%]` of a 2:3 stage the box was
-                ~69% of the stage's WIDTH — mathematically "two thirds", and it
+                ~69% of the stage's WIDTH, mathematically "two thirds", and it
                 still read small, because the box is not the Blobbi. The body
-                artwork occupies only part of its square viewBox — measured
+                artwork occupies only part of its square viewBox, measured
                 from the SVG sources: the adult body spans ~55% of the box's
-                width, the baby ~68% — the rest being the coordinate space
+                width, the baby ~68%, the rest being the coordinate space
                 accessories and effects overflow into. So the VISIBLE adult was
                 0.69 × 0.55 ≈ 38% of the banner. At `h-[68%]` the box is ~102%
                 of the stage width (the invisible 1% per side clips harmlessly
                 at the stage's own overflow-hidden), which puts the visible
-                body at ≈56% (adult) and ≈69% (baby) of the banner width — the
+                body at ≈56% (adult) and ≈69% (baby) of the banner width, the
                 protagonist, in both forms, with no form-specific override.
 
                 The bottom padding drops 7% → 3% in the same move: the body's
                 feet sit above the box's own bottom whitespace (12.5% adult,
                 20% baby of box height), and a bigger box grows that gap in
-                absolute terms — 3% keeps the feet at roughly the distance from
+                absolute terms: 3% keeps the feet at roughly the distance from
                 the floor they had before.
 
-                `stageRef` is this element, which IS the renderer box — so the
+                `stageRef` is this element, which IS the renderer box, so the
                 placement overlay's percentage space is still exactly the box,
                 by construction.
               */}
@@ -511,7 +511,7 @@ export function BlobbiInfoModal({
                   {/* Accessory Overlay for inventory editing. `stageRef` wraps
                       exactly the preview's renderer box (its only child), so
                       the overlay's inset-0 percentage space IS the canonical
-                      renderer box — the same space the world renderer uses. */}
+                      renderer box: the same space the world renderer uses. */}
                   {!readOnly && selectedTab === 'wardrobe' && (
                     <PlacementOverlay
                       className="absolute inset-0 z-20"
@@ -545,7 +545,7 @@ export function BlobbiInfoModal({
             >
               {/* The window's primary navigation. Fixed at the top of the
                   pane, so the tab strip never scrolls away from a long
-                  inventory — the content region below is what scrolls. */}
+                  inventory: the content region below is what scrolls. */}
               <TabsList
                 className={cn(
                   'grid h-auto w-full shrink-0 gap-1 rounded-panel border border-island-wood/20 bg-island-cream-2 p-0.5',
@@ -573,17 +573,17 @@ export function BlobbiInfoModal({
               {/* Tab Content - scrollable panels */}
               {/* THE one scroll region in this window. The frame's own
                   scroller is handed back (see `bodyClassName`), the stage does
-                  not scroll, and the tab strip above is `shrink-0` — so there
+                  not scroll, and the tab strip above is `shrink-0`: so there
                   is exactly one thing that moves and no two scrollers to fight
                   each other on a phone. */}
               <div className="min-h-0 h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin scrollbar-track-transparent">
                 {/*
-                  Blobbi — the pet card.
+                  Blobbi: the pet card.
 
                   One headline, five needs, three trophies, some character, and
                   the scene control. It used to be a badge row, an alert, a
                   five-row stat table under a heading, and a two-column
-                  definition list — every fact present, correctly grouped, and
+                  definition list: every fact present, correctly grouped, and
                   reading like a profile analytics panel. See `PetCard.tsx` for
                   what the reference study changed and why.
                 */}
@@ -597,7 +597,7 @@ export function BlobbiInfoModal({
                     The previous pass packed this into side-by-side blocks to
                     guarantee it fit, and the result read as six equally loud
                     widgets jostling for a pane. The content is ~360px in a
-                    ~525px budget, so it never needed the cramming — it needed a
+                    ~525px budget, so it never needed the cramming; it needed a
                     hierarchy:
 
                       1  how my Blobbi feels        the mood hero
@@ -605,10 +605,10 @@ export function BlobbiInfoModal({
                       3  progression + identity     one HUD strip, one chip row
                       4  secondary controls         coins + scene, one light strip
 
-                    Levels 2–4 get progressively lighter treatment — the meters
+                    Levels 2–4 get progressively lighter treatment, the meters
                     are bare shapes, the progression is one shared panel instead
                     of three bordered boxes, and the utility strip drops the
-                    shadow entirely — so the eye lands on the pet first and the
+                    shadow entirely: so the eye lands on the pet first and the
                     plumbing last.
                   */}
                   <MoodHero care={careStatus} stats={blobbiData} />
@@ -621,7 +621,7 @@ export function BlobbiInfoModal({
 
                   {!readOnly && (
                     <div className="mt-auto grid grid-cols-2 gap-2.5">
-                      {/* Level 4: quietly present. No shadow, muted surface —
+                      {/* Level 4: quietly present. No shadow, muted surface,
                           a coin count and a scene picker must not compete with
                           hunger. */}
                       <div className="flex items-center justify-between rounded-panel border border-island-wood/15 bg-island-cream-2/60 px-2.5 py-2">
@@ -665,7 +665,7 @@ export function BlobbiInfoModal({
                               className="text-xs font-medium text-island-ink-soft underline"
                               onClick={() => coinBalance.refetch()}
                             >
-                              Balance unavailable — tap to retry
+                              Balance unavailable: tap to retry
                             </button>
                           ) : (
                             <CoinAmount
@@ -688,8 +688,8 @@ export function BlobbiInfoModal({
                           'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-island-cream',
                         )}
                       >
-                        {/* The swatch is 2:3, so its WIDTH sets the row height
-                            — w-6 keeps this the same height as the coin row. */}
+                        {/* The swatch is 2:3, so its WIDTH sets the row height,
+                            w-6 keeps this the same height as the coin row. */}
                         <span
                           aria-hidden
                           className="block w-6 shrink-0 overflow-hidden rounded border border-island-wood/25"
@@ -712,7 +712,7 @@ export function BlobbiInfoModal({
                 </TabsContent>
 
                 {/*
-                  Wardrobe — everything that changes how the Blobbi LOOKS.
+                  Wardrobe: everything that changes how the Blobbi LOOKS.
 
                   Wearables and effects behind one segmented control, with the
                   Blobbi visible beside them. Effects stopped being a top-level
@@ -747,7 +747,7 @@ export function BlobbiInfoModal({
                 </TabsContent>
 
                 {/*
-                  Items — the bag of usable things.
+                  Items: the bag of usable things.
 
                   Lighter than it was: wearables moved to the Wardrobe, so what
                   is left is food, toys, care items and currency.

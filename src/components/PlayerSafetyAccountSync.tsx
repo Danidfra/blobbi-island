@@ -2,8 +2,8 @@
  * Points the local safety stores at the signed-in account.
  *
  * Renders nothing. It exists because mute, block and report are module-level
- * stores — `isBlocked(pubkey)` is called from the presence ingest and the chat
- * ingest, outside React, on every event — so they cannot read a hook. Something
+ * stores, `isBlocked(pubkey)` is called from the presence ingest and the chat
+ * ingest, outside React, on every event, so they cannot read a hook. Something
  * has to tell them whose decisions are in scope, and this is that something.
  *
  * Mounted inside the login provider and above the router, so the answer is set

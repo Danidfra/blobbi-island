@@ -30,12 +30,12 @@ import {
 import { constrainPosition } from './boundaries';
 import { worldDistancePx, ARRIVAL_THRESHOLD_PX } from './blobbi-ground';
 
-describe('theater seats — approach vs pose', () => {
+describe('theater seats: approach vs pose', () => {
   it('the seated pose applies the seat-contact offset EXACTLY ONCE (no half-body term)', () => {
     // Recomputed independently from raw config fields:
     //   pose = cushion line + SEAT_CONTACT_RATIO × (128 × seatedScale / 697)
     // A half-body term (ratio 0.5 of the box) buried the sitter behind the
-    // chair; zero offset floated it above the cushion — both real regressions.
+    // chair; zero offset floated it above the cushion; both real regressions.
     for (const seat of occupiableTheaterSeats) {
       const spriteTop = 100 - seat.bottomPercent - SEAT_SPRITE_HEIGHT_PERCENT;
       const cushionLine = spriteTop + SEAT_SPRITE_HEIGHT_PERCENT * seat.interactionTarget.y;
@@ -46,7 +46,7 @@ describe('theater seats — approach vs pose', () => {
       );
       // Deeper than the interim 0.3 calibration (the body sank too little),
       // and never MORE than the legacy half-body (which is the calibration
-      // target itself — see the derivation test below).
+      // target itself: see the derivation test below).
       expect(seatAnchorPosition(seat).y - cushionLine).toBeGreaterThan(0.3 * scaledBody);
       expect(seatAnchorPosition(seat).y - cushionLine).toBeLessThanOrEqual(scaledBody / 2 + 1e-9);
     }
@@ -97,7 +97,7 @@ describe('theater seats — approach vs pose', () => {
     }
   });
 
-  it('adjacent seats in a row are farther apart than the arrival threshold — no teleport-snap', () => {
+  it('adjacent seats in a row are farther apart than the arrival threshold; no teleport-snap', () => {
     const byRow = new Map<string, typeof occupiableTheaterSeats>();
     for (const seat of occupiableTheaterSeats) {
       byRow.set(seat.row, [...(byRow.get(seat.row) ?? []), seat]);
@@ -132,7 +132,7 @@ describe('theater seats — approach vs pose', () => {
   });
 });
 
-describe('chairs — live inline configs (shop / Nostr Station)', () => {
+describe('chairs: live inline configs (shop / Nostr Station)', () => {
   const source = readFileSync(
     join(process.cwd(), 'src/components/blobbi/InteractiveElements.tsx'),
     'utf8',
@@ -170,7 +170,7 @@ describe('chairs — live inline configs (shop / Nostr Station)', () => {
   });
 });
 
-describe('arcade machines — targets vs static placement', () => {
+describe('arcade machines: targets vs static placement', () => {
   it('static sprite placement carries NO ground offset (only the actor target does)', () => {
     for (const machine of arcadeMachines) {
       // The sprite rect derives purely from authored art fields…
@@ -185,7 +185,7 @@ describe('arcade machines — targets vs static placement', () => {
     }
   });
 
-  it('every machine target stops BELOW the sprite base — in front of the machine, never inside it', () => {
+  it('every machine target stops BELOW the sprite base, in front of the machine, never inside it', () => {
     for (const machine of arcadeMachines) {
       const spriteBottom = 100 - machine.bottomPercent;
       const anchor = machineAnchorPosition(machine);

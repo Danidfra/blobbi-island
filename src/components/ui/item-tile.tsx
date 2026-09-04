@@ -11,7 +11,7 @@ import { CoinIcon } from "@/components/blobbi/CoinAmount";
  * Four surfaces were drawing the same thing four ways. The shop built it from
  * `Card` + `CardHeader` + `CardFooter`; the item bag built it twice in the same
  * file, once as a `<div>` and once as a `<Button>`, with the quantity badge
- * `bg-amber-500` in one and `bg-blue-500` in the other — the same concept in
+ * `bg-amber-500` in one and `bg-blue-500` in the other, the same concept in
  * two colours, neither of them a token. The prize counter built a third.
  *
  * So: one tile, one price, one count. Nothing beyond that is abstracted here.
@@ -23,7 +23,7 @@ import { CoinIcon } from "@/components/blobbi/CoinAmount";
  *
  * Ownership, affordability, stack limits and what a click does are the
  * caller's. The tile renders `selected`, `disabled` and `affordable` as
- * appearance and nothing else — it never decides them. Keeping that line sharp
+ * appearance and nothing else; it never decides them. Keeping that line sharp
  * is what makes it safe to drop into economy surfaces without touching
  * economy rules.
  */
@@ -38,18 +38,18 @@ export interface ItemTileProps extends React.HTMLAttributes<HTMLElement> {
   affordable?: boolean;
   /** Owned count. Renders the corner badge. Omit or pass 0 for none. */
   quantity?: number;
-  /** Marks the tile as chosen — the equipped item, the selected prize. */
+  /** Marks the tile as chosen, the equipped item, the selected prize. */
   selected?: boolean;
   disabled?: boolean;
   /** Makes the tile a button. Without it the tile is a static `<div>`. */
   onClick?: () => void;
-  /** Small text under the price — "Equipped", "Sold out", a rarity. */
+  /** Small text under the price, "Equipped", "Sold out", a rarity. */
   footnote?: React.ReactNode;
   /** Controls in the tile's own footer, e.g. the shop's − / + stepper. */
   children?: React.ReactNode;
   className?: string;
   /**
-   * Anything else lands on the root element — `data-*` hooks, `aria-*`,
+   * Anything else lands on the root element, `data-*` hooks, `aria-*`,
    * `title`. Extending `HTMLAttributes` rather than enumerating them keeps the
    * tile usable as a drop-in for the hand-written tiles it replaces, which
    * carried their own data attributes.
@@ -171,7 +171,7 @@ export function PriceTag({
     >
       <CoinIcon className="size-3.5" />
       {amount}
-      <span className="sr-only"> coins{affordable ? "" : " — not enough"}</span>
+      <span className="sr-only"> coins{affordable ? "" : " (not enough)"}</span>
     </span>
   );
 }

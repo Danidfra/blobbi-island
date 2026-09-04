@@ -59,7 +59,7 @@ export default defineConfig(() => ({
   resolve: {
     alias: [
       // @blobbi-kit/core and @blobbi-kit/react resolve from their published
-      // npm packages in node_modules — no source aliases. @blobbi/react
+      // npm packages in node_modules; no source aliases. @blobbi/react
       // resolves through its workspace symlink, also without a source alias.
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       { find: "react", replacement: path.resolve(__dirname, "node_modules/react") },

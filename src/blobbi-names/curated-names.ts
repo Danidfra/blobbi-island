@@ -3,7 +3,7 @@
  *
  * ## Why a vocabulary rather than a filter
  *
- * "Reject names containing prohibited words" is not a boundary — a modified
+ * "Reject names containing prohibited words" is not a boundary, a modified
  * client sends `meet me outside`, which is clean, and every filter in the world
  * passes it. The only rule that holds against text nobody has written yet is a
  * closed set: a curated name must be two words, both from these lists, in this
@@ -16,7 +16,7 @@
  * ## The tone
  *
  * Cosy and small-creature-ish, to sit beside the island's own voice. Sixteen by
- * sixteen is 256 combinations — enough that a name feels chosen rather than
+ * sixteen is 256 combinations, enough that a name feels chosen rather than
  * assigned, small enough that every word and every pairing has actually been
  * read. `Bouncy Sparkle` is the longest at fourteen characters, comfortably
  * inside the existing thirty-two-character limit.
@@ -25,7 +25,7 @@
  * test, so no combination can produce something unfortunate by accident.
  */
 
-/** First word. Adjectives only — the grammar depends on the position. */
+/** First word. Adjectives only, the grammar depends on the position. */
 export const CURATED_ADJECTIVES: readonly string[] = Object.freeze([
   'Sunny',
   'Tiny',
@@ -99,7 +99,7 @@ export type CuratedNameResult =
  * Exactly two words, separated by a single space, both from the lists above, in
  * that order, case-sensitively. Deliberately strict: every relaxation here is a
  * gap a modified client can write through, and there is no legitimate caller
- * that needs one — the composer only ever produces this shape.
+ * that needs one, the composer only ever produces this shape.
  *
  * Note what it does NOT do: consult the prohibited-text classifier. It does not
  * need to. A closed vocabulary that has been read cannot contain a prohibited

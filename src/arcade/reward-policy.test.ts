@@ -1,7 +1,7 @@
 /**
  * Reward-policy tests.
  *
- * The point of these is not to bless a particular ticket number — the numbers
+ * The point of these is not to bless a particular ticket number, the numbers
  * are explicitly tunable product decisions. It is to prove the SHARED layer
  * cannot be bypassed: caps hold, the participation floor exists, the daily limit
  * bites, an invalid result pays nothing, and every registered policy stays
@@ -311,7 +311,7 @@ describe('flat policies', () => {
   });
 });
 
-describe('baseBreakdown validation — presentation can never misrepresent the reward', () => {
+describe('baseBreakdown validation: presentation can never misrepresent the reward', () => {
   /** A flat policy paying a fixed base, with a breakdown the test scripts. */
   const withBreakdown = (
     base: number,
@@ -416,7 +416,7 @@ describe('baseBreakdown validation — presentation can never misrepresent the r
       expect(award.total, JSON.stringify(lines)).toBe(6);
       expect(award.base, JSON.stringify(lines)).toBe(6);
     }
-    // And a VALID one pays exactly the same number — the lines are words only.
+    // And a VALID one pays exactly the same number, the lines are words only.
     expect(
       calculateTicketAward(
         withBreakdown(6, [

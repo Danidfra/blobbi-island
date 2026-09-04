@@ -1,5 +1,5 @@
 /**
- * Value-bearing kind:31124 writes — the pet-state counterpart of
+ * Value-bearing kind:31124 writes, the pet-state counterpart of
  * `src/inventory/inventory-transaction.ts`.
  *
  * ## Why the generic pet writer is not enough
@@ -12,7 +12,7 @@
  * - has no per-pet serialization and no cross-tab lock;
  * - stamps a bare wall-clock `created_at`, so two writes in one second tie;
  * - publishes through `useNostrPublish`, which swallows a 5 s timeout and
- *   resolves — a timeout is reported as success;
+ *   resolves: a timeout is reported as success;
  * - takes ABSOLUTE field values, so it has no notion of an operation that
  *   must apply exactly once.
  *
@@ -36,7 +36,7 @@
  *
  * The lock key is per-pet, not per-owner: settling one Blobbi's energy must
  * not queue behind an unrelated write to another Blobbi. It is deliberately a
- * DIFFERENT name space from the inventory lock — kind:31124 and kind:31633 are
+ * DIFFERENT name space from the inventory lock, kind:31124 and kind:31633 are
  * separate replaceable domains and must not block each other.
  */
 
@@ -73,7 +73,7 @@ export type PetStateReadOutcome =
   | { readonly status: 'found'; readonly value: PetStateWithMeta }
   /**
    * The relay COMPLETED the read (EOSE), twice, and holds no such event. For a
-   * pet the caller already knew about, this is still not a licence to write —
+   * pet the caller already knew about, this is still not a licence to write,
    * see {@link PetStateTransactionError}'s `pet-absent`.
    */
   | { readonly status: 'absent' }
@@ -126,7 +126,7 @@ export class PetStateTransactionError extends Error {
     message: string,
     readonly reason:
       | 'not-logged-in'
-      /** The read could not be completed — publish nothing, stay pending. */
+      /** The read could not be completed, publish nothing, stay pending. */
       | 'read-unknown'
       /**
        * The read COMPLETED and the pet is not there. For a settlement of a pet
@@ -150,7 +150,7 @@ export class PetStateTransactionError extends Error {
  *
  * `mergePetStateTags` preserves unknown tags verbatim, so a writer that puts
  * `[PET_OP_MARKER_TAG, <opId>]` on a revision can later read the newest state
- * and know whether THAT operation already landed — the Mine's energy
+ * and know whether THAT operation already landed, the Mine's energy
  * settlement and the external-item consumption both key on it. Exactly one
  * marker rides on the event at a time (`dropTagNames: [PET_OP_MARKER_TAG]`),
  * so it proves the most recent operation and nothing older.

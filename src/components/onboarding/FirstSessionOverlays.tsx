@@ -2,8 +2,8 @@
  * The first minutes on the Island, in three short moments:
  *
  * ```
- *   1. arrival    "Blobbi Island" — a brief world reveal, once per visit
- *   2. coins      "+200 Coins"    — the initial grant, celebrated once, ever
+ *   1. arrival    "Blobbi Island": a brief world reveal, once per visit
+ *   2. coins      "+200 Coins": the initial grant, celebrated once, ever
  *   3. welcome    how to move, what to do first, that there is more to see
  * ```
  *
@@ -86,7 +86,7 @@ export function FirstSessionOverlays({ inWorld }: FirstSessionOverlaysProps) {
   //
   // THE REAL GRANT decides. `phase: 'applied'` with `alreadyApplied: false`
   // means this run just granted the Coins; `alreadyApplied: true` means the
-  // durable marker was already there — nothing to celebrate. The local
+  // durable marker was already there; nothing to celebrate. The local
   // "celebrated" flag only prevents a second party for the same player on
   // the same device (a remount, a reload, a later sign-in).
   const grantedNow = economy.phase === 'applied' && economy.alreadyApplied === false;
@@ -141,7 +141,7 @@ export function FirstSessionOverlays({ inWorld }: FirstSessionOverlaysProps) {
 
 /**
  * Arriving. A soft vignette lifts off the world while the Island's name
- * settles in and fades — a breath, then control. Under reduced motion the
+ * settles in and fades, a breath, then control. Under reduced motion the
  * same words simply appear and go.
  */
 function IslandArrival({ reducedMotion }: { reducedMotion: boolean }) {
@@ -176,7 +176,7 @@ const COIN_PIECES = 8;
 
 /**
  * The initial grant. Unmistakably currency: the Coin mark, the amount, a
- * small burst of coins rising and settling — inside the game frame, never a
+ * small burst of coins rising and settling, inside the game frame, never a
  * browser-style toast. Tapping it closes it early.
  */
 function CoinGrantCelebration({
@@ -247,7 +247,7 @@ function FirstSessionWelcome({ onDismiss }: { onDismiss: () => void }) {
         <p className="mt-1 text-sm text-island-ink">
           Tap somewhere to walk around. Start by visiting the Beach and find your first treasure.
         </p>
-        <p className="mt-1 text-xs text-island-ink-soft">There&apos;s more to explore — the Map shows every place.</p>
+        <p className="mt-1 text-xs text-island-ink-soft">There&apos;s more to explore, the Map shows every place.</p>
         <div className="mt-3 flex items-center justify-end gap-2">
           <button
             type="button"

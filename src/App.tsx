@@ -45,7 +45,7 @@ const queryClient = new QueryClient({
 });
 
 const defaultConfig: AppConfig = {
-  // Island theme id — see src/lib/island-themes.ts.
+  // Island theme id; see src/lib/island-themes.ts.
   theme: DEFAULT_ISLAND_THEME_ID,
   relayUrl: "wss://relay.ditto.pub",
 };
@@ -60,7 +60,7 @@ export function App() {
     <ErrorBoundary>
       {/* The safety policy sits above everything that can render content another
           player authored. No profile is passed, so it resolves to the build's
-          active profile — Standard — deterministically. */}
+          active profile: Standard, deterministically. */}
       <IslandSafetyProvider>
       <UnheadProvider head={head}>
         <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig} presetRelays={presetRelays}>
@@ -69,7 +69,7 @@ export function App() {
               <NostrProvider>
               {/* Renders nothing. Refreshes the selected theme's cached palette
                   and adopts a selection made on another device. It has to be
-                  BELOW NostrProvider — AppProvider, which paints the theme, sits
+                  BELOW NostrProvider: AppProvider, which paints the theme, sits
                   above it and must never wait on a relay. */}
               {/* Points mute/block/report at the signed-in account. Renders
                   nothing; see PlayerSafetyAccountSync for why it is a component. */}

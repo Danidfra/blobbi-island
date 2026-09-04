@@ -107,7 +107,7 @@ function renderMachines(configs: ArcadeMachineConfig[]): Harness {
   // path and refuses to move the world for anything inside a `[data-block-move]`
   // subtree. React's `stopPropagation` does NOT protect against this listener
   // (React delegates at the root, so a native listener on an ancestor still
-  // fires) — the attribute is the actual mechanism, on both event types.
+  // fires): the attribute is the actual mechanism, on both event types.
   const worldListener = (ev: Event) => {
     if ((ev.target as Element).closest?.('[data-block-move]')) return;
     worldMoves += 1;
@@ -195,7 +195,7 @@ describe('walk-to-interact', () => {
         SURFACE_RECT.height) *
       100;
     // GROUND semantics: the runtime target is the anchor fraction plus the
-    // depth-scaled half body (shared arcadeMachineGroundOffsetPercent) —
+    // depth-scaled half body (shared arcadeMachineGroundOffsetPercent),
     // applied exactly ONCE, so it matches the DOM-free machineAnchorPosition.
     const expectedY = fractionY + arcadeMachineGroundOffsetPercent(config.floor, fractionY);
     expect(target.y).toBeCloseTo(expectedY, 5);
@@ -297,7 +297,7 @@ describe('accessibility', () => {
     // A machine used to publish `data-arcade-availability`, back when a
     // nullable `gameId` plus a loose `availability` described what it did. One
     // discriminated `activation` field replaced both, and it is read from the
-    // registry rather than from the DOM — so the only thing this element needs
+    // registry rather than from the DOM, so the only thing this element needs
     // to carry is its own id.
     const h = renderMachines([dance(), pool()]);
     for (const id of ['arcade-dance-machine', 'arcade-pool-table']) {

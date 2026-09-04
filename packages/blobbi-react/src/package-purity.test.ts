@@ -6,7 +6,7 @@
  * the logged-in user, ask where in a world it is, or build a path into somebody
  * else's `public/` folder. Every one of those properties is a property of the
  * import graph, and every one is cheap to destroy with a single convenient
- * import — so they are asserted against the real graph rather than described in
+ * import: so they are asserted against the real graph rather than described in
  * a comment.
  *
  * This file is the successor to Island's `renderer-boundary.test.ts`. That test
@@ -14,8 +14,8 @@
  * tree; this one describes a boundary the directory layout already enforces,
  * and fails if the layout is subverted.
  *
- * Import statements are matched, not free text, so the prose in these modules —
- * which discusses Nostr, Island and `useAccessoryManagement` at length — does
+ * Import statements are matched, not free text, so the prose in these modules,
+ * which discusses Nostr, Island and `useAccessoryManagement` at length, does
  * not trip the check.
  */
 import { describe, it, expect } from 'vitest';
@@ -167,7 +167,7 @@ describe('the package reaches nothing it must not', () => {
   });
 
   it('depends on a tiny, deliberate set of external packages', () => {
-    // Anything arriving here is a new peer dependency, which is a decision —
+    // Anything arriving here is a new peer dependency, which is a decision,
     // so it is recorded in this list and in package.json.
     expect(pkg.externals).toEqual([
       '@blobbi-kit/core/color-guardrails',
@@ -193,7 +193,7 @@ describe('the package reaches nothing it must not', () => {
 
   it('contains exactly the React component files it means to', () => {
     // A LIST, not a count. Phase 8 added the effect walker, which has to be a
-    // component because it renders between the body and the front accessories —
+    // component because it renders between the body and the front accessories,
     // and that widening is exactly the kind of decision this list exists to
     // make visible in a diff rather than let happen quietly.
     const components = pkg.files.filter((f) => f.endsWith('.tsx'));
@@ -215,7 +215,7 @@ describe('the package reaches nothing it must not', () => {
 
   it('emits a clean publishable artifact, when one has been built', () => {
     // `dist/` is gitignored and CI does not build it, so this is a local
-    // verification rather than a gate — but when the artifact IS present, the
+    // verification rather than a gate, but when the artifact IS present, the
     // things that would break a real consumer are checked properly: an
     // unresolved path alias, a leaked host module, or a bundled React.
     const dist = join(PACKAGE_ROOT, 'dist');

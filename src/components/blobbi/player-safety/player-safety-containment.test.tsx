@@ -4,7 +4,7 @@
  * Mute, Block and Report are opened from a player's card, and that card is an
  * IN-WORLD surface: the island renders inside a fixed 1046×697 stage wrapped in
  * a wood frame, with the browser page visible around it. A confirmation that
- * positions itself against the viewport instead lands outside that frame — over
+ * positions itself against the viewport instead lands outside that frame, over
  * the page, over the shell header, or anywhere a windowed or short viewport puts
  * it. The island already has a frame-aware portal for exactly this
  * (`StageOverlayContext`); these tests prove the safety surfaces use it.
@@ -68,7 +68,7 @@ function openCard() {
   };
 }
 
-/** The window itself — the element Radix gives the dialog role. */
+/** The window itself, the element Radix gives the dialog role. */
 const surface = () => screen.getByRole('dialog');
 
 beforeEach(() => {
@@ -144,13 +144,13 @@ describe('on a phone', () => {
 
   it('presents the report as a bottom sheet rather than a centred window', () => {
     // The stage on a phone is most of the screen, so a sheet IS the contained
-    // form — thumb-reachable and safe-area aware, which a centred window in a
+    // form: thumb-reachable and safe-area aware, which a centred window in a
     // few hundred pixels is not.
     openCard();
     fireEvent.click(screen.getByRole('button', { name: /report/i }));
 
     const dialog = surface();
-    // Anchored to the bottom edge and spanning the width — the sheet form,
+    // Anchored to the bottom edge and spanning the width, the sheet form,
     // not a centred window shrunk to fit.
     expect(dialog.className).toContain('bottom-0');
     expect(dialog.className).toContain('inset-x-0');
@@ -206,7 +206,7 @@ describe('the three controls have room to be themselves', () => {
 
   it('keeps every label on one line', () => {
     // `whitespace-nowrap` comes from the button base, which is what turns a
-    // squeeze into a clipped pill rather than a two-line one — and why the
+    // squeeze into a clipped pill rather than a two-line one, and why the
     // squeeze had to be fixed at the layout instead of by shortening labels.
     openCard();
     for (const button of buttons()) {

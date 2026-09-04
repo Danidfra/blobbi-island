@@ -1,5 +1,5 @@
 /**
- * Fonts and background media — the two theme fields that are strings from a
+ * Fonts and background media, the two theme fields that are strings from a
  * stranger's event and have to reach a stylesheet.
  *
  * Colours cannot carry a payload: they are validated as hex, parsed into
@@ -71,7 +71,7 @@ describe('URL validation', () => {
 describe('font safety', () => {
   it('strips everything that could break out of a CSS string', () => {
     expect(sanitizeCssIdentifier('Playfair Display')).toBe('Playfair Display');
-    // Period, hyphen, underscore and apostrophe survive — they are part of real
+    // Period, hyphen, underscore and apostrophe survive; they are part of real
     // family names ("Noto Sans Mono", "PT Serif", "Sackers Gothic-Light").
     // Braces, quotes, semicolons and colons do not.
     const stripped = sanitizeCssIdentifier('Inter"; } html { display: none } .x{');
@@ -109,7 +109,7 @@ describe('font safety', () => {
     expect(face).toContain('@font-face');
     expect(face).toContain('font-family: "Playfair Display"');
     expect(face).toContain('src: url("https://fonts.example/pf.woff2")');
-    // `swap`, so the island renders in its own type until the file arrives —
+    // `swap`, so the island renders in its own type until the file arrives,
     // and stays in it forever if the file never does.
     expect(face).toContain('font-display: swap');
 
@@ -155,7 +155,7 @@ describe('font safety', () => {
     const family = css.match(/--island-font-body: "([^"]*)"/)![1];
     expect(family).not.toMatch(/["{}();:]/);
     expect(css).not.toContain('display:none');
-    // One declaration, one block — no second rule smuggled in.
+    // One declaration, one block; no second rule smuggled in.
     expect(css.match(/\{/g)).toHaveLength(1);
   });
 });
@@ -164,7 +164,7 @@ describe('the interop bug: a curated family with no URL', () => {
   /*
     The bug this phase exists to fix.
 
-    Ditto's `FontPicker.handleSelect` calls `applyFont({ family })` — no URL —
+    Ditto's `FontPicker.handleSelect` calls `applyFont({ family })`: no URL,
     because Ditto bundles its curated fonts and loads them with `import()`. A
     URL only appears when the theme is PUBLISHED. Ditto's encrypted settings,
     which Island prefers because they are what Ditto renders from, therefore
@@ -199,8 +199,8 @@ describe('the interop bug: a curated family with no URL', () => {
   });
 
   it('lets the theme\'s own URL win over the registry', () => {
-    // An explicit URL is the author's deliberate choice — a self-hosted file or
-    // a Blossom upload — and Island is consuming it, not normalising its own.
+    // An explicit URL is the author's deliberate choice, a self-hosted file or
+    // a Blossom upload, and Island is consuming it, not normalising its own.
     applyThemeFonts({ body: { family: 'Inter', url: 'https://mine.example/inter.woff2' } });
     const face = styleText('island-theme-font-faces');
     expect(face).toContain('https://mine.example/inter.woff2');

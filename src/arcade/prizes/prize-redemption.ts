@@ -1,12 +1,12 @@
 /**
- * The Prize Counter's redemption contract — pure eligibility and a pure state
+ * The Prize Counter's redemption contract, pure eligibility and a pure state
  * machine, with **no I/O of any kind**.
  *
  * The shape deliberately mirrors `arcade-reward-boundary.ts`, the claim
  * machine that already survived a real duplicate-grant defect, because a spend
  * has the same failure physics as a grant run in reverse: the kind:31633 event
  * is a plain replaceable list of quantities, a resolved publish is not proof,
- * and an unresolved outcome must NEVER be retried — a `-40` retried after a
+ * and an unresolved outcome must NEVER be retried, a `-40` retried after a
  * publish that actually landed is `-80`.
  *
  * ## The lifecycle
@@ -19,12 +19,12 @@
  *      │                          ▲                            │ delivery-complete
  *      │       reconcile          │                            ▼
  *      │ (now === before − price, │                        confirmed  (terminal
- *      │  EXACTLY — see below)    │                         for THIS attempt)
+ *      │  EXACTLY: see below)    │                         for THIS attempt)
  *      │                          │
  *      │                   spend-unresolved  ◀── spending, on timeout/mismatch
  *      │                     (reconcile-only, NEVER respent)
  *      ▼
- *   failed-before-spend  (retryable — provably nothing was published)
+ *   failed-before-spend  (retryable: provably nothing was published)
  * ```
  *
  * `delivering` is the honest name for "the tickets are spent but the prize has
@@ -39,8 +39,8 @@
  *
  * A kind:31633 COSMETIC prize is different: the ticket debit and the prize
  * grant are the same replaceable event, so they land together or not at all.
- * That variant reuses every state here — the record, the lock, the strict
- * publish, the never-respend rule — and differs in exactly one place:
+ * That variant reuses every state here, the record, the lock, the strict
+ * publish, the never-respend rule, and differs in exactly one place:
  * {@link PrizeRedemptionEvent} `reconcile-atomic`, which reconciles against
  * the PRIZE rather than against a balance other writers also move. See its
  * doc comment for why that is both stronger and safer.
@@ -82,7 +82,7 @@ export interface PrizeEligibilityInput {
  *
  * Checks are ordered so the reason a player sees is the most actionable one:
  * log in first, availability next, ownership, then the balance. An unavailable
- * balance is its own reason — "we could not check" must never be presented as
+ * balance is its own reason, "we could not check" must never be presented as
  * "you cannot afford it".
  */
 export function evaluatePrizeEligibility(input: PrizeEligibilityInput): PrizeEligibility {
@@ -152,7 +152,7 @@ export function isPreSpendFailure(failure: PrizeSpendFailure): boolean {
  * in-flight redemption spends.
  */
 export interface ArcadePrizeRedemption {
-  /** `${prizeId}:${attemptId}` — stable across every phase of one attempt. */
+  /** `${prizeId}:${attemptId}`: stable across every phase of one attempt. */
   readonly redemptionId: string;
   readonly prizeId: string;
   readonly attemptId: string;
@@ -182,7 +182,7 @@ export type PrizeRedemptionOutcome =
  * Record a redemption, before anything is sent anywhere.
  *
  * Refuses a prize that is not priced sanely, a blank attempt id, and an
- * existing record for the same attempt — the caller mints a fresh attempt id
+ * existing record for the same attempt, the caller mints a fresh attempt id
  * per explicit confirmation, so an id collision means a bug, not a retry.
  */
 export function createReservedRedemption(
@@ -233,7 +233,7 @@ export type PrizeRedemptionEvent =
   /** Read-only reconciliation observed the current balance. Never publishes. */
   | { readonly type: 'reconcile'; readonly now: number; readonly quantityNow: number | null }
   /**
-   * Read-only reconciliation for an ATOMIC redemption — one where the ticket
+   * Read-only reconciliation for an ATOMIC redemption; one where the ticket
    * debit and the prize grant ride on the SAME kind:31633 replacement event.
    * Never publishes.
    *
@@ -265,7 +265,7 @@ export function advanceRedemption(
   redemption: ArcadePrizeRedemption,
   event: PrizeRedemptionEvent,
 ): ArcadePrizeRedemption {
-  // Terminal. Late events — a duplicate delivery-complete, a stale timer —
+  // Terminal. Late events, a duplicate delivery-complete, a stale timer,
   // cannot reopen a confirmed redemption.
   if (redemption.status === 'confirmed') return redemption;
 
@@ -337,7 +337,7 @@ export function advanceRedemption(
       // unrelated balance changes to THIS spend: baseline 100, price 40, this
       // publish never landed, another tab spends 50 → balance 50 ≤ 60 would
       // have delivered a prize that was never paid for. A drop by more, by
-      // less, no drop, or a rise all stay unresolved — they are evidence of
+      // less, no drop, or a rise all stay unresolved; they are evidence of
       // OTHER writes, not of this one.
       //
       // Even exact equality is limited evidence: kind:31633 carries no
@@ -359,7 +359,7 @@ export function advanceRedemption(
         updatedAt: event.now,
       };
       // POSITIVE proof. The prize is granted by the spend's own event and by
-      // nothing else, so holding it means that event landed — and because it
+      // nothing else, so holding it means that event landed, and because it
       // landed WHOLE, the tickets are spent and the prize is delivered. This
       // is strictly stronger evidence than the balance rule above, which can
       // only ever say "the number is consistent with my spend".
@@ -409,7 +409,7 @@ export function advanceRedemption(
  * Everything from "a spend may be in flight" to "paid but not delivered"
  * blocks unconditionally; `reserved` (nothing sent, likely an abandoned
  * confirmation) and `failed-before-spend` (provably nothing sent) leave the
- * door open. `confirmed` blocks a NON-repeatable prize forever — but for a
+ * door open. `confirmed` blocks a NON-repeatable prize forever, but for a
  * repeatable one it is a finished purchase, not a lock: `confirmed` is
  * terminal for one ATTEMPT, and a new explicit attempt (with a fresh attempt
  * id and its own record) is allowed.
@@ -427,7 +427,7 @@ export function blocksNewRedemption(
   );
 }
 
-/** Spent but not delivered — the record a recovery pass must finish. */
+/** Spent but not delivered, the record a recovery pass must finish. */
 export function needsDelivery(redemption: ArcadePrizeRedemption): boolean {
   return redemption.status === 'spent' || redemption.status === 'delivering';
 }

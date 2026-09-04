@@ -8,22 +8,22 @@ import type { HockeyOrientation } from './hockey-draw';
  * ## Why this control exists at all
  *
  * The renderer picks a layout from the shape of the box it is given, and that
- * answer is right almost always — a wide window gets a wide table. "Almost" is
+ * answer is right almost always, a wide window gets a wide table. "Almost" is
  * the reason for the button: an arcade window on a tall, narrow desktop browser,
  * or a player who simply reads a vertical table better, both want the other one.
  * A measurement that is usually right and never overridable is a worse control
  * than a measurement with an override.
  *
  * It is deliberately NOT offered during expanded play on a phone. There the
- * layout is not a preference — it is which way the player is holding the
- * device — and a button that fights the next rotation would be an annoyance
+ * layout is not a preference; it is which way the player is holding the
+ * device: and a button that fights the next rotation would be an annoyance
  * rather than a choice. See `AirHockeyTable`.
  *
  * ## Why it is not an icon on its own
  *
  * The two states are a wide rectangle and a tall one, which is exactly the kind
  * of distinction an icon renders at 16 px and nobody can read. So the button
- * carries a WORD — "Wide" or "Tall" — describing the layout currently in force,
+ * carries a WORD, "Wide" or "Tall", describing the layout currently in force,
  * with the shape beside it as reinforcement. The accessible name names the
  * ACTION instead ("Lay the table out tall"), because that is what pressing it
  * does; a name that matched the visible word would announce the state twice and

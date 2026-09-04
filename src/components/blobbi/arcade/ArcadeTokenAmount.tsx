@@ -3,7 +3,7 @@
  *
  * Uses the OFFICIAL published Token artwork resolved through the item catalog,
  * degrading to the published `symbol` emoji when the definition cannot be
- * fetched — the same rule `CoinAmount` follows, so the three currencies look
+ * fetched: the same rule `CoinAmount` follows, so the three currencies look
  * like three currencies rather than three ad-hoc glyphs.
  *
  * `amount === null` renders an explicit unavailable state: a balance that

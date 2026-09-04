@@ -1,5 +1,5 @@
 /**
- * Treasure-hunt asset registry — every supplied asset resolves from its
+ * Treasure-hunt asset registry; every supplied asset resolves from its
  * permanent location, the calibration matches the real SVG, and nothing in
  * the source tree still points at the temporary drop folder.
  */

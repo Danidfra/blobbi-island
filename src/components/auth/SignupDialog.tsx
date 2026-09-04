@@ -1,12 +1,12 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
-// Phase 5 polish: presentation only. The wooden plate IS the surface — copy and
+// Phase 5 polish: presentation only. The wooden plate IS the surface, copy and
 // buttons sit directly on the wood; small cream surfaces are used only for the
 // secret-key (nsec) block and its warning so that step stays serious and
 // readable. No big cream card. On mobile landscape the SAME square board image
-// is rotated 90° (board layer only — content is never rotated) and enlarged so
+// is rotated 90° (board layer only, content is never rotated) and enlarged so
 // it reads as a wider, roomier horizontal sign.
-// Copy is simplified but the secret key (nsec) stays clearly the credential —
+// Copy is simplified but the secret key (nsec) stays clearly the credential,
 // the save/download step and warnings remain serious. Never called a "passport".
 // Key generation / nsec encoding / download / final login / toasts / prop
 // signatures / callback timing are unchanged.
@@ -120,7 +120,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
   // badge/pill. Inline + box-decoration-clone so wrapped lines each get the
   // band; tiny horizontal padding + negative vertical margin keep it tight to
   // the text and add no layout height (so it never introduces scroll). No
-  // border-radius — a rounded shape would make the bounds noticeable.
+  // border-radius: a rounded shape would make the bounds noticeable.
   const woodMarkClass =
     'box-decoration-clone bg-[rgba(20,14,8,0.16)] px-[0.12em] [margin-block:-0.04em]';
 
@@ -133,7 +133,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
         onPointerDown={(e) => e.stopPropagation()}
         // Desktop/tablet/portrait: square board. Mobile landscape: the
         // already-horizontal mobile board (~1.64:1). Bounds fill most of the
-        // landscape viewport — roomy but no longer oversized; object-contain
+        // landscape viewport: roomy but no longer oversized; object-contain
         // on the image keeps the true aspect ratio.
         className='aspect-square h-auto w-[min(92vw,29rem)] max-w-[29rem] border-0 bg-transparent p-0 shadow-none landscape:max-md:aspect-[1381/842] landscape:max-md:h-[90svh] landscape:max-md:max-h-[90svh] landscape:max-md:w-[95vw] landscape:max-md:max-w-[95vw]'
       >
@@ -142,9 +142,9 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
           Create a Nostr account for Blobbi Island.
         </DialogDescription>
 
-        {/* Wooden modal frame — BOARD LAYER ONLY. Desktop/tablet/portrait use
+        {/* Wooden modal frame: BOARD LAYER ONLY. Desktop/tablet/portrait use
             the square modal asset. Mobile landscape swaps to the dedicated
-            horizontal mobile board (already rotated in the asset itself — no
+            horizontal mobile board (already rotated in the asset itself; no
             CSS rotation). The content layer below is never rotated. */}
         <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
           <img
@@ -167,7 +167,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
           />
         </div>
 
-        {/* Close — kept inside the safe area, clear of the corner vines. */}
+        {/* Close: kept inside the safe area, clear of the corner vines. */}
         <DialogClose
           aria-label='Close'
           className='absolute right-[13%] top-[12%] z-10 rounded-full bg-island-ink/40 p-1.5 text-island-cream transition-colors hover:bg-island-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-island-cream landscape:max-md:right-[10%] landscape:max-md:top-[10%]'
@@ -182,7 +182,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
         <div className='absolute inset-0 flex items-center justify-center'>
           <div className='flex h-full w-full flex-col p-[14%] text-center landscape:max-md:px-[12%] landscape:max-md:py-[8%]'>
             {/* Header printed on the wood: cream text lifted by a stronger
-                layered text-shadow (no background pill — text only). */}
+                layered text-shadow (no background pill, text only). */}
             <div className='shrink-0 px-1'>
               <h2 className={cn(woodTextClass, 'text-xl font-bold landscape:max-md:text-lg')}>
                 <span className={woodMarkClass}>{title}</span>
@@ -217,7 +217,7 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
 
             {step === 'download' && (
               <div className='space-y-2.5 text-left'>
-                {/* Serious warning — high contrast cream strip so it can't be
+                {/* Serious warning: high contrast cream strip so it can't be
                     missed. Kept compact, not a giant card. */}
                 <p className='rounded-xl border-2 border-island-wood/40 bg-island-cream px-3 py-2 text-xs font-semibold text-island-ink shadow-cozy-soft'>
                   This key is the only way to access your account again. Save it somewhere safe and

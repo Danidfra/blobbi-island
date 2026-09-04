@@ -9,7 +9,7 @@
  *
  * This module is pure: no DOM, no network, no YouTube API. Whether a video is
  * actually *playable* (private, deleted, embedding disabled, region blocked) can
- * only be discovered by trying to embed it — those cases surface as player
+ * only be discovered by trying to embed it; those cases surface as player
  * errors, see `youtube-player.ts`.
  */
 
@@ -46,7 +46,7 @@ export const YOUTUBE_PARSE_MESSAGES: Record<YouTubeParseFailure, string> = {
   'empty': 'Paste a YouTube link or video ID to get started.',
   'not-a-youtube-link': "That doesn't look like a YouTube link. Only YouTube videos work for now.",
   'no-video-id': "That YouTube link doesn't point at a single video.",
-  'invalid-video-id': 'That video ID looks wrong — YouTube IDs are 11 characters long.',
+  'invalid-video-id': 'That video ID looks wrong: YouTube IDs are 11 characters long.',
 };
 
 /** `?t=90`, `?t=1m30s`, `#t=90` → seconds. Returns undefined when absent/odd. */

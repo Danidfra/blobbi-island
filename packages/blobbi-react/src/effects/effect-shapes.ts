@@ -1,7 +1,7 @@
 /**
  * The DRAWING ATOMS effects are built from.
  *
- * Twelve effects, but only twelve shapes — because an effect is mostly a
+ * Twelve effects, but only twelve shapes, because an effect is mostly a
  * choice of shape, palette, count and timing, and keeping the shape vocabulary
  * small is what stops "add an effect" from meaning "add a renderer". (The one
  * exception proves the rule: lightning is a connected channel, not a particle,
@@ -20,7 +20,7 @@
  *    browser can animate on the compositor without re-layout.
  *
  * Sizes are never in pixels. A piece's width and height are percentages of the
- * renderer box, so an effect is the same effect at every size token — which is
+ * renderer box, so an effect is the same effect at every size token, which is
  * the same rule the accessory layer already follows
  * (`ACCESSORY_BASE_PERCENT`).
  */
@@ -57,7 +57,7 @@ const STAR6_POLYGON =
  * A heart, sampled at 22 points from the standard cardioid
  * `x = 16sin³t, y = 13cos t − 5cos2t − 2cos3t − cos4t` and normalized to the
  * 0–100 % box. Sampled rather than hand-drawn so the lobes are symmetric and
- * the point is actually centered — both are obvious when it is wrong at 8 px.
+ * the point is actually centered; both are obvious when it is wrong at 8 px.
  */
 const HEART_POLYGON =
   'polygon(50% 24%, 51% 18%, 58% 7%, 72% 0%, 89% 4%, 100% 18%, 100% 37%, 89% 55%, 72% 71%, 58% 85%, 51% 96%, 50% 100%, 49% 96%, 42% 85%, 28% 71%, 11% 55%, 0% 37%, 0% 18%, 11% 4%, 28% 0%, 42% 7%, 49% 18%)';
@@ -81,8 +81,8 @@ export function pieceShapeStyle(
       };
 
     case 'glow-dot':
-      // A hot white core inside a coloured bloom — how a small light source
-      // actually reads — with a halo thrown PAST the element by box-shadow, so
+      // A hot white core inside a coloured bloom, how a small light source
+      // actually reads: with a halo thrown PAST the element by box-shadow, so
       // the light appears to land on the air around the firefly rather than
       // stopping at its own edge.
       return {
@@ -136,8 +136,8 @@ export function pieceShapeStyle(
       };
 
     case 'pixel':
-      // Still a flat square — softening the fill would turn it into a bokeh
-      // mote — but a CRT square: a tight neon halo in its own colour plus a
+      // Still a flat square, softening the fill would turn it into a bokeh
+      // mote: but a CRT square: a tight neon halo in its own colour plus a
       // magenta/cyan pair offset one step to either side, the classic RGB
       // channel mis-registration of a glitching arcade monitor.
       return {

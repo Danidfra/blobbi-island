@@ -9,7 +9,7 @@
  * synchronized player:
  *
  *  1. **Is this event mine to believe?** Right session address, right host
- *     pubkey — checked again here even though the parser checked, because the
+ *     pubkey: checked again here even though the parser checked, because the
  *     parser validates one event while this validates it against the session
  *     this client actually joined.
  *  2. **Is it newer than what I have?** `rev` first, then `created_at`, then
@@ -41,7 +41,7 @@ export const NO_REVISION = -1;
 export type SessionRole = 'host' | 'guest';
 
 export interface SessionClientState {
-  /** `31951:<host>:<d>` — fixed for the lifetime of this client state. */
+  /** `31951:<host>:<d>`: fixed for the lifetime of this client state. */
   address: string;
   hostPubkey: string;
   role: SessionRole;
@@ -105,7 +105,7 @@ function unchanged(state: SessionClientState, ignored: IngestRejection): IngestR
 /**
  * Accept (or refuse) a canonical `31951`.
  *
- * A keepalive — same `rev`, refreshed anchor — is adopted as the record but
+ * A keepalive: same `rev`, refreshed anchor, is adopted as the record but
  * reports `changed: false`: the state was already applied, and the fresher
  * anchor simply makes the next passive drift check more accurate.
  */
@@ -124,7 +124,7 @@ export function ingestCanonical(
   };
   if (!isNewerCanonical(state.canonicalOrder, incoming)) return unchanged(state, 'stale');
 
-  // Every accepted event from the host is a free clock sample — including
+  // Every accepted event from the host is a free clock sample, including
   // keepalives, which is what keeps the estimate fresh through a long pause.
   const clockSamples = pushClockSample(state.clockSamples, receivedAtMs - session.content.playback.updatedAt);
 
@@ -146,7 +146,7 @@ export function ingestCanonical(
 
   return {
     state: next,
-    // An ended session is applied once — the final position — and then nothing
+    // An ended session is applied once, the final position, and then nothing
     // more is ever synchronized for it.
     changed: applies,
     mediaChanged: applies && Boolean(mediaChanged),
@@ -206,7 +206,7 @@ export function expectedNow(
 /**
  * The passive drift decision (§8.3). Reads; never publishes; never seeks.
  *
- * Correction is suspended — `'ignore'` — whenever the player cannot answer
+ * Correction is suspended, `'ignore'`, whenever the player cannot answer
  * honestly (buffering, not ready) or cannot comply (an unmatchable rate). A
  * client that corrects against a meaningless `getCurrentTime()` produces a
  * seek→buffer→drift→seek loop, which is worse than being two seconds late.

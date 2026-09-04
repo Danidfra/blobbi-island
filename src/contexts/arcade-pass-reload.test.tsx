@@ -23,7 +23,7 @@
  * ## Why the rule is now stricter than "survives a reload"
  *
  * The pass is a **24-hour entitlement redeemed with Arcade Tickets**, and its
- * only boundary is the clock. Leaving the arcade no longer voids it either —
+ * only boundary is the clock. Leaving the arcade no longer voids it either,
  * doing so would destroy a day of play the moment the player walked into Town.
  *
  * So navigation and unload have NO say in its lifetime, and these tests assert
@@ -111,7 +111,7 @@ describe('Arcade Pass across a reload', () => {
   it('survives a mobile suspend/resume', () => {
     // Backgrounding a tab fires visibility/pagehide, and on some mobile browsers
     // `beforeunload` too. None of them is a location change, and a location
-    // change would not revoke the pass anyway. No device branch exists — this
+    // change would not revoke the pass anyway. No device branch exists; this
     // is the same code path desktop takes; only the events differ.
     render(<LocationProvider initialLocation="arcade-1">{null}</LocationProvider>);
     redeem();
@@ -131,7 +131,7 @@ describe('leaving the arcade no longer revokes it', () => {
   }
 
   async function navigate(from: LocationId, to: LocationId): Promise<void> {
-    // Unmounted at the end so a second leg starts from one clean tree — the
+    // Unmounted at the end so a second leg starts from one clean tree, the
     // point being tested is the pass surviving ACROSS these, so the entitlement
     // deliberately outlives the render.
     const { unmount } = render(

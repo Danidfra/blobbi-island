@@ -2,7 +2,7 @@
  * Measured geometry of the Blobbi Island theater screen.
  *
  * No new artwork was created for the player. `stage-inside.png` is a palette PNG
- * whose proscenium already contains a fully transparent rectangle — it renders
+ * whose proscenium already contains a fully transparent rectangle; it renders
  * black today only because `PlaceBackground` puts `bg-black` behind the stage
  * background. That hole is the screen, and anything mounted inside it shows
  * through the artwork instead of sitting on top of it.
@@ -22,7 +22,7 @@
  * 100%   └────────────────────────────────────────────────────────────┘
  * ```
  *
- * The hole is 2.565 : 1 — wider than 16 : 9 — so a video is fitted by HEIGHT and
+ * The hole is 2.565 : 1, wider than 16 : 9, so a video is fitted by HEIGHT and
  * centred horizontally. Fitting by width would overflow the frame vertically and
  * paint video over the painted proscenium.
  */
@@ -72,7 +72,7 @@ export const THEATER_PLAYER_RECT = (() => {
  * NOT over the screen. The painted red curtain covers the proscenium down to
  * roughly y 60 %, so anything placed against the bottom of the video rectangle
  * (y ≈ 57 %) is drawn on top of scenery and reads as floating debris. The band
- * between the curtain's hem and the back row of seats — the stage front wall —
+ * between the curtain's hem and the back row of seats, the stage front wall,
  * is the only clear strip in the room, and it is where the card lives.
  *
  * Row C's chair sprites start at y ≈ 72.4 %, so a card taller than ~12 % of the
@@ -95,7 +95,7 @@ export const THEATER_CONTROL_CARD_RECT = {
  *
  * The screen must paint ABOVE the background image but BELOW everything else in
  * the room. The curtain block is a plain `absolute` div with no z-index, so it
- * paints at z 0 within the stage stacking context — the screen therefore uses a
+ * paints at z 0 within the stage stacking context, the screen therefore uses a
  * NEGATIVE z so the curtain can still fall in front of it, while the seat rows
  * (z 10/20/30) and the back arrow (z 20) are untouched.
  *

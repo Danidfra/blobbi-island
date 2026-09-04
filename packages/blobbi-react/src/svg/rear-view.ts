@@ -8,7 +8,7 @@
  * What DOES exist is a semantic convention every one of the Blobbi SVGs follows:
  * each part of the character is introduced by an HTML comment
  * (`<!-- Eyes (white base) -->`, `<!-- Mouth -->`, ...) and runs until the next
- * comment or `</svg>`. The renderer already treats those comments as an API —
+ * comment or `</svg>`. The renderer already treats those comments as an API,
  * `applyGazeMarkup` finds the pupils that way, and the eye-colour customizer
  * scopes its fill replacement to the same block.
  *
@@ -36,16 +36,16 @@ export type BlobbiView = 'front' | 'rear';
  * Exact comment labels whose blocks are removed in rear view.
  *
  * Comparison is case-insensitive on the trimmed comment text and must match in
- * full — `Eyes` does not match `Eyes (white base)`; both are listed explicitly.
+ * full, `Eyes` does not match `Eyes (white base)`; both are listed explicitly.
  * The list covers the mixed English/Portuguese naming used across the art.
  */
 export const REAR_VIEW_REMOVED_BLOCKS: readonly string[] = [
-  // Eyes — awake
+  // Eyes: awake
   'Eyes',
   'Eyes (white base)',
   'Eyes (white/base eye shapes)',
   'Eyes (black patches + white base)',
-  // Eyes — sleeping variants
+  // Eyes: sleeping variants
   'Sleeping eyes',
   'Sleeping eyes on stem',
   'Twinkling eyes',
@@ -77,10 +77,10 @@ export const REAR_VIEW_REMOVED_BLOCKS: readonly string[] = [
  * Exported so the test suite can assert they survive, and so the intent is
  * documented next to the removal list rather than in a commit message.
  *
- * - `Big circular pop-out eyes` — FROGGI's eye BULGES. They are part of the
+ * - `Big circular pop-out eyes`: FROGGI's eye BULGES. They are part of the
  *   silhouette; a frog seen from behind still has them.
  * - `*gradient` blocks live inside `<defs>` and paint nothing on their own.
- * - `Black ear patches` — PANDI's ears, not its eye patches.
+ * - `Black ear patches`: PANDI's ears, not its eye patches.
  */
 export const REAR_VIEW_KEPT_BLOCKS: readonly string[] = [
   'Big circular pop-out eyes',
@@ -123,7 +123,7 @@ export function isSelfContainedMarkup(fragment: string): boolean {
  * Locate the comment blocks a rear view must delete.
  *
  * A block starts at its `<!--` and ends where the next comment starts, or at
- * `</svg>`, or at the end of the string — the same convention `gaze.ts` uses.
+ * `</svg>`, or at the end of the string, the same convention `gaze.ts` uses.
  *
  * @returns Ranges in source order, each with the label that matched.
  */

@@ -52,7 +52,7 @@ describe('adoption preview → baby tags', () => {
     const tags = previewToBabyTags({ ...preview, name: 'Puck' });
     const event = asBabyEvent(tags);
 
-    // stage is baby, not egg — so useBlobbis (which drops eggs) keeps it.
+    // stage is baby, not egg, so useBlobbis (which drops eggs) keeps it.
     expect(tags.find(([n]) => n === 'stage')?.[1]).toBe('baby');
 
     // Passes the same validator useBlobbis uses on reload.

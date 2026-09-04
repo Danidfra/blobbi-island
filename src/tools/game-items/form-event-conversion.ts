@@ -6,7 +6,7 @@
  * `buildGameItemDefinitionEvent` decides tag order, image-tag emission and
  * required-field enforcement; `parseGameItemDefinitionResult` decides what a
  * stored event means. This module owns exactly two things the package cannot
- * know about — how a form's rows map onto repeatable tags, and which tags the
+ * know about: how a form's rows map onto repeatable tags, and which tags the
  * form does NOT manage.
  *
  * ## Unknown-tag preservation
@@ -20,7 +20,7 @@
  * That is the whole rule. It is deliberately name-based rather than
  * value-based: if a future spec version adds `["durability", "40"]`, this form
  * has no field for it, so it lands in `extraTags`, survives an edit, and is
- * republished untouched. The alternative — dropping what we don't recognize —
+ * republished untouched. The alternative, dropping what we don't recognize,
  * would make this tool destructive to anything published by a newer client.
  *
  * The same policy applies inside `content`: keys the structured editor models
@@ -30,7 +30,7 @@
  *
  * A primary image is an `image` tag with no third element. The form models it
  * as `marker === ''` and this module asserts the literal string `"primary"`
- * never reaches a tag — that string is a UI label for "unmarked", nothing more.
+ * never reaches a tag; that string is a UI label for "unmarked", nothing more.
  *
  * ## One thing the round trip normalizes, on purpose
  *
@@ -39,8 +39,8 @@
  * of the list therefore comes back with the primary hoisted. That is the
  * library's documented tag ordering, not information the form dropped: the
  * form itself holds the event's original order (so the image manager shows you
- * what was published), and the relative order of the MARKED views — the part
- * clients actually read in sequence — survives untouched. Reproducing the
+ * what was published), and the relative order of the MARKED views, the part
+ * clients actually read in sequence, survives untouched. Reproducing the
  * original interleaving would mean bypassing the builder, which is the one
  * thing this integration will not do.
  */
@@ -76,7 +76,7 @@ import {
 /**
  * Tag names the form owns and therefore regenerates on every publish.
  *
- * This list mirrors the package builder's own managed set — it has to, because
+ * This list mirrors the package builder's own managed set; it has to, because
  * the builder throws when `extraTags` contains one of them. Keeping the two in
  * sync is asserted by `form-event-conversion.test.ts`, which round-trips a
  * definition carrying every managed tag.
@@ -182,7 +182,7 @@ function metadataValue(row: MetadataRow): ConversionResult<unknown> {
  * Build the `content` string from the content editor.
  *
  * In `json` mode (and for content that was never a JSON object) the raw text is
- * authoritative and is validated but not reformatted — an issuer who hand-wrote
+ * authoritative and is validated but not reformatted, an issuer who hand-wrote
  * their content gets their bytes back. In `structured` mode the managed fields
  * are assembled and every unmanaged key is appended verbatim.
  *
@@ -235,7 +235,7 @@ export function buildContentString(
   // `visual` key order is deliberate and stable: the discriminator first, then
   // whichever shape it selects, then the stage list both shapes share. It costs
   // nothing and makes a published effect definition read the way the document
-  // describes it. Every field is omitted when blank — a wearable never emits an
+  // describes it. Every field is omitted when blank, a wearable never emits an
   // empty `effect`, and an effect never emits an empty `slot`.
   const visual: Record<string, unknown> = {};
   if (content.visual.kind.trim() !== '') visual.kind = content.visual.kind.trim();
@@ -280,8 +280,8 @@ export function imageRowsToPackageImages(
  * from live form rows.
  *
  * This is what lets the preview panel call `primaryItemImageUrl` and
- * `itemImageSourcesForView` — the exact functions inventory rows and the
- * accessory resolver use — against an item that has not been published yet.
+ * `itemImageSourcesForView`: the exact functions inventory rows and the
+ * accessory resolver use, against an item that has not been published yet.
  */
 export function formImageCandidate(form: ItemFormState): {
   images: GameItemImage[];
@@ -340,7 +340,7 @@ export function formToBuildInput(
  * Every rejection comes from the package builder (missing `id`/`name`/`type`,
  * a bad `max_stack`, a malformed `based_on` address, an ambiguous primary
  * image, an `extraTags` conflict) rather than from a second implementation of
- * its rules here — that is the point of routing through it at all.
+ * its rules here; that is the point of routing through it at all.
  */
 export function formToUnsignedEvent(
   form: ItemFormState,
@@ -360,7 +360,7 @@ export function formToUnsignedEvent(
  * The primary image is the ABSENCE of a marker. If the literal string
  * `"primary"` ever appeared in slot 2 of an `image` tag, every other client
  * would read it as an unknown view marker and the item would have no primary
- * image at all — so this is checked rather than assumed.
+ * image at all, so this is checked rather than assumed.
  */
 function assertNoLiteralPrimaryMarker(tags: readonly string[][]): void {
   for (const tag of tags) {
@@ -376,7 +376,7 @@ function assertNoLiteralPrimaryMarker(tags: readonly string[][]): void {
  * The unsigned event as it will be signed, for preview and inspection.
  *
  * `id` and `sig` stay empty because they do not exist until the signer runs,
- * and `created_at` is a preview value — the real one is stamped at signing.
+ * and `created_at` is a preview value, the real one is stamped at signing.
  */
 export function toPreviewEvent(
   template: UnsignedEventTemplate<typeof KIND_GAME_ITEM_DEFINITION>,
@@ -467,9 +467,9 @@ function contentToForm(rawContent: string, contentJson: unknown): ContentFormSta
     }
   }
 
-  // Managed `visual` keys are lifted into typed fields; anything else — an
+  // Managed `visual` keys are lifted into typed fields; anything else, an
   // unknown key, or a managed key holding an unexpected TYPE (a numeric `slot`,
-  // an object `effect`) — falls through to `extra` and is republished verbatim.
+  // an object `effect`): falls through to `extra` and is republished verbatim.
   // Coercing a wrong type into a string field would silently rewrite somebody
   // else's definition, which is the one thing this editor must not do.
   const visual = blankVisual();
@@ -510,7 +510,7 @@ function contentToForm(rawContent: string, contentJson: unknown): ContentFormSta
  * Read raw content text into the structured editor.
  *
  * Used when switching from JSON mode back to structured mode, which is allowed
- * ONLY when the text is a JSON object — the structured editor has fields for
+ * ONLY when the text is a JSON object, the structured editor has fields for
  * objects and no way to represent a bare array or string, so the switch is
  * refused with a reason rather than silently discarding the content.
  */
@@ -614,14 +614,14 @@ export function eventToForm(
  * IMPORTING A PASTED EVENT is loading, with the network taken out.
  *
  * An author writing a batch of official items usually has the whole event
- * already — tags, content, the lot — and only the artwork is still in flux.
+ * already: tags, content, the lot, and only the artwork is still in flux.
  * Retyping fifteen tags into a form to get back to what they pasted is the kind
  * of work a tool exists to remove.
  *
  * So this reuses {@link eventToForm} verbatim rather than growing a second
- * parser. Everything the load path guarantees — the package decides what a tag
+ * parser. Everything the load path guarantees, the package decides what a tag
  * means, unknown tags land in `extraTags`, unknown content keys land in
- * `content.extra` / `visual.extra` — holds identically here, because it is
+ * `content.extra` / `visual.extra`: holds identically here, because it is
  * literally the same code. What this function adds is only the two things a
  * pasted blob needs that a fetched event does not:
  *
@@ -634,13 +634,13 @@ export function eventToForm(
  * ## Provenance is reported, never attached
  *
  * A pasted event may carry an `id`, a `pubkey` and a `sig`. Those describe
- * where the JSON came from — they are NOT a claim that this editor is now
+ * where the JSON came from; they are NOT a claim that this editor is now
  * editing that published event. Attaching them would lock the `d` tag and make
  * the studio announce that publishing "replaces" an address that belongs to
  * whoever signed the paste, which is wrong whenever that is not the current
  * signer, and misleading even when it is.
  *
- * So the imported form has `loaded: null` — a fresh local draft — and the
+ * So the imported form has `loaded: null`: a fresh local draft, and the
  * provenance is handed back separately for the UI to show. Publishing it goes
  * through the normal flow: signed by the current signer, at the current
  * signer's address.
@@ -650,7 +650,7 @@ export function eventToForm(
  * Stand-in author used only to satisfy the package's address builder.
  *
  * `parseGameItemDefinitionResult` derives `31632:<pubkey>:<d>` and throws on an
- * empty pubkey — but an unsigned draft legitimately has no author yet. Since
+ * empty pubkey: but an unsigned draft legitimately has no author yet. Since
  * the imported form drops `loaded` entirely, the address this produces is
  * discarded immediately and never reaches the UI, the form or an event.
  */
@@ -662,7 +662,7 @@ export interface ImportedEventProvenance {
   pubkey: string;
   createdAt: number;
   sig: string;
-  /** A signature was present — the paste came from a published event. */
+  /** A signature was present, the paste came from a published event. */
   isSigned: boolean;
 }
 
@@ -683,7 +683,7 @@ function asString(value: unknown): string {
  * Validate the pasted envelope down to something `eventToForm` can read.
  *
  * Rejections are specific on purpose: "this is a kind:1 note" is actionable and
- * "invalid event" is not. Nothing is silently repaired — a malformed tag is an
+ * "invalid event" is not. Nothing is silently repaired, a malformed tag is an
  * error rather than a dropped tag, because dropping one would mean importing an
  * item that is quietly missing a field the author can see in their clipboard.
  */
@@ -742,7 +742,7 @@ export function importEventJson(raw: string): ConversionResult<ImportedEvent> {
 
   // `content` is a STRING on the wire. An author who hand-wrote their draft may
   // well have left it as a nested object, which is an obvious slip rather than
-  // a different document — so it is serialized and reported, not rejected.
+  // a different document, so it is serialized and reported, not rejected.
   let content: string;
   if (source.content === undefined || source.content === null) {
     content = '';
@@ -786,7 +786,7 @@ export function importEventJson(raw: string): ConversionResult<ImportedEvent> {
   return {
     ok: true,
     value: {
-      // `loaded: null` is the whole provenance decision — see the module note.
+      // `loaded: null` is the whole provenance decision; see the module note.
       form: { ...result.form, loaded: null },
       warnings: [...warnings, ...result.warnings.map((w) => w.message)],
       provenance: hasProvenance
@@ -801,7 +801,7 @@ export function importEventJson(raw: string): ConversionResult<ImportedEvent> {
  * the caller must change.
  *
  * Used by "Duplicate as new" and by "Use as template" for another issuer's
- * definition. Optionally records the source as a `based_on` derivation —
+ * definition. Optionally records the source as a `based_on` derivation,
  * which asserts lineage only, never ownership or endorsement.
  */
 export function asNewItem(

@@ -31,7 +31,7 @@ describe('the curated registry', () => {
   it('covers the families Ditto bundles', () => {
     // Spot-check across the categories rather than restating the table: a
     // missing family costs a theme its font only when that theme omits a URL,
-    // so the failure is soft — but it is exactly the failure this phase fixed.
+    // so the failure is soft, but it is exactly the failure this phase fixed.
     for (const family of [
       'Inter',
       'Playfair Display',
@@ -77,7 +77,7 @@ describe('the curated registry', () => {
     );
     expect(resolveThemeFontUrl('Inter')).toContain('jsdelivr');
     // An uncurated family with no URL has nowhere to fetch from, and that is a
-    // legitimate answer — not every font is one of Ditto's.
+    // legitimate answer: not every font is one of Ditto's.
     expect(resolveThemeFontUrl('Georgia')).toBeUndefined();
   });
 
@@ -136,8 +136,8 @@ describe('no component overrides the inherited family', () => {
       The regression this guards.
 
       A theme font reaches the app through ONE inherited variable. Any component
-      that sets `font-family` itself — a hardcoded `Comfortaa`, a Tailwind
-      `font-sans` utility, an inline style — becomes a hole the theme cannot
+      that sets `font-family` itself, a hardcoded `Comfortaa`, a Tailwind
+      `font-sans` utility, an inline style, becomes a hole the theme cannot
       reach, and nothing about the app looks wrong until a themed player opens
       it. The exceptions below are deliberate and named.
     */

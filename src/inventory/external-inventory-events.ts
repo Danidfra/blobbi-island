@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the ONE store of everything Island knows about the
+ * Blobbi Island: the ONE store of everything Island knows about the
  * inventories another game writes for the signed-in player.
  *
  * ```
@@ -33,13 +33,13 @@
  *
  * - the author is the store's owner (a cheap pre-check; the package parsers
  *   enforce it again against the inventory address);
- * - kind:31633 — parses as an inventory (`parseInventoryEvent`), is not
+ * - kind:31633: parses as an inventory (`parseInventoryEvent`), is not
  *   Blobbi's own context, and wins the canonical newest-valid selection for
  *   its `d` against the snapshot already held;
- * - kind:1416 — parses as a spend (`parseGameInventorySpend`: full inventory
+ * - kind:1416: parses as a spend (`parseGameInventorySpend`: full inventory
  *   and item addresses, canonical quantity, author = inventory owner), and
  *   is not already held;
- * - kind:1417 — parses as a fold manifest (`parseGameInventoryFold`: full
+ * - kind:1417: parses as a fold manifest (`parseGameInventoryFold`: full
  *   inventory address, well-formed references, author = owner), and is not
  *   already held.
  *
@@ -52,15 +52,15 @@
  * is ever identified by a bare `d`, and no game-specific rule lives here.
  *
  * Whether a spend applies, whether a fold settles anything, whether a
- * snapshot is resolvable — all of that is the package's
+ * snapshot is resolvable; all of that is the package's
  * `resolveGameInventoryState`, run by `deriveExternalInventoryStates` over
  * the whole store. So:
  *
  * - a fold that arrives before the snapshot referencing it is stored and
- *   INERT: nothing references it, so the derivation ignores it — until the
+ *   INERT: nothing references it, so the derivation ignores it, until the
  *   snapshot arrives and the chain reaches it;
  * - a snapshot that arrives before its fold is stored and derives as
- *   UNRESOLVED (no balance, never the raw number) — until the fold arrives,
+ *   UNRESOLVED (no balance, never the raw number): until the fold arrives,
  *   live or fetched by id, and the same derivation resolves it;
  * - a spend arriving from three relays is one spend; a spend for another
  *   inventory or by another author is kept out or ignored by the package.
@@ -71,9 +71,9 @@
  * may not yet hold a spend another relay streamed a second ago, or the
  * snapshot the owner just published. A network read is therefore ADDITIONAL
  * EVIDENCE, never permission to forget. `reconcileExternalInventoryStores`
- * folds a freshly fetched store into the one already held — immutable spends
+ * folds a freshly fetched store into the one already held, immutable spends
  * and folds are a union by id, and a snapshot is replaced only by the
- * canonical newest-valid winner — so an incomplete read can neither delete a
+ * canonical newest-valid winner, so an incomplete read can neither delete a
  * known kind:1416/1417 nor regress a newer valid kind:31633. The rule is
  * scoped to ONE owner: stores of different players are never merged, and a
  * store that has been dropped (logout, cache removal) is simply gone.
@@ -190,7 +190,7 @@ export function mergeExternalInventoryEvents(
  * ```
  *   held:    rev18, S1, S2, S3          (S3 and rev18 arrived live)
  *   fetched: rev17, S1, S2              (a relay that has not caught up)
- *   result:  rev18, S1, S2, S3          — nothing forgotten
+ *   result:  rev18, S1, S2, S3; nothing forgotten
  *
  *   held:    rev18                      fetched: valid rev19   → rev19
  *   held:    rev18                      fetched: malformed rev20 → rev18
@@ -265,7 +265,7 @@ export function deriveExternalInventoryStates(
 
 /**
  * The manifests every unresolved inventory is missing, with relay hints,
- * deduplicated by id — what a bounded by-id fetch should ask for.
+ * deduplicated by id, what a bounded by-id fetch should ask for.
  */
 export function missingFoldReferencesOf(view: ExternalInventoryView): EventReference[] {
   const seen = new Set<string>();
@@ -295,7 +295,7 @@ export function missingFoldReferencesOf(view: ExternalInventoryView): EventRefer
  * One REQ per relay; three filters in it. Ten or fifty inventories change the
  * length of the `#a` list, not the number of subscriptions. There is no
  * per-item and no per-inventory subscription. The spend and fold filters are
- * omitted while no inventory is known — a `#a: []` filter would match nothing
+ * omitted while no inventory is known, a `#a: []` filter would match nothing
  * and some relays reject it.
  */
 export function externalInventoryLiveFilters(
@@ -346,7 +346,7 @@ export const MAX_FOLD_FETCH_ROUNDS = 8;
  * 3. derive; for every unresolved inventory fetch its missing manifests by
  *    id (configured relays + relay hints) and derive again, bounded.
  *
- * An unanswered read is an ERROR — never an empty store. Steps 2–3 for a
+ * An unanswered read is an ERROR; never an empty store. Steps 2–3 for a
  * subset only (`onlyAddresses`) let a consumption preflight refresh one
  * inventory's ledger without re-discovering everything; the caller supplies
  * the snapshots it already trusts.

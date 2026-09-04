@@ -15,7 +15,7 @@
  *   Family stranger names        deterministic alias        (display-names.ts)
  * ```
  *
- * Each of those is *structural* — it works on text nobody has seen before, in
+ * Each of those is *structural*; it works on text nobody has seen before, in
  * any language, spelled any way. This file catches the small, obvious subset
  * those structures do not cover, and its value is precisely that it is not load
  * bearing. `docs/safe-user-authored-names.md` §7 states the limits plainly.
@@ -32,8 +32,8 @@
  *
  * ## Evasion handled, and evasion not handled
  *
- * The normalizer folds the cheap tricks — case, accents, full-width characters,
- * digit-for-letter substitution — and each term's pattern tolerates arbitrary
+ * The normalizer folds the cheap tricks, case, accents, full-width characters,
+ * digit-for-letter substitution: and each term's pattern tolerates arbitrary
  * separators BETWEEN its letters (`f.u.c.k`, `f u c k`, `f-u-c-k`). Separators
  * are restricted to non-alphanumerics, so an intervening real word breaks the
  * match rather than being skipped over.
@@ -80,13 +80,13 @@ const LEET_FOLD: ReadonlyMap<string, string> = new Map([
  * ## Why substitution folding is optional
  *
  * Folding `1`→`i` and `3`→`e` catches `sh1t`, and it also DESTROYS the digit
- * boundary that catches `fuck123` — with the fold applied that becomes
+ * boundary that catches `fuck123`: with the fold applied that becomes
  * `fucki2e`, where `fuck` is followed by a letter and no longer stands alone.
  * The two goals are genuinely in tension, so {@link classifyUserAuthoredText}
  * checks both forms rather than picking one and losing the other. Checking twice
  * can only add matches, never false positives.
  *
- * Never throws — a malformed surrogate or an exotic script must not take out the
+ * Never throws: a malformed surrogate or an exotic script must not take out the
  * caller, which may be rendering a remote player's name.
  */
 export function normalizeForMatching(value: string, foldSubstitutions = true): string {
@@ -116,7 +116,7 @@ export function normalizeForMatching(value: string, foldSubstitutions = true): s
  * The prohibited vocabulary.
  *
  * **Small, curated, English, and explicitly not exhaustive.** The goal is to
- * establish the mechanism, not to attempt comprehensive coverage — a list that
+ * establish the mechanism, not to attempt comprehensive coverage, a list that
  * pretended to be complete would invite exactly the misplaced confidence this
  * module's header warns against.
  *
@@ -171,8 +171,8 @@ export const PROHIBITED_TERMS: readonly string[] = Object.freeze([
 /**
  * One pattern per term.
  *
- * `[\W_]*` between letters absorbs separators — dots, spaces, hyphens, asterisks
- * — while excluding letters and digits, so an intervening real word breaks the
+ * `[\W_]*` between letters absorbs separators, dots, spaces, hyphens, asterisks,
+ * while excluding letters and digits, so an intervening real word breaks the
  * match instead of being skipped.
  *
  * The boundaries are LETTER-only on purpose (see the header): `class` must not
@@ -192,7 +192,7 @@ export interface UserTextClassification {
   /**
    * The term that matched, or `null`.
    *
-   * Exposed for tests and diagnostics. **Not for display** — echoing the matched
+   * Exposed for tests and diagnostics. **Not for display**: echoing the matched
    * word back to a player is how a filter becomes a lookup table for what to try
    * next, and in a child-facing product it also prints the slur it just blocked.
    */
@@ -204,7 +204,7 @@ const CLEAN: UserTextClassification = Object.freeze({ verdict: 'clean', matched:
 /**
  * Classify a value. Never throws; anything unusable is `clean`.
  *
- * `clean` means "nothing on the list was found", never "this is safe" — the
+ * `clean` means "nothing on the list was found", never "this is safe": the
  * difference is the whole reason this is defence in depth.
  */
 export function classifyUserAuthoredText(value: unknown): UserTextClassification {

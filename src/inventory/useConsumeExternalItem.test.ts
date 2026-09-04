@@ -442,7 +442,7 @@ describe('nothing is signed when', () => {
     expect(w.petRelay.published).toHaveLength(0);
   }
 
-  it('the effective quantity is zero — however many the raw snapshot claims', async () => {
+  it('the effective quantity is zero, however many the raw snapshot claims', async () => {
     await expectNothingSigned(world({ effective: 0 }), /No Strawberry left/);
   });
 
@@ -507,7 +507,7 @@ describe('one spend per player action', () => {
     const second = await runExternalConsumption(w.deps, input(inventory(3)));
     expect(second).toMatchObject({ status: 'applied', spendId: first.spendId, resumed: true });
     expect(w.signer.spendsSigned()).toBe(1);
-    // Same id, same bytes — it came back out of the durable ledger, not a signer.
+    // Same id, same bytes; it came back out of the durable ledger, not a signer.
     expect(w.spendRelays.publish.mock.calls[1][0]).toEqual(w.spendRelays.publish.mock.calls[0][0]);
     expect(w.spendRelays.publish.mock.calls[1][0].id).toBe(first.spendId);
     // The resume did not re-derive: the debit's existence was the question, not the balance.
@@ -541,7 +541,7 @@ describe('one spend per player action', () => {
 });
 
 describe('the effect is applied at most once per spend id', () => {
-  it('an ambiguous pet-state publish is reported, then RECONCILED by marker — no second spend, no second effect', async () => {
+  it('an ambiguous pet-state publish is reported, then RECONCILED by marker; no second spend, no second effect', async () => {
     const w = world({ effective: 1, petPublish: 'timeout' });
     const first = await runExternalConsumption(w.deps, input(inventory(3)));
     expect(first.status).toBe('effect-ambiguous');

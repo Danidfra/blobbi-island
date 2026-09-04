@@ -1,5 +1,5 @@
 /**
- * Test doubles for the dance game — a scriptable audio engine, plus re-exports
+ * Test doubles for the dance game, a scriptable audio engine, plus re-exports
  * of the arcade-wide fake signer and fake reward writer.
  *
  * The signer and writer moved to `../test-doubles` when Air Hockey and Pool
@@ -16,7 +16,7 @@ export { createFakeWriter, fakeUser, type FakeWriterOptions } from '../test-doub
 /**
  * A scriptable audio engine.
  *
- * `jsdom` has no `AudioContext`, so the real engine cannot be built there — and
+ * `jsdom` has no `AudioContext`, so the real engine cannot be built there, and
  * more importantly, a test that had to wait for real seconds to pass would be a
  * test nobody runs. `setSongTime` moves the song clock explicitly, which is the
  * whole reason the judgement code takes the time as an argument.

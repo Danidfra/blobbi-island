@@ -8,7 +8,7 @@
  * counter. Everything below is one of those.
  *
  * The room is rendered with a stubbed `usePendingInteraction` so arrival can be
- * driven explicitly — that is the whole point of the contract being tested.
+ * driven explicitly: that is the whole point of the contract being tested.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ARCADE_CATALOGUE, BLOBBI_DANCE_GAME_ID } from '@/arcade/catalogue';
@@ -17,11 +17,11 @@ import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { FREE_ARCADE_GAME_ENTRY } from '@/arcade/tokens/game-entry';
 
 // These tests are about walking the room, opening cabinets and switching
-// views — not about the arcade economy. The turnstile reads the player's
+// views: not about the arcade economy. The turnstile reads the player's
 // inventory, so it is stubbed to free play here; what it actually charges is
 // covered by `useArcadeGameEntry.test.tsx`.
 /**
- * What the GENERIC cabinets have to play. Empty in production today — and an
+ * What the GENERIC cabinets have to play. Empty in production today, and an
  * empty catalogue makes the cabinets decoration, so the catalogue path is
  * exercised here with a stand-in shared-cabinet game.
  */
@@ -73,7 +73,7 @@ vi.mock('@/hooks/useLocation', () => ({
 
 /*
   The dance machine's reward hook needs a relay pool, a query client and a login
-  context. This file tests the ROOM — which machine opens what, and when — so the
+  context. This file tests the ROOM, which machine opens what, and when, so the
   claim path is stubbed out rather than provided. It is exercised for real in
   `useArcadeReward.test.tsx` and `dance/DanceMachine.test.tsx`, both against a
   fake writer. Nothing in this file can publish.
@@ -100,8 +100,8 @@ vi.mock('@/hooks/useArcadeReward', () => ({
 
 /*
   The Prize Counter needs a query client, a relay pool and a login context for
-  its balance and its redemption boundary. This file tests the ROOM — that the
-  counter OPENS it — so the surface is stubbed; it is exercised for real in
+  its balance and its redemption boundary. This file tests the ROOM; that the
+  counter OPENS it: so the surface is stubbed; it is exercised for real in
   `prizes/PrizeCounter.test.tsx` against fake writers.
 */
 vi.mock('./prizes/PrizeCounter', () => ({
@@ -549,8 +549,8 @@ describe('decoration is decoration', () => {
 describe('elevator', () => {
   it('opens the floor selector for everyone, with no entitlement check', () => {
     // The elevator used to demand an Arcade Pass and open a refusal modal
-    // instead. The arcade charges for PLAYS now — one Arcade Token per game,
-    // bought at the counter — so riding it is free and the refusal modal is
+    // instead. The arcade charges for PLAYS now; one Arcade Token per game,
+    // bought at the counter, so riding it is free and the refusal modal is
     // gone rather than merely unreachable.
     renderRoom('ground');
 

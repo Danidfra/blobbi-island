@@ -140,7 +140,7 @@ describe('the welcome', () => {
 });
 
 describe('the initial 200 Coins', () => {
-  it('is celebrated when — and only when — the real grant reports it was applied by this run', () => {
+  it('is celebrated when: and only when, the real grant reports it was applied by this run', () => {
     economy = { phase: 'applied', alreadyApplied: false, canRetry: false };
     render(<Overlays />);
     expect(celebration()).toBeNull(); // arrival first

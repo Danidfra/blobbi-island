@@ -1,5 +1,5 @@
 /**
- * BlobbiActor — the shared Island-side actor primitive (Phase 2).
+ * BlobbiActor: the shared Island-side actor primitive (Phase 2).
  *
  * One implementation of the GROUND-ANCHOR geometry for both the local player
  * (`MovableBlobbi`) and remote players (`RemoteBlobbiSprite`), replacing the
@@ -22,7 +22,7 @@
  *   └── debug markers (dev-only, via DebugOverlaysContext)
  *
  * This component owns NO input capture, movement state, presence logic,
- * boundary selection, or Nostr publishing — those stay in its two wrappers.
+ * boundary selection, or Nostr publishing; those stay in its two wrappers.
  */
 import React from 'react';
 import { cn } from '@/lib/utils';
@@ -51,13 +51,13 @@ export interface BlobbiActorProps {
   anchorId?: string;
   /** data-player-key value for remote actors. */
   playerKey?: string;
-  /** Seat id (data attribute only — presentation is driven by props). */
+  /** Seat id (data attribute only, presentation is driven by props). */
   seatedIn?: string | null;
   /** Hiding-spot id (data attribute; pair with `visualHidden`). */
   hiddenIn?: string | null;
   /**
-   * Paint nothing (sprite, shadow) while keeping the positioned anchor mounted
-   * — the hiding-spot presentation. Input/portal behavior stays alive.
+   * Paint nothing (sprite, shadow) while keeping the positioned anchor mounted,
+   * the hiding-spot presentation. Input/portal behavior stays alive.
    */
   visualHidden?: boolean;
   hideShadow?: boolean;

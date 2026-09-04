@@ -1,6 +1,6 @@
 /**
  * Form ⇄ event conversion, verified against the REAL
- * `@nostr-games/inventory@0.2.0` — no mock of the builder or the parser exists
+ * `@nostr-games/inventory@0.2.0`: no mock of the builder or the parser exists
  * anywhere in this suite, because a mocked builder would only prove that our
  * assumptions agree with themselves.
  *
@@ -484,7 +484,7 @@ describe('round trip', () => {
   it('preserves marked-view order, and lets the builder hoist the primary', () => {
     // The package builder documents that it "emits one unmarked primary image
     // tag followed by the marked image views". So a definition that published
-    // its primary in the middle comes back with the primary first — that is
+    // its primary in the middle comes back with the primary first; that is
     // the library normalizing, not the form losing information. What must NOT
     // change is the relative order of the MARKED views, because that is the
     // order clients read them in.
@@ -555,7 +555,7 @@ describe('round trip', () => {
 
   it('does not duplicate a preserved tag once the form manages it', () => {
     // `alt` is managed, so an event carrying one must produce exactly one on
-    // the way back out — never one preserved plus one regenerated.
+    // the way back out; never one preserved plus one regenerated.
     const event = signedEvent([
       ['d', 'x:y:z'],
       ['name', 'X'],

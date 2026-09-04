@@ -37,7 +37,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 0.8,
   },
   // Clothing Store. `initialScale` is the FRONT of the room (y = 99.5) and
-  // `finalScale` the BACK (y = 64.5) — see `resolveBlobbiScale`. The furnished
+  // `finalScale` the BACK (y = 64.5): see `resolveBlobbiScale`. The furnished
   // artwork opened the floor up from a 22 %-deep strip to a 35 %-deep room, so
   // the ramp widened with it: the old 1.2 → 1.0 was calibrated for the shell and
   // would have left a Blobbi at the clothing rack the same size as one on the
@@ -47,14 +47,14 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 0.9,
   },
   // Badges Store. `initialScale` is the FRONT of the room (y = 99) and
-  // `finalScale` the BACK (y = 59.5) — see `resolveBlobbiScale`. At ~40 % of the
+  // `finalScale` the BACK (y = 59.5): see `resolveBlobbiScale`. At ~40 % of the
   // world deep it is the deepest shop interior, so the ramp is the widest.
   'badges-store-inside.webp': {
     initialScale: 1.3,
     finalScale: 0.9,
   },
   // Furniture Store. `initialScale` is the FRONT of the room (y = 99) and
-  // `finalScale` the BACK (y = 56) — see `resolveBlobbiScale`. At 43 % of the
+  // `finalScale` the BACK (y = 56): see `resolveBlobbiScale`. At 43 % of the
   // world deep it is the deepest interior in the game, because the showroom's
   // aisle runs all the way from the frame's bottom edge to the checkout desk
   // against the back wall. The ramp is set to the same slope per unit of depth
@@ -65,7 +65,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 0.85,
   },
   // Care Store. `initialScale` is the FRONT of the room (y = 99) and
-  // `finalScale` the BACK (y = 68.5) — see `resolveBlobbiScale`. The room is
+  // `finalScale` the BACK (y = 68.5): see `resolveBlobbiScale`. The room is
   // ~30 % of the world deep, a little more than the clothing store, so the ramp
   // is slightly wider.
   'care-store-inside.webp': {
@@ -77,7 +77,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
     finalScale: 1.5,
   },
   // Plaza interior. `initialScale` is the FRONT of the room (y = 99.5) and
-  // `finalScale` the BACK (y ≈ 39.4, the far ends of the balcony's wings) —
+  // `finalScale` the BACK (y ≈ 39.4, the far ends of the balcony's wings),
   // see `resolveBlobbiScale`. Two floors share one linear ramp, so the scale
   // runs continuously: ~1.05 at the frame's bottom edge, ~0.85 at the bottom
   // step (y = 73.6), ~0.73 halfway up the flight, ~0.63 on the landing and the
@@ -90,7 +90,7 @@ export const locationScalingConfig: Record<string, LocationScalingConfig> = {
   // balcony parapet: the Blobbi walks the corridor BEHIND it, and the corridor
   // line keeps the same immersion behind the parapet's plate all the way out
   // (`PLAZA_CORRIDOR`), so what has to hold is that an `lg` rig (96 px, 8 % of
-  // the world tall at 0.58) keeps its head and eyes above the plate — which it
+  // the world tall at 0.58) keeps its head and eyes above the plate, which it
   // does with ~1.5 % to spare above the top rail at the wings' ends and ~3.5 %
   // along the centre run. Lower than this and the corridor becomes a walk
   // behind a fence.

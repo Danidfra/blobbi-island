@@ -64,7 +64,7 @@ export function resolveIslandThemeOffline(
 }
 
 export interface UseThemeResult {
-  /** The resolved active theme. Never undefined — an unresolvable id falls back. */
+  /** The resolved active theme. Never undefined, an unresolvable id falls back. */
   theme: IslandTheme;
   /**
    * The id as STORED, which is not always `theme.id`: a config carrying an id
@@ -77,14 +77,14 @@ export interface UseThemeResult {
   themes: readonly IslandTheme[];
   /**
    * True when the stored id names a Nostr theme this client cannot render from
-   * its cache — the only state in which the island is showing something other
+   * its cache: the only state in which the island is showing something other
    * than what the player chose.
    */
   isUnresolved: boolean;
   /**
    * Switch themes. Applies immediately and caches the palette for the next boot.
    *
-   * Publishing the choice to Nostr is deliberately NOT here — see
+   * Publishing the choice to Nostr is deliberately NOT here; see
    * `useThemeSelection`. This hook is used by surfaces that only read the theme
    * (the account menu's Appearance row), and a read-only surface must not drag
    * a publish path, a signer and a relay into its dependency graph.
@@ -92,7 +92,7 @@ export interface UseThemeResult {
    * `chosenBy` is the account that made the choice, and it is a PARAMETER for
    * the same reason: reading the signed-in user here would mean requiring a
    * login provider above every surface that merely displays the theme's name.
-   * `useThemeSelection` — the hook every real chooser goes through — supplies
+   * `useThemeSelection`: the hook every real chooser goes through, supplies
    * it. Omitting it records an unattributed choice, which reconciliation treats
    * as "not this account's", the safe direction.
    */
@@ -104,8 +104,8 @@ export interface UseThemeResult {
  *
  * ## Where the choice lives
  *
- * The id goes in the `nostr:app-config` localStorage blob — the same one that
- * holds the relay preference — because that is what the pre-paint boot script
+ * The id goes in the `nostr:app-config` localStorage blob, the same one that
+ * holds the relay preference, because that is what the pre-paint boot script
  * reads, and boot must never wait on anything. When the player is signed in the
  * choice is ALSO published as kind:16767 (`useThemeSelection`), which is what
  * makes it survive a new device and what lets Ditto show the same theme.
@@ -117,7 +117,7 @@ export interface UseThemeResult {
  *
  * If the selected theme is a Nostr theme and it cannot be read, the cached
  * palette keeps rendering and the stored id is left alone. The player is told
- * only when there is no cache either — the one case where what they see is
+ * only when there is no cache either, the one case where what they see is
  * genuinely not what they chose.
  */
 export function useTheme(): UseThemeResult {
@@ -164,8 +164,8 @@ export function useTheme(): UseThemeResult {
         `IslandThemeSync` reconciles this browser against the account, and
         without a time on the local side it cannot order the two: a selection
         made a second ago and one made last month look identical to it, so the
-        relay's copy — which is stale by exactly the length of the publish
-        debounce — wins and the player watches their choice revert.
+        relay's copy: which is stale by exactly the length of the publish
+        debounce: wins and the player watches their choice revert.
 
         ONE update, not three. `useLocalStorage`'s setter derives the next value
         from the state of the render it was created in, so two calls in the same

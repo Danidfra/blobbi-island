@@ -1,5 +1,5 @@
 /**
- * Beach Treasure Hunt — the pure game model (Beach 1A).
+ * Beach Treasure Hunt, the pure game model (Beach 1A).
  *
  * Public surface of `src/beach/treasure-hunt/`. Everything exported here is
  * deterministic and framework-free; see `types.ts` for the ground rules and

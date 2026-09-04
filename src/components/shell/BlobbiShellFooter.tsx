@@ -8,7 +8,7 @@ interface BlobbiShellFooterProps {
 }
 
 /**
- * BlobbiShellFooter — the reserved contextual strip below the desktop canvas.
+ * BlobbiShellFooter: the reserved contextual strip below the desktop canvas.
  *
  * A quiet single-line area under the game window for tips, status, CTAs,
  * announcements or onboarding hints. Deliberately subtle: no heavy card or

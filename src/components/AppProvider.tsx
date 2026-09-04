@@ -31,7 +31,7 @@ interface AppProviderProps {
  * WHOLE blob, so without the per-field catch a stale theme id would also cost
  * the player their chosen relay.
  *
- * The theme is not validated against the known ids on purpose — see the note on
+ * The theme is not validated against the known ids on purpose; see the note on
  * `Theme` in `src/contexts/AppContext.ts`. An unknown id is resolved (to the
  * default) at the point it is applied, not rejected here, so a theme removed
  * from a later build and then restored still comes back.
@@ -40,7 +40,7 @@ const AppConfigSchema: z.ZodType<AppConfig> = z.object({
   theme: z.string().catch(DEFAULT_ISLAND_THEME_ID),
   /*
     Both optional and both `.catch(undefined)`: a config written before these
-    existed is the common case, and "absent" is a MEANINGFUL value here — it
+    existed is the common case, and "absent" is a MEANINGFUL value here; it
     says the selection's age is unknown, which reconciliation reads as "yield to
     the account". A corrupt value must degrade to that same unknown rather than
     to a confident zero, which would claim the local choice is older than
@@ -75,7 +75,7 @@ export function AppProvider(props: AppProviderProps) {
   const policy = useIslandSafetyPolicy();
 
   /**
-   * Generic config updater — and the ONE place a relay change can happen.
+   * Generic config updater, and the ONE place a relay change can happen.
    *
    * The relay gate lives here rather than on `RelaySelector` because the
    * selector is mounted in three places (the account menu, the account switcher,
@@ -86,7 +86,7 @@ export function AppProvider(props: AppProviderProps) {
    *
    * A refused relay change is dropped, not thrown: the rest of the update still
    * applies, so a caller changing the theme and the relay in one go keeps the
-   * theme. `RelaySelector` is also hidden where the capability is absent — that
+   * theme. `RelaySelector` is also hidden where the capability is absent; that
    * is presentation, and this is enforcement.
    */
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
@@ -119,19 +119,19 @@ export function AppProvider(props: AppProviderProps) {
  * `useLayoutEffect` rather than `useEffect` so the custom properties land in
  * the same frame the app first paints. In the browser the pre-paint boot script
  * (`public/island-theme.js`) has usually already written the same values, and
- * this is the reconciliation — but the script is best-effort (it can be blocked,
+ * this is the reconciliation, but the script is best-effort (it can be blocked,
  * or the config can change), so this is the authoritative write.
  *
  * Resolution is deliberately OFFLINE (`resolveIslandThemeOffline`): built-in
  * registry, then the palette cache, then the default. This provider sits above
- * every Nostr provider — it has no relay to ask and must not acquire one, since
+ * every Nostr provider; it has no relay to ask and must not acquire one, since
  * first paint cannot wait on a socket. A selected Nostr theme is refreshed from
  * its definition afterwards by `IslandThemeSync`, which lives below the
  * providers where a relay exists.
  *
  * Switching a theme is only a custom-property change on the root element. No
  * component unmounts, no context above the router changes identity, and no
- * query is invalidated — which is the reason a player can change theme mid-game
+ * query is invalidated, which is the reason a player can change theme mid-game
  * without disturbing a mining session, a rhythm track or their position in the
  * world. `island-theme.test.tsx` holds that line.
  */
@@ -142,7 +142,7 @@ function useApplyIslandTheme(themeId: string) {
     `ditto:active` names "whatever theme this account is using", so
     `IslandThemeSync` replaces its CONTENT without the id ever changing. An
     effect keyed on the id alone would leave the previous theme painted until
-    something else happened to re-render — which is exactly what a player who
+    something else happened to re-render, which is exactly what a player who
     changed their theme in Ditto and came back would see.
   */
   const cacheVersion = useSyncExternalStore(
@@ -159,7 +159,7 @@ function useApplyIslandTheme(themeId: string) {
 
       A Nostr theme may carry a FONT and BACKGROUND MEDIA (Ditto's `f` and `bg`
       tags). They are applied here, from the same resolved theme, so there is
-      exactly one place a theme becomes visible — and cleared here too, since
+      exactly one place a theme becomes visible, and cleared here too, since
       `theme.config` is absent for every built-in and switching to one must take
       the previous theme's wallpaper with it.
     */

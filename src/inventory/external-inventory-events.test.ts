@@ -1,6 +1,6 @@
 /**
- * The external inventory event STORE: what enters it, what it derives, and —
- * the part that only matters once events arrive live — that the order of
+ * The external inventory event STORE: what enters it, what it derives, and,
+ * the part that only matters once events arrive live; that the order of
  * arrival never changes the answer.
  *
  * Every balance rule is the package's; what is pinned here is the store's
@@ -160,7 +160,7 @@ describe('merging kind:31633 (addressable: newest VALID per context)', () => {
 describe('merging kind:1416 live', () => {
   const base = () => mergeExternalInventoryEvent(empty(), snapshot('s1', [[STRAWBERRY, 4]]));
 
-  it('a new spend reduces the effective quantity — the raw snapshot is untouched', () => {
+  it('a new spend reduces the effective quantity, the raw snapshot is untouched', () => {
     const store = mergeExternalInventoryEvent(base(), spend('x1'));
     expect(qty(store)).toBe(3);
     expect(store.snapshots[0].tags).toContainEqual(['a', STRAWBERRY, '', '4']);
@@ -197,7 +197,7 @@ describe('merging kind:1416 live', () => {
   });
 });
 
-describe('merging kind:1417 live — arrival order never changes the answer', () => {
+describe('merging kind:1417 live: arrival order never changes the answer', () => {
   it('an orphan fold is stored and INERT', () => {
     const store = mergeExternalInventoryEvents(empty(), [
       snapshot('s1', [[STRAWBERRY, 4]]),

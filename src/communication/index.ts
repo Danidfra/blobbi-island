@@ -1,5 +1,5 @@
 /**
- * Island communication — the structured message layer for kind 21201.
+ * Island communication: the structured message layer for kind 21201.
  *
  * Everything here is pure: catalogs, a parser, a renderer, a payload builder and
  * rate limits. No React, no relay, no storage. The wiring lives in

@@ -1,13 +1,13 @@
 /**
- * A CANONICALLY free cart still buys — without touching the Coin wallet.
+ * A CANONICALLY free cart still buys, without touching the Coin wallet.
  *
  * The shipped catalog has no free item (`validateCoinPrices` requires every
  * listed price to be a positive integer), so this branch is unreachable in
  * production today. It is tested against a stubbed catalog because the rule
  * that matters is a distinction, not a price: a canonical **0** skips the
  * wallet and grants through the shared inventory transaction, while an
- * **unpriced** item is rejected outright. Collapsing those two — treating
- * "unknown" as "free" — would turn the shop into a free-grant API, which is
+ * **unpriced** item is rejected outright. Collapsing those two, treating
+ * "unknown" as "free": would turn the shop into a free-grant API, which is
  * exactly what F-05 exists to prevent.
  */
 
@@ -104,7 +104,7 @@ describe('a canonically free cart', () => {
     expect(outcome).toMatchObject({ outcome: 'ambiguous' });
   });
 
-  it('an UNPRICED item is not free — it is rejected before any grant', async () => {
+  it('an UNPRICED item is not free; it is rejected before any grant', async () => {
     const { result } = renderBatch();
     await act(async () => {
       await expect(

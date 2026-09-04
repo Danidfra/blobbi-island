@@ -1,5 +1,5 @@
 /**
- * Air Hockey balance — does a match actually work as a match?
+ * Air Hockey balance, does a match actually work as a match?
  *
  * The three questions a physics test cannot answer, answered by playing whole
  * matches in a loop: does the opponent score, can it be beaten, and does a match
@@ -8,8 +8,8 @@
  * ## The reference opponent
  *
  * The "player" here is the SAME controller, mirrored across the centre line and
- * driving the player's mallet. That is the only fair yardstick available — a
- * hand-written stand-in would measure the stand-in — and it makes the test
+ * driving the player's mallet. That is the only fair yardstick available, a
+ * hand-written stand-in would measure the stand-in, and it makes the test
  * symmetric by construction: any bias it finds is a bias in the game, not in the
  * harness. The mirrored side is genuinely stronger, because the player's mallet
  * is faster than any opponent profile, which is exactly the advantage a person
@@ -18,9 +18,9 @@
  * ## Why the thresholds are loose
  *
  * These are tuning guards, not specifications. They exist to catch the two
- * failures that actually happened during development — a 0–0 stalemate that ran
+ * failures that actually happened during development, a 0–0 stalemate that ran
  * past four hundred simulated seconds, and a puck creeping along a rail for
- * forty seconds while nobody could reach it — without breaking every time a
+ * forty seconds while nobody could reach it, without breaking every time a
  * constant is nudged. A tighter assertion here would be a test about the
  * harness's arithmetic rather than about whether the game is playable.
  */
@@ -65,7 +65,7 @@ const mirrorPoint = (v: Vec2): Vec2 => ({ x: v.x, y: TABLE_HEIGHT - v.y });
 /**
  * How fast the reference player's HAND may move, in table units per second.
  *
- * The real player's mallet has no speed limit at all — it is wherever the
+ * The real player's mallet has no speed limit at all; it is wherever the
  * pointer is. A reference opponent driving it would therefore teleport, which
  * measures a player nobody can be and makes every balance number meaningless.
  * So the harness rate-limits its own AIM POINT instead, modelling the one thing
@@ -176,7 +176,7 @@ describe('the opponent is a real opponent', () => {
 
   it('is beatable by a stronger player', () => {
     // The other half. An opponent nobody can score against is not difficult,
-    // it is broken — and that is exactly what the first tuning pass shipped.
+    // it is broken, and that is exactly what the first tuning pass shipped.
     const reports = SEEDS.map((seed) => playMatch('normal', 'normal', seed));
     const goals = reports.reduce((a, r) => a + r.playerScore, 0);
     expect(goals).toBeGreaterThan(reports.length);

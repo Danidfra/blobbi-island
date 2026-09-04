@@ -2,14 +2,14 @@
  * The canonical store of local player-safety relationships.
  *
  * One record per pubkey, two independent bits, one place. Everything that
- * enforces Mute or Block — the presence ingest, the communication ingest, the
- * settings list, the action sheet — reads this module and nothing else. A
+ * enforces Mute or Block, the presence ingest, the communication ingest, the
+ * settings list, the action sheet, reads this module and nothing else. A
  * second store would be a second answer to "is this player blocked?", and the
  * two would disagree on exactly the event that mattered.
  *
  * ## Why this lives outside `src/safety/`
  *
- * `src/safety/` answers *what may this EXPERIENCE do* — a capability matrix
+ * `src/safety/` answers *what may this EXPERIENCE do*, a capability matrix
  * that is deliberately pure, deliberately ambient-state-free, and asserted to be
  * so by its own boundary test. This module answers a different question: *what
  * has this PLAYER decided about that PLAYER*. It is per-person, mutable, and
@@ -27,14 +27,14 @@
  * "the person harassing you is still on screen while we publish" is not an
  * acceptable failure mode. So the local write IS the enforcement, and any future
  * Nostr synchronisation (see `docs/player-safety-controls.md`) is durability and
- * interoperability layered on top — never a precondition.
+ * interoperability layered on top; never a precondition.
  *
  * ## Cross-tab propagation is free here
  *
  * `localStorage` fires a `storage` event in every OTHER document of the same
  * origin. Same-tab writes notify subscribers directly (storage events do not
  * fire in the writing tab). Together that is live cross-tab propagation with no
- * BroadcastChannel and no second synchronisation mechanism — the same shape
+ * BroadcastChannel and no second synchronisation mechanism, the same shape
  * `arcade-pass.ts` already uses, pointed at `localStorage` because a block must
  * outlive the tab that made it.
  *
@@ -46,8 +46,8 @@
  * the subscription for the whole room.
  *
  * That failure direction is worth stating plainly, because it is the unsafe one:
- * a corrupt store forgets that someone was blocked. The alternative — refusing
- * to render anything until storage can be read — fails the entire game closed
+ * a corrupt store forgets that someone was blocked. The alternative, refusing
+ * to render anything until storage can be read, fails the entire game closed
  * for a problem that is almost always "private browsing". The mitigation is that
  * writes read back (see {@link write}), so a store that cannot persist reports
  * failure to the caller at the moment the player presses Block, rather than
@@ -87,7 +87,7 @@ function storageKey(): string | null {
  */
 export const MAX_TRACKED_PLAYERS = 500;
 
-/** A hex pubkey, loosely validated — enough to reject obvious junk. */
+/** A hex pubkey, loosely validated, enough to reject obvious junk. */
 const PUBKEY_PATTERN = /^[0-9a-f]{64}$/i;
 
 /** What this player has decided about one other player. */
@@ -151,15 +151,15 @@ function parse(raw: string | null): StoredMap {
       A VERSION WE DO NOT KNOW IS NOT THIS SCHEMA.
 
       The version tag was written from the start and never read, so a future
-      `v: 2` — a different mute/block representation, a new field with its own
-      meaning — would have been parsed as though it were this one, and the parts
+      `v: 2`: a different mute/block representation, a new field with its own
+      meaning: would have been parsed as though it were this one, and the parts
       that happened to look familiar would have been believed. Reading a v2
       store as v1 is how a block quietly becomes a mute.
 
       An unknown version yields an EMPTY store rather than a throw: the player
       sees no relationships, which is visibly wrong and recoverable, instead of
       a subtly wrong set they would have no reason to doubt. A missing version
-      is treated as v1 — the shape that shipped before the tag was enforced.
+      is treated as v1, the shape that shipped before the tag was enforced.
     */
     const version = (parsed as { v?: unknown }).v;
     if (version !== undefined && version !== SCHEMA_VERSION) return {};
@@ -241,7 +241,7 @@ function write(next: StoredMap): boolean {
         else localStorage.setItem(key, serialized);
       }
     } catch {
-      /* fall through — the read-back decides the outcome */
+      /* fall through: the read-back decides the outcome */
     }
   }
 
@@ -260,7 +260,7 @@ function write(next: StoredMap): boolean {
  * Make room for one more entry, without ever dropping a block.
  *
  * Returns the map to write. When every entry is a block the map is returned
- * unchanged and the store is allowed past the cap — see {@link MAX_TRACKED_PLAYERS}.
+ * unchanged and the store is allowed past the cap; see {@link MAX_TRACKED_PLAYERS}.
  */
 function evictIfFull(map: StoredMap, incoming: string): StoredMap {
   if (Object.keys(map).length < MAX_TRACKED_PLAYERS || incoming in map) return map;
@@ -281,7 +281,7 @@ function update(pubkey: string, change: Partial<PlayerRelationship>, now: number
     You cannot mute or block yourself.
 
     Not a UI concern: the card that offers these buttons is only ever opened on
-    somebody else, so the only way here is a direct call — a console, a future
+    somebody else, so the only way here is a direct call, a console, a future
     surface, a bug that passes the wrong pubkey. Blocking your own account would
     delete your own Blobbi from your own island and silence your own messages,
     with a Settings row as the only clue.
@@ -297,7 +297,7 @@ function update(pubkey: string, change: Partial<PlayerRelationship>, now: number
   // Idempotent: setting a bit to the value it already has changes nothing.
   //
   // Without this, re-blocking an already-blocked player would rewrite the
-  // timestamp, which counts as a change and wakes every subscriber — so the
+  // timestamp, which counts as a change and wakes every subscriber, so the
   // presence map would re-prune and every bubble would be re-checked for a
   // decision that did not move. Cheap to get wrong, and the churn only shows up
   // under real timing.
@@ -413,7 +413,7 @@ export function clearAllRelationships(): boolean {
   SWITCHING ACCOUNT SWITCHES THE ANSWERS, immediately.
 
   The parsed snapshot is cached against the exact string it came from, and the
-  string now comes from an account-scoped key — so when the account changes,
+  string now comes from an account-scoped key, so when the account changes,
   the cache is stale in a way no `storage` event will ever report. Dropping it
   and waking every subscriber is what makes B's block list take effect in a
   world A left mounted: the presence map re-prunes, the bubbles re-check, and

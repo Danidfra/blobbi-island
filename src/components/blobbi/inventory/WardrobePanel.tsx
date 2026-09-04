@@ -10,7 +10,7 @@ import { EffectsPanel } from '../EffectsPanel';
 import { InventoryBrowser } from './InventoryBrowser';
 
 /**
- * Wardrobe — everything that changes how the Blobbi LOOKS.
+ * Wardrobe: everything that changes how the Blobbi LOOKS.
  *
  * ## Why this exists as a tab
  *
@@ -21,8 +21,8 @@ import { InventoryBrowser } from './InventoryBrowser';
  * to scroll past sandwiches, and a player feeding a hungry Blobbi had to scroll
  * past hats.
  *
- * So the window is now `Blobbi | Wardrobe | Items`, and Effects — which was a
- * top-level tab for something that is plainly a kind of appearance — folds in
+ * So the window is now `Blobbi | Wardrobe | Items`, and Effects, which was a
+ * top-level tab for something that is plainly a kind of appearance, folds in
  * here as the second half of a two-way segmented control:
  *
  * ```
@@ -37,7 +37,7 @@ import { InventoryBrowser } from './InventoryBrowser';
  *
  * ## The feedback loop
  *
- * Both halves are meant to be used with the Blobbi visible beside them —
+ * Both halves are meant to be used with the Blobbi visible beside them,
  * selecting a hat highlights it on the stage and arms its drag handles;
  * previewing an effect draws it on the real renderer. Nothing here publishes:
  * the verbs are handed up to the window, which owns the kind:31634 mutation.

@@ -25,7 +25,7 @@ function equip(code: string, overrides: Partial<AccessoryPlacementInput> = {}): 
   };
 }
 
-describe('normalizeAccessoryPlacements — deterministic layering', () => {
+describe('normalizeAccessoryPlacements: deterministic layering', () => {
   it('assigns behind-body layers to back and aura, front to face slots', () => {
     const placements = normalizeAccessoryPlacements([
       equip('headwear-1'),

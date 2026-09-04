@@ -1,5 +1,5 @@
 /**
- * Air Hockey — everything that puts pixels on the canvas.
+ * Air Hockey: everything that puts pixels on the canvas.
  *
  * Presentation only. It reads a {@link HockeyMatchState} and draws it; it never
  * changes one, never decides anything, and never talks to React. That split is
@@ -7,7 +7,7 @@
  *
  * ## Why a canvas at all
  *
- * Blobbi Dance deliberately uses DOM elements — a dozen notes with text, focus
+ * Blobbi Dance deliberately uses DOM elements, a dozen notes with text, focus
  * rings and a screen-reader story, none of which a canvas gives you free. Air
  * Hockey is the opposite case: three moving circles, a puck trail, contact
  * ripples and a table's worth of markings, none of which carry text and none of
@@ -15,7 +15,7 @@
  * node per trail sample and per ripple, created and destroyed several times a
  * second.
  *
- * The accessible content — both scores, the phase, the countdown, the result —
+ * The accessible content; both scores, the phase, the countdown, the result,
  * is real DOM ABOVE the canvas, so nothing a player needs to READ lives inside
  * the picture. The canvas itself is `aria-hidden`.
  *
@@ -43,7 +43,7 @@ import type { HockeySide, Vec2 } from '@/arcade/hockey/physics';
 /**
  * The table's colours.
  *
- * Deep indigo felt with neon markings — the same family as the dance game's
+ * Deep indigo felt with neon markings, the same family as the dance game's
  * playfield, so the two machines read as the same arcade. The two sides are
  * told apart by HUE (purple for the player, amber for the opponent) and also by
  * POSITION and by the labelled scores in the DOM, so nothing about the game
@@ -117,7 +117,7 @@ export const TRAIL_LENGTH = 14;
 export type HockeyOrientation = 'landscape' | 'portrait';
 
 export interface TableTransform {
-  /** CSS pixels per table unit. Uniform — the table never stretches. */
+  /** CSS pixels per table unit. Uniform, the table never stretches. */
   readonly scale: number;
   /** Letterbox offset in CSS pixels. */
   readonly offsetX: number;
@@ -147,7 +147,7 @@ export function tableAspectRatio(orientation: HockeyOrientation): string {
  *
  * Measured, never guessed from a user agent: a wide box gets the long axis
  * across it, a tall box gets the long axis down it. This is what makes a phone
- * rotate correctly — the container changes shape and the answer changes with it.
+ * rotate correctly: the container changes shape and the answer changes with it.
  * A square box is a tie, and landscape wins it because the scoreboard reads
  * left-to-right.
  */
@@ -161,7 +161,7 @@ export function autoOrientation(widthPx: number, heightPx: number): HockeyOrient
  *
  * Uniform scale and a letterbox rather than a stretch, because a stretched table
  * would mean a pointer position that does not map back to a table unit the
- * simulation would agree with — the puck would appear to leave the mallet at the
+ * simulation would agree with, the puck would appear to leave the mallet at the
  * wrong angle, and no amount of tuning would fix it.
  */
 export function fitTable(
@@ -183,7 +183,7 @@ export function fitTable(
  * Map a point in CSS pixels (relative to the canvas box) to table units.
  *
  * The one place pointer input crosses into the simulation's coordinate system,
- * and the exact inverse of {@link applyTableTransform} — layout included.
+ * and the exact inverse of {@link applyTableTransform}, layout included.
  * Because both directions read the same `orientation` off the same object, a
  * resize, a device rotation or a manual layout switch cannot desynchronise where
  * the player points from where the mallet goes: there is no second copy of the
@@ -256,7 +256,7 @@ function roundedRect(
   ctx.closePath();
 }
 
-/** The felt, the markings and the two goal mouths. Redrawn every frame — it is cheap. */
+/** The felt, the markings and the two goal mouths. Redrawn every frame; it is cheap. */
 export function drawTable(ctx: CanvasRenderingContext2D): void {
   const gradient = ctx.createLinearGradient(0, 0, 0, TABLE_HEIGHT);
   gradient.addColorStop(0, HOCKEY_PALETTE.feltTop);
@@ -283,7 +283,7 @@ export function drawTable(ctx: CanvasRenderingContext2D): void {
   ctx.arc(TABLE_CENTER_X, TABLE_CENTER_Y, 2.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Goal creases — a semicircle in front of each mouth, tinted to whoever
+  // Goal creases: a semicircle in front of each mouth, tinted to whoever
   // defends it. A player glancing at the table can tell which end is theirs
   // without reading anything.
   drawCrease(ctx, 0, HOCKEY_PALETTE.opponent);
@@ -323,7 +323,7 @@ const GOAL_LINE_WIDTH = 2.6;
 function drawGoalMouth(ctx: CanvasRenderingContext2D, lineY: number, tint: string): void {
   // Drawn just INSIDE the goal line rather than centred on it. A stroke centred
   // on `y = 0` puts half its width outside the canvas, so the mouth appeared as
-  // a thin sliver at the top and vanished completely at the bottom — the two
+  // a thin sliver at the top and vanished completely at the bottom, the two
   // most important marks on the table, and the only ones telling a player which
   // end is theirs. The simulation's goal line is untouched: this moves paint,
   // not geometry.

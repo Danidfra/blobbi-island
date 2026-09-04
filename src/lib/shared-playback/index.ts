@@ -1,5 +1,5 @@
 /**
- * Shared Playback Session — the pure protocol library.
+ * Shared Playback Session, the pure protocol library.
  *
  * Framework-free by rule (protocol §14.3): nothing in this directory may import
  * React, the DOM, the seat system, presence, chat or rendering. That is what

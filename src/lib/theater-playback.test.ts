@@ -112,7 +112,7 @@ describe('resolveSkipTarget', () => {
     expect(resolveSkipTarget(298, 10, 300)).toBe(300 - END_GUARD_SECONDS);
   });
 
-  it('returns null for a no-op — a no-op must not publish anything', () => {
+  it('returns null for a no-op, a no-op must not publish anything', () => {
     expect(resolveSkipTarget(0, -10, 300)).toBeNull();
     expect(resolveSkipTarget(300 - END_GUARD_SECONDS, 10, 300)).toBeNull();
   });
@@ -286,7 +286,7 @@ describe('LocalTheaterPlaybackController', () => {
     expect(adapter.calls.at(-1)).toBe(`seek:${300 - END_GUARD_SECONDS}`);
   });
 
-  it('keeps volume, mute and captions strictly local — never a command', () => {
+  it('keeps volume, mute and captions strictly local; never a command', () => {
     const adapter = makeAdapter();
     const commands: PlaybackCommand[] = [];
     const c = makeController(adapter, (cmd) => commands.push(cmd));

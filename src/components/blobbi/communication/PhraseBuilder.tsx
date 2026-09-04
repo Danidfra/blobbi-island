@@ -3,7 +3,7 @@
  *
  * Deliberately not a grammar engine. A template is a fixed sequence of literal
  * fragments and named holes (`src/communication/templates.ts`), every hole draws
- * from a small catalog, and there is no free-text slot anywhere — which is what
+ * from a small catalog, and there is no free-text slot anywhere, which is what
  * lets the whole feature be available in a profile that refuses free text.
  *
  * ## Native `<select>`, on purpose
@@ -16,8 +16,8 @@
  *
  * ## The preview is the message
  *
- * The sentence shown above the Send button is produced by `renderTemplateText`
- * — the same function the RECEIVER uses. A preview built by different code from
+ * The sentence shown above the Send button is produced by `renderTemplateText`,
+ * the same function the RECEIVER uses. A preview built by different code from
  * the one that renders the received message is a preview that can lie about
  * what you are about to say.
  */
@@ -38,7 +38,7 @@ interface PhraseBuilderProps {
   onSend: (message: IslandMessage) => void;
 }
 
-/** The first allowed value of every parameter — a template always starts valid. */
+/** The first allowed value of every parameter, a template always starts valid. */
 function initialParams(template: PhraseTemplate): Record<string, string> {
   const params: Record<string, string> = {};
   for (const param of template.params) {

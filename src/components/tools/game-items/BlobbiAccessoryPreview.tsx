@@ -5,7 +5,7 @@
  *
  * Nothing here writes. It does not equip, does not grant, does not touch the
  * player's inventory, does not publish an event, and does not read the current
- * player's companion — the Blobbi on screen is a fixture built from constants
+ * player's companion: the Blobbi on screen is a fixture built from constants
  * in this file. The x/y/scale/rotation controls are local component state used
  * to eyeball artwork; they are NOT placement protocol data, are never
  * serialized into the item definition, and disappear when the panel unmounts.
@@ -26,13 +26,13 @@
  * definition-derived URLs: a URL generated from a legacy accessory code, then
  * `public/assets/.../<code>.webp`, then `.png`. Those steps exist for
  * accessories that predate the item protocol and are identified by codes like
- * `headwear-8`. An item being authored here has no legacy code — its identity
- * is a `d` tag — so every one of those steps is guaranteed to miss, and
+ * `headwear-8`. An item being authored here has no legacy code; its identity
+ * is a `d` tag, so every one of those steps is guaranteed to miss, and
  * including them would emit an "unknown accessory prefix" warning and two
  * doomed image requests per render. The part of the chain that describes THIS
  * item's artwork is `itemImageSourcesForView`, and that is used verbatim.
  *
- * The renderer still receives nothing but plain strings — it never learns that
+ * The renderer still receives nothing but plain strings; it never learns that
  * an item definition, an address or a view marker exists. That boundary is the
  * reason `@blobbi/react` can stay protocol-agnostic, and this panel does not
  * bend it.
@@ -154,7 +154,7 @@ export function BlobbiAccessoryPreview({
 
       {facing === 'back' && hiddenFromBehind && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-          A <code>{accessorySlot}</code> accessory is not drawn from behind — you
+          A <code>{accessorySlot}</code> accessory is not drawn from behind; you
           would not see it. That is the renderer&rsquo;s rear-view slot rule, not a
           missing image, and publishing a <code>back</code> view does not change it.
         </p>
@@ -163,7 +163,7 @@ export function BlobbiAccessoryPreview({
       <div className="space-y-3 rounded-xl border border-dashed p-3">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-medium text-muted-foreground">
-            Preview-only placement — never published, never saved
+            Preview-only placement: never published, never saved
           </p>
           <Button
             type="button"

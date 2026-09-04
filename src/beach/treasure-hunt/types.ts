@@ -1,5 +1,5 @@
 /**
- * Beach Treasure Hunt — the pure domain types.
+ * Beach Treasure Hunt, the pure domain types.
  *
  * Everything in `src/beach/treasure-hunt/` is a pure simulation in the same
  * sense as `src/arcade/hockey/`: no React, no DOM, no timers, no audio, no
@@ -16,7 +16,7 @@
  *
  * ## What is deliberately NOT here
  *
- * - No presentation text, image URLs or React nodes — `kind` is a stable
+ * - No presentation text, image URLs or React nodes, `kind` is a stable
  *   identifier (`'bottle-cap'`), and display names live with the UI.
  * - No official kind:31632 item addresses, no event ids, no Coin values.
  *   `rawValue` is an abstract reward unit; mapping units to anything real is
@@ -49,7 +49,7 @@ export interface TreasureTarget {
   readonly digRadius: number;
   /** Scales the detector signal, `0..1`. Litter reads slightly weaker than treasure. */
   readonly signalWeight: number;
-  /** Abstract reward units. NOT Coins — see the module doc. */
+  /** Abstract reward units. NOT Coins; see the module doc. */
   readonly rawValue: number;
   readonly found: boolean;
 }
@@ -58,7 +58,7 @@ export interface TreasureTarget {
  * What the detector reports for a coil position.
  *
  * Deliberately lossy: it never contains a target's coordinates, only an
- * intensity and the distance to the nearest in-range unresolved target — the
+ * intensity and the distance to the nearest in-range unresolved target, the
  * same information a real detector's beep carries. The UI/audio layer renders
  * this; it never gets to peek at the field.
  */
@@ -80,7 +80,7 @@ export type DigRejectionReason =
   | 'no-shovel-uses';
 
 /**
- * The outcome of one dig attempt. A rejected attempt consumes nothing — a
+ * The outcome of one dig attempt. A rejected attempt consumes nothing, a
  * shovel use is only ever spent on a valid attempt, hit or miss.
  */
 export type DigResolution =
@@ -109,7 +109,7 @@ export type TreasureHuntEndReason =
   | 'ended-by-player';
 
 /**
- * Semantic actions only — no browser event objects, no wall-clock timestamps.
+ * Semantic actions only; no browser event objects, no wall-clock timestamps.
  * Time is advanced explicitly by the caller as a delta in seconds.
  */
 export type TreasureHuntAction =
@@ -130,7 +130,7 @@ export interface TreasureFindResult {
  * The economy-neutral round result. Derived purely from a finished round.
  *
  * `rawCleanupValue` / `rawTreasureValue` are abstract units. They are not
- * Coins, and `specialCandidateFound` records candidacy only — nothing here
+ * Coins, and `specialCandidateFound` records candidacy only; nothing here
  * claims any reward was granted anywhere.
  */
 export interface TreasureHuntResult {
@@ -144,7 +144,7 @@ export interface TreasureHuntResult {
   readonly litterFinds: readonly TreasureFindResult[];
   readonly valuableFinds: readonly TreasureFindResult[];
   readonly specialFinds: readonly TreasureFindResult[];
-  /** Sum of litter `rawValue` — the "you helped clean the beach" units. */
+  /** Sum of litter `rawValue`: the "you helped clean the beach" units. */
   readonly rawCleanupValue: number;
   /** Sum of valuable `rawValue`. Excludes the special candidate. */
   readonly rawTreasureValue: number;

@@ -2,7 +2,7 @@
  * Data-driven configuration for every machine in the Blobbi Island arcade.
  *
  * Replaces nine hand-written `<InteractiveElement>` blocks that all called
- * `handleElementClick('dance-machine')` — a pool table, an air hockey table and
+ * `handleElementClick('dance-machine')`: a pool table, an air hockey table and
  * six generic cabinets included. The audit's headline finding was that the
  * arcade *told players it had games it does not have*; this file is where that
  * stops being possible, because identity, floor, artwork and accessible name are
@@ -22,18 +22,18 @@
  *   specific game, or shows one specific game's coming-soon screen. It replaced
  *   a nullable `gameId` plus a loose `availability` plus a free-text `blurb`,
  *   three fields whose combinations included several that meant nothing, and
- *   then briefly replaced NOTHING at all — a pass that made every machine open
+ *   then briefly replaced NOTHING at all, a pass that made every machine open
  *   the shared catalogue, which turned a pool table into a menu. Behaviour is
  *   never inferred from a filename, artwork or a display name.
  * - **The arcade has two kinds of machine.** Six *generic cabinets* whose screens
- *   can show anything, and three *dedicated machines* — a dance pad, a pool
- *   table, an air hockey table — that ARE one physical game and can never be
+ *   can show anything, and three *dedicated machines*, a dance pad, a pool
+ *   table, an air hockey table; that ARE one physical game and can never be
  *   another. Only the generic six open the shared catalogue.
  * - **Placement is numeric.** Percentages applied via inline `style`, not
  *   arbitrary-value Tailwind classes, so the arithmetic is checkable and a
  *   mistake is visible to a test rather than only to an eye.
  * - **Anchors are derived from the art.** Each machine's sprite ratio is
- *   recorded, so the walk-to point can be computed without a DOM — which is what
+ *   recorded, so the walk-to point can be computed without a DOM, which is what
  *   lets `arcade-machines-config.test.ts` prove every anchor lands on walkable
  *   floor.
  *
@@ -42,7 +42,7 @@
  * The brief allowed for a per-machine `blocker` rect. There is none, on purpose.
  * `MovableBlobbi.goTo` REFUSES a target inside a blocker, so a blocker placed
  * over a machine's footprint before its interaction anchor has been validated in
- * a real browser would silently make that machine unreachable — trading a
+ * a real browser would silently make that machine unreachable, trading a
  * cosmetic overlap for a dead machine. Blockers belong in the phase that has a
  * playable game to walk up to; the anchors here are measured first.
  */
@@ -107,7 +107,7 @@ export type ArcadeMachineActivation =
    */
   | { readonly type: 'shared-catalogue' }
   /**
-   * A dedicated machine with a playable game. Launches that game directly — no
+   * A dedicated machine with a playable game. Launches that game directly; no
    * menu in between, because the physical object IS the game.
    */
   | { readonly type: 'dedicated-game'; readonly gameId: string }
@@ -115,7 +115,7 @@ export type ArcadeMachineActivation =
    * A dedicated machine whose game is not built yet. Shows THAT game's own
    * coming-soon screen: a pool table talks about pool.
    *
-   * No machine uses this today — all three dedicated machines now have games —
+   * No machine uses this today; all three dedicated machines now have games,
    * and it is kept because it is the state every future machine passes through,
    * and because deleting it would mean the next one has to reinvent the rule
    * that a coming-soon machine still talks about its OWN game.
@@ -150,7 +150,7 @@ export interface ArcadeMachineConfig {
   readonly zIndex: number;
   /**
    * Fractional aim point inside the sprite rect (0..1) that the Blobbi walks to.
-   * `y` near 1 puts the player at the machine's base — in FRONT of it — rather
+   * `y` near 1 puts the player at the machine's base, in FRONT of it, rather
    * than inside its artwork.
    */
   readonly interactionAnchor: { readonly x: number; readonly y: number };
@@ -175,7 +175,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
   // is named for the game it hosts: a player looking for the dance game should
   // be able to find it by reading the room. (A corrective pass briefly renamed
   // it "Dance Pad Cabinet" to satisfy an architectural rule that turned out to
-  // be wrong — the rule, not the name, was the mistake.)
+  // be wrong: the rule, not the name, was the mistake.)
   {
     id: BLOBBI_DANCE_MACHINE_ID,
     floor: 'basement',
@@ -202,7 +202,7 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
   //
   // The six cabinets are interchangeable furniture and open the shared
   // catalogue. The pool table and the air hockey table are not: each is one
-  // physical game, and each now launches that game directly — no menu, and never
+  // physical game, and each now launches that game directly; no menu, and never
   // another machine's game.
   {
     id: 'arcade-cabinet-pink',
@@ -266,8 +266,8 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
     // The third machine in the arcade with a real game behind it. Walking up to
-    // it racks a frame directly — no menu, because the physical object IS the
-    // game — and `canLaunchArcadeGame` refuses Pool from anywhere else.
+    // it racks a frame directly; no menu, because the physical object IS the
+    // game: and `canLaunchArcadeGame` refuses Pool from anywhere else.
     activation: { type: 'dedicated-game', gameId: BLOBBI_POOL_GAME_ID },
   },
   {
@@ -284,8 +284,8 @@ export const arcadeMachines: readonly ArcadeMachineConfig[] = [
     zIndex: 30,
     interactionAnchor: NEAR_EDGE_OF_TABLE,
     // The second machine in the arcade with a real game behind it. Walking up to
-    // it starts a match directly — no menu, because the physical object IS the
-    // game — and `canLaunchArcadeGame` refuses Air Hockey from anywhere else.
+    // it starts a match directly; no menu, because the physical object IS the
+    // game: and `canLaunchArcadeGame` refuses Air Hockey from anywhere else.
     activation: { type: 'dedicated-game', gameId: BLOBBI_AIR_HOCKEY_GAME_ID },
   },
   {
@@ -353,7 +353,7 @@ export function arcadeMachinesForFloor(floor: ArcadeFloorId): ArcadeMachineConfi
     .sort((a, b) => a.zIndex - b.zIndex);
 }
 
-/** The six generic cabinets — every machine that opens the shared catalogue. */
+/** The six generic cabinets; every machine that opens the shared catalogue. */
 export function sharedCatalogueMachines(): ArcadeMachineConfig[] {
   return arcadeMachines.filter((m) => m.activation.type === 'shared-catalogue');
 }
@@ -383,14 +383,14 @@ export function machineLeftPercent(machine: ArcadeMachineConfig): number {
  *
  * DOM-free on purpose. `ArcadeMachine` reads the live rect at click time (so the
  * target is right no matter how the world is scaled or letterboxed), but this
- * function computes the same point without a browser — which is what lets the
+ * function computes the same point without a browser, which is what lets the
  * config test prove every anchor lands on walkable floor before anyone clicks
  * anything.
  */
 /**
  * Ground-anchor offset (Phase 2): the anchor FRACTIONS were authored against
  * center semantics ("body center stops at 90% of the cabinet"), which put the
- * FEET half a scaled body lower — on the floor in front of the machine. The
+ * FEET half a scaled body lower, on the floor in front of the machine. The
  * stored position now IS the feet, so the same on-screen stop point is the
  * fraction point plus the depth-scaled half body height (arcade floors render
  * the lg 96 px box; scale from each floor's ramp at the anchor's y).
@@ -403,7 +403,7 @@ const ARCADE_FLOOR_SCALES: Record<ArcadeFloorId, { front: number; back: number; 
 };
 
 /**
- * Depth-scaled half body height at `y` on an arcade floor, in world percent —
+ * Depth-scaled half body height at `y` on an arcade floor, in world percent,
  * the actor-target ground offset. Shared by the DOM-free `machineAnchorPosition`
  * AND the runtime live-rect target (`ArcadeMachine.computeMachineTarget`), so
  * the two can never disagree about where the feet stop. Applied EXACTLY ONCE,

@@ -1,10 +1,10 @@
 /**
- * Blobbi Dance — the production ticket policy.
+ * Blobbi Dance: the production ticket policy.
  *
  * **This is the first `active` reward policy in the arcade.** Phase 2 shipped
  * the machinery with every policy marked `draft` precisely so that no code path
  * could pay out before a real game existed to earn it. One does now, so this one
- * is promoted — deliberately, with its numbers written down, versioned, and
+ * is promoted: deliberately, with its numbers written down, versioned, and
  * bounded.
  *
  * ## The numbers
@@ -28,7 +28,7 @@
  * | 80%, finished | 2 + 2 = **4** |
  * | 61%, finished | 2 + 1 = **3** |
  * | 40%, finished | **2** (participation floor; the run did not clear) |
- * | 100%, closed at bar 30 | **0** (no result exists — an aborted run has none) |
+ * | 100%, closed at bar 30 | **0** (no result exists, an aborted run has none) |
  *
  * ## Why it is `flat`
  *
@@ -38,11 +38,11 @@
  * and exactly one difficulty. Declaring `shape: 'flat'` says that in data
  * instead of feeding the shared layer a context of permanent `false`s and
  * advertising bonuses that can never fire. The shared caps and the participation
- * floor still apply — a flat policy opts out of bonuses, not out of the ceiling.
+ * floor still apply, a flat policy opts out of bonuses, not out of the ceiling.
  *
  * ## Why not `1 score = 1 ticket`
  *
- * A perfect run scores 110 notes × 1000 plus combo bonus — well over 130,000.
+ * A perfect run scores 110 notes × 1000 plus combo bonus, well over 130,000.
  * Paying anything proportional to that would make one afternoon's play worth
  * more than every coin sink on the island combined, and it would reward grinding
  * an easy chart over playing well. A bounded per-run reward makes the ceiling a
@@ -69,7 +69,7 @@ import {
  * The dance game's stable id.
  *
  * Re-exported, not redeclared. It was written out here AND in the machine
- * registry, each with a comment saying it mirrored the other — two constants
+ * registry, each with a comment saying it mirrored the other, two constants
  * that a rename would have silently desynchronised. The catalogue owns game
  * identity now, so it owns the string; this module borrows it.
  */
@@ -115,7 +115,7 @@ export function danceBaseTickets(result: ArcadeGameResult): number {
   const accuracy = resultAccuracy(result);
   if (accuracy === null) {
     // A result whose accuracy stat is missing or out of range still finished a
-    // run, so it is paid participation — never zero (which would look like a
+    // run, so it is paid participation; never zero (which would look like a
     // punishment) and never a tier (which would be unearned).
     return DANCE_REWARD_TUNING.participation;
   }

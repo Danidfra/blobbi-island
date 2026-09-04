@@ -9,11 +9,11 @@
  *
  * Two properties every error here carries:
  *
- *  - **`fatal`** — whether the SESSION is over. Almost nothing is: a publish
+ *  - **`fatal`**: whether the SESSION is over. Almost nothing is: a publish
  *    failure is retried, a subscription drop reconnects, and a video the local
  *    player cannot show is a local problem while the session continues for
  *    everyone else.
- *  - **`keepsPlayer`** — whether the local player survives. A Nostr problem must
+ *  - **`keepsPlayer`**: whether the local player survives. A Nostr problem must
  *    never destroy a working YouTube embed; the user can always leave the
  *    session and keep watching locally.
  */
@@ -99,7 +99,7 @@ const CATALOG: Record<SharedWatchErrorCode, Omit<SharedWatchError, 'code' | 'det
     keepsPlayer: false,
   },
   'publish-failed': {
-    message: 'Not synced — retrying.',
+    message: 'Not synced: retrying.',
     fatal: false,
     keepsPlayer: true,
   },
@@ -144,8 +144,8 @@ export function sharedWatchError(code: SharedWatchErrorCode, detail?: string): S
  *
  * Most rejections are silent-by-design: on an open relay, junk under a custom
  * kind is background noise, not something to interrupt anyone about. Only the
- * two that mean something to a person — "this client is too old" and "someone
- * tried to command a session they do not own" — get promoted.
+ * two that mean something to a person, "this client is too old" and "someone
+ * tried to command a session they do not own": get promoted.
  */
 export function errorForRejection(reason: RejectionReason): SharedWatchError | null {
   switch (reason) {

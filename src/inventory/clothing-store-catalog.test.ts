@@ -80,7 +80,7 @@ describe('nothing that is not clothing can reach the shelf', () => {
     }
   });
 
-  it('no currency is listed — not the Coin, not the Arcade Ticket', () => {
+  it('no currency is listed; not the Coin, not the Arcade Ticket', () => {
     expect(isClothingStoreProduct(BLOBBI_COIN_ADDRESS)).toBe(false);
     const ticket = ADDRESSED_OFFICIAL_ITEMS.find((i) => i.d === ARCADE_TICKET_D)!;
     expect(isClothingStoreProduct(ticket.address)).toBe(false);
@@ -147,7 +147,7 @@ describe('the shelf is empty on purpose, and the reason is checkable', () => {
 
   it('because every official wearable is already spoken for', () => {
     // Three are Arcade Prize Counter items with Arcade TICKET prices. Giving
-    // any of them a Coin price would let a player buy past the ticket ladder —
+    // any of them a Coin price would let a player buy past the ticket ladder,
     // an Arcade economy change, not a Clothing Store one.
     const arcadeAddresses = new Set(OFFICIAL_ARCADE_PRIZE_CATALOG.map((p) => p.itemAddress));
     const unclaimed = ADDRESSED_OFFICIAL_COSMETICS.filter(

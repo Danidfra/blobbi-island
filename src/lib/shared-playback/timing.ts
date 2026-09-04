@@ -2,7 +2,7 @@
  * Playback timing: where should this player be, right now?
  *
  * The protocol never streams the current position. A canonical state is a
- * *sample* — "at host-time T the playhead was at P, advancing at rate R" — and
+ * *sample*, "at host-time T the playhead was at P, advancing at rate R", and
  * every client extrapolates from it (§8.1). That is what makes a session
  * recoverable from a single stored event and what keeps the event rate at one
  * publish per user action rather than one per second.
@@ -55,7 +55,7 @@ export function expectedPosition(
 
 /**
  * A canonical `playing` state that has run past the end is *ended*, not a seek
- * target — chasing it produces a seek/buffer loop at the final frame (§8.4).
+ * target: chasing it produces a seek/buffer loop at the final frame (§8.4).
  */
 export function hasReachedEnd(expected: number, duration: number): boolean {
   return duration > 0 && expected >= duration - 0.25;
@@ -67,8 +67,8 @@ export function hasReachedEnd(expected: number, duration: number): boolean {
  * Add one passive sample: `receivedAtLocalMs − updatedAt`.
  *
  * That difference is `clockSkew + oneWayLatency`. There is no round trip and no
- * extra event: every accepted event from the host — including the 20 s keepalive
- * — is a free sample, which is precisely why the keepalive exists during long
+ * extra event: every accepted event from the host, including the 20 s keepalive,
+ * is a free sample, which is precisely why the keepalive exists during long
  * pauses.
  */
 export function pushClockSample(samples: readonly number[], sample: number): number[] {
@@ -81,7 +81,7 @@ export function pushClockSample(samples: readonly number[], sample: number): num
  *
  * The median (not the mean) because a single relay hiccup would otherwise drag
  * the estimate for eight samples. It over-estimates true skew by roughly the
- * median one-way latency — typically well under 200 ms, an order of magnitude
+ * median one-way latency, typically well under 200 ms, an order of magnitude
  * below the 750 ms ignore threshold, which is why v1 needs no ping/pong.
  */
 export function estimateClockOffset(samples: readonly number[]): number {

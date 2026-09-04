@@ -5,7 +5,7 @@ import type { ResolvedArcadePrize } from './useOfficialArcadePrizes';
 import { PrizePreviewStage } from './PrizePreviewStage';
 
 /**
- * The detail panel for one official prize — up close, with a live preview and
+ * The detail panel for one official prize, up close, with a live preview and
  * an HONEST redemption state.
  *
  * This module still owns NO redemption of its own. The redeem control is
@@ -16,7 +16,7 @@ import { PrizePreviewStage } from './PrizePreviewStage';
  *
  *   "Prize redemption is being prepared. You can preview rewards now."
  *
- * The preview goes through the real renderer path and writes nothing — see
+ * The preview goes through the real renderer path and writes nothing; see
  * `PrizePreviewStage`. Previewing is not owning: nothing on this panel changes
  * kind:31633 or kind:31634, and "You own" reads the real inventory.
  */
@@ -107,7 +107,7 @@ export function PrizeDetail({ resolved, balance, onBack, redeemSlot }: PrizeDeta
           <p className="mt-2 text-sm text-island-ink/90">{resolved.description}</p>
         )}
 
-        {/* Ownership and price — the facts, in words. */}
+        {/* Ownership and price, the facts, in words. */}
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <dt className="blobbi-text-muted">Price</dt>
           <dd className="text-right font-mono font-black text-island-purple">

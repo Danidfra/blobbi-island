@@ -1,5 +1,5 @@
 /**
- * The dev-equipment simulation reducer — pure, deterministic, max-stack-safe.
+ * The dev-equipment simulation reducer, pure, deterministic, max-stack-safe.
  *
  * The item universe and identity rules are the canonical Lab projection, so
  * coverage tests here double as "no second hand-maintained list" proof.
@@ -26,7 +26,7 @@ function reduce(state: DevSimState, ...actions: Parameters<typeof devSimReducer>
   return actions.reduce(devSimReducer, state);
 }
 
-describe('coverage — the canonical sixteen', () => {
+describe('coverage: the canonical sixteen', () => {
   it('the universe is the Lab projection: four wearables, twelve effects, unique addresses, max stack one', () => {
     expect(LAB_OFFICIAL_ITEMS).toHaveLength(16);
     expect(LAB_OFFICIAL_ITEMS.filter((i) => i.kind === 'wearable')).toHaveLength(4);
@@ -40,10 +40,10 @@ describe('coverage — the canonical sixteen', () => {
 });
 
 describe('simulated inventory', () => {
-  it('own one / remove one, capped at max stack — never above one', () => {
+  it('own one / remove one, capped at max stack; never above one', () => {
     let state = reduce(INITIAL_DEV_SIM_STATE, { type: 'set-owned', address: CAP, owned: true });
     expect(state.quantities.get(CAP)).toBe(1);
-    // Owning again stays 1 — there is no increment path at all.
+    // Owning again stays 1; there is no increment path at all.
     state = reduce(state, { type: 'set-owned', address: CAP, owned: true });
     expect(state.quantities.get(CAP)).toBe(1);
     state = reduce(state, { type: 'set-owned', address: CAP, owned: false });

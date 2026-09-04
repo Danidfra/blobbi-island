@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — CANONICAL protocol registry.
+ * Blobbi Island: CANONICAL protocol registry.
  *
  * This module is the single machine-readable source of truth for:
  *
@@ -20,7 +20,7 @@
  *  src/inventory/shop-catalog.ts                                ▼
  *  (LOCAL coin prices,      docs/protocol/blobbi-island-event-registry.md
  *   validated against this
- *   registry — see below)
+ *   registry: see below)
  * ```
  *
  * Before this file existed, the same facts were maintained by hand in four
@@ -37,12 +37,12 @@
  *   own lifecycle (promotions, per-shop variation, a future ticket currency); it
  *   is not part of a kind:31632 definition and must not be presented as one.
  *   Prices live in `src/inventory/shop-catalog.ts`, a distinct domain that is
- *   VALIDATED against this registry at module load — a separate source, not a
+ *   VALIDATED against this registry at module load, a separate source, not a
  *   drifting duplicate.
  * - **No inferred semantics.** Every entry is grounded in code that exists or in
  *   a document in this repository. Two status axes keep that honest:
  *   {@link ClientImplementationStatus} says what THIS client does, and
- *   {@link ProtocolStatus} says what the wider Blobbi protocol says — the second
+ *   {@link ProtocolStatus} says what the wider Blobbi protocol says, the second
  *   may only claim `superseded` with a citation. "Island does not implement it"
  *   is never recorded as "the ecosystem retired it".
  * - **No ownership claims over external kinds.** `31632` / `31633` belong to
@@ -52,7 +52,7 @@
  *
  * See {@link RECOVERY_BOUNDARY}. In short: this registry holds enough canonical
  * information to recreate and republish the OFFICIAL, issuer-signed item
- * definitions. It cannot reconstruct anything a USER signed — inventory
+ * definitions. It cannot reconstruct anything a USER signed, inventory
  * quantities, coins, owned Blobbis, or history.
  */
 
@@ -99,15 +99,15 @@ export type EventClass =
  * How the code IN THIS REPOSITORY relates to a kind. Scoped to the Blobbi
  * Island client and nothing else.
  *
- * - `implemented`      — this client reads AND writes it.
- * - `read-only`        — this client reads it as a first-class part of the
+ * - `implemented`: this client reads AND writes it.
+ * - `read-only`: this client reads it as a first-class part of the
  *                        product but never writes it (someone else publishes it).
- * - `read-compat`      — this client reads it only for backward compatibility
+ * - `read-compat`: this client reads it only for backward compatibility
  *                        with superseded data, and never writes it.
- * - `not-implemented`  — no code in `src/` queries, parses or publishes it.
+ * - `not-implemented`: no code in `src/` queries, parses or publishes it.
  *
  * `not-implemented` is a statement about THIS CLIENT ONLY. It says nothing
- * about whether the kind is alive elsewhere in the Blobbi ecosystem — that is
+ * about whether the kind is alive elsewhere in the Blobbi ecosystem; that is
  * {@link ProtocolStatus}, which is a separate axis on purpose.
  */
 export type ClientImplementationStatus =
@@ -120,11 +120,11 @@ export type ClientImplementationStatus =
  * What the wider Blobbi protocol says about a kind, as far as THIS REPOSITORY
  * can evidence.
  *
- * - `current`      — in use and not replaced.
- * - `superseded`   — a document in this repository names a replacement. Only
+ * - `current`: in use and not replaced.
+ * - `superseded`: a document in this repository names a replacement. Only
  *                    valid with {@link ApplicationEventKind.protocolStatusEvidence}
  *                    citing where that is stated.
- * - `undetermined` — this repository contains no statement either way. The kind
+ * - `undetermined`: this repository contains no statement either way. The kind
  *                    may still be live in another Blobbi client; absence of code
  *                    here is not evidence of deprecation anywhere else.
  *
@@ -165,7 +165,7 @@ export interface ApplicationEventKind {
   /** What the wider protocol says, as evidenced by this repository. */
   protocolStatus: ProtocolStatus;
   /**
-   * Where `protocolStatus` comes from. REQUIRED for `superseded` — a claim that
+   * Where `protocolStatus` comes from. REQUIRED for `superseded`: a claim that
    * a kind is retired must cite the document that says so. `null` for `current`
    * and `undetermined`.
    */
@@ -185,7 +185,7 @@ export interface ApplicationEventKind {
 
 /**
  * Presence kind. Unlike every other kind here there is no exported constant to
- * import — `31950` is written as a literal in `src/lib/multiplayer.ts` and
+ * import, `31950` is written as a literal in `src/lib/multiplayer.ts` and
  * `src/hooks/useIslandPresence.ts`. Recorded here as a literal with that fact
  * stated rather than silently duplicating a magic number.
  */
@@ -254,7 +254,7 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     ],
     docs: ['NIP.md', 'docs/INVENTORY_ARCHITECTURE.md', 'docs/blobbi-coin-cutover.md'],
     notes:
-      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data — never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.',
+      'Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data; never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.',
   },
   {
     kind: KIND_BLOBBONAUT_PROFILE_LEGACY, // 31125
@@ -449,7 +449,7 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     kind: KIND_GAME_INVENTORY_SPEND, // 1416
     name: 'Game Inventory Spend',
     purpose:
-      'A player-signed debit of one item quantity from one kind:31633 inventory — how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.',
+      'A player-signed debit of one item quantity from one kind:31633 inventory, how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.',
     eventClass: 'regular',
     addressFormat: null,
     authority: 'player',
@@ -493,13 +493,13 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     ],
     docs: ['docs/INVENTORY_ARCHITECTURE.md'],
     notes:
-      'Island NEVER publishes one: folding is the owning game\'s act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance — the row is shown as unavailable and never spent against.',
+      'Island NEVER publishes one: folding is the owning game\'s act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance, the row is shown as unavailable and never spent against.',
   },
   {
     kind: KIND_GAME_ITEM_PLACEMENT, // 31634
     name: 'Game Item Placement',
     purpose:
-      "Where a player's owned items are equipped or placed — Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.",
+      "Where a player's owned items are equipped or placed: Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.",
     eventClass: 'addressable',
     addressFormat: '31634:<owner>:<d>',
     authority: 'player',
@@ -539,13 +539,13 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     clientStatus: 'not-implemented',
     protocolStatus: 'superseded',
     protocolStatusEvidence:
-      "NIP.md, 'Legacy / superseded kinds': \"14919 → superseded by 1124 — Old interaction kind from the original NIP-BB draft\".",
+      "NIP.md, 'Legacy / superseded kinds': \"14919 → superseded by 1124: Old interaction kind from the original NIP-BB draft\".",
     ownership: 'blobbi-island',
     supersededBy: KIND_BLOBBI_INTERACTION,
     sourceFiles: [],
     docs: ['MD/old-NIP.md', 'NIP.md'],
     notes:
-      'No code in src/ queries, parses or publishes this kind. NIP.md heads its legacy table "queried for backward compatibility"; that is accurate for kind 31125 but NOT for 14919, which nothing reads. Other Blobbi clients may still write it — this repository only evidences that Island replaced it with 1124.',
+      'No code in src/ queries, parses or publishes this kind. NIP.md heads its legacy table "queried for backward compatibility"; that is accurate for kind 31125 but NOT for 14919, which nothing reads. Other Blobbi clients may still write it; this repository only evidences that Island replaced it with 1124.',
   },
   {
     kind: KIND_DRAFT_BREEDING, // 14920
@@ -585,7 +585,7 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     sourceFiles: [],
     docs: ['MD/old-NIP.md'],
     notes:
-      'Blobbi Island publishes no hatch/milestone event: adoption publishes only the final kind 31124 baby state (src/hooks/useFirstEggAdoption.ts). NO document in this repository deprecates or replaces 14921, and NIP.md does not mention it at all, so its ecosystem status is undetermined — it may be live in another Blobbi client.',
+      'Blobbi Island publishes no hatch/milestone event: adoption publishes only the final kind 31124 baby state (src/hooks/useFirstEggAdoption.ts). NO document in this repository deprecates or replaces 14921, and NIP.md does not mention it at all, so its ecosystem status is undetermined; it may be live in another Blobbi client.',
   },
 ];
 
@@ -635,7 +635,7 @@ export const ITEM_CATEGORIES = [
 export type ItemCategoryName = (typeof ITEM_CATEGORIES)[number];
 
 /**
- * Categories that represent consumable care items — i.e. everything that can be
+ * Categories that represent consumable care items; i.e. everything that can be
  * used on a Blobbi and sold in the shop. Derived by exclusion so adding a new
  * non-care category cannot silently make it consumable.
  */
@@ -654,11 +654,11 @@ export interface ItemEffectsShape {
 /**
  * Publication status of an official item definition.
  *
- * - `active`     — the issuer-signed kind:31632 event is published and live.
- * - `reserved`   — the identity (d/address) is claimed and the client can
+ * - `active`: the issuer-signed kind:31632 event is published and live.
+ * - `reserved`: the identity (d/address) is claimed and the client can
  *                  already resolve it from the bundled fallback, but the
  *                  official event has NOT been published yet.
- * - `deprecated` — was published, no longer offered; kept so existing player
+ * - `deprecated`: was published, no longer offered; kept so existing player
  *                  inventories still resolve.
  */
 export type OfficialItemStatus = 'active' | 'reserved' | 'deprecated';
@@ -673,7 +673,7 @@ export interface OfficialItemDefinition {
   /**
    * Human-readable description.
    *
-   * `null` for the 19 items whose published definitions carry no description —
+   * `null` for the 19 items whose published definitions carry no description,
    * inventing copy here would misrepresent what is on relays. Non-null values
    * are intended for the `alt` tag and `content.metadata.description` of a
    * definition that has not been published yet.
@@ -715,7 +715,7 @@ export interface OfficialItemDefinition {
   // second currency (ticket prices in the arcade prize shop) will need its own
   // price domain rather than a second field here. Prices live in
   // `src/inventory/shop-catalog.ts`, which validates every entry against this
-  // registry — see `CONSUMABLE_ITEM_CATEGORIES` below for the rule that keeps
+  // registry: see `CONSUMABLE_ITEM_CATEGORIES` below for the rule that keeps
   // currency out of the coin shop.
 }
 
@@ -728,7 +728,7 @@ export interface OfficialItemDefinition {
 export const ARCADE_TICKET_D = 'blobbi:currency:arcade-ticket';
 
 /**
- * Production artwork for the Arcade Ticket — the single place this URL is
+ * Production artwork for the Arcade Ticket, the single place this URL is
  * written.
  *
  * It is the exact value that must appear in the published definition's `image`
@@ -744,13 +744,13 @@ export const ARCADE_TICKET_D = 'blobbi:currency:arcade-ticket';
  *
  * NOTE: artwork existing does NOT make the item `active`. The ticket stays
  * `reserved` until the issuer-signed kind:31632 event is published AND fetched
- * back from both official relays — see `docs/protocol/arcade-ticket-publication.md`.
+ * back from both official relays; see `docs/protocol/arcade-ticket-publication.md`.
  */
 export const ARCADE_TICKET_IMAGE_URL =
   'https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp';
 
 /**
- * The canonical Arcade Token identity — the arcade's PAY-TO-PLAY currency.
+ * The canonical Arcade Token identity, the arcade's PAY-TO-PLAY currency.
  *
  * Bought with Blobbi Coins, spent to start a game. Deliberately NOT the Arcade
  * Ticket, which travels the opposite way: Tickets are what a game PAYS OUT and
@@ -759,23 +759,23 @@ export const ARCADE_TICKET_IMAGE_URL =
  *
  * Identity is the stable address `31632:<issuer>:blobbi:currency:arcade-token`.
  * The published revision's event id is recorded as provenance in
- * `src/arcade/tokens/arcade-token.ts` and is never an ownership key — quantity
+ * `src/arcade/tokens/arcade-token.ts` and is never an ownership key, quantity
  * lives in the player's kind:31633 like every other item.
  */
 export const ARCADE_TOKEN_D = 'blobbi:currency:arcade-token';
 
 /**
- * The canonical Blobbi Coin identity — the island's OFFICIAL currency.
+ * The canonical Blobbi Coin identity, the island's OFFICIAL currency.
  *
  * The issuer-signed kind:31632 definition is published (see
  * `docs/blobbi-coin-cutover.md` for the verification record). Identity is the
- * stable address `31632:<issuer>:blobbi:currency:coin` — the event id of the
+ * stable address `31632:<issuer>:blobbi:currency:coin`: the event id of the
  * currently observed revision is a diagnostic in `src/inventory/coin.ts`,
  * never identity.
  *
  * The published definition intentionally omits `max_stack` (the inventory
  * spec makes it optional and games MAY ignore it); the application-level
- * balance ceiling lives in `src/inventory/coin.ts`, enforced by the wallet —
+ * balance ceiling lives in `src/inventory/coin.ts`, enforced by the wallet,
  * never by rejecting the definition.
  */
 export const BLOBBI_COIN_D = 'blobbi:currency:coin';
@@ -1146,7 +1146,7 @@ export const OFFICIAL_ITEM_DEFINITIONS: readonly OfficialItemDefinition[] = [
     emoji: '🕹️',
     // The published definition carries the official front/back artwork; the
     // catalog fetches it from the relays and that revision wins. No bundled URL
-    // is recorded here, so nothing can drift from what was actually published —
+    // is recorded here, so nothing can drift from what was actually published,
     // the emoji is the offline fallback.
     image: null,
     // Currency is never used on a Blobbi. `useUseItem` rejects a null action, so
@@ -1210,12 +1210,12 @@ export const OFFICIAL_DEFINITION_RELAYS = OFFICIAL_ITEM_RELAYS;
  * with the catalog it joins.
  *
  * They live here rather than on each item because they are identical for every
- * item — per-item copies would be 20 chances to drift.
+ * item: per-item copies would be 20 chances to drift.
  */
 export const OFFICIAL_DEFINITION_CONVENTIONS = {
-  /** `context` tag — scopes the item to this game and is relay-indexable. */
+  /** `context` tag: scopes the item to this game and is relay-indexable. */
   context: 'game:blobbi',
-  /** `version` tag — definition schema revision, not the item's revision. */
+  /** `version` tag: definition schema revision, not the item's revision. */
   version: 1,
   /** Prefix of the NIP-31 `alt` tag. */
   altPrefix: 'Game item definition: ',
@@ -1233,7 +1233,7 @@ export function officialItemAddress(d: string): string {
 
 /** An official item definition plus its derived canonical address. */
 export interface AddressedOfficialItem extends OfficialItemDefinition {
-  /** `31632:<issuer>:<d>`, derived — never hardcoded. */
+  /** `31632:<issuer>:<d>`, derived: never hardcoded. */
   address: string;
 }
 
@@ -1283,7 +1283,7 @@ export function officialItemByAddress(
 //     category to make a hat expressible would therefore also declare hats
 //     consumable, and `shop-catalog.ts` would start treating them as sellable
 //     care items.
-//   - Every field that list requires — `action`, `stages`, `effects` — is
+//   - Every field that list requires, `action`, `stages`, `effects`, is
 //     meaningless for a hat, so each entry would carry three null/empty fields
 //     asserting something the item does not do.
 //
@@ -1291,8 +1291,8 @@ export function officialItemByAddress(
 // nothing else. The published definition remains authoritative for category,
 // rarity, description, topics, contexts and every image view; those fields are
 // deliberately ABSENT here so they cannot drift. `name`, `symbol` and
-// `primaryImage` exist for exactly one situation — the definition could not be
-// fetched — and a fetched definition always outranks them
+// `primaryImage` exist for exactly one situation, the definition could not be
+// fetched: and a fetched definition always outranks them
 // (see `useItemCatalog`).
 //
 // The `slot` is NOT stored here either: since the kind:31634 migration the
@@ -1310,17 +1310,17 @@ export function officialItemByAddress(
 export interface OfficialCosmeticDefinition {
   /** The kind:31632 `d` tag. Canonical identity together with the issuer. */
   d: string;
-  /** Display name — FALLBACK ONLY. The published `name` tag wins. */
+  /** Display name: FALLBACK ONLY. The published `name` tag wins. */
   name: string;
-  /** Emoji shown when no artwork loads — FALLBACK ONLY. */
+  /** Emoji shown when no artwork loads: FALLBACK ONLY. */
   symbol: string;
   /**
-   * The published primary (unmarked) `image` URL — FALLBACK ONLY, and `null`
+   * The published primary (unmarked) `image` URL: FALLBACK ONLY, and `null`
    * until the definition is published.
    *
    * Recorded for the same reason `ARCADE_TICKET_IMAGE_URL` is: so a compact UI
    * still draws the right picture when the catalog query fails. Pose-specific
-   * views (`front`/`back`/side) are never recorded here — they only ever come
+   * views (`front`/`back`/side) are never recorded here; they only ever come
    * from a fetched definition.
    */
   primaryImage: string | null;
@@ -1352,14 +1352,14 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
         'https://blossom.primal.net/11ed179592981472e25b9a327d8c6bfd55b7a3bae0a8d805e071b8ba4e47d1dc.webp',
       // ACTIVE: the issuer-signed kind:31632 event was fetched back from
       // wss://relay.ditto.pub with a valid signature. NOTE it was NOT found on
-      // wss://relay.dreamith.to — see docs/accessory-definition-migration.md.
+      // wss://relay.dreamith.to: see docs/accessory-definition-migration.md.
       maxStack: 1,
       status: 'active',
     },
     // The three wearables below were published by the official issuer alongside
     // the twelve visual-effect items (Phase 9). Every value here was taken from
     // the signed events supplied with that phase, whose ids and signatures were
-    // verified locally — see src/effects/official-item-event-fixtures.ts and
+    // verified locally: see src/effects/official-item-event-fixtures.ts and
     // its tests, which assert this registry still agrees with the events.
     {
       d: 'blobbi:cosmetic:celestial-seraph-necklace',
@@ -1392,7 +1392,7 @@ export const OFFICIAL_COSMETIC_DEFINITIONS: readonly OfficialCosmeticDefinition[
 
 /** An official cosmetic plus its derived canonical address. */
 export interface AddressedOfficialCosmetic extends OfficialCosmeticDefinition {
-  /** `31632:<issuer>:<d>`, derived — never hardcoded. */
+  /** `31632:<issuer>:<d>`, derived: never hardcoded. */
   address: string;
 }
 
@@ -1444,13 +1444,13 @@ export function officialCosmeticByAddress(
 export interface OfficialEffectItemDefinition {
   /** The kind:31632 `d` tag. Canonical identity together with the issuer. */
   d: string;
-  /** Display name — FALLBACK ONLY. The published `name` tag wins. */
+  /** Display name: FALLBACK ONLY. The published `name` tag wins. */
   name: string;
-  /** Emoji shown when no artwork loads — FALLBACK ONLY. */
+  /** Emoji shown when no artwork loads: FALLBACK ONLY. */
   symbol: string;
-  /** The published primary `image` URL — FALLBACK ONLY. */
+  /** The published primary `image` URL: FALLBACK ONLY. */
   primaryImage: string | null;
-  /** The published `rarity` tag — FALLBACK ONLY; the definition wins. */
+  /** The published `rarity` tag: FALLBACK ONLY; the definition wins. */
   rarity: string;
   /** The LOCAL renderer effect this item entitles its owner to activate. */
   effectId: string;
@@ -1480,7 +1480,7 @@ const EFFECT_FORMS_BABY_ADULT: readonly string[] = ['baby', 'adult'];
  *
  * Values were taken from the signed kind:31632 events supplied with the phase
  * (ids and signatures verified locally against the official issuer). The
- * fixture tests assert this table still agrees with those events — including
+ * fixture tests assert this table still agrees with those events, including
  * that ONLY Golden Sparkles, Mystic Fog and Celestial Aura carry `arcade-prize`.
  */
 export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefinition[] =
@@ -1657,7 +1657,7 @@ export const OFFICIAL_EFFECT_ITEM_DEFINITIONS: readonly OfficialEffectItemDefini
 
 /** An official effect item plus its derived canonical address. */
 export interface AddressedOfficialEffectItem extends OfficialEffectItemDefinition {
-  /** `31632:<issuer>:<d>`, derived — never hardcoded. */
+  /** `31632:<issuer>:<d>`, derived: never hardcoded. */
   address: string;
 }
 
@@ -1690,7 +1690,7 @@ export function officialEffectItemByAddress(
 }
 
 /**
- * The recovery boundary this registry guarantees — and the one it explicitly
+ * The recovery boundary this registry guarantees, and the one it explicitly
  * does not. Rendered verbatim into the generated document so the two can never
  * disagree.
  */

@@ -40,7 +40,7 @@ logged-in user, an equipment hook, a world coordinate system and a specific
 - no asset directory conventions;
 - no state. The component is a function of its props.
 
-Everything in that list is a legitimate concern — it just belongs to whoever is
+Everything in that list is a legitimate concern; it just belongs to whoever is
 building the world, not to whatever draws the character.
 
 ## 2. Installation in this workspace
@@ -73,7 +73,7 @@ which emits ESM + `.d.ts` + source maps into `dist/` (gitignored).
 ## 3. Public API
 
 Everything is exported from the package root. There are no deep imports, and
-`src/index.ts` contains no `export *` — the surface is a hand-written list,
+`src/index.ts` contains no `export *`: the surface is a hand-written list,
 asserted exactly by `package-api.test.ts`.
 
 ### Component
@@ -81,7 +81,7 @@ asserted exactly by `package-api.test.ts`.
 | Export | What it is |
 | --- | --- |
 | `BlobbiRendererView` | The renderer. The whole point. |
-| `AccessoryLayerView` | One accessory layer group (`behind` / `front`). *Provisional* — only for consumers composing their own stack. |
+| `AccessoryLayerView` | One accessory layer group (`behind` / `front`). *Provisional*; only for consumers composing their own stack. |
 | `BlobbiRendererViewProps` | Props type, for typed wrapping. |
 
 ### Visual normalization
@@ -99,7 +99,7 @@ asserted exactly by `package-api.test.ts`.
 | --- | --- |
 | `BLOBBI_RENDER_SIZE_PX` | The framework-neutral source of truth: token → pixels. |
 | `BLOBBI_RENDER_SIZE_CLASSES` | Its Tailwind projection (see §7). |
-| `ACCESSORY_BASE_RATIO`, `ACCESSORY_BASE_PERCENT` | Accessory base size as a fraction of the box — what an editor needs to share the coordinate space. |
+| `ACCESSORY_BASE_RATIO`, `ACCESSORY_BASE_PERCENT` | Accessory base size as a fraction of the box, what an editor needs to share the coordinate space. |
 | `blobbiRenderSizePx`, `accessoryBasePx` | Convenience lookups. |
 | `BlobbiRenderSize` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`. |
 
@@ -120,7 +120,7 @@ asserted exactly by `package-api.test.ts`.
 | `normalizeBlobbiVisualEffects` | Effect input → the deterministic, slot-resolved list the renderer draws. |
 | `EFFECT_SLOTS`, `EFFECT_SLOT_ORDER` | Which slot each effect occupies, and the canonical render order. |
 | `isBlobbiVisualEffectId` | Type guard for a string from outside. |
-| `getBlobbiVisualEffectInfo` | Id, slot, display name, description, piece count — enough to build a picker. |
+| `getBlobbiVisualEffectInfo` | Id, slot, display name, description, piece count, enough to build a picker. |
 | `DEFAULT_EFFECT_INTENSITY`, `MIN_EFFECT_INTENSITY`, `MAX_EFFECT_INTENSITY` | The intensity contract. |
 | `MAX_PIECES_PER_EFFECT`, `MAX_PIECES_TOTAL` | The particle caps this package holds itself to. |
 | `BLOBBI_EFFECT_STYLESHEET` | The full effect CSS, for consumers who prefer to mount it once (§7). |
@@ -173,7 +173,7 @@ const accessories = normalizeAccessoryPlacements([
   accessories={accessories}
   eyeOffset={{ x: 0.4, y: -0.2 }}
   // Visual effects are named, never described. `{ id, intensity? }` and nothing
-  // else — no component, class name, CSS or animation expression is accepted.
+  // else: no component, class name, CSS or animation expression is accepted.
   effects={[{ id: 'celestial-aura' }, { id: 'golden-sparkles', intensity: 0.8 }]}
 />;
 ```
@@ -220,7 +220,7 @@ type AccessorySourceResolver = (req: {
 }) => readonly string[];
 ```
 
-The default is `DEFAULT_ACCESSORY_SOURCES` — *"use the URL you gave me"*:
+The default is `DEFAULT_ACCESSORY_SOURCES`: *"use the URL you gave me"*:
 
 ```ts
 normalizeAccessoryPlacements(items);                       // sources = [item.url] or []
@@ -229,7 +229,7 @@ normalizeAccessoryPlacements(items, { resolveSources });   // your layout, your 
 
 There is deliberately no built-in extension-guessing or CDN convention. A
 package that guessed would force every consumer to mirror somebody else's
-`public/` tree — which is exactly what this boundary exists to prevent. Blobbi
+`public/` tree: which is exactly what this boundary exists to prevent. Blobbi
 Island supplies its own resolver (`island-accessory-sources.ts`) and keeps its
 asset layout entirely on its side of the line.
 
@@ -240,13 +240,13 @@ Blobbi bodies are **inlined SVG string modules** compiled into the package
 
 - no fetch, no filesystem, no async, no loading state;
 - deterministic: same input, same markup, in any runtime;
-- no consumer setup — nothing to copy into `public/`.
+- no consumer setup; nothing to copy into `public/`.
 
 The cost is size: the adult artwork is ~138 kB of source (all 17 forms and
 their sleeping variants), which is the dominant term in the ~233 kB of emitted
 JS. All of it is reachable through one lookup table, so tree-shaking a subset of
-forms is **not** currently possible. That is a deliberate trade — synchronous,
-zero-setup rendering was the requirement — and it is the first thing to revisit
+forms is **not** currently possible. That is a deliberate trade, synchronous,
+zero-setup rendering was the requirement, and it is the first thing to revisit
 if the package is ever published for size-sensitive consumers.
 
 Front/rear and awake/sleeping are all derived from the same bundled artwork:
@@ -268,7 +268,7 @@ package in its `content` globs:
 content: ['./src/**/*.{ts,tsx}', './packages/*/src/**/*.{ts,tsx}'],
 ```
 
-Without that glob the box collapses to 0×0, and no test in jsdom would notice —
+Without that glob the box collapses to 0×0, and no test in jsdom would notice,
 so `package-css.test.ts` asserts the glob is present in this repository's
 config.
 
@@ -278,7 +278,7 @@ caller override the box through `className` (the shell's account chip passes
 
 **Optional.** Three decoration class names appear only behind
 `transparent={false}` / `interactive`: `blobbi-gradient-frame`, `blobbi-hover`,
-`theme-transition`. A consumer may define them or ignore them — the geometry is
+`theme-transition`. A consumer may define them or ignore them, the geometry is
 identical either way. No other custom class names are emitted; no Island card,
 gradient, room-grade or world vocabulary exists in this package.
 
@@ -290,7 +290,7 @@ require no keyframes from you: the effect system carries its own namespaced
 (`blobbi-fx-*`) CSS and renders the subset it needs into a `<style>` element
 beside the effect layers. A Blobbi with no effects emits nothing. If you render
 many effect-bearing Blobbis at once and would rather not carry one `<style>`
-each, mount `BLOBBI_EFFECT_STYLESHEET` yourself — it is additive, not a
+each, mount `BLOBBI_EFFECT_STYLESHEET` yourself; it is additive, not a
 replacement.
 
 ## 8. Instance ids and multiple Blobbis
@@ -321,7 +321,7 @@ per instance, and stable across a server render and its hydration.
   accessory images. Both are SSR-safe; the handler simply never fires on the
   server.
 - Structurally safe to server-render. **No SSR infrastructure is provided or
-  tested here** — the claim is about the absence of hazards, not the presence of
+  tested here**: the claim is about the absence of hazards, not the presence of
   support.
 
 ## 10. What stays with the consumer
@@ -347,7 +347,7 @@ extraction could happen without shadowing the already-installed
 `@blobbi-kit/react`; the final scope is an open decision (blocker 4 below).
 Nothing may be released until that decision is made.
 
-### Dependency policy — decided vs. open
+### Dependency policy: decided vs. open
 
 The current manifest declares **everything** as a peer dependency. That is the
 right default for a workspace package consumed from source by exactly one
@@ -356,10 +356,10 @@ become:
 
 | Dependency | Now | On publication | Why |
 | --- | --- | --- | --- |
-| `react` | peer | **stays a peer** — decided | React is a singleton. Bundling or hard-depending on it gives a consumer two copies, two dispatchers, and hooks that throw. This repository already dedupes React in `vite.config.ts` for the same reason. Not an open question. |
-| `clsx` | peer | **should likely become a dependency** | An implementation detail of `internal/cn.ts`, not part of the contract. A consumer has no reason to install it, and no reason to care which version resolves — nothing is shared across the boundary. ~0.5 kB. |
+| `react` | peer | **stays a peer**: decided | React is a singleton. Bundling or hard-depending on it gives a consumer two copies, two dispatchers, and hooks that throw. This repository already dedupes React in `vite.config.ts` for the same reason. Not an open question. |
+| `clsx` | peer | **should likely become a dependency** | An implementation detail of `internal/cn.ts`, not part of the contract. A consumer has no reason to install it, and no reason to care which version resolves; nothing is shared across the boundary. ~0.5 kB. |
 | `tailwind-merge` | peer | **should likely become a dependency** | Same reasoning, with one caveat worth checking before flipping: `tailwind-merge` semantics *are* part of the public contract (callers override the canonical box through `className`, §7), and a consumer on a very different Tailwind major could want to pin it. Ship as a dependency unless that turns out to matter in practice. |
-| `@blobbi-kit/core` | peer | **undecided — not this repository's call** | Used for one subpath (`color-guardrails`, in the adult SVG customizer). Whether it is a peer or a dependency depends on how the `blobbi-kit` repository versions and releases its own packages, and on whether this package ends up living inside that repository. **That policy must be decided in the real `blobbi-kit` repository, not here.** |
+| `@blobbi-kit/core` | peer | **undecided; not this repository's call** | Used for one subpath (`color-guardrails`, in the adult SVG customizer). Whether it is a peer or a dependency depends on how the `blobbi-kit` repository versions and releases its own packages, and on whether this package ends up living inside that repository. **That policy must be decided in the real `blobbi-kit` repository, not here.** |
 
 Neither `clsx` nor `tailwind-merge` is changed now: as peers they resolve from
 the application's own `node_modules`, which is correct while the package is

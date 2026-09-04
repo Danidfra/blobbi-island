@@ -8,7 +8,7 @@ interface BlobbiLoginScreenProps {
 }
 
 /**
- * BlobbiLoginScreen — the "arrive at Blobbi Island" entry scene.
+ * BlobbiLoginScreen: the "arrive at Blobbi Island" entry scene.
  *
  * The game frame becomes the island (blobbi-island-login.png), and a cozy wooden
  * sign (blobbi-island-login-wood.png) is centered on top, acting as the login
@@ -18,18 +18,18 @@ interface BlobbiLoginScreenProps {
  * Title: the "Blobbi Island" game logo image (blobbi-island-title.png) is used as
  * the title/wordmark, centered on the plate and scaled to fit without stretching.
  *
- * The main plate is deliberately minimal — just the logo, the "Enter Island" CTA,
+ * The main plate is deliberately minimal, just the logo, the "Enter Island" CTA,
  * and the "Get started" link. Any explanation of Nostr/login happens later inside
  * <LoginDialog /> / <SignupDialog />. Layout intent on the plate: logo near the
  * top, the CTA at the visual center, the secondary link just below it.
  *
  * Wording is deliberate: the plate is a cozy wooden sign, but the credential is
- * described plainly as a Nostr account/login — the private key is never called a
+ * described plainly as a Nostr account/login, the private key is never called a
  * passport here.
  *
  * Auth is NOT rewritten: this reuses the stable <LoginDialog /> and
  * <SignupDialog /> (the same flow used by the account menu). The "Create a Nostr
- * account" link opens the in-app signup modal — no external redirect.
+ * account" link opens the in-app signup modal; no external redirect.
  *
  * Layout:
  *   - Desktop / portrait: scene fills the frame; the wood sign is centered both
@@ -72,7 +72,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
           authModalOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        {/* The wooden plate art — never stretched. */}
+        {/* The wooden plate art; never stretched. */}
         <img
           src="/assets/ui/branding/blobbi-island-login-wood.png"
           alt=""
@@ -82,7 +82,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
         />
 
         {/* Login content sits in the flat central area of the sign, inset to
-            clear the vines and curved edges. No translucent card — the wood is
+            clear the vines and curved edges. No translucent card, the wood is
             the container. Intentional plate layout: logo near the TOP, the
             "Enter Island" button at the visual CENTER, the link just below. */}
         <div className="absolute inset-x-[12%] inset-y-[15%] flex flex-col items-center text-center">
@@ -91,7 +91,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
               it never overflows or touches the vines.
               The asset ships with transparent padding, so a small negative top
               margin + slight upscale visually compensate to seat it nearer the
-              top edge — see report: the proper long-term fix is to crop the
+              top edge: see report: the proper long-term fix is to crop the
               transparent padding in the image asset itself. */}
           <img
             src="/assets/ui/branding/blobbi-island-title.png"
@@ -111,7 +111,7 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
               <span className="truncate">Enter Island</span>
             </Button>
 
-            {/* First time here — opens the in-app signup modal (no redirect).
+            {/* First time here, opens the in-app signup modal (no redirect).
                 Cream text with a dark shadow so it stays readable on the wood. */}
             <Button
               variant="link"

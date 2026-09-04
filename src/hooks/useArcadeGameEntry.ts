@@ -8,7 +8,7 @@
  *
  * ## Where the charge happens, and where it does not
  *
- * A Token is spent only when a run genuinely begins — the moment the machine
+ * A Token is spent only when a run genuinely begins, the moment the machine
  * would dispatch `start` or `replay`. Opening a cabinet, reading the
  * instructions, picking a difficulty, closing the modal and backing out are
  * all free, because none of them is a play. A replay IS a play, so it is
@@ -22,8 +22,8 @@
  *
  * ## One start costs exactly one thing
  *
- * A Pass no longer waives plays without limit — it includes a finite allowance
- * — so a Pass-admitted start SPENDS something too. The turnstile therefore
+ * A Pass no longer waives plays without limit; it includes a finite allowance,
+ * so a Pass-admitted start SPENDS something too. The turnstile therefore
  * charges exactly one of two currencies and never both:
  *
  * ```
@@ -33,7 +33,7 @@
  *
  * Which is why the Pass branch lives in `admit` and not in `admitFree`.
  * `admitFree` is the zero-I/O path, and it is now reserved for starts that
- * genuinely cost NOTHING — a game with no Token price at all. Consuming a
+ * genuinely cost NOTHING, a game with no Token price at all. Consuming a
  * finite allowance is a write, and a write belongs at the same commitment
  * boundary as the Token spend, not on a fast path beside it.
  *
@@ -42,7 +42,7 @@
  * Four defences, cheapest first:
  *
  * 1. a synchronous in-flight ref, so two clicks in one tick cannot both reach
- *    the wallet — React state flips a render too late to be the guard;
+ *    the wallet: React state flips a render too late to be the guard;
  * 2. the pass entitlement's own cross-tab lock, so two TABS cannot both spend
  *    the last free play (`consumeArcadeFreePlay` re-checks inside the lock);
  * 3. the shared inventory transaction's cross-tab lock and per-tab chain,
@@ -50,7 +50,7 @@
  * 4. refusing admission on an UNCONFIRMED publish. A timeout means the spend
  *    may have landed, so the honest move is to not start the run: the player
  *    keeps a Token they might have paid and loses nothing but a click. The
- *    opposite bias — admit anyway — would hand out free plays on every flaky
+ *    opposite bias: admit anyway, would hand out free plays on every flaky
  *    publish.
  *
  * That last rule is why this needs no durable operation ledger of its own. A
@@ -88,7 +88,7 @@ export function useArcadeGameEntry(now: () => number = Date.now): ArcadeGameEntr
     ? getQuantity(inventory.data, ARCADE_TOKEN_ADDRESS)
     : null;
 
-  // "Will the next start be free?" — both limits, so an exhausted pass reports
+  // "Will the next start be free?": both limits, so an exhausted pass reports
   // false and the UI stops promising free plays it cannot deliver.
   const hasPass = pubkey ? hasUsableArcadePass(pubkey, now()) : false;
 
@@ -100,7 +100,7 @@ export function useArcadeGameEntry(now: () => number = Date.now): ArcadeGameEntr
    * The genuinely-costless path: no charge, no write, no await.
    *
    * Only games with no Token price qualify. A Pass start does NOT, because it
-   * spends a free play — see the header. Returns `null` whenever anything at
+   * spends a free play; see the header. Returns `null` whenever anything at
    * all has to be consumed, and the caller must then await {@link admit}.
    */
   const admitFree = useCallback((gameId: string): ArcadeEntryAdmitted | null => {
@@ -129,7 +129,7 @@ export function useArcadeGameEntry(now: () => number = Date.now): ArcadeGameEntr
         // Checked and consumed in one locked step. A `false` here is not an
         // error: the pass may have expired, run out, or lost the last play to
         // another tab while this call queued. In every one of those cases the
-        // correct next move is the same — fall through and charge Tokens.
+        // correct next move is the same, fall through and charge Tokens.
         if (pubkey && hasUsableArcadePass(pubkey, now())) {
           if (await consumeArcadeFreePlay(pubkey, now())) {
             return { ok: true, charged: 0, waivedByPass: true };
@@ -137,7 +137,7 @@ export function useArcadeGameEntry(now: () => number = Date.now): ArcadeGameEntr
         }
 
         // An unknown balance is not a zero balance, and it is not a licence to
-        // charge either — refuse until the inventory is actually known.
+        // charge either: refuse until the inventory is actually known.
         if (tokenBalance === null) return { ok: false, reason: 'unavailable' };
         if (tokenBalance < cost) {
           return { ok: false, reason: 'insufficient-tokens', needed: cost };

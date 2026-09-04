@@ -4,7 +4,7 @@
  * The interesting assertions here are the negative ones. Anyone can publish a
  * kind:31632 event with the `d` of an official effect item and the right
  * `effectId` in its content; relays will serve it happily. What must be true is
- * that none of that reaches the renderer — that the only key is the full
+ * that none of that reaches the renderer; that the only key is the full
  * address, and that the address is built from the official issuer rather than
  * taken from anything.
  *
@@ -213,7 +213,7 @@ describe('the registry stays inside its Phase-9 activation boundary', () => {
       '@/protocol/event-registry',
       '@blobbi/react',
     ]);
-    // Constants and a pure address builder — no hook, no query, no mutation.
+    // Constants and a pure address builder; no hook, no query, no mutation.
     for (const banned of [/use[A-Z]/, /useNostrPublish/, /mutate/, /31633/, /31634/]) {
       expect(banned.test(source.replace(/\/\*[\s\S]*?\*\//g, '')), String(banned)).toBe(
         false,

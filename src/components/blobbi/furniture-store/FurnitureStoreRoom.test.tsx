@@ -1,10 +1,10 @@
 /**
- * `<FurnitureStoreRoom>` — the showroom's contract with the movement system and
+ * `<FurnitureStoreRoom>`: the showroom's contract with the movement system and
  * its shop.
  *
  * The claims under test:
  *
- *  1. the room renders COLLISION and CONTROLS and nothing else — every fixture
+ *  1. the room renders COLLISION and CONTROLS and nothing else; every fixture
  *     is painted into `furniture-store-inside.webp`, so a sprite appearing here
  *     would be the showroom drawn twice;
  *  2. its floor footprint reaches the SHARED movement blocker context, not a
@@ -118,7 +118,7 @@ describe('the room renders controls, not furniture', () => {
 
   it('leaves the room for the mall', () => {
     renderRoom();
-    // `<BackArrow>` is a `data-block-move` div, not a button — the shared
+    // `<BackArrow>` is a `data-block-move` div, not a button, the shared
     // component, unchanged.
     fireEvent.click(document.querySelector('[data-block-move]')!);
     expect(setCurrentLocation).toHaveBeenCalledWith('shop');
@@ -203,7 +203,7 @@ describe('the lower-right Shop button', () => {
     fireEvent.click(checkout());
     act(() => requests[0].action());
     expect(screen.getAllByTestId('furniture-store-modal')).toHaveLength(1);
-    // Two mounts across two separate openings — never two at once.
+    // Two mounts across two separate openings; never two at once.
     expect(modalMounts).toHaveLength(2);
   });
 });

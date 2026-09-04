@@ -1,10 +1,10 @@
 /**
- * Pool — the production ticket policy.
+ * Pool: the production ticket policy.
  *
  * The third `active` policy in the arcade, written against the fields
  * `pool-result.ts` was built to expose: the win, the difficulty, how the 8-ball
  * went down, and how cleanly the frame was played. Like the other two it is a
- * client-trusted Arcade V1 number — the client computes it and the client
+ * client-trusted Arcade V1 number, the client computes it and the client
  * writes it, which a modified client can abuse. That is accepted for now; see
  * `docs/arcade-reward-publication-boundary.md` §1.
  *
@@ -30,7 +30,7 @@
  * | legal-8 win with a scratch, Normal | 2 + 3 + 1 + 1 = **7** |
  * | win because the rival potted the 8 early, Normal, clean | 2 + 3 + 1 + 1 = **7** |
  * | clean legal-8 win, Easy | 2 + 3 + 1 + 1 = **7** |
- * | any completed loss — outdrawn, or your own early 8 | **2** (participation floor) |
+ * | any completed loss, outdrawn, or your own early 8 | **2** (participation floor) |
  * | left mid-frame | **0** (an aborted run has no result) |
  *
  * ## Fouls reduce bonuses; they never go negative
@@ -39,7 +39,7 @@
  * per-foul deduction: the shared layer already guarantees a non-negative
  * integer, and a policy that could push a win below the participation floor
  * would punish beginners for finishing, which is the opposite of what the floor
- * is for. The early 8-ball loss is likewise not punished below the floor — the
+ * is for. The early 8-ball loss is likewise not punished below the floor, the
  * frame completed, and losing it is already the outcome.
  *
  * ## What is deliberately NOT an input
@@ -90,7 +90,7 @@ export const POOL_REWARD_TUNING = {
 /**
  * Tickets for a WON frame, before the shared floor and caps.
  *
- * Only called for `cleared` results — the shared layer pays every completed
+ * Only called for `cleared` results, the shared layer pays every completed
  * loss the participation floor without consulting the game. Missing stats
  * degrade to "bonus not earned" rather than refusing: the validated result that
  * reached the reducer always carries them, and a hand-built one without them
@@ -114,7 +114,7 @@ export function poolBaseTickets(result: ArcadeGameResult): number {
 /**
  * The base, decomposed into the lines the results screen shows.
  *
- * Must add up to exactly what {@link poolBaseTickets} returns — the shared
+ * Must add up to exactly what {@link poolBaseTickets} returns, the shared
  * layer checks that and falls back to a single `Clear` line if it ever drifts,
  * so this function can only ever explain the number, never change it.
  */

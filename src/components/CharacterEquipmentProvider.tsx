@@ -3,8 +3,8 @@
  *
  * Mounted near the app root, inside the providers the three underlying queries
  * need (`AppProvider` for the configured relay, `QueryClientProvider` for the
- * queries themselves). Everything below it — every `CurrentBlobbiDisplay` on
- * screen — consumes a plain value and needs neither.
+ * queries themselves). Everything below it; every `CurrentBlobbiDisplay` on
+ * screen: consumes a plain value and needs neither.
  *
  * The companion is read from the owner profile rather than passed in, because
  * "which Blobbi am I currently playing" is already app-wide state and having
@@ -37,7 +37,7 @@ export function CharacterEquipmentProvider({
 
   // The form gates form-restricted cosmetics. It is passed only when known:
   // `undefined` means "form unknown", which `formIsCompatible` treats as no
-  // restriction rather than as a mismatch — a hat must not vanish because the
+  // restriction rather than as a mismatch, a hat must not vanish because the
   // Blobbi list has not loaded yet.
   const equipment = useCharacterEquipment(companionId, {
     ...(companion?.stage === undefined ? {} : { form: companion.stage }),

@@ -2,7 +2,7 @@
 
 **Status:** transitional. One accessory activated (Block Builder Cap).
 **Scope of this document:** how a hat stops being a filename and starts being a
-published item definition — and, just as importantly, what deliberately did *not*
+published item definition: and, just as importantly, what deliberately did *not*
 move.
 
 ---
@@ -15,19 +15,19 @@ complete set of places accessory data lives, with each one classified by what it
 
 | # | Module / asset | Owns | Disposition |
 |---|---|---|---|
-| 1 | `src/components/blobbi/lib/accessory-types.ts` | Equip/inv tag vocabulary, `SLOT_PREFIXES`, `ACCESSORY_CODE_PATTERN` | **Keep now** — this is the equip protocol, not metadata |
+| 1 | `src/components/blobbi/lib/accessory-types.ts` | Equip/inv tag vocabulary, `SLOT_PREFIXES`, `ACCESSORY_CODE_PATTERN` | **Keep now**: this is the equip protocol, not metadata |
 | 2 | `src/components/blobbi/lib/accessory-utils.ts` | Tag parse/serialize, slot inference, `generateAccessoryUrl`, `resolveAccessoryImageUrl` | **Keep now**; URL builders become fallback-only |
-| 3 | `src/components/blobbi/lib/island-accessory-sources.ts` | Artwork resolution (definition → legacy chain) | **Keep** — this is the join point |
-| 4 | `src/inventory/accessory-item-identity.ts` | code → official `d`, issuer trust | **Keep** — the mapping |
+| 3 | `src/components/blobbi/lib/island-accessory-sources.ts` | Artwork resolution (definition → legacy chain) | **Keep**: this is the join point |
+| 4 | `src/inventory/accessory-item-identity.ts` | code → official `d`, issuer trust | **Keep**: the mapping |
 | 5 | `src/inventory/item-image-resolution.ts` | Which image view a pose/compact UI wants | **Keep** |
-| 6 | `src/protocol/event-registry.ts` → `OFFICIAL_COSMETIC_DEFINITIONS` | Cosmetic identity + minimal fallback | **Keep** — grows per publication |
+| 6 | `src/protocol/event-registry.ts` → `OFFICIAL_COSMETIC_DEFINITIONS` | Cosmetic identity + minimal fallback | **Keep**: grows per publication |
 | 7 | `src/components/blobbi/hooks/useAccessoryManagement.ts` | Ownership (`inv`) + equipped state (`equip`) | **Keep until Placement exists** |
 | 8 | `src/components/blobbi/AccessoryOverlay.tsx` | Placement editing surface | **Keep**; artwork now definition-aware (§9) |
 | 9 | `AccessoryEditPanel/InventoryGrid/InventoryUI/RemovalModal/UsageModal` | Editor + inventory UI | **Keep**; read artwork through the resolver |
-| 10 | `src/lib/asset-paths.ts` → `accessoryImagePath` | Local `public/` layout | **Keep** — final compatibility fallback |
+| 10 | `src/lib/asset-paths.ts` → `accessoryImagePath` | Local `public/` layout | **Keep**: final compatibility fallback |
 | 11 | `public/assets/characters/blobbi/accessories/**` (24 PNGs) | Local artwork for `headwear-1…21`, `eyewear-2…4` | **Remove only per-item**, after that item is published *and* mapped |
-| 12 | `src/components/blobbi/DebugAccessoriesModal.tsx` | Dev-only inv/equip editor | **Keep** — dev fixture, still reachable and useful |
-| 13 | `src/components/blobbi/test-accessories.md` | Manual test notes | **Keep** — documentation, no runtime cost |
+| 12 | `src/components/blobbi/DebugAccessoriesModal.tsx` | Dev-only inv/equip editor | **Keep**: dev fixture, still reachable and useful |
+| 13 | `src/components/blobbi/test-accessories.md` | Manual test notes | **Keep**: documentation, no runtime cost |
 
 ### What the audit did *not* find
 
@@ -40,8 +40,8 @@ and no code was deleted for them:
   "avoid two catalogs" is satisfied by construction: there is no second catalog
   to retire.
 - **No automatically-applied or default accessories.** Nothing decorates a
-  Blobbi without reading equip state. The one historical leak — `BlobbiInfoModal`
-  rendering *another* player's Blobbi wearing the *local* player's hats — was
+  Blobbi without reading equip state. The one historical leak, `BlobbiInfoModal`
+  rendering *another* player's Blobbi wearing the *local* player's hats, was
   fixed in Phase 5 and is pinned by
   `CurrentBlobbiDisplay.accessory-policy.test.tsx`.
 - **No dead accessory fixtures.** `DebugAccessoriesModal` is dev-gated but live,
@@ -76,7 +76,7 @@ kind:31124 equip tag
                                           │
                             ordered candidate URLs (front/back aware)
                                           ▼
-                          @blobbi/react — plain placement data + strings
+                          @blobbi/react: plain placement data + strings
 ```
 
 `@blobbi/react` never learns that an address, a marker or a relay exists. It
@@ -126,7 +126,7 @@ The mapping is **derived**, not hand-written. The single edit is an entry in
 be expressed in the consumable registry would therefore also declare hats
 *consumable*, and `shop-catalog.ts` would treat them as sellable care items.
 Cosmetics also have no meaningful `action`, `stages` or `effects`. They are a
-different domain that happens to share a kind — so they get their own identity
+different domain that happens to share a kind, so they get their own identity
 list and resolve through the **same** catalog query.
 
 ### Transitional codes
@@ -137,7 +137,7 @@ numeric (`headwear-1` … `headwear-21`), and each number is backed by a file in
 number:
 
 - `headwear-block-builder-cap` ✅
-- `headwear-22` ❌ — implies a local file that does not exist, and collides with
+- `headwear-22` ❌: implies a local file that does not exist, and collides with
   the next hat that does ship one.
 
 The slug still matches `ACCESSORY_CODE_PATTERN` and still infers its slot from
@@ -169,7 +169,7 @@ source-code change.
 
 1. Author the definition in `/tools/game-items` → **Item Studio**.
 2. Include an unmarked primary `image`, plus `front` and `back` views (side views
-   optional — they are preserved but never posed).
+   optional: they are preserved but never posed).
 3. Set `type: cosmetic`, `category`, `rarity`, `symbol`, and
    `content.visual.slot` / `visual.forms`.
 4. Sign and publish. Confirm the event on **both** official relays.
@@ -195,7 +195,7 @@ The tool never edits source and never activates anything.
 6. local `.webp`
 7. local `.png`
 
-**Unmapped accessory:** steps 5–7 only — byte-for-byte the pre-migration chain.
+**Unmapped accessory:** steps 5–7 only, byte-for-byte the pre-migration chain.
 
 Published artwork outranks inferred paths. Resolution is **synchronous and
 side-effect free**: a render never triggers a fetch.
@@ -214,7 +214,7 @@ no event; no inventory mutation; no Placement event.
 
 **One shared transform covers every view.** A front and a back view of the same
 hat cannot be positioned independently. Per-view placement would require a
-Placement design that does not exist — see §11.
+Placement design that does not exist; see §11.
 
 ---
 
@@ -256,11 +256,11 @@ Update this table as accessories are published.
 | Name | Legacy code | Official `d` | Pub | Primary | Front | Back | Mapped | Verified | Legacy metadata removed | Legacy artwork removable |
 |---|---|---|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | Block Builder Cap | `headwear-block-builder-cap` | `blobbi:cosmetic:block-builder-cap` | ✅¹ | ✅ | ✅ | ✅ | ✅ | ✅ | n/a² | n/a³ |
-| — | `headwear-1` … `headwear-21` | *(unpublished)* | ❌ | — | — | — | ❌ | — | n/a² | ❌ |
-| — | `eyewear-2` … `eyewear-4` | *(unpublished)* | ❌ | — | — | — | ❌ | — | n/a² | ❌ |
+|: | `headwear-1` … `headwear-21` | *(unpublished)* | ❌ |, |, |, | ❌ |, | n/a² | ❌ |
+|: | `eyewear-2` … `eyewear-4` | *(unpublished)* | ❌ |, |, |, | ❌ |, | n/a² | ❌ |
 
-¹ Verified on `wss://relay.ditto.pub`. **Not present on `wss://relay.dreamith.to`**
-  — the second official relay. Republishing there is recommended so the catalog
+¹ Verified on `wss://relay.ditto.pub`. **Not present on `wss://relay.dreamith.to`**,
+  the second official relay. Republishing there is recommended so the catalog
   resolves if Ditto is unreachable.
 ² There has never been legacy accessory *metadata* to remove (see §1).
 ³ No local artwork was ever shipped for this cap, so there is nothing to delete.

@@ -1,9 +1,9 @@
 /**
  * The particle randomness must not be random.
  *
- * Everything downstream — "re-rendering does not teleport a particle", "a
+ * Everything downstream, "re-rendering does not teleport a particle", "a
  * server render matches its hydration", "the same Blobbi always looks the
- * same" — reduces to properties of these four functions, so they are tested
+ * same": reduces to properties of these four functions, so they are tested
  * directly rather than only through the markup they end up in.
  */
 import { describe, it, expect } from 'vitest';
@@ -67,7 +67,7 @@ describe('unitFor', () => {
 
   it('spreads successive indices across the range instead of walking it', () => {
     // Twelve consecutive indices should not come out sorted, and should not
-    // cluster in one third of the range — either would be visible as a line of
+    // cluster in one third of the range; either would be visible as a line of
     // particles marching across the box.
     const values = Array.from({ length: 12 }, (_, i) => unitFor('spread', i, 'x'));
     const sorted = [...values].sort((a, b) => a - b);

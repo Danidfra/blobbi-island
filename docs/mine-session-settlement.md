@@ -11,7 +11,7 @@ Builds on [`relay-read-resilience.md`](relay-read-resilience.md).
 
 ## 1. What was wrong
 
-Energy was published on **every click** and the reward once, at the end — so
+Energy was published on **every click** and the reward once, at the end, so
 the cost was durable long before the benefit:
 
 ```
@@ -49,7 +49,7 @@ RECOVER on next entry: `open` → abandoned (nothing was owed);
         `finalized`/`coin-pending`/`energy-pending` → resume under the SAME ids
 ```
 
-**No atomicity claim.** Energy is kind:31124 and Coins are kind:31633 — two
+**No atomicity claim.** Energy is kind:31124 and Coins are kind:31633, two
 events, no shared transaction. Settlement here is **recoverable and
 idempotent, not atomically committed across both kinds**.
 
@@ -68,7 +68,7 @@ status: 'open' | 'finalized' | 'coin-pending' | 'energy-pending'
 
 `finalized` is the point of no return for the NUMBERS: recovery settles the
 recorded values and never recomputes them from UI state that no longer exists.
-`settled` is a one-way door. Persistence is read-back verified — **no durable
+`settled` is a one-way door. Persistence is read-back verified, **no durable
 operation identity, no value-bearing run** (the same rule the Coin wallet
 applies before it publishes); if storage refuses, Start fails with a friendly
 message rather than starting a run that cannot be paid.
@@ -123,7 +123,7 @@ proves nothing. So the replacement event carries an opaque marker:
 ```
 
 `mergePetStateTags` preserves unknown tags verbatim, so the marker survives
-ordinary care writes — which is what lets a later read prove that *this*
+ordinary care writes: which is what lets a later read prove that *this*
 operation's event landed. Each settlement drops previous `blobbi_op` tags
 before adding its own, so exactly one is ever present and the event cannot
 accumulate one per session forever.
@@ -132,13 +132,13 @@ Chosen over local-evidence-only (Strategy B in the audit) because cross-reload
 verification is the whole point: after a reload the ledger may say `ambiguous`
 and nothing else can settle the question.
 
-**Honest limits.** The marker is app-specific and opaque — no protocol meaning,
+**Honest limits.** The marker is app-specific and opaque; no protocol meaning,
 no new kind, no NIP claim. If another client ever republishes a pet without
 preserving unknown tags, the marker is lost; reconciliation then reports
 `ambiguous` and the operation stays unresolved rather than subtracting twice.
 
 Durable ledgers (`pet-energy-ledger`, `mine-session-ledger`) are per browser
-profile, like the Coin and Beach ledgers. A different device has no ledger —
+profile, like the Coin and Beach ledgers. A different device has no ledger,
 and also no operation id to replay.
 
 ## 7. The hardened kind:31124 path
@@ -198,15 +198,15 @@ per run for a bad read to disturb the session.
 Correctness depends on none of: a foreground timer, the component staying
 mounted, hover, pointer type, or audio.
 
-- **Fast repeated clicks** — local state only; nothing races.
-- **Tab switch / multiple tabs** — settlement takes the per-pet cross-tab lock
+- **Fast repeated clicks**: local state only; nothing races.
+- **Tab switch / multiple tabs**: settlement takes the per-pet cross-tab lock
   and the shared per-tab chain; a concurrent care write serializes with it.
-- **Background / screen lock / tab suspension mid-run** — the run is abandoned
+- **Background / screen lock / tab suspension mid-run**: the run is abandoned
   on recovery. Gameplay progress is lost; **nothing durable is**.
-- **Network switch at settlement** — an unusable read publishes nothing; an
+- **Network switch at settlement**: an unusable read publishes nothing; an
   ambiguous publish reconciles by marker. Neither double-charges.
-- **Orientation remount** — same as any unmount: abandoned, cost 0.
-- **Resume after Coins landed but energy did not** — recovery finishes energy
+- **Orientation remount**: same as any unmount: abandoned, cost 0.
+- **Resume after Coins landed but energy did not**: recovery finishes energy
   under the original opId.
 
 ## 11. Scope
@@ -218,7 +218,7 @@ persistence and settlement semantics changed.
 `useUpdatePetState` (the generic pet writer used by care actions) is
 **deliberately unchanged**. Migrating every care action to the hardened
 transaction would turn this into a full pet-state rewrite with a much larger
-test surface; the Mine — the only value-bearing pet write — uses the safe path,
+test surface; the Mine, the only value-bearing pet write, uses the safe path,
 and the generic writer's stale-base/tie hazards are recorded as follow-up in
 `mine-session-settlement-audit.md` §3.
 
@@ -228,7 +228,7 @@ and the generic writer's stale-base/tie hazards are recorded as follow-up in
    and non-strict. A care action can still lose an update to a concurrent care
    action. It cannot corrupt a Mine settlement (that path reads fresh inside a
    lock), but it can overwrite one *afterwards* with a stale snapshot.
-2. **Ledgers are per browser profile.** Cross-device recovery does not exist —
+2. **Ledgers are per browser profile.** Cross-device recovery does not exist,
    consistent with the Coin and Beach ledgers, and stated in each.
 3. **The marker depends on unknown-tag preservation.** True for this client and
    asserted by a regression test; a third-party writer that strips unknown tags

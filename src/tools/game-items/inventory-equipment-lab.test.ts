@@ -1,6 +1,6 @@
 /**
  * The Inventory & Equipment Lab's pure half: registry projection, bulk
- * planning and the documented test loadout — no signer, no relay, no React.
+ * planning and the documented test loadout; no signer, no relay, no React.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -79,8 +79,8 @@ describe('bulk inventory planning respects max_stack', () => {
     const plan = planBulkInventoryAction(
       'add-all-effects',
       new Map([
-        [AURA, 2], // already invalid — must not become 3, must not silently become 1
-        [SPARKLES, 1], // owned — omitted from the diff
+        [AURA, 2], // already invalid, must not become 3, must not silently become 1
+        [SPARKLES, 1], // owned, omitted from the diff
       ]),
     );
     // Ten effects go 0 → 1; the owned and the anomalous ones plan nothing.
@@ -103,7 +103,7 @@ describe('bulk inventory planning respects max_stack', () => {
       'remove-all-wearables',
       new Map([
         [CAP, 3],
-        [AURA, 1], // an effect — not this action's business
+        [AURA, 1], // an effect; not this action's business
         ['31632:beef:third-party:item', 9], // never targeted
       ]),
     );
@@ -131,8 +131,8 @@ describe('bulk inventory planning respects max_stack', () => {
       'normalize-stacks',
       new Map([
         [AURA, 3],
-        [CAP, 1], // valid — untouched
-        [SPARKLES, 0], // unowned — normalization never grants
+        [CAP, 1], // valid, untouched
+        [SPARKLES, 0], // unowned, normalization never grants
         ['31632:beef:third-party:item', 9], // never targeted
       ]),
     );

@@ -26,10 +26,10 @@ import { careItemPurpose } from './care-item-purpose';
 /**
  * The Care Store's shop window.
  *
- * ## One item, one button — and why that is not the food shop
+ * ## One item, one button, and why that is not the food shop
  *
  * The mall kiosk is a basket: a stepper per item and one confirmation at the
- * end, because a grocery run is many things at once. A care shop is not — you
+ * end, because a grocery run is many things at once. A care shop is not; you
  * come in because a Blobbi is dirty or hurt, you buy the one thing, you leave.
  * So every card carries its own Buy button and its own state, and there is no
  * cart to reconcile. That is a UX choice, not an architectural one: underneath,
@@ -41,7 +41,7 @@ import { careItemPurpose } from './care-item-purpose';
  * It resolves no prices (the purchase hook prices from the item's address), it
  * publishes nothing, it holds no ownership state, and it patches no balance. The
  * numbers on screen come from the shared inventory query, so a confirmed
- * purchase updates them because the shared cache updated — not because this
+ * purchase updates them because the shared cache updated; not because this
  * component wrote to itself. Every displayed price and total is presentation;
  * spendable truth is read inside the mutation boundary.
  */
@@ -79,7 +79,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
    * `purchasingAddress` is React state and only takes effect after a re-render,
    * so two clicks in the same tick would both pass it. This ref flips before the
    * first `await` and is therefore the real guard; the disabled buttons are a
-   * courtesy on top of it. It is first-line protection only — one-debit-per-
+   * courtesy on top of it. It is first-line protection only; one-debit-per-
    * purchase is the spend intent's job inside `useBatchPurchase`.
    */
   const inFlightRef = useRef(false);
@@ -91,7 +91,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
    * first: a shop cell that carries a name, a price, a purpose line and its own
    * Buy button is tall, and stacking two full categories pushes the second one
    * below a fold the player has no reason to expect. One shelf at a time keeps
-   * every card reachable at every viewport, and matches how someone shops here —
+   * every card reachable at every viewport, and matches how someone shops here,
    * they came for soap or they came for a bandage.
    */
   const [shelf, setShelf] = useState<CareStoreCategory>(CARE_STORE_CATEGORIES[0]);
@@ -153,7 +153,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
         setPurchasedAddress(product.address);
       } else if (result.outcome === 'blocked') {
         setError(
-          `An earlier ${product.name} purchase is still being verified — nothing new was charged. Try again in a moment.`,
+          `An earlier ${product.name} purchase is still being verified; nothing new was charged. Try again in a moment.`,
         );
       } else {
         setError(
@@ -163,7 +163,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
     } catch (err) {
       setError(playerFacingMessage(err, "We couldn't complete that purchase right now. Try again in a moment."));
     } finally {
-      // Released on EVERY outcome, so a deliberate retry is always possible —
+      // Released on EVERY outcome, so a deliberate retry is always possible,
       // that retry is how an unresolved operation reconciles without a second
       // debit.
       inFlightRef.current = false;
@@ -316,7 +316,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
                                   ? 'Unavailable'
                                   : state === 'logged-out'
                                     ? 'Sign in to buy'
-                                    : `Buy — ${product.price}`}
+                                    : `Buy for ${product.price}`}
                       </Button>
                     </ItemTile>
                   );

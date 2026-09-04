@@ -2,7 +2,7 @@
  * Validation is the security boundary.
  *
  * Kind numbers are unregistered, so anything at all can arrive under `31951` /
- * `21951` — including events crafted to steer someone else's session. There is
+ * `21951`: including events crafted to steer someone else's session. There is
  * one test per numbered rule in the protocol's §4.4 and §5.4 lists, because a
  * rule that is not tested is a rule that quietly stops applying.
  */
@@ -53,7 +53,7 @@ function commandEvent(content: unknown, overrides: object = {}) {
   } as Parameters<typeof makeCommandEvent>[0]);
 }
 
-describe('parseSessionEvent — the §16 examples', () => {
+describe('parseSessionEvent: the §16 examples', () => {
   for (const { label, event } of CANONICAL_EXAMPLES) {
     it(`accepts ${label}`, () => {
       const result = parseSessionEvent(event, { nowSec: T0_SEC });
@@ -105,7 +105,7 @@ describe('parseSessionEvent — the §16 examples', () => {
   });
 });
 
-describe('parseSessionEvent — §4.4 rejections', () => {
+describe('parseSessionEvent: §4.4 rejections', () => {
   it('(1) refuses another kind', () => {
     const result = parseSessionEvent(sessionEvent(VALID_CONTENT, { kind: 31950 }), { nowSec: NOW });
     expect(result).toEqual({ ok: false, reason: 'wrong-kind' });
@@ -130,7 +130,7 @@ describe('parseSessionEvent — §4.4 rejections', () => {
     expect(result).toEqual({ ok: false, reason: 'missing-tag' });
   });
 
-  it('(2) refuses an active session with no invitation code — it would be unreachable', () => {
+  it('(2) refuses an active session with no invitation code; it would be unreachable', () => {
     const result = parseSessionEvent(sessionEvent(VALID_CONTENT, { code: null }), { nowSec: NOW });
     expect(result).toEqual({ ok: false, reason: 'missing-tag' });
   });
@@ -239,7 +239,7 @@ describe('parseSessionEvent — §4.4 rejections', () => {
   });
 });
 
-describe('parseCommandEvent — the §16 examples', () => {
+describe('parseCommandEvent: the §16 examples', () => {
   for (const { label, event } of COMMAND_EXAMPLES) {
     it(`accepts ${label}`, () => {
       const result = parseCommandEvent(event, { nowSec: T0_SEC, expectedAddress: ADDRESS });
@@ -287,7 +287,7 @@ describe('parseCommandEvent — the §16 examples', () => {
   });
 });
 
-describe('parseCommandEvent — §5.4 rejections', () => {
+describe('parseCommandEvent: §5.4 rejections', () => {
   const PLAY = { version: 1, command: 'play', rev: 3, position: 0, updatedAt: NOW * 1000, rate: 1 };
 
   it('(1) refuses another kind', () => {
@@ -328,7 +328,7 @@ describe('parseCommandEvent — §5.4 rejections', () => {
     expect(result).toEqual({ ok: false, reason: 'missing-tag' });
   });
 
-  it('(4) refuses a command signed by a guest — the whole authority guarantee', () => {
+  it('(4) refuses a command signed by a guest, the whole authority guarantee', () => {
     const result = parseCommandEvent(commandEvent(PLAY, { pubkey: OTHER_PUBKEY }), {
       nowSec: NOW,
       expectedAddress: ADDRESS,

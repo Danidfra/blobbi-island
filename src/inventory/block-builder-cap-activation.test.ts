@@ -47,7 +47,7 @@ const IMG = {
 /**
  * The published event, tag for tag.
  *
- * NOTE the `front` view carries the SAME url as the unmarked primary — that is
+ * NOTE the `front` view carries the SAME url as the unmarked primary; that is
  * what the issuer published, and several assertions below depend on the tests
  * not quietly "fixing" it.
  */
@@ -175,7 +175,7 @@ describe('image views', () => {
     expect(sources).toContain(IMG.primary);
   });
 
-  it('offers only published artwork — no inferred local path', () => {
+  it('offers only published artwork; no inferred local path', () => {
     // The legacy chain appended `/assets/.../headwear/<code>.{webp,png}` here.
     // Nothing does any more: an address is not a filename.
     const sources = capSources('front');

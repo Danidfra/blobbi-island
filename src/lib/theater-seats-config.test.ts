@@ -117,7 +117,7 @@ describe('theater seat configuration', () => {
       // Explicit VISUAL POSE ANCHOR, calibrated to the cushion (measured lines
       // 87.6 / 82.7 / 77.6) plus SEAT_CONTACT_RATIO of the row-scaled body.
       // The ratio (0.5) is derived from the legacy center-anchor renderer's
-      // visible body bottom — see ground-target-hardening.test.ts.
+      // visible body bottom; see ground-target-hardening.test.ts.
       const cushionByRow = { a: 87.6, b: 82.7, c: 77.6 };
       for (const seat of theaterSeats) {
         const scaledBody = (128 * seat.seatedScale * 100) / 697;

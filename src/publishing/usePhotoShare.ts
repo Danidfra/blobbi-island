@@ -3,7 +3,7 @@
  *
  * ShareModal used to own this: convert the data URL, upload to Blossom, build a
  * kind 1 note, publish it. That made the component the boundary, and a component
- * is a bad boundary — a second share surface, or a caller that reaches the
+ * is a bad boundary, a second share surface, or a caller that reaches the
  * hooks directly, would have had its own copy of the sequence and none of the
  * checks.
  *
@@ -22,7 +22,7 @@
  * ```
  *
  * The upload is not undoable, so nothing may reach it until the whole operation
- * is known to be permitted. `useUploadFile` refuses independently as well — that
+ * is known to be permitted. `useUploadFile` refuses independently as well; that
  * is the guard against a future second caller, not the primary check.
  *
  * ## Denial is not failure

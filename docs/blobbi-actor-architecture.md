@@ -18,20 +18,20 @@ BlobbiActor            (shared ground-anchor actor primitive)
         ▼
 ─────────────── package boundary ───────────────
         ▼
-BlobbiRendererView     (@blobbi/react — pure visual renderer)
+BlobbiRendererView     (@blobbi/react: pure visual renderer)
 ```
 
 Everything above the line is Blobbi Island: it knows where it is, whose it is,
 and what it is doing. Everything below is `@blobbi/react`, a local workspace
 package (`packages/blobbi-react/`) that knows only what it was handed. The line
-is enforced from both sides — `packages/blobbi-react/src/package-purity.test.ts`
+is enforced from both sides, `packages/blobbi-react/src/package-purity.test.ts`
 proves the package cannot reach a relay, a user, a world or an asset path;
 `src/components/blobbi/renderer-boundary.test.ts` proves Island holds no second
 copy of the renderer and imports it only through the package entry point.
 
 ## 1. World coordinate systems
 
-Three systems, one conversion module — `src/lib/world-coordinates.ts`:
+Three systems, one conversion module, `src/lib/world-coordinates.ts`:
 
 | system | units | used for |
 | --- | --- | --- |
@@ -68,15 +68,15 @@ Unchanged from Phase 2 (`src/lib/blobbi-ground.ts`):
 
 ## 3. Movement controller
 
-`src/hooks/useBlobbiMovementController.ts` — the local player's movement
+`src/hooks/useBlobbiMovementController.ts`: the local player's movement
 engine, extracted from `MovableBlobbi`:
 
 - current ground position, walk target, `isMoving`, heading, optional trail;
 - the rAF integration loop (fixed design px/s → viewport-independent speed);
-- `goTo(target)` — walk; the **target** is not clamped, each **step** is;
-- `snapTo(pose)` — immediate, boundary-bypassing pose snap (the ONLY way a
+- `goTo(target)`: walk; the **target** is not clamped, each **step** is;
+- `snapTo(pose)`: immediate, boundary-bypassing pose snap (the ONLY way a
   pose anchor enters the world), cancels any active walk, completes once;
-- `stop()` — cancel in place, no completion.
+- `stop()`: cancel in place, no completion.
 
 Lifecycle guarantees (tested in `useBlobbiMovementController.test.tsx`): one
 rAF loop at most; retargeting redirects rather than stacks; callbacks are read
@@ -87,15 +87,15 @@ blocker collision ends the walk in place but reports the *target* to
 
 ## 4. BlobbiActor
 
-`src/components/blobbi/BlobbiActor.tsx` — the shared Island-side actor
+`src/components/blobbi/BlobbiActor.tsx`: the shared Island-side actor
 primitive for local AND remote players. Owns the ground-anchor DOM geometry
 (anchor box, scale rig, float wrapper, ground shadow, label slot, debug
 markers) and nothing else: no input, no movement, no presence, no pose logic.
 Same props in → same geometry out, whoever mounts it.
 
-## 5. BlobbiRendererView — the package boundary
+## 5. BlobbiRendererView: the package boundary
 
-`packages/blobbi-react/src/BlobbiRendererView.tsx` — the pure visual renderer
+`packages/blobbi-react/src/BlobbiRendererView.tsx`: the pure visual renderer
 (body SVG + accessory overlays inside the canonical square renderer box, see
 `docs/blobbi-renderer-contract.md`). Unchanged by Phase 3.
 
@@ -126,7 +126,7 @@ are documented in `packages/blobbi-react/README.md`; the extraction record is in
 
 ## 6. Approach targets
 
-`src/lib/approach-target.ts` — the ONE implementation of "resolve where the
+`src/lib/approach-target.ts`: the ONE implementation of "resolve where the
 feet should stop for this object":
 
 ```ts
@@ -143,17 +143,17 @@ Consumers and their configuration:
 
 | object | fraction | clamp | offset |
 | --- | --- | --- | --- |
-| generic door/kiosk (`InteractiveElement`) | `ELEMENT_BASE_FRACTION` (0.5, 0.9) | `walkBoundary` when the room passes it | — |
-| Town bush (`TownBush`) | per-bush `config.interactionTarget` | town boundary | — |
-| theater seat (`TheaterSeat`) | `SEAT_APPROACH_TARGET` (0.5, 1.05) | theater boundary | — |
+| generic door/kiosk (`InteractiveElement`) | `ELEMENT_BASE_FRACTION` (0.5, 0.9) | `walkBoundary` when the room passes it |, |
+| Town bush (`TownBush`) | per-bush `config.interactionTarget` | town boundary |, |
+| theater seat (`TheaterSeat`) | `SEAT_APPROACH_TARGET` (0.5, 1.05) | theater boundary |, |
 | arcade machine (`ArcadeMachine`) | `config.interactionAnchor` | floor boundary | `arcadeMachineGroundOffsetPercent`, applied exactly once |
-| chairs (shop / Nostr Station) | `chairConfig.seatAnchor` (default {50, 85} pseudo-sit) | room boundary | — |
-| mine/cave, arcade counters | explicit `walkTarget` from config | pre-clamped in config | — |
+| chairs (shop / Nostr Station) | `chairConfig.seatAnchor` (default {50, 85} pseudo-sit) | room boundary |, |
+| mine/cave, arcade counters | explicit `walkTarget` from config | pre-clamped in config |, |
 
 DOM-free config mirrors (`seatApproachPosition`, `machineAnchorPosition`) are
 proven equal to the runtime path by `src/lib/approach-target.test.ts`.
 Outputs are always ground-position **approach targets** for
-`usePendingInteraction` — never pose anchors.
+`usePendingInteraction`: never pose anchors.
 
 ## 7. Pose anchors
 
@@ -186,7 +186,7 @@ resolveActorRender(pose, ctx) → {
 
 One pure resolver decides everything visual about a pose, for local and
 remote alike. Seated resolves through `resolveSeatedRender` (unknown /
-decorative / lost seat ids fall back to standing — hostile-claim guard);
+decorative / lost seat ids fall back to standing, hostile-claim guard);
 sleeping keeps the shadow and suppresses float; hidden paints nothing while
 the anchor stays mounted. `ctx.suppressFloat` carries caller policy (local
 `disableFloating` config; remote `isMoving`, whose positions integrate
@@ -195,16 +195,16 @@ presentation state.
 
 ## 9. Local and remote adapters
 
-- **Local** — `MovableBlobbi`: world-input adapter
+- **Local**: `MovableBlobbi`: world-input adapter
   (`shouldTriggerWorldMove` + wake/stand/reveal policy per pose), local gaze
   adapter (movement heading → attention target → idle gaze), movement
   controller mount, `BlobbiActor` mount. Exposes
   `{ goTo, snapTo, stop, getCurrentPosition }`.
-- **Local pose orchestration** — `useBlobbiPoseController` (mounted by
+- **Local pose orchestration**: `useBlobbiPoseController` (mounted by
   PlayingView): owns sleeping/seated/hidden state and every transition (seat
   arrival snap, bed pending-interaction walk → sleep snap, hide-on-arrival,
   wake/stand/reveal on movement, reset on location change).
-- **Remote** — `MultiplayerLayer`: derives each player's pose from explicit
+- **Remote**: `MultiplayerLayer`: derives each player's pose from explicit
   presence fields (`hiddenIn`; `seatId` only when the seat is WON per
   `theater-occupancy`), renders through the same `resolveActorRender` +
   `BlobbiActor`, and animates positions via the presence rAF.
@@ -246,7 +246,7 @@ converts wire coordinates.
    if (target) requestInteraction({ target, touch, action: onArrive });
    ```
 
-3. `onArrive` fires ONLY on confirmed arrival — never open anything on click.
+3. `onArrive` fires ONLY on confirmed arrival; never open anything on click.
 4. If tests need the point without a DOM, add a DOM-free config mirror and a
    parity assertion (see `approach-target.test.ts`).
 
@@ -261,12 +261,12 @@ converts wire coordinates.
 4. Leave it in `handleMoveStart`/`handleWakeUp` (movement always stands
    up/wakes/reveals).
 5. If remotes can see it, publish an explicit presence field and map it to the
-   pose in `MultiplayerLayer` — never infer it from coordinates.
+   pose in `MultiplayerLayer`: never infer it from coordinates.
 
 ## 14. What could later move into a shared library
 
-For the **renderer**, this question is answered in full — with a dependency
-map, the proposed public API, and a readiness verdict — in
+For the **renderer**, this question is answered in full, with a dependency
+map, the proposed public API, and a readiness verdict, in
 `docs/blobbi-package-readiness.md` (Phase 4). Do not duplicate that analysis
 here.
 
@@ -285,8 +285,8 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 
 ## Related documents
 
-- `docs/blobbi-renderer-contract.md` — renderer box + accessory space (Phase 1)
-- `docs/blobbi-package-readiness.md` — renderer extraction boundary + future package API (Phase 4)
-- `docs/blobbi-ground-anchor-implementation.md` — ground-anchor derivation (Phase 2)
-- `docs/blobbi-actor-position-migration-notes.md` — center→ground migration
-- `docs/blobbi-actor-ui-audit.md` — the original audit that motivated Phases 0–3
+- `docs/blobbi-renderer-contract.md`: renderer box + accessory space (Phase 1)
+- `docs/blobbi-package-readiness.md`: renderer extraction boundary + future package API (Phase 4)
+- `docs/blobbi-ground-anchor-implementation.md`: ground-anchor derivation (Phase 2)
+- `docs/blobbi-actor-position-migration-notes.md`: center→ground migration
+- `docs/blobbi-actor-ui-audit.md`: the original audit that motivated Phases 0–3

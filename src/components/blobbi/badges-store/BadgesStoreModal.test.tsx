@@ -1,5 +1,5 @@
 /**
- * `<BadgesStoreModal>` — the shop window over an empty catalog.
+ * `<BadgesStoreModal>`: the shop window over an empty catalog.
  *
  * What has to hold while there is no badge protocol:
  *

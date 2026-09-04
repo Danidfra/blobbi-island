@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the COMPATIBILITY POLICY for items owned in other games'
+ * Blobbi Island: the COMPATIBILITY POLICY for items owned in other games'
  * inventories.
  *
  * ```
@@ -7,8 +7,8 @@
  *   this module says WHAT IT DOES to a Blobbi      (Blobbi Island policy)
  * ```
  *
- * A partner game publishes generic semantics — `type: consumable`,
- * `category: food`, topic `edible` — and deliberately nothing about hunger,
+ * A partner game publishes generic semantics, `type: consumable`,
+ * `category: food`, topic `edible`: and deliberately nothing about hunger,
  * stages, cooldowns or any other Blobbi vocabulary. Interpreting those
  * semantics is the consuming game's job, and this is the ONE place Island does
  * it. Nothing in the generic protocol parser, the trusted-definition parser or
@@ -19,7 +19,7 @@
  * An external item becomes usable only when BOTH hold:
  *
  * 1. its issuer is a trusted partner that has been granted the profile
- *    (`TrustedItemIssuer.compatibility` in `trusted-issuers.ts`) — trust is the
+ *    (`TrustedItemIssuer.compatibility` in `trusted-issuers.ts`): trust is the
  *    issuer key, never a `d`, never an address;
  * 2. its published definition carries the generic semantics the profile
  *    requires.
@@ -33,8 +33,8 @@
  *
  * A profile is a Blobbi gameplay interpretation ("raw produce: one food
  * segment"). Gameplay code consumes the profile; it never learns which
- * partner, item id or address produced it. New tiers — prepared food from a
- * cooking game, say — are new profiles here, not new branches elsewhere.
+ * partner, item id or address produced it. New tiers, prepared food from a
+ * cooking game, say, are new profiles here, not new branches elsewhere.
  */
 
 import type {
@@ -49,7 +49,7 @@ import { getTrustedItemIssuer } from './trusted-issuers';
 /**
  * The Blobbi gameplay interpretations an external item can map to.
  *
- * - `'raw-produce'` — unprocessed edible food from a partner game. One food
+ * - `'raw-produce'`: unprocessed edible food from a partner game. One food
  *   segment.
  */
 export type ExternalCompatibilityProfile = 'raw-produce';
@@ -68,14 +68,14 @@ export interface ExternalItemCompatibility {
  * than chosen:
  *
  * - the hunger meter is 0–100 and the UI reads it in 25-point bands
- *   (`needLevel`: critical ≤ 25, low ≤ 50, good above — `src/lib/blobbi-mood.ts`);
+ *   (`needLevel`: critical ≤ 25, low ≤ 50, good above, `src/lib/blobbi-mood.ts`);
  * - the smallest official food, the Apple, restores exactly 25
  *   (`src/protocol/event-registry.ts`);
  * - the generic feed action assumes "+25" (`useFeedPet`).
  *
  * So the quantum the game already thinks in is 25, and raw produce restores
  * one of them. Prepared food from a future cooking game would map to more
- * segments — a different profile, the same unit.
+ * segments: a different profile, the same unit.
  */
 export const FOOD_SEGMENT_HUNGER = 25;
 
@@ -87,7 +87,7 @@ export const RAW_PRODUCE_STAGES: readonly ItemStage[] = ['baby', 'adult'];
 
 /**
  * Does this published definition describe raw edible food, in the generic
- * vocabulary of kind:31632? Semantics only — no issuer, no id.
+ * vocabulary of kind:31632? Semantics only; no issuer, no id.
  */
 export function hasRawProduceSemantics(
   definition: Pick<ResolvedBlobbiItemDefinition, 'type' | 'category' | 'topics'>,
@@ -104,7 +104,7 @@ export interface ResolveExternalItemCompatibilityInput {
   definition: ResolvedBlobbiItemDefinition;
   /**
    * The kind:31633 context the item is owned in. Not consulted by any current
-   * profile — every profile is about the item — but part of the contract so a
+   * profile: every profile is about the item, but part of the contract so a
    * future policy can be source-aware without changing every caller.
    */
   sourceInventoryId?: string;

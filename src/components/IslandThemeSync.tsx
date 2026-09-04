@@ -18,7 +18,7 @@ import { themeConfigFromDittoSettings } from '@/lib/ditto-settings';
 import { addressFromNostrThemeId, nostrThemeId, type ThemeConfig } from '@/lib/nostr-theme';
 
 /**
- * IslandThemeSync — reconciles the local theme selection with the account.
+ * IslandThemeSync: reconciles the local theme selection with the account.
  *
  * Renders nothing. It lives BELOW the Nostr providers, which is the whole
  * reason it exists as a component rather than living in `AppProvider`: the
@@ -40,7 +40,7 @@ import { addressFromNostrThemeId, nostrThemeId, type ThemeConfig } from '@/lib/n
  * ```
  *
  * 30078 is read first and preferred. 16767 is the fallback, and it is the one
- * that carries an `a` reference back to a named definition — so when both are
+ * that carries an `a` reference back to a named definition, so when both are
  * present, the settings blob decides WHAT and the active event decides WHICH
  * NAMED THEME, if any.
  *
@@ -48,14 +48,14 @@ import { addressFromNostrThemeId, nostrThemeId, type ThemeConfig } from '@/lib/n
  *
  * It required a remote event to name a theme it could resolve: an `island-theme`
  * tag it wrote itself, or an `a` tag pointing at a kind:36767 definition. Ditto
- * publishes NEITHER for the common case — selecting a preset, or nudging a
+ * publishes NEITHER for the common case, selecting a preset, or nudging a
  * colour, produces a self-contained 16767 with three `c` tags and no reference
  * at all. Island saw `remoteId === null` and returned early, every time. A
  * self-contained theme is now adopted on its own terms, under the reserved id
  * {@link DITTO_ACTIVE_THEME_ID}, exactly as Ditto's own `theme: 'custom'` has no
  * name either.
  *
- * ## Which selection is newer — and why that question has to be asked
+ * ## Which selection is newer, and why that question has to be asked
  *
  * The two sides are not symmetric. `AppConfig.theme` changes the instant the
  * player clicks; the account's copy is published after a two-second debounce,
@@ -74,7 +74,7 @@ import { addressFromNostrThemeId, nostrThemeId, type ThemeConfig } from '@/lib/n
  *   otherwise                   the local choice is newer → leave it alone
  * ```
  *
- * The provenance lives on the CHOICE, in the config, rather than in a ref —
+ * The provenance lives on the CHOICE, in the config, rather than in a ref,
  * because a ref is gone after a reload, and a reload was the moment the bug
  * showed itself.
  *
@@ -82,7 +82,7 @@ import { addressFromNostrThemeId, nostrThemeId, type ThemeConfig } from '@/lib/n
  *
  * - Reset the selection because a read failed. Both reads throw on an unusable
  *   outcome rather than resolving to `null`, so "no remote theme" here is a
- *   CONFIRMED absence — and even that only means "do nothing".
+ *   CONFIRMED absence: and even that only means "do nothing".
  * - Overwrite a newer local choice with an older remote one. See above.
  * - Adopt a named id it cannot resolve. That would trade a working island for
  *   the fallback one.
@@ -130,14 +130,14 @@ export function IslandThemeSync() {
 
       Both reads throw on an unusable outcome rather than resolving empty, so
       arriving here with nothing means either "still loading" or "this account
-      genuinely has no theme". Neither is a reason to touch the selection — and
+      genuinely has no theme". Neither is a reason to touch the selection, and
       neither answers the question, so the guard below stays unarmed and the
       effect asks again when the reads land.
     */
     if (!remote) return;
 
     /*
-      ARMED HERE, on every path that ANSWERS the question — not only on the
+      ARMED HERE, on every path that ANSWERS the question; not only on the
       paths that write.
 
       This is the regression. The effect re-runs on `selectedId`, so when the
@@ -158,7 +158,7 @@ export function IslandThemeSync() {
     */
     const adoptedProvenance = { themeChosenAt: remote.updatedAtMs, themeChosenBy: pubkey };
 
-    // Already showing it — but the CONTENT of a self-contained theme can change
+    // Already showing it, but the CONTENT of a self-contained theme can change
     // while its id does not, so the cache is refreshed even when the id matches.
     if (remote.id === selectedId && remote.id !== DITTO_ACTIVE_THEME_ID) return;
 
@@ -218,7 +218,7 @@ function settingsUpdatedAtMs(result: DittoThemeSettingsResult | undefined): numb
  *
  *  1. **The local choice is not this account's.** `AppConfig.theme` is
  *     per-browser; 16767 and 30078 are per-account. Signing in as somebody else
- *     adopts THEIR theme even though it is older than what is on screen — that
+ *     adopts THEIR theme even though it is older than what is on screen; that
  *     is the intended scope, not an accident, and it is why provenance is
  *     checked before recency.
  *  2. **No local choice on record.** A config written before these fields
@@ -226,7 +226,7 @@ function settingsUpdatedAtMs(result: DittoThemeSettingsResult | undefined): numb
  *     account, which is exactly what shipped before.
  *  3. **Genuinely newer.** Strictly greater, so a tie keeps what the player is
  *     looking at. The remote side is second-resolution and the local side is
- *     milliseconds, so ties are common inside the second a selection is made —
+ *     milliseconds, so ties are common inside the second a selection is made,
  *     and in that second the local value is the one that was chosen last.
  */
 function remoteWins(input: {
@@ -271,7 +271,7 @@ interface RemoteSelection {
  * What the account says the active theme is, as an Island theme.
  *
  * Exported for tests: this is the decision the whole interop story turns on,
- * and it is pure — no relay, no React, no storage.
+ * and it is pure; no relay, no React, no storage.
  */
 export function resolveRemoteSelection(input: {
   settingsConfig: ThemeConfig | null;
@@ -286,7 +286,7 @@ export function resolveRemoteSelection(input: {
   const updatedAtMs = Math.max(input.settingsUpdatedAtMs ?? 0, input.activeUpdatedAtMs ?? 0);
 
   // A NAMED theme is preferred whenever the account points at one, because a
-  // name survives the author editing it — the definition is re-fetched by
+  // name survives the author editing it, the definition is re-fetched by
   // address and the island follows the edit. Both signals for a name are
   // considered: the id Island writes for itself, and the `a` reference Ditto
   // writes when a selection came from a definition.

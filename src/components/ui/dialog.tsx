@@ -84,7 +84,7 @@ const DialogContent = React.forwardRef<
         //
         // The merged geometry is the OLD geometry: the outer Close was a
         // zero-width box pinned at `right-4 top-4` (both its children were out
-        // of flow), and the visible circle sat at `right-1` inside it — i.e.
+        // of flow), and the visible circle sat at `right-1` inside it; i.e.
         // 1rem + 0.25rem = 1.25rem from the content edge. Hence `right-5`.
         // `transition` replaces the pair `transition-opacity` (outer) and
         // `transition-colors` (inner) now that one element owns both.
@@ -106,8 +106,8 @@ DialogContent.displayName = DialogPrimitive.Content.displayName
  * The two branches above are not symmetrical, and the asymmetry is easy to miss:
  * the body-portal branch carries `p-6` (plus `border`, `bg-background`,
  * `shadow-lg`), and the `inFrame` branch carries **positioning and animation
- * only**. That is deliberate — the in-frame dialogs written first are full-bleed
- * artwork boards that pass `p-0 border-0 bg-transparent` — but it means a dialog
+ * only**. That is deliberate, the in-frame dialogs written first are full-bleed
+ * artwork boards that pass `p-0 border-0 bg-transparent`: but it means a dialog
  * MOVED from `document.body` to a frame silently loses all of its padding, and
  * its `w-full` starts resolving against the game stage instead of the viewport,
  * so it also loses its side margins.
@@ -119,14 +119,14 @@ DialogContent.displayName = DialogPrimitive.Content.displayName
  *
  * ## The rule
  *
- * - `w-[calc(100%-2rem)]` — 1rem of visible stage on each side, at every size.
+ * - `w-[calc(100%-2rem)]`: 1rem of visible stage on each side, at every size.
  *   Percent of the STAGE, not of the viewport: `vw` units would measure the
  *   browser window, which is the thing a contained dialog is no longer sized by.
- * - `max-w-md` — a normal card on desktop, where the stage is wide.
- * - `max-h-[calc(100%-2rem)]` + `overflow-y-auto` — a tall dialog scrolls inside
+ * - `max-w-md`: a normal card on desktop, where the stage is wide.
+ * - `max-h-[calc(100%-2rem)]` + `overflow-y-auto`: a tall dialog scrolls inside
  *   itself instead of overflowing the stage, which the frame's `overflow-hidden`
  *   would otherwise clip.
- * - `p-5 sm:p-6` — the padding the body-portal branch would have given it.
+ * - `p-5 sm:p-6`: the padding the body-portal branch would have given it.
  *
  * Callers append their own surface classes (`blobbi-card-xl`, borders, radius).
  * Anything here can still be overridden per dialog: `cn()` is tailwind-merge, so

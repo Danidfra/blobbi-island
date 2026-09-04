@@ -10,7 +10,7 @@
  * That is correct ONLY if `refreshFromRelay` is referentially stable. It was
  * not: `useOptimizedStatus` declared it with `[clearPendingUpdates, ownerQuery,
  * petsQuery]`, and the `useQuery` RESULT OBJECTS get a new identity on every
- * render — so the callback did too, and the effect re-fired on every render.
+ * render: so the callback did too, and the effect re-fired on every render.
  * One measured session issued 11 refreshes = 22 relay reads, each of which
  * could resolve empty and wipe the player's state.
  *

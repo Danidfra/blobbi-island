@@ -1,5 +1,5 @@
 /**
- * Generator — seed determinism and layout validity.
+ * Generator: seed determinism and layout validity.
  *
  * The promises under test: same seed + same policy is the identical field;
  * every generated layout honors bounds, padding, separation, the initial-coil
@@ -145,7 +145,7 @@ describe('layout validity', () => {
 });
 
 describe('generation failure', () => {
-  it('fails with a typed result — not a shrunken round — when placement is impossible', () => {
+  it('fails with a typed result, not a shrunken round, when placement is impossible', () => {
     // Valid policy, unsatisfiable geometry: nine targets half a field apart.
     const impossible: TreasureHuntPolicy = {
       ...POLICY,

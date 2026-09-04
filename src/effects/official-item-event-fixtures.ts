@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the CURRENTLY PUBLISHED official kind:31632 events, verbatim.
+ * Blobbi Island: the CURRENTLY PUBLISHED official kind:31632 events, verbatim.
  *
  * FIXTURE / DIAGNOSTIC DATA ONLY. These are the sixteen issuer-signed events
  * supplied with Phase 9 (four wearable cosmetics, twelve visual-effect items),
@@ -18,7 +18,7 @@
  * only. Stable identity is always `31632:<issuer>:<d>` and lives in
  * `src/protocol/event-registry.ts`. The production activation path
  * (`official-visual-effect-items.ts`, `active-effects.ts`) does not import
- * this module — a source-level test asserts that.
+ * this module: a source-level test asserts that.
  *
  * The events are byte-exact as supplied, including the pretty-printed content
  * JSON of Firefly Friends / Love Burst / Bubble Bliss (whitespace is inside

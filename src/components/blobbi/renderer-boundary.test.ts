@@ -2,14 +2,14 @@
  * ISLAND-SIDE package boundary (Phase 5).
  *
  * The renderer now lives in `@blobbi/react`. That package proves its own purity
- * (`packages/blobbi-react/src/package-purity.test.ts` — it cannot reach a relay,
+ * (`packages/blobbi-react/src/package-purity.test.ts`: it cannot reach a relay,
  * a user, a world or an asset path). What THIS file proves is the half that
  * lives on the Island side of the line, and that no amount of package hygiene
  * can guarantee:
  *
  *  1. There is exactly ONE renderer implementation, and it is the package's.
  *     A local re-implementation would compile, pass every behavioral test, and
- *     silently fork the drawing — so its absence is asserted directly.
+ *     silently fork the drawing, so its absence is asserted directly.
  *  2. Island talks to the package through its public entry point, not through
  *     its file layout.
  *  3. The dependency arrow between the actor and the renderer points ONE way.
@@ -18,8 +18,8 @@
  *  5. The editor overlay shares the package's coordinate space instead of
  *     restating it.
  *
- * Import statements are matched, not free text, so the prose in these modules —
- * which discusses `useAccessoryManagement` and `BlobbiActor` at length — does
+ * Import statements are matched, not free text, so the prose in these modules,
+ * which discusses `useAccessoryManagement` and `BlobbiActor` at length, does
  * not trip the check.
  */
 import { describe, it, expect } from 'vitest';
@@ -163,7 +163,7 @@ describe('the accessory EDITOR shares the package contract instead of restating 
   it('uses the SAME box-relative sizing and ordering as the static renderer', () => {
     // Editor placements are authored in this coordinate space and replayed in
     // the world. If the two ever used different size bases or different layer
-    // ordering, every saved accessory would shift on save — so both read the
+    // ordering, every saved accessory would shift on save, so both read the
     // constants from one module, which is now the package.
     const specifiers = importsOf(OVERLAY);
     expect(specifiers).toContain('@blobbi/react');
@@ -178,7 +178,7 @@ describe('the accessory EDITOR shares the package contract instead of restating 
       expect(renderer, `renderer must share ${shared}`).toContain(shared);
     }
 
-    // Ordering comes from the same module on both paths — but only the editor
+    // Ordering comes from the same module on both paths, but only the editor
     // CALLS it. The renderer consumes placements that are already normalized,
     // which is exactly why it stays free of equipment parsing.
     expect(overlay).toContain('normalizeAccessoryPlacements');
@@ -188,13 +188,13 @@ describe('the accessory EDITOR shares the package contract instead of restating 
 
   it('mounts the editor on the canonical renderer box, at the canonical size', () => {
     // `stageRef` wraps the preview whose only child is the renderer box, and
-    // the preview is `xl` — the size every saved placement was authored in.
+    // the preview is `xl`: the size every saved placement was authored in.
     const modal = readFileSync(join(ROOT, 'src/components/blobbi/BlobbiInfoModal.tsx'), 'utf8');
     expect(modal).toMatch(/containerRef=\{stageRef\}/);
     expect(modal).toMatch(/size="xl"/);
 
     // The preview shrink-wraps that box, so the drag math measures the box and
-    // nothing more — no padding, no centering slack.
+    // nothing more: no padding, no centering slack.
     const preview = readFileSync(join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx'), 'utf8');
     expect(preview).toContain('h-fit w-fit');
   });
@@ -229,7 +229,7 @@ describe('remote rendering never subscribes to local-player data', () => {
   });
 
   it('the local-player wrapper is the ONLY component holding the companion hooks', () => {
-    // Not a ban — a census. `CurrentBlobbiDisplay` exists precisely to own this
+    // Not a ban, a census. `CurrentBlobbiDisplay` exists precisely to own this
     // data, and the package beneath it stays ignorant of it.
     const wrapper = importsOf(join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx'));
     expect(wrapper.some((s) => /useBlobbis/.test(s))).toBe(true);
@@ -237,8 +237,8 @@ describe('remote rendering never subscribes to local-player data', () => {
     // Equipment arrives through a CONTEXT, not a query. Resolving kind:31634
     // needs three queries (placement, inventory, catalog) and this component
     // renders once per Blobbi on screen, so the queries live at the app root
-    // and this wrapper consumes their result. Asserting the context — rather
-    // than a hook — is what stops the queries from creeping back in here.
+    // and this wrapper consumes their result. Asserting the context, rather
+    // than a hook, is what stops the queries from creeping back in here.
     expect(wrapper.some((s) => /useCharacterEquipmentContext/.test(s))).toBe(true);
     expect(wrapper.some((s) => /usePlacementState|useIslandInventory|useItemCatalog/.test(s))).toBe(false);
   });
@@ -260,7 +260,7 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
     expect(importers).toEqual([]);
   });
 
-  it('passes that adapter explicitly — the package has no Island default', () => {
+  it('passes that adapter explicitly, the package has no Island default', () => {
     const displayPath = join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx');
     const display = readFileSync(displayPath, 'utf8');
     // The resolver is now BUILT per render (it closes over `facing` and the item
@@ -268,7 +268,7 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
     // Island-made resolver rather than letting the package choose one.
     expect(display).toContain('resolveSources: resolveAccessorySources');
     // Since the kind:31634 migration the adapter is keyed by ITEM ADDRESS, not
-    // by a legacy accessory code, and has no filename-convention fallback — an
+    // by a legacy accessory code, and has no filename-convention fallback, an
     // item either has a published definition or it is not drawn.
     expect(display).toContain('createPlacementAccessorySourceResolver');
     expect(importsOf(displayPath)).toContain('@/placement/accessory-sources');
@@ -282,7 +282,7 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
 describe('item-definition knowledge stops at the Island adapter', () => {
   /**
    * The renderer package must stay protocol-agnostic. It is not enough that it
-   * avoids importing the inventory library — it must not have grown its own
+   * avoids importing the inventory library; it must not have grown its own
    * copy of the vocabulary either, because a hand-rolled `marker === 'front'`
    * inside the package would fork the policy this phase just centralized.
    */
@@ -343,7 +343,7 @@ describe('item-definition knowledge stops at the Island adapter', () => {
     ).map(rel).sort();
     // Only the render surfaces may CALL the builder; nobody else may
     // reimplement one. The dev simulation harness is on the list for exactly
-    // that reason — it must run the REAL source resolution rather than build
+    // that reason: it must run the REAL source resolution rather than build
     // its own candidate lists.
     expect(resolverBuilders).toEqual([
       'src/components/blobbi/CurrentBlobbiDisplay.tsx',

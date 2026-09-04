@@ -1,12 +1,12 @@
 /**
- * Blobbi Island — PLANNING a care effect, shared by every consumption path.
+ * Blobbi Island: PLANNING a care effect, shared by every consumption path.
  *
  * `useUseItem` (Island-owned consumables, debited from `blobbi:island`) and
  * `useConsumeExternalItem` (partner produce, debited by a kind:1416 spend)
  * apply an item to a Blobbi in exactly the same way: the resolved definition's
  * `action` and `effects` become stat deltas, clamped by the Island rule, plus
  * XP and the shared care-streak bookkeeping. This module is that computation,
- * lifted out so the two flows cannot drift — and so it can be tested without
+ * lifted out so the two flows cannot drift, and so it can be tested without
  * a relay, a signer, or React.
  *
  * Pure. Nothing here publishes, reads, or mutates.
@@ -78,7 +78,7 @@ export interface PlanCareEffectInput {
 /**
  * Compute everything a care action changes about a Blobbi.
  *
- * Effects come from the resolved definition — never inferred from names. The
+ * Effects come from the resolved definition; never inferred from names. The
  * care streak reuses the SHARED @blobbi-kit helper (`calculateStreakUpdate`)
  * that owns that behaviour: initialize→1, increment on the next local calendar
  * day, no-op on the same day, reset→1 after missing 2+ days.

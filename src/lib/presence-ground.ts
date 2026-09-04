@@ -6,8 +6,8 @@
  * CENTER points, for compatibility with clients that predate the migration.
  * No new protocol field is published.
  *
- * Conversion happens at EXACTLY two boundaries — every publish helper input
- * (useIslandPresence) and presence ingest (`processPresenceEvent`) — never in
+ * Conversion happens at EXACTLY two boundaries; every publish helper input
+ * (useIslandPresence) and presence ingest (`processPresenceEvent`): never in
  * UI components.
  *
  * The offset needs the actor's renderer size and depth scale. Both are fully
@@ -15,7 +15,7 @@
  * the conversion is exact for standing actors. The depth scale is authoritative
  * at the GROUND point; publishing samples it there directly, and ingest
  * recovers the same ground point by fixed-point iteration
- * (ĝ = wire + halfH(scale(ĝ)) — the ramp is a gentle contraction, so a few
+ * (ĝ = wire + halfH(scale(ĝ)): the ramp is a gentle contraction, so a few
  * steps converge far below a world pixel even in the steepest room).
  */
 
@@ -43,7 +43,7 @@ export function wireCenterToGround(center: Position, location: string): GroundPo
   const size = getBlobbiSizeForLocation(location as LocationId);
   // Fixed-point iteration: the true ground point g satisfies
   // g = center + halfH(scale(g)), with scale sampled at the GROUND point (the
-  // same sampling `groundToWireCenter` uses) — so the pair is exactly inverse.
+  // same sampling `groundToWireCenter` uses): so the pair is exactly inverse.
   let ground: GroundPosition = center;
   for (let i = 0; i < 4; i++) {
     ground = centerToGround(center, size, depthScaleAt(location, ground));

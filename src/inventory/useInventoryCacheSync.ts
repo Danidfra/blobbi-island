@@ -3,13 +3,13 @@
  * query cache.
  *
  * The reader already folds the confirmed event in (see `useIslandInventory`),
- * which makes a lagging relay unable to roll the UI backwards — but that only
+ * which makes a lagging relay unable to roll the UI backwards, but that only
  * takes effect on the NEXT read, which is a round trip away. This closes the
  * gap: the moment a relay accepts a write, every consumer of the inventory
  * query re-renders with it.
  *
  * Mount ONCE at the authenticated app root. It renders nothing, publishes
- * nothing, and is the only place a feature's cache is updated on its behalf —
+ * nothing, and is the only place a feature's cache is updated on its behalf,
  * so no surface has to patch quantities itself.
  */
 

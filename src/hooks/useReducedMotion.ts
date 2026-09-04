@@ -1,10 +1,10 @@
 /**
- * `prefers-reduced-motion` support — the first in this repository.
+ * `prefers-reduced-motion` support: the first in this repository.
  *
  * Generic on purpose: it lives in `src/hooks/` rather than `src/arcade/` because
  * decorative motion is everywhere on the island (bush sway, leaf bursts, tap
  * pops, modal zooms) and every one of them should eventually read this. Nothing
- * outside the arcade is rewired in this pass — that would be a repository-wide
+ * outside the arcade is rewired in this pass; that would be a repository-wide
  * animation refactor, which is not this task.
  *
  * ## What it is for, and what it is NOT for
@@ -12,9 +12,9 @@
  * Reduced motion suppresses **decoration**: parallax, screen shake, particle
  * bursts, large scale/slide transitions. It must NEVER change:
  *
- *  - **game timing** — a note is due when the audio clock says it is, and the
+ *  - **game timing**: a note is due when the audio clock says it is, and the
  *    accessibility setting has no vote;
- *  - **gameplay cues** — an approaching note, a lane highlight, a judgement
+ *  - **gameplay cues**: an approaching note, a lane highlight, a judgement
  *    readout are information, not flourish. Removing them makes the game
  *    unplayable rather than calmer.
  *
@@ -60,7 +60,7 @@ function subscribe(onChange: () => void): () => void {
   return () => {};
 }
 
-/** Boolean snapshot — a primitive, so `useSyncExternalStore` cannot tear. */
+/** Boolean snapshot: a primitive, so `useSyncExternalStore` cannot tear. */
 function getSnapshot(): boolean {
   return getMediaQueryList()?.matches ?? false;
 }

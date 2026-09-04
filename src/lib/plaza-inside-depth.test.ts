@@ -1,10 +1,10 @@
 /**
  * Where the Blobbi is drawn relative to the Plaza's balcony-and-staircase
- * overlay — the regression that motivated x-limited depth bands.
+ * overlay: the regression that motivated x-limited depth bands.
  *
  * The overlay is one image carrying the railing AND the stairs. A Blobbi on
  * the upper corridor must pass behind the railing; a Blobbi on the landing or
- * the stairs — at the very same y — must be in front of the steps. A y-only
+ * the stairs: at the very same y, must be in front of the steps. A y-only
  * band cannot say both, and it used to say "in front" for the whole balcony,
  * so a Blobbi walking behind the railing was drawn over it.
  *
@@ -90,7 +90,7 @@ describe('on the landing and the stairs', () => {
     expect(z(onFloor({ x: columnRight + 1, y }))).toBeLessThan(OVERLAY);
   });
 
-  it('falls back to "behind" when only y is known — a y-only caller is never put in front of the railing', () => {
+  it('falls back to "behind" when only y is known, a y-only caller is never put in front of the railing', () => {
     const y = PLAZA_CORRIDOR.y;
     expect(calculateBlobbiZIndex(y, PLAZA_INSIDE_BACKGROUND)).toBeLessThan(OVERLAY);
   });

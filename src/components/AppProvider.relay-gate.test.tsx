@@ -3,8 +3,8 @@
  *
  * `RelaySelector` returning `null` under Family is presentation. The claim these
  * tests make is stronger and is the one that matters: calling `updateConfig`
- * directly — which is what all three mounts of the selector do, and what any
- * future fourth mount would do — cannot change the relay when the capability is
+ * directly: which is what all three mounts of the selector do, and what any
+ * future fourth mount would do, cannot change the relay when the capability is
  * absent.
  *
  * A relay change is the quiet way around every other restriction: a different
@@ -61,7 +61,7 @@ describe('Standard', () => {
 
 describe('Family', () => {
   it('refuses a relay change made through the writer itself', () => {
-    // Not "the picker is hidden" — the underlying callback is invoked directly,
+    // Not "the picker is hidden": the underlying callback is invoked directly,
     // exactly as any mount of RelaySelector would.
     mount('family');
     act(() => update?.((current) => ({ ...current, relayUrl: ELSEWHERE })));

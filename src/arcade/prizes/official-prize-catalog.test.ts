@@ -1,5 +1,5 @@
 /**
- * The initial official Arcade Prize catalog — content and invariants.
+ * The initial official Arcade Prize catalog, content and invariants.
  *
  * Unlike the retired fixture catalogue, the ENTRIES here are load-bearing:
  * Phase 9.5 specifies exactly six prizes, exactly these items, exactly these
@@ -33,7 +33,7 @@ const EXPECTED = [
 ] as const;
 
 describe('the six initial prizes', () => {
-  it('contains exactly six entries — the specified items at the specified prices', () => {
+  it('contains exactly six entries, the specified items at the specified prices', () => {
     expect(OFFICIAL_ARCADE_PRIZE_CATALOG).toHaveLength(6);
     for (const expected of EXPECTED) {
       const entry = OFFICIAL_ARCADE_PRIZE_CATALOG.find((p) => p.d === expected.d);
@@ -120,7 +120,7 @@ describe('shape and determinism', () => {
     expect(orderedOfficialArcadePrizes(shuffled)).toEqual(ordered);
   });
 
-  it('every entry is available — all six cosmetics redeem for real', () => {
+  it('every entry is available; all six cosmetics redeem for real', () => {
     for (const entry of OFFICIAL_ARCADE_PRIZE_CATALOG) {
       expect(entry.availability).toBe('available');
     }

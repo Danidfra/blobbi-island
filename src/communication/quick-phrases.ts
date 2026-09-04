@@ -1,5 +1,5 @@
 /**
- * The quick-phrase catalog — trusted, local, and the only source of the words a
+ * The quick-phrase catalog, trusted, local, and the only source of the words a
  * quick phrase renders as.
  *
  * ## IDs are the protocol; text is presentation

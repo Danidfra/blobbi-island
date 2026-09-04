@@ -4,7 +4,7 @@
  * Two things are worth pinning down while the protocol does not exist:
  *
  *  1. the catalog is EMPTY and nothing quietly fills it with plausible-looking
- *     merchandise — a fabricated badge that reaches a relay cannot be edited
+ *     merchandise: a fabricated badge that reaches a relay cannot be edited
  *     back out;
  *  2. every acquisition branch REFUSES, explicitly and by acquisition type,
  *     rather than throwing, half-writing, or silently succeeding.
@@ -70,7 +70,7 @@ describe('the acquisition adapter', () => {
     expect(result.outcome === 'unsupported' && result.reason).toBeTruthy();
   });
 
-  it('gives each branch a DIFFERENT reason — they are blocked on different things', () => {
+  it('gives each branch a DIFFERENT reason; they are blocked on different things', () => {
     const reasons = BADGE_ACQUISITIONS.map((acquisition) => {
       const result = acquireBadge({ badgeId: 'x', acquisition });
       return result.outcome === 'unsupported' ? result.reason : '';

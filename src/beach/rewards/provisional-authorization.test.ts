@@ -1,5 +1,5 @@
 /**
- * Provisional authorization — exactly-once, honesty about outcomes, and the
+ * Provisional authorization: exactly-once, honesty about outcomes, and the
  * seam contract (calculation and wallet stay untouched by outcome mapping).
  */
 
@@ -146,7 +146,7 @@ describe('provisional authorization', () => {
     expect(grantCoins).not.toHaveBeenCalled();
   });
 
-  it('an ambiguous grant is recorded ambiguous — surfaced, not retried', async () => {
+  it('an ambiguous grant is recorded ambiguous, surfaced, not retried', async () => {
     const { wallet } = makeWallet({ status: 'ambiguous', reason: 'publish-timeout' });
     const authorizer = createProvisionalTreasureHuntAuthorizer({
       pubkey: PUBKEY,

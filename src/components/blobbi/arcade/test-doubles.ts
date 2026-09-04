@@ -1,5 +1,5 @@
 /**
- * Arcade-wide test doubles — a fake signer and a fake reward writer.
+ * Arcade-wide test doubles, a fake signer and a fake reward writer.
  *
  * These started life in `dance/test-doubles.ts` when Blobbi Dance was the only
  * game that could claim tickets. Air Hockey and Pool now share the same claim
@@ -50,7 +50,7 @@ export interface FakeWriterOptions {
  * A writer whose every branch is chosen by the test.
  *
  * The default is the happy path: publishes accumulate into `granted`, and reads
- * return it — additive, like the real kind:31633 grant.
+ * return it: additive, like the real kind:31633 grant.
  *
  * ## `quantities` is SCRIPTED, and that makes it weaker than a relay
  *
@@ -62,7 +62,7 @@ export interface FakeWriterOptions {
  * balance.
  *
  * Anything asserting "one publish, delta exactly N" therefore uses a purpose-
- * built additive writer instead — see `laggyRelayWriter` in
+ * built additive writer instead; see `laggyRelayWriter` in
  * `useArcadeReward.test.tsx`, which models a real relay: the publish lands, and
  * only the read lags.
  */

@@ -7,7 +7,7 @@
  * goes AROUND rather than stopping?
  *
  * That matters in both directions. Routing turns rooms that were quietly
- * half-broken into working ones — but it can also expose a room whose furniture
+ * half-broken into working ones, but it can also expose a room whose furniture
  * was only ever passable because the walk gave up politely. So every stand point
  * in the Care Store, the Clothing Store and the Badges Store is checked for a
  * real route from that room's own spawn, and the routes are checked leg by leg

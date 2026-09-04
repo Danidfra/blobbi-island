@@ -2,8 +2,8 @@
  * A storefront painted into a room's background, made pressable.
  *
  * The mall composes each shop from a facade sprite, so its click target is the
- * sprite. A room whose shops are baked into the plate has no sprite to click —
- * the Plaza is the first — so the target is a rectangle over the painted bay
+ * sprite. A room whose shops are baked into the plate has no sprite to click,
+ * the Plaza is the first, so the target is a rectangle over the painted bay
  * and a stand point in front of it. This is the shape of that rectangle; the
  * component that draws and drives it is `StorefrontHotspot`.
  *
@@ -42,10 +42,10 @@ export const STOREFRONT_COMING_SOON_TEXT = 'Coming soon';
 
 /** The hotspot's accessible name: the shop, and what pressing it does. */
 export function storefrontAccessibleName(store: Pick<StorefrontHotspotConfig, 'name' | 'destination'>): string {
-  return store.destination ? `${store.name} — go inside` : `${store.name} — coming soon`;
+  return store.destination ? `${store.name}: go inside` : `${store.name}: coming soon`;
 }
 
-/** Is the shop open — does pressing its storefront lead somewhere? */
+/** Is the shop open, does pressing its storefront lead somewhere? */
 export function isStorefrontOpen(store: Pick<StorefrontHotspotConfig, 'destination'>): boolean {
   return store.destination !== null;
 }

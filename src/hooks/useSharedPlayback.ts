@@ -1,5 +1,5 @@
 /**
- * Shared playback — the React layer.
+ * Shared playback: the React layer.
  *
  * This is the ONLY file where the protocol meets a relay and a player. Above it,
  * the theater UI calls methods and renders a {@link SharedWatchState}; below it,
@@ -34,7 +34,7 @@
  * | a drift correction is being applied | no | same counter |
  *
  * Without that, applying a remote `play` would emit a local `play`, which would
- * publish, which would arrive back — a loop that gets louder.
+ * publish, which would arrive back, a loop that gets louder.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -104,7 +104,7 @@ export type SharedWatchConnection =
 export interface SharedWatchState {
   mode: SharedWatchMode;
   role: 'host' | 'guest' | null;
-  /** `31951:<host>:<d>` — the one identifier presence and the UI may hold. */
+  /** `31951:<host>:<d>`: the one identifier presence and the UI may hold. */
   sessionAddress: string | null;
   invitationCode: string | null;
   connectionState: SharedWatchConnection;
@@ -133,15 +133,15 @@ const LOCAL_STATE: SharedWatchState = {
  *
  * **Why a module-level map and not component state:** the session outlives the
  * component that displays it. A theater UI can be remounted for reasons that
- * have nothing to do with the session — a shell layout change, Strict Mode, a
- * re-keyed parent — and a host that lost its publisher on such a remount would
+ * have nothing to do with the session, a shell layout change, Strict Mode, a
+ * re-keyed parent: and a host that lost its publisher on such a remount would
  * be permanently locked out of the session it created, while that session went
  * on existing on the relay until its 4 h expiration. Nobody could take it over
  * either: authority is the author's pubkey, so an orphaned session is simply
  * dead furniture.
  *
  * It is deliberately **in memory only**. There is no `localStorage`, so a page
- * reload is still a clean slate — this recovers from an accidental remount, not
+ * reload is still a clean slate; this recovers from an accidental remount, not
  * from a navigation. Every intentional exit (leave, end, standing up, leaving
  * the room) deletes the entry, so nothing here can resurrect a session the user
  * chose to leave.
@@ -162,7 +162,7 @@ const resumableSessions = new Map<string, ResumableSession>();
  * Called when the player LEAVES THE THEATER, which is one of the two ways out of
  * a session (the other being the explicit Leave/End buttons). It is deliberately
  * a plain function rather than a hook method: by the time the location has
- * changed, the theater — and the hook with it — is already gone, so the caller
+ * changed, the theater, and the hook with it, is already gone, so the caller
  * that knows about locations has to be able to say so from outside.
  */
 export function forgetWatchSession(pubkey: string | undefined): void {
@@ -180,14 +180,14 @@ export interface UseSharedPlaybackOptions {
   snapshot: TheaterPlaybackSnapshot;
   /**
    * Ask the theater to put this media on screen. Called when the SESSION says
-   * the media changed — the hook cannot mount a player itself, because which
+   * the media changed, the hook cannot mount a player itself, because which
    * player exists is the theater state machine's decision.
    */
   onRequestMedia: (media: SharedMediaRef) => void;
   /**
    * The approved-media list, for the publication seam's own admission check.
    *
-   * Must be the same list `TheaterStage` admits against — see `catalogRef`.
+   * Must be the same list `TheaterStage` admits against; see `catalogRef`.
    */
   catalog?: readonly ApprovedMedia[];
 }
@@ -267,7 +267,7 @@ export function useSharedPlayback({
   /**
    * The player's state as the PLAYER sees it, not as React last rendered it.
    *
-   * The rendered snapshot can be a render behind — more under load, in a
+   * The rendered snapshot can be a render behind, more under load, in a
    * background tab, or between two timer callbacks in the same task. Measuring
    * "drift" against a stale position turns render lag into a seek, and a seek
    * into more lag. The controller is polled every 250 ms and is the honest
@@ -279,7 +279,7 @@ export function useSharedPlayback({
     if (!ctrl) return snapshotRef.current;
     // Force a fresh read from the player rather than trusting the 250 ms poll:
     // a backgrounded or throttled tab can stretch that poll to seconds, and both
-    // callers here — the drift check and the keepalive — would then measure, or
+    // callers here: the drift check and the keepalive, would then measure, or
     // publish, a position the player left behind long ago. `tick()` only reads.
     ctrl.tick();
     return ctrl.getSnapshot();
@@ -289,7 +289,7 @@ export function useSharedPlayback({
    * Is there a player whose readings mean anything right now?
    *
    * Between standing up and sitting down again there is no player at all, and
-   * the last rendered snapshot still *looks* usable — same phase, a frozen
+   * the last rendered snapshot still *looks* usable, same phase, a frozen
    * position. Believing it freezes the session's anchor for as long as the host
    * is on their feet, and every guest gets dragged back to that moment when the
    * host sits down again. "No player" has to mean "no readings".
@@ -307,7 +307,7 @@ export function useSharedPlayback({
    * Sign and publish, propagating failure.
    *
    * Deliberately NOT `useNostrPublish`: that hook swallows publish errors for
-   * presence (kind 31950), which is right for a heartbeat and wrong here — a
+   * presence (kind 31950), which is right for a heartbeat and wrong here, a
    * canonical state whose publish failed must be retried and surfaced, not
    * reported as success.
    */
@@ -340,7 +340,7 @@ export function useSharedPlayback({
   /**
    * Bring the local player in line with the canonical state.
    *
-   * `force` seeks regardless of drift — used on join, on a media change, and
+   * `force` seeks regardless of drift, used on join, on a media change, and
    * when a command was just applied. The passive tick uses the drift bands
    * instead, so ordinary jitter never causes a seek.
    */
@@ -481,7 +481,7 @@ export function useSharedPlayback({
 
   // ── Relay I/O ────────────────────────────────────────────────────────────
 
-  /** Read the newest canonical state directly — the reconnect/heal path (§8.7). */
+  /** Read the newest canonical state directly, the reconnect/heal path (§8.7). */
   const requeryCanonical = useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
@@ -774,8 +774,8 @@ export function useSharedPlayback({
   /**
    * Re-attach to a session this tab is already in, after the UI was remounted.
    *
-   * Everything is rebuilt from the relay's own latest canonical event — never
-   * from remembered playback state — so a resumed host continues the revision
+   * Everything is rebuilt from the relay's own latest canonical event; never
+   * from remembered playback state, so a resumed host continues the revision
    * count the relay actually holds, and a resumed guest reconstructs exactly as
    * a fresh joiner would.
    */
@@ -886,7 +886,7 @@ export function useSharedPlayback({
     // The PUBLICATION seam, and the host's half of the gate.
     //
     // A host's media has already passed admission on the way to its own player,
-    // so this is defence in depth rather than the primary check — but it is the
+    // so this is defence in depth rather than the primary check, but it is the
     // one place a `set-media` becomes an event other people receive, and a
     // caller holding this callback should not be able to broadcast media this
     // experience would refuse to play.
@@ -906,7 +906,7 @@ export function useSharedPlayback({
   // ── Timers ───────────────────────────────────────────────────────────────
 
   // Re-attach after a remount. Runs once per mount, and only when this tab was
-  // already in a session that no intentional exit removed — so it cannot revive
+  // already in a session that no intentional exit removed, so it cannot revive
   // a session the user left, and it cannot create one.
   const resumeAttemptedRef = useRef(false);
   useEffect(() => {
@@ -939,7 +939,7 @@ export function useSharedPlayback({
     return () => window.clearInterval(id);
   }, [hasLivePlayer, livePlayback, shared.mode]);
 
-  // The passive check. It reads the player and publishes NOTHING — no network
+  // The passive check. It reads the player and publishes NOTHING; no network
   // event is ever produced by a drift check, on host or guest.
   useEffect(() => {
     if (shared.mode === 'local') return;
@@ -951,7 +951,7 @@ export function useSharedPlayback({
 
       // A player that appeared, or became ready, with state waiting for it.
       // This is a one-shot catch-up (it clears the flag), not a correction, and
-      // it is what puts a rebuilt player — after a seat change, say — back at
+      // it is what puts a rebuilt player, after a seat change, say, back at
       // the canonical position instead of at zero.
       if (pendingApplyRef.current && ctrl) {
         reconcile({ force: true });
@@ -963,8 +963,8 @@ export function useSharedPlayback({
       //
       // Canonical position is DERIVED from the host's player (§8.1), so
       // correcting the host toward it is a feedback loop with nothing outside it:
-      // the moment the two disagree — a play started from YouTube's own controls
-      // publishes nothing, so canonical stays "paused at 0" — the check drags the
+      // the moment the two disagree, a play started from YouTube's own controls
+      // publishes nothing, so canonical stays "paused at 0": the check drags the
       // host's player back, every tick, forever. That is the reported
       // "jumps back to the beginning every few seconds".
       //
@@ -1000,7 +1000,7 @@ export function useSharedPlayback({
 
   // A NEW player, in either role, starts at zero and knows nothing about the
   // session. Standing up destroys the player and sitting down builds another, so
-  // this is the ordinary path after a seat change — and without it a host's
+  // this is the ordinary path after a seat change, and without it a host's
   // rebuilt player would sit at 0 while the session played on, then drag the
   // canonical anchor back to 0 on its next keepalive.
   const lastControllerRef = useRef<TheaterPlaybackController | null>(null);

@@ -3,8 +3,8 @@
  * this item look right?" is four different questions.
  *
  *   Card         what an inventory row, a shop tile or a chest slot shows.
- *                Uses `primaryItemImageUrl` — the SAME helper those screens
- *                use — so a missing primary image looks broken here in exactly
+ *                Uses `primaryItemImageUrl`: the SAME helper those screens
+ *                use: so a missing primary image looks broken here in exactly
  *                the way it will look broken there.
  *   Views        one tile per published `image` tag, marker and all. Nothing is
  *                invented: a view the item does not publish is shown as absent
@@ -140,7 +140,7 @@ function CompactCardPreview({
           {/*
             `max-w-full break-all` on every badge, because all three render FREE
             TEXT. `type`, `category` and `rarity` are plain inputs the author can
-            put anything into — including a pasted URL — and a Badge is an
+            put anything into: including a pasted URL, and a Badge is an
             `inline-flex` that otherwise sizes to its content and refuses to
             wrap. One long value made a badge 543px wide inside this 198px card
             and scrolled the whole page sideways at 375px.
@@ -261,7 +261,7 @@ function ViewGallery({
  * The three views a posed Blobbi can actually ask for, side by side.
  *
  * Each tile shows both what the item PUBLISHES for that marker and what the
- * renderer would ACTUALLY paint after fallback — those differ exactly when a
+ * renderer would ACTUALLY paint after fallback; those differ exactly when a
  * view is missing, which is the thing worth seeing.
  */
 function ViewComparison({ candidate }: { candidate: ItemImageCandidate }) {

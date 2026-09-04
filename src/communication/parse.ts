@@ -1,13 +1,13 @@
 /**
- * The receive-side parser — where an arbitrary string from a relay becomes
+ * The receive-side parser, where an arbitrary string from a relay becomes
  * either a message this client understands or nothing at all.
  *
  * ## What this module is for
  *
  * Everything arriving on kind 21201 was authored by someone else and signed by a
  * key that proves only who wrote it. This is the one place that decides whether
- * a payload has a shape the island recognises. Downstream code — the safety
- * admission check, the renderer, the components — sees a typed
+ * a payload has a shape the island recognises. Downstream code, the safety
+ * admission check, the renderer, the components, sees a typed
  * {@link IslandMessage} or sees nothing, and never touches the raw object.
  *
  * ## Structure is validated; text is reconstructed
@@ -18,7 +18,7 @@
  * local catalogs and, crucially, keeps only the ids. The words a structured
  * message renders as come from `render.ts` reading this build's own catalogs, so
  * a hostile client cannot make a Blobbi say anything that is not written in
- * `quick-phrases.ts`, `emotes.ts` or `templates.ts` — whatever extra fields it
+ * `quick-phrases.ts`, `emotes.ts` or `templates.ts`: whatever extra fields it
  * attaches to the payload.
  *
  * That is the concrete answer to the attack this phase exists to prevent:
@@ -78,7 +78,7 @@ export type MessageParseResult =
       readonly message: IslandMessage;
       readonly envelope: ParsedEnvelope;
       /**
-       * True when the payload carried no version field — i.e. the shape every
+       * True when the payload carried no version field; i.e. the shape every
        * currently deployed client emits. Free text is byte-identical whether it
        * came from an old client or a new one, which is deliberate: the
        * compatibility rule and the safety rule are the same rule
@@ -98,7 +98,7 @@ function failure(reason: MessageParseFailure): MessageParseResult {
  * To be clear about what protects this app: React escaping does, plus a CSP with
  * `default-src 'none'`. Chat text is rendered as a text node and never as
  * markup. This step is cosmetic tidying inherited from the previous
- * implementation — it stops a stray `<b>` from looking like a bug — and it is
+ * implementation: it stops a stray `<b>` from looking like a bug, and it is
  * deliberately NOT relied on as a security control, because it is trivially
  * evaded by an unclosed tag.
  */
@@ -129,7 +129,7 @@ function versionOk(payload: Record<string, unknown>): boolean {
  *
  * Exact match in both directions: every declared parameter must be present with
  * an allowed value, and no parameter may be present that was not declared. The
- * second half matters more than it looks — it is what stops a payload from
+ * second half matters more than it looks; it is what stops a payload from
  * carrying a passenger field that some later, more forgiving reader might pick
  * up.
  */
@@ -204,7 +204,7 @@ export function parseIslandChatPayload(raw: string): MessageParseResult {
 
   // ── Free text ──────────────────────────────────────────────────────────
   // The deployed shape, unchanged. It carries no version, so `legacy` is true
-  // for every free-text message including the ones this client sends — see the
+  // for every free-text message including the ones this client sends; see the
   // note on the result type.
   if (FREE_TEXT_WIRE_TYPES.includes(type)) {
     if (typeof payload.text !== 'string') return failure('invalid-text');

@@ -1,5 +1,5 @@
 /**
- * Pool's result — the join point a future reward policy would read.
+ * Pool's result: the join point a future reward policy would read.
  *
  * Two things are being pinned:
  *
@@ -40,7 +40,7 @@ function ball(number: number, x: number, y: number, pocketed = false): PoolBall 
 /**
  * A world per fixture.
  *
- * The frames below are played for real, so each one needs its own simulation —
+ * The frames below are played for real, so each one needs its own simulation,
  * the match holds snapshots, not bodies.
  */
 function freshWorld(balls: readonly PoolBall[]): PoolPhysicsWorld {

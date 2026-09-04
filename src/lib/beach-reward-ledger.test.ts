@@ -1,5 +1,5 @@
 /**
- * Beach reward ledger — reservations, the daily window, the abandonment rule
+ * Beach reward ledger, reservations, the daily window, the abandonment rule
  * and the one-way status doors.
  */
 
@@ -62,7 +62,7 @@ describe('reservations and the daily limit', () => {
     expect(beachRewardedCount(PUBKEY, WINDOW)).toBe(0);
   });
 
-  it('a finalized reward is never abandoned — the intent survives', () => {
+  it('a finalized reward is never abandoned, the intent survives', () => {
     reserve('op-keep');
     finalizeBeachReward(PUBKEY, 'op-keep', 9, NOW);
     abandonBeachReward(PUBKEY, 'op-keep', false, NOW);

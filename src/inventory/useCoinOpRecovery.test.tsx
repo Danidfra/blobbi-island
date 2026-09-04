@@ -1,5 +1,5 @@
 /**
- * The startup reconciliation sweep — the production consumer of
+ * The startup reconciliation sweep, the production consumer of
  * `unresolvedCoinOps`.
  *
  * Contract: on login it reconciles unresolved Coin operations READ-ONLY
@@ -103,7 +103,7 @@ describe('useCoinOpRecovery', () => {
     expect(nostrEvent).not.toHaveBeenCalled();
   });
 
-  it('leaves an unprovable operation ambiguous — never success, never failure', async () => {
+  it('leaves an unprovable operation ambiguous; never success, never failure', async () => {
     persistCoinOp(PUBKEY, ambiguousSpend('shop-purchase:unclear', { publishedEventId: 'evt-mine' }));
     // The relay shows a different event and a balance matching neither
     // "landed" nor "did not land".

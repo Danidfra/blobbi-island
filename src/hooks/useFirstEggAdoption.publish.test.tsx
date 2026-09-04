@@ -2,7 +2,7 @@
  * Adoption against relays that misbehave.
  *
  * The naming suite proves WHAT is published; this proves what happens when the
- * publish does not go through — which is where a real player lost their Blobbi
+ * publish does not go through, which is where a real player lost their Blobbi
  * to `AggregateError: All promises were rejected`.
  *
  * Two rules the tests exist to hold:
@@ -54,7 +54,7 @@ const nostrEvent = vi.fn(async (event: NostrEvent) => {
 /*
   `req`, not just `query`, because the completion rule under test lives there:
   an answer is only trustworthy when EOSE arrives. A relay that goes quiet
-  yields nothing and closes — which `NPool.query` would flatten into `[]`, and
+  yields nothing and closes, which `NPool.query` would flatten into `[]`, and
   which is exactly the lie the adoption read must not believe.
 */
 const nostrReq = vi.fn(async function* () {
@@ -205,7 +205,7 @@ describe('a relay that does not answer the first time', () => {
   });
 
   it('signs once however many times it publishes', async () => {
-    // Re-signing would re-prompt the player and mint a second event id — a
+    // Re-signing would re-prompt the player and mint a second event id, a
     // retry that landed after a silent success would then be a second Blobbi
     // rather than a duplicate the relay collapses.
     publishOutcomes = [false, false, true, true];
@@ -291,7 +291,7 @@ describe('the profile read is not allowed to lie', () => {
 
   it('THE DATA-LOSS PATH: an unanswered read never becomes "no profile"', async () => {
     /*
-      `NPool.query` cannot fail — a timeout and a genuinely new player both come
+      `NPool.query` cannot fail: a timeout and a genuinely new player both come
       back empty. Believing that empty would publish a profile whose `has[]`
       held only the new Blobbi, dropping every previous one. Adoption fails
       instead, and the player retries.
@@ -339,7 +339,7 @@ describe('partial success', () => {
   it('reconciles on retry instead of creating a second Blobbi', async () => {
     publishOutcomes = [true, false, false, false];
     const { result } = adoption('standard');
-    // The SAME preview the ceremony holds across a retry — the coordinate is
+    // The SAME preview the ceremony holds across a retry, the coordinate is
     // decided before the first submit and does not change when one fails.
     const preview = result.current.generatePreview();
     await act(async () => {
@@ -386,7 +386,7 @@ describe('double submit', () => {
   });
 
   it('rejects both callers once, without publishing twice', async () => {
-    // The double console line came from two SUBMITS sharing one run — each
+    // The double console line came from two SUBMITS sharing one run; each
     // caller catches, so each logs. The work still happens once.
     publishOutcomes = [false, false, false];
     const { result } = adoption('standard');

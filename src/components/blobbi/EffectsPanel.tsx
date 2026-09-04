@@ -1,5 +1,5 @@
 /**
- * EffectsPanel — the production visual-effect management UI (Phase 9).
+ * EffectsPanel: the production visual-effect management UI (Phase 9).
  *
  * The effect sibling of the inventory's wearables, on the same three events:
  *
@@ -9,7 +9,7 @@
  *
  * ONLY OWNED SUPPORTED OFFICIAL EFFECTS ARE ACTIONABLE. Unowned items appear
  * in a collapsed locked view with honest reasons, never as something that can
- * be equipped. Equipping writes the placement document and nothing else —
+ * be equipped. Equipping writes the placement document and nothing else,
  * quantities are untouched in both directions.
  *
  * REPLACEMENT IS EXPLICIT. One effect per slot is the model; when equipping
@@ -97,7 +97,7 @@ export function EffectsPanel({
   );
 
   /*
-    An effect can stop being available while it is selected — a life-stage
+    An effect can stop being available while it is selected, a life-stage
     change, the item leaving the inventory. A detail panel describing something
     the player can no longer act on would be worse than no panel.
   */
@@ -149,7 +149,7 @@ export function EffectsPanel({
         <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:items-start">
           {/* The same bounded, paged collection the wardrobe's clothing uses.
               Effects were a vertical list of description cards with two buttons
-              each — three of them filled the pane — which made the rest of the
+              each: three of them filled the pane, which made the rest of the
               wardrobe a scroll. They are a collection like any other. */}
           <CollectionGrid
             className="min-w-0 flex-1"
@@ -265,8 +265,8 @@ export function EffectsPanel({
               <li key={item.address} className="text-island-ink-soft">
                 <span className="font-medium text-island-ink">
                   {item.definition?.name ?? item.registration.name}
-                </span>{' '}
-                — {explainEffectUnavailable(item.reason)}
+                </span>{': '}
+                {explainEffectUnavailable(item.reason)}
               </li>
             ))}
           </ul>
@@ -280,7 +280,7 @@ export function EffectsPanel({
  * The selected effect's detail: what it is, and the one or two things to do.
  *
  * It replaced `EffectCard`, which put a description and two buttons on EVERY
- * item — three of them filled the wardrobe pane and pushed the rest into a
+ * item: three of them filled the wardrobe pane and pushed the rest into a
  * scroll. The information is the same; it is now shown for one effect at a time,
  * in a reserved box that does not change the panel's height.
  *

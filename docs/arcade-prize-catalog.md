@@ -1,13 +1,13 @@
-# Arcade Prize Catalog — the six official prizes
+# Arcade Prize Catalog, the six official prizes
 
 The Prize Counter shows six REAL kind:31632-backed items, and all six are
 REDEEMABLE: Arcade Tickets buy them, and the item lands in the player's
 kind:31633 inventory where the ordinary wardrobe and effects panel pick it up.
 
 Every redemption is ONE replacement event carrying both the ticket debit and
-the item grant — see §7.
+the item grant: see §7.
 
-Catalog module: `src/arcade/prizes/official-prize-catalog.ts` — the single
+Catalog module: `src/arcade/prizes/official-prize-catalog.ts`: the single
 source of truth for prices; rebalancing edits that one file.
 
 ## 1–2. The six prizes and their ticket values
@@ -22,14 +22,14 @@ source of truth for prices; rebalancing edits that one file.
 | Celestial Aura | `blobbi:effect:celestial-aura` | Effect | legendary | 2,500 |
 
 Identity is the full stable address `31632:<official-issuer>:<d>`, derived
-from the canonical registry's builder — never a current event id (addressable
+from the canonical registry's builder; never a current event id (addressable
 definitions get new ids on every republish). Catalog entries carry only
 stable data (address, price, sort order, featured flag, availability); names,
 artwork, descriptions and rarity resolve from the kind:31632 catalog at
 render time, falling back to the bundled registry when relays are
 unreachable.
 
-## 3. Balancing assumptions — PROVISIONAL VALUES
+## 3. Balancing assumptions: PROVISIONAL VALUES
 
 **These prices are provisional catalog values, not a finalized economy.** The
 repository has no production ticket-earning rate: the audited reward policy
@@ -37,10 +37,10 @@ repository has no production ticket-earning rate: the audited reward policy
 game in production. The prices therefore cannot claim economic balance; what
 they encode is the intended acquisition LADDER:
 
-- Block Builder Cap — the first reachable prize;
-- Golden Sparkles, Stargazer Glasses — short-to-medium goals;
-- Starlight Bow Tie, Mystic Fog — medium-term goals;
-- Celestial Aura — the long-term headline prize (featured).
+- Block Builder Cap, the first reachable prize;
+- Golden Sparkles, Stargazer Glasses, short-to-medium goals;
+- Starlight Bow Tie, Mystic Fog, medium-term goals;
+- Celestial Aura: the long-term headline prize (featured).
 
 Rarities come from the published definitions and were NOT adjusted to fit
 pricing. Final balancing happens only after measuring: average tickets per
@@ -67,11 +67,11 @@ sample Blobbi when none exists) through the real renderer paths
 (`PrizePreviewStage`): accessories composite over the currently worn
 equipment using the published front/back views with the rear hidden-slot
 rules unchanged; effects render through the Phase-8 implementations, winning
-their slot while other active effects stay. Previews mutate nothing — no
+their slot while other active effects stay. Previews mutate nothing; no
 kind:31633, no kind:31634, no publish, no signer (behaviour-tested with a
 recording signer mock).
 
-## 7. Redemption — one atomic kind:31633 event
+## 7. Redemption: one atomic kind:31633 event
 
 Arcade Tickets and cosmetic items are quantities in the SAME replaceable
 kind:31633 event, so a cosmetic redemption does not pay first and deliver
@@ -87,7 +87,7 @@ after:   { …, Arcade Ticket: 300, Block Builder Cap: 1 }
 Consequences:
 
 - there is no state where the tickets are gone and the prize is missing;
-- delivery is a VERIFICATION, not a write — `grantPrize` reads and confirms;
+- delivery is a VERIFICATION, not a write, `grantPrize` reads and confirms;
 - an AMBIGUOUS publish is reconciled against the PRIZE (`reconcile-atomic`),
   which only this redemption's own event could have granted, rather than
   against a ticket balance every other writer also moves. Prize present ⇒
@@ -104,7 +104,7 @@ Uniqueness: every prize definition publishes `max_stack: 1`, so a prize is
 redeemable exactly once. The catalog refuses to build an entry whose
 definition says otherwise, the UI shows **Owned** instead of a price, and the
 authoritative refusal happens inside the write lock against the newest
-kind:31633 event — never against the rendered inventory alone.
+kind:31633 event: never against the rendered inventory alone.
 
 ### Where the write lives
 
@@ -120,7 +120,7 @@ entitlement, not kind:31633 ownership. Its delivery genuinely is a second
 write into a local expiring store, so it keeps the two-stage
 `spent → delivering → confirmed` path, the paid-but-undelivered recovery and
 the balance-based reconciliation. One redemption architecture, two delivery
-adapters — `atomicWithSpend` is the flag that picks the reconciliation.
+adapters, `atomicWithSpend` is the flag that picks the reconciliation.
 
 **See also:** `docs/arcade-prize-counter.md` (the V1 counter this supersedes)
 · `docs/inventory-equipment-lab.md` · `docs/blobbi-effect-activation.md` ·

@@ -1,10 +1,10 @@
 /**
- * /dev/treasure-hunt — simulation-only, and provably so.
+ * /dev/treasure-hunt: simulation-only, and provably so.
  *
  * Two layers, mirroring `DevEquipment.test.tsx`:
  *  1. the page SAYS it is simulation-only;
  *  2. the transitive import graph of the page and the whole treasure-hunt UI
- *     contains no write path — no coins mutation, no inventory mutation, no
+ *     contains no write path; no coins mutation, no inventory mutation, no
  *     publisher, no signer, no owner-profile writer. Phase 1B has no reward
  *     code, and this test is what keeps that true by accident-proofing it.
  */
@@ -25,7 +25,7 @@ function resolveImport(fromFile: string, specifier: string): string | null {
   let base: string;
   if (specifier.startsWith('@/')) base = join(ROOT, 'src', specifier.slice(2));
   else if (specifier.startsWith('.')) base = join(dirname(fromFile), specifier);
-  else return null; // package import — not part of the repo graph
+  else return null; // package import; not part of the repo graph
   for (const candidate of [
     base,
     `${base}.ts`,
@@ -75,7 +75,7 @@ function importGraph(entry: string): Set<string> {
 describe('DevTreasureHunt', () => {
   it('labels itself simulation-only and renders the harness controls', () => {
     render(<DevTreasureHunt />);
-    expect(screen.getByText(/Simulation only — nothing is published/)).toBeInTheDocument();
+    expect(screen.getByText(/Simulation only: nothing is published/)).toBeInTheDocument();
     expect(screen.getByLabelText('Seed')).toBeInTheDocument();
     expect(screen.getByLabelText('Composition')).toBeInTheDocument();
     expect(screen.getByLabelText('Shovel uses')).toBeInTheDocument();

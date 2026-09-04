@@ -1,8 +1,8 @@
 /**
- * Detector — the signal is honest, bounded and lossy.
+ * Detector: the signal is honest, bounded and lossy.
  *
  * Hand-placed targets, exact distances: the curve, the saturation plateau,
- * the strongest-wins overlap rule and — most importantly — the promise that
+ * the strongest-wins overlap rule and, most importantly, the promise that
  * a signal never leaks a target's coordinates.
  */
 
@@ -73,7 +73,7 @@ describe('evaluateDetectorSignal', () => {
     expect(signal.activeTargetCount).toBe(0);
   });
 
-  it('never exposes target coordinates — only intensity, id, distance, count', () => {
+  it('never exposes target coordinates; only intensity, id, distance, count', () => {
     const buried = target({ id: 'target-1', position: { x: 0.5, y: 0.5 } });
     const signal = evaluateDetectorSignal({ x: 0.45, y: 0.5 }, [buried], POLICY);
     expect(Object.keys(signal).sort()).toEqual([

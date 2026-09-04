@@ -4,7 +4,7 @@
  * The companion to `effect-model.test.ts` (which input survives) and
  * `effect-catalog.test.ts` (what the presets promise). This file asserts the
  * thing both of those cannot: that drawing an effect changes what a Blobbi
- * looks like and changes NOTHING ELSE — not the box, not the accessory order,
+ * looks like and changes NOTHING ELSE; not the box, not the accessory order,
  * not hit-testing, not the markup of a Blobbi that has no effects.
  *
  * Rendered with no providers, like the rest of the package's suite: if any part
@@ -46,7 +46,7 @@ const groups = (c: HTMLElement) =>
 /**
  * The DISTINCT effects drawn, in first-appearance order.
  *
- * An effect gets one group element inside EACH layer it paints on — Mystic Fog
+ * An effect gets one group element inside EACH layer it paints on: Mystic Fog
  * has a rear bank and a foreground veil, so it legitimately appears twice.
  * "Which effects are drawn" is therefore the deduplicated list.
  */
@@ -95,7 +95,7 @@ describe('every effect renders from plain data', () => {
   it.each(ALL)('%s renders identically front and back', (id) => {
     // Effects surround the character rather than attaching to its face, so
     // turning around must not remove or move a single particle. Compared on
-    // the effect subtree alone — the BODY markup legitimately differs.
+    // the effect subtree alone, the BODY markup legitimately differs.
     const front = draw([{ id }], { facing: 'front' });
     const back = draw([{ id }], { facing: 'back' });
 
@@ -412,7 +412,7 @@ describe('effect markup is deterministic and instance-isolated', () => {
   it('namespaces every effect id by instance, so two instances cannot collide', () => {
     // The particle system mints no ids at all; the lightning SVG must mint its
     // paint-server ids (filters and gradients are referenced by id), and every
-    // one is prefixed with the renderer's instance id — the same rule the body
+    // one is prefixed with the renderer's instance id, the same rule the body
     // SVG follows. Two instances therefore share nothing.
     const { container } = draw(ALL.map((id) => ({ id })));
     for (const el of container.querySelectorAll('[class*="blobbi-fx"]')) {

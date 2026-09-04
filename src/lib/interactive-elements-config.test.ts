@@ -21,7 +21,7 @@ describe('Interactive Elements Configuration', () => {
       expect(nearBottom).toBe(25);
 
       // Ground-anchor bands (Phase 2): the center-era 18%-from-bottom sample
-      // corresponds to a GROUND point ~9.2% lower — 8.8% from bottom → z 15.
+      // corresponds to a GROUND point ~9.2% lower: 8.8% from bottom → z 15.
       const midBottom = calculateBlobbiZIndex(91.2, 'stage-inside.png');
       expect(midBottom).toBe(15);
 
@@ -40,7 +40,7 @@ describe('Interactive Elements Configuration', () => {
       expect(nearBottom).toBe(25);
 
       // Ground-anchor bands (Phase 2): the center-era 15%-from-bottom line sits
-      // ~8.3% lower for a ground point — 8.3% from bottom → z 15.
+      // ~8.3% lower for a ground point: 8.3% from bottom → z 15.
       const higherUp = calculateBlobbiZIndex(91.7, 'town-open.webp');
       expect(higherUp).toBe(15);
     });

@@ -20,17 +20,17 @@ interface BlobbiShellHeaderProps {
 }
 
 /**
- * BlobbiShellHeader — lightweight top bar for the desktop game shell.
+ * BlobbiShellHeader: lightweight top bar for the desktop game shell.
  *
  * Intentionally minimal:
  *   left:  app icon + "Blobbi Island" wordmark
  *   right: account/menu button + fullscreen button
  *
  * The account menu is the single home for account identity, current Blobbi /
- * switch Blobbi, relays/network, account switching and logout — the header no
+ * switch Blobbi, relays/network, account switching and logout, the header no
  * longer carries separate settings or current-Blobbi controls.
  *
- * Only rendered in the desktop (framed) shell — mobile landscape and desktop
+ * Only rendered in the desktop (framed) shell, mobile landscape and desktop
  * fullscreen are immersive and never show this header (their account/settings
  * menu opens from the in-canvas HUD as a touch-friendly sheet instead).
  */
@@ -57,7 +57,7 @@ export function BlobbiShellHeader({
         className,
       )}
     >
-      {/* Wordmark — real app icon (favicon) + title */}
+      {/* Wordmark: real app icon (favicon) + title */}
       <div className="flex items-center gap-2.5 min-w-0">
         <img
           src="/icons/blobbi-island-icon-rounded-192.png"

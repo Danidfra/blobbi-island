@@ -1,10 +1,10 @@
 /**
- * `<CareStoreModal>` — what the shop shows, and what a Buy click is allowed to
+ * `<CareStoreModal>`: what the shop shows, and what a Buy click is allowed to
  * ask the purchase layer for.
  *
- * The purchase hook itself is faked here on purpose. What it does with a cart —
+ * The purchase hook itself is faked here on purpose. What it does with a cart,
  * one atomic kind:31633 event carrying the Coin debit and every grant, behind a
- * durable spend intent — is proven against the real wallet in
+ * durable spend intent, is proven against the real wallet in
  * `useBatchPurchase.test.tsx` and `care-store-purchase.test.ts`. What this file
  * proves is the CONTRACT the shop hands it:
  *
@@ -145,7 +145,7 @@ describe('what the shop shows', () => {
     expect(screen.getByText(String(TEDDY.price))).toBeInTheDocument();
     // The purpose line is derived from the definition's own effects.
     expect(screen.getByText(/Happiness \+45/)).toBeInTheDocument();
-    expect(buyButton(TEDDY.address).textContent).toBe(`Buy — ${TEDDY.price}`);
+    expect(buyButton(TEDDY.address).textContent).toBe(`Buy for ${TEDDY.price}`);
   });
 
   it('shows how many you already own', async () => {
@@ -276,7 +276,7 @@ describe('the shared inventory stays the UI boundary', () => {
   it('renders whatever the shared inventory reports, purchase or not', async () => {
     // The freshness guarantee itself belongs to the confirmed-inventory cache
     // (`inventory-cache-freshness.test.tsx`). What the shop owes that machinery
-    // is simply to READ from it — so a changed shared value must show up here
+    // is simply to READ from it, so a changed shared value must show up here
     // with no local state involved.
     coinBalance.value = 500;
     owned.set(SOAP.address, 0);
@@ -320,7 +320,7 @@ describe('when you cannot buy', () => {
     expect(purchase).not.toHaveBeenCalled();
   });
 
-  it('an unknown balance still allows a purchase — the wallet is the real gate', async () => {
+  it('an unknown balance still allows a purchase, the wallet is the real gate', async () => {
     coinBalance.value = null;
     await renderShop();
     await act(async () => {

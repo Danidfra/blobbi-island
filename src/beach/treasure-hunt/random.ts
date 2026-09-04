@@ -1,22 +1,22 @@
 /**
- * Beach Treasure Hunt — seeded randomness.
+ * Beach Treasure Hunt, seeded randomness.
  *
  * The same mulberry32 + FNV-1a pair that `src/arcade/hockey/match.ts` and
  * `src/arcade/pool/rack.ts` each carry, copied rather than imported: those
  * modules are arcade domain code, and the beach model must not depend on them
- * (the copies exist for the same reason — a game's determinism should not
+ * (the copies exist for the same reason, a game's determinism should not
  * depend on a package version, and nine lines do not justify a dependency).
  *
  * ## Seed representation
  *
  * The public seed is a **string** (easy to type into a dev harness, easy to
  * log, easy to correlate). `treasureSeedFrom` hashes it to the uint32 the
- * generator state actually is. The generator state is threaded functionally —
- * `nextRandom(state)` returns `{ value, state }` — so nothing here ever calls
+ * generator state actually is. The generator state is threaded functionally,
+ * `nextRandom(state)` returns `{ value, state }`: so nothing here ever calls
  * `Math.random()` and the whole round stays reproducible from the seed.
  */
 
-/** mulberry32 — small, well-distributed, deterministic 32-bit PRNG. */
+/** mulberry32: small, well-distributed, deterministic 32-bit PRNG. */
 export function nextRandom(state: number): { value: number; state: number } {
   let a = (state + 0x6d2b79f5) | 0;
   let t = a;

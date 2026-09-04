@@ -1,5 +1,5 @@
 /**
- * F-02 — the Food Shop's SYNCHRONOUS submit guard.
+ * F-02: the Food Shop's SYNCHRONOUS submit guard.
  *
  * `isPending` only flips after a re-render, so two confirms landing in the
  * same tick both passed it and both started a purchase. The in-flight ref is
@@ -8,7 +8,7 @@
  * operation) is the F-01 spend intent inside `useBatchPurchase`, which these
  * tests deliberately leave in place unmocked-at-the-wallet-level tests cover.
  *
- * Every non-success outcome must still allow a LATER deliberate confirm —
+ * Every non-success outcome must still allow a LATER deliberate confirm,
  * that retry is exactly how the spend intent reconciles an unresolved
  * operation.
  */
@@ -84,7 +84,7 @@ describe('the synchronous submit guard', () => {
     fireEvent.click(button);
     fireEvent.click(button);
 
-    // The second and third confirms were stopped BEFORE the mutation — not by
+    // The second and third confirms were stopped BEFORE the mutation; not by
     // React state, which has not re-rendered yet.
     expect(purchaseBatch).toHaveBeenCalledTimes(1);
     expect(purchaseBatch.mock.calls[0][0]).toEqual({
@@ -106,7 +106,7 @@ describe('the synchronous submit guard', () => {
       ),
     );
 
-    // The retry is allowed — and it submits the SAME kept basket, which is
+    // The retry is allowed, and it submits the SAME kept basket, which is
     // what lets useBatchPurchase reuse the same spend intent underneath.
     await act(async () => {
       fireEvent.click(confirmButton());
@@ -175,7 +175,7 @@ describe('the synchronous submit guard', () => {
 });
 
 /**
- * F-05 — what the shop is allowed to tell the purchase layer.
+ * F-05: what the shop is allowed to tell the purchase layer.
  *
  * The modal still computes a displayed total from the canonical catalog, but
  * the payload it submits carries WHAT and HOW MANY only. Price is a fact about
@@ -183,7 +183,7 @@ describe('the synchronous submit guard', () => {
  * never be able to move money.
  */
 describe('the submitted basket', () => {
-  it('carries address and quantity only — no price of any kind', async () => {
+  it('carries address and quantity only; no price of any kind', async () => {
     purchaseBatch.mockResolvedValue({ lines: [], totalCost: 20, outcome: 'applied' });
     const APPLE = itemIdToAddress('food_apple')!;
     renderShop();

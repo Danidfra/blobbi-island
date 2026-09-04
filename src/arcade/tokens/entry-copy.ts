@@ -1,7 +1,7 @@
 /**
  * What the player is told when a run is refused.
  *
- * One place, so three machines cannot describe the same refusal three ways —
+ * One place, so three machines cannot describe the same refusal three ways,
  * and so no arcade surface can accidentally call a Token a Ticket while
  * explaining why a play did not start.
  */
@@ -20,7 +20,7 @@ export function arcadeEntryRefusalMessage(refusal: ArcadeEntryRefusal): string {
       // token is safe. Trying again is the honest instruction.
       return "We couldn't confirm your token just now, so the game didn't start. Check your tokens and try again.";
     case 'busy':
-      return 'Just a moment — your game is already starting.';
+      return 'Just a moment, your game is already starting.';
     case 'unavailable':
       return "We couldn't read your tokens just now. Try again in a moment.";
   }

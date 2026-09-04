@@ -3,8 +3,8 @@
  *
  * Three claims, each of which a careless containment change could reverse:
  *
- *   1. Blobbi Island is still a GAME WINDOW — an aspect-locked, centered,
- *      ideal-capped frame — and was NOT converted into a generic
+ *   1. Blobbi Island is still a GAME WINDOW, an aspect-locked, centered,
+ *      ideal-capped frame: and was NOT converted into a generic
  *      100vw × 100vh fullscreen web app;
  *   2. the INTERNAL gap is gone at its actual mechanism: the wood border's
  *      padding matches the world's aspect ratio, so the bezel interior is
@@ -55,7 +55,7 @@ describe('the game window keeps its format', () => {
     expect(frame).not.toMatch(/w-screen|h-screen|100vw|100vh|100dvw|100dvh/);
     expect(stage).not.toMatch(/w-screen|h-screen|100vw|100vh/);
     // The shell root's `fixed inset-0` predates this pass (it is the app's
-    // own root and the clipping shell) — but the FRAME must not gain one.
+    // own root and the clipping shell): but the FRAME must not gain one.
     // Comments stripped: the frame's own docs may NAME the root's classes.
     const code = frame.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     expect(code).not.toMatch(/fixed inset-0/);
@@ -65,8 +65,8 @@ describe('the game window keeps its format', () => {
 describe('the INTERNAL gap: the wallpaper meets the bezel flush', () => {
   it('gives the wood border aspect-matched padding, not a uniform one', () => {
     /*
-      THE mechanism of the old sliver. The aspect lock sits on the OUTER box —
-      wood border included — so a uniform border (`p-2 sm:p-3`) left the bezel
+      THE mechanism of the old sliver. The aspect lock sits on the OUTER box,
+      wood border included: so a uniform border (`p-2 sm:p-3`) left the bezel
       interior slightly WIDER than the world's 1046:697. VirtualWorld
       contain-scales the fixed world into that box, so height bound and a
       ~4–6px strip of blurred letterbox showed between bezel and wallpaper at
@@ -89,7 +89,7 @@ describe('the INTERNAL gap: the wallpaper meets the bezel flush', () => {
     expect(stage).toMatch(/"w-full h-full max-w-full max-h-full mx-auto"/);
   });
 
-  it('contain-scales the world — never cover, crop or stretch', () => {
+  it('contain-scales the world: never cover, crop or stretch', () => {
     // The flush fit comes from shaping the BOX, not from scaling the world
     // differently: the uniform-scale contract that keeps every world
     // coordinate aligned is untouched.
@@ -117,7 +117,7 @@ describe('the EXTERNAL gap: a kept minimum, never a bleed', () => {
   it('never intentionally bleeds past the viewport', () => {
     // The corrected regression: no oversized container, no negative-margin
     // centering trick, nothing for the shell root to clip horizontally. The
-    // full wood frame — rounded flanks included — stays visible.
+    // full wood frame, rounded flanks included, stays visible.
     expect(frame).not.toMatch(/calc\(100%\s*\+/);
     expect(frame).not.toMatch(/-mx-|-ml-|-mr-/);
   });
@@ -129,14 +129,14 @@ describe('the EXTERNAL gap: a kept minimum, never a bleed', () => {
     //    Immersive keeps its own edge-to-edge box, untouched by the gutter.
     expect(frame).toMatch(/items-center justify-center/);
     expect(frame).toMatch(/"relative h-full w-full overflow-hidden bg-island-ink"/);
-    // The desktop/immersive split stays the existing device heuristic — no
+    // The desktop/immersive split stays the existing device heuristic; no
     // new breakpoint was invented for the gutter.
     expect(read('src/components/shell/BlobbiAppShell.tsx')).toMatch(/useImmersive\(\)/);
   });
 
   it('cannot produce horizontal document scroll', () => {
     // The frame fits inside viewport-minus-gutters, and the shell root is a
-    // `fixed inset-0 overflow-hidden` box besides — belt and suspenders.
+    // `fixed inset-0 overflow-hidden` box besides, belt and suspenders.
     expect(shell).toMatch(/"fixed inset-0 overflow-hidden"/);
     expect(frame).toMatch(/data-stage-overlay-host/);
   });

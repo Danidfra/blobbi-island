@@ -6,7 +6,7 @@
  * `isSkyDevMode` is `import.meta.env.DEV`, which Vite replaces with a literal
  * `false` in a build, so the whole component body collapses to an early `return
  * null` and the surrounding branch in `PlaceBackground` is dead code the bundler
- * drops. The guard is *not* CSS — nothing is rendered and then hidden. Even if
+ * drops. The guard is *not* CSS; nothing is rendered and then hidden. Even if
  * this component were somehow mounted in production, `setIslandSkyDev` is itself
  * guarded, so every control would be inert and the sky would stay on the
  * automatic clock.
@@ -18,7 +18,7 @@
  * importantly, a route would have to rebuild the world shell to show a sky, which
  * would be testing a replica. This panel opens *over the real world* from the
  * existing "Developer tools" section of `AccountMenu`, so what is being adjusted
- * is the actual scene, with the actual Blobbi and actual remote players in it —
+ * is the actual scene, with the actual Blobbi and actual remote players in it,
  * which is the only way to judge whether the night is too dark to play in.
  *
  * It is mounted outside `VirtualWorld` because it is UI rather than a world
@@ -62,7 +62,7 @@ const PHASES: readonly IslandDayPhase[] = ['dawn', 'day', 'sunset', 'night'];
  * Human label for a shape id.
  *
  * Derived here rather than stored on the geometry table, because the table is
- * production data and the labels are DEV-only chrome — keeping them in this module
+ * production data and the labels are DEV-only chrome, keeping them in this module
  * means they are dropped from the production bundle along with the panel.
  */
 function cloudShapeLabel(shape: IslandCloudShape): string {
@@ -317,7 +317,7 @@ export function IslandSkyDevPanel() {
       <div className="space-y-1 border-t border-island-wood/20 pt-2">
         <p className="text-[11px] text-island-ink-soft">
           Sky locations
-          {!config.enabled && <span className="ml-1">— current scene has no sky</span>}
+          {!config.enabled && <span className="ml-1">(current scene has no sky)</span>}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {locations.map((id) => (

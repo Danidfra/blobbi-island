@@ -3,7 +3,7 @@
  *
  * The assertion that matters most is negative: a denied class must not reach
  * `window.open` or `navigator.share` at all. "The button was hidden" is not the
- * claim — a component that still holds the callback is one prop from being
+ * claim: a component that still holds the callback is one prop from being
  * reachable, and a modified build has it regardless.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -114,7 +114,7 @@ describe('Standard', () => {
     },
   );
 
-  it('does not confirm a native share — the OS sheet is the confirmation', () => {
+  it('does not confirm a native share, the OS sheet is the confirmation', () => {
     const decision = decideEgress(
       STANDARD_POLICY,
       { class: 'native-share', data: { title: 'x' } },
@@ -193,7 +193,7 @@ describe('performEgress is the only thing that touches the browser', () => {
     expect(url).toBe('https://github.com');
     expect(target).toBe('_blank');
     // Without `noopener` the opened page gets a live handle to this tab and can
-    // navigate it — the tabnabbing the scattered calls were all exposed to.
+    // navigate it: the tabnabbing the scattered calls were all exposed to.
     expect(features).toContain('noopener');
     expect(features).toContain('noreferrer');
   });

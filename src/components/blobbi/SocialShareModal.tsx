@@ -38,7 +38,7 @@ interface SocialShareModalProps {
  * `iconClass` carries BRAND colours, which are the one legitimate exception to
  * the no-hardcoded-colour rule: Facebook blue is a fact about Facebook, not a
  * decision this design system gets to make, and it does not follow the theme.
- * The two that are NOT brand colours use tokens — X's mark is monochrome
+ * The two that are NOT brand colours use tokens: X's mark is monochrome
  * (`text-black` would have vanished on a dusk panel) and Copy Link is a plain
  * utility icon.
  */
@@ -66,7 +66,7 @@ export function SocialShareModal({ isOpen, onClose, title, capturedPolaroidSrc, 
   /*
     The hand-rolled `document` Escape listener and backdrop handler that used
     to live here are gone: BlobbiModal's Radix dialog owns both, and it does
-    Escape correctly for a STACK — only the topmost surface closes. The global
+    Escape correctly for a STACK; only the topmost surface closes. The global
     listener fired regardless of what was above it.
   */
 

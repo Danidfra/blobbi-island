@@ -2,7 +2,7 @@
  * The pure activation resolver, gate by gate.
  *
  * Everything here runs on plain data: hand-built placement entries, a quantity
- * map and a stage string. No queries, no signer, no relay — that the resolver
+ * map and a stage string. No queries, no signer, no relay; that the resolver
  * NEEDS none of those is itself asserted at the bottom, source-level, because
  * purity is a load-bearing property (the dev simulator and the tests depend on
  * calling this freely).
@@ -45,7 +45,7 @@ function owned(...addresses: string[]): ReadonlyMap<string, number> {
   return new Map(addresses.map((a) => [a, 1]));
 }
 
-describe('resolveActiveBlobbiEffects — the twelve official items', () => {
+describe('resolveActiveBlobbiEffects: the twelve official items', () => {
   it('each of the twelve resolves alone, owned, on baby and on adult', () => {
     for (const item of ADDRESSED_VISUAL_EFFECT_ITEMS) {
       for (const stage of ['baby', 'adult']) {
@@ -133,7 +133,7 @@ describe('ownership gates', () => {
       stage: 'adult',
     });
     expect(result.effects).toEqual([]);
-    // The input entry is untouched — resolving must never mutate or drop the
+    // The input entry is untouched, resolving must never mutate or drop the
     // raw placement; cleanup is a policy decision made elsewhere, explicitly.
     expect(placements[0]).toEqual(equip(GROUND.address, 'ground-local'));
     expect(result.rejected[0]).toMatchObject({ reason: 'not-owned' });
@@ -184,7 +184,7 @@ describe('issuer and item gates', () => {
       quantityByAddress: owned(copied),
       stage: 'adult',
     });
-    // Ignored entirely: neither active nor rejected — the wearable policy owns
+    // Ignored entirely: neither active nor rejected, the wearable policy owns
     // its diagnosis (untrusted-issuer).
     expect(result.effects).toEqual([]);
     expect(result.rejected).toEqual([]);
@@ -287,7 +287,7 @@ describe('diagnostics', () => {
   });
 });
 
-describe('purity — the resolver imports no I/O', () => {
+describe('purity: the resolver imports no I/O', () => {
   it('has no hook, query, signing or publishing import', () => {
     const source = readFileSync(
       join(process.cwd(), 'src/effects/active-effects.ts'),

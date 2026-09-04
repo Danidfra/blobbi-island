@@ -2,7 +2,7 @@
  * The compatibility layer: three colours in, sixteen out, readable at the end.
  *
  * The contract this file defends is the one that makes external themes usable
- * at all — an adapted palette must clear the SAME WCAG pairings every built-in
+ * at all: an adapted palette must clear the SAME WCAG pairings every built-in
  * theme clears (`island-theme-contrast.test.ts`). A theme from a stranger is not
  * held to a lower bar just because nobody on the team authored it.
  */
@@ -66,7 +66,7 @@ describe('derivation', () => {
   });
 
   it.each(CASES)('%s keeps its three surfaces apart', (_name, colors) => {
-    // If page / cream / cream-2 collapse, panels stop reading as panels — a
+    // If page / cream / cream-2 collapse, panels stop reading as panels, a
     // failure a text-contrast check never catches, because the text still
     // passes. Same invariant the built-in palette sanity check holds.
     const p = paletteFromCoreColors(colors);
@@ -138,7 +138,7 @@ describe('publishing a built-in theme', () => {
   it('survives a round trip legibly, even though it is lossy', () => {
     // Sixteen authored colours do not fit in three, so a round trip is NOT
     // expected to reproduce the built-in palette. What it must do is come back
-    // as a usable island — which is what a Ditto user applying an Island theme
+    // as a usable island, which is what a Ditto user applying an Island theme
     // and an Island player re-selecting it both get.
     for (const theme of islandThemes) {
       const roundTripped = paletteFromCoreColors(coreColorsFromPalette(theme.palette));

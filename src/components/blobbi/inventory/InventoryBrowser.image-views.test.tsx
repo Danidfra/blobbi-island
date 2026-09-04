@@ -7,7 +7,7 @@
  * *sold* and *listed* with its default picture. Showing a hat's back view in an
  * inventory grid would misrepresent the item.
  *
- * Driven through the real `InventoryBrowser` and a mocked catalog — no relay, no
+ * Driven through the real `InventoryBrowser` and a mocked catalog; no relay, no
  * published definition, no inventory ownership beyond the in-memory event.
  */
 

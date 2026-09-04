@@ -48,7 +48,7 @@ import { HockeyOrientationToggle } from './HockeyOrientationToggle';
 import { HockeySoundToggle } from './HockeySoundToggle';
 
 /**
- * Air Hockey — the playable surface.
+ * Air Hockey: the playable surface.
  *
  * ## Render strategy: the simulation is not React's business
  *
@@ -64,13 +64,13 @@ import { HockeySoundToggle } from './HockeySoundToggle';
  *
  * The simulation is therefore completely decoupled from render frequency:
  * `useFixedStepLoop` takes real elapsed time, hands the match fixed 1/120 s
- * steps, and throws away anything beyond a quarter of a second — so a stutter,
+ * steps, and throws away anything beyond a quarter of a second, so a stutter,
  * a resize or a backgrounded tab can never produce one enormous physics step.
  *
  * ## Coordinates
  *
  * The simulation lives in a 100 × 160 table-unit box and knows nothing about
- * pixels — or about which way up it is drawn. `fitTable` maps that box onto the
+ * pixels: or about which way up it is drawn. `fitTable` maps that box onto the
  * canvas with a UNIFORM scale and a QUARTER TURN (the game window is landscape
  * at every viewport; see `hockey-draw.ts`), and `toTableUnits` is its exact
  * inverse for pointer input. Because both directions read the same transform,
@@ -83,7 +83,7 @@ import { HockeySoundToggle } from './HockeySoundToggle';
  * hidden tab silently accumulates misses against an audio clock that keeps
  * running, so it must abort. Air Hockey's clock IS the loop: stop the loop and
  * the match stops with it, exactly where it was. Hiding the tab or losing focus
- * therefore pauses, and the player picks the match back up — losing a
+ * therefore pauses, and the player picks the match back up, losing a
  * three-minute match to an OS dialog would be hostile, and nothing is gained by
  * it.
  */
@@ -103,7 +103,7 @@ export interface AirHockeyTableProps {
   readonly onFinish: (result: ArcadeGameResult) => void;
   /** The run cannot continue. Never called with a result. */
   readonly onAbort: (reason: ArcadeAbortReason) => void;
-  /** Freeze — the tab was hidden or the window lost focus. Recoverable. */
+  /** Freeze: the tab was hidden or the window lost focus. Recoverable. */
   readonly onPause: () => void;
   readonly audio: HockeyAudioEngine;
   readonly muted: boolean;
@@ -129,7 +129,7 @@ export interface AirHockeyTableProps {
    * Build the match to play. Overridable for tests and the DEV harness.
    *
    * The production default seeds the match from the run id, so a run is
-   * reproducible and two runs are never identical — and so nothing in the
+   * reproducible and two runs are never identical, and so nothing in the
    * render path ever calls `Math.random()`.
    */
   readonly createMatchState?: () => HockeyMatchState;
@@ -260,15 +260,15 @@ export function AirHockeyTable({
   /**
    * The layout the CONTAINER asks for, measured. Changes when the window is
    * resized, when the phone is rotated, or when the shell's footer comes and
-   * goes — never from a user-agent string.
+   * goes: never from a user-agent string.
    */
   const [fittedOrientation, setFittedOrientation] = useState<HockeyOrientation>('landscape');
   /**
    * Whether the scoreboard goes BESIDE the table instead of above it.
    *
    * This is where most of the desktop's wasted space was going. The arcade's
-   * game window is short and very wide — 956 x 382 of usable stage on a normal
-   * laptop — and a table locked to 8:5 in a box that wide is bound by HEIGHT.
+   * game window is short and very wide: 956 x 382 of usable stage on a normal
+   * laptop: and a table locked to 8:5 in a box that wide is bound by HEIGHT.
    * Stacking a 65 px scoreboard and a line of instructions on top of it
    * therefore did not cost a strip of table; it cost a fifth of the table's
    * every dimension, and left 500 px of width empty beside it. Measured, the
@@ -276,7 +276,7 @@ export function AirHockeyTable({
    *
    * Putting the HUD in the empty column instead spends the width that had no
    * use on the thing that had nowhere to go, and the table grows from
-   * 456 x 285 to 611 x 382 — about 1.8x the playfield, with nothing overlapping
+   * 456 x 285 to 611 x 382, about 1.8x the playfield, with nothing overlapping
    * the puck.
    */
   const [hudBeside, setHudBeside] = useState(false);
@@ -305,7 +305,7 @@ export function AirHockeyTable({
    */
   const measure = useCallback(() => {
     // The CONTAINER decides the layout; the canvas decides the scale. Measuring
-    // the canvas for both would be circular — its own shape is a consequence of
+    // the canvas for both would be circular; its own shape is a consequence of
     // the layout we are trying to choose.
     const container = containerRef.current;
     if (container) {
@@ -356,10 +356,10 @@ export function AirHockeyTable({
     if (typeof window === 'undefined') return;
 
     // Three signals, because each catches something the others do not:
-    //   • `resize`            — the window changed, on every platform;
-    //   • `orientationchange` — older mobile browsers fire it BEFORE a resize,
+    //   • `resize`: the window changed, on every platform;
+    //   • `orientationchange`: older mobile browsers fire it BEFORE a resize,
     //                           or instead of one;
-    //   • `ResizeObserver`    — the container changed without the window doing
+    //   • `ResizeObserver`: the container changed without the window doing
     //                           so, which is what happens when the shell's
     //                           footer appears or the app enters expanded mode.
     window.addEventListener('resize', measure);
@@ -505,7 +505,7 @@ export function AirHockeyTable({
 
       // Keyboard moves the AIM POINT, which the mallet then chases under the
       // same rate limit the pointer is subject to. One target, two ways to move
-      // it — so neither input path can produce a mallet speed the other cannot.
+      // it: so neither input path can produce a mallet speed the other cannot.
       const keys = keysRef.current;
       if (keys.size > 0) {
         const dx =
@@ -707,8 +707,8 @@ export function AirHockeyTable({
           hudBeside
             ? 'w-[7.5rem] grid-cols-1 content-center justify-items-center py-2 text-center'
             : 'grid-cols-3',
-          // Expanded play keeps the scoreboard — a score you cannot read is not
-          // a score — but strips it to one thin line so every remaining pixel
+          // Expanded play keeps the scoreboard, a score you cannot read is not
+          // a score: but strips it to one thin line so every remaining pixel
           // belongs to the table.
           expanded
             ? 'rounded-lg border px-2 py-0.5'
@@ -749,7 +749,7 @@ export function AirHockeyTable({
             The instructions live INSIDE the HUD column when the HUD is beside
             the table. As a sibling of the table they were a `shrink-0`
             paragraph 300 px wide, quietly taking a third of the playfield's
-            width in row layout — the table measured 418 px instead of 579.
+            width in row layout, the table measured 418 px instead of 579.
           */}
           {hudBeside && !expanded && (
             <span className="mt-2 block text-[10px] font-normal normal-case leading-snug tracking-normal blobbi-text-muted">
@@ -776,7 +776,7 @@ export function AirHockeyTable({
 
       {/*
         The table. Centred, aspect-locked, and never wider or taller than its
-        box — and it is THIS box, measured, that decides which way round the
+        box: and it is THIS box, measured, that decides which way round the
         table is laid out.
       */}
       <div
@@ -820,8 +820,8 @@ export function AirHockeyTable({
           <div className="absolute right-1.5 top-1.5 flex items-center gap-1.5">
             {/*
               The layout switch is a DESKTOP control and is not rendered in
-              expanded play. On a phone the answer is not a preference — it is
-              which way the player is holding the device — and offering a button
+              expanded play. On a phone the answer is not a preference; it is
+              which way the player is holding the device, and offering a button
               that fights the next rotation would be worse than offering none.
             */}
             {!expanded && (
@@ -893,7 +893,7 @@ export function AirHockeyTable({
 
       {/*
         One short line of instructions, kept on screen rather than only on the
-        start panel — a player who came back after a pause should not have to
+        start panel: a player who came back after a pause should not have to
         remember. Dropped in expanded play: on a phone the gesture is obvious,
         and the line costs a strip of table to say so.
       */}

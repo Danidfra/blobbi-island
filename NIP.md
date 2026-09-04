@@ -1,4 +1,4 @@
-# NIP.md — Blobbi Island Custom Event Kinds
+# NIP.md: Blobbi Island Custom Event Kinds
 
 This document describes the custom Nostr event kinds used by **Blobbi Island**, a
 Nostr-native virtual creature game. Some of these kinds are co-authored with the
@@ -13,7 +13,7 @@ human-readable description for clients that do not understand the kind.
 > An existing NIP is preferred over a Blobbi-specific convention even at some cost
 > in fit. Ask, in order: does a current NIP cover this; does it fit without
 > distortion; are its privacy properties acceptable for a product children use.
-> Record the answers — a standard that fits but publishes something a child should
+> Record the answers, a standard that fits but publishes something a child should
 > not publish is one we decline *with a reason*, not one we skipped. The worked
 > example is [`docs/player-safety-controls.md`](docs/player-safety-controls.md)
 > §3, where NIP-51 mute lists and NIP-56 reports were both evaluated and
@@ -34,7 +34,7 @@ human-readable description for clients that do not understand the kind.
 | Kind | Name | Class | Purpose |
 |------|------|-------|---------|
 | `1124` | Blobbi Social Interaction | Regular | Append-only log of care/social actions (feed, play, etc.) |
-| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: owned pets, achievements, current companion. **Not the Coin balance** — see kind `31633` |
+| `11125` | Blobbonaut Owner Profile | Replaceable | Player profile: owned pets, achievements, current companion. **Not the Coin balance**: see kind `31633` |
 | `31124` | Blobbi Pet State | Addressable | Full state of a single Blobbi creature (stats, appearance, care timestamps) |
 | `31632` | Game Item Definition | Addressable | Canonical item catalog (official issuer). See `@nostr-games/inventory`. |
 | `31633` | Game Inventory | Addressable | Player consumable inventory **and the canonical Blobbi Coin / Arcade Ticket balances**. See `@nostr-games/inventory`. |
@@ -42,8 +42,8 @@ human-readable description for clients that do not understand the kind.
 | `21201` | Island Communication | Ephemeral | In-world speech bubbles: free text, quick phrases, phrase templates and emotes |
 | `31951` | Shared Playback Session | Addressable | Canonical state of a synchronized watch session (theater) |
 | `21951` | Shared Playback Command | Ephemeral | Low-latency playback commands for a watch session |
-| `36767` | Theme Definition | Addressable | A shareable UI theme. **Not an Island kind** — Ditto's, reused as-is |
-| `16767` | Active Profile Theme | Replaceable | The palette a user advertises publicly. **Not an Island kind** — Ditto's |
+| `36767` | Theme Definition | Addressable | A shareable UI theme. **Not an Island kind**: Ditto's, reused as-is |
+| `16767` | Active Profile Theme | Replaceable | The palette a user advertises publicly. **Not an Island kind**: Ditto's |
 | `30078` | App Settings (NIP-78) | Addressable | Ditto's encrypted settings, `d = "ditto/metadata"`. **Holds the theme a user is actually using** |
 
 ### Legacy / superseded kinds (queried for backward compatibility, not written)
@@ -55,7 +55,7 @@ human-readable description for clients that do not understand the kind.
 
 ---
 
-## Kind 1124 — Blobbi Social Interaction (Regular)
+## Kind 1124: Blobbi Social Interaction (Regular)
 
 Append-only record of an interaction a player performed on a Blobbi (feeding,
 playing, cleaning, etc.). Used as an audit/history log; the resulting state change
@@ -63,28 +63,28 @@ is reflected in the corresponding kind `31124` event.
 
 - **`content`**: optional freeform text or empty string.
 - **Tags**:
-  - `["a", "31124:<pubkey>:<blobbiD>"]` — the Blobbi this interaction targets.
-  - `["t", "<interaction-type>"]` — e.g. `feed`, `play`.
+  - `["a", "31124:<pubkey>:<blobbiD>"]`: the Blobbi this interaction targets.
+  - `["t", "<interaction-type>"]`: e.g. `feed`, `play`.
   - `["client", "blobbi-island"]`.
   - `["alt", "<human-readable description>"]`.
 
 ---
 
-## Kind 11125 — Blobbonaut Owner Profile (Replaceable)
+## Kind 11125: Blobbonaut Owner Profile (Replaceable)
 
 The player's account/profile. One per pubkey. Co-authored with Ditto; unknown tags
 (e.g. `xp`, `level`, progression markers) are preserved by this client.
 
 - **`content`**: optional; canonical structured fields are carried in tags.
 - **Notable tags** (non-exhaustive):
-  - `["coins", "<number>"]` — **OBSOLETE.** Historical pre-cutover currency.
+  - `["coins", "<number>"]`: **OBSOLETE.** Historical pre-cutover currency.
     Never written by this client, never read for any economic decision, never
     displayed. A pre-existing tag is preserved verbatim on republish. The live
     balance is the Blobbi Coin quantity in kind `31633` (see below).
   - `["current_companion", "<blobbiD>"]`
   - `["starter_blobbi", "<blobbiD>"]`
   - `["favorite_blobbi", "<blobbiD>"]`
-  - `["pet", "<blobbiD>"]` (repeatable — owned pets)
+  - `["pet", "<blobbiD>"]` (repeatable, owned pets)
   - `["achievement", "<id>"]` (repeatable)
   - `["alt", "Blobbonaut owner profile"]`
 
@@ -92,24 +92,24 @@ The player's account/profile. One per pubkey. Co-authored with Ditto; unknown ta
 > is stored on kind 11125 any more. Both live in **kind 31633** (Game
 > Inventory): the Coin is the official item
 > `31632:<issuer>:blobbi:currency:coin`, and its balance is that item's
-> quantity. This client does not write inventory tags — or a `coins` tag — into
+> quantity. This client does not write inventory tags, or a `coins` tag, into
 > 11125.
 
 ---
 
-## Kinds 31632 / 31633 — Game Item Definition & Game Inventory
+## Kinds 31632 / 31633: Game Item Definition & Game Inventory
 
 Blobbi Island uses the framework-independent
 [`@nostr-games/inventory`](https://www.npmjs.com/package/@nostr-games/inventory)
 protocol for items and inventory. That package is the source of truth for the
 tag schema, parsing, validation, and quantities.
 
-- **Kind 31632 — Game Item Definition** (addressable, `31632:<issuer>:<d>`):
+- **Kind 31632: Game Item Definition** (addressable, `31632:<issuer>:<d>`):
   the canonical item catalog. Blobbi's official items are signed by the official
   issuer `9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9` and
   use `d` values of the form `blobbi:<category>:<slug>` (e.g. `blobbi:food:apple`).
   This client only trusts definitions from the official issuer.
-- **Kind 31633 — Game Inventory** (addressable, `31633:<owner>:<d>`): the
+- **Kind 31633: Game Inventory** (addressable, `31633:<owner>:<d>`): the
   player's inventory. Blobbi Island WRITES a single per-user inventory with
   `d = "blobbi:island"`, and READS every other context the player has authored
   (e.g. the Farm's `farm:main`), deriving their effective balances through
@@ -145,9 +145,9 @@ version would use a new second element; the current Coin balance and the
 legacy kind:11125 `coins` tag (obsolete, opaque, never migrated) play no role
 in allocation eligibility.
 
-The complete, machine-checked list — every official `d`, its canonical
+The complete, machine-checked list; every official `d`, its canonical
 `31632:<issuer>:<d>` address, category, action, effects, artwork and publication
-status — is in
+status: is in
 [`docs/protocol/blobbi-island-event-registry.md`](docs/protocol/blobbi-island-event-registry.md).
 It is generated from `src/protocol/event-registry.ts` and is not duplicated here.
 
@@ -155,7 +155,7 @@ See `docs/INVENTORY_ARCHITECTURE.md` for the full Island architecture.
 
 ---
 
-## Kind 1416 — Game Inventory Spend (Regular, `@nostr-games/inventory`)
+## Kind 1416: Game Inventory Spend (Regular, `@nostr-games/inventory`)
 
 Blobbi Island publishes a **player-signed kind:1416** to consume ONE unit of an
 item owned in an inventory another game writes (first: Farm produce in
@@ -164,19 +164,19 @@ item owned in an inventory another game writes (first: Farm produce in
 model are specified in `@nostr-games/inventory`
 (`docs/1416-1417-game-inventory-spend.md`), which is canonical.
 
-- **Author**: the inventory owner — `event.pubkey` equals the owner in the
+- **Author**: the inventory owner, `event.pubkey` equals the owner in the
   inventory address. Island refuses to sign for any other inventory.
 - **Tags** (through the canonical builder; never hand-rolled):
-  - `["a", "31633:<owner>:<d>", "<relay>", "inventory"]` — the **full** inventory address;
-  - `["a", "31632:<issuer>:<d>", "<relay>", "item"]` — the **full** item address;
-  - `["quantity", "<N>"]` — the whole batch of one action; never N events;
+  - `["a", "31633:<owner>:<d>", "<relay>", "inventory"]`: the **full** inventory address;
+  - `["a", "31632:<issuer>:<d>", "<relay>", "item"]`: the **full** item address;
+  - `["quantity", "<N>"]`: the whole batch of one action; never N events;
   - informational, never accounting: `["purpose", "feed:blobbi"]`,
     `["client", "blobbi-island"]`, `["nonce", "<unique>"]`, `["alt", …]`.
 - **Identity**: the event id. A retry after an ambiguous publish republishes the
   same signed event; a second signature would be a second debit.
 - Blobbi Island **never replaces** another game's kind:31633 and **never
-  publishes a kind:1417** for it; it READS kind:31633, kind:1416 and kind:1417
-  — an authoritative fetch plus one live subscription per relay — to derive
+  publishes a kind:1417** for it; it READS kind:31633, kind:1416 and kind:1417,
+  an authoritative fetch plus one live subscription per relay, to derive
   effective balances. See `docs/INVENTORY_ARCHITECTURE.md` (Cross-game
   inventories).
 
@@ -190,7 +190,7 @@ kind:31124 revision that applies the effect carries the spend id as its
 `blobbi_op` operation marker (the same marker the Mine's energy settlement
 uses), which is what makes the effect idempotent per spend id.
 
-## Kind 31124 — Blobbi Pet State (Addressable)
+## Kind 31124: Blobbi Pet State (Addressable)
 
 Full state of an individual Blobbi creature. Addressable by
 `31124:<pubkey>:<d>` where `d` is the Blobbi's stable id. Co-authored with Ditto;
@@ -209,7 +209,7 @@ unknown tags are preserved.
 
 ---
 
-## Kind 31950 — Island Presence (Addressable, NIP-40 Expiration)
+## Kind 31950: Island Presence (Addressable, NIP-40 Expiration)
 
 Real-time multiplayer presence. Each browser session publishes one addressable
 event keyed by session id, renewed by a heartbeat (~25s) and expiring via NIP-40
@@ -217,13 +217,13 @@ event keyed by session id, renewed by a heartbeat (~25s) and expiring via NIP-40
 *goal* (start/end/velocity/timestamp); each client interpolates remote motion
 locally rather than streaming positions.
 
-- **`d`**: `session:<uuid>` — one presence per session (latest session per pubkey wins).
+- **`d`**: `session:<uuid>`: one presence per session (latest session per pubkey wins).
 - **Tags**:
-  - `["a", "31124:<pubkey>:<blobbiD>"]` — links to the Blobbi being shown.
-  - `["t", "blobbi:presence"]` — global presence index.
-  - `["t", "island:<islandId>"]` — island scope.
-  - `["t", "loc:<location>"]` — current location scope (enables relay-level location filtering).
-  - `["expiration", "<unix-seconds>"]` — NIP-40.
+  - `["a", "31124:<pubkey>:<blobbiD>"]`: links to the Blobbi being shown.
+  - `["t", "blobbi:presence"]`: global presence index.
+  - `["t", "island:<islandId>"]`: island scope.
+  - `["t", "loc:<location>"]`: current location scope (enables relay-level location filtering).
+  - `["expiration", "<unix-seconds>"]`: NIP-40.
 - **`content`** (JSON):
   ```json
   {
@@ -241,39 +241,39 @@ locally rather than streaming positions.
   Positions are percentages of the location's playable area (`0–100`), making them
   resolution-independent. `goal` is omitted when the player is stationary.
 
-  The last four fields are **optional and additive** — clients that do not
+  The last four fields are **optional and additive**: clients that do not
   understand them ignore them and keep rendering the player normally:
 
-  - **`hiddenIn`** — id of the hiding spot the player is hidden inside (e.g.
+  - **`hiddenIn`**: id of the hiding spot the player is hidden inside (e.g.
     `"town-bush-1"`). Remote clients suppress the Blobbi's visual entirely.
     Readers MUST decide by PRESENCE of the field, not by resolving its value: a
     spot id from another room, from a newer build, or the reserved value below
-    all mean the same thing — this player is hidden. The reserved value
+    all mean the same thing; this player is hidden. The reserved value
     **`"hidden"`** means *hidden, spot withheld*, and is what a client publishes
     when it is configured not to disclose fine-grained presence
     (`docs/presence-data-minimization.md`). It is not a hiding spot and no
     configuration defines one by that name.
-  - **`seatId`** — canonical id of the theater seat the player is sitting in
+  - **`seatId`**: canonical id of the theater seat the player is sitting in
     (e.g. `"theater-seat-a4"`). Remote clients snap the Blobbi to that seat's
     configured anchor and draw it rear-facing, **ignoring `anchor`** for the
     seated pose. Set only on confirmed arrival, preserved across heartbeats, and
-    always absent from `state: "moving"` presence — so the movement that leaves a
+    always absent from `state: "moving"` presence, so the movement that leaves a
     seat is itself what clears it. This is advisory, self-expiring *visual*
     occupancy: it reserves nothing, and clients resolve two players claiming one
     seat locally (lowest hex pubkey wins).
-  - **`activity`** — a reference to the shared activity the player is taking
+  - **`activity`**: a reference to the shared activity the player is taking
     part in: `{"type": "shared-playback", "session": "31951:<host>:<d>"}`. It
-    carries the session ADDRESS and nothing else — no revision, no playhead, no
-    media — so presence can answer "who is watching this together?" without ever
+    carries the session ADDRESS and nothing else; no revision, no playhead, no
+    media: so presence can answer "who is watching this together?" without ever
     becoming a second copy of the session state. Set once a session is actually
     created or joined (never while a code is being typed) and preserved across
-    heartbeats **and across all movement** — participation belongs to being in
+    heartbeats **and across all movement**: participation belongs to being in
     the room, not to a chair, so standing up, walking and changing seats all keep
     it while `seatId` alone is cleared. It is cleared by an explicit leave (an
     `idle` event, since there is no movement to preserve) and by a location
     change. Nothing else publishes a clear, which is also what stops a cleanup
     event from ever superseding the movement it would have followed.
-  - **`seq`** — monotonic publish counter for the session. `created_at` has
+  - **`seq`**: monotonic publish counter for the session. `created_at` has
     one-second resolution, so a sit/hide and the movement that ends it routinely
     share a second; `seq` orders them regardless of relay delivery order.
 
@@ -283,7 +283,7 @@ locally rather than streaming positions.
 > Note: `state: "emote"` remains reserved and is still not produced by this
 > client. Emotes are **communication**, not presence: they travel on kind `21201`
 > (below), because an emote is a momentary utterance while presence is a
-> replaceable event with a 35-second lifetime and a heartbeat — an emote stored
+> replaceable event with a 35-second lifetime and a heartbeat, an emote stored
 > there would either hang over a Blobbi for half a minute or need a second
 > clearing event racing the movement ordering. The slot is kept for a future
 > emote *pose* (a Blobbi that visibly waves), which is a rendering concern
@@ -291,7 +291,7 @@ locally rather than streaming positions.
 
 ---
 
-## Kind 21201 — Island Communication (Ephemeral)
+## Kind 21201: Island Communication (Ephemeral)
 
 In-world communication shown as a speech bubble above a player's Blobbi.
 Ephemeral (20000–29999) with a short NIP-40 expiration; messages are transient
@@ -302,13 +302,13 @@ The full specification, including the reasoning behind every rule, is
 
 - **Tags** (identical for every message class):
   - `["d", "<sessionId>"]`
-  - `["l", "<location>"]` — location scope.
-  - `["i", "<islandId>"]` — island scope.
-  - `["p", "<pubkey>"]` — author.
-  - `["expiration", "<unix-seconds>"]` — NIP-40 (~10s).
-  - `["alt", "Chat message: <preview>"]` — NIP-31 description, built from the
+  - `["l", "<location>"]`: location scope.
+  - `["i", "<islandId>"]`: island scope.
+  - `["p", "<pubkey>"]`: author.
+  - `["expiration", "<unix-seconds>"]`: NIP-40 (~10s).
+  - `["alt", "Chat message: <preview>"]`: NIP-31 description, built from the
     SENDER's local rendering. Descriptive only; this client never reads it back.
-- **`content`** (JSON) — an envelope plus one of four message classes.
+- **`content`** (JSON): an envelope plus one of four message classes.
 
   Envelope, on every class: `location` (the sender's location id), `blobbiD`
   (optional), `ts` (unix seconds). Structured classes additionally carry
@@ -336,7 +336,7 @@ The full specification, including the reasoning behind every rule, is
   bubble. Ids are language-independent, which is also what makes translation
   possible without invalidating published events.
 
-  Receivers MUST validate structurally — unknown `type`, unrecognised `v`,
+  Receivers MUST validate structurally, unknown `type`, unrecognised `v`,
   unknown phrase/emote/template id, a missing, unexpected or out-of-catalog
   parameter, and oversized payloads are all rejected rather than best-effort
   rendered. Received free-text `text` is HTML-stripped before rendering.
@@ -344,7 +344,7 @@ The full specification, including the reasoning behind every rule, is
 
 ---
 
-## Kinds 31951 / 21951 — Shared Playback Session & Command
+## Kinds 31951 / 21951: Shared Playback Session & Command
 
 Host-authoritative synchronized playback of recorded media (the Blobbi Island
 theater's "watch together"). The full specification, including the reasoning
@@ -354,8 +354,8 @@ what this client actually implements is
 [`docs/theater-shared-watch-implementation.md`](docs/theater-shared-watch-implementation.md).
 
 > **Experimental, and application-private by convention only.** These kind
-> numbers are not registered anywhere — Nostr has no registry with allocation
-> authority — so any other application may already use them. Every consumer
+> numbers are not registered anywhere: Nostr has no registry with allocation
+> authority: so any other application may already use them. Every consumer
 > MUST validate structurally and ignore anything that does not parse as this
 > schema, rather than trusting the kind number.
 
@@ -364,10 +364,10 @@ what this client actually implements is
 still correct, and a client that misses one is corrected by the next `31951`.
 Both events for one action carry the same `rev`.
 
-### Kind 31951 — Shared Playback Session (Addressable, NIP-40)
+### Kind 31951: Shared Playback Session (Addressable, NIP-40)
 
 - **`d`**: a fresh UUIDv4 per session, never reused. Address:
-  `31951:<host-pubkey>:<d>` — the host is the event's author, so authority is
+  `31951:<host-pubkey>:<d>`: the host is the event's author, so authority is
   derived from authorship and a session's host can never change.
 - **Tags**: `["r", "blobbi-island:theater:main"]` (reusable room),
   `["c", "<6-char code>"]` (invitation code, indexed, required while active),
@@ -386,7 +386,7 @@ Both events for one action carry the same `rev`.
   }
   ```
   `position` is in **seconds** and `updatedAt` is the host's wall clock in
-  **milliseconds** — deliberately finer than `created_at`, which is too coarse
+  **milliseconds**: deliberately finer than `created_at`, which is too coarse
   for playback timing. Together they are an anchor, not a live value: clients
   extrapolate `position + elapsed × rate` while playing. `provider`, `media` and
   `status` are unqueryable mirrors of the content; on any disagreement the
@@ -397,7 +397,7 @@ refreshed `expiration` and a re-anchored `updatedAt`/`position`. This keeps the
 session alive, keeps every guest's clock-offset estimate fresh, and doubles as a
 liveness signal.
 
-### Kind 21951 — Shared Playback Command (Ephemeral, NIP-40)
+### Kind 21951: Shared Playback Command (Ephemeral, NIP-40)
 
 - **Tags**: `["a", "31951:<host>:<d>", "<relay hint>"]` (exactly one; required),
   `["p", "<host pubkey>"]`, `["t", "shared-playback"]`, `["client", ...]`,
@@ -410,7 +410,7 @@ liveness signal.
   metadata.
 
 **Absolute positions only.** `+10 s` publishes the resulting position, never a
-delta — that is what makes a command idempotent under duplicate delivery,
+delta: that is what makes a command idempotent under duplicate delivery,
 independently applicable after a missed one, and safely ignorable when
 superseded.
 
@@ -426,7 +426,7 @@ never rewind a player.
 
 ---
 
-## Kinds 36767 / 16767 — Themes (Ditto's protocol, reused)
+## Kinds 36767 / 16767: Themes (Ditto's protocol, reused)
 
 **These are not Blobbi Island kinds.** They are [Ditto](https://soapbox.pub/)'s
 theme protocol, and Island implements them so that a theme published anywhere in
@@ -446,7 +446,7 @@ selection in Island's first attempt:
 - A **definition** is a thing anyone can discover and apply.
 - An **active profile theme** (16767) is a PUBLIC advertisement. In Ditto its
   only reader is `useActiveProfileTheme`, consumed by `ProfilePage` and
-  `FollowPage` — it decorates somebody's profile with their colours. Ditto also
+  `FollowPage`: it decorates somebody's profile with their colours. Ditto also
   pulls its own 16767 back on pageload (when `autoShareTheme`, default `true`)
   into `customTheme`, but explicitly does **not** change the theme *mode*.
 - The **settings blob** (30078) is what Ditto actually renders from. Publishing
@@ -454,7 +454,7 @@ selection in Island's first attempt:
 
 A client that wants to interoperate on *selection* has to write both.
 
-### Kind 36767 — Theme Definition
+### Kind 36767: Theme Definition
 
 ```jsonc
 {
@@ -488,15 +488,15 @@ republishes **both**:
        "dim 1920x1080", "blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH"]
 ```
 
-- **`f`** — a CSS family name and an optional direct link to a font *file*
+- **`f`**: a CSS family name and an optional direct link to a font *file*
   (`.woff2`/`.ttf`/`.otf`), not a stylesheet. The fourth element is the role;
   a tag with **no** role is legacy and counts as the body font.
-- **`bg`** — one variadic imeta-style tag of `key value` strings. The key is
+- **`bg`**: one variadic imeta-style tag of `key value` strings. The key is
   everything before the first space. `mode` is `cover` (centred, fixed,
   non-repeating) or `tile` (repeat at natural size); absent means `cover`.
 
 **Island renders the body font, the title font and the background image.** The
-title font maps to game-window titles and settings section headings — Ditto uses
+title font maps to game-window titles and settings section headings: Ditto uses
 its `--title-font-family` for `<h2>` headings, sidebar labels and dialog titles,
 i.e. display typography generally rather than profile names alone.
 
@@ -506,11 +506,11 @@ fontsource CDN link when *publishing*. A consuming client that treats a missing
 URL as "no font" will silently render its own type. Island keeps a mirror of that
 registry (`src/lib/theme-fonts.ts`) and fetches the file Ditto would have
 published. The wallpaper is applied to the
-page *around* the game window rather than to `body` wholesale — Town, Beach,
+page *around* the game window rather than to `body` wholesale: Town, Beach,
 Mine and the Arcade are drawn art, and a theme may dress the room the game sits
 in but not the game.
 
-### Kind 16767 — Active Profile Theme
+### Kind 16767: Active Profile Theme
 
 The same `c` / `f` / `bg` tags, `["alt", "Active profile theme"]`, an optional
 `title` and `description`, and `["a", "36767:<pubkey>:<d>"]` when the selection
@@ -535,12 +535,12 @@ does not read:
 
 It exists because neither the colours nor the `a` tag can express "I am using the
 built-in Cozy Day": a built-in theme has no address, and its sixteen authored
-colours do not survive a round trip through three. The tag is additive — the
+colours do not survive a round trip through three. The tag is additive, the
 event remains a fully valid Ditto active-theme event with a fully correct colour
 triple, and a client that ignores the tag loses nothing. An absent or unknown
 value falls back to the `a` tag, and then to the default theme.
 
-### Kind 30078 — the theme a user is *using* (NIP-78)
+### Kind 30078: the theme a user is *using* (NIP-78)
 
 ```jsonc
 {
@@ -560,7 +560,7 @@ Two keys matter for themes:
 | Key | Meaning |
 |-----|---------|
 | `theme` | `"light" \| "dark" \| "system" \| "custom"`. **Only `"custom"` renders `customTheme`.** |
-| `customTheme` | A `ThemeConfig`: `{ title?, colors{background,text,primary}, font?, titleFont?, background? }`, colours as **HSL channel triplets** (not hex — that is the event encoding) |
+| `customTheme` | A `ThemeConfig`: `{ title?, colors{background,text,primary}, font?, titleFont?, background? }`, colours as **HSL channel triplets** (not hex; that is the event encoding) |
 
 There is also a `lastSync` in **milliseconds**, which is the ordering key
 between devices and the one mechanism that disambiguates two selections inside
@@ -570,7 +570,7 @@ the same wall-clock second.
 `z.looseObject`, so unknown keys survive its own round trip; any other client
 writing it must be at least as careful. Island reads the current event fresh,
 decrypts it, replaces only `theme`, `customTheme` and `lastSync`, and
-**abandons the write entirely if it cannot decrypt** — publishing a settings
+**abandons the write entirely if it cannot decrypt**: publishing a settings
 event containing only a theme would erase the account's feed settings, content
 filters and relay preferences.
 
@@ -612,10 +612,10 @@ Untrusted-input rules, because a theme is a stranger's data colouring the whole
 UI:
 
 - a `c` value is accepted only if it matches `#rgb`/`#rrggbb`, and is then
-  parsed into numbers and re-emitted from those numbers — a colour cannot carry
+  parsed into numbers and re-emitted from those numbers, a colour cannot carry
   a payload because the input string is never reused;
 - URLs (`f` and `bg`) are **https only**, and are re-serialised by the URL
-  parser, which percent-encodes quotes and backslashes — so a URL cannot
+  parser, which percent-encodes quotes and backslashes, so a URL cannot
   terminate the `url("…")` string it lands in;
 - font families pass a Unicode allowlist (letters, numbers, space, underscore,
   hyphen, apostrophe, period); braces, quotes, semicolons and parentheses are

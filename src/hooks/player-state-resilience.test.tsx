@@ -164,7 +164,7 @@ describe('useBlobbis keeps known Blobbis across an unusable read', () => {
     expect((client.getQueryData(['blobbis', OWNER]) as unknown[])?.length).toBe(1);
   });
 
-  it('a CONFIRMED empty read still yields [] — a new player can start', async () => {
+  it('a CONFIRMED empty read still yields []: a new player can start', async () => {
     const client = makeClient();
     relayScript = answersEmpty; // both the read and its confirmation
     renderHook(() => useBlobbis(), { wrapper: wrapperFor(client) });
@@ -310,7 +310,7 @@ describe('BlobbiSelectionScreen distinguishes unknown from confirmed empty', () 
     expect(screen.queryByText('Your nest is empty')).not.toBeInTheDocument();
   });
 
-  it('SHOWS the empty nest for a confirmed empty read — new players can hatch', async () => {
+  it('SHOWS the empty nest for a confirmed empty read, new players can hatch', async () => {
     await renderScreen({ data: [], isLoading: false, error: null });
     expect(screen.getByText('Your nest is empty')).toBeInTheDocument();
     expect(screen.getByText(EMPTY_COPY)).toBeInTheDocument();

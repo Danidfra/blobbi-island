@@ -1,8 +1,8 @@
 /**
- * Pool — the physics world, and the ONLY module that knows Planck exists.
+ * Pool: the physics world, and the ONLY module that knows Planck exists.
  *
- * Everything above this file — the match state machine, the rules, the AI, the
- * result, the renderer — speaks in {@link PoolBall} snapshots and table units.
+ * Everything above this file, the match state machine, the rules, the AI, the
+ * result, the renderer, speaks in {@link PoolBall} snapshots and table units.
  * Nothing above it ever sees a `Body`, a `Fixture` or a `Vec2` from the engine,
  * which is what makes the engine replaceable and what keeps `rules.ts` a pure
  * function of numbers.
@@ -31,15 +31,15 @@
  * The game thinks in **table units** (200 × 100, ball radius 2.8). Box2D is
  * tuned for **metres** and its tolerances are absolute: `linearSlop` is 5 mm,
  * `maxTranslation` is 2 m per step. So the world runs at
- * {@link METRES_PER_UNIT} = 0.1 — a 20 × 10 m table with 0.28 m balls — and this
+ * {@link METRES_PER_UNIT} = 0.1, a 20 × 10 m table with 0.28 m balls, and this
  * module converts at the boundary. That scale was chosen so the defaults land
  * well and **no Planck global has to be mutated**:
  *
  * | tolerance | default | in table units | verdict |
  * | --- | --- | --- | --- |
- * | `linearSlop` | 0.005 m | 0.05 | 1.8% of a ball's radius — invisible |
+ * | `linearSlop` | 0.005 m | 0.05 | 1.8% of a ball's radius, invisible |
  * | `maxTranslation` | 2 m/step | 20/step | our worst is 1.6 |
- * | `velocityThreshold` | 1 m/s | 10 u/s | below this, contacts are inelastic — and a ball below 10 u/s stops within 2 units anyway |
+ * | `velocityThreshold` | 1 m/s | 10 u/s | below this, contacts are inelastic, and a ball below 10 u/s stops within 2 units anyway |
  *
  * ## Rolling friction is ours, not the engine's
  *
@@ -53,7 +53,7 @@
  *    it means the migration did not have to retune the opponent.
  *
  * It is applied uniformly to every ball after the solver has finished, so it
- * never fights the solver — it is a velocity edit between steps, not a force.
+ * never fights the solver; it is a velocity edit between steps, not a force.
  */
 
 import { Circle, Polygon, Vec2, World, type Body, type Contact } from 'planck';
@@ -93,9 +93,9 @@ const POSITION_ITERATIONS = 8;
  * How many consecutive steps every ball must be stopped before the table counts
  * as settled.
  *
- * Six steps is 50 ms at 120 Hz. It is not there to wait for slow balls — the
- * friction rule zeroes anything under {@link STOP_SPEED}, so "stopped" is exact
- * — it is there so that a ball which is momentarily stationary at the top of a
+ * Six steps is 50 ms at 120 Hz. It is not there to wait for slow balls, the
+ * friction rule zeroes anything under {@link STOP_SPEED}, so "stopped" is exact,
+ * it is there so that a ball which is momentarily stationary at the top of a
  * bounce, or between two frames of a contact being resolved, cannot end the shot
  * early.
  */
@@ -189,7 +189,7 @@ const toUnits = (metres: number) => metres * UNITS_PER_METRE;
 /**
  * Build a world.
  *
- * Synchronous, and cheap enough to build one per run — which is what the game
+ * Synchronous, and cheap enough to build one per run, which is what the game
  * does, so a replay can never inherit a body from the frame before it.
  */
 export function createPoolPhysicsWorld(): PoolPhysicsWorld {
@@ -221,7 +221,7 @@ export function createPoolPhysicsWorld(): PoolPhysicsWorld {
       type: 'dynamic',
       position: new Vec2(toMetres(ball.x), toMetres(ball.y)),
       // No spin is modelled, so a ball has no reason to acquire angular
-      // momentum — and letting it would only leak energy out of the solver into
+      // momentum: and letting it would only leak energy out of the solver into
       // a rotation nothing draws.
       fixedRotation: true,
       // Continuous collision. At 1/120 s a ball at top speed moves 0.16 m
@@ -278,7 +278,7 @@ export function createPoolPhysicsWorld(): PoolPhysicsWorld {
    * Contacts are recorded on BEGIN, never on solve.
    *
    * `post-solve` fires every step for as long as two bodies stay touching, which
-   * for two balls resting against each other is forever — and that is exactly
+   * for two balls resting against each other is forever, and that is exactly
    * the "duplicate audio from persistent contacts" failure. Begin fires once per
    * contact, and the closing speed is still available at that moment because the
    * solver has not run yet.
@@ -386,7 +386,7 @@ export function createPoolPhysicsWorld(): PoolPhysicsWorld {
    * Pocket capture and the escape backstop.
    *
    * Runs outside `world.step`, so touching bodies here is safe, and it is
-   * exhaustive rather than event-driven — a ball is pocketed the step its centre
+   * exhaustive rather than event-driven, a ball is pocketed the step its centre
    * crosses a mouth plane, in ball-number order, exactly once.
    */
   function collectPockets(): void {
@@ -396,7 +396,7 @@ export function createPoolPhysicsWorld(): PoolPhysicsWorld {
       const at = { x: toUnits(p.x), y: toUnits(p.y) };
 
       if (!Number.isFinite(at.x) || !Number.isFinite(at.y)) {
-        // Not a pocket — a broken body. The caller decides what it costs.
+        // Not a pocket, a broken body. The caller decides what it costs.
         recovered.push(record.number);
         retire(record);
         continue;

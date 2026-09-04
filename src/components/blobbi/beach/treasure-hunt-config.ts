@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt — the ONE registry of presentation configuration: asset
+ * Treasure Hunt: the ONE registry of presentation configuration: asset
  * paths, artwork geometry, detector calibration, the UI round policy and the
  * per-kind display metadata. Components import from here and never hardcode a
  * path or a balance number.
@@ -14,9 +14,9 @@
  *
  * The metal-detector SVG (`viewBox 0 0 320 720`) is drawn handle-down,
  * coil-up: the search coil is the ellipse centered at (160, 176). In the
- * top-down playfield that orientation is already correct — the handle points
+ * top-down playfield that orientation is already correct, the handle points
  * toward the player at the bottom of the screen, the coil sweeps the sand
- * ahead — so no rotation is applied. The LOGICAL sensing point is the coil
+ * ahead: so no rotation is applied. The LOGICAL sensing point is the coil
  * anchor fraction below, never the SVG canvas center; artwork padding can
  * change without touching detector math.
  *
@@ -24,7 +24,7 @@
  *
  * The pure model's field is policy-defined. The UI plays on a field whose
  * width/height ratio equals the sand rectangle's on-screen aspect, so one
- * field unit is the same number of pixels in x and y — detection circles
+ * field unit is the same number of pixels in x and y, detection circles
  * render as circles, and dragging feels identical in both axes. Everything
  * else (durations, counts, radii) is the model's provisional V1 policy,
  * untouched.
@@ -53,7 +53,7 @@ export const TREASURE_HUNT_ASSETS = {
   shack: '/assets/locations/beach/treasure-shack.webp',
 } as const;
 
-/** Intrinsic aspect of the playfield art (1537 / 1023). Layout only —
+/** Intrinsic aspect of the playfield art (1537 / 1023). Layout only,
  *  gameplay coordinates never touch these pixels. */
 export const PLAYFIELD_IMAGE_ASPECT = 1537 / 1023;
 
@@ -71,7 +71,7 @@ export const DETECTOR_CALIBRATION = {
   viewBoxHeight: 720,
   /**
    * The coil's center inside the viewBox, as fractions: ellipse (160, 176)
-   * of 320 × 720. THIS is the logical sensing point — not the canvas center.
+   * of 320 × 720. THIS is the logical sensing point; not the canvas center.
    */
   coilAnchorX: 160 / 320,
   coilAnchorY: 176 / 720,
@@ -127,7 +127,7 @@ validateTreasureHuntPolicy(TREASURE_HUNT_UI_POLICY);
 // ── Find presentation metadata ──────────────────────────────────────────────
 
 export interface FindPresentation {
-  /** Accessible display name — the pure model's `kind` is an identifier. */
+  /** Accessible display name, the pure model's `kind` is an identifier. */
   readonly name: string;
   /**
    * Centralized TEMPORARY local icon (no final find art was supplied for
@@ -163,7 +163,7 @@ export type SignalLevel = 'none' | 'weak' | 'medium' | 'strong' | 'very-strong';
  * (ids `th-display-screen`, `th-signal-dot`, `th-signal-arc-1..3` inside
  * `metal-detector.svg`): the dot plus a growing arc count is the structural
  * indicator, the screen tint is the redundant color channel (coral = far,
- * yellow = closer, green = close — distance, never danger). All thresholds
+ * yellow = closer, green = close, distance, never danger). All thresholds
  * live here; nothing in JSX may hardcode one.
  */
 export interface SignalDisplayState {
@@ -201,7 +201,7 @@ export function signalDisplayState(intensity: number): SignalDisplayState {
 /**
  * Desktop-only decorative cursor: the shovel SVG follows a fine pointer over
  * the sand with its blade tip on the exact dig point. The tip anchor is the
- * blade apex at (150, 40) of the 300 × 600 viewBox — presentation only; dig
+ * blade apex at (150, 40) of the 300 × 600 viewBox, presentation only; dig
  * coordinates always come from the pointer, never from these bounds.
  */
 export const SHOVEL_CURSOR = {
@@ -217,7 +217,7 @@ export const SHOVEL_CURSOR = {
 
 /**
  * Where the idle detector parks (toward the right-side tool dock) while the
- * shovel is selected. Percent of the playfield image box — PRESENTATION ONLY:
+ * shovel is selected. Percent of the playfield image box: PRESENTATION ONLY:
  * the logical coil position in the round state is never overwritten, so
  * re-selecting the detector returns it to the searched spot.
  */

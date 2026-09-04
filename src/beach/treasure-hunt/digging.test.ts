@@ -1,5 +1,5 @@
 /**
- * Digging — one use per valid attempt, at most one reveal, never twice.
+ * Digging: one use per valid attempt, at most one reveal, never twice.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -50,7 +50,7 @@ describe('resolveDig', () => {
     const right = target({ id: 'target-2', position: { x: 0.35, y: 0.3 } });
     const result = resolveDig({ x: 0.3, y: 0.3 }, [left, right], 5, POLICY);
     expect(result).toEqual({ type: 'hit', targetId: 'target-1', shovelUsesConsumed: 1 });
-    // Same pair, swapped order: the other one wins — the rule is array order.
+    // Same pair, swapped order: the other one wins, the rule is array order.
     const swapped = resolveDig({ x: 0.3, y: 0.3 }, [right, left], 5, POLICY);
     expect(swapped).toEqual({ type: 'hit', targetId: 'target-2', shovelUsesConsumed: 1 });
   });
@@ -87,7 +87,7 @@ describe('resolveDig', () => {
     });
   });
 
-  it('rejects an out-of-field point without consuming a use — no silent clamping', () => {
+  it('rejects an out-of-field point without consuming a use; no silent clamping', () => {
     const result = resolveDig({ x: 1.2, y: 0.3 }, [], 5, POLICY);
     expect(result).toEqual({
       type: 'rejected',

@@ -5,7 +5,7 @@
  *   - `mergePetStateTags` derived `last_interaction` from the STALE raw tag of
  *     the source event before the live `pet.lastInteraction`, so action
  *     timestamps never advanced even though `care_streak` (read from the live
- *     `pet` field) did — an inconsistent state.
+ *     `pet` field) did, an inconsistent state.
  *   - `useUseItem` reimplemented a naive `>20h` care-streak rule and only wrote
  *     `care_streak`, leaving `care_streak_last_at` / `care_streak_last_day`
  *     stale (preserved passthrough) while `care_streak` advanced.
@@ -182,7 +182,7 @@ function makeAdultPet(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('useUseItem — Blobbi state timestamp & care-streak regression', () => {
+describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
@@ -278,7 +278,7 @@ describe('useUseItem — Blobbi state timestamp & care-streak regression', () =>
     });
     const { tags } = stateEvent();
     // Streak unchanged on same day; metadata preserved (day unchanged, at
-    // preserved at its previous value — not corrupted or wiped).
+    // preserved at its previous value; not corrupted or wiped).
     expect(tag(tags, 'care_streak')).toBe('5');
     expect(tag(tags, 'care_streak_last_day')).toBe(todayStr);
     expect(tag(tags, 'care_streak_last_at')).toBe(String(NOW_UNIX - 3600));
@@ -317,7 +317,7 @@ describe('useUseItem — Blobbi state timestamp & care-streak regression', () =>
     // Equipment moved to kind:31634. Feeding a Blobbi republishes its kind:31124
     // state and must not AUTHOR equipment: it neither reads the old vocabulary
     // nor writes a fresh copy of it. A legacy `equip` tag already on the event
-    // rides along verbatim through the unknown-tag passthrough — this client
+    // rides along verbatim through the unknown-tag passthrough; this client
     // has stopped understanding that tag, which is not a licence to delete a
     // player's record.
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);

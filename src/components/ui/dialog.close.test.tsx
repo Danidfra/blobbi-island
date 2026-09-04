@@ -2,7 +2,7 @@
  * The shared Dialog's built-in close control.
  *
  * WHY THIS FILE EXISTS. `DialogContent` used to render a native `<button>`
- * INSIDE `DialogPrimitive.Close` — which is itself a `<button>`. React reported
+ * INSIDE `DialogPrimitive.Close`: which is itself a `<button>`. React reported
  * it every time such a dialog opened (`validateDOMNesting: <button> cannot
  * appear as a descendant of <button>`), and beyond the warning it was two
  * overlapping hit targets carrying two accessible names for one action.
@@ -19,7 +19,7 @@
  * ON KEYBOARD ACTIVATION. jsdom does not synthesize a click from Enter/Space on
  * a native button the way a browser does, so a `keyDown` assertion here would
  * test jsdom, not the fix. What actually earns keyboard activation is BEING a
- * native, enabled, focusable `<button>` — which is exactly what the nested
+ * native, enabled, focusable `<button>`: which is exactly what the nested
  * markup put at risk and what the test asserts. Real keyboard activation is
  * covered in the browser pass.
  */

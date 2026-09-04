@@ -34,13 +34,13 @@ import { DanceMascot, type DanceMascotMood } from './DanceMascot';
 import { DanceSoundToggle } from './DanceSoundToggle';
 
 /**
- * Blobbi Dance — the playable surface.
+ * Blobbi Dance: the playable surface.
  *
  * ## Render strategy
  *
  * A rhythm game updates sixty times a second. React state updated sixty times a
  * second re-renders a tree sixty times a second, and the input handler then
- * competes with reconciliation for the main thread — which shows up as exactly
+ * competes with reconciliation for the main thread, which shows up as exactly
  * the thing a rhythm game may not have: input lag.
  *
  * So this component splits its state by frequency:
@@ -54,7 +54,7 @@ import { DanceSoundToggle } from './DanceSoundToggle';
  * | lifecycle status | React state, owned by the caller's reducer | a few times a run |
  *
  * The run state itself lives in a ref and is advanced through the PURE reducer
- * functions in `judgment.ts` — so the rules stay pure and stay tested by passing
+ * functions in `judgment.ts`: so the rules stay pure and stay tested by passing
  * numbers, while the storage is a ref that no re-render depends on. Canvas was
  * considered and rejected: 110 notes with at most a dozen on screen is nowhere
  * near a DOM bottleneck, and a canvas would cost the focus outlines, the text
@@ -69,7 +69,7 @@ import { DanceSoundToggle } from './DanceSoundToggle';
  * ## Timing
  *
  * Every judgement is made against `engine.songTimeMs()` sampled AT THE MOMENT
- * the input arrives — not against the last animation frame, which may be 16 ms
+ * the input arrives; not against the last animation frame, which may be 16 ms
  * stale (a quarter of the Perfect window), and not against a frame counter.
  * `requestAnimationFrame` only decides when to draw; a dropped frame costs a
  * frame of animation and nothing else, because the next frame reads the true
@@ -97,7 +97,7 @@ export interface BlobbiDanceGameProps {
   readonly onFinish: (result: ArcadeGameResult) => void;
   /** The run cannot continue. Never called with a result. */
   readonly onAbort: (reason: ArcadeAbortReason) => void;
-  /** The run should freeze — the window lost focus. Recoverable. */
+  /** The run should freeze, the window lost focus. Recoverable. */
   readonly onPause: () => void;
   /**
    * The audio engine for THIS run, already built.
@@ -177,7 +177,7 @@ export function BlobbiDanceGame({
    * pixels.
    *
    * Measured to the receptors' CENTRE rather than to the field's bottom edge.
-   * Using the field height — as this did before the polish pass — put a note's
+   * Using the field height, as this did before the polish pass, put a note's
    * top edge on the field's bottom edge at the moment it was due, which is a
    * receptor's height BELOW the receptor: notes were judged after they had
    * visually left the lane, and no note ever met the ring it was supposed to
@@ -216,7 +216,7 @@ export function BlobbiDanceGame({
   /**
    * Measure the note travel distance.
    *
-   * Runs on mount, on resize and when the phase changes — never inside the frame
+   * Runs on mount, on resize and when the phase changes; never inside the frame
    * loop. Reading layout sixty times a second is the classic way to make a
    * smooth game stutter; reading it when the box actually changes costs nothing.
    */
@@ -240,12 +240,12 @@ export function BlobbiDanceGame({
     // `resize` covers what actually changes this box: a window resize, and a
     // mobile browser collapsing its URL bar (the shell is sized in `dvh`, so
     // that moves the field too). `orientationchange` is belt and braces for the
-    // older mobile browsers that fire it before — or instead of — a resize.
+    // older mobile browsers that fire it before, or instead of, a resize.
     //
     // A `ResizeObserver` was considered and rejected: it would have to be
     // stubbed in every test environment, and the geometry here cannot change
     // without one of these two events. Nothing inside the game resizes the
-    // field — the combo emphasis is a `ring` (a box-shadow, so no layout), the
+    // field: the combo emphasis is a `ring` (a box-shadow, so no layout), the
     // countdown is absolutely positioned, and every row has an explicit
     // line-height, so even a late webfont swap leaves the box alone.
     window.addEventListener('resize', measureField);
@@ -260,7 +260,7 @@ export function BlobbiDanceGame({
   const restartAnimation = useCallback((element: HTMLElement | null, className: string) => {
     if (!element || reducedMotionRef.current) return;
     element.classList.remove(className);
-    // One forced reflow per hit — a handful a second, never per frame — which is
+    // One forced reflow per hit, a handful a second, never per frame, which is
     // the only way to restart a CSS animation that is already running.
     void element.offsetWidth;
     element.classList.add(className);
@@ -276,7 +276,7 @@ export function BlobbiDanceGame({
         element.textContent = '';
         element.className = JUDGMENT_READOUT_CLASS;
         // Reset first, then reflow, so the pop replays even for two Perfects in
-        // a row — otherwise an identical class list is a no-op to the browser.
+        // a row: otherwise an identical class list is a no-op to the browser.
         if (!reducedMotionRef.current) void element.offsetWidth;
         element.textContent =
           judgment === 'perfect'
@@ -310,7 +310,7 @@ export function BlobbiDanceGame({
    * Unmounting must leave nothing running.
    *
    * Stopping is this component's job because it knows the run is over; DISPOSING
-   * is the controller's, because the controller built the engine. Both happen —
+   * is the controller's, because the controller built the engine. Both happen,
    * the frame loop is cancelled here, and the controller releases the context.
    */
   useEffect(() => {
@@ -459,7 +459,7 @@ export function BlobbiDanceGame({
         if (comboScaleRef.current) {
           comboScaleRef.current.className = cn(COMBO_SCALE_CLASS, tier.className);
         }
-        // Bump only when the tier changes — a bump on every hit would restart a
+        // Bump only when the tier changes, a bump on every hit would restart a
         // CSS animation eight times a second for no added meaning.
         if (previous && tier.min > 0) restartAnimation(comboBumpRef.current, 'dance-combo-bump');
 
@@ -550,13 +550,13 @@ export function BlobbiDanceGame({
    * A hidden tab is unrecoverable: `requestAnimationFrame` is throttled to a
    * stop while `AudioContext.currentTime` keeps advancing, so the run silently
    * accumulates misses the player never had a chance to answer. Aborting is the
-   * safe outcome, and it has a decisive advantage — an aborted run has no
+   * safe outcome, and it has a decisive advantage, an aborted run has no
    * result, so it cannot be claimed, rewarded, or argued about.
    *
    * A blurred-but-visible tab is a different thing entirely: the notes are still
    * on screen and the music is still playing. Ending a sixty-eight second run
    * because someone clicked a devtools panel is hostile, and pausing costs
-   * nothing — the engine re-anchors to the current audio time on resume rather
+   * nothing: the engine re-anchors to the current audio time on resume rather
    * than trusting the clock to have frozen.
    */
   useArcadeInterruption({
@@ -638,13 +638,13 @@ export function BlobbiDanceGame({
             The HUD, and only what a player uses mid-song: how well it is going
             (score), how well it is going RIGHT NOW (combo), and how much is left
             (the progress bar under the marquee). Accuracy, offsets, ghost inputs and
-            note counts are all computed — and all deliberately kept off this screen
+            note counts are all computed, and all deliberately kept off this screen
             until the results, where there is time to read them.
           */}
           {/*
             Three columns, so the combo stays optically centred over the lanes
             whatever the score's digit count. The difficulty is deliberately NOT
-            repeated here — it is already on the marquee, and a HUD that restates
+            repeated here: it is already on the marquee, and a HUD that restates
             what is two centimetres above it is clutter competing with the notes.
           */}
           <div className="grid shrink-0 grid-cols-3 items-center px-0.5">
@@ -655,7 +655,7 @@ export function BlobbiDanceGame({
 
             {/*
               A FIXED box. The combo grows by scaling its contents, never by taking
-              more room — a counter that reflows the HUD would move the playfield
+              more room: a counter that reflows the HUD would move the playfield
               under the player's hands at the exact moment they are doing well.
             */}
             <div
@@ -712,7 +712,7 @@ export function BlobbiDanceGame({
               no animation) still reads it in the same place.
 
               It is drawn BEFORE the notes deliberately. Both live in the same
-              stacking context, so DOM order decides who paints on top — and a
+              stacking context, so DOM order decides who paints on top, and a
               420 ms word must not cover the thing the player is aiming at. The
               word is several times the size of a note and stays perfectly
               legible with one falling across it; a note hidden behind it is a
@@ -759,7 +759,7 @@ export function BlobbiDanceGame({
               );
             })}
 
-            {/* Receptors — the judgement line's four targets. */}
+            {/* Receptors: the judgement line's four targets. */}
             <div
               ref={receptorRowRef}
               className="absolute bottom-2 left-0 right-0 grid grid-cols-4 sm:bottom-3"
@@ -773,7 +773,7 @@ export function BlobbiDanceGame({
                 than being offset from the field's bottom edge. An offset has to
                 be re-derived every time a receptor's size or the row's padding
                 changes, and it was already wrong by half a receptor at the
-                smallest size — drawing the line above the targets it is supposed
+                smallest size: drawing the line above the targets it is supposed
                 to run through. Centring it on the row is correct at every size
                 by construction, and it is the same line the notes are animated
                 to (`travelRef` measures to this row's centre too).
@@ -801,7 +801,7 @@ export function BlobbiDanceGame({
                         changes, and that is not a stylistic choice.
 
                         Holding a lane changes `activeLanes`, which re-renders
-                        the receptor above — and a React re-render rewrites
+                        the receptor above: and a React re-render rewrites
                         `className` from props, wiping any class the frame loop
                         had just added to it. React has no opinion about THIS
                         element, so the one class the loop toggles survives the
@@ -863,7 +863,7 @@ export function BlobbiDanceGame({
           </div>
 
           {/*
-            Touch controls — always rendered, so a tablet with a keyboard has both.
+            Touch controls: always rendered, so a tablet with a keyboard has both.
 
             Each button sits directly under the lane it fires, which is what makes
             the lane-to-button relationship readable without a legend. The arrow is

@@ -2,7 +2,7 @@
  * Coverage for the extracted world-click cancellation rule.
  *
  * This was inline in `InteractiveElements` and is now shared, because the arcade
- * owns its own `usePendingInteraction` instance and must behave identically —
+ * owns its own `usePendingInteraction` instance and must behave identically,
  * "the player chose somewhere else, so abandon the pending walk" is a rule of the
  * world, not of one room.
  *
@@ -56,7 +56,7 @@ describe('cancelling on a world click', () => {
   });
 
   it('does NOT cancel when the tap lands on an interactive element', () => {
-    // Those manage their own pending lifecycle — cancelling here would kill the
+    // Those manage their own pending lifecycle, cancelling here would kill the
     // walk the very same tap just requested.
     const cancel = vi.fn();
     const { container } = render(<Harness cancel={cancel} hasPending={() => true} />);

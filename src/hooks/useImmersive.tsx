@@ -1,7 +1,7 @@
 import * as React from "react";
 
 /**
- * useImmersive — decides whether the game should render in near-fullscreen
+ * useImmersive: decides whether the game should render in near-fullscreen
  * "immersive" mode (real phones / tablets) vs the cozy centered "framed" mode
  * (desktops & laptops).
  *
@@ -11,8 +11,8 @@ import * as React from "react";
  *   desktop browser window narrower than 768px would wrongly become immersive.
  *
  * Heuristic (user-agent-safe, feature based):
- *   A device is treated as immersive when it is a touch-first device — i.e. the
- *   primary pointer is coarse AND the device cannot hover (no mouse) — AND the
+ *   A device is treated as immersive when it is a touch-first device; i.e. the
+ *   primary pointer is coarse AND the device cannot hover (no mouse): AND the
  *   shorter side of the viewport is small enough to be a handheld (height in
  *   landscape, or width in portrait). Desktops/laptops have a fine pointer
  *   and/or hover capability, so they stay framed even in small windows.
@@ -24,7 +24,7 @@ import * as React from "react";
  * `useReducedMotion` has always done this; this hook did not, and the
  * difference was load-bearing. `window.matchMedia` is missing in some
  * environments and can be replaced by something non-conforming in others (a
- * mock whose implementation has been reset, most obviously) — and reading
+ * mock whose implementation has been reset, most obviously): and reading
  * `.matches` off `undefined` throws during render, which unmounts whatever tree
  * asked. Here that tree is the whole arcade room, over a question whose safe
  * answer is simply `false`: a device we cannot interrogate is treated as a
@@ -46,7 +46,7 @@ function computeImmersive(): boolean {
   const noHover = prefers("(hover: none)");
   const touchFirst = coarse && noHover;
 
-  // The "short side" of the viewport — height in landscape, width in portrait.
+  // The "short side" of the viewport, height in landscape, width in portrait.
   const shortSide = Math.min(window.innerWidth, window.innerHeight);
 
   // Phones/small tablets in landscape rarely exceed ~600px on the short side.

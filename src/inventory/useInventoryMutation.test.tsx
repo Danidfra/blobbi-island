@@ -197,7 +197,7 @@ describe('useInventoryMutation', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.isSuccess).toBe(false);
 
-    // The optimistic +2 is rolled back — the cache does not retain an
+    // The optimistic +2 is rolled back, the cache does not retain an
     // unconfirmed write as though it landed (the settled-state invalidation
     // then reconciles with whatever the relay actually holds).
     await waitFor(() => {

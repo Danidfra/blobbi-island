@@ -1,10 +1,10 @@
 /**
- * Beach Treasure Hunt — the detector signal, as pure math.
+ * Beach Treasure Hunt, the detector signal, as pure math.
  *
  * The signal is everything the UI and audio layer are allowed to know about
  * the buried field: an intensity, the distance to the nearest in-range
  * unresolved target, and how many targets are contributing. Coordinates are
- * never returned — the beep IS the information, exactly like a real detector.
+ * never returned: the beep IS the information, exactly like a real detector.
  *
  * ## The response curve
  *
@@ -18,7 +18,7 @@
  * ```
  *
  * `k = signalCurveExponent > 1` makes the last stretch toward the target
- * steeper than the first — the "getting warmer" feel.
+ * steeper than the first, the "getting warmer" feel.
  *
  * ## Overlap rule: strongest wins
  *
@@ -59,7 +59,7 @@ export function signalStrengthForDistance(
 /**
  * Evaluate the detector at a coil position against the unresolved targets.
  *
- * Found targets are ignored entirely. A non-finite coil position throws — the
+ * Found targets are ignored entirely. A non-finite coil position throws, the
  * reducer rejects such moves before they get here, so reaching this error
  * means a caller bypassed the state machine.
  */

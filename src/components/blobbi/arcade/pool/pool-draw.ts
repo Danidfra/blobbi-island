@@ -1,5 +1,5 @@
 /**
- * Pool — everything that puts pixels on the canvas.
+ * Pool: everything that puts pixels on the canvas.
  *
  * Presentation only. It reads a {@link PoolMatchState} and draws it; it never
  * changes one, never decides anything, and never talks to React. That split is
@@ -12,8 +12,8 @@
  * needs. Drawing that with DOM elements would mean a node per ripple, created
  * and destroyed several times a second, and a layout pass every frame.
  *
- * The accessible content — whose turn it is, which group each side is on, how
- * many balls are left, the foul message, the result — is real DOM AROUND the
+ * The accessible content, whose turn it is, which group each side is on, how
+ * many balls are left, the foul message, the result, is real DOM AROUND the
  * canvas, so nothing a player needs to READ lives inside the picture. The canvas
  * itself is `aria-hidden`.
  *
@@ -29,7 +29,7 @@
  * | phone held upright, expanded | ~390 × 700, tall | portrait |
  * | phone held sideways, expanded | ~740 × 350, wide | landscape |
  *
- * A 2:1 table fitted landscape into an upright phone is 390 × 195 — a quarter of
+ * A 2:1 table fitted landscape into an upright phone is 390 × 195, a quarter of
  * the screen, with the balls too small to tell apart. Turned a quarter, it is
  * 350 × 700, which is nearly four times the playfield.
  *
@@ -43,7 +43,7 @@
  * ```
  *
  * Both matrices are proper rotations (determinant +1), never mirrors, so a
- * rebound on screen is always the rebound the simulation computed — and a shot
+ * rebound on screen is always the rebound the simulation computed, and a shot
  * aimed at a pocket goes to that pocket in both layouts. That is the whole
  * reason the simulation was kept in abstract table units.
  *
@@ -150,7 +150,7 @@ export const BALL_COLOURS: Readonly<Record<number, string>> = Object.freeze({
  * The wooden frame around the whole table, in table units.
  *
  * Deep enough to contain the cushions ({@link CUSHION_DEPTH}) and the deepest
- * pocket well — a corner's, whose radius is {@link CORNER_MOUTH}. Derived rather
+ * pocket well: a corner's, whose radius is {@link CORNER_MOUTH}. Derived rather
  * than typed in, because a change to either would otherwise clip a pocket at the
  * edge of the canvas.
  */
@@ -172,7 +172,7 @@ export const RIPPLE_LIFE_S = 0.4;
 export type PoolOrientation = 'landscape' | 'portrait';
 
 export interface PoolTransform {
-  /** CSS pixels per table unit. Uniform — the table never stretches. */
+  /** CSS pixels per table unit. Uniform, the table never stretches. */
   readonly scale: number;
   /** Where table unit `(0, 0)` lands, in CSS pixels. Includes the rail inset. */
   readonly offsetX: number;
@@ -205,7 +205,7 @@ export function tableOuterSize(orientation: PoolOrientation): {
  *
  * Measured, never guessed from a user agent: a wide box gets the long axis
  * across it, a tall box gets the long axis down it. This is what makes a phone
- * rotate correctly — the container changes shape and the answer changes with it.
+ * rotate correctly: the container changes shape and the answer changes with it.
  * A square box is a tie, and landscape wins it because the HUD reads
  * left-to-right.
  */
@@ -215,7 +215,7 @@ export function autoOrientation(widthPx: number, heightPx: number): PoolOrientat
 }
 
 /**
- * Fit the table — rails included — into a box, preserving its aspect ratio.
+ * Fit the table, rails included, into a box, preserving its aspect ratio.
  *
  * Uniform scale and a letterbox rather than a stretch, because a stretched table
  * would mean a pointer position that does not map back to a table unit the
@@ -241,7 +241,7 @@ export function fitTable(
  * Map a point in CSS pixels (relative to the canvas box) to table units.
  *
  * The one place pointer input crosses into the simulation's coordinate system,
- * and the exact inverse of {@link applyTableTransform} — layout included.
+ * and the exact inverse of {@link applyTableTransform}, layout included.
  * Because both directions read the same `orientation` off the same object, a
  * resize, a device rotation or a manual layout switch cannot desynchronise where
  * the player points from where the cue aims: there is no second copy of the
@@ -310,7 +310,7 @@ export function screenDownInSim(orientation: PoolOrientation): Vec2 {
  * How much to rotate text so it reads upright on screen.
  *
  * A ball number drawn under the portrait transform would run up the side of the
- * screen. Counter-rotating by a quarter turn puts it back the right way round —
+ * screen. Counter-rotating by a quarter turn puts it back the right way round,
  * which matters, because the number is how a player tells the 3 from the 11.
  */
 export function textRotationFor(orientation: PoolOrientation): number {
@@ -345,8 +345,8 @@ function roundedRect(
  *
  * ## Drawn from the physics, not alongside it
  *
- * Every cushion here is a polygon out of {@link POOL_CUSHIONS} — literally the
- * same vertex list Planck's static bodies are built from — and every pocket is
+ * Every cushion here is a polygon out of {@link POOL_CUSHIONS}, literally the
+ * same vertex list Planck's static bodies are built from, and every pocket is
  * the gap between two of them. There is no separate "pocket radius" any more,
  * because there is nothing to tune: the hole on screen IS the hole in the table.
  *
@@ -406,7 +406,7 @@ function drawFrame(ctx: CanvasRenderingContext2D): void {
   ctx.stroke();
 }
 
-/** The head string and the two spots. Faint — they orient, they do not decorate. */
+/** The head string and the two spots. Faint; they orient, they do not decorate. */
 function drawMarkings(ctx: CanvasRenderingContext2D): void {
   ctx.save();
   ctx.strokeStyle = POOL_PALETTE.marking;
@@ -434,8 +434,8 @@ const normaliseAngle = (a: number) => ((a % TAU) + TAU) % TAU;
  * The six pocket wells: for each, the part of a circle that lies BEYOND its
  * mouth chord.
  *
- * The circle is centred on the pocket and has {@link PoolPocket.wellRadius} — the
- * distance to its own cushion noses — so it reaches exactly to the ends of the
+ * The circle is centred on the pocket and has {@link PoolPocket.wellRadius}, the
+ * distance to its own cushion noses, so it reaches exactly to the ends of the
  * opening. Keeping only the far side of the chord is what makes this honest:
  *
  *  - it fills the whole corner, the way a hole cut into the slate does, instead
@@ -453,7 +453,7 @@ function drawPocketWells(ctx: CanvasRenderingContext2D): void {
     const angleA = Math.atan2(mouthA.y - centre.y, mouthA.x - centre.x);
     const angleB = Math.atan2(mouthB.y - centre.y, mouthB.x - centre.x);
     const angleOut = Math.atan2(outward.y, outward.x);
-    // Sweep the way that passes through the OUTWARD direction — the long way
+    // Sweep the way that passes through the OUTWARD direction, the long way
     // round at a corner, the short way at a side pocket.
     const clockwiseSpan = normaliseAngle(angleB - angleA);
     const clockwiseHasOut = normaliseAngle(angleOut - angleA) <= clockwiseSpan;
@@ -493,7 +493,7 @@ function drawCushions(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = POOL_PALETTE.cushion;
     ctx.fill();
 
-    // A thin bright line along the NOSE only — the edge a ball actually meets.
+    // A thin bright line along the NOSE only, the edge a ball actually meets.
     ctx.strokeStyle = POOL_PALETTE.cushionNose;
     ctx.lineWidth = 0.8;
     ctx.beginPath();
@@ -509,7 +509,7 @@ function drawCushions(ctx: CanvasRenderingContext2D): void {
 /**
  * One ball: shadow, body, stripe, highlight, number.
  *
- * The number is drawn only when it would be legible — below about seven screen
+ * The number is drawn only when it would be legible, below about seven screen
  * pixels of radius it becomes a smudge that makes the ball look dirty rather
  * than numbered. The colour and the stripe still tell the player everything the
  * rules need; the number is the detail on top.
@@ -553,7 +553,7 @@ export function drawBall(
     ctx.restore();
   }
 
-  // A soft top-left highlight — the one thing that stops a flat disc reading as
+  // A soft top-left highlight, the one thing that stops a flat disc reading as
   // a sticker instead of a sphere.
   const shine = ctx.createRadialGradient(
     -BALL_RADIUS * 0.34,
@@ -601,7 +601,7 @@ export function drawBall(
  *
  * The single most useful thing on the table for a new player, and the reason
  * "am I solids or stripes?" never has to be answered by squinting. It is a
- * reinforcement, not the only signal — the HUD says it in words too.
+ * reinforcement, not the only signal, the HUD says it in words too.
  */
 export function drawTargetRings(
   ctx: CanvasRenderingContext2D,
@@ -701,8 +701,8 @@ export function drawCue(ctx: CanvasRenderingContext2D, cue: Vec2, aim: AimState)
  *  - a ghost ball at the point of contact;
  *  - a short arrow showing which way the struck ball would set off.
  *
- * The third is exact rather than approximate — the collision carries no spin, so
- * the object ball genuinely leaves along the line of centres — and it is the one
+ * The third is exact rather than approximate, the collision carries no spin, so
+ * the object ball genuinely leaves along the line of centres, and it is the one
  * piece of information that turns aiming from guesswork into a skill.
  *
  * What it deliberately does NOT show: how far the object ball travels, whether
@@ -768,7 +768,7 @@ export function drawAimGuide(
 /**
  * The cue ball during ball-in-hand: a dashed halo, red where it may not go.
  *
- * Colour is the reinforcement here rather than the signal — the confirm button
+ * Colour is the reinforcement here rather than the signal, the confirm button
  * beside the table carries the words, and an illegal placement is snapped to a
  * legal one on confirm anyway, so nobody can be stuck.
  */

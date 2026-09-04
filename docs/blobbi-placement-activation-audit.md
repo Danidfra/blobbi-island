@@ -1,4 +1,4 @@
-# Blobbi Island — Placement & Effect-Activation Audit (Phase 9, pre-implementation)
+# Blobbi Island: Placement & Effect-Activation Audit (Phase 9, pre-implementation)
 
 Date: 2026-07-31 · Branch `production` · Baseline commit `627ced2`
 (`polish(blobbi): final visual-polish pass for the twelve effects`).
@@ -11,7 +11,7 @@ disagree, the code below is what Phase 9 builds on.
 
 ## 1. What already exists
 
-### kind:31634 — FULLY IMPLEMENTED, and already the only wearable path
+### kind:31634: FULLY IMPLEMENTED, and already the only wearable path
 
 The placement kind is **fully implemented** and has been the production
 equipment path since commits `06f2c02` (equipment service) and `67df788`
@@ -22,12 +22,12 @@ parallel legacy path to avoid.
 |---|---|---|
 | Parsing / building / validation / addressing / slot mutations | `@nostr-games/inventory@0.3.0` (`KIND_GAME_ITEM_PLACEMENT`, `parseGameItemPlacementResult`, `buildGameItemPlacementEvent`, `setEquippedPlacementForSlot`, `removeEquippedPlacementFromSlot`, `toBuildGameItemPlacementInput`, `compareGameItemPlacementRevisions`) | external package |
 | Import surface | `src/inventory/package.ts` (single audited re-export) | Island |
-| Document identity | `src/placement/identity.ts` — `d = blobbi-island:character:<characterId>:equipment`, `target = {type:'address', address:'31124:<owner>:<characterId>'}` | Island |
-| Read model | `src/placement/usePlacementState.ts` — newest-valid-event selection, honest `isEmpty`, canonical query key `['blobbi-placement-31634', owner, characterId]` | Island |
-| Write model | `src/placement/useEquipmentMutation.ts` — per-document serialization, fresh relay read before every write, complete-replacement publish, revision increment, optimistic cache update, rollback, invalidation | Island |
-| Authorization policy | `src/placement/policy.ts` — author → mode → slot → issuer → definition → ownership → form gates; last-wins slot conflicts | Island |
-| Render translation | `src/placement/render-model.ts` — 2D-percent reference, defaults, unsupported-transform refusal | Island |
-| Join hook | `src/placement/useCharacterEquipment.ts` — 31634 ∩ 31633 ∩ 31632 → `AccessoryPlacementInput[]` + `hidden[]` diagnostics | Island |
+| Document identity | `src/placement/identity.ts`: `d = blobbi-island:character:<characterId>:equipment`, `target = {type:'address', address:'31124:<owner>:<characterId>'}` | Island |
+| Read model | `src/placement/usePlacementState.ts`: newest-valid-event selection, honest `isEmpty`, canonical query key `['blobbi-placement-31634', owner, characterId]` | Island |
+| Write model | `src/placement/useEquipmentMutation.ts`: per-document serialization, fresh relay read before every write, complete-replacement publish, revision increment, optimistic cache update, rollback, invalidation | Island |
+| Authorization policy | `src/placement/policy.ts`: author → mode → slot → issuer → definition → ownership → form gates; last-wins slot conflicts | Island |
+| Render translation | `src/placement/render-model.ts`: 2D-percent reference, defaults, unsupported-transform refusal | Island |
+| Join hook | `src/placement/useCharacterEquipment.ts`: 31634 ∩ 31633 ∩ 31632 → `AccessoryPlacementInput[]` + `hidden[]` diagnostics | Island |
 | App distribution | `CharacterEquipmentProvider` (app root) → `useCharacterEquipmentContext` → `CurrentBlobbiDisplay` | Island |
 
 **Protocol code ownership**: the event format belongs to
@@ -48,9 +48,9 @@ The document's `target` re-asserts the Blobbi's 31124 address on every write.
 ### Effects renderer (Phase 8, accepted baseline)
 
 `@blobbi/react` implements the twelve effects and exports the full vocabulary
-needed by this phase — `BLOBBI_VISUAL_EFFECT_IDS`, `BlobbiVisualEffect`,
+needed by this phase, `BLOBBI_VISUAL_EFFECT_IDS`, `BlobbiVisualEffect`,
 `EFFECT_SLOTS` (id → slot), `EFFECT_SLOT_ORDER`
-(`aura, ground-local, ambient-particles, body-overlay` — the canonical order;
+(`aura, ground-local, ambient-particles, body-overlay`: the canonical order;
 Phase 9 must NOT invent a second one), `normalizeBlobbiVisualEffects`
 (dedupe, one-per-slot, canonical ordering), and
 `BlobbiRendererView`'s `effects?: readonly BlobbiVisualEffect[]` prop.
@@ -65,7 +65,7 @@ The renderer is protocol-agnostic and must remain so.
 placement, no production render path. Phase 9 activates it.
 
 The `d` values and rarities in that table match the sixteen published events
-supplied with this phase **exactly** (verified against the signed events — all
+supplied with this phase **exactly** (verified against the signed events; all
 sixteen signatures and ids verify against the official issuer pubkey
 `9efb8d3…63a9`).
 
@@ -98,9 +98,9 @@ This is the natural home for the effect-management surface.
 
 ### Dev tooling
 
-- `/dev/equipment` — real-service equipment inspector (publishes real events
+- `/dev/equipment`: real-service equipment inspector (publishes real events
   through the logged-in signer; it is not a simulator).
-- `/dev/blobbi-effects` — pure renderer harness (no login, no relay, no
+- `/dev/blobbi-effects`: pure renderer harness (no login, no relay, no
   queries); displays the trusted registry as reference data.
 - Both are `import.meta.env.DEV`-gated; `src/dev-routes.test.ts` asserts
   production builds exclude them.
@@ -110,7 +110,7 @@ This is the natural home for the effect-management surface.
 **Nothing on the equipment path.** The kind:31124 `equip`-tag and kind:11125
 `inv`-tag systems were deleted in `67df788`, and
 `src/legacy-accessory-removal.test.ts` guards against reintroduction at the
-source level. Wearables already flow exclusively through 31634 — so there is
+source level. Wearables already flow exclusively through 31634, so there is
 **no legacy migration question for this phase**: accessories and effects will
 share the same kind:31634 document from the start, and no implicit migration
 happens because none is needed.

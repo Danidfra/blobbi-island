@@ -22,11 +22,11 @@ interface TheaterMediaInputProps {
  * The theater has an OPEN catalog: a normal watch URL, a `youtu.be` link, an
  * embed/shorts URL, or the bare 11-character id all work, and the id is
  * extracted here. Anything else is rejected with a specific sentence *before* a
- * player is constructed — a malformed input should never become a mysterious
+ * player is constructed, a malformed input should never become a mysterious
  * embed failure.
  *
- * Failures that CANNOT be detected here — private, deleted, embedding disabled,
- * region blocked — are only knowable by attempting the embed, and are reported
+ * Failures that CANNOT be detected here, private, deleted, embedding disabled,
+ * region blocked: are only knowable by attempting the embed, and are reported
  * by the control card once the player answers.
  */
 export function TheaterMediaInput({ onLoad, disabled = false, onCancel, autoFocus }: TheaterMediaInputProps) {

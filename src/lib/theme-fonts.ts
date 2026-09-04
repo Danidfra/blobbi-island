@@ -1,14 +1,14 @@
 /**
- * Blobbi Island — the curated font registry, mirrored from Ditto.
+ * Blobbi Island: the curated font registry, mirrored from Ditto.
  *
  * ## The bug this exists to fix
  *
  * A theme's font arrived in Island, was parsed correctly, produced a correct
- * CSS variable — and changed nothing on screen. The reason is one line in
+ * CSS variable: and changed nothing on screen. The reason is one line in
  * Ditto's `FontPicker`:
  *
  * ```ts
- * applyFont({ family });   // handleSelect — no `url`
+ * applyFont({ family });   // handleSelect; no `url`
  * ```
  *
  * Ditto's twenty-five curated fonts are **bundled** in its own build. When a
@@ -17,8 +17,8 @@
  * when the theme is PUBLISHED, where `resolveFontUrl` substitutes the fontsource
  * CDN link so other clients have something to fetch.
  *
- * The catch is that Ditto's own encrypted settings (kind:30078) — the channel
- * Island prefers, because it is the one Ditto renders from — hold the
+ * The catch is that Ditto's own encrypted settings (kind:30078): the channel
+ * Island prefers, because it is the one Ditto renders from, hold the
  * *unpublished* value. So Island received `{ family: 'Playfair Display' }` with
  * no URL, correctly declined to invent one, wrote
  * `--island-font-body: "Playfair Display", Comfortaa, …`, and the browser fell
@@ -29,7 +29,7 @@
  *
  * The same thing `resolveFontUrl` does, from the other side: given a family
  * Ditto curates, produce the fontsource CDN URL for it. Island does not bundle
- * these fonts — it has its own type — so it fetches the exact file Ditto would
+ * these fonts: it has its own type, so it fetches the exact file Ditto would
  * have published.
  *
  * ## Why a hardcoded table and not a URL built from the family name
@@ -41,7 +41,7 @@
  * list. The table is transcribed from `src/lib/fonts.ts` in the Ditto repo and
  * is asserted against those exact URLs by `theme-fonts.test.ts`.
  *
- * A family that is NOT in this table is not rejected — it simply needs to carry
+ * A family that is NOT in this table is not rejected; it simply needs to carry
  * its own URL, which is what a self-hosted or uploaded font does.
  */
 
@@ -106,8 +106,8 @@ export function findCuratedFont(family: string | undefined): CuratedFont | undef
 /**
  * The URL to fetch a family from, preferring the theme's own.
  *
- * Ditto's `resolveFontUrl` does the reverse precedence — it OVERRIDES a stored
- * URL with the CDN one when publishing — because it is normalising its own
+ * Ditto's `resolveFontUrl` does the reverse precedence; it OVERRIDES a stored
+ * URL with the CDN one when publishing, because it is normalising its own
  * output. Island is consuming somebody else's, so an explicit URL is the
  * author's deliberate choice (a self-hosted file, a Blossom upload) and wins.
  * The registry is the fallback for the case that broke: a curated family with

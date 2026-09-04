@@ -1,12 +1,12 @@
 /**
- * Blobbi Island — LOCAL coin economy for the shop.
+ * Blobbi Island: LOCAL coin economy for the shop.
  *
  * ## Why prices live here and not in the protocol registry
  *
  * A coin price is not a protocol fact. It is not part of the kind:31632
  * definition, it is never read from a relay, it changes on a different clock
  * from the definition (balancing, promotions, per-shop variation), and a second
- * currency — arcade tickets in the prize shop — will need its own price domain
+ * currency: arcade tickets in the prize shop, will need its own price domain
  * rather than a second field bolted onto the item definition. So the price table
  * is a **distinct domain with its own source**, deliberately.
  *
@@ -25,7 +25,7 @@
  *
  * ## Identity
  *
- * The table is keyed by the kind:31632 `d` — protocol identity — not by the
+ * The table is keyed by the kind:31632 `d`: protocol identity, not by the
  * legacy `itemId`. Addresses are derived from the canonical registry.
  *
  * ## Missing prices are `null`, never `0`
@@ -33,7 +33,7 @@
  * An item with no entry is NOT FOR SALE. `priceForAddress` returns `null`, which
  * is what makes `normalizePurchaseLines` reject it ("Item is not for sale"). An
  * earlier shape defaulted to `0`, which would have made any unpriced official
- * item — the Arcade Ticket, for one — purchasable for free.
+ * item: the Arcade Ticket, for one, purchasable for free.
  */
 
 import {
@@ -86,8 +86,8 @@ export const COIN_PRICES: readonly CoinPriceEntry[] = [
   // Energy
   { d: 'blobbi:energy:drink', coins: 30 },
   //
-  // NOT PRICED — deliberately:
-  //   blobbi:currency:arcade-ticket — earned in the arcade, never bought with
+  // NOT PRICED: deliberately:
+  //   blobbi:currency:arcade-ticket: earned in the arcade, never bought with
   //   coins. Rule 3 below makes pricing it a hard error rather than a review
   //   catch.
 ];
@@ -184,7 +184,7 @@ const PRICE_BY_ADDRESS = new Map(
 );
 
 /**
- * The WEARABLE coin price list — a second price domain, deliberately separate.
+ * The WEARABLE coin price list, a second price domain, deliberately separate.
  *
  * {@link COIN_PRICES} refuses to price anything that is not a consumable, and
  * that rule is load-bearing rather than incidental: it is what stops the Arcade
@@ -199,12 +199,12 @@ const PRICE_BY_ADDRESS = new Map(
  *   Block Builder Cap      200 Arcade Tickets   (Prize Counter)
  *   Stargazer Glasses      500 Arcade Tickets   (Prize Counter)
  *   Starlight Bow Tie      900 Arcade Tickets   (Prize Counter)
- *   Celestial Seraph Necklace  — reserved for a future special acquisition
+ *   Celestial Seraph Necklace, reserved for a future special acquisition
  *                                path, deliberately NOT in the Arcade
  *                                (`official-prize-catalog.ts`)
  *
  * Putting a Coin price on any of the first three would let a player buy past
- * the ticket ladder that the Prize Counter exists to create — an Arcade economy
+ * the ticket ladder that the Prize Counter exists to create, an Arcade economy
  * change, not a Clothing Store one. Putting a price on the fourth would decide
  * the "future special acquisition path" its own definition reserves. Neither is
  * this workstream's call to make, and neither is recoverable by a code review,
@@ -304,7 +304,7 @@ export function priceForItemId(itemId: string): number | null {
 /**
  * Look up a price by canonical address. `null` when the item is not for sale.
  *
- * THE pricing boundary — `useBatchPurchase` resolves every charge through this
+ * THE pricing boundary, `useBatchPurchase` resolves every charge through this
  * one function, so both price domains have to answer here or a wearable could
  * not be bought through the shared purchase path at all. Consulting both keeps
  * ONE boundary rather than growing a second purchase flow beside it; the two

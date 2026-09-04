@@ -1,9 +1,9 @@
 /**
- * Pool — the opponent, as a shot planner.
+ * Pool: the opponent, as a shot planner.
  *
  * **One decision per turn, made once.** The planner is called exactly once when
- * the opponent's turn begins; it returns a {@link PoolShotPlan} — an angle, a
- * power, and optionally where to put the cue ball — which the match state
+ * the opponent's turn begins; it returns a {@link PoolShotPlan}, an angle, a
+ * power, and optionally where to put the cue ball, which the match state
  * machine then plays through the *same* shot path a human's drag produces. The
  * opponent cannot move a ball, cannot exceed the player's power, cannot re-aim
  * once it has committed, and is judged by the same {@link resolveShot} the
@@ -16,7 +16,7 @@
  *
  * A geometric search, not a simulation and not a dice roll:
  *
- *  1. **Legal targets.** Whatever the rules say it may strike first — its own
+ *  1. **Legal targets.** Whatever the rules say it may strike first; its own
  *     group, anything but the 8 on an open table, or the 8 alone once its group
  *     is gone.
  *  2. **Every target against every pocket.** Ninety pairs at most.
@@ -46,7 +46,7 @@
  * ## Randomness
  *
  * Every random number comes from the caller's seeded generator, drawn only while
- * planning — never per frame and never during a React render. The same seed and
+ * planning: never per frame and never during a React render. The same seed and
  * the same table produce the same plan, which is what makes `ai.test.ts` able to
  * assert anything at all.
  */
@@ -85,7 +85,7 @@ export interface PoolAiProfile {
    * Half-width of the aim error applied to the chosen shot, in radians.
    *
    * The single most important knob. At 0.05 rad the opponent is about 2.9° out,
-   * which over a 60-unit pot is roughly half a ball — a miss on anything long
+   * which over a 60-unit pot is roughly half a ball, a miss on anything long
    * and a pot on anything close, which is exactly how a casual player plays.
    */
   readonly aimErrorRad: number;
@@ -94,7 +94,7 @@ export interface PoolAiProfile {
   /**
    * The thinnest cut it will attempt, as the cosine of the cut angle.
    *
-   * 0.2 is a 78° cut — near the limit of what is possible at all. 0.45 is 63°,
+   * 0.2 is a 78° cut, near the limit of what is possible at all. 0.45 is 63°,
    * which is the sort of cut a beginner does not see.
    */
   readonly minCutCos: number;
@@ -170,9 +170,9 @@ export interface PoolShotPlan {
   /**
    * What sort of shot this is.
    *
-   * - `pot` — a pocket was found and this shot is aimed at it.
-   * - `break` — the opening shot. Not a search; see {@link PlanPoolShotInput.isBreak}.
-   * - `safety` — nothing was potable, so hit a legal ball firmly and move on.
+   * - `pot`: a pocket was found and this shot is aimed at it.
+   * - `break`: the opening shot. Not a search; see {@link PlanPoolShotInput.isBreak}.
+   * - `safety`: nothing was potable, so hit a legal ball firmly and move on.
    */
   readonly kind: 'pot' | 'break' | 'safety';
 }
@@ -192,7 +192,7 @@ export interface PlanPoolShotInput {
    * A break is not a shot the pot search can find and must not be planned like
    * one: every ball behind the apex is blocked by the ball in front of it, so
    * the search correctly rejects all ninety pairs and falls through to a gentle
-   * legal knock — which taps the intact rack, moves nothing, and hands the table
+   * legal knock: which taps the intact rack, moves nothing, and hands the table
    * back. Two opponents doing that to each other never open the table at all.
    *
    * So the break is a separate, explicit shot: full power at the front of the
@@ -225,7 +225,7 @@ function powerForSpeed(speed: number): number {
 /**
  * How far a ray travels before it goes down a pocket, or `Infinity`.
  *
- * Uses the real pocket MOUTHS — the same segments the cushions leave, the
+ * Uses the real pocket MOUTHS, the same segments the cushions leave, the
  * physics captures against and the renderer draws. It used to test a circle
  * around each pocket centre, which was a fourth, private idea of where a pocket
  * was; the planner could therefore avoid a scratch that could not happen and
@@ -250,7 +250,7 @@ const POT_MARGIN = 20;
 /**
  * Every pot this cue position could attempt, scored.
  *
- * Pure geometry with no randomness — the noise and the error are applied by the
+ * Pure geometry with no randomness, the noise and the error are applied by the
  * caller, after the choice, so the search itself is reproducible and testable.
  */
 function candidatesFrom(
@@ -294,7 +294,7 @@ function candidatesFrom(
       if (!pathIsClear(target, pocket, balls, [CUE_BALL, targetNumber])) continue;
 
       // Power. The object ball gets roughly `cos(cut)` of the cue ball's speed
-      // at contact, and the cue ball has to reach the contact first — so the
+      // at contact, and the cue ball has to reach the contact first, so the
       // shot is built backwards from the roll the object ball needs.
       const objectSpeed = speedToTravel(potTravel + POT_MARGIN);
       const contactSpeed = objectSpeed / Math.max(0.25, cutCos);
@@ -339,8 +339,8 @@ function candidatesFrom(
  *
  * One per promising (ball, pocket) pair: sit the cue ball straight behind the
  * ghost ball, on the far side from the pocket, at a comfortable distance. That
- * is what a person does with ball-in-hand — line the easiest pot up dead
- * straight — and it needs no search of its own.
+ * is what a person does with ball-in-hand, line the easiest pot up dead
+ * straight: and it needs no search of its own.
  *
  * The list is capped by {@link PoolAiProfile.placementCandidates}, so the work
  * is bounded whatever the table looks like.
@@ -394,7 +394,7 @@ const KNOCK_FOLLOW_THROUGH = 90;
  *  2. **Move the table on.** The first version played this at whatever speed
  *     just reached the target, which is a tap. Two planners tapping at each
  *     other never dislodge anything, and a table with no pot available stays a
- *     table with no pot available — measured at five hundred consecutive
+ *     table with no pot available, measured at five hundred consecutive
  *     scoreless shots. Hitting THROUGH the ball with real pace is what turns a
  *     dead layout into a live one.
  *
@@ -425,8 +425,8 @@ function safetyPlan(
   }
 
   if (best === null) {
-    // No legal ball at all. Cannot happen while the match is live — the 8 is
-    // always there until somebody wins — but a plan must always exist.
+    // No legal ball at all. Cannot happen while the match is live, the 8 is
+    // always there until somebody wins, but a plan must always exist.
     const toCentre = normalise(TABLE_CENTER_X - cue.x, TABLE_CENTER_Y - cue.y) ?? { x: 1, y: 0 };
     return {
       angle: Math.atan2(toCentre.y, toCentre.x),
@@ -462,7 +462,7 @@ function safetyPlan(
 /**
  * The break: everything, at the front of the rack.
  *
- * Deliberately not a search. See {@link PlanPoolShotInput.isBreak} — the pot
+ * Deliberately not a search. See {@link PlanPoolShotInput.isBreak}, the pot
  * search cannot find a break, because every ball in an intact rack is screened
  * by the one in front of it, and letting it fall through to a knock produces a
  * game that never starts.
@@ -556,7 +556,7 @@ export function planPoolShot({
   }
 
   // Rank, with a little noise so the same table does not always produce the same
-  // shot — drawn from the seeded generator, so a replay still does.
+  // shot: drawn from the seeded generator, so a replay still does.
   let best = candidates[0];
   let bestScore = -Infinity;
   for (const candidate of candidates) {
@@ -585,7 +585,7 @@ export function planPoolShot({
 /**
  * A copy of the table with the cue ball moved.
  *
- * Returns a NEW array of NEW objects — the planner is handed the real match's
+ * Returns a NEW array of NEW objects, the planner is handed the real match's
  * balls and must not be able to move one. `ai.test.ts` checks that by identity.
  */
 export function ballsWithCueAt(balls: readonly PoolBall[], at: Vec2): PoolBall[] {

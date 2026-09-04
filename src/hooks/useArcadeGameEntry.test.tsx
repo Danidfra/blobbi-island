@@ -104,7 +104,7 @@ describe('starting a run costs one Token', () => {
     await act(async () => {
       await result.current.admit(BLOBBI_DANCE_GAME_ID);
     });
-    // Two runs are two Tokens — a replay is a play like any other.
+    // Two runs are two Tokens, a replay is a play like any other.
     expect(mutateInventory).toHaveBeenCalledTimes(2);
   });
 
@@ -173,7 +173,7 @@ describe('nothing is charged when a run does not start', () => {
   });
 });
 
-describe('an active Pass makes a play free — and spends one of its plays', () => {
+describe('an active Pass makes a play free, and spends one of its plays', () => {
   it('starts the run and writes nothing at all', async () => {
     grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
     const { result } = renderEntry();
@@ -295,7 +295,7 @@ describe('an active Pass makes a play free — and spends one of its plays', () 
     expect(mutateInventory).toHaveBeenCalledTimes(1);
   });
 
-  it('spends the LAST free play, then charges — one play, one Token, never both', async () => {
+  it('spends the LAST free play, then charges; one play, one Token, never both', async () => {
     grantArcadePass(PUBKEY, { redemptionId: 'r1', nowMs: NOW });
     for (let i = 0; i < ARCADE_PASS_FREE_PLAYS - 1; i += 1) {
       await consumeArcadeFreePlay(PUBKEY, NOW);

@@ -1,5 +1,5 @@
 /**
- * The review scenarios — checked for being SETUPPABLE, not for their outcome.
+ * The review scenarios, checked for being SETUPPABLE, not for their outcome.
  *
  * A scenario's job is to put a legal table in front of a person and tell them
  * what to look for. It rots in two ways: the layout drifts into something the
@@ -9,7 +9,7 @@
  *
  * What is deliberately NOT here is whether each shot does what its `expected`
  * sentence says. Several of them are about how something LOOKS, and the ones
- * that can be asserted are asserted in `pool-physics-world.test.ts` — a second,
+ * that can be asserted are asserted in `pool-physics-world.test.ts`: a second,
  * weaker copy would just be a place for the two to disagree.
  */
 import { describe, it, expect } from 'vitest';
@@ -138,7 +138,7 @@ describe('the scenarios that CAN be judged automatically, are', () => {
   });
 
   it('runs past the SIDE pocket without dropping into it', () => {
-    // Reaching the far corner and dropping there is correct and expected — the
+    // Reaching the far corner and dropping there is correct and expected, the
     // contract is only that the side pocket (index 1) did not take it.
     expect(play('rail-past-side').map((p) => p.pocket)).not.toContain(1);
   });

@@ -2,7 +2,7 @@
  * Mute and Block, proven against the real ingest paths.
  *
  * Every case here pushes a real event through the real subscription and asserts
- * on the DOM, because the claims are about what reaches a player — not about
+ * on the DOM, because the claims are about what reaches a player; not about
  * what a component chooses to draw. The distinction matters most for Block: a
  * blocked player must never enter the presence model at all, so "no actor" has
  * to be true of the state, not just of the render.

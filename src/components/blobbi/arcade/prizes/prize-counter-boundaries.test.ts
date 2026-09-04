@@ -5,14 +5,14 @@
  * Phase 9.5 retired the temporary V1 redemption from this surface and made the
  * counter preview-only. These tests make that structural: starting from the
  * counter's modules and walking every `@/`-and-relative import they can reach,
- * NONE of the following may appear —
+ * NONE of the following may appear,
  *
  *   - the inventory write path (`useInventoryMutation`) or the equipment write
  *     path (`useEquipmentMutation`);
  *   - the retired redemption machinery (`useArcadePrizeRedemption`, the spend
  *     writer, the temporary ownership store);
  *   - the internal developer Inventory & Equipment Lab (`/tools/game-items`
- *     modules) — the player-facing counter must never invoke developer
+ *     modules): the player-facing counter must never invoke developer
  *     mutations.
  *
  * A module that cannot be imported cannot be called, however a future refactor
@@ -36,7 +36,7 @@ const ENTRY_MODULES = [
 // `useNostrPublish` is deliberately NOT on this list for the transitive walk:
 // shared read hooks (the profile hook the preview uses for the companion
 // visual) live in modules that also export writes, and reaching such a module
-// is not a spend path — the source-text check below and the behavioral tests
+// is not a spend path, the source-text check below and the behavioral tests
 // (`signEvent` never called) cover the act itself.
 const FORBIDDEN: readonly { pattern: RegExp; why: string }[] = [
   { pattern: /useInventoryMutation/, why: 'the kind:31633 write path' },
@@ -98,7 +98,7 @@ describe('the Prize Counter cannot reach a write path', () => {
   const graph = reachableModules();
 
   it('walks a non-trivial graph (the resolver is not silently broken)', () => {
-    // The counter reaches the renderer, the catalog and the registries — far
+    // The counter reaches the renderer, the catalog and the registries, far
     // more than its own five files.
     expect(graph.size).toBeGreaterThan(15);
   });
@@ -109,7 +109,7 @@ describe('the Prize Counter cannot reach a write path', () => {
         for (const { pattern, why } of FORBIDDEN) {
           expect(
             pattern.test(spec),
-            `${file.replace(`${ROOT}/`, '')} imports "${spec}" — ${why}`,
+            `${file.replace(`${ROOT}/`, '')} imports "${spec}": ${why}`,
           ).toBe(false);
         }
       }

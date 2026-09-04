@@ -1,9 +1,9 @@
 /**
- * CurrentBlobbiPreview — preview-context wrapper over CurrentBlobbiDisplay.
+ * CurrentBlobbiPreview: preview-context wrapper over CurrentBlobbiDisplay.
  *
  * Sizing goes through the ONE canonical renderer-size table
- * (`blobbi-render-size.ts`): every token — including the preview-only `2xl`
- * and `3xl` — is a real renderer box now, so there are no preview-specific
+ * (`blobbi-render-size.ts`): every token, including the preview-only `2xl`
+ * and `3xl`: is a real renderer box now, so there are no preview-specific
  * class overrides, no separate accessory multiplier table, and no viewport
  * breakpoints. The accessory editor mounts its overlay on the same box (see
  * BlobbiInfoModal), so editor placement and world placement agree by
@@ -13,7 +13,7 @@
  *
  * `boxClassName` reaches the renderer box itself, which is the sanctioned
  * override the size table documents (`className` wins over
- * `BLOBBI_RENDER_SIZE_CLASSES` through tailwind-merge — the shell's account
+ * `BLOBBI_RENDER_SIZE_CLASSES` through tailwind-merge, the shell's account
  * chip already passes `size-full`). The My Blobbi stage uses it to make the
  * Blobbi a fixed FRACTION of its scene rather than a fixed pixel count, so the
  * protagonist is the same size relative to its backdrop on a phone and on a
@@ -22,7 +22,7 @@
  * This is safe because everything the renderer paints is already expressed in
  * percentages OF the box: accessory x/y, accessory base size
  * (`ACCESSORY_BASE_RATIO`) and every effect shape. Resizing the box scales the
- * Blobbi and everything on it as ONE unit — no accessory-by-accessory
+ * Blobbi and everything on it as ONE unit; no accessory-by-accessory
  * compensation, and saved placements keep their meaning exactly.
  */
 import { forwardRef } from "react";

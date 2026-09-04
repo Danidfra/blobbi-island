@@ -3,8 +3,8 @@
  *
  * WHY THIS LIVES IN THE COMPONENT LAYER. `src/tools/game-items/` is the
  * studio's pure domain layer: form model, event conversion, validation. It must
- * not import `@blobbi/react`, because that would put React — and 230 kB of
- * artwork — in the middle of event building, a boundary
+ * not import `@blobbi/react`, because that would put React, and 230 kB of
+ * artwork: in the middle of event building, a boundary
  * `src/tools/game-items/boundaries.test.ts` enforces. Suggestions and
  * autofill are UI, so they belong here, where the renderer is already a
  * dependency.
@@ -14,7 +14,7 @@
  * (`EFFECT_SLOT_SUGGESTIONS`, with a drift test against this package).
  *
  * Nothing here gates a publication. An effect id this client does not implement
- * is valid to publish — another client may draw it — so the studio offers what
+ * is valid to publish, another client may draw it, so the studio offers what
  * it knows, reports what it does not, and never refuses.
  */
 
@@ -53,20 +53,20 @@ export function isImplementedEffectId(effectId: string): boolean {
  * A STAND-IN for an effect id this client cannot draw.
  *
  * An author may legitimately publish an effect a newer client knows and this
- * one does not — the studio never refuses that. But answering "what does it
+ * one does not, the studio never refuses that. But answering "what does it
  * look like?" with an empty box is the worst of both worlds: it looks like a
  * broken item rather than an unimplemented one.
  *
  * So an unknown id borrows a real effect from its DECLARED SLOT and is labelled
  * as an approximation. That is honest about the two things the author can
- * actually act on — where the effect will sit, and that this client will draw
- * nothing for it — without inventing a second rendering engine to be wrong in
+ * actually act on, where the effect will sit, and that this client will draw
+ * nothing for it, without inventing a second rendering engine to be wrong in
  * a new way. It is `effectSlot` that decides, which is exactly what the slot is
  * for.
  */
 /**
  * A `Map`, not an object literal. `effectSlot` comes off a relay, and
- * `'__proto__' in {…}` is `true` for every plain object — an object-literal
+ * `'__proto__' in {…}` is `true` for every plain object, an object-literal
  * lookup would answer `effectSlot: "__proto__"` with `Object.prototype` and
  * hand a non-string "effect id" to the renderer. A `Map` has no inherited keys,
  * so the hazard does not exist rather than being guarded against.
@@ -107,7 +107,7 @@ export interface EffectPreviewResolution {
  * Decide what the preview should draw for a declared effect.
  *
  * The ONE resolver every preview surface uses, so a draft, an import, a loaded
- * event and live form state cannot disagree — they are all just two strings by
+ * event and live form state cannot disagree; they are all just two strings by
  * the time they reach here.
  *
  * `effect` is the canonical source. `effectSlot` is consulted only to choose a

@@ -46,19 +46,19 @@ interface BlobbiHUDProps {
 }
 
 /**
- * BlobbiHUD — the in-game top HUD (replaces the website navbar).
+ * BlobbiHUD: the in-game top HUD (replaces the website navbar).
  *
  * Center: current location pill (an in-world location sign, centered at the top).
  * Right:  online count + account/menu.
  *
  * Carries `data-block-move` so taps on the HUD never move the Blobbi. In
  * immersive / fullscreen mode (no header) the account/menu is the single home
- * for account, current Blobbi / switch Blobbi, relays/network and logout — it
+ * for account, current Blobbi / switch Blobbi, relays/network and logout; it
  * opens as a centered, touch-friendly game modal rather than a cramped popover
  * or a tall bottom drawer.
  */
 export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, showGlobalControls = true }: BlobbiHUDProps) {
-  // One quiet line when presence is paused because signing was declined —
+  // One quiet line when presence is paused because signing was declined,
   // the only presence state the player caused and can change. Nothing else
   // about presence is worth a word here.
   const presenceMessage = presenceStatusMessage(usePresenceStatus());
@@ -80,7 +80,7 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
           : "px-3 sm:px-4 pt-2 pb-2",
       )}
     >
-      {/* Center: current location — an in-world location sign, centered at the
+      {/* Center: current location, an in-world location sign, centered at the
           top of the canvas. Absolutely centered (both axes) so it never shifts
           with the right cluster, sits on the same line as the side controls,
           and never collides with the account/menu (right) or the
@@ -93,7 +93,7 @@ export function BlobbiHUD({ compact = false, onlineCount, onOpenCollection, show
         <LocationPill label={locationName} size={size} />
       </div>
 
-      {/* Left spacer — keeps the right cluster right-aligned via justify-between
+      {/* Left spacer: keeps the right cluster right-aligned via justify-between
           while the location sign floats centered above. */}
       <div aria-hidden className="min-w-0 flex-1" />
 

@@ -3,9 +3,9 @@
  *
  * The rule under test, in one line: **nothing reaches `confirmed` except a
  * publish that resolved AND a read-back whose delta matches the award.**
- * Everything else here is a way of getting that wrong — a timeout treated as
+ * Everything else here is a way of getting that wrong, a timeout treated as
  * success, a double-click, a stale callback, a claim that raced an account
- * switch — and each one has to land somewhere honest instead.
+ * switch: and each one has to land somewhere honest instead.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -129,7 +129,7 @@ describe('the happy path', () => {
     expect(hasClaimed(PUBKEY, 'run-1')).toBe(true);
     expect(readClaim(PUBKEY, 'run-1')).toMatchObject({ status: 'claimed', tickets: 8 });
 
-    // A brand-new hook instance — the shell closed and reopened.
+    // A brand-new hook instance, the shell closed and reopened.
     const second = setup(createFakeWriter({ quantities: [8, 16] }));
     let attempt!: Awaited<ReturnType<typeof hook.current.claimReward>>;
     await act(async () => {
@@ -168,7 +168,7 @@ describe('same-tick double claim', () => {
 
     let attempts!: Awaited<ReturnType<typeof hook.current.claimReward>>[];
     await act(async () => {
-      // No await between them — this is the shape of a double-click, and the
+      // No await between them; this is the shape of a double-click, and the
       // reason the guard is a synchronous lock rather than `isPending`.
       attempts = await Promise.all([
         hook.current.claimReward(run, calculation),
@@ -227,7 +227,7 @@ describe('REGRESSION: the observed 3 → 6 duplicate grant', () => {
    *
    * A 3-ticket reward was granted, the verification read did not yet show it
    * (the relay had not caught up), the claim was recorded as `failed`, the UI
-   * offered "Try again", and the retry published a SECOND additive +3 — leaving
+   * offered "Try again", and the retry published a SECOND additive +3, leaving
    * the player with 6.
    *
    * The writer here is a faithful stand-in for a relay: `publishTicketGrant`
@@ -318,7 +318,7 @@ describe('REGRESSION: the observed 3 → 6 duplicate grant', () => {
     expect(hasClaimed(PUBKEY, 'run-1')).toBe(true);
   });
 
-  it('stays unresolved for ever when the read never catches up — delta still exactly 3', async () => {
+  it('stays unresolved for ever when the read never catches up, delta still exactly 3', async () => {
     const writer = laggyRelayWriter(10);
     const { result: hook } = setup(writer);
     const run = result();
@@ -355,7 +355,7 @@ describe('REGRESSION: the observed 3 → 6 duplicate grant', () => {
     });
     first.unmount();
 
-    // The shell was closed and reopened — a brand-new hook instance.
+    // The shell was closed and reopened, a brand-new hook instance.
     const second = setup(writer);
     act(() => second.result.current.hydrate('run-1'));
     expect(second.result.current.state.phase).toBe('unresolved');
@@ -513,7 +513,7 @@ describe('an unexpected throw inside the lock', () => {
   });
 });
 
-describe('reconciliation is read-only — proven, not inferred', () => {
+describe('reconciliation is read-only: proven, not inferred', () => {
   /**
    * A writer that DETONATES if anything tries to publish.
    *
@@ -532,7 +532,7 @@ describe('reconciliation is read-only — proven, not inferred', () => {
       },
       async publishTicketGrant() {
         if (publishes < 0) {
-          throw new Error('RECONCILIATION PUBLISHED — this must be unreachable');
+          throw new Error('RECONCILIATION PUBLISHED; this must be unreachable');
         }
         publishes += 1;
       },
@@ -576,7 +576,7 @@ describe('reconciliation is read-only — proven, not inferred', () => {
       await hook.current.reconcileClaim('run-1');
     });
     const record = readClaim(PUBKEY, 'run-1')!;
-    // Still ambiguous, still blocking, still the SAME run — reconciliation does
+    // Still ambiguous, still blocking, still the SAME run, reconciliation does
     // not mint a new claim and does not reset the status.
     expect(record.status).toBe('ambiguous');
     expect(record.runId).toBe('run-1');
@@ -602,7 +602,7 @@ describe('the >= baseline + award inference, recorded deliberately', () => {
    *
    * That direction is chosen on purpose. The opposite rule (`=== baseline +
    * award`, or refusing to confirm without stronger proof) does not prevent the
-   * loss either — it just leaves the claim unresolved for ever — while any rule
+   * loss either: it just leaves the claim unresolved for ever, while any rule
    * that resolved the doubt by PUBLISHING AGAIN would reintroduce the 3 → 6
    * duplicate. Between "an owed reward is occasionally not paid" and "the
    * currency inflates", this phase picks the first.
@@ -759,7 +759,7 @@ describe('durable storage is a prerequisite', () => {
     const writer = createFakeWriter({ quantities: [0, 8] });
     const { result: hook } = setup(writer);
     const run = result();
-    // setItem accepts the write and silently drops it — quota eviction, an
+    // setItem accepts the write and silently drops it, quota eviction, an
     // extension, private mode. A claim record that is not really there is how a
     // grant gets offered a second time.
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {});
@@ -780,7 +780,7 @@ describe('durable storage is a prerequisite', () => {
       this: Storage,
       key: string,
     ) {
-      // Storage accepts the write but stores a stale version — the record the
+      // Storage accepts the write but stores a stale version, the record the
       // caller relies on is not the record that is actually there.
       real.call(this, key, JSON.stringify({ [PUBKEY]: { 'run-1': { runId: 'run-1', gameId: 'blobbi-dance', machineId: 'arcade-dance-machine', status: 'failed', tickets: 8, createdAt: 1, updatedAt: 1, attempts: 0, failure: null, quantityBefore: null, reconcileAttempts: 0 } } }));
     });
@@ -797,7 +797,7 @@ describe('durable storage is a prerequisite', () => {
     const writer = createFakeWriter({ quantities: [0, 8] });
     const { result: hook } = setup(writer);
     const run = result();
-    // A corrupt ledger reads as empty, so the claim proceeds — and the write
+    // A corrupt ledger reads as empty, so the claim proceeds, and the write
     // repairs the file. This is a deliberate trade: refusing every claim for
     // ever because of one bad byte would be worse, and the repaired record then
     // blocks normally. It DOES mean a hand-corrupted ledger loses its history,
@@ -963,7 +963,7 @@ describe('claims that outlive their component', () => {
       await pending;
     });
 
-    // The write still completed and is still recorded — losing the record would
+    // The write still completed and is still recorded, losing the record would
     // be worse than a stale render, because the tickets are genuinely granted.
     expect(writer.publishCount()).toBe(1);
     await waitFor(() => expect(hasClaimed(PUBKEY, 'run-1')).toBe(true));

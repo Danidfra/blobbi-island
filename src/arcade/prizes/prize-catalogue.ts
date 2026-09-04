@@ -29,15 +29,15 @@
  * event (`src/inventory/arcade-cosmetic-redeemer.ts`). The rest are still
  * intent:
  *
- *  - `badge` — a collectible achievement, later displayable on the profile
+ *  - `badge`: a collectible achievement, later displayable on the profile
  *    card, the Blobbi card and arcade surfaces;
- *  - `blobbi-effect` — a cosmetic animation applied to the Blobbi by a future
+ *  - `blobbi-effect`: a cosmetic animation applied to the Blobbi by a future
  *    effect renderer;
- *  - `home-furniture` — a placeable Home item. The Mini Arcade Cabinet carries
+ *  - `home-furniture`: a placeable Home item. The Mini Arcade Cabinet carries
  *    `gameplayMode: 'no-rewards'`: it will open arcade games from Home, and
  *    those games will grant NO Arcade Tickets;
- *  - `inventory` — a real kind:31632 item granted into kind:31633. LIVE;
- *  - `mock-ownership` — nothing beyond a local store. The Arcade Pass carries
+ *  - `inventory`: a real kind:31632 item granted into kind:31633. LIVE;
+ *  - `mock-ownership`: nothing beyond a local store. The Arcade Pass carries
  *    it because its delivery is an expiring ENTITLEMENT rather than ownership;
  *    see `arcade-pass-prize.ts`.
  *
@@ -101,8 +101,8 @@ export interface ArcadePrize {
    *
    * Optional because the fixture entries below are all priced by
    * {@link ARCADE_PRIZE_CATALOGUE_VERSION}, which stays the default. A prize
-   * that comes from a DIFFERENT catalog — the six official cosmetics, priced
-   * by `official-prize-catalog.ts` — carries its own version here, so a ledger
+   * that comes from a DIFFERENT catalog, the six official cosmetics, priced
+   * by `official-prize-catalog.ts`: carries its own version here, so a ledger
    * record always names the list that set its price.
    */
   readonly catalogVersion?: string;
@@ -118,7 +118,7 @@ export const ARCADE_PRIZE_CATALOGUE_VERSION = 'temp-v1';
  * The temporary starter catalogue.
  *
  * Prices are UI fixtures chosen to exercise every interface state (cheap,
- * mid, premium, aspirational) — they are not the final economy. Keep them
+ * mid, premium, aspirational): they are not the final economy. Keep them
  * here, centralized, so replacing the list is one edit.
  */
 export const ARCADE_PRIZE_CATALOGUE: readonly ArcadePrize[] = Object.freeze([
@@ -171,7 +171,7 @@ export const ARCADE_PRIZE_CATALOGUE: readonly ArcadePrize[] = Object.freeze([
     id: 'mini-arcade-trophy',
     title: 'Mini Arcade Trophy',
     description:
-      'A tiny golden cabinet on a plinth. A collectible badge — one day it will shine on your profile card.',
+      'A tiny golden cabinet on a plinth. A collectible badge; one day it will shine on your profile card.',
     category: 'badge',
     price: 75,
     emojiFallback: '🏆',
@@ -183,7 +183,7 @@ export const ARCADE_PRIZE_CATALOGUE: readonly ArcadePrize[] = Object.freeze([
     id: 'arcade-glow',
     title: 'Arcade Glow',
     description:
-      'A soft neon aura for your Blobbi — a premium effect that will light them up wherever they go.',
+      'A soft neon aura for your Blobbi, a premium effect that will light them up wherever they go.',
     category: 'effect',
     price: 120,
     emojiFallback: '✨',
@@ -206,7 +206,7 @@ export const ARCADE_PRIZE_CATALOGUE: readonly ArcadePrize[] = Object.freeze([
     id: 'mini-arcade-cabinet',
     title: 'Mini Arcade Cabinet',
     description:
-      'Your very own arcade cabinet for your Home. One day you will place it there and play arcade games without leaving the house — Home games are just for fun and award no Arcade Tickets.',
+      'Your very own arcade cabinet for your Home. One day you will place it there and play arcade games without leaving the house: Home games are just for fun and award no Arcade Tickets.',
     category: 'furniture',
     price: 500,
     emojiFallback: '🕹️',
@@ -227,7 +227,7 @@ export function getArcadePrize(prizeId: string): ArcadePrize | null {
 
 /**
  * The deliberate display order: everyday prizes by ascending price first, the
- * premium long-term goals last (also by price). Deterministic — same input,
+ * premium long-term goals last (also by price). Deterministic, same input,
  * same order, never dependent on render timing or player state, so the shelf
  * does not reshuffle between visits. Owned prizes keep their place; the UI
  * marks them rather than moving them.

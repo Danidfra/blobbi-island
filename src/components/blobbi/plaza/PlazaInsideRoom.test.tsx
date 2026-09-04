@@ -95,7 +95,7 @@ describe('the Plaza interior', () => {
       const button = hotspot(store.id);
       expect(button, store.id).not.toBeNull();
       expect(button.tagName).toBe('BUTTON');
-      expect(button).toHaveAttribute('aria-label', `${store.name} — coming soon`);
+      expect(button).toHaveAttribute('aria-label', `${store.name}: coming soon`);
       // Over the painted bay, in world percent.
       expect(button.style.left).toBe(`${store.box.x}%`);
       expect(button.style.top).toBe(`${store.box.y}%`);
@@ -134,7 +134,7 @@ describe('the Plaza interior', () => {
     expect(ids).toEqual(plazaInsideBlockers.map((b) => b.id).sort());
   });
 
-  it('walks the player to the shop and then says "Coming soon" — it does not navigate', async () => {
+  it('walks the player to the shop and then says "Coming soon": it does not navigate', async () => {
     vi.useFakeTimers();
     const { walks, setCurrentLocation } = await renderRoom();
     const store = plazaStorefronts[0];
@@ -245,10 +245,10 @@ describe('a storefront hotspot on its own', () => {
     expect(glowOf(button).className).not.toContain('animate-storefront-glow');
   });
 
-  it('goes inside on arrival once a destination is configured — the one-field upgrade', () => {
+  it('goes inside on arrival once a destination is configured, the one-field upgrade', () => {
     const open = { ...store, destination: 'plaza' as const };
     const { requests, onEnter, button } = renderHotspot(open);
-    expect(button).toHaveAttribute('aria-label', 'Test Shop — go inside');
+    expect(button).toHaveAttribute('aria-label', 'Test Shop: go inside');
     fireEvent.click(button);
     act(() => requests[0].action());
     expect(onEnter).toHaveBeenCalledWith('plaza');

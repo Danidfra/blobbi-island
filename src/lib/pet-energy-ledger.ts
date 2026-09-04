@@ -1,5 +1,5 @@
 /**
- * The pet-energy operation ledger — the durable half of "one energy
+ * The pet-energy operation ledger, the durable half of "one energy
  * subtraction per operation, ever".
  *
  * Modelled on `src/lib/coin-op-ledger.ts`, for the same reason it exists: a
@@ -12,7 +12,7 @@
  * Energy is harder to reconcile than Coins: observing a value proves nothing
  * on its own, because care actions move energy too. The settler therefore
  * writes an opaque marker tag onto the replacement event and reconciles by
- * looking for it — see `src/mine/energy-settlement.ts`. This ledger stores the
+ * looking for it; see `src/mine/energy-settlement.ts`. This ledger stores the
  * evidence that reconciliation needs.
  *
  * ## Status lifecycle
@@ -32,7 +32,7 @@
  * ## Honest limits
  *
  * Durable per browser profile only, exactly like the Coin and Beach ledgers. A
- * different device has an empty ledger — and also no opId to replay, because
+ * different device has an empty ledger, and also no opId to replay, because
  * ids are minted where the operation runs. Storage that silently drops writes
  * is caught by read-back, and a failed read-back REFUSES the publish rather
  * than proceeding unrecorded.
@@ -135,7 +135,7 @@ export function petEnergyOpBlocksPublish(record: PetEnergyOpRecord | null): bool
 
 /**
  * Persist a record and VERIFY it by reading back. Returns false when storage
- * refused — callers must then refuse to publish.
+ * refused: callers must then refuse to publish.
  *
  * `applied` is sticky: a late callback can never downgrade it.
  */

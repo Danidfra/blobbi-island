@@ -1,7 +1,7 @@
 /**
  * What a coarse presence may say, and what it must still say.
  *
- * The subtraction is small on purpose — one field, and only its value — so the
+ * The subtraction is small on purpose, one field, and only its value, so the
  * tests that matter most are the ones proving the alternatives are WORSE:
  * omitting the field entirely un-hides a hidden player, and dropping the
  * movement goal stops remote Blobbis moving at all. Both are checked here at
@@ -40,7 +40,7 @@ function fullPresence(over: Partial<PresenceContent> = {}): PresenceContent {
 }
 
 describe('detailed presence', () => {
-  it('is a pass-through — the wire shape does not change', () => {
+  it('is a pass-through: the wire shape does not change', () => {
     const content = fullPresence();
     expect(projectPresenceForPolicy(detailed, content)).toEqual(content);
   });
@@ -127,7 +127,7 @@ describe('coarse presence withholds the hiding spot', () => {
 });
 
 describe('the projection is a function, not a side effect', () => {
-  it('never mutates its input — local state keeps the real spot', () => {
+  it('never mutates its input, local state keeps the real spot', () => {
     const content = fullPresence();
     const before = structuredClone(content);
     projectPresenceForPolicy(coarse, content);

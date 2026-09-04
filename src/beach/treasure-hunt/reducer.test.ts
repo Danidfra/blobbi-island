@@ -1,5 +1,5 @@
 /**
- * Reducer — the round lifecycle and its invariants.
+ * Reducer: the round lifecycle and its invariants.
  *
  * The invariants under test: a round starts once, ends exactly once and for
  * the documented reason; a rejected action returns the SAME state reference;
@@ -129,7 +129,7 @@ describe('move-detector', () => {
     expect(moved.coilPosition).toEqual({ x: 0.25, y: 0.75 });
   });
 
-  it('rejects out-of-field and non-finite positions — no silent clamping', () => {
+  it('rejects out-of-field and non-finite positions; no silent clamping', () => {
     const started = startedRound();
     expect(
       treasureHuntReducer(started, { type: 'move-detector', position: { x: 1.4, y: 0.5 } })
@@ -182,7 +182,7 @@ describe('dig', () => {
     const buried = started.targets[0];
     const once = treasureHuntReducer(started, { type: 'dig', position: buried.position });
     const twice = treasureHuntReducer(once, { type: 'dig', position: buried.position });
-    if (twice.status === 'finished') return; // budget ran out — equally fine
+    if (twice.status === 'finished') return; // budget ran out, equally fine
     expect(twice.foundTargetIds.filter((id) => id === buried.id)).toHaveLength(1);
     expect(twice.digHistory[1].outcome).toBe('miss');
   });

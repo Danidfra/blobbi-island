@@ -1,5 +1,5 @@
 /**
- * Pool — the geometry the game reasons with, as pure functions over plain
+ * Pool: the geometry the game reasons with, as pure functions over plain
  * numbers.
  *
  * ## What this is, since Planck arrived
@@ -10,10 +10,10 @@
  * ASKS QUESTIONS about a table rather than advancing one:
  *
  *  - the ball and vector types the whole game speaks in;
- *  - `predictCuePath` — the aim guide;
- *  - `pathIsClear` — what the AI uses to reject a blocked shot;
- *  - `isLegalBallPosition` / `nearestLegalPosition` — ball-in-hand;
- *  - `separateOverlaps` and `sanitiseBall` — building a rack, and recovery.
+ *  - `predictCuePath`: the aim guide;
+ *  - `pathIsClear`: what the AI uses to reject a blocked shot;
+ *  - `isLegalBallPosition` / `nearestLegalPosition`: ball-in-hand;
+ *  - `separateOverlaps` and `sanitiseBall`: building a rack, and recovery.
  *
  * All of it is still pure: no `Date.now()`, no `Math.random()`, no DOM, no
  * React, no Planck. That is what lets the AI and the aim guide be tested by
@@ -22,7 +22,7 @@
  *
  * ## The geometry these answers use is the REAL geometry
  *
- * Every pocket question here goes through `pool-physics-geometry.ts` — the same
+ * Every pocket question here goes through `pool-physics-geometry.ts`: the same
  * cushion polygons and mouth planes the physics world is built from and the
  * renderer draws. The previous implementation had its own idea of where a pocket
  * was (a circle of radius 4.2 around the corner point) which agreed with neither
@@ -44,7 +44,7 @@ import {
 
   There is a cycle here and it is only in the types: `pool-physics-geometry.ts`
   imports this module's `Vec2` with `import type`, which TypeScript erases. At
-  run time the dependency runs one way — physics → geometry — so there is no
+  run time the dependency runs one way, physics → geometry, so there is no
   initialisation order to get wrong.
 */
 import {
@@ -63,7 +63,7 @@ export interface Vec2 {
  *
  * `number` is the identity: `0` is the cue ball, `1`–`15` are the object balls,
  * and it is the same integer the rules, the physics world, the renderer and the
- * result all use. There is deliberately no separate `id` — a second key would be
+ * result all use. There is deliberately no separate `id`: a second key would be
  * a second thing to keep in step.
  *
  * This is a SNAPSHOT. The authoritative state during a shot lives in Planck
@@ -133,7 +133,7 @@ export function isMoving(ball: PoolBall): boolean {
  *
  * A convenience for reading a snapshot, not the settling rule. Whether a shot
  * has finished is `PoolPhysicsWorld.isSettled()`, which additionally requires
- * the table to have stayed still for several consecutive steps — see
+ * the table to have stayed still for several consecutive steps; see
  * `pool-physics-world.ts`.
  */
 export function allBallsStopped(balls: readonly PoolBall[]): boolean {
@@ -204,8 +204,8 @@ export function clampBall(ball: PoolBall): PoolBall {
 /**
  * Push apart every overlapping pair WITHOUT touching a velocity.
  *
- * Setup, not physics. It exists for two moments — building a rack, and placing a
- * ball by hand — where the world is about to be loaded from a list of positions
+ * Setup, not physics. It exists for two moments, building a rack, and placing a
+ * ball by hand, where the world is about to be loaded from a list of positions
  * and two of them must not start inside each other. Giving them an impulse
  * instead would mean the table moved on its own before anyone hit anything.
  */
@@ -257,7 +257,7 @@ export interface CuePathPrediction {
   /** The ball that would be struck. Present only when `end === 'ball'`. */
   readonly ballNumber: number | null;
   /**
-   * The direction the struck ball would set off in — the line of centres.
+   * The direction the struck ball would set off in, the line of centres.
    *
    * Exact, and verified against the engine: `pool-physics-world.test.ts` plays a
    * half-ball hit and checks the object ball leaves within 0.12 rad of this.
@@ -281,8 +281,8 @@ function firstRoot(b: number, c: number): number | null {
 /**
  * Where a shot along `direction` first meets something.
  *
- * The aim assistance, and the whole of it. It answers one question — "what does
- * the cue ball hit first, and which way does that ball go?" — using the same
+ * The aim assistance, and the whole of it. It answers one question, "what does
+ * the cue ball hit first, and which way does that ball go?": using the same
  * geometry the simulation uses, so the line it draws is the line the shot takes.
  *
  * ## What it deliberately does not do
@@ -322,7 +322,7 @@ export function predictCuePath(
 
   const mouth = nearestMouthCrossing(cue, unit);
   const pocketTravel = mouth?.travel ?? Infinity;
-  // Against the real cushions, which have holes in them — not against the
+  // Against the real cushions, which have holes in them; not against the
   // playfield rectangle, which does not. A rectangle would draw a rail across
   // every pocket mouth and never warn about a scratch into a side pocket.
   const rail = nearestCushionContact(cue, unit);
@@ -387,7 +387,7 @@ export function pathIsClear(
  * Whether a ball's centre may legally sit here.
  *
  * Three separate refusals, and each one is a real thing a player tries: off the
- * cloth, inside another ball, and — the one everybody tries once — in a pocket.
+ * cloth, inside another ball, and, the one everybody tries once, in a pocket.
  */
 export function isLegalBallPosition(
   point: Vec2,
@@ -415,8 +415,8 @@ export function isLegalBallPosition(
 /**
  * The nearest legal spot to `point`, searched outwards in rings.
  *
- * The safety net under ball-in-hand: whatever the player asks for — a pocket,
- * the middle of the rack, a coordinate off the cloth — there is always somewhere
+ * The safety net under ball-in-hand: whatever the player asks for, a pocket,
+ * the middle of the rack, a coordinate off the cloth; there is always somewhere
  * to put the ball, and it is always close to where they pointed. The search is
  * bounded and deterministic, so two players asking for the same impossible spot
  * get the same answer.

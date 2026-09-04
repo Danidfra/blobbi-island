@@ -16,7 +16,7 @@
  * clients show, and it is the same string every time.
  *
  * A caller MAY pass a remembered Blobbi name as a *secondary* hint where the
- * player already saw it in context — but the npub stays the identity, because
+ * player already saw it in context, but the npub stays the identity, because
  * that is the part that is true.
  */
 

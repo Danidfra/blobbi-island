@@ -1,5 +1,5 @@
 /**
- * The acquisition adapter — the one place a badge could ever be acquired.
+ * The acquisition adapter, the one place a badge could ever be acquired.
  *
  * ```
  *   BadgesStoreModal  →  BADGE_CATALOG (normalized)  →  acquireBadge()
@@ -9,8 +9,8 @@
  * ```
  *
  * The modal never publishes. It calls this, reads the result, and renders it.
- * That is the same split the Care and Clothing Stores use for Coins — the UI
- * describes intent, a domain module owns the write — and it is why adding a
+ * That is the same split the Care and Clothing Stores use for Coins, the UI
+ * describes intent, a domain module owns the write, and it is why adding a
  * real badge protocol later touches this file and not the store.
  *
  * ## Today every branch refuses, and the refusal is the correct behaviour
@@ -21,8 +21,8 @@
  * explicit `unsupported` result naming what is missing. It never throws and
  * never partially writes: refusing is a normal outcome, not an error.
  *
- * The store cannot reach these branches anyway — {@link BADGE_CATALOG} is
- * empty, so there is no card to press — but the seam is exercised by its tests
+ * The store cannot reach these branches anyway, {@link BADGE_CATALOG} is
+ * empty, so there is no card to press, but the seam is exercised by its tests
  * rather than left to be discovered.
  */
 
@@ -56,7 +56,7 @@ const UNSUPPORTED_REASONS: Record<BadgeAcquisition, string> = {
 };
 
 /**
- * Acquire a badge — or say precisely why it cannot be acquired.
+ * Acquire a badge, or say precisely why it cannot be acquired.
  *
  * Pure and write-free by construction: this module imports no publisher, no
  * signer, no wallet and no inventory mutation, so there is no code path from

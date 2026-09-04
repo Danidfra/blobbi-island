@@ -7,7 +7,7 @@ export interface ChatBubble {
   id: string;
   playerKey: string;
   /**
-   * The RESOLVED presentation model — never a raw event payload.
+   * The RESOLVED presentation model; never a raw event payload.
    *
    * Structured messages (quick phrases, templates, emotes) are reconstructed
    * from this build's own catalogs before they get here, so nothing in this
@@ -191,7 +191,7 @@ function ChatBubbleElement({ bubble, isExpiring }: ChatBubbleElementProps) {
           isEmote ? "px-3 py-1.5" : "px-3 py-2",
         )}
         // The whole bubble is one utterance. Announcing it as a labelled group
-        // is what makes an emote — which has no readable text node at all —
+        // is what makes an emote, which has no readable text node at all,
         // reach a screen reader as "Clap" rather than as a stray glyph.
         role="status"
         aria-label={bubbleTextEquivalent(content)}

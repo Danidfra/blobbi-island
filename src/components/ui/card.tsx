@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 /**
  * The island's card.
  *
- * Still the shadcn Card — same name, same parts, same API — but wearing the
+ * Still the shadcn Card, same name, same parts, same API, but wearing the
  * island's surface language instead of the stock one: the cozy panel radius
  * rather than `rounded-lg`, a warm hairline rather than the full-strength
  * `border-border`, and the soft elevation rather than `shadow-sm`.

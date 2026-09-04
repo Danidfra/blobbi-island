@@ -3,7 +3,7 @@
  *
  * This is the first policy in the arcade that can actually pay, so the tests are
  * written the way an economy's tests should be: every tier, both edges of every
- * threshold, the cap, and — most importantly — every route to ZERO.
+ * threshold, the cap, and, most importantly, every route to ZERO.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -94,7 +94,7 @@ describe('the policy is live and self-describing', () => {
   });
 });
 
-describe('accuracy tiers — one tier, never cumulative', () => {
+describe('accuracy tiers: one tier, never cumulative', () => {
   it.each([
     [100, 4],
     [95, 4],
@@ -137,7 +137,7 @@ describe('worked examples from the documented policy', () => {
     expect(tickets({ accuracy: 61 }).quantity).toBe(3);
   });
 
-  it('40% pays the participation floor of 2 — the run finished, it just did not clear', () => {
+  it('40% pays the participation floor of 2, the run finished, it just did not clear', () => {
     const award = tickets({ accuracy: 40 });
     expect(award.quantity).toBe(DANCE_REWARD_TUNING.participation);
     expect(award.eligible).toBe(true);
@@ -216,7 +216,7 @@ describe('the breakdown a player is shown', () => {
     expect(tickets({ accuracy: 40 }).components.map((c) => c.label)).toEqual(['Participation']);
   });
 
-  it('shows a single Clear line for a flat policy — no phantom difficulty bonus', () => {
+  it('shows a single Clear line for a flat policy; no phantom difficulty bonus', () => {
     const award = tickets({ accuracy: 96, fullCombo: true });
     expect(award.components.map((c) => c.label)).toEqual(['Clear']);
     expect(award.components[0].tickets).toBe(8);
@@ -244,7 +244,7 @@ describe('determinism', () => {
     );
   });
 
-  it('reads no clock — a result from 2020 pays the same as one from today', () => {
+  it('reads no clock: a result from 2020 pays the same as one from today', () => {
     const old = calculateArcadeReward({
       policy: DANCE_REWARD_POLICY,
       result: result({ extra: { startedAt: 1_580_000_000_000, endedAt: 1_580_000_068_000 } }),

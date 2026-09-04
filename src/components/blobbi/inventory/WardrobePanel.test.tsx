@@ -1,8 +1,8 @@
 /**
  * The Wardrobe, driven.
  *
- * Both halves have their own deep suites — `InventoryBrowser.equipment.test.tsx`
- * for the cosmetic policy, `EffectsPanel.test.tsx` for the effect one — so what
+ * Both halves have their own deep suites, `InventoryBrowser.equipment.test.tsx`
+ * for the cosmetic policy, `EffectsPanel.test.tsx` for the effect one, so what
  * this file owns is the seam between them: that the segmented control switches,
  * that each half is actually mounted, that carried items never appear here, and
  * that leaving Effects ends a preview.
@@ -65,7 +65,7 @@ beforeEach(() => {
   mockUseOptimizedStatus.mockReturnValue({
     status: { currentPet: { id: 'blobbi-1' }, allPets: [] },
   });
-  // A bag full of food and coins — none of which belongs in a wardrobe.
+  // A bag full of food and coins; none of which belongs in a wardrobe.
   let inv = buildEmptyInventory('owner');
   inv = addInventoryItemQuantity(inv, itemIdToAddress('food_apple')!, 3);
   inv = addInventoryItemQuantity(inv, itemIdToAddress('med_vitamins')!, 2);

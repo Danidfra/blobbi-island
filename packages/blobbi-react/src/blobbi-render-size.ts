@@ -1,7 +1,7 @@
 /**
  * Canonical Blobbi renderer-box contract (Phase 1).
  *
- * THE CONTRACT — see docs/blobbi-renderer-contract.md for the full document:
+ * THE CONTRACT: see docs/blobbi-renderer-contract.md for the full document:
  *
  *  - The renderer box is a SQUARE, fixed-pixel box and the single local
  *    coordinate space for everything the renderer paints.
@@ -20,7 +20,7 @@
  *    that scales the Blobbi with the viewport.
  *
  * Pixel values are the previous DESKTOP (`md:` variant) sizes of the visible
- * body SVG — chosen so the primary (desktop) in-world look is unchanged and
+ * body SVG: chosen so the primary (desktop) in-world look is unchanged and
  * the old sub-768px viewport size step disappears. `xl` (128) is also the
  * accessory editor's box, so saved accessory placements keep their meaning
  * exactly.
@@ -42,7 +42,7 @@ export const BLOBBI_RENDER_SIZE_PX: Record<BlobbiRenderSize, number> = {
  * Fixed Tailwind classes implementing {@link BLOBBI_RENDER_SIZE_PX}
  * (h-8=32px … h-72=288px). Classes rather than inline styles so a caller can
  * still override the box through `className` via tailwind-merge (the shell's
- * account chip passes `size-full`). NO responsive variants — that is the
+ * account chip passes `size-full`). NO responsive variants; that is the
  * point.
  */
 export const BLOBBI_RENDER_SIZE_CLASSES: Record<BlobbiRenderSize, string> = {
@@ -58,7 +58,7 @@ export const BLOBBI_RENDER_SIZE_CLASSES: Record<BlobbiRenderSize, string> = {
  * Accessory base size as a fraction of the renderer box.
  *
  * 60/128: the legacy editor rendered accessories at a fixed 60px inside the
- * 128px `xl` box, and the editor is where every saved placement was authored —
+ * 128px `xl` box, and the editor is where every saved placement was authored,
  * preserving that ratio preserves the author's intent in every context. A
  * saved `scale` multiplies this base.
  */

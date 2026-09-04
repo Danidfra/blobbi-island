@@ -7,7 +7,7 @@
  *     `the Standard experience` corresponds to behaviour that exists in the
  *     application right now, cited to where it lives. If a future Family
  *     restriction is written into the wrong literal, or Standard is quietly
- *     tightened during a refactor, these fail — which is the whole reason the
+ *     tightened during a refactor, these fail, which is the whole reason the
  *     policy foundation can be added without a product change.
  *  2. **Family must keep its shape.** Especially the parts that are easy to
  *     over-restrict: a Family island still has multiplayer, still has shared
@@ -77,7 +77,7 @@ describe('the Family experience', () => {
     expect(FAMILY_POLICY.ownFreeTextNaming).toBe(false);
   });
 
-  it('currently PERMITS stranger-authored names — a deferred product decision', () => {
+  it('currently PERMITS stranger-authored names, a deferred product decision', () => {
     // Not an oversight, and not a regression to fix by flipping this back. The
     // substitution mechanism exists and is tested against a hand-built policy;
     // the shipped profile does not select it while the social identity model
@@ -184,7 +184,7 @@ describe('every profile has a policy', () => {
 
   it('describes the same capabilities in every profile', () => {
     // A field present in one policy and missing from another is how a capability
-    // silently becomes `undefined` — which is falsy, and would read as
+    // silently becomes `undefined`: which is falsy, and would read as
     // "restricted" at some call sites and "allowed" at others.
     expect(Object.keys(STANDARD_POLICY).sort()).toEqual(Object.keys(FAMILY_POLICY).sort());
   });

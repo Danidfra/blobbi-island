@@ -4,7 +4,7 @@
  * `selectNewestDefinitions` is the tools' answer to the same question
  * `selectNewestValidDefinitions` answers for the catalog, and it must get the
  * same thing right: PARSE FIRST, then compare. A newer malformed event must not
- * be able to hide an older good one — that is how a broken publication would
+ * be able to hide an older good one; that is how a broken publication would
  * otherwise make a working item vanish from the browser.
  */
 

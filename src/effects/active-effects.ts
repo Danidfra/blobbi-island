@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — PURE resolver: which visual effects are ACTIVE on a Blobbi.
+ * Blobbi Island: PURE resolver: which visual effects are ACTIVE on a Blobbi.
  *
  * The first production activation path (Phase 9), as one referentially
  * transparent function:
@@ -20,20 +20,20 @@
  *
  * ## The gates, in order
  *
- *  1. REGISTRY — the entry's item must resolve in the trusted full-address
+ *  1. REGISTRY: the entry's item must resolve in the trusted full-address
  *     registry. A third-party event carrying `"effect": "celestial-aura"` under
  *     its own pubkey resolves to nothing and is not even this resolver's
  *     business (the wearable policy reports it separately).
- *  2. MODE — equip only. `place` is valid protocol for furniture, not for a
+ *  2. MODE: equip only. `place` is valid protocol for furniture, not for a
  *     character's active effects.
- *  3. SLOT — the entry must claim exactly the registry's expected slot. A
+ *  3. SLOT: the entry must claim exactly the registry's expected slot. A
  *     placement that puts Celestial Aura in `ambient-particles` is refused, not
  *     honoured: the ISSUER (via the registry) says where an effect lives, never
  *     the placement document.
- *  4. OWNERSHIP — kind:31633 quantity ≥ 1 for the exact full address. A stale
- *     placement referencing an item no longer owned is not rendered — and not
+ *  4. OWNERSHIP: kind:31633 quantity ≥ 1 for the exact full address. A stale
+ *     placement referencing an item no longer owned is not rendered, and not
  *     cleaned up either: publishing is never a side effect of rendering.
- *  5. FORM — when the current stage is known it must be among the registered
+ *  5. FORM: when the current stage is known it must be among the registered
  *     forms. All twelve current effects support `baby` and `adult`; `egg`
  *     activates nothing. An UNKNOWN stage is no restriction (the same rule the
  *     wearable policy uses), so effects do not flicker off while the Blobbi
@@ -43,7 +43,7 @@
  *
  * One winner per effect slot: the LAST valid equip entry, matching the
  * package's `setEquippedPlacementForSlot` last-wins collapse and the wearable
- * policy — so a freshly-equipped effect beats a leftover duplicate. The result
+ * policy: so a freshly-equipped effect beats a leftover duplicate. The result
  * is ordered by the renderer's own `EFFECT_SLOT_ORDER`; this module does not
  * invent a second order.
  */
@@ -81,7 +81,7 @@ export interface RejectedEffectPlacement {
 export interface ActiveBlobbiEffectResolution {
   /**
    * Renderer input, canonical slot order, at most one entry per effect slot.
-   * Plain serializable data — exactly what `BlobbiRendererView.effects` takes.
+   * Plain serializable data, exactly what `BlobbiRendererView.effects` takes.
    */
   effects: readonly BlobbiVisualEffect[];
   /** The winning placements, same order as {@link effects}. */
@@ -117,7 +117,7 @@ export function isEffectItemPlacement(entry: GameItemPlacementEntry): boolean {
 }
 
 /**
- * Resolve the active visual effects for one Blobbi. Pure — see module doc.
+ * Resolve the active visual effects for one Blobbi. Pure; see module doc.
  *
  * Entries whose item is not an official effect item are IGNORED here, not
  * rejected: wearables and unknown items belong to `placement/policy.ts`, and
@@ -135,21 +135,21 @@ export function resolveActiveBlobbiEffects(
 
   for (const entry of placements) {
     const registration = resolveOfficialVisualEffectItem(entry.item);
-    if (registration === null) continue; // not an effect item — not our business
+    if (registration === null) continue; // not an effect item; not our business
 
-    // 2. MODE — equip only.
+    // 2. MODE: equip only.
     if (entry.mode !== 'equip') {
       rejected.push({ entry, registration, reason: 'unsupported-mode' });
       continue;
     }
 
-    // 3. SLOT — exactly the registered expected slot, canonical comparison.
+    // 3. SLOT: exactly the registered expected slot, canonical comparison.
     if (entry.slot !== registration.effectSlot) {
       rejected.push({ entry, registration, reason: 'slot-mismatch' });
       continue;
     }
 
-    // 4. OWNERSHIP — the exact full address, quantity ≥ 1. Placement is never
+    // 4. OWNERSHIP: the exact full address, quantity ≥ 1. Placement is never
     // possession; a definition existing is never possession; being registered
     // official is never possession.
     if ((quantityByAddress.get(entry.item) ?? 0) <= 0) {
@@ -157,7 +157,7 @@ export function resolveActiveBlobbiEffects(
       continue;
     }
 
-    // 5. FORM — a known stage must be registered; an unknown stage is not a
+    // 5. FORM: a known stage must be registered; an unknown stage is not a
     // restriction. `egg` is not among any current effect's forms, so an egg
     // activates nothing without this module hardcoding that fact.
     if (

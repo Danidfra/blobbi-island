@@ -1,7 +1,7 @@
 /**
  * Buying clothing, end to end, against the REAL machinery.
  *
- * The Clothing Store's shelf ships EMPTY — no official wearable has a Coin price
+ * The Clothing Store's shelf ships EMPTY; no official wearable has a Coin price
  * yet (see `WEARABLE_COIN_PRICES`). That is a data decision, and it must not
  * leave the purchase path unproven: everything downstream of a price is built,
  * and everything downstream of a price is exercised here by stocking the shelf
@@ -16,7 +16,7 @@
  * The claims:
  *
  *   - the Coin debit and the wearable grant are ONE event;
- *   - a wearable is UNIQUE — buying an owned one charges nothing, and the guard
+ *   - a wearable is UNIQUE, buying an owned one charges nothing, and the guard
  *     that says so lives in the mutation layer, not in a button;
  *   - unrelated holdings, Arcade Tickets included, are untouched;
  *   - buying does not equip: only kind:31633 is written, never kind:31634.
@@ -51,7 +51,7 @@ const GLASSES_PRICE = 250;
 /**
  * The price table, stocked.
  *
- * Only `priceForAddress` and `stackLimitForAddress` are replaced — everything
+ * Only `priceForAddress` and `stackLimitForAddress` are replaced; everything
  * else in the module (the consumable table, both validators) stays real, so a
  * consumable still prices exactly as it does in production and the wearable
  * ceiling still comes from the published `max_stack`.
@@ -195,7 +195,7 @@ describe('a clothing purchase is one atomic inventory write', () => {
     expect(heldIn(written, GLASSES.address)).toBe(1);
   });
 
-  it('writes ONLY the inventory kind — buying is not wearing', async () => {
+  it('writes ONLY the inventory kind, buying is not wearing', async () => {
     relay = makeRelay(
       realInventoryEvent([{ address: BLOBBI_COIN_ADDRESS, amount: 400 }], 1_000),
     );
@@ -203,7 +203,7 @@ describe('a clothing purchase is one atomic inventory write', () => {
 
     // Ownership is kind:31633 and equipment is kind:31634. A purchase touches
     // exactly the first. (That an owned cosmetic is then equippable through the
-    // ordinary wardrobe is proven, once, in `arcade-prize-equipment.test.tsx` —
+    // ordinary wardrobe is proven, once, in `arcade-prize-equipment.test.tsx`,
     // it asks only "does kind:31633 hold this?", so it cannot care how the item
     // got there.)
     expect(relay.published.map((e) => e.kind)).toEqual([KIND_GAME_INVENTORY]);
@@ -230,7 +230,7 @@ describe('a clothing purchase is one atomic inventory write', () => {
     expect(heldIn(stored, BLOBBI_COIN_ADDRESS)).toBe(600 - GLASSES_PRICE);
   });
 
-  it('never spends an Arcade currency — Coins, and only Coins', async () => {
+  it('never spends an Arcade currency: Coins, and only Coins', async () => {
     relay = makeRelay(
       realInventoryEvent(
         [
@@ -282,7 +282,7 @@ describe('a wearable is unique, and the mutation layer is what enforces it', () 
   });
 
   it('the refusal does not depend on the UI having noticed', async () => {
-    // Buy it, then buy it again through a hook that never re-rendered — the
+    // Buy it, then buy it again through a hook that never re-rendered, the
     // shape of a stale card, a second tab, or a lagging cache.
     relay = makeRelay(
       realInventoryEvent([{ address: BLOBBI_COIN_ADDRESS, amount: 900 }], 1_000),
@@ -300,7 +300,7 @@ describe('a wearable is unique, and the mutation layer is what enforces it', () 
     expect(heldIn(relay.getStored(), GLASSES.address)).toBe(1);
   });
 
-  it('a consumable is unaffected — no ceiling, so it still stacks', async () => {
+  it('a consumable is unaffected; no ceiling, so it still stacks', async () => {
     const { itemIdToAddress } = await import('./registry');
     const apple = itemIdToAddress('food_apple')!;
     relay = makeRelay(
@@ -324,7 +324,7 @@ describe('the shop cannot buy what is not for sale', () => {
       realInventoryEvent([{ address: BLOBBI_COIN_ADDRESS, amount: 900 }], 1_000),
     );
 
-    // The cap is a real official cosmetic — and an Arcade prize. Without a Coin
+    // The cap is a real official cosmetic, and an Arcade prize. Without a Coin
     // price it is not for sale, and the pricing boundary says so before any
     // spend intent, ledger record or wallet call exists.
     const { error } = await buy(CAP.address);

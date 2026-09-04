@@ -1,5 +1,5 @@
 /**
- * Arcade input — the React half.
+ * Arcade input: the React half.
  *
  * A thin, boring listener wrapper. Every decision worth arguing about lives in
  * `arcade-input-map.ts`, which has no React and is tested directly; this hook

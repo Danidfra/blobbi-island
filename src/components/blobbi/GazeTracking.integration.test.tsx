@@ -353,7 +353,7 @@ describe('local-watching-remote gaze tracking', () => {
     expect(presenceSub, 'presence subscription should exist').toBeTruthy();
 
     // Local at (50,90). Remote spawns at (50,75) (dist 15, IN acquisition
-    // range) and walks along the room to (90,74) — a ~3.3s walk that crosses
+    // range) and walks along the room to (90,74): a ~3.3s walk that crosses
     // the 18-unit radius at x≈58 (~0.75s in) and continues OUT of range for
     // far longer than the 1.5s ATTENTION_HOLD. Pre-fix, attention released
     // mid-walk (hold expired while the target was still moving) and the eyes
@@ -400,8 +400,8 @@ describe('local-watching-remote gaze tracking', () => {
       }
     }
 
-    // While the remote walks BEYOND the acquisition radius — and beyond the
-    // point where the pre-fix hold would have expired (~frame 135) — the gaze
+    // While the remote walks BEYOND the acquisition radius, and beyond the
+    // point where the pre-fix hold would have expired (~frame 135): the gaze
     // must keep following: targetKey stays set and the eyes keep changing.
     // (Pre-fix, attention released mid-walk and the eyes froze here.)
     const beyond = samples.filter((s) => s.frame >= 150 && s.frame <= 190);

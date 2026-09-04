@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — Inventory protocol constants.
+ * Blobbi Island: Inventory protocol constants.
  *
  * These are Island-level constants for the clean kind:31632 / kind:31633
  * inventory architecture built on top of `@nostr-games/inventory`.

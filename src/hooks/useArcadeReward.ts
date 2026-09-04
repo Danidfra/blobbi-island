@@ -1,11 +1,11 @@
 /**
- * `useArcadeReward` — the claim boundary between a finished run and a ticket
+ * `useArcadeReward`: the claim boundary between a finished run and a ticket
  * balance.
  *
  * ## The defect this file was rebuilt around
  *
  * A manual test produced a **duplicate grant: a 3-ticket reward was added twice,
- * for 6 tickets**. The path was not exotic — it was the ordinary one:
+ * for 6 tickets**. The path was not exotic; it was the ordinary one:
  *
  * ```
  *   publish resolves → read the balance back → the relay has not caught up
@@ -23,7 +23,7 @@
  * ## The rule now
  *
  * > **Anything that may have crossed the publish boundary is `ambiguous`, and an
- * > ambiguous claim is never republished — only reconciled, read-only.**
+ * > ambiguous claim is never republished; only reconciled, read-only.**
  *
  * ```
  *   validate
@@ -41,8 +41,8 @@
  *
  * | outcome | may we publish again? |
  * | --- | --- |
- * | `invalid-claim`, `lock-unavailable`, `ledger-unavailable`, `baseline-unavailable`, `sign-failed`, `publish-rejected` | **yes** — provably nothing was sent |
- * | `publish-timeout`, `verify-mismatch`, `verify-unavailable`, anything unclassified | **no** — reconciliation only |
+ * | `invalid-claim`, `lock-unavailable`, `ledger-unavailable`, `baseline-unavailable`, `sign-failed`, `publish-rejected` | **yes**: provably nothing was sent |
+ * | `publish-timeout`, `verify-mismatch`, `verify-unavailable`, anything unclassified | **no**: reconciliation only |
  *
  * The default for an unrecognised error is the unsafe-to-retry side. A failure
  * nobody has classified must not become a second additive write.
@@ -55,7 +55,7 @@
  * higher than the baseline read taken before the write.
  *
  * It does not prove every relay has it, that it survives, or that no concurrent
- * writer will replace it — kind:31633 is replaceable and newest-wins.
+ * writer will replace it, kind:31633 is replaceable and newest-wins.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -109,7 +109,7 @@ export type ArcadeRewardPhase =
   | 'confirmed'
   /** Provably nothing was sent. Retryable. */
   | 'failed'
-  /** May have been published. Reconciliation only — NEVER republished. */
+  /** May have been published. Reconciliation only: NEVER republished. */
   | 'unresolved'
   /** A read-only reconciliation is running. */
   | 'checking'
@@ -165,7 +165,7 @@ const FAILURE_COPY: Readonly<Record<ArcadeClaimFailure, string>> = {
     'Your inventory could not be read, so nothing was sent. You can try again.',
   'ledger-unavailable':
     'This browser would not save a record of the claim, so nothing was sent. ' +
-    'Tickets are only granted once a claim can be recorded — free some storage and try again.',
+    'Tickets are only granted once a claim can be recorded, free some storage and try again.',
   'lock-unavailable':
     'Another tab is already claiming this run, so nothing was sent here. Finish it there.',
   'invalid-claim': 'This run cannot be claimed.',
@@ -181,8 +181,8 @@ const FAILURE_COPY: Readonly<Record<ArcadeClaimFailure, string>> = {
  * Only errors that PROVABLY happened before the event could reach a relay are
  * classified as retryable. `ArcadeRewardWriterError` carries that proof: it is
  * thrown by the writer's own guards, all of which run before `nostr.event()`.
- * Anything else — a timeout, an abort, a rejection whose shape we do not
- * recognise — is treated as possibly-published.
+ * Anything else: a timeout, an abort, a rejection whose shape we do not
+ * recognise: is treated as possibly-published.
  */
 function classifyPublishError(error: unknown): ArcadeClaimFailure {
   if (error instanceof ArcadeRewardWriterError) {
@@ -219,7 +219,7 @@ function classifyPublishError(error: unknown): ArcadeClaimFailure {
  * So "every sub-error is a plain Error" does NOT mean "every relay refused it":
  * a dropped connection after the `EVENT` frame was written looks identical, and
  * in that case the relay may well have stored the event. There is no way, with
- * this contract, to tell a definitive rejection from an unknown outcome — so the
+ * this contract, to tell a definitive rejection from an unknown outcome, so the
  * unknown outcome wins, and the claim becomes unresolved rather than retryable.
  *
  * The cost is a claim that stays unresolved when the player was simply offline.
@@ -248,7 +248,7 @@ function phaseForClaim(claim: ArcadeRewardClaim): ArcadeRewardPhase {
     case 'publishing':
     case 'verifying':
       // A record left mid-flight by a crashed or closed tab. It blocks a new
-      // grant exactly as an ambiguous one does — the write may have happened.
+      // grant exactly as an ambiguous one does, the write may have happened.
       return 'unresolved';
     default:
       return 'idle';
@@ -302,7 +302,7 @@ export function useArcadeReward(options: UseArcadeRewardOptions = {}) {
    *
    * Called when the results screen mounts for a run, so an ambiguous or
    * confirmed claim survives closing the shell, remounting the component, and a
-   * full page refresh — instead of presenting a fresh "Claim" button over a run
+   * full page refresh, instead of presenting a fresh "Claim" button over a run
    * that may already have been paid.
    */
   const hydrate = useCallback(
@@ -355,7 +355,7 @@ export function useArcadeReward(options: UseArcadeRewardOptions = {}) {
       calculation: ArcadeRewardCalculation,
     ): Promise<ArcadeClaimAttempt> => {
       // Capture the user for the whole attempt. If the player switches accounts
-      // mid-claim, the write still belongs to — and is recorded against — the
+      // mid-claim, the write still belongs to, and is recorded against, the
       // account that earned it.
       const activeUser = user;
       const runId = result.runId;
@@ -412,7 +412,7 @@ export function useArcadeReward(options: UseArcadeRewardOptions = {}) {
       }
 
       // THE same-document guard. Synchronous, so two presses inside one tick
-      // cannot both pass it — no await and no re-render between check and set.
+      // cannot both pass it; no await and no re-render between check and set.
       if (!acquireClaimLock(pubkey, runId)) {
         return {
           ok: false,
@@ -449,7 +449,7 @@ export function useArcadeReward(options: UseArcadeRewardOptions = {}) {
 
           // ── Durable record is a PREREQUISITE, not a courtesy ──
           // `persistClaim` writes and reads back. Without a record that survives
-          // a refresh, the claim would be offered again — the second half of the
+          // a refresh, the claim would be offered again, the second half of the
           // duplicate-grant bug.
           if (!persistClaim(pubkey, claim)) {
             return settle(
@@ -539,7 +539,7 @@ export function useArcadeReward(options: UseArcadeRewardOptions = {}) {
             );
           }
 
-          // The boundary — not this hook — decides whether the numbers add up,
+          // The boundary: not this hook, decides whether the numbers add up,
           // against the baseline IT recorded.
           claim = advanceClaim(claim, { type: 'confirm', now: Date.now(), quantityAfter: after });
           persistClaim(pubkey, claim);

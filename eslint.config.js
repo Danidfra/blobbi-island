@@ -51,7 +51,7 @@ export default tseslint.config(
     // to notice: OUTSIDE `src/safety/`, code consumes CAPABILITIES.
     //
     // `useIslandSafetyPolicy`, the `IslandSafetyPolicy` type, the provider and
-    // the pure admission helpers are all freely importable — those are the
+    // the pure admission helpers are all freely importable; those are the
     // capability surface. What is restricted is everything that would let a call
     // site ask *who the player is* instead: the profile union, the two policy
     // literals and the resolver. A feature that reaches for those has found a
@@ -60,7 +60,7 @@ export default tseslint.config(
     // `docs/family-safety-policy.md`.
     //
     // Tests are exempt: asserting the matrix is exactly what they are for.
-    // `src/safety/boundaries.test.ts` is the belt to this rule's braces — it
+    // `src/safety/boundaries.test.ts` is the belt to this rule's braces; it
     // checks the real import graph, so a relative-path import cannot slip past.
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/safety/**", "src/**/*.test.{ts,tsx}"],
@@ -100,7 +100,7 @@ export default tseslint.config(
     // Leaving Blobbi Island happens in ONE place.
     //
     // Six components used to call `window.open` themselves, each building its
-    // own URL and none of them passing `noopener` — so an opened page kept a
+    // own URL and none of them passing `noopener`: so an opened page kept a
     // live handle to this tab. Centralising fixed all of that at once, and these
     // rules are what stop it drifting back one convenient call at a time.
     //

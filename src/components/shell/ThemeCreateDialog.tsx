@@ -27,14 +27,14 @@ import {
 } from "@/lib/nostr-theme";
 
 /**
- * ThemeCreateDialog — "Create a theme".
+ * ThemeCreateDialog, "Create a theme".
  *
  * ## The interoperable schema, not Island's internals
  *
  * The form edits exactly what the public protocol carries: three colours, an
  * optional body font, and an optional background image. Island's other thirteen
- * palette roles are an implementation detail of this client — derived,
- * deterministic, never published — and putting them in this form would produce
+ * palette roles are an implementation detail of this client, derived,
+ * deterministic, never published, and putting them in this form would produce
  * themes only Blobbi Island could read, which is the opposite of the point. A
  * theme made here is a plain kind:36767 event that Ditto renders as its author
  * intended, font and wallpaper included.
@@ -44,7 +44,7 @@ import {
  * The colours are run through the same adapter the applier uses and written
  * onto a container as custom properties, so what the player is looking at while
  * they drag a colour picker IS the island they will get. Nothing global changes
- * until they publish and select — editing a draft must not repaint the app.
+ * until they publish and select, editing a draft must not repaint the app.
  *
  * ## Contrast is reported, not enforced
  *
@@ -121,9 +121,9 @@ export function ThemeCreateDialog({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [draft, setDraft] = useState(DEFAULT_DRAFT);
-  /** Ditto's `font.family` — a CSS family name, not a stylesheet URL. */
+  /** Ditto's `font.family`: a CSS family name, not a stylesheet URL. */
   const [fontFamily, setFontFamily] = useState('');
-  /** Ditto's `font.url` — a direct link to a font FILE, https only. */
+  /** Ditto's `font.url`: a direct link to a font FILE, https only. */
   const [fontUrl, setFontUrl] = useState('');
   const [backgroundUrl, setBackgroundUrl] = useState('');
   const [backgroundMode, setBackgroundMode] = useState<'cover' | 'tile'>('cover');
@@ -132,8 +132,8 @@ export function ThemeCreateDialog({
    * The draft as core colours, with each field falling back to the default when
    * it is mid-edit.
    *
-   * A half-typed `#ab` must not blank the preview — the player is watching it
-   * while they type — so an invalid field keeps the last valid default rather
+   * A half-typed `#ab` must not blank the preview, the player is watching it
+   * while they type, so an invalid field keeps the last valid default rather
    * than propagating `NaN` into a custom property.
    */
   const colors: CoreThemeColors = useMemo(
@@ -173,7 +173,7 @@ export function ThemeCreateDialog({
   const findings = useMemo(() => contrastReport(palette), [palette]);
   const failures = findings.filter((f) => !f.passes);
 
-  // The draft's own type, scoped to the preview — so a font typed into the form
+  // The draft's own type, scoped to the preview, so a font typed into the form
   // is visible before it is published, and only inside the preview box.
   const previewBodyFont = previewFontStack(config.font);
 
@@ -198,7 +198,7 @@ export function ThemeCreateDialog({
   const handlePublish = async () => {
     try {
       const result = await publish.mutateAsync({ title, description, config });
-      // Apply it immediately — the player just designed this island, showing it
+      // Apply it immediately, the player just designed this island, showing it
       // to them is the entire point, and the selection publish carries the
       // ORIGINAL three colours rather than a re-derivation.
       selectTheme(
@@ -239,7 +239,7 @@ export function ThemeCreateDialog({
       container={container}
       size="lg"
       title="Create a theme"
-      description="Three colours. The island works out the rest — and so does any other client that reads Nostr themes."
+      description="Three colours. The island works out the rest, and so does any other client that reads Nostr themes."
       icon={<Paintbrush />}
       footer={
         <>
@@ -272,7 +272,7 @@ export function ThemeCreateDialog({
             />
             <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
               {slug
-                ? `Published as ${slug} — republishing with the same name updates this theme.`
+                ? `Published as ${slug}, republishing with the same name updates this theme.`
                 : 'Needed. Also becomes the theme’s identifier.'}
             </p>
           </div>
@@ -315,7 +315,7 @@ export function ThemeCreateDialog({
           {/*
             Font and background are the other two fields the protocol carries.
             Both are optional, both are published exactly as Ditto publishes
-            them, and both are validated before they enter the config — an
+            them, and both are validated before they enter the config, an
             unusable value is simply absent rather than silently broken.
           */}
           <div className="space-y-1.5">
@@ -339,7 +339,7 @@ export function ThemeCreateDialog({
               className="font-mono text-xs"
             />
             <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
-              A CSS family name, and a direct https link to a font file (.woff2, .ttf, .otf) — not
+              A CSS family name, and a direct https link to a font file (.woff2, .ttf, .otf): not
               a stylesheet. Without a link the font only shows for people who have it installed.
             </p>
           </div>
@@ -378,7 +378,7 @@ export function ThemeCreateDialog({
               ))}
             </div>
             <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
-              https only. On the island it dresses the page around the game window — the world
+              https only. On the island it dresses the page around the game window, the world
               keeps its own art.
             </p>
           </div>
@@ -433,13 +433,13 @@ export function ThemeCreateDialog({
               <AlertTriangle aria-hidden className="mt-0.5 size-3 shrink-0" />
               <span>
                 {failures.length} pairing{failures.length === 1 ? '' : 's'} below AA. You can still
-                publish — other clients derive their own colours from yours.
+                publish: other clients derive their own colours from yours.
               </span>
             </p>
           )}
 
           <p className="text-[0.6875rem] leading-snug text-island-ink-soft">
-            Published as a Nostr theme (kind 36767) — colours as hex, the font as an{' '}
+            Published as a Nostr theme (kind 36767): colours as hex, the font as an{' '}
             <code className="font-mono">f</code> tag and the image as a{' '}
             <code className="font-mono">bg</code> tag, exactly as Ditto writes them. Any client
             that reads Nostr themes can use it.

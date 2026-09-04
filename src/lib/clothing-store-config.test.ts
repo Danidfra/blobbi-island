@@ -3,14 +3,14 @@
  *
  * The old file for this room tested a SCENE: nine sprites, their placements,
  * their sizes relative to one another and the depth bands derived from their
- * painted bases. That composition is gone — `clothing-store.webp` contains the
- * furniture those sprites drew — and the coordinate claims went with it rather
+ * painted bases. That composition is gone, `clothing-store.webp` contains the
+ * furniture those sprites drew, and the coordinate claims went with it rather
  * than being kept alive against furniture nobody renders. What replaces them is
  * not a coordinate snapshot either. Three kinds of claim are checked here:
  *
  *  1. the room POINTS AT the new artwork, and no trace of the old composition
  *     is left behind in the repository or in the configs keyed by filename;
- *  2. the walkable floor matches the picture — the Blobbi stands on visible
+ *  2. the walkable floor matches the picture, the Blobbi stands on visible
  *     boards, the furniture painted on them is solid, and the room is still one
  *     connected space with every control reachable;
  *  3. the hotspots sit OVER the things they name, and each opens exactly one of
@@ -69,7 +69,7 @@ function isBlocked(point: Position): boolean {
   );
 }
 
-/** A point the walk boundary does not have to move — i.e. real floor. */
+/** A point the walk boundary does not have to move; i.e. real floor. */
 function onFloor(point: Position, b: Boundary = boundary): boolean {
   const clamped = constrainPosition(point, b);
   return Math.abs(clamped.x - point.x) < 1e-6 && Math.abs(clamped.y - point.y) < 1e-6;
@@ -84,8 +84,8 @@ function standable(point: Position): boolean {
  *
  * Mirrors the movement loop: no pathfinding, one straight line, each step
  * clamped into the boundary and halted the moment it lands in a blocker.
- * `room-routing.test.ts` asks the harder question — whether the shared planner
- * finds a way round when this fails — so a `false` here is a statement about
+ * `room-routing.test.ts` asks the harder question, whether the shared planner
+ * finds a way round when this fails, so a `false` here is a statement about
  * the straight line only.
  */
 function walkable(from: Position, to: Position, steps = 400): boolean {
@@ -215,7 +215,7 @@ describe('the storefront in the mall', () => {
     const paintedRight = left + width * (1 - 0.0319);
     const paintedBase = boxBottomY - heightPct * 0.0293;
 
-    // The extent the `.png` facade painted: x 50 → 74.5, base on y = 61.5 —
+    // The extent the `.png` facade painted: x 50 → 74.5, base on y = 61.5,
     // the same floor line the Care and Badges facades stand on.
     expect(paintedLeft).toBeCloseTo(50, 1);
     expect(paintedRight).toBeCloseTo(74.5, 1);

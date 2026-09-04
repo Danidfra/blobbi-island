@@ -1,9 +1,9 @@
 /**
- * Beach Treasure Hunt — the economy-neutral result.
+ * Beach Treasure Hunt, the economy-neutral result.
  *
  * `buildTreasureHuntResult` is a pure projection of a **finished** round:
  * same finished round, same result, no services called, nothing mutated.
- * An unfinished round throws — there is deliberately no "partial result"
+ * An unfinished round throws; there is deliberately no "partial result"
  * here; if Beach 1B wants a live scoreboard it should read the round state
  * directly, not a half-built result object.
  *

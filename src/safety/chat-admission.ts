@@ -1,5 +1,5 @@
 /**
- * The communication data boundary — the first capability with a real
+ * The communication data boundary, the first capability with a real
  * enforcement point, now aware of message classes.
  *
  * ## Why admission, and not a hidden input
@@ -12,7 +12,7 @@
  * has to live where a message is ADMITTED, and both directions consult the same
  * function.
  *
- * This module is pure — no React, no relay, no clock, no storage — so "does
+ * This module is pure, no React, no relay, no clock, no storage, so "does
  * Family refuse this message?" is answerable by a unit test with no world to
  * mount, and the same answer is what the running game uses.
  *
@@ -40,7 +40,7 @@
  *
  * That split is what makes the security claim checkable. A spoofed
  * `{"type":"quick","phrase":"want-to-play","text":"<abuse>"}` is not defeated
- * here — it is defeated in the parser, which never copies `text` — and this
+ * here: it is defeated in the parser, which never copies `text`, and this
  * function then sees an ordinary quick phrase, because that is all that is left
  * of it.
  */
@@ -125,8 +125,8 @@ export function admitChatMessage(
     case 'text':
       return policy.freeTextChat ? ADMITTED : REFUSALS['free-text-not-permitted'];
 
-    // A quick phrase and a filled-in template are the same product promise — a
-    // sentence assembled from a catalog this build ships — so one capability
+    // A quick phrase and a filled-in template are the same product promise, a
+    // sentence assembled from a catalog this build ships, so one capability
     // governs both. Splitting them would let a profile allow "Hi!" and refuse
     // "Meet me at the Beach in 10 minutes", which is not a distinction anyone
     // has a reason to draw.

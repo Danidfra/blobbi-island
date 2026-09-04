@@ -33,13 +33,13 @@ import {
 } from '@/arcade/tokens/game-entry';
 
 /**
- * Pool — the controller that joins the game to the shared arcade.
+ * Pool: the controller that joins the game to the shared arcade.
  *
  * The **third** file with this shape, after `DanceMachine` and
  * `AirHockeyMachine`, and that is the point rather than an accident:
  * `docs/blobbi-air-hockey.md` §2 wrote the dedicated-machine pattern down and
  * said Pool should be the next thing that looks like it. What a controller owns
- * is the WIRING, and nothing the pieces around it already own — the lifecycle
+ * is the WIRING, and nothing the pieces around it already own, the lifecycle
  * lives in `ArcadeRoom`'s reducer, the rules live in `src/arcade/pool/`, and the
  * frame is `ArcadeGameShell`.
  *
@@ -47,8 +47,8 @@ import {
  *
  *  - **A run id is minted exactly once, by the caller of `start`.** The reducer
  *    is pure and refuses to overwrite one; this is the only place one is made,
- *    and it is also the match's SEED — the rack and the rival's decisions both
- *    come from it — so a run is reproducible.
+ *    and it is also the match's SEED, the rack and the rival's decisions both
+ *    come from it, so a run is reproducible.
  *  - **Difficulty is fixed when the run starts.** It is part of the request and
  *    is echoed into the result; letting it change mid-frame would make the
  *    result describe a match that did not happen.
@@ -64,7 +64,7 @@ import {
  *
  * `POOL_REWARD_POLICY` is active and the catalogue says `grantsTickets: true`,
  * so this controller carries the same claim wiring as `DanceMachine` and
- * `AirHockeyMachine` — the shared `useArcadeRewardController`, which prices the
+ * `AirHockeyMachine`: the shared `useArcadeRewardController`, which prices the
  * finished {@link ArcadeGameResult} and drives the exactly-once claim through
  * `useArcadeReward`. Nothing about the simulation or the result shape changed
  * to enable it; the result built in `pool-result.ts` was the join point all
@@ -86,7 +86,7 @@ export interface PoolMachineProps {
   readonly exitAriaLabel: string;
   /**
    * The turnstile that charges for a run. Injected, like the reward writer:
-   * a machine rendered without one plays free, which is the safe default —
+   * a machine rendered without one plays free, which is the safe default,
    * charging by omission would be taking money nobody wired up.
    */
   readonly entry?: ArcadeGameEntry;
@@ -105,7 +105,7 @@ export interface PoolMachineProps {
    * Force the expanded (whole-screen) presentation on or off.
    *
    * Production leaves it undefined and the answer comes from `useImmersive`, the
-   * app's existing feature-based test for a touch-first handheld — the same one
+   * app's existing feature-based test for a touch-first handheld, the same one
    * `BlobbiAppShell` uses to decide whether the world fills the screen.
    * Overridable only so a test can render either presentation deterministically.
    */
@@ -221,7 +221,7 @@ export function PoolMachine({
       setAbortNotice(null);
       prepareEngine();
 
-      // A free run — or one a Pass waives — starts on this tick, with no
+      // A free run, or one a Pass waives, starts on this tick, with no
       // write and no await.
       if (entry.admitFree(gameId)) {
         dispatch({ type: kind, runId: mintRunId(), difficulty });
@@ -270,8 +270,8 @@ export function PoolMachine({
    *
    * Deliberately scoped to a LIVE run. The start panel, the rival picker and the
    * results all want to be readable panels; only gameplay wants every pixel. And
-   * it is deliberately not a second modal, a second route or a second lifecycle
-   * — the same shell, told to stop insetting itself, and the same table, told to
+   * it is deliberately not a second modal, a second route or a second lifecycle,
+   * the same shell, told to stop insetting itself, and the same table, told to
    * drop its chrome. `BlobbiFrame` already makes the stage fill the screen on a
    * handheld, so filling the stage is filling the screen.
    */
@@ -367,7 +367,7 @@ export function PoolMachine({
       /*
         Expanded play gives the shell the whole stage: no inset, no rounding, no
         border. `sm:` is where the shell adds them, so `sm:` is where they are
-        taken back — one override, not a second layout.
+        taken back: one override, not a second layout.
       */
       className={expanded ? 'sm:inset-0 sm:rounded-none border-0' : undefined}
       /*

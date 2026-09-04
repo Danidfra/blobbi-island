@@ -10,7 +10,7 @@ import { QuantityBadge } from '@/components/ui/item-tile';
  * heights differ (footnotes, prices). That fixed the content SHAPE and left the
  * geometry implicit: every zone was still sized by its content, and the tile's
  * `height: 100%` had to resolve through a class-less block wrapper against a
- * height the wrapper only acquired by grid stretching — the classic circular
+ * height the wrapper only acquired by grid stretching, the classic circular
  * percentage-resolution case that engines settle differently. Identical class
  * strings, and "Ball" still rendered a visibly smaller card than "Calcium
  * Supplement" on a real screen.
@@ -26,8 +26,8 @@ import { QuantityBadge } from '@/components/ui/item-tile';
  *   │ title    h-8      │   fixed TWO-LINE zone: line-clamp-2 at leading-4.
  *   │ (2 lines held)    │   "Ball" reserves both lines; "Calcium Supplement"
  *   └───────────────────┘   wraps into them; nothing gets a third.
- *        ×3                 quantity — absolute overlay, top-right corner
- *      [Worn]               state — absolute overlay pill, never in flow
+ *        ×3                 quantity: absolute overlay, top-right corner
+ *      [Worn]               state: absolute overlay pill, never in flow
  * ```
  *
  * Total: 2px border + p-2 + 64 + mt-1 + 32 + p-2 = **118px, at every
@@ -52,7 +52,7 @@ export interface CollectionTileProps extends React.HTMLAttributes<HTMLElement> {
   /** Makes the tile a button. Without it the tile is a static `<div>`. */
   onClick?: () => void;
   /**
-   * A short state word — "Worn", "Active", "Previewing" — rendered as an
+   * A short state word, "Worn", "Active", "Previewing", rendered as an
    * overlay pill over the art zone. Text, not colour alone, and zero effect
    * on the tile's height.
    */

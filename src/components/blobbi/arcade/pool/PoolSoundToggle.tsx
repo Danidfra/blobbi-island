@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
  *
  * A third small toggle rather than a shared one lifted out of the other two, for
  * the reason `HockeySoundToggle` already states: the three are visually similar
- * and semantically different, and the part that genuinely must be common — the
- * persisted `blobbi:arcade:audio-muted` flag — already is. A generic
+ * and semantically different, and the part that genuinely must be common, the
+ * persisted `blobbi:arcade:audio-muted` flag, already is. A generic
  * `ArcadeSoundToggle` parameterised by surface colour, for three callers, is the
  * speculative abstraction the brief asks not to build.
  *

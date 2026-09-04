@@ -320,7 +320,7 @@ This replaceable event contains the current state of the Blobbi. The `d` tag con
 
 ### Kind 14921: Blobbi Record (Immutable)
 
-This event kind tracks immutable records from a Blobbi's life — including birth, hatching, evolution, memories, and other important milestones. Each event is permanent and contributes to the Blobbi's historical timeline.
+This event kind tracks immutable records from a Blobbi's life, including birth, hatching, evolution, memories, and other important milestones. Each event is permanent and contributes to the Blobbi's historical timeline.
 
 ---
 
@@ -510,7 +510,7 @@ It includes the public keys of both parent Blobbis and metadata about the result
 }
 ```
 
-# 📋 Kind 14919 — Blobbi Interaction Event
+# 📋 Kind 14919: Blobbi Interaction Event
 
 Este documento descreve o evento do tipo `14919`, usado para registrar interações com um Blobbi (pet digital). Cada evento representa uma ação específica do usuário, como alimentar, brincar, limpar ou colocar para descansar o Blobbi.
 

@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the Nostr THEME protocol, as Ditto defines it.
+ * Blobbi Island: the Nostr THEME protocol, as Ditto defines it.
  *
  * This module is a compatible re-implementation of `src/lib/themeEvent.ts` in
  * the Ditto client, verified against that source. Nothing here was invented:
@@ -10,8 +10,8 @@
  * ## Two kinds, two different questions
  *
  * ```
- *   36767  addressable   A THEME — a named, shareable definition. Many per user.
- *   16767  replaceable   THE THEME I AM USING — one per user, the selection.
+ *   36767  addressable   A THEME, a named, shareable definition. Many per user.
+ *   16767  replaceable   THE THEME I AM USING; one per user, the selection.
  * ```
  *
  * They must never be conflated. A definition is a thing that exists and can be
@@ -22,7 +22,7 @@
  *
  * ## The event shape
  *
- * Kind 36767 — theme definition:
+ * Kind 36767: theme definition:
  *
  * ```jsonc
  * {
@@ -41,19 +41,19 @@
  * }
  * ```
  *
- * Kind 16767 — active theme: the same `c` tags, an optional `title` /
+ * Kind 16767: active theme: the same `c` tags, an optional `title` /
  * `description`, and `["a", "36767:<pubkey>:<d>"]` when a definition was
  * selected. Empty tags means "cleared".
  *
  * Ditto also defines `f` (font family + URL, with a body/title role) and `bg`
- * (an imeta-style background media tag). Island reads and writes BOTH — see
+ * (an imeta-style background media tag). Island reads and writes BOTH; see
  * {@link ThemeCompatibilityNote} at the bottom of this file for what happens to
  * each once it is inside the island.
  *
  * ## What this file is NOT
  *
  * It is not "the theme this user is using in Ditto". That lives in NIP-78
- * kind:30078 under `d = "ditto/metadata"`, encrypted to self — see
+ * kind:30078 under `d = "ditto/metadata"`, encrypted to self; see
  * `ditto-settings.ts`. Kind 16767 is a PUBLIC advertisement of a palette, read
  * by Ditto's ProfilePage and FollowPage to decorate somebody's profile, and
  * pulled back on pageload into `customTheme`. Treating it as the app-level
@@ -75,7 +75,7 @@
  *
  * A `c` tag is accepted only if it matches `#rgb`/`#rrggbb`, and it is then
  * PARSED INTO NUMBERS and re-emitted from those numbers. So even a value that
- * passed validation cannot carry a payload — what lands in a custom property is
+ * passed validation cannot carry a payload, what lands in a custom property is
  * arithmetic output, never the input. Titles and descriptions are length-capped
  * and rendered as text nodes by React, never interpolated into markup or style.
  */
@@ -105,7 +105,7 @@ export interface CoreThemeColors {
   background: string;
   /** Body text / foreground. */
   text: string;
-  /** Primary accent — buttons, links, focus. */
+  /** Primary accent: buttons, links, focus. */
   primary: string;
 }
 
@@ -115,7 +115,7 @@ const CORE_ROLES = ['background', 'text', 'primary'] as const;
  * A font reference, exactly as Ditto models it: a CSS family name and an
  * optional URL to a font FILE.
  *
- * Not a CSS declaration, not a stylesheet link, not a Google Fonts embed URL —
+ * Not a CSS declaration, not a stylesheet link, not a Google Fonts embed URL,
  * a `.woff2`/`.ttf`/`.otf` that goes in a single `src: url(...)`. Anything else
  * in these fields is data Island refuses rather than interprets.
  */
@@ -136,7 +136,7 @@ export interface ThemeBackground {
 }
 
 /**
- * The complete interoperable theme — Ditto's `ThemeConfig`, field for field.
+ * The complete interoperable theme: Ditto's `ThemeConfig`, field for field.
  *
  * This is the unit that travels: it is what a kind:36767 definition holds, what
  * a kind:16767 active theme holds, and what lives under `customTheme` in
@@ -178,8 +178,8 @@ export function sanitizeThemeUrl(raw: unknown): string | undefined {
  * Allowlist-sanitise a string destined for a quoted CSS value.
  *
  * Ditto's `sanitizeCssString`, reproduced: Unicode letters and numbers, space,
- * underscore, hyphen, apostrophe and period survive; everything else — quotes,
- * braces, semicolons, parentheses, backslashes — is removed. A font family is
+ * underscore, hyphen, apostrophe and period survive; everything else, quotes,
+ * braces, semicolons, parentheses, backslashes, is removed. A font family is
  * the one event-sourced string that has to reach a stylesheet, and this is what
  * makes that safe.
  */
@@ -317,8 +317,8 @@ export function isDarkBackground(triplet: string): boolean {
 /**
  * Caps on the free text a theme may carry.
  *
- * Not a security control on their own — React renders these as text nodes, so
- * they cannot execute — but a 40KB "title" is a denial-of-layout, and a theme
+ * Not a security control on their own: React renders these as text nodes, so
+ * they cannot execute, but a 40KB "title" is a denial-of-layout, and a theme
  * list is rendered from strangers' events.
  */
 export const THEME_TITLE_MAX = 64;
@@ -329,7 +329,7 @@ export const THEME_DESCRIPTION_MAX = 200;
  *
  * Written as a code-point scan rather than a regex on purpose: a character
  * class covering C0 and C1 has to contain literal control characters, and the
- * project lints those out of regex literals (correctly — there they are almost
+ * project lints those out of regex literals (correctly; there they are almost
  * always an accident). Here they are the subject. Theme titles arrive from
  * strangers, and a NUL, a bidi override or a lone escape in a list of names is
  * exactly what this removes before React ever renders it.
@@ -351,7 +351,7 @@ export function sanitizeThemeText(value: unknown, max: number): string {
  * Read the three core colours out of an event's tags.
  *
  * Returns `null` unless all three roles are present AND every one of them is a
- * valid hex colour — a theme missing its text colour is not a theme with a
+ * valid hex colour, a theme missing its text colour is not a theme with a
  * default text colour, it is an invalid event, and guessing would put an
  * unreadable UI in front of the player.
  */
@@ -381,12 +381,12 @@ function buildColorTags(colors: CoreThemeColors): string[][] {
  * Read the body and title fonts.
  *
  * Shape: `['f', family, url, role]` where role is `'body'` or `'title'`. A tag
- * with NO role is legacy and counts as the body font — Ditto's rule, and
+ * with NO role is legacy and counts as the body font: Ditto's rule, and
  * dropping those would lose every font published before the role was added.
  * First tag per role wins, so a later duplicate cannot override.
  *
  * The URL is https-validated here rather than at the point of use, so an
- * unusable one becomes a family with no URL — which still renders correctly if
+ * unusable one becomes a family with no URL, which still renders correctly if
  * the family happens to be installed, instead of discarding the font entirely.
  */
 function parseFontTags(tags: string[][]): { font?: ThemeFont; titleFont?: ThemeFont } {
@@ -414,7 +414,7 @@ function parseFontTags(tags: string[][]): { font?: ThemeFont; titleFont?: ThemeF
 }
 
 /**
- * Emit `f` tags. Body before title, and an absent URL is written as `''` —
+ * Emit `f` tags. Body before title, and an absent URL is written as `''`,
  * both are Ditto's shape, and the empty string is load-bearing because the role
  * is the FOURTH element.
  */
@@ -430,7 +430,7 @@ function buildFontTags(font?: ThemeFont, titleFont?: ThemeFont): string[][] {
 /**
  * Read the background media tag.
  *
- * Shape: one variadic tag of `key value` strings, imeta-style —
+ * Shape: one variadic tag of `key value` strings, imeta-style,
  * `['bg', 'url https://…', 'mode cover', 'm image/jpeg', 'dim 1920x1080',
  * 'blurhash …']`. The key is everything before the FIRST space, so a value may
  * itself contain spaces.
@@ -515,7 +515,7 @@ function parseLegacyContentColors(content: string): CoreThemeColors | null {
   if (!parsed || typeof parsed !== 'object') return null;
   const record = parsed as Record<string, unknown>;
 
-  // Legacy values are HSL TRIPLETS, not hex — that format predates the hex
+  // Legacy values are HSL TRIPLETS, not hex; that format predates the hex
   // encoding. Anything unparseable is rejected rather than defaulted.
   const raw = [record.background, record.text ?? record.foreground, record.primary];
   if (!raw.every((v) => parseHslTriplet(v) !== null)) return null;
@@ -539,7 +539,7 @@ export interface NostrThemeDefinition {
   description: string;
   /** The complete interoperable theme: colours, fonts, background media. */
   config: ThemeConfig;
-  /** `36767:<pubkey>:<d>` — stable across republishes, unlike the event id. */
+  /** `36767:<pubkey>:<d>`: stable across republishes, unlike the event id. */
   address: string;
   /** For deterministic newest-wins resolution. */
   createdAt: number;
@@ -550,7 +550,7 @@ export interface NostrThemeDefinition {
 /**
  * The stable id Island stores for a Nostr theme.
  *
- * `nostr:36767:<pubkey>:<d>` — the protocol address with a namespace in front.
+ * `nostr:36767:<pubkey>:<d>`: the protocol address with a namespace in front.
  * The prefix is what lets one `AppConfig.theme` field hold both kinds of
  * identity without a collision: a built-in id is a bare slug (`cozy-day`) and
  * contains no colon, so the two vocabularies cannot overlap. See
@@ -643,7 +643,7 @@ export function buildThemeDefinitionTags(input: {
  * Ditto's slug rule, reproduced.
  *
  * The `d` is the addressable identity, so publishing the same title twice
- * REPLACES rather than duplicating — which is what makes "edit my theme" work
+ * REPLACES rather than duplicating, which is what makes "edit my theme" work
  * without an update path of its own.
  */
 export function titleToSlug(title: string): string {
@@ -668,9 +668,9 @@ export function titleToSlug(title: string): string {
  * do not survive a round trip through three.
  *
  * So Island appends ONE tag Ditto does not read and does not need to: the id
- * from Island's own vocabulary. Nothing in the public protocol changes meaning
- * — the event is a fully valid Ditto active-theme event with a fully correct
- * colour triple — and Island can tell which of its own themes produced it. An
+ * from Island's own vocabulary. Nothing in the public protocol changes meaning,
+ * the event is a fully valid Ditto active-theme event with a fully correct
+ * colour triple: and Island can tell which of its own themes produced it. An
  * unknown or absent value falls back to matching on the `a` tag, and then to
  * the default.
  */
@@ -682,8 +682,8 @@ export interface ActiveThemeSelection {
    *
    * This is the field that matters, and the one the first implementation did
    * not have. Ditto publishes a self-contained active theme for every selection
-   * that did not come from a definition — a preset, an edited palette, a colour
-   * nudge — so an event with no `a` tag is the COMMON case, not a degenerate
+   * that did not come from a definition, a preset, an edited palette, a colour
+   * nudge: so an event with no `a` tag is the COMMON case, not a degenerate
    * one. It is applied from these values alone.
    */
   config: ThemeConfig;
@@ -722,7 +722,7 @@ export function parseActiveTheme(event: NostrEvent): ActiveThemeSelection | null
  * The order is Ditto's, exactly: colours, fonts, background, `alt`, `title`,
  * `description`, `a`. Island's own `island-theme` tag is appended LAST, so
  * everything before it is byte-identical to what Ditto's builder produces for
- * the same input — which is what `ditto-interop.test.ts` asserts.
+ * the same input, which is what `ditto-interop.test.ts` asserts.
  *
  * `sourceAuthor` + `sourceIdentifier` rather than a pre-built address, again
  * matching Ditto: the `a` tag is emitted only when BOTH are present, so a
@@ -762,7 +762,7 @@ export function buildActiveThemeTags(input: {
  * Nostr replacement semantics, applied deterministically: an addressable event
  * is identified by `kind:pubkey:d`, and the newest `created_at` wins. Ties break
  * on the LOWER event id, which is the convention NIP-01 gives for replaceable
- * events and, more importantly, is stable — two clients resolving the same set
+ * events and, more importantly, is stable, two clients resolving the same set
  * must pick the same theme, or a shared theme shows different colours to
  * different people.
  *
@@ -798,11 +798,11 @@ export function resolveThemeDefinitions(events: readonly NostrEvent[]): NostrThe
  *   stranger's say-so; a Ditto theme with a font renders in Island with
  *   Island's type and its colours intact. Publishing from Island never emits an
  *   `f` tag, so re-publishing a Ditto theme through Island would DROP a font
- *   its author had set — which is why Island publishes new themes rather than
+ *   its author had set, which is why Island publishes new themes rather than
  *   editing other people's.
  *
  * - **`bg` (background media).** Same reasoning, plus: the island already has a
- *   background — it is a game world — and a full-bleed image behind it is not a
+ *   background: it is a game world, and a full-bleed image behind it is not a
  *   theme, it is a different product.
  *
  * Neither omission affects whether Ditto can read an Island theme: an absent

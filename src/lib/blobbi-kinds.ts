@@ -27,7 +27,7 @@ export {
   KIND_BLOBBI_INTERACTION,
   /** Blobbonaut owner profile (replaceable). */
   KIND_BLOBBONAUT_PROFILE,
-  /** Legacy owner profile kind — query alongside 11125 for backward compat. */
+  /** Legacy owner profile kind, query alongside 11125 for backward compat. */
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   /** Both profile kinds, for use in query filters. */
   BLOBBONAUT_PROFILE_KINDS,

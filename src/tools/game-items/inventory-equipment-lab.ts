@@ -1,11 +1,11 @@
 /**
- * Inventory & Equipment Lab — the PURE half.
+ * Inventory & Equipment Lab, the PURE half.
  *
  * Everything the lab decides is computed here from plain inputs, so every
  * bulk plan, loadout diff and row status is unit-testable without a signer, a
  * relay or a component. The UI (`InventoryEquipmentLab.tsx`) renders these
  * values and hands the resulting mutations to the SAME two writers production
- * uses (`useInventoryMutation`, `useEquipmentMutation`) — this module never
+ * uses (`useInventoryMutation`, `useEquipmentMutation`): this module never
  * invents a third.
  *
  * ## The three roles, kept apart
@@ -15,7 +15,7 @@
  * kind:31634 author → the PLAYER equipping them.
  *
  * The lab operates as the player. The issuer appears here only as the pubkey
- * every official address is derived from — the lab can never write anything
+ * every official address is derived from, the lab can never write anything
  * in the issuer's name, and the item list below is a projection of the
  * Phase-9 registries, never a hand-maintained copy.
  */
@@ -51,7 +51,7 @@ export interface LabOfficialItem {
    * The published `max_stack`, from the canonical registry (which the fixture
    * tests pin against the signed events), or `null` if a future item ever
    * registers without one. Normal lab controls must never plan a quantity
-   * above it — all sixteen current items are `1`.
+   * above it: all sixteen current items are `1`.
    */
   readonly maxStack: number | null;
 }
@@ -130,7 +130,7 @@ export interface LabInventoryChange {
  * A quantity that already violates the item's published `max_stack`.
  *
  * `add-*` actions never touch these (they neither increment nor silently
- * normalize them — an add is not a repair); they are reported so the operator
+ * normalize them: an add is not a repair); they are reported so the operator
  * can run the explicit `normalize-stacks` action.
  */
 export interface LabStackAnomaly {
@@ -175,11 +175,11 @@ function addressesFor(action: LabBulkInventoryAction): readonly string[] {
  *
  * `add-*` ENSURES OWNERSHIP rather than incrementing: `0 → 1`, an owned item
  * is omitted from the diff, and a quantity already ABOVE the max is neither
- * incremented nor silently normalized — it is reported in `anomalies` for the
+ * incremented nor silently normalized; it is reported in `anomalies` for the
  * explicit `normalize-stacks` repair. `remove-*` sets targeted items to zero.
  * `normalize-stacks` plans `quantity > max → max` and nothing else.
  *
- * Only OFFICIAL REGISTERED addresses are ever targeted — a third-party entry
+ * Only OFFICIAL REGISTERED addresses are ever targeted, a third-party entry
  * in the same inventory is structurally out of reach, and the resulting
  * `set-many` touches nothing outside `targets`.
  */
@@ -206,7 +206,7 @@ export function planBulkInventoryAction(
         // Already invalid: an add action must not compound OR repair it.
         anomalies.push({ address, name, quantity: from, maxStack });
       }
-      // 1..max: already owned — nothing to plan.
+      // 1..max: already owned; nothing to plan.
     } else {
       to = 0;
     }
@@ -245,7 +245,7 @@ export interface LabLoadoutStep {
   readonly name: string;
   /** What currently occupies the slot and would be replaced, if anything. */
   readonly replaces: string | null;
-  /** Already equipped exactly like this — the step publishes no change. */
+  /** Already equipped exactly like this, the step publishes no change. */
   readonly alreadyEquipped: boolean;
 }
 
@@ -255,7 +255,7 @@ export interface LabLoadoutPlan {
   readonly missing: readonly LabOfficialItem[];
   /** The equips to fold into ONE canonical kind:31634 publish. */
   readonly equips: readonly { slot: string; entry: GameItemPlacementEntry }[];
-  /** Every step already satisfied — applying would publish nothing. */
+  /** Every step already satisfied, applying would publish nothing. */
   readonly isNoop: boolean;
 }
 

@@ -1,19 +1,19 @@
 /**
- * The Equipment Lab's build gate — the DISABLED build (the default).
+ * The Equipment Lab's build gate, the DISABLED build (the default).
  *
  * What must hold:
  *
  *  - the Lab tab does not exist and the three read-only tabs all do;
- *  - the Lab component NEVER mounts — not via the tab list, not via a forged
+ *  - the Lab component NEVER mounts; not via the tab list, not via a forged
  *    tab value (`coerceToolTab` falls back to the studio), so no Lab mutation
  *    hook can initialize and no Lab mutation surface reaches the DOM;
  *  - the disabled note shows.
  *
  * The flag is fixed at module load exactly as it is in a real build, so this
  * file pins the disabled state and `GameItemTools.lab-gate-enabled.test.tsx`
- * pins the enabled one — two files because the page (correctly) evaluates the
+ * pins the enabled one, two files because the page (correctly) evaluates the
  * flag once, at import. Heavy tab children are stubbed: this test is about
- * the GATE. The Lab stub records every mount — "does not mount" is an
+ * the GATE. The Lab stub records every mount, "does not mount" is an
  * assertion, not an assumption.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -83,7 +83,7 @@ function renderTools(initialEntry = '/tools/game-items') {
 }
 
 describe('disabled build (the default)', () => {
-  it('shows the three read-only tabs, no Lab tab, and the disabled note — and never mounts the Lab', () => {
+  it('shows the three read-only tabs, no Lab tab, and the disabled note, and never mounts the Lab', () => {
     renderTools();
 
     expect(screen.getByText('Item Studio')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('disabled build (the default)', () => {
     expect(labMounts).not.toHaveBeenCalled();
   });
 
-  it('no tab value can reveal the Lab — its trigger and content do not exist', () => {
+  it('no tab value can reveal the Lab; its trigger and content do not exist', () => {
     renderTools();
 
     // The read-only tabs still switch normally…

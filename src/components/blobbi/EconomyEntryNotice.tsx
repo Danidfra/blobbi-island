@@ -3,21 +3,21 @@
  *
  * Shown ONLY while something needs saying: the initial allocation is actively
  * applying, its confirmation is ambiguous, or a retryable failure needs user
- * action. Plain checking and the settled/applied state render nothing — entry
+ * action. Plain checking and the settled/applied state render nothing, entry
  * must never feel like a gate.
  *
  * ## Why it now also speaks inside the world
  *
  * The notice used to be mounted only by the pre-world shell, on the reasoning
  * that the in-world Coins surface owns this. That surface lives inside the
- * Blobbi info modal, which a player may never open — so a failed allocation
+ * Blobbi info modal, which a player may never open, so a failed allocation
  * left a new player at 0 Coins with no visible way back. In the world the
  * notice therefore says the two things the modal cannot say on its own: that
  * the allocation FAILED and can be retried, and that an attempt is running.
  * The routine `ambiguous` state stays with the Coins surface, because it is
  * not a failure and asks nothing of the player.
  *
- * Both contexts drive the SAME `retry()` from `useEconomyEntryStatus` — there
+ * Both contexts drive the SAME `retry()` from `useEconomyEntryStatus`: there
  * is one retry action in the app, not one per surface.
  *
  * Copy is child-friendly and never leaks Nostr terminology (no event kinds,

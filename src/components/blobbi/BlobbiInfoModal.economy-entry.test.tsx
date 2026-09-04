@@ -2,7 +2,7 @@
  * The in-world Coins surface and a failed initial allocation.
  *
  * F-04: a relay hiccup during the initial 200-Coin allocation used to render
- * as a plain `0` here — indistinguishable from an honest empty purse, and with
+ * as a plain `0` here, indistinguishable from an honest empty purse, and with
  * no way back short of reloading the page. The row must now say the Coins did
  * not arrive, offer the SAME retry the pre-world notice drives, and return to
  * an ordinary balance once the retry lands.
@@ -149,7 +149,7 @@ describe('the in-world Coins surface', () => {
 });
 
 /**
- * F-09 — the in-world Coins row uses the shared presentation.
+ * F-09: the in-world Coins row uses the shared presentation.
  *
  * Audited rather than rewritten: it already renders through `CoinAmount` and
  * already distinguishes unknown from zero. These pin that, so a future edit

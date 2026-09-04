@@ -3,8 +3,8 @@
  *
  * ## Why a gate rather than a check inside the island
  *
- * Every capability in this game is enforced at a data boundary — chat
- * admission, egress, uploads, theater media, naming, presence projection — and
+ * Every capability in this game is enforced at a data boundary, chat
+ * admission, egress, uploads, theater media, naming, presence projection, and
  * every one of those boundaries reads a policy. Mounting the island first and
  * "tightening" it once a profile arrives would mean each of those boundaries
  * had already answered a question once, under whichever policy happened to be
@@ -17,7 +17,7 @@
  *
  * ```
  *   resolved     mount the world under exactly that policy
- *   resolving    hold — a neutral surface, no world, no publish, no subscription
+ *   resolving    hold: a neutral surface, no world, no publish, no subscription
  *   unprovided   REFUSE. A missing provider is a wiring bug that will not
  *                resolve itself, and waiting forever would hide it.
  * ```
@@ -29,7 +29,7 @@
  * ## The holding surface says nothing
  *
  * No age language, no mention of profiles, no explanation of what is being
- * decided — a child should never be shown the machinery of their own
+ * decided: a child should never be shown the machinery of their own
  * supervision, and there is nothing here a player can act on. It is a moment of
  * the island's own background, which today never renders because resolution is
  * synchronous.

@@ -1,5 +1,5 @@
 /**
- * The Item Studio's FORM MODEL — the shape a human edits, as opposed to the
+ * The Item Studio's FORM MODEL, the shape a human edits, as opposed to the
  * shape a relay stores.
  *
  * Everything here is plain, serializable data with no React and no Nostr: the
@@ -18,7 +18,7 @@
  *
  * The one naming decision worth stating: a row whose `marker` is the empty
  * string IS the primary image. The literal string `"primary"` is a UI label and
- * never reaches the wire — see {@link PRIMARY_MARKER}.
+ * never reaches the wire; see {@link PRIMARY_MARKER}.
  */
 
 import { GAME_ITEM_IMAGE_MARKERS } from '@/inventory/package';
@@ -30,7 +30,7 @@ let rowCounter = 0;
 /**
  * A process-unique id for a repeatable row.
  *
- * Only ever used as a React key and as a handle for edit/remove/reorder — it is
+ * Only ever used as a React key and as a handle for edit/remove/reorder; it is
  * never serialized into an event, so a counter is enough and is deterministic
  * in tests, unlike a random id.
  */
@@ -44,7 +44,7 @@ export function nextRowId(prefix = 'row'): string {
  * collide with freshly minted rows.
  *
  * The bug this fixes: the counter lives in module scope, so it restarts at 0 on
- * every page load — but draft rows are persisted to localStorage and come back
+ * every page load, but draft rows are persisted to localStorage and come back
  * still carrying `image-1`, `image-2`, … Adding a row after a reload therefore
  * minted `image-1` a second time. React reported it ("two children with the same
  * key, `image-2`") and the same collision applies to DRAFT ids, where two drafts
@@ -54,7 +54,7 @@ export function nextRowId(prefix = 'row'): string {
  * property above: ids stay a deterministic sequence within a run, which is what
  * makes them readable in tests and in the DOM.
  *
- * Only the numeric suffix matters, and only when it parses — an id from some
+ * Only the numeric suffix matters, and only when it parses, an id from some
  * other scheme is ignored rather than guessed at.
  */
 export function reserveRowIds(ids: Iterable<string>): void {
@@ -123,8 +123,8 @@ export type ContentMode = 'structured' | 'json';
  * The `content.visual` object, split into managed fields and the rest.
  *
  * TWO SHAPES, ONE OBJECT. A `visual` describes either a **wearable accessory**
- * (`slot` — where it sits on the body) or a **visual effect** (`kind`, `effect`,
- * `effectSlot` — which locally-implemented effect it grants). They are modelled
+ * (`slot`: where it sits on the body) or a **visual effect** (`kind`, `effect`,
+ * `effectSlot`: which locally-implemented effect it grants). They are modelled
  * as sibling fields rather than a discriminated union because that is what the
  * wire format is: one JSON object whose keys a reader picks from. A union here
  * would force the editor to throw away one side's fields whenever the author
@@ -135,13 +135,13 @@ export type ContentMode = 'structured' | 'json';
  * means "this is a visual effect". Absent means "a wearable, read `slot`".
  */
 export interface VisualFormState {
-  /** `visual.slot` — where a WEARABLE sits. Not used by effect items. */
+  /** `visual.slot`: where a WEARABLE sits. Not used by effect items. */
   slot: string;
-  /** `visual.kind` — the discriminator; {@link BLOBBI_EFFECT_VISUAL_KIND}. */
+  /** `visual.kind`: the discriminator; {@link BLOBBI_EFFECT_VISUAL_KIND}. */
   kind: string;
-  /** `visual.effect` — the effect id this item grants. */
+  /** `visual.effect`: the effect id this item grants. */
   effect: string;
-  /** `visual.effectSlot` — which effect slot it competes for. */
+  /** `visual.effectSlot`: which effect slot it competes for. */
   effectSlot: string;
   forms: string[];
   /** `visual` keys the structured editor does not manage, preserved verbatim. */
@@ -179,7 +179,7 @@ export interface ContentFormState {
 /** What is known about the published event a form was loaded from. */
 export interface LoadedItemMeta {
   eventId: string;
-  /** The author of the loaded event — NOT necessarily the current signer. */
+  /** The author of the loaded event: NOT necessarily the current signer. */
   pubkey: string;
   createdAt: number;
   address: string;
@@ -308,7 +308,7 @@ export const CATEGORY_SUGGESTIONS: readonly string[] = [
   'neckwear',
   'handheld',
   // Not a place on the body: an `effect` item grants a visual effect that
-  // surrounds the character. Picking it seeds the effect visual shape — see
+  // surrounds the character. Picking it seeds the effect visual shape; see
   // `contentPatchForCategory`.
   'effect',
   'food',
@@ -354,7 +354,7 @@ export const TOPIC_SUGGESTIONS: readonly string[] = [
 ];
 
 /**
- * `visual.slot` suggestions — the accessory slots `@blobbi/react` can draw.
+ * `visual.slot` suggestions: the accessory slots `@blobbi/react` can draw.
  *
  * A slot describes where an accessory WOULD sit if worn. It is not a claim
  * that anyone has equipped it; that is inventory/equipment data and is out of
@@ -371,13 +371,13 @@ export const SLOT_SUGGESTIONS: readonly string[] = [
   'color-overlay',
 ];
 
-/** `visual.forms` suggestions — the Blobbi life stages. */
+/** `visual.forms` suggestions: the Blobbi life stages. */
 export const FORM_SUGGESTIONS: readonly string[] = ['egg', 'baby', 'adult'];
 
 // --- Visual effects --------------------------------------------------------
 //
 // An effect item is an ordinary kind:31632 definition. What makes it an effect
-// is `content.visual.kind === 'blobbi-effect'` plus an `effect` id — and that
+// is `content.visual.kind === 'blobbi-effect'` plus an `effect` id, and that
 // id is a NAME, never an implementation. No animation, CSS or markup is ever
 // carried in an event or read out of one; the effect code lives in
 // `@blobbi/react` and Island resolves a TRUSTED item address to a local effect
@@ -396,7 +396,7 @@ export const EFFECT_CATEGORY = 'effect';
  *
  * WRITTEN OUT rather than imported from `@blobbi/react`, because this module is
  * the tools' pure domain layer and importing the renderer here would put React
- * in the middle of event building — a boundary `boundaries.test.ts` enforces.
+ * in the middle of event building, a boundary `boundaries.test.ts` enforces.
  * Four short strings are a fair price for that; a twelve-entry EFFECT ID list
  * would not be, which is why the ids live in the component layer instead
  * (`effect-vocabulary.ts`).
@@ -437,7 +437,7 @@ export function isEffectItemForm(form: ItemFormState): boolean {
  *
  * SEEDS, NEVER CLEARS. Choosing `effect` fills in the one field that makes the
  * effect shape serialize at all (`visual.kind`) so the structured editor stops
- * silently producing a `visual` with only `forms` in it — the exact failure
+ * silently producing a `visual` with only `forms` in it, the exact failure
  * this helper exists to fix. It does so ONLY when the visual is still
  * unclaimed: an item that already declares a `slot`, a `kind`, or any effect
  * field keeps whatever the author typed, because a category chip is not consent

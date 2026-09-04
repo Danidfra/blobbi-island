@@ -3,14 +3,14 @@
  *
  * Two callers, and the important one is the first:
  *
- *  - **A dedicated machine whose game is not built** — the pool table and the air
+ *  - **A dedicated machine whose game is not built**: the pool table and the air
  *    hockey table. Each shows ITS OWN game: pool talks about pool. A corrective
  *    pass briefly sent both of them to the shared cabinet catalogue, which
  *    offered a rhythm game on a pool table and said nothing about pool at all.
  *  - **The prize counter**, which is not a game and does not pretend to be one.
  *
- * The copy is data — a registry entry's `shortDescription`, or
- * `arcade-room-config.ts` for the counter — never a string in this component.
+ * The copy is data, a registry entry's `shortDescription`, or
+ * `arcade-room-config.ts` for the counter; never a string in this component.
  * That is the rule that stops a hard-coded "Get ready to dance!" from appearing
  * over a pool table, which is exactly how this started.
  */
@@ -22,7 +22,7 @@ interface ArcadeMachinePanelProps {
   blurb: string;
   /** Short state chip above the name. Says what is true, never a promise. */
   badge?: string;
-  /** Decorative artwork — the machine's own sprite. Never the only signal. */
+  /** Decorative artwork: the machine's own sprite. Never the only signal. */
   image?: string;
 }
 

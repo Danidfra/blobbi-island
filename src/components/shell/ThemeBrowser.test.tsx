@@ -29,14 +29,14 @@ const ME = 'f'.repeat(64);
 /**
  * A signer that stamps rather than signs.
  *
- * Enough for `useNostrPublish`, which signs then hands the event to the pool —
+ * Enough for `useNostrPublish`, which signs then hands the event to the pool,
  * and the pool here is the fake below, which records instead of publishing. No
  * key material and no relay is involved anywhere in this file.
  */
 /**
  * A reversible stand-in for NIP-44, so the settings blob is inspectable.
  *
- * Not encryption and not pretending to be — the point of these tests is WHICH
+ * Not encryption and not pretending to be, the point of these tests is WHICH
  * events are published and WHAT is in them, and a real cipher would only make
  * the assertions unreadable. No key material and no relay is involved anywhere
  * in this file.
@@ -318,7 +318,7 @@ describe('selecting a community theme', () => {
       The Island → Ditto fix.
 
       A 16767 alone is imported by Ditto into `customTheme` and then ignored,
-      because `NostrSync` does not touch the `theme` mode — so the account has
+      because `NostrSync` does not touch the `theme` mode, so the account has
       to be told `theme: 'custom'`, and that lives in the NIP-78 blob.
     */
     vi.useFakeTimers();
@@ -352,7 +352,7 @@ describe('selecting a community theme', () => {
 
   it('does not clobber settings it could not read', async () => {
     // A decrypt failure means we do not know what is in the blob, so we must
-    // not replace it — a theme-only settings event would erase the account's
+    // not replace it, a theme-only settings event would erase the account's
     // feed settings, filters and relay preferences.
     vi.useFakeTimers();
     currentUser = fakeUser(ME, { decryptFails: true });
@@ -372,7 +372,7 @@ describe('selecting a community theme', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(published.some((e) => e.kind === NIP78_KIND)).toBe(false);
-    // The public half still went out — it has nothing to clobber.
+    // The public half still went out; it has nothing to clobber.
     expect(published.some((e) => e.kind === ACTIVE_THEME_KIND)).toBe(true);
     vi.useRealTimers();
   });
@@ -380,7 +380,7 @@ describe('selecting a community theme', () => {
   it('breaks a same-second tie in favour of the LATER selection', async () => {
     /*
       Replaceable events carry second-resolution timestamps, and NIP-01 breaks a
-      tie between two of them on the lower event id — which has nothing to do
+      tie between two of them on the lower event id, which has nothing to do
       with which one the player chose. Selecting A then B inside one second
       could therefore leave A winning. `nextReplaceableCreatedAt` makes every
       revision strictly newer than the one it replaces.
@@ -456,7 +456,7 @@ describe('selecting a community theme', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(published).toEqual([]);
-    // The choice still applies locally — signing in is not a requirement for
+    // The choice still applies locally, signing in is not a requirement for
     // choosing how your island looks.
     expect(document.documentElement.getAttribute('data-island-theme')).toBe('lantern-night');
     vi.useRealTimers();
@@ -534,7 +534,7 @@ describe('creating a theme', () => {
     expect(definition.tags).toContainEqual(['t', 'theme']);
     expect(definition.tags).toContainEqual(['alt', 'Custom theme: Harbour Dusk']);
 
-    // Applied immediately — the player just designed this island.
+    // Applied immediately: the player just designed this island.
     await waitFor(() => {
       expect(document.documentElement.getAttribute('data-island-theme')).toBe(
         `nostr:${THEME_DEFINITION_KIND}:${ME}:harbour-dusk`,
@@ -598,7 +598,7 @@ describe('when the relay cannot be reached', () => {
     await renderPicker();
 
     // The island is still theirs, painted from the cache, and the stored choice
-    // is untouched — a relay outage is not a change of mind.
+    // is untouched: a relay outage is not a change of mind.
     await waitFor(() => {
       expect(document.documentElement.getAttribute('data-island-theme')).toBe(themeId);
     });

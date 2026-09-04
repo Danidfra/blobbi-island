@@ -96,7 +96,7 @@ describe('resolveRemoteSeatOccupancy', () => {
   describe('the local player keeps their own seat', () => {
     it('drops a remote claim on the seat the local player occupies', () => {
       // Presence is advisory. A stranger's claim must never be able to stand you
-      // up, spin your Blobbi around or tear down your control card — and drawing
+      // up, spin your Blobbi around or tear down your control card, and drawing
       // them in your chair would be the overlap this whole module exists to
       // prevent.
       const winners = resolveRemoteSeatOccupancy([claim(SEAT_A, '0000')], SEAT_A);

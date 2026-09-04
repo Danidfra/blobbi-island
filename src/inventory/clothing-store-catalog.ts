@@ -6,10 +6,10 @@
  * Like the Care Store's shelf, this is a PROJECTION and not a list. Its two
  * sources already exist:
  *
- *   1. `ADDRESSED_OFFICIAL_COSMETICS` — the canonical kind:31632 cosmetic
+ *   1. `ADDRESSED_OFFICIAL_COSMETICS`: the canonical kind:31632 cosmetic
  *      registry, which already carries every wearable's name, symbol, artwork
  *      and published `max_stack`;
- *   2. `WEARABLE_COIN_PRICES` in `shop-catalog.ts` — the Island's wearable coin
+ *   2. `WEARABLE_COIN_PRICES` in `shop-catalog.ts`: the Island's wearable coin
  *      price domain.
  *
  * So the store cannot list an unofficial item, cannot list an unpriced one, and
@@ -19,14 +19,14 @@
  *
  * ## The shelf is EMPTY today, deliberately
  *
- * All four official wearables are already spoken for — three are Arcade Prize
+ * All four official wearables are already spoken for, three are Arcade Prize
  * Counter items with Arcade Ticket prices, and the fourth's definition reserves
  * it for a future special acquisition path. Pricing any of them in Coins is an
  * economy decision about the Arcade, not about this shop, so
  * `WEARABLE_COIN_PRICES` ships empty and the modal says so honestly rather than
  * inventing a number. See that table for the full reasoning.
  *
- * Everything below — and the whole purchase path behind it — is built and
+ * Everything below: and the whole purchase path behind it, is built and
  * tested against a fixture price table. Stocking the store is one line of data.
  *
  * ## Slots are read from the DEFINITION, never from this file
@@ -46,7 +46,7 @@ import {
 import { WEARABLE_SHOP_ENTRIES } from './shop-catalog';
 
 export interface ClothingStoreProduct {
-  /** Canonical kind:31632 address — the item's identity. */
+  /** Canonical kind:31632 address, the item's identity. */
   readonly address: string;
   /** The definition's `d` tag. */
   readonly d: string;
@@ -61,7 +61,7 @@ export interface ClothingStoreProduct {
    * How many one player may hold, from the definition's published `max_stack`.
    *
    * Every official cosmetic publishes `1`, so in practice a wearable is UNIQUE:
-   * owned once, never bought again. That is read here, not assumed — an issuer
+   * owned once, never bought again. That is read here, not assumed, an issuer
    * publishing a genuinely stackable wearable would be honoured without a code
    * change, and the guard that enforces it lives in the mutation layer rather
    * than in the button (see `useBatchPurchase`).
@@ -72,7 +72,7 @@ export interface ClothingStoreProduct {
 /**
  * Every wearable the Clothing Store sells, in canonical registry order.
  *
- * Empty while `WEARABLE_COIN_PRICES` is — see the note above.
+ * Empty while `WEARABLE_COIN_PRICES` is; see the note above.
  */
 export const CLOTHING_STORE_PRODUCTS: readonly ClothingStoreProduct[] =
   WEARABLE_SHOP_ENTRIES.flatMap((entry) => {
@@ -103,7 +103,7 @@ export function isClothingStoreProduct(address: string): boolean {
  * Every official wearable, whether or not it is for sale.
  *
  * The modal uses this to tell the player what the store is FOR while its shelf
- * is empty — "these exist, they are not on sale here yet" is a truthful thing to
+ * is empty, "these exist, they are not on sale here yet" is a truthful thing to
  * show, and an unexplained blank room is not.
  */
 export const OFFICIAL_WEARABLES = ADDRESSED_OFFICIAL_COSMETICS;

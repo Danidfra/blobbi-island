@@ -5,7 +5,7 @@
  * reuses the shop's machinery rather than growing its own: one canonical
  * kind:31633 event carrying both sides, a durable spend intent for retry
  * identity, and the wallet's fresh authoritative balance read. These pin that
- * it really does behave that way — including that a failed or unconfirmed
+ * it really does behave that way, including that a failed or unconfirmed
  * purchase never looks like a successful one.
  */
 
@@ -59,7 +59,7 @@ describe('a Token purchase is one atomic operation', () => {
     expect(spendCoins).toHaveBeenCalledTimes(1);
     const op = spendCoins.mock.calls[0][0];
     expect(op.amount).toBe(5 * ARCADE_TOKEN_COIN_PRICE);
-    // One operation carrying both halves — never a spend then a separate grant.
+    // One operation carrying both halves; never a spend then a separate grant.
     expect(op.grantLines).toEqual([{ address: ARCADE_TOKEN_ADDRESS, amount: 5 }]);
     expect(op.label).toBe('arcade-token');
   });

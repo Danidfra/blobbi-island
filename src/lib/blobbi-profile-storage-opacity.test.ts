@@ -13,7 +13,7 @@
  *   - never deleted.
  *
  * These are behavioral tests over the real read (`parseOwnerProfile`) and write
- * (`mergeOwnerProfileTags`) paths — they assert emitted tags, not source text.
+ * (`mergeOwnerProfileTags`) paths: they assert emitted tags, not source text.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -64,7 +64,7 @@ describe('parseOwnerProfile does not expose legacy storage as inventory', () => 
       ['storage', 'toy_ball:2'],
     ]);
 
-    // The field is gone from the parsed shape entirely — not merely empty.
+    // The field is gone from the parsed shape entirely; not merely empty.
     expect('inventory' in profile).toBe(false);
     expect((profile as unknown as Record<string, unknown>).inventory).toBeUndefined();
   });
@@ -130,7 +130,7 @@ describe('mergeOwnerProfileTags preserves legacy storage opaquely', () => {
     const out = mergeOwnerProfileTags({ ...profile, coins: 165, name: 'Renamed' });
 
     // Since the Coin cutover `coins` is NOT a managed tag: the historic value
-    // rides the unknown-tag passthrough VERBATIM — a profile update can never
+    // rides the unknown-tag passthrough VERBATIM, a profile update can never
     // change (or roll back) a balance again. The in-memory field is inert.
     expect(out.find(([n]) => n === 'coins')?.[1]).toBe('200');
     expect(out.find(([n]) => n === 'name')?.[1]).toBe('Renamed');
@@ -138,7 +138,7 @@ describe('mergeOwnerProfileTags preserves legacy storage opaquely', () => {
     expect(tagsNamed(out, 'storage')).toEqual([['storage', 'food_apple:5']]);
   });
 
-  it('repeated republishes are idempotent — the whole tag set reaches a fixed point', () => {
+  it('repeated republishes are idempotent, the whole tag set reaches a fixed point', () => {
     // Round 1 starts from a raw profile carrying legacy storage plus an
     // unrelated host extension tag.
     const first = mergeOwnerProfileTags(

@@ -1,4 +1,4 @@
-# Blobbi Island — design system
+# Blobbi Island: design system
 
 The rules that let the island's look change without its components changing.
 
@@ -9,8 +9,8 @@ to add a theme. This one covers the layers underneath it.
 
 ## 1. Goals
 
-The island already had a coherent visual identity — warm sand, painted wood, a
-bright sky — but it was welded to the build. The Tailwind `island-*` colours
+The island already had a coherent visual identity, warm sand, painted wood, a
+bright sky: but it was welded to the build. The Tailwind `island-*` colours
 were literal hex, so "change how the island looks" meant "edit components", and
 in practice that meant nobody did.
 
@@ -39,27 +39,27 @@ Strict dependency order. Nothing may reach past its own layer.
    feature surfaces       shops, chests, HUD, settings
 ```
 
-### Layer 1 — the palette
+### Layer 1: the palette
 
 Sixteen colours, held as **bare HSL channels** (`27 40% 54%`), never as
 colours. That is what lets Tailwind declare them as
 `hsl(var(--island-wood) / <alpha-value>)`, which in turn is what makes
-`border-island-wood/30` — the opacity modifier included — follow the theme.
+`border-island-wood/30`: the opacity modifier included, follow the theme.
 
 | Token | Role |
 | --- | --- |
 | `page` | the page behind the wood frame |
 | `sky` | sky plate, decorative fills |
 | `ocean` | the sea, informational accents |
-| `focus` | focus rings — see the note below |
-| `grass` | success, "play", online — a **fill**, never text |
+| `focus` | focus rings; see the note below |
+| `grass` | success, "play", online, a **fill**, never text |
 | `grass-dark` | the green used as *text* or an edge on cream |
 | `sand` | secondary surface, the title plaque |
 | `wood` | the frame, and the default cozy CTA |
 | `wood-dark` | frame edge, strong label text on cream |
-| `cream` | **the panel** — cards, popovers, modals, HUD |
+| `cream` | **the panel**: cards, popovers, modals, HUD |
 | `cream-2` | the panel one step down: muted rows, chips |
-| `purple` | mascot accent — highlights, active state, the accent CTA |
+| `purple` | mascot accent, highlights, active state, the accent CTA |
 | `ink` / `ink-soft` | text / muted text |
 | `danger` | destructive, failure |
 | `warn` | caution, cost, attention |
@@ -72,7 +72,7 @@ that (1.9:1 on cream), so focus is a deeper version of it.
 These names are art direction, not hues. `cream` means "the panel"; in Lantern
 Night it is a dark violet. Read them as roles and they never lie.
 
-### Layer 2 — semantic roles
+### Layer 2: semantic roles
 
 The shadcn/Radix contract (`--background`, `--card`, `--primary`, `--ring`, …),
 every value a **reference** into layer 1. This is why a stock `<Card>` or
@@ -93,16 +93,16 @@ cannot drift.
 | `ring` | `focus` |
 | `foreground`, `muted-foreground` | `ink`, `ink-soft` |
 
-### Layer 3 — composites
+### Layer 3: composites
 
 Shadows and radii, built from layer 1.
 
-- `shadow-cozy-soft` / `-raised` / `-frame` / `-inset` — the elevation scale.
+- `shadow-cozy-soft` / `-raised` / `-frame` / `-inset`: the elevation scale.
   Each is the theme's **own ink** at low alpha, so a theme with a cool or dark
   ink casts a shadow that belongs to it rather than a generic black.
-- `rounded-lg/md/sm` — the shadcn radius scale, from `--radius` (1rem).
-- `rounded-panel` (1.25rem) — a cozy card.
-- `rounded-frame` (1.5rem) — a framed modal, or the wood frame itself.
+- `rounded-lg/md/sm`: the shadcn radius scale, from `--radius` (1rem).
+- `rounded-panel` (1.25rem): a cozy card.
+- `rounded-frame` (1.5rem): a framed modal, or the wood frame itself.
 
 Game surfaces are rounder than form controls. That is the whole radius rule.
 
@@ -119,7 +119,7 @@ Game surfaces are rounder than form controls. That is the whole radius rule.
 | `shadow-[0_8px_20px_...]` | `shadow-cozy-raised` |
 | a new purple CTA class string | `<Button variant="accent">` |
 
-`text-white` deserves its own note: it is not a colour, it is an assumption —
+`text-white` deserves its own note: it is not a colour, it is an assumption,
 that the surface underneath is always the darker half of the pair. Lantern
 Night makes `purple` and `ocean` the *light* half, and every `text-white` on
 them became unreadable. Use the `-foreground` token for the surface, which
@@ -140,7 +140,7 @@ Canonical, in `src/components/ui/`. **Extend these; never add a parallel
 
 | Variant | Use |
 | --- | --- |
-| `playful` | the primary cozy CTA — warm wood |
+| `playful` | the primary cozy CTA, warm wood |
 | `accent` | the mascot-purple CTA (login, hatch, confirm, purchase) |
 | `success` | play / go / start |
 | `soft` | secondary, cancel, list rows |
@@ -148,7 +148,7 @@ Canonical, in `src/components/ui/`. **Extend these; never add a parallel
 | `default` / `outline` / `ghost` / `link` / `destructive` | stock shadcn |
 
 Sizes add `xl`, `icon-lg` and `pill` to the stock scale. Touch targets on game
-surfaces should be at least 44px — pass `min-h-[44px]` where a size does not
+surfaces should be at least 44px, pass `min-h-[44px]` where a size does not
 already give it.
 
 ### Dialog
@@ -156,19 +156,19 @@ already give it.
 `src/components/ui/dialog.tsx` is the canonical dialog and already models the
 island's **two overlay contexts**, which is a distinction worth internalising:
 
-- **App chrome** — account menu, auth, settings. Viewport-level and `fixed`.
+- **App chrome**: account menu, auth, settings. Viewport-level and `fixed`.
   Portal into `useFullscreenPortalContainer()` so it still renders above a
   fullscreened shell.
-- **In-world surfaces** — a shop, a chest, an arcade cabinet. These portal into
+- **In-world surfaces**: a shop, a chest, an arcade cabinet. These portal into
   `useStageOverlayHost()` with `inFrame`, so they dim only the game window and
   leave the wood frame and the page around it visible. An in-world surface that
   blacks out the browser reads as "the website opened a dialog", not as "you are
   standing at a machine".
 
   `inFrame` supplies **positioning only**. A dialog moved into the frame must
-  bring its own padding and side margins — use `inFrameDialogPanelClass`.
+  bring its own padding and side margins; use `inFrameDialogPanelClass`.
 
-### BlobbiModal — the game window
+### BlobbiModal: the game window
 
 **Every modal surface should be this.** It is composed over `Dialog` and vaul's
 `Drawer`, so it inherits focus trap, ESC, backdrop dismiss, scroll lock,
@@ -181,13 +181,13 @@ The one decision a caller has to make is **what the surface belongs to**:
 
 | `presentation` | For | Portals into | Positioned |
 | --- | --- | --- | --- |
-| `dialog` | app chrome — settings, auth, sharing | fullscreen root | `fixed`, viewport-centred |
-| `in-frame` | a thing in the world — a shop, a chest, a cabinet | stage host | `absolute`, inside the game window |
+| `dialog` | app chrome, settings, auth, sharing | fullscreen root | `fixed`, viewport-centred |
+| `in-frame` | a thing in the world, a shop, a chest, a cabinet | stage host | `absolute`, inside the game window |
 | `sheet` | the mobile form of either | fullscreen root | `fixed`, bottom-anchored |
 | `auto` *(default)* | picks `sheet` on a phone, `dialog` otherwise | | |
 
 `in-frame` is the one worth internalising. On desktop it dims **only the game
-window** — the wood frame, the shell header and footer, and the page behind
+window**: the wood frame, the shell header and footer, and the page behind
 them all stay visible. A shop counter that blacks out the browser reads as "the
 website opened a dialog", not as "you are standing at a counter".
 
@@ -202,7 +202,7 @@ Two automatic behaviours you do not have to handle:
 
 `sm` `md` `lg` `xl` `full`. Viewport sizes are `min(vw, rem)` so they cap AND
 keep side margins; in-frame sizes are percentages of the **stage**. Never
-reintroduce a `max-w-*` — the primitive clears the base one deliberately.
+reintroduce a `max-w-*`: the primitive clears the base one deliberately.
 
 #### Anatomy
 
@@ -211,7 +211,7 @@ reintroduce a `max-w-*` — the primitive clears the base one deliberately.
 │ (icon)  Title                       [×] │  header band, cream-2, hairline
 │         description                     │
 ├─────────────────────────────────────────┤
-│  body — scrolls, never overflows        │  p-4 sm:p-5
+│  body: scrolls, never overflows        │  p-4 sm:p-5
 ├─────────────────────────────────────────┤
 │                    [Cancel]  [Primary]  │  footer band, hairline
 └─────────────────────────────────────────┘     stacks primary-first on mobile
@@ -220,7 +220,7 @@ reintroduce a `max-w-*` — the primitive clears the base one deliberately.
 - `title` is required and typed `string`, because an unnamed dialog is announced
   as nothing at all, and markup in a title stops it working as an accessible
   name. Put anything richer in `children`.
-- `description` is a **sibling** of the title, never nested in it — nesting
+- `description` is a **sibling** of the title, never nested in it, nesting
   makes a screen reader read the whole paragraph on every focus entry.
 - `icon` is always decorative.
 - `hideHeader` keeps the accessible name and the close button for a window whose
@@ -240,7 +240,7 @@ context. Forcing those through a portal breaks them. See
 `[icon] Label / description ……… [value, control, or chevron]`
 
 The island's list row, for any list where the player picks one of several
-labelled things — settings, the account menu, the elevator's floors.
+labelled things: settings, the account menu, the elevator's floors.
 
 - Pass `onClick`/`href` → renders a real `<button>`/`<a>` with hover, press and
   focus states.
@@ -252,7 +252,7 @@ labelled things — settings, the account menu, the elevator's floors.
 ### ItemTile / PriceTag / QuantityBadge
 
 The economy vocabulary. A tile renders `selected`, `disabled` and `affordable`
-as **appearance only** — it never decides them, which is what makes it safe to
+as **appearance only**: it never decides them, which is what makes it safe to
 drop into economy surfaces without going near economy rules. Its artwork is
 `aria-hidden` (the name is right beneath it), and an unaffordable price says
 "not enough" in text, not just in red.
@@ -262,7 +262,7 @@ drop into economy surfaces without going near economy rules. Its artwork is
 `loading` / `pending` / `empty` / `error`, with the mascot. Reach for it before
 writing another bare spinner or "No items found" paragraph.
 
-`pending` is for work the player cannot influence — a Coin settlement
+`pending` is for work the player cannot influence, a Coin settlement
 confirming, a mine session closing. It suppresses the action button, because
 offering a Retry for something already reconciling is worse than offering
 nothing. `compact` drops the mascot for use inside a panel.
@@ -288,21 +288,21 @@ nothing. `compact` drops the mascot for use inside a panel.
 
 ## 6. Responsive
 
-- **Desktop** — the framed island: wood frame, header, footer, page behind.
-- **Narrow mobile** — modals become bottom sheets. `BlobbiModal` does this by
+- **Desktop**: the framed island: wood frame, header, footer, page behind.
+- **Narrow mobile**: modals become bottom sheets. `BlobbiModal` does this by
   viewport; force it with `presentation`. The sheet is safe-area padded, sized
   in `dvh` (a mobile toolbar appears mid-scroll and `vh` measures the tallest
   state, so the footer would hide exactly when reached for), and stacks its
   footer primary-action-first, nearest the thumb.
-- **Landscape mobile** — vertical space is the scarce resource. The account menu
+- **Landscape mobile**: vertical space is the scarce resource. The account menu
   becomes a compact centered modal rather than a dropdown for exactly this
   reason; follow that pattern rather than letting a tall surface scroll.
-- **Safe areas** — any surface anchored to a screen edge uses
+- **Safe areas**: any surface anchored to a screen edge uses
   `pb-[max(1rem,env(safe-area-inset-bottom))]`, and `dvh` rather than `vh`.
-- **Touch** — 44px minimum. Drag surfaces (the hockey table, the treasure field,
+- **Touch**: 44px minimum. Drag surfaces (the hockey table, the treasure field,
   dance lanes) set `touch-action: none` and `overscroll-behavior: contain` so a
   drag never scrolls the page.
-- **Long labels** — assume translations are longer. `truncate` on a fixed row,
+- **Long labels**: assume translations are longer. `truncate` on a fixed row,
   wrap everywhere else; never size a control to a specific string.
 
 ---
@@ -314,11 +314,11 @@ Non-negotiable, and cheaper to keep than to retrofit:
 - **Focus is always visible.** `focus-visible:ring-2 focus-visible:ring-ring`,
   with `ring-offset` matched to the surface behind it. `ring` is the dedicated
   `focus` token, which every theme must keep at 3:1 or better against all three
-  surfaces — asserted by `island-theme-contrast.test.ts`.
+  surfaces: asserted by `island-theme-contrast.test.ts`.
 - **Colour is never the only signal.** The theme picker pairs each swatch with a
   name and a description; a selected card carries a check, not just a border.
 - **Every dialog has an accessible name**, and its description lives in the
-  Description slot — never nested inside the title, which would make a screen
+  Description slot: never nested inside the title, which would make a screen
   reader read the whole paragraph on every focus entry.
 - **Decorative art is `aria-hidden`.** Emoji icons, arrows, preview swatches.
 - **Semantic controls.** A thing that does something is a `<button>`. A
@@ -331,7 +331,7 @@ Non-negotiable, and cheaper to keep than to retrofit:
   call rather than a bug in this layer.
 - **Reduced motion** is honoured in CSS (so it applies before React hydrates)
   and via `motion-reduce:` on interactive transforms. Under reduced motion a
-  state change must still be *visible* — keep the state, drop the tween.
+  state change must still be *visible*; keep the state, drop the tween.
 
 ---
 

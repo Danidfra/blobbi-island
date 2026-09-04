@@ -53,12 +53,12 @@ import {
 } from '@/arcade/arcade-machine-state';
 
 /**
- * ArcadeRoom — all three arcade floors, extracted from `InteractiveElements`.
+ * ArcadeRoom: all three arcade floors, extracted from `InteractiveElements`.
  *
  * `InteractiveElements.tsx` was 1549 lines with twelve sequential location
  * branches and every room's modal state hoisted into one component. The arcade's
  * branch alone held nine machines, four chairs, two counters, an elevator, four
- * modals and the "which game is this?" dispatch — and adding a real game to that
+ * modals and the "which game is this?" dispatch, and adding a real game to that
  * would have compounded the problem rather than solved it.
  *
  * What lives here now:
@@ -73,13 +73,13 @@ import {
  *
  * ## Two state machines, kept apart (Phase 4)
  *
- * - **`view`** (`arcade-navigation.ts`) — which SCREEN is up: nothing, the
+ * - **`view`** (`arcade-navigation.ts`): which SCREEN is up: nothing, the
  *   catalogue, a game, or a notice panel. Walking up to a cabinet opens the
  *   catalogue and starts no run at all.
- * - **`lifecycle`** (`arcade-machine-state.ts`) — whether a RUN exists, whether
+ * - **`lifecycle`** (`arcade-machine-state.ts`): whether a RUN exists, whether
  *   it may advance, and whether it may be rewarded. Untouched by this phase.
  *
- * They move together in exactly three handlers — arriving at a dedicated game
+ * They move together in exactly three handlers, arriving at a dedicated game
  * machine opens both, selecting from the catalogue opens both, and leaving a
  * game closes the run and steps the view back. There is no fourth place that
  * changes one of them, which is why they cannot drift.
@@ -93,14 +93,14 @@ import {
  * ```
  *
  * `handleMachineArrival` switches on the machine's `activation` field and does
- * nothing else — no branch on an id, a filename or a display name. That is what
+ * nothing else: no branch on an id, a filename or a display name. That is what
  * makes "a pool table is a pool table" a property of the data rather than of
  * this component.
  *
  * A run that is interrupted (tab hidden) does NOT jump back on its own: the game
  * shows what happened and offers Play again, and the player leaves when they
  * choose. A run the player explicitly leaves is aborted through the reducer and
- * lands wherever `exitGame` says — the catalogue it came from, or the room.
+ * lands wherever `exitGame` says, the catalogue it came from, or the room.
  */
 
 interface ArcadeRoomProps {
@@ -117,14 +117,14 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   const [isElevatorHovered, setIsElevatorHovered] = useState(false);
   const [isTokenShopOpen, setIsTokenShopOpen] = useState(false);
   const [isElevatorModalOpen, setIsElevatorModalOpen] = useState(false);
-  /** Which screen is up. Never a run — see the two-state-machines note above. */
+  /** Which screen is up. Never a run; see the two-state-machines note above. */
   const [view, setView] = useState<ArcadeView>(ARCADE_VIEW_CLOSED);
   /**
    * Why the last launch was refused, shown on the catalogue.
    *
    * It exists because "nothing happened" is the worst possible answer to a tap.
    * A coming-soon card has no button at all, so this is only reachable when the
-   * catalogue and the resolver disagree — which is a bug, and should say so
+   * catalogue and the resolver disagree, which is a bug, and should say so
    * plainly rather than silently doing nothing.
    */
   const [launchError, setLaunchError] = useState<string | null>(null);
@@ -152,7 +152,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
    *
    * Without it, the ticket and prize counters are unreachable: they are mounted
    * high on the back wall, above the walkable `y ≥ 48` floor, and
-   * `MovableBlobbi` clamps each animation STEP rather than the target — so the
+   * `MovableBlobbi` clamps each animation STEP rather than the target, so the
    * Blobbi slides along the floor's top edge until it hits a wall, never closes
    * the distance, and the pending interaction never fires. Browser-reproduced.
    */
@@ -163,13 +163,13 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
    * Fired on CONFIRMED ARRIVAL at a machine, never on click.
    *
    * One `switch` over the machine's declared `activation`, and nothing else. No
-   * branch on an id, a filename, a display name or a piece of artwork — which is
+   * branch on an id, a filename, a display name or a piece of artwork, which is
    * what makes "a pool table opens pool" a property of the registry that a test
    * can check, rather than a convention this component happens to follow.
    *
    * A dedicated game opens with NO menu in between, because the physical object
    * is the game. If its renderer cannot be resolved (a registry entry with no
-   * implementation), it falls back to that same game's coming-soon screen —
+   * implementation), it falls back to that same game's coming-soon screen,
    * which is the honest thing to show, and is never another game's.
    */
   const handleMachineArrival = useCallback((machineId: string) => {
@@ -199,7 +199,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       return;
     }
     // Both state machines move together: the view opens the game, and the
-    // lifecycle opens a run slot on THIS machine — which is what carries a
+    // lifecycle opens a run slot on THIS machine, which is what carries a
     // correct `machineId` into the result and the reward claim.
     dispatch({ type: 'open', machineId, gameId: entry.id });
     setView(openDedicatedGame(machineId, entry.id));
@@ -213,7 +213,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
    * Launch a game from the SHARED catalogue, on the generic cabinet the player
    * walked to.
    *
-   * Nothing reaches this today — no game is offered by the shared cabinets — and
+   * Nothing reaches this today, no game is offered by the shared cabinets, and
    * the checks matter for exactly that reason: the first game added must not be
    * able to skip them. `canLaunchArcadeGame` refuses a dedicated-machine game
    * here on `host`, so Blobbi Dance can never be started from a cabinet however
@@ -250,7 +250,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
    * never silently forgiven. WHERE it lands is `exitGame`'s decision: back to
    * the catalogue for a catalogue-launched game, out to the room for a dedicated
    * machine's own game. Blobbi Dance is the second kind, so leaving it returns
-   * the player to the arcade — not to a list that does not contain it.
+   * the player to the arcade; not to a list that does not contain it.
    */
   const handleExitGame = useCallback(() => {
     dispatch({ type: 'close' });
@@ -271,7 +271,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
    * It used to demand a Coin-bought Arcade Pass, which made the pass a
    * TOLLGATE on the arcade itself. The redesign moves the cost to the games
    * (one Arcade Token each) and turns the pass into a premium Ticket reward
-   * that waives that cost — so exploring the floors, reading the catalogues
+   * that waives that cost, so exploring the floors, reading the catalogues
    * and browsing the prize counter are free, as they should always have been.
    */
   const handleElevatorClick = useCallback(() => setIsElevatorModalOpen(true), []);
@@ -285,7 +285,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
   /**
    * The game to mount, resolved fresh from the view.
    *
-   * `null` for anything that must not run — checked HERE as well as at every
+   * `null` for anything that must not run, checked HERE as well as at every
    * entry point, and with the same surface the view was opened from, so a game
    * cannot be rendered under a rule looser than the one that let it in.
    */
@@ -308,7 +308,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
     <>
       <div className="w-full h-full relative">
         {/*
-          Elevator. Fixed at `ARCADE_ELEVATOR_Z_INDEX` (8) on every floor — the
+          Elevator. Fixed at `ARCADE_ELEVATOR_Z_INDEX` (8) on every floor, the
           explicit layering rule that replaces the old `z-10` tie with the
           ground floor's Blobbi depth band, which markup order resolved in the
           doors' favour and drew the Blobbi INSIDE a closed elevator.
@@ -376,7 +376,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
                   className={cn('absolute', seat.className)}
                   /*
                     Walking to a chair and standing there is all these have ever
-                    done — there is no seated pose or state in the arcade. They
+                    done: there is no seated pose or state in the arcade. They
                     now go through the shared walk-to-interact system instead of
                     a handler that located its container with
                     `closest('.w-full.h-full.relative')`, a class-string lookup
@@ -433,7 +433,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
             </div>
 
             {/*
-              The PRIZES counter. Its only previous effect was a `console.log` —
+              The PRIZES counter. Its only previous effect was a `console.log`,
               it did not even walk the Blobbi over. It keeps its affordance
               because the prize shop is a real planned feature, and it now says
               so instead of doing nothing.
@@ -466,7 +466,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
       )}
 
       {/*
-        The shared catalogue — the SIX generic cabinets only. The dance machine,
+        The shared catalogue: the SIX generic cabinets only. The dance machine,
         the pool table and the air hockey table never reach this branch, because
         their `activation` sends them somewhere else.
       */}
@@ -539,7 +539,7 @@ export function ArcadeRoom({ blobbiRef, floor, selectedBlobbiId = null }: Arcade
             The counter owns its own scrolling (shelf and detail scroll
             independently) and fills the box, so the shell's padding is off and
             its scroll engages ONLY below the counter's minimum height (a squat
-            desktop window) — never as a second scrollbar in normal use.
+            desktop window): never as a second scrollbar in normal use.
           */
           contentClassName="overflow-y-auto p-0"
         >

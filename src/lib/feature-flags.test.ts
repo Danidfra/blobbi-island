@@ -1,5 +1,5 @@
 /**
- * The build-time flag parser — strict by design.
+ * The build-time flag parser, strict by design.
  *
  * A mutation-capable surface must never appear because of a typo'd or
  * half-set environment, so ONLY the exact string "true" enables. There is no
@@ -37,7 +37,7 @@ describe('isFeatureFlagEnabled', () => {
 describe('LIVE_INVENTORY_LAB_ENABLED', () => {
   it('is disabled in the default (unset) test environment', () => {
     // The repository sets no VITE_ENABLE_LIVE_INVENTORY_LAB anywhere, so the
-    // default everywhere — dev, test, production build — is OFF.
+    // default everywhere: dev, test, production build, is OFF.
     expect(LIVE_INVENTORY_LAB_ENABLED).toBe(false);
   });
 });

@@ -44,7 +44,7 @@ export const LOCATION_INITIAL_POSITIONS: Record<LocationId, InitialPosition> = {
 
 /**
  * The arcade ground floor's walk boundary is the full-width rectangle
- * `y ∈ [57.2, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [45.2, 57.2]` — the
+ * `y ∈ [57.2, 100]` **plus a narrow alcove** at `x ∈ [45, 55], y ∈ [45.2, 57.2]`: the
  * space in front of the elevator doors.
  *
  * These two constants exist because the elevator-exit spawn used to sit on the
@@ -96,7 +96,7 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // The clothing store sits on the mall's MIDDLE level: its sprite group spans
   // x ≈ 50–74.5% and its door x ≈ 51–64% (InteractiveElements, shopping-mall
   // branch). The walkable floor on that level is the strip y ∈ [62.1, 63.1] of
-  // `shopping-mall-inside.png` (locationBoundaries) — the same strip players
+  // `shopping-mall-inside.png` (locationBoundaries): the same strip players
   // stand on when they walk INTO the store. The pre-Phase-0 value {55, 40} was
   // outside every walkable area (mid-air between floors), so the Blobbi
   // spawned off-floor and snapped away on the first movement frame.
@@ -109,7 +109,7 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // x 37–63 % with its base on y = 33.02 % (`furniture-store-config.ts`), and
   // the walkable floor on that level is the strip `y ∈ [32.5, 33.5]` of
   // `shopping-mall-inside.png`. This is the facade's own `walkTarget`, so going
-  // in and coming out cannot drift apart — and it is the far end of the mall's
+  // in and coming out cannot drift apart, and it is the far end of the mall's
   // two-stair cross-floor route, not a point the ground floor can reach
   // directly.
   'shop:furniture-store-inside': { x: 50, y: 33 },
@@ -119,7 +119,7 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   // The Care Store facade stands on the mall's MIDDLE level, in the bay it
   // traded with the Photo Booth, spanning x ≈ 25.4–49.9 % (`care-store-config.ts`).
   // The walkable floor on that level is the strip `y ∈ [62.1, 63.1]` of
-  // `shopping-mall-inside.png` — the same one the Clothing Store returns onto —
+  // `shopping-mall-inside.png`: the same one the Clothing Store returns onto,
   // so the return point is the storefront's horizontal centre on that strip.
   // The player comes back out where they went in.
   'shop:care-store-inside': { x: 37.6, y: 62.6 },
@@ -128,7 +128,7 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
   //
   // The Badges Store facade holds the middle level's far-left bay, painting
   // x ≈ −2.2–21.7 % (`badges-store-config.ts`). Same walkway strip as its two
-  // neighbours, at the storefront's painted centre — which is also its
+  // neighbours, at the storefront's painted centre, which is also its
   // `walkTarget`, so going in and coming out use one point.
   'shop:badges-store-inside': { x: 9.75, y: 62.6 },
 
@@ -143,8 +143,8 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
  * Where the actor stands when a scene mounts.
  *
  * One rule, one place: a resumed session opens at the position kind:31950
- * presence recorded; everything else — every ordinary arrival, and every
- * navigation after the bootstrap — uses the scene's canonical entry point.
+ * presence recorded; everything else; every ordinary arrival, and every
+ * navigation after the bootstrap, uses the scene's canonical entry point.
  *
  * `bootstrapPosition` comes from `LocationContext` and is non-null ONLY between
  * the resume adoption and the first navigation, so this cannot shadow the spawn
@@ -153,7 +153,7 @@ export const EXIT_POSITIONS: Record<string, InitialPosition> = {
  * given here rather than re-clamped.
  *
  * `PlayingView` calls this to build `MovableBlobbi`'s `initialPosition`, and
- * `MovableBlobbi` is keyed on the location — so the value lands at the actor's
+ * `MovableBlobbi` is keyed on the location, so the value lands at the actor's
  * FIRST mount in a scene. Nothing moves it afterwards; there is no correcting
  * effect and therefore no visible teleport.
  */

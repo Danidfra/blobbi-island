@@ -22,7 +22,7 @@ import {
 import { pruneMineSessions } from '@/mine/mine-session-ledger';
 
 export interface MineSettlementApi {
-  /** `null` when logged out — the Mine then runs as an unrewarded practice run. */
+  /** `null` when logged out, the Mine then runs as an unrewarded practice run. */
   readonly settlement: MineSettlement | null;
   /** Settle (or resume) a session and refresh the caches it moved. */
   settle(sessionId: string): Promise<MineSettlementResult>;

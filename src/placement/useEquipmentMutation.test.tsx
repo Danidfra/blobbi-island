@@ -4,7 +4,7 @@
  * The relay and publish primitives are mocked so success and failure are
  * deterministic. What is asserted here is the behavior that cannot be seen from
  * a pure function: what is actually published, what the cache does before and
- * after, and — importantly — what the inventory does NOT do.
+ * after, and: importantly, what the inventory does NOT do.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -500,7 +500,7 @@ describe('useEquipmentMutation', () => {
       ]);
     });
 
-    // Both published, one after the other — never interleaved.
+    // Both published, one after the other; never interleaved.
     expect(signEvent).toHaveBeenCalledTimes(2);
   });
 });

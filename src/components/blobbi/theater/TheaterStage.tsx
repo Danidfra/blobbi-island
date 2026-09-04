@@ -36,16 +36,16 @@ interface TheaterStageProps {
   seatId: string | null;
   /**
    * Force a control surface. Normally the ROLE IS DERIVED from the shared
-   * session — hosting or watching alone gives you the host surface, joining
-   * someone else's session gives you the guest one — and this exists only for
+   * session: hosting or watching alone gives you the host surface, joining
+   * someone else's session gives you the guest one, and this exists only for
    * harnesses that want to see one surface without a relay.
    */
   role?: TheaterRole;
   /**
    * The approved-media list, for a curated experience.
    *
-   * Defaults to the bundled catalog. Overriding it is the test/dev seam — see
-   * the note beside `catalogRef` — not a product feature.
+   * Defaults to the bundled catalog. Overriding it is the test/dev seam; see
+   * the note beside `catalogRef`: not a product feature.
    */
   catalog?: readonly ApprovedMedia[];
   /**
@@ -63,7 +63,7 @@ interface TheaterStageProps {
 }
 
 /**
- * The theater: screen, curtain, controls, and — when there is one — a shared
+ * The theater: screen, curtain, controls, and, when there is one, a shared
  * watch session.
  *
  * Everything visible is a function of `theaterReducer`'s state plus the shared
@@ -71,7 +71,7 @@ interface TheaterStageProps {
  *
  *  - **Nothing but scenery exists until the Blobbi is sitting down.** No card,
  *    no player, no API script, no session, no error.
- *  - **The curtain rises only on confirmed player readiness** — never because a
+ *  - **The curtain rises only on confirmed player readiness**: never because a
  *    session said "playing", which is a claim about a timeline, not about
  *    whether this screen has a picture on it.
  *  - **Standing up releases the player AND the session.** Leaving the seat means
@@ -97,7 +97,7 @@ export function TheaterStage({
   // and stands the viewer up.
   //
   // `retain` is the whole of the seat/screen split: with a shared session
-  // attached, standing up vacates the CHAIR and nothing else — the film is still
+  // attached, standing up vacates the CHAIR and nothing else, the film is still
   // running for everyone else in the room, so the screen keeps playing and only
   // the control card goes away. Watching alone keeps the original behaviour:
   // walking away from your own film stops it.
@@ -126,7 +126,7 @@ export function TheaterStage({
     THE catalog seam.
 
     Defaults to the bundled approved list and is overridable only by a caller
-    that constructs this component — which in practice means tests and the dev
+    that constructs this component, which in practice means tests and the dev
     harness. It is a prop rather than a module mock because the catalog is read
     through default parameters deep inside pure functions, and a mocked constant
     would not reach them.
@@ -145,8 +145,8 @@ export function TheaterStage({
   /**
    * THE gate. Every path that can put media on this screen goes through here.
    *
-   * There are four — the local input, a session `set-media`, joining a session,
-   * and the re-seat fallback — and only the first is a person typing. Checking
+   * There are four, the local input, a session `set-media`, joining a session,
+   * and the re-seat fallback, and only the first is a person typing. Checking
    * the input alone would leave the other three open, and the one that matters
    * most is the second: a guest joins while an approved video is playing and the
    * host swaps it a second later.
@@ -154,7 +154,7 @@ export function TheaterStage({
    * Refusal happens BEFORE `dispatch`, so unapproved media never reaches the
    * state machine, never becomes a `request`, and therefore never causes a
    * player to be constructed. There is no frame in which it is briefly on
-   * screen — the iframe for it is never built at all.
+   * screen: the iframe for it is never built at all.
    */
   const admitAndRequestMedia = useCallback(
     (media: MediaRef, options: { startSeconds?: number; source: 'local' | 'session' } = { source: 'local' }) => {
@@ -172,7 +172,7 @@ export function TheaterStage({
       // LEAVING is the deliberate choice over "keep the last approved video" or
       // "pause and explain". The host controls the media and can change it
       // again immediately, so staying turns a single refusal into a loop of
-      // them — and every one of those is a moment where the only thing between a
+      // them: and every one of those is a moment where the only thing between a
       // child and the content is this check holding. Staying synchronised to
       // someone who is trying to show you disallowed content is not a state
       // worth preserving. Leaving is local and immediate; it does not end the
@@ -186,7 +186,7 @@ export function TheaterStage({
   const handleRequestMedia = useCallback(
     (media: SharedMediaRef) => {
       // The SESSION asked for this video; the theater state machine still decides
-      // what a player is and when it exists — and admission decides whether it
+      // what a player is and when it exists, and admission decides whether it
       // may be asked at all.
       admitAndRequestMedia({ provider: 'youtube', id: media.id }, { source: 'session' });
     },
@@ -212,7 +212,7 @@ export function TheaterStage({
   const sharedModeRef = useRef(shared.mode);
   sharedModeRef.current = shared.mode;
 
-  // Presence carries the session ADDRESS and nothing else — no rev, no position,
+  // Presence carries the session ADDRESS and nothing else; no rev, no position,
   // no media (§14.3). It is set after a session is actually established and
   // cleared the instant one is not.
   useEffect(() => {
@@ -225,7 +225,7 @@ export function TheaterStage({
   // the session untouched: the only ways out are the explicit Leave/End buttons
   // and walking out of the theater (handled by `PlayingView`, which owns the
   // location and forgets the session there). This component deliberately does
-  // NOT tie session membership to `seatId` — it used to, and standing up
+  // NOT tie session membership to `seatId`: it used to, and standing up
   // silently dropped a host out of the session it had created, with no way back
   // in since only its own pubkey can author that session.
   //
@@ -238,8 +238,8 @@ export function TheaterStage({
     if (!media) return;
     // FALLBACK, not the seat-change path. Retaining means the screen never went
     // away, so there is normally nothing to restore here. This covers the case
-    // where a player genuinely does not exist — the theater was remounted, or
-    // the session was joined from a cold start — and puts the session's media
+    // where a player genuinely does not exist, the theater was remounted, or
+    // the session was joined from a cold start, and puts the session's media
     // back without the viewer choosing anything. The shared layer catches the
     // new player up to the session's position when it reports ready.
     if (requestRef.current !== null) return;
@@ -249,7 +249,7 @@ export function TheaterStage({
   }, [seatId, shared.media?.id, shared.mode, admitAndRequestMedia]);
 
   // Readiness and failure are reported BY the player and consumed by the state
-  // machine — the machine never assumes either.
+  // machine: the machine never assumes either.
   const playerReady =
     controller !== null &&
     snapshot.media !== null &&
@@ -326,7 +326,7 @@ export function TheaterStage({
           {/* The IFrame API replaces a child of this box with its iframe. */}
           <div ref={hostRef} className="h-full w-full [&>iframe]:h-full [&>iframe]:w-full" />
 
-          {/* Buffering mid-film: a spinner, not a skeleton — a short operation.
+          {/* Buffering mid-film: a spinner, not a skeleton, a short operation.
               Loading a NEW video is reported on the card instead, because the
               curtain is down and nobody can see the screen. */}
           {state.status === 'video-ready' && snapshot.phase === 'buffering' && (

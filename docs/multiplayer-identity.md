@@ -10,7 +10,7 @@ lives at the presence ingest; nothing about the wire format changed.
 
 ## 1. What was seen
 
-> Click to walk. The Blobbi moves normally — and a second, visually identical
+> Click to walk. The Blobbi moves normally, and a second, visually identical
 > Blobbi appears behind it and follows.
 
 ## 2. What was actually happening
@@ -18,7 +18,7 @@ lives at the presence ingest; nothing about the wire format changed.
 Presence is a **broadcast**. Every kind 31950 this client publishes comes
 straight back down its own subscription, along with everybody else's, because
 the filter is `#t: island / location` and not "not me". So "is this event mine?"
-is not a detail of the ingest — it is the question that decides whether an actor
+is not a detail of the ingest; it is the question that decides whether an actor
 exists at all.
 
 The client answered it by comparing the event's author against the local pubkey,
@@ -28,7 +28,7 @@ the comparison could be made against a value that was empty, or stale, and in
 both cases the answer came back "not me".
 
 The consequence is specific, and it is exactly what was reported. The echo
-carries our own Blobbi address, so the visual fetch loads *our own* kind 31124 —
+carries our own Blobbi address, so the visual fetch loads *our own* kind 31124,
 identical colours, identical name. It carries our own published movement goal,
 which the remote path interpolates from `anchor` toward `goal.to` rather than
 driving directly, so the copy arrives a beat late. A visually identical Blobbi,
@@ -37,15 +37,15 @@ walking our path, behind us.
 ### Three reproductions, all through the real world layer
 
 `src/components/blobbi/MultiplayerLayer.identity.test.tsx` wires the round trip
-up honestly — the publish mock stamps the author onto the template and pushes it
-into the live subscription, exactly as a relay does — and each of these failed
+up honestly: the publish mock stamps the author onto the template and pushes it
+into the live subscription, exactly as a relay does, and each of these failed
 before the fix:
 
 | Trigger | Why the old check missed it |
 |---|---|
 | **identity resolves after the presence hook initialises** | the subscription captured `''`, so nothing ever matched it |
 | **the player switches account under a mounted island** | the subscription still held the previous key |
-| **a NIP-07 extension is switched to another account** | every event comes back authored by a key the app does not know is ours — identity *cannot* catch this one |
+| **a NIP-07 extension is switched to another account** | every event comes back authored by a key the app does not know is ours, identity *cannot* catch this one |
 
 That last row is why there are two invariants rather than one.
 
@@ -61,11 +61,11 @@ admits an actor. The identity comparison, the closure it lived in and the
 ```
 pubkey        WHO. One account is one actor.
 sessionId     WHICH CLIENT. Random per mounted presence hook. Published as the
-              `d` tag (`session:<id>`), which makes presence addressable — one
+              `d` tag (`session:<id>`), which makes presence addressable; one
               live event per session.
 blobbiD       WHAT they are wearing. The `a` tag is `31124:<pubkey>:<blobbiD>`.
               Appearance, never identity: two players can own identical Blobbis.
-player key    `${pubkey}:${sessionId}` — the map key and the React key.
+player key    `${pubkey}:${sessionId}`: the map key and the React key.
 ```
 
 **The invariant:**
@@ -78,7 +78,7 @@ player key    `${pubkey}:${sessionId}` — the map key and the React key.
 
 Two independent rules, because they fail differently. Identity is canonical.
 The session id is the backstop that still works when identity is unknown or
-wrong — we generated it and we published it, so an event carrying it is ours
+wrong: we generated it and we published it, so an event carrying it is ours
 whatever we believe about our key.
 
 And one precondition: **an unknown local identity admits nobody.** If we cannot
@@ -92,7 +92,7 @@ One pubkey is deliberately **one visible actor**. The ingest keeps only the
 newest session per author (`latestSessionByPubkeyRef`) and evicts the others, so
 a second tab or a phone moves that account's Blobbi to the newer session rather
 than drawing two. There is therefore no legitimate case where the local player's
-own key should appear as a remote actor — not another tab, not another device,
+own key should appear as a remote actor; not another tab, not another device,
 not a reconnect. The invariant costs nothing that the product wanted.
 
 ## 5. Where it is enforced
@@ -111,9 +111,9 @@ kind 31950 arrives
 At the ingest, not at the render. An actor filtered in JSX still exists: it
 holds a map entry, an animation target, a live position the gaze loop reads, a
 seat claim and an anchor a chat bubble can portal into. Hiding the last step
-leaves all of that in place. The render filter is kept as a second wall — the
+leaves all of that in place. The render filter is kept as a second wall, the
 local player is drawn elsewhere, so a remote entry with our key is a visible
-duplicate and worth refusing twice — but it is not the rule.
+duplicate and worth refusing twice, but it is not the rule.
 
 The same pass also stopped the subscription from pinning the ingest by value:
 it now calls through a ref, so identity, policy and player state cannot age

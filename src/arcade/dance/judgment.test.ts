@@ -1,7 +1,7 @@
 /**
  * Judgement and scoring tests.
  *
- * Every case here is a number in and a number out — no clock, no DOM, no audio.
+ * Every case here is a number in and a number out; no clock, no DOM, no audio.
  * That is the whole reason the engine takes the song time as an argument: "was
  * this note hit?" must have exactly one answer, and it must be checkable without
  * waiting sixty-eight real seconds.
@@ -149,7 +149,7 @@ describe('inputs', () => {
     expect(event?.judgment).toBe('perfect');
   });
 
-  it('charges nothing for a ghost input — it is not a miss', () => {
+  it('charges nothing for a ghost input; it is not a miss', () => {
     const { state, event } = play(createDanceRun(SIMPLE), 'up', 0);
     expect(event).toBeNull();
     expect(state.counts.miss).toBe(0);
@@ -207,7 +207,7 @@ describe('scoring and combo', () => {
     expect(comboBonusFor(DANCE_COMBO_BONUS.cap)).toBe(
       DANCE_COMBO_BONUS.cap * DANCE_COMBO_BONUS.step,
     );
-    // Past the cap it stops growing — one long streak cannot dominate a result.
+    // Past the cap it stops growing; one long streak cannot dominate a result.
     expect(comboBonusFor(10_000)).toBe(DANCE_COMBO_BONUS.cap * DANCE_COMBO_BONUS.step);
   });
 
@@ -224,7 +224,7 @@ describe('scoring and combo', () => {
     expect(maxPerNote).toBeLessThan(2 * DANCE_JUDGMENT_POINTS.perfect);
   });
 
-  it('cannot be farmed by spamming — a ghost input adds nothing', () => {
+  it('cannot be farmed by spamming, a ghost input adds nothing', () => {
     let run = createDanceRun(SIMPLE);
     for (let i = 0; i < 500; i += 1) run = play(run, 'left', 500).state;
     expect(run.score).toBe(0);

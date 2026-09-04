@@ -1,5 +1,5 @@
 /**
- * Trusted reconstruction — the other half of the spoofing defence.
+ * Trusted reconstruction: the other half of the spoofing defence.
  *
  * The parser guarantees a structured message contains only ids. This module
  * guarantees the words come from the local catalogs. Together they are the claim

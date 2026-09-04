@@ -1,7 +1,7 @@
 import * as React from "react";
 
 /**
- * useFullscreen — thin wrapper around the browser Fullscreen API.
+ * useFullscreen: thin wrapper around the browser Fullscreen API.
  *
  * Targets a specific element (the game shell root). Tracks whether **that
  * element** is the current fullscreen element, and exposes enter/exit/toggle
@@ -12,7 +12,7 @@ import * as React from "react";
  *
  * The theater's video control requests fullscreen on the **YouTube iframe**, a
  * descendant. `document.fullscreenElement` then becomes truthy, and a hook that
- * only asked that question would report that the SHELL had gone fullscreen —
+ * only asked that question would report that the SHELL had gone fullscreen,
  * flipping the shell into its immersive presentation and overlaying an "exit
  * fullscreen" button on top of a video the shell never fullscreened. Ownership
  * of the fullscreen layer belongs to whoever requested it.
@@ -110,7 +110,7 @@ export function useFullscreen(
       else if (el.mozRequestFullScreen) await el.mozRequestFullScreen();
       else if (el.msRequestFullscreen) await el.msRequestFullscreen();
     } catch {
-      // User gesture rejected or not allowed — leave state as-is.
+      // User gesture rejected or not allowed, leave state as-is.
     }
   }, [isSupported, targetRef]);
 
@@ -123,7 +123,7 @@ export function useFullscreen(
       else if (d.mozCancelFullScreen) await d.mozCancelFullScreen();
       else if (d.msExitFullscreen) await d.msExitFullscreen();
     } catch {
-      // Ignore — escape/native exit will still work.
+      // Ignore: escape/native exit will still work.
     }
   }, [isSupported]);
 

@@ -4,7 +4,7 @@
  * ## Why the guard is on the route and not on the menu entry
  *
  * The authoring tools are unlinked from the game's navigation, which is
- * discoverability rather than a boundary — anyone can type the path. Removing a
+ * discoverability rather than a boundary, anyone can type the path. Removing a
  * menu item leaves the route mounted and one URL away; guarding the route means
  * the surface is not reachable at all, however it is addressed.
  *

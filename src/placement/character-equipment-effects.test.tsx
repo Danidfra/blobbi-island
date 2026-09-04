@@ -1,5 +1,5 @@
 /**
- * useCharacterEquipment × visual effects — the join, hook-level.
+ * useCharacterEquipment × visual effects, the join, hook-level.
  *
  * The pure resolver's own tests prove the gates; these prove the PARTITION and
  * the PLUMBING: that one kind:31634 document feeds both vocabularies, that an
@@ -7,7 +7,7 @@
  * that the author gate silences effects for documents the owner did not sign,
  * and that the empty case stays the shared frozen array.
  *
- * All three queries are seeded straight into the cache — no relay, no signer.
+ * All three queries are seeded straight into the cache; no relay, no signer.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';

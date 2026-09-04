@@ -1,11 +1,11 @@
 /**
- * Blobbi Island — is this published cosmetic actually WEARABLE yet?
+ * Blobbi Island: is this published cosmetic actually WEARABLE yet?
  *
  * ## The gap this closes
  *
  * Publishing a kind:31632 definition and making it wearable are two different
  * things. Since the kind:31634 migration the gap is no longer a source-code
- * mapping — it is the DEFINITION'S OWN CONTENT. A cosmetic becomes wearable
+ * mapping: it is the DEFINITION'S OWN CONTENT. A cosmetic becomes wearable
  * when it is registered as an official identity, signed by the official issuer,
  * and declares a `content.visual.slot` this renderer supports. Nothing infers a
  * slot from an id or a code prefix any more, so an issuer who omits it has
@@ -23,7 +23,7 @@
  * paste. Letting a web UI write the trust list would defeat the point of it.
  *
  * It never infers ownership. "Wearable" means "if a player owned this, Island
- * could equip and draw it" — not that anybody owns or is wearing one.
+ * could equip and draw it": not that anybody owns or is wearing one.
  */
 
 import { officialCosmeticByD } from '@/protocol/event-registry';
@@ -50,7 +50,7 @@ export interface ActivationSubject {
   visualSlot?: string;
 }
 
-/** One thing that is true — or wrong — about this definition's activation. */
+/** One thing that is true, or wrong, about this definition's activation. */
 export type ActivationFindingLevel = 'ok' | 'todo' | 'warn';
 
 export interface ActivationFinding {
@@ -71,7 +71,7 @@ export interface ActivationStatus {
    * The supported slot this definition declares, or `null`.
    *
    * `null` covers "declared nothing" and "declared something this renderer does
-   * not support" alike — both mean nothing can wear it.
+   * not support" alike; both mean nothing can wear it.
    */
   declaredSlot: string | null;
   /**
@@ -218,7 +218,7 @@ export function activationStatus(subject: ActivationSubject): ActivationStatus {
   }
 
   // Artwork. `primary` is what compact UI shows; `front`/`back` are what a posed
-  // Blobbi asks for. A missing pose is not fatal — the resolver falls back — so
+  // Blobbi asks for. A missing pose is not fatal, the resolver falls back, so
   // it is reported as work to do, not as breakage.
   const candidate: ItemImageCandidate = {
     images: subject.images as ItemImageCandidate['images'],

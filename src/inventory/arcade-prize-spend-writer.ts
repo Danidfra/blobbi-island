@@ -3,7 +3,7 @@
  * Tickets.
  *
  * The mirror image of `arcade-reward-writer.ts`, built to the same rules for
- * the same reasons — a spend is a grant with the sign flipped, and it inherits
+ * the same reasons, a spend is a grant with the sign flipped, and it inherits
  * every failure mode the reward boundary was rebuilt around:
  *
  * ```
@@ -49,24 +49,24 @@ import {
   type InventoryTransactionNostr,
 } from './inventory-transaction';
 
-/** Canonical Arcade Ticket address — derived, never a literal. */
+/** Canonical Arcade Ticket address, derived, never a literal. */
 const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
 /**
- * The slice of `useNostr()` this module needs — structurally the shared
+ * The slice of `useNostr()` this module needs, structurally the shared
  * inventory-transaction surface, because that is what this writer now is.
  */
 export type PrizeSpendNostr = InventoryTransactionNostr;
 
 /**
- * The spend capability the redemption hook holds — an interface, so the DEV
+ * The spend capability the redemption hook holds, an interface, so the DEV
  * harness and the tests can substitute one that never touches a relay, and so
  * a future grant/redemption protocol can replace the implementation behind the
  * same boundary.
  */
 export interface ArcadePrizeSpendWriter {
   /**
-   * Publish the ticket spend STRICTLY — a timeout or abort MUST reject.
+   * Publish the ticket spend STRICTLY, a timeout or abort MUST reject.
    * Resolving on timeout is the exact defect this boundary exists to forbid.
    */
   spendTickets(redemption: ArcadePrizeRedemption): Promise<void>;
@@ -75,7 +75,7 @@ export interface ArcadePrizeSpendWriter {
 }
 
 /**
- * Thrown for problems whose timing is PROVABLE — every reason here means
+ * Thrown for problems whose timing is PROVABLE; every reason here means
  * "this happened before the event could reach a relay", which is what lets
  * the redemption machine mark the attempt retryable instead of unresolved.
  * A failure that cannot prove its timing is thrown raw and classified as
@@ -134,7 +134,7 @@ export function createArcadePrizeSpendWriter(
           const { inventory } = await ctx.readBase();
           const held = getQuantity(inventory, TICKET_ADDRESS);
           if (held < redemption.price) {
-            // Nothing sent, and no balance may ever go negative — the freshest
+            // Nothing sent, and no balance may ever go negative, the freshest
             // read is the last word.
             insufficient = new ArcadePrizeSpendError(
               `Holding ${held} tickets; ${redemption.price} needed`,
@@ -157,7 +157,7 @@ export function createArcadePrizeSpendWriter(
         if (error instanceof InventoryTransactionError && error.reason === 'sign-failed') {
           throw new ArcadePrizeSpendError(error.message, 'sign-failed');
         }
-        // Read and publish failures keep their ORIGINAL identity — the
+        // Read and publish failures keep their ORIGINAL identity, the
         // redemption machine classifies the thrown value, not this writer.
         throw unwrapInventoryTransactionError(error);
       }

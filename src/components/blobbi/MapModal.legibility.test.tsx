@@ -1,7 +1,7 @@
 /**
  * A new player has to be able to READ the map: every destination labelled
- * without hovering, "You are here" on the place they are — including when
- * they are somewhere the map does not draw (an arcade floor is Town) — and
+ * without hovering, "You are here" on the place they are, including when
+ * they are somewhere the map does not draw (an arcade floor is Town): and
  * never a raw location id in sight.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -47,7 +47,7 @@ describe('map legibility', () => {
   it('labels every destination visibly, with its player-facing name', async () => {
     const dialog = await renderMapAt('home');
     // jsdom cannot measure the map box, which keeps the marker layer
-    // `visibility: hidden` until measured — so markers are found by their
+    // `visibility: hidden` until measured, so markers are found by their
     // destination attribute, and the name is read from the label itself.
     for (const name of DESTINATIONS) {
       const marker = markerNamed(dialog, name);
@@ -59,7 +59,7 @@ describe('map legibility', () => {
   it('marks where the player is with "You are here"', async () => {
     const dialog = await renderMapAt('beach');
     const here = dialog.querySelector('[data-map-here]') as HTMLElement;
-    expect(here).toHaveAttribute('aria-label', 'Beach — you are here');
+    expect(here).toHaveAttribute('aria-label', 'Beach: you are here');
     expect(here).toHaveAttribute('aria-current', 'location');
     expect(here.textContent).toContain('You are here');
     expect(dialog.querySelectorAll('[data-map-here]')).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('map legibility', () => {
   ] as [LocationId, string][])('places a player inside %s on %s', async (location, destination) => {
     const dialog = await renderMapAt(location);
     const here = dialog.querySelector('[data-map-here]') as HTMLElement;
-    expect(here).toHaveAttribute('aria-label', `${destination} — you are here`);
+    expect(here).toHaveAttribute('aria-label', `${destination}: you are here`);
     expect(dialog).toHaveAccessibleDescription(new RegExp(`You are at ${destination}`));
   });
 

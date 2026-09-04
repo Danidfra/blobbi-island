@@ -1,5 +1,5 @@
 /**
- * The Island communication message model — the shape shared by every layer.
+ * The Island communication message model, the shape shared by every layer.
  *
  * ## One kind, four classes
  *
@@ -13,13 +13,13 @@
  * What changes is the `content` JSON, and it changes in the one way the existing
  * receiver already tolerates. Today's client rejects anything whose
  * `content.type` is not `"chat"`, so adding new `type` values is invisible to
- * it — a deployed old tab ignores a phrase rather than mis-rendering it. See
+ * it: a deployed old tab ignores a phrase rather than mis-rendering it. See
  * {@link docs/communication-v2.md} for the interoperability consequences, which
  * are real and deliberate.
  *
  * ## Why free text still says `"chat"` on the wire
  *
- * The obvious modernisation — renaming it `"text"` — would break exactly the
+ * The obvious modernisation, renaming it `"text"`, would break exactly the
  * compatibility the design is built on: an older client would stop showing free
  * text, which is the one message class it *can* show. So the wire keeps
  * `"chat"`, the parser also accepts `"text"` for a future client that prefers
@@ -32,7 +32,7 @@
  * security property this whole phase rests on is that **the discriminant is
  * unambiguous**: a message either is free text, or it is a reference into a
  * local catalog. A payload carrying both would force every receiver to hold the
- * invariant "ignore `text` when `phrase` is present" — a rule that is one
+ * invariant "ignore `text` when `phrase` is present": a rule that is one
  * careless edit away from being violated, in the exact code path that decides
  * what a child is shown.
  *
@@ -129,8 +129,8 @@ export interface IslandMessageEnvelope {
  * A structural bound, not a policy one: the biggest legitimate payload is a
  * 120-character free-text message inside a small envelope, so 2 KiB is roughly
  * an order of magnitude of headroom and still makes hostile payloads cheap to
- * discard. It closes the receive-side gap the audit records as H-7 — the send
- * path has always capped length and the receive path never did — without
+ * discard. It closes the receive-side gap the audit records as H-7, the send
+ * path has always capped length and the receive path never did, without
  * pretending to be a content rule: a 500-character message from another client
  * still renders, exactly as it does today.
  */

@@ -48,8 +48,8 @@ import { genUserName } from "@/lib/genUserName";
 
 interface AccountMenuProps {
   /**
-   * "dropdown" — desktop framed header (popover-style dropdown).
-   * "modal"    — mobile landscape / immersive / desktop fullscreen. Opens as a
+   * "dropdown": desktop framed header (popover-style dropdown).
+   * "modal": mobile landscape / immersive / desktop fullscreen. Opens as a
    *              compact, centered, cozy game modal (not a bottom drawer or a
    *              cramped popover) since vertical space is limited there.
    */
@@ -60,7 +60,7 @@ interface AccountMenuProps {
 }
 
 /**
- * AccountMenu — the single home for account identity, current Blobbi / switch
+ * AccountMenu: the single home for account identity, current Blobbi / switch
  * Blobbi, relays/network, account switching, logout, and (in dev) the developer
  * tools toggle.
  *
@@ -71,7 +71,7 @@ interface AccountMenuProps {
  *
  * Presentation:
  *   - Desktop framed: a header dropdown/popover.
- *   - Immersive (mobile landscape) and desktop fullscreen: a centered modal —
+ *   - Immersive (mobile landscape) and desktop fullscreen: a centered modal,
  *     compact, touch-friendly, width-controlled, scrollable, with a backdrop.
  *
  * Fullscreen correctness: both surfaces portal into the active fullscreen root
@@ -107,7 +107,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
     setLoginDialogOpen(true);
   };
 
-  // The picker is its own modal, so the menu gets out of its way first —
+  // The picker is its own modal, so the menu gets out of its way first,
   // otherwise the dropdown's outside-click handling and the modal's focus trap
   // fight over the same pointer events.
   const handleOpenSafety = () => {
@@ -120,7 +120,7 @@ export function AccountMenu({ variant = "dropdown", onSwitchBlobbi, className }:
     setThemePickerOpen(true);
   };
 
-  // The shared menu body — identical option set for both desktop & mobile.
+  // The shared menu body, identical option set for both desktop & mobile.
   const body = (
     <AccountMenuBody
       currentUser={currentUser}
@@ -251,7 +251,7 @@ function AccountMenuBody({
 
     It used to hand-roll one: a `rowClass` string, a `Row` component switching
     between `DropdownMenuItem` and a bare `<button>`, and a `Divider` switching
-    between `DropdownMenuSeparator` and a `<div>` — and four more spellings of
+    between `DropdownMenuSeparator` and a `<div>`: and four more spellings of
     the same row lived elsewhere in the game. Keeping `DropdownMenuItem` was
     what forced the split, and it bought nothing here: the menu's rows either
     open a surface or perform an action, and Radix's roving focus is not worth
@@ -259,7 +259,7 @@ function AccountMenuBody({
   */
   return (
     // The modal presentation is used in mobile landscape and desktop
-    // fullscreen, where vertical space is the scarce resource — so its sections
+    // fullscreen, where vertical space is the scarce resource, so its sections
     // flow into two columns once there is width for them. The dropdown is
     // 288px wide and always stacks. This is the only place `variant` still
     // changes anything; the rows themselves are now identical in both.
@@ -270,7 +270,7 @@ function AccountMenuBody({
       )}
     >
       <SettingsSection>
-        {/* Identity is a row too, just not an actionable one — the trailing
+        {/* Identity is a row too, just not an actionable one, the trailing
             slot carries the state instead of a control. */}
         <SettingsRow
           icon={
@@ -326,7 +326,7 @@ function AccountMenuBody({
           label="Theme"
           /* The theme's own name, whether it is one of the two built into the
              game or one somebody published on Nostr. The row does not say
-             which — a player picking how their island looks does not care
+             which: a player picking how their island looks does not care
              where the colours came from, and the picker labels the sections. */
           description={theme.name}
           onClick={onOpenThemePicker}
@@ -370,15 +370,15 @@ function AccountMenuBody({
         />
       </SettingsSection>
 
-      {/* Developer tools — dev/local builds only; never rendered in production. */}
+      {/* Developer tools: dev/local builds only; never rendered in production. */}
       {/* `import.meta.env.DEV` is a literal `false` in a build, so the whole
           branch is dropped from the bundle rather than merely rendering nothing.
           `isDevMode` is the same value re-exported from a module, which Rollup
-          cannot fold across the boundary — keeping both means the runtime gate is
+          cannot fold across the boundary, keeping both means the runtime gate is
           unchanged AND the markup stops shipping. */}
       {import.meta.env.DEV && isDevMode && (
         <SettingsSection label="Developer tools" icon={<Wrench />}>
-          {/* The Switch is the control, so the ROW is not a button — otherwise
+          {/* The Switch is the control, so the ROW is not a button; otherwise
               the toggle would be an interactive element inside another one, and
               tapping the row would fight the toggle. */}
           <SettingsRow

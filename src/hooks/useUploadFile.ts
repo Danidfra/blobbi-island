@@ -9,7 +9,7 @@ import { useCurrentUser } from "./useCurrentUser";
  * Thrown when the experience does not permit uploading media.
  *
  * A distinct type because a refusal is not a failure. Blossom did not go down,
- * the signer did not misbehave, the file was not malformed — nothing was
+ * the signer did not misbehave, the file was not malformed; nothing was
  * attempted. A caller that showed "Upload failed" here would be lying and would
  * also be inviting a retry of something that will never work.
  */
@@ -28,7 +28,7 @@ export function isMediaUploadNotPermitted(error: unknown): error is MediaUploadN
 }
 
 /**
- * The application's one Blossom uploader — and the enforcement point for
+ * The application's one Blossom uploader, and the enforcement point for
  * `mediaUploads`.
  *
  * ## Why the gate is here rather than only at the callers
@@ -40,12 +40,12 @@ export function isMediaUploadNotPermitted(error: unknown): error is MediaUploadN
  *  - the PhotoBooth share (`ShareModal` → `usePhotoShare`);
  *  - the Game Item authoring tools (`tools/game-items/image-upload.ts`), whose
  *    route is separately gated on `authoringTools`;
- *  - `EditProfileForm`, which has no importer anywhere in `src/` — dead code.
+ *  - `EditProfileForm`, which has no importer anywhere in `src/`: dead code.
  *
  * Nothing internal or trusted uploads through this hook: official item artwork
  * is published by the issuer through those same authoring tools, not by the
  * game. So gating here does not contaminate generic infrastructure serving
- * unrelated required operations — it puts the check on the narrowest thing that
+ * unrelated required operations; it puts the check on the narrowest thing that
  * every upload must pass through.
  *
  * `usePhotoShare` also decides up front, before it converts a blob, because

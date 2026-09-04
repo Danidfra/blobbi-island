@@ -29,12 +29,12 @@ import {
 } from '@/arcade/tokens/game-entry';
 
 /**
- * Blobbi Dance — the controller that joins the game to the shared arcade.
+ * Blobbi Dance: the controller that joins the game to the shared arcade.
  *
  * It owns nothing that the pieces around it already own. The lifecycle lives in
  * `ArcadeRoom`'s reducer, the rules live in `src/arcade/dance/`, the claim
  * wiring lives in `useArcadeRewardController` (shared with Air Hockey and
- * Pool), and the frame is `ArcadeGameShell`. What is left here is the wiring —
+ * Pool), and the frame is `ArcadeGameShell`. What is left here is the wiring,
  * and the wiring is where the interesting rules are:
  *
  *  - **A run id is minted exactly once, by the caller of `start`.** The reducer
@@ -55,7 +55,7 @@ import {
  * player walked to.
  *
  * In production that machine is ALWAYS `arcade-dance-machine`, and it is not
- * this component's job to make that true — `canLaunchArcadeGame` refuses a
+ * this component's job to make that true, `canLaunchArcadeGame` refuses a
  * Blobbi Dance launch from anywhere else, so no other machine can produce a run
  * to hand here. A brief corrective pass had the catalogue launching this game
  * from any of nine cabinets, which would have written a pool table's id into a
@@ -85,7 +85,7 @@ export interface DanceMachineProps {
   readonly exitAriaLabel: string;
   /**
    * The turnstile that charges for a run. Injected, like the reward writer:
-   * a machine rendered without one plays free, which is the safe default —
+   * a machine rendered without one plays free, which is the safe default,
    * charging by omission would be taking money nobody wired up.
    */
   readonly entry?: ArcadeGameEntry;
@@ -112,7 +112,7 @@ const ABORT_COPY: Record<string, string> = {
   closed: 'That run ended when you left the machine, so it earned no tickets.',
   quit: 'That run ended early, so it earned no tickets.',
   interrupted:
-    'That run ended because the tab was hidden — a rhythm game cannot keep time in a background tab. It earned no tickets.',
+    'That run ended because the tab was hidden, a rhythm game cannot keep time in a background tab. It earned no tickets.',
   error: 'That run could not continue, so it earned no tickets.',
 };
 
@@ -141,7 +141,7 @@ export function DanceMachine({
    *
    * It lives here, not in the game component, for one reason: an `AudioContext`
    * built outside a user gesture starts suspended and silently produces nothing.
-   * Building it inside the Start handler — the click itself — is the only way to
+   * Building it inside the Start handler, the click itself, is the only way to
    * be sure, and it means an unavailable audio system is reported BEFORE a run
    * exists rather than aborting one that had already started.
    */
@@ -152,9 +152,9 @@ export function DanceMachine({
    * The persisted arcade mute setting, mirrored into React so a control can
    * render it.
    *
-   * The storage and the engine hook already existed — `isArcadeMuted`,
+   * The storage and the engine hook already existed, `isArcadeMuted`,
    * `setArcadeMuted` and `DanceAudioEngine.setMuted` all shipped in earlier
-   * phases — and nothing in the product had ever offered a way to reach them.
+   * phases: and nothing in the product had ever offered a way to reach them.
    * This adds the control, not the capability, and it changes no timing: muting
    * takes the master gain to zero while the `AudioContext` (and therefore the
    * clock every judgement is made against) keeps running exactly as before.
@@ -164,7 +164,7 @@ export function DanceMachine({
    * The authoritative value, so the toggle never has to read `muted` from a
    * closure that a second click in the same tick would have made stale.
    *
-   * The alternative — deriving `next` inside `setMuted`'s updater — would put
+   * The alternative: deriving `next` inside `setMuted`'s updater, would put
    * the storage write and the engine call inside a function React is entitled to
    * invoke twice (and does, under StrictMode) and to discard the result of. A
    * state updater must be pure; a ref is the honest place for the value the side
@@ -189,7 +189,7 @@ export function DanceMachine({
    * Validated once per chart, before anything can start.
    *
    * The one shipped chart is generated deterministically from committed data, so
-   * in practice this always passes — which is exactly why it must be checked
+   * in practice this always passes, which is exactly why it must be checked
    * rather than assumed: the check is what makes a future hand-edited or
    * fetched chart fail honestly instead of producing an unplayable run.
    */
@@ -219,7 +219,7 @@ export function DanceMachine({
    * Build a fresh engine for a new run, from inside the click that asked for it.
    *
    * Returns `false` when audio is unavailable, in which case no run is started
-   * at all — a rhythm game whose clock comes from the audio cannot be played
+   * at all: a rhythm game whose clock comes from the audio cannot be played
    * without it, and starting one anyway would produce a result nobody earned.
    */
   const prepareEngine = useCallback((): boolean => {
@@ -251,7 +251,7 @@ export function DanceMachine({
 
   /**
    * The commitment boundary: a Token is charged here and nowhere earlier.
-   * A broken chart and a failed audio engine both refuse BEFORE the charge —
+   * A broken chart and a failed audio engine both refuse BEFORE the charge,
    * the player must never pay for a run that cannot start.
    */
   const beginRun = useCallback(
@@ -262,7 +262,7 @@ export function DanceMachine({
       // dead audio engine must never cost the player a Token.
       if (!prepareEngine()) return;
 
-      // A free run — or one a Pass waives — starts on this tick, with no
+      // A free run, or one a Pass waives, starts on this tick, with no
       // write and no await.
       if (entry.admitFree(gameId)) {
         dispatch({ type: kind, runId: mintRunId(), difficulty: chart.difficulty });
@@ -361,7 +361,7 @@ export function DanceMachine({
    * Before this pass Close and Start were the same size and nearly the same
    * weight, so the screen offered a child two equally-loud choices and let them
    * work out which one plays the game. `islandCtaButtonClass` is the island's
-   * existing primary CTA — the same pill used to enter the island — so the
+   * existing primary CTA, the same pill used to enter the island, so the
    * loudest thing on the screen is the thing the player came for.
    *
    * Phase 4 removed the footer's quiet "Close" as well. It did the same thing as

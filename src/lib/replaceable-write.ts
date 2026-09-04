@@ -7,7 +7,7 @@
  *
  * 1. **Interleaved read-modify-write.** A replaceable publish does not patch,
  *    it REPLACES. Two writers that build from the same base silently destroy
- *    each other's work — whichever lands last wins, whole.
+ *    each other's work, whichever lands last wins, whole.
  * 2. **Same-second ties.** Nostr timestamps have second resolution and NIP-01
  *    breaks a tie between two replaceable events by lowest id, so two writes
  *    inside one second can make the newer one silently lose.

@@ -246,7 +246,7 @@ export function MapModal({ className }: MapModalProps) {
     setIsMapModalOpen(false);
   };
 
-  // Where the player IS, on this map's terms — never a raw location id.
+  // Where the player IS, on this map's terms; never a raw location id.
   const hereId = mapDestinationFor(currentLocation);
   const currentName = LOCATIONS.find((l) => l.id === hereId)?.name ?? 'the Island';
 
@@ -274,7 +274,7 @@ export function MapModal({ className }: MapModalProps) {
       >
 
 
-        {/* Map Container — sized to the measured rendered map rect so all
+        {/* Map Container: sized to the measured rendered map rect so all
             markers (children of this box) stay aligned and proportional with
             the map image at any modal size. */}
         <div
@@ -333,7 +333,7 @@ export function MapModal({ className }: MapModalProps) {
                   height: `${heightPct}%`,
                 }}
                 title={location.name}
-                aria-label={isHere ? `${location.name} — you are here` : `Go to ${location.name}`}
+                aria-label={isHere ? `${location.name}: you are here` : `Go to ${location.name}`}
                 disabled={isImageLoading}
               >
               {isImageLoading ? (
@@ -353,7 +353,7 @@ export function MapModal({ className }: MapModalProps) {
                 />
               )}
 
-              {/* "You are here" — a pin above the marker the player is on. */}
+              {/* "You are here": a pin above the marker the player is on. */}
               {isHere && (
                 <span
                   aria-hidden
@@ -366,7 +366,7 @@ export function MapModal({ className }: MapModalProps) {
                 </span>
               )}
 
-              {/* Location label — ALWAYS visible. A new player has to be able
+              {/* Location label: ALWAYS visible. A new player has to be able
                   to read the map, not discover it by hovering; the hover only
                   lifts the label a little. */}
               <div

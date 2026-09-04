@@ -98,12 +98,12 @@ const STALL_EPSILON = 0.15 * WORLD_PX_PER_PERCENT_Y;
  * Stall-firing only counts if the Blobbi settled within this multiple of the
  * proximity threshold of the target. If it stalls far away, it was redirected
  * elsewhere (e.g. the user tapped a different ground point), so we must NOT fire
- * the stale action — defense in depth alongside the world-surface cancel.
+ * the stale action, defense in depth alongside the world-surface cancel.
  */
 const STALL_MAX_DISTANCE_FACTOR = 1.6;
 
 /**
- * usePendingInteraction — a small, reusable "request interaction → walk toward
+ * usePendingInteraction: a small, reusable "request interaction → walk toward
  * target → trigger when close" model for Blobbi Island gameplay.
  *
  * It reuses the existing movement system: `requestInteraction` calls
@@ -166,8 +166,8 @@ export function usePendingInteraction({
         }
 
         // Stall detection: if the Blobbi can't get any closer (blocked short of
-        // the target by a boundary/blocker), fire anyway so the item isn't dead
-        // — but only if it settled reasonably near the target. If it stalled far
+        // the target by a boundary/blocker), fire anyway so the item isn't dead,
+        // but only if it settled reasonably near the target. If it stalled far
         // away it was redirected elsewhere, so cancel instead of firing.
         if (pending.lastPos && distance(current, pending.lastPos) < STALL_EPSILON) {
           pending.stallFrames += 1;
@@ -226,7 +226,7 @@ export function usePendingInteraction({
 
       // Broadcast the walk target to multiplayer presence so REMOTE clients see
       // this Blobbi walk to the target (e.g. to a door) before any location
-      // change removes it — instead of vanishing instantly. Only broadcast for
+      // change removes it, instead of vanishing instantly. Only broadcast for
       // real walks (target meaningfully far from the current position); an
       // underfoot interaction needs no remote movement.
       const here = blobbiRef.current?.getCurrentPosition?.();

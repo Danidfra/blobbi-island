@@ -1,7 +1,7 @@
 /**
  * Relay reads that can say "I don't know".
  *
- * The bug this suite pins: `NPool.query()` never throws — a timeout, a dead
+ * The bug this suite pins: `NPool.query()` never throws, a timeout, a dead
  * socket and a genuinely empty relay all produce `[]`, so the app recorded
  * "this player owns nothing" whenever the network hiccuped. These tests drive
  * the wrapper through the same message shapes `NRelay.req()` produces.
@@ -48,7 +48,7 @@ function reader(script: () => AsyncIterable<ReqMessage>): RelayReader {
   };
 }
 
-/** Never yields, never completes — until the caller's signal aborts. */
+/** Never yields, never completes, until the caller's signal aborts. */
 function silentReader(): RelayReader {
   return {
     req: (_filters, opts) => ({
@@ -81,7 +81,7 @@ describe('completion semantics', () => {
     expect(outcome.status === 'answered' && outcome.events).toHaveLength(2);
   });
 
-  it('EOSE with no events is ANSWERED-EMPTY — the only confirmed empty', async () => {
+  it('EOSE with no events is ANSWERED-EMPTY, the only confirmed empty', async () => {
     const outcome = await readRelay(
       reader(async function* () {
         yield ['EOSE', 'sub'];
@@ -236,7 +236,7 @@ describe('confirmed-empty policy', () => {
     expect(outcome.status === 'answered' && outcome.events).toHaveLength(1);
   });
 
-  it('empty then UNKNOWN is unknown — never confirmed empty', async () => {
+  it('empty then UNKNOWN is unknown; never confirmed empty', async () => {
     const { reader: r } = scripted([[['EOSE', 's']], [['CLOSED', 's', 'nope']]]);
     const outcome = await readRelayConfirmed(r, [{ kinds: [1] }]);
     expect(outcome).toMatchObject({ status: 'unknown', reason: 'closed' });
@@ -245,7 +245,7 @@ describe('confirmed-empty policy', () => {
     );
   });
 
-  it('is bounded to two reads — no loop, no backoff', async () => {
+  it('is bounded to two reads; no loop, no backoff', async () => {
     const { reader: r, reads } = scripted([[['EOSE', 's']]]);
     await readRelayConfirmed(r, [{ kinds: [1] }]);
     expect(reads()).toBe(2);

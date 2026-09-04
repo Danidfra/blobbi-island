@@ -14,7 +14,7 @@
  *
  * All values are percentages of the fixed virtual world (see VirtualWorld:
  * 1046×697, uniformly scaled and centered). Because the whole world scales as a
- * single layer, percentage geometry is viewport-independent — one set of numbers
+ * single layer, percentage geometry is viewport-independent; one set of numbers
  * stays aligned with the artwork on desktop and mobile alike.
  */
 

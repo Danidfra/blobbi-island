@@ -1,5 +1,5 @@
 /**
- * The trusted issuer set — what it says, and what it deliberately does not.
+ * The trusted issuer set, what it says, and what it deliberately does not.
  *
  * This is the whole of the cross-game trust decision, so it is worth pinning
  * that it stays a decision about KEYS. The failure this guards against is
@@ -42,7 +42,7 @@ describe('who is trusted', () => {
     expect(isTrustedItemIssuer('')).toBe(false);
   });
 
-  it('compares the WHOLE key — a prefix is a different person', () => {
+  it('compares the WHOLE key, a prefix is a different person', () => {
     expect(isTrustedItemIssuer(FARM_ISSUER.slice(0, 60))).toBe(false);
     expect(isTrustedItemIssuer(`${FARM_ISSUER}00`)).toBe(false);
     expect(isTrustedItemIssuer(FARM_ISSUER.toUpperCase())).toBe(false);
@@ -62,7 +62,7 @@ describe('the table records issuers, not products', () => {
     // The rule this asserts: Blobbi learns what a partner's items are by
     // reading their published definitions. Recording a crop id here would make
     // every new partner item a Blobbi release, and would re-introduce `d` as an
-    // identity — the exact thing full addresses exist to prevent.
+    // identity: the exact thing full addresses exist to prevent.
     const serialized = JSON.stringify(TRUSTED_ITEM_ISSUERS);
     expect(serialized).not.toContain('farm:produce');
     expect(serialized).not.toContain('strawberry');

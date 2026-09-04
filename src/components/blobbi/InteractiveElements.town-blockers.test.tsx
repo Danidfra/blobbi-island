@@ -5,7 +5,7 @@
  * `right-[12%]` → `right-[18%]`) but its MovementBlockers kept the OLD coordinates
  * (x 8 / x 82.5, y 86, 4.5×4). They ended up beside the bottom Town bushes and cut
  * the straight walk-in path to those bushes' hiding targets, so arriving there fell
- * back to the pending-interaction stall path — or failed outright.
+ * back to the pending-interaction stall path, or failed outright.
  *
  * These tests use the REAL Town markup and the REAL MovementBlockerProvider, so
  * they cover registration as well as geometry:
@@ -172,7 +172,7 @@ describe('Town movement blockers', () => {
       const art = streetlightArtBox(streetlight);
       const base = streetlightBaseBlocker(streetlight);
 
-      // Horizontally within the sprite, and resting on its bottom edge — i.e.
+      // Horizontally within the sprite, and resting on its bottom edge; i.e.
       // derived from the streetlight, never from a bush position.
       expect(base.x).toBeGreaterThanOrEqual(art.x);
       expect(base.x + base.width).toBeLessThanOrEqual(art.x + art.width);
@@ -229,7 +229,7 @@ describe('Town movement blockers', () => {
     // A blocked path stops the Blobbi short, and the walk-to-interact model then
     // relies on stall detection (and gives up beyond 1.6× the 5% threshold). With
     // the corrected blockers the walk reaches the target itself, so arrival is by
-    // proximity — assert the final approach is clear right up to the target.
+    // proximity: assert the final approach is clear right up to the target.
     for (const id of ['town-bush-3', 'town-bush-4']) {
       const bush = townBushes.find((b) => b.id === id)!;
       const target = bushTarget(bush);
@@ -257,7 +257,7 @@ describe('Town movement blockers', () => {
       expect(img, streetlight.id).toBeTruthy();
 
       // The artwork is placed from the SAME numbers the blocker is derived from,
-      // in percentages of the fixed virtual world — so a single set of
+      // in percentages of the fixed virtual world, so a single set of
       // coordinates stays aligned at every viewport size (VirtualWorld scales the
       // whole world layer uniformly; the sprite has no breakpoint variants).
       expect(img!.style.height).toBe(`${streetlight.heightPercent}%`);

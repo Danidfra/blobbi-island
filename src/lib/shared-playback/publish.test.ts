@@ -278,7 +278,7 @@ describe('keepalive', () => {
     expect(last.playback.updatedAt).toBe(T + 25_000);
   });
 
-  it('publishes no command — a keepalive is not an action', async () => {
+  it('publishes no command: a keepalive is not an action', async () => {
     const h = harness();
     await h.publisher.create(MEDIA);
     h.advance(20_000);

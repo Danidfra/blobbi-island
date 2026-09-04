@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — canonical kind:31633 inventory write API (Phases 5 & 6).
+ * Blobbi Island: canonical kind:31633 inventory write API (Phases 5 & 6).
  *
  * This is the SINGLE mutation layer for the Island inventory. All quantity math
  * is delegated to `@nostr-games/inventory` helpers (add/remove/set/get); this
@@ -14,12 +14,12 @@
  * kind:31633 writers contend for, the shared per-tab write chain, an
  * authoritative base read (a resolved-empty answer is confirmed by a second
  * read before it may be built on), monotonic `created_at`
- * (`max(now, previous + 1)` — no same-second ties), and a STRICT publish where
- * a timeout throws `InventoryTransactionError('publish-timeout')` — the write
+ * (`max(now, previous + 1)`: no same-second ties), and a STRICT publish where
+ * a timeout throws `InventoryTransactionError('publish-timeout')`: the write
  * is AMBIGUOUS, never assumed to have landed.
  *
  * Optimistic UI updates the canonical inventory cache immediately and rolls back
- * on any rejection — definite failure and ambiguous publish alike, so the cache
+ * on any rejection, definite failure and ambiguous publish alike, so the cache
  * never retains an unconfirmed state as though it landed. There is NO relay
  * rollback after a successful publish (replaceable events cannot be
  * un-published); a post-settlement invalidation reconciles with the relay.
@@ -58,8 +58,8 @@ import { inventoryQueryKey } from './useIslandInventory';
 
 /**
  * Serialize an inventory write on the shared per-user chain. The transaction
- * primitive runs every writer — the Coin wallet, the Ticket writers and this
- * module's mutations — through this ONE chain, so no two kind:31633 writers
+ * primitive runs every writer, the Coin wallet, the Ticket writers and this
+ * module's mutations: through this ONE chain, so no two kind:31633 writers
  * in this tab can interleave their read-modify-write windows. The chain is the
  * shared `serializeByKey` primitive, namespaced so inventory writes never
  * block an unrelated domain (pet state has its own per-owner+pet key).
@@ -130,7 +130,7 @@ function isForeignInventoryTag(tag: readonly string[]): boolean {
 
 /**
  * Extract every tag on the inventory's source event that the canonical builder
- * does not own — unknown/forward-compatible tags (including the economy
+ * does not own, unknown/forward-compatible tags (including the economy
  * allocation marker and non-grant `e` tags). These MUST ride through every
  * rewrite verbatim: kind:31633 is a replaceable event, so a write that drops
  * them destroys other clients' (and our own markers') data permanently.
@@ -358,7 +358,7 @@ export function applyMutation(
  * non-hook callers can exercise it directly. Every safety property comes from
  * `runInventoryTransaction`: the queued cross-tab lock all kind:31633 writers
  * share, the per-tab write chain, the empty-confirmed authoritative base, the
- * lossless canonical builder, monotonic `created_at`, and a STRICT publish —
+ * lossless canonical builder, monotonic `created_at`, and a STRICT publish,
  * a timeout throws `InventoryTransactionError('publish-timeout')`, meaning the
  * write is AMBIGUOUS (it MAY have landed), never success.
  */
@@ -383,10 +383,10 @@ export function runInventoryMutationTransaction(
  * - snapshots + optimistically updates the canonical inventory cache;
  * - runs the write as a shared inventory transaction (cross-tab lock, per-user
  *   serialization, authoritative empty-confirmed base, monotonic `created_at`,
- *   strict publish — see {@link runInventoryMutationTransaction});
+ *   strict publish: see {@link runInventoryMutationTransaction});
  * - validates quantities via the package (rejects negative/non-integer/overflow);
  * - rolls back the cache on failure AND on an ambiguous publish (a timeout
- *   rejects with `InventoryTransactionError('publish-timeout')` — it is never
+ *   rejects with `InventoryTransactionError('publish-timeout')`: it is never
  *   reported as success);
  * - invalidates only the canonical inventory key after settlement, so the
  *   cache reconciles with whatever actually landed.
@@ -413,7 +413,7 @@ export function useInventoryMutation() {
 
       // Optimism only ever extends what is already KNOWN. A cold cache used to
       // fall back to an empty inventory here, which rendered a real `0`
-      // balance for a player who simply had not loaded yet — an unknown
+      // balance for a player who simply had not loaded yet, an unknown
       // balance must never be shown as an empty one. With no snapshot there is
       // nothing honest to predict, so the cache is left alone and the
       // confirmed write fills it in a moment later.
@@ -422,7 +422,7 @@ export function useInventoryMutation() {
         const optimistic = applyMutation(previous, mutation);
         queryClient.setQueryData<GameInventory>(key, optimistic);
       } catch {
-        // Invalid mutation (e.g. consume with zero) — leave cache untouched;
+        // Invalid mutation (e.g. consume with zero): leave cache untouched;
         // the mutationFn will throw and surface the error.
       }
       return { previous };

@@ -4,8 +4,8 @@
  * Since the Coin cutover a paid cart is ONE canonical wallet operation: the
  * total Coin deduction and every item grant land in the SAME kind:31633
  * replacement event (`spendCoins({ amount, grantLines })`). The old two-event
- * flow — and its documented "items granted but coins not charged" partial
- * failure — no longer exists.
+ * flow: and its documented "items granted but coins not charged" partial
+ * failure: no longer exists.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -53,7 +53,7 @@ function renderBatch() {
   return renderHook(() => useBatchPurchase(), { wrapper: makeWrapper(client) });
 }
 
-describe('useBatchPurchase — one atomic wallet operation per cart', () => {
+describe('useBatchPurchase: one atomic wallet operation per cart', () => {
   beforeEach(() => {
     inventoryMutate.mockReset();
     spendCoins.mockReset();
@@ -103,7 +103,7 @@ describe('useBatchPurchase — one atomic wallet operation per cart', () => {
     expect(op.amount).toBe(50);
   });
 
-  it('insufficient funds reject inside the wallet — nothing is granted', async () => {
+  it('insufficient funds reject inside the wallet; nothing is granted', async () => {
     spendCoins.mockRejectedValue(
       Object.assign(new Error('Insufficient coins'), { reason: 'insufficient-funds' }),
     );
@@ -118,7 +118,7 @@ describe('useBatchPurchase — one atomic wallet operation per cart', () => {
     expect(inventoryMutate).not.toHaveBeenCalled();
   });
 
-  it('an ambiguous publish surfaces as an ambiguous cart outcome — no retry', async () => {
+  it('an ambiguous publish surfaces as an ambiguous cart outcome; no retry', async () => {
     spendCoins.mockResolvedValue({ status: 'ambiguous', reason: 'publish-timeout' });
     const { result } = renderBatch();
     let outcome;
@@ -230,7 +230,7 @@ describe('useBatchPurchase — one atomic wallet operation per cart', () => {
  * F-05: the price charged is a fact about the ITEM, resolved inside the hook.
  * The hook used to charge whatever `unitPrice` the caller handed it; the shop
  * passed canonical values so nothing was ever mispriced in production, but a
- * presentation-layer number must never be able to move real money — nor, since
+ * presentation-layer number must never be able to move real money, nor, since
  * the spend intent keys on the total, the identity that makes a retry
  * idempotent.
  */
@@ -273,7 +273,7 @@ describe('prices come from the catalog, never from the caller', () => {
     });
   });
 
-  it('a caller trying to UNDERCHARGE is ignored — the canonical price is used', async () => {
+  it('a caller trying to UNDERCHARGE is ignored, the canonical price is used', async () => {
     const { result } = renderBatch();
     await act(async () => {
       await result.current.mutateAsync({
@@ -284,7 +284,7 @@ describe('prices come from the catalog, never from the caller', () => {
     expect(spendCoins.mock.calls[0][0].amount).toBe(50);
   });
 
-  it('a caller trying to OVERCHARGE is ignored — the canonical price is used', async () => {
+  it('a caller trying to OVERCHARGE is ignored, the canonical price is used', async () => {
     const { result } = renderBatch();
     await act(async () => {
       await result.current.mutateAsync({
@@ -343,7 +343,7 @@ describe('prices come from the catalog, never from the caller', () => {
     expect(openSpendIntentsFor(TEST_PUBKEY, 'shop-purchase')).toEqual([]);
   });
 
-  it('one unlisted line poisons the whole cart — nothing is bought', async () => {
+  it('one unlisted line poisons the whole cart; nothing is bought', async () => {
     const { result } = renderBatch();
     await act(async () => {
       await expect(

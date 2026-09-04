@@ -1,5 +1,5 @@
 /**
- * Theater media admission — the one answer to "may this play here?".
+ * Theater media admission, the one answer to "may this play here?".
  *
  * ## Why this is not a check in the input component
  *
@@ -15,8 +15,8 @@
  *
  * A check on the input covers the first and none of the rest. The one that
  * matters most is the second: a guest can join while an approved video is
- * playing and the host can swap it a second later. So the question is asked here
- * — a pure function — and every one of those four paths asks it before anything
+ * playing and the host can swap it a second later. So the question is asked here,
+ * a pure function, and every one of those four paths asks it before anything
  * is handed to a player.
  *
  * ## Capabilities, never a profile
@@ -42,7 +42,7 @@ export interface TheaterMediaRef {
 }
 
 export type TheaterMediaDenial =
-  /** Not something this client can play at all — wrong provider, malformed id. */
+  /** Not something this client can play at all, wrong provider, malformed id. */
   | 'unsupported-media'
   /** Playable, but this experience only shows approved media and this is not. */
   | 'not-approved';
@@ -54,7 +54,7 @@ export type TheaterMediaAdmission =
        * The catalog entry, when there is one.
        *
        * `null` under an open policy for media that simply is not in the
-       * catalog — which is normal and not a problem. When it is present the
+       * catalog: which is normal and not a problem. When it is present the
        * caller should prefer its title (see {@link theaterMediaTitle}).
        */
       readonly approved: ApprovedMedia | null;
@@ -68,7 +68,7 @@ const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
  * Structural support, before any policy question.
  *
  * Deliberately the same shape `lib/shared-playback/parse.ts` enforces on the
- * wire and `lib/youtube-url.ts` produces from a URL — this is the third place
+ * wire and `lib/youtube-url.ts` produces from a URL; this is the third place
  * that agrees rather than a fourth opinion, and its own test pins them together.
  */
 function isSupportedRef(media: TheaterMediaRef | null | undefined): boolean {
@@ -103,7 +103,7 @@ export function allowsOpenMediaEntry(policy: IslandSafetyPolicy): boolean {
 /**
  * Whether the theater screen may go fullscreen.
  *
- * ## Derived, not a new capability — and why
+ * ## Derived, not a new capability, and why
  *
  * `IslandSafetyPolicy` has no `theaterFullscreen` field and this phase did not
  * add one. The policy's own guidance is not to grow the matrix for a single
@@ -111,13 +111,13 @@ export function allowsOpenMediaEntry(policy: IslandSafetyPolicy): boolean {
  *
  * It is derived from `openMediaEntry` because the two express the same stance
  * rather than two independent preferences. An experience that curates what plays
- * is one where the theater is a room in the game — the screen is part of the
+ * is one where the theater is a room in the game, the screen is part of the
  * island, with the world visible around it. Fullscreen removes the island and
  * leaves a child alone with a video player, which is precisely the shape the
  * curation was there to avoid.
  *
  * If fullscreen ever needs to vary independently of curation, that is the moment
- * it becomes a capability — with a second call site to justify it. Deriving it
+ * it becomes a capability, with a second call site to justify it. Deriving it
  * here, once and named, is what keeps that decision reversible instead of
  * scattered.
  */
@@ -158,7 +158,7 @@ export function admitTheaterMedia(
  * The title to display for a piece of media.
  *
  * Under a curated policy this is always the catalog's title, and `null` when
- * there is no entry — a curated client has no other trustworthy source, and a
+ * there is no entry, a curated client has no other trustworthy source, and a
  * host-supplied name would be an unvalidated string on a child's screen.
  *
  * Note what makes that easy here: the session protocol carries `{provider, id}`

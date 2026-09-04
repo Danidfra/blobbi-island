@@ -1,12 +1,12 @@
 /**
  * The theater's local state machine.
  *
- * Everything the room shows — whether the control card exists, whether the
- * yellow curtain is up, whether a player is mounted at all — is derived from ONE
+ * Everything the room shows, whether the control card exists, whether the
+ * yellow curtain is up, whether a player is mounted at all, is derived from ONE
  * value here. That is the point: the previous version scattered the same
  * information across `sittingIn`, `hasMedia`, `changingVideo`, `fatalError`,
  * `snapshot.error` and `snapshot.phase`, and those booleans could (and did)
- * describe states that cannot exist — a player error while nobody is sitting
+ * describe states that cannot exist, a player error while nobody is sitting
  * down, an open curtain with nothing loaded, a "Load Video" button wired to a
  * controller that was never built.
  *
@@ -43,7 +43,7 @@
  * ## Seating and the player are separate lifetimes
  *
  * `seatId` says where the local Blobbi is; it does NOT own the screen. Standing
- * up out of a local, single-viewer session releases the player — walking out of
+ * up out of a local, single-viewer session releases the player, walking out of
  * your own film should stop it. But standing up while a SHARED session is
  * running must not: the session is still playing for everybody else, and tearing
  * the player down would black the screen out, close the curtain and force a
@@ -51,7 +51,7 @@
  *
  * So `sit` and `stand` take a `retain` flag, set by the caller that knows
  * whether a session is attached. Retaining keeps `status`, `request` and `error`
- * exactly as they are and moves only `seatId` — which is why the control card
+ * exactly as they are and moves only `seatId`: which is why the control card
  * (seated-only) disappears while the video (player-only) keeps playing.
  */
 
@@ -90,7 +90,7 @@ export const INITIAL_THEATER_STATE: TheaterLocalState = {
 
 export type TheaterEvent =
   /**
-   * CONFIRMED arrival at a seat — never a click.
+   * CONFIRMED arrival at a seat; never a click.
    *
    * `retain` means "a shared session is attached, keep what is on screen": the
    * media, the player and the curtain carry straight across, and only the seat
@@ -100,7 +100,7 @@ export type TheaterEvent =
   /**
    * Movement started, the location changed, or the seat was otherwise left.
    *
-   * `retain` keeps the screen alive while the viewer is on their feet — used
+   * `retain` keeps the screen alive while the viewer is on their feet, used
    * exactly when a shared session is still running.
    */
   | { type: 'stand'; retain?: boolean }
@@ -115,7 +115,7 @@ export type TheaterEvent =
 export function theaterReducer(state: TheaterLocalState, event: TheaterEvent): TheaterLocalState {
   switch (event.type) {
     case 'sit': {
-      // Re-arriving at the seat you are already in changes nothing — a new
+      // Re-arriving at the seat you are already in changes nothing, a new
       // object here would tear down a playing video for no reason.
       if (state.status !== 'not-seated' && state.seatId === event.seatId) return state;
       // With a session attached, a chair is just a chair: sit down anywhere and

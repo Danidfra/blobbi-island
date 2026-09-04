@@ -4,8 +4,8 @@
  * Complements `src/lib/blobbi-profile-storage-opacity.test.ts` (which covers the
  * pure parse/merge functions) by driving the actual publishing hooks end to end:
  *
- *   - `useCreateOwnerProfile` — a brand-new profile must never invent `storage`;
- *   - `useUpdateOwnerProfile` — an update must carry pre-existing `storage`
+ *   - `useCreateOwnerProfile`: a brand-new profile must never invent `storage`;
+ *   - `useUpdateOwnerProfile`: an update must carry pre-existing `storage`
  *     through untouched while still applying the intended field change.
  */
 
@@ -60,7 +60,7 @@ function tagsNamed(tags: string[][], name: string): string[][] {
   return tags.filter(([n]) => n === name);
 }
 
-describe('kind:11125 write path — legacy storage opacity', () => {
+describe('kind:11125 write path: legacy storage opacity', () => {
   beforeEach(() => {
     nostrEvent.mockReset();
     nostrQuery.mockReset();
@@ -89,7 +89,7 @@ describe('kind:11125 write path — legacy storage opacity', () => {
     // The profile was really written...
     expect(tagsNamed(tags, 'has')).toEqual([['has', 'blobbi-abc']]);
     // ...and since the Coin cutover a fresh profile carries NO coins tag at
-    // all — the initial balance is a wallet grant into kind:31633.
+    // all: the initial balance is a wallet grant into kind:31633.
     expect(tags.find(([n]) => n === 'coins')).toBeUndefined();
     // ...with no consumable inventory anywhere on it.
     expect(tagsNamed(tags, 'storage')).toEqual([]);
@@ -127,7 +127,7 @@ describe('kind:11125 write path — legacy storage opacity', () => {
     const tags = publishedTags();
     // The intended change landed.
     expect(tags.find(([n]) => n === 'name')?.[1]).toBe('Veteran Renamed');
-    // The historic coins tag rides the passthrough VERBATIM — a profile
+    // The historic coins tag rides the passthrough VERBATIM, a profile
     // update can never change a balance since the Coin cutover.
     expect(tags.find(([n]) => n === 'coins')?.[1]).toBe('200');
     // Legacy storage survived with every element intact, exactly once.

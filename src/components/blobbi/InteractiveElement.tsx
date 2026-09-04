@@ -26,7 +26,7 @@ import { getBackgroundForLocation } from '@/lib/location-backgrounds';
  * element's horizontal center, slightly above its base line, so the feet stop
  * on the floor at the doorway/object base rather than inside its artwork.
  *
- * Why `walkBoundary` matters: `MovableBlobbi.goTo` does NOT clamp its target —
+ * Why `walkBoundary` matters: `MovableBlobbi.goTo` does NOT clamp its target,
  * it clamps each animation STEP. A target above the walkable floor is never
  * reached (the walk slides along the floor's top edge forever), so
  * `usePendingInteraction` never fires and the element appears dead. The
@@ -64,13 +64,13 @@ export interface InteractiveElementProps {
    *
    * For an object mounted high on a wall, "the floor in front of its base" is
    * not on the floor at all, and clamping it only moves it onto the walkable
-   * area's edge — where a walk can slide sideways forever without converging.
+   * area's edge: where a walk can slide sideways forever without converging.
    * Naming the point removes the guesswork. See `arcade-room-config.ts`.
    */
   walkTarget?: Position;
   /**
    * DECORATION, explicitly. Renders the artwork with no pointer cursor, no
-   * hover/tap effect and no handlers — a click falls through to the floor as
+   * hover/tap effect and no handlers, a click falls through to the floor as
    * if the art were part of the background. For props that look like they
    * should do something but do not yet (the beach boat, the plaza kiosks):
    * an honest "not yet" beats a door that pretends.
@@ -84,11 +84,11 @@ export interface InteractiveElementProps {
   /**
    * Chair configuration for the Nostr Station / shop chairs: `seatAnchor`
    * names the fraction of the chair rect the FEET stop on (the accepted
-   * `{50, 85}` pseudo-sit — the body rests on the cushion while any action
+   * `{50, 85}` pseudo-sit, the body rests on the cushion while any action
    * runs; these rooms have no real seated state).
    *
-   * Chairs route through the SAME walk-to-interact path as doors — the click
-   * starts a walk, `onClick` (if any) fires only on confirmed arrival — the
+   * Chairs route through the SAME walk-to-interact path as doors, the click
+   * starts a walk, `onClick` (if any) fires only on confirmed arrival, the
    * only differences being the aim fraction and that a chair walks even with
    * no action attached (walking to a chair IS the interaction).
    */
@@ -151,7 +151,7 @@ export function InteractiveElement({
    * left a 300ms timer running against an unmounted component, which React
    * reports as a state update after teardown. It surfaced as an intermittent
    * post-teardown error in the chairs test, but the leak is real in the game
-   * too — every tap on a scale element scheduled a timer nothing owned.
+   * too: every tap on a scale element scheduled a timer nothing owned.
    */
   const popTimer = useRef<number | null>(null);
 
@@ -187,8 +187,8 @@ export function InteractiveElement({
    * Reveal the "open"/"on" art from a tap and let it fade back on its own.
    *
    * Touch devices never get `:hover`, so the tap itself has to drive the
-   * reveal. It is armed for *every* tap on a visibility effect — whether or not
-   * an action is attached and whether or not a walk was requested — because the
+   * reveal. It is armed for *every* tap on a visibility effect, whether or not
+   * an action is attached and whether or not a walk was requested, because the
    * feedback is about the tap, not about what the tap goes on to do. When a
    * walk-to-interact IS started below, that walk takes ownership of the reveal
    * (it must stay lit for however long the Blobbi takes) and disarms the timer.
@@ -213,7 +213,7 @@ export function InteractiveElement({
 
     if (!onClick && !isChair) {
       // Visibility-only overlay (no action attached), e.g. the furniture-store
-      // door. There is nothing to run — the tap feedback above is the whole
+      // door. There is nothing to run, the tap feedback above is the whole
       // behaviour. Chairs are the exception: walking to a chair IS the
       // interaction, action or not (the shop's pseudo-sit).
       return;
@@ -246,7 +246,7 @@ export function InteractiveElement({
         own aim point is where it wants the Blobbi to END UP; the room's
         boundary and blockers say where that is possible. An explicit
         `walkTarget` is trusted as configured (those points were placed on the
-        floor by hand); everything else is projected — into the room's walk
+        floor by hand); everything else is projected, into the room's walk
         boundary (the prop, or the current location's own) and out of any
         blocker the room registered.
       */
@@ -364,7 +364,7 @@ export function InteractiveElement({
         effect === 'scale' && animated && 'transition-all duration-300 ease-out hover:scale-110',
         /*
          * Mobile parity: a tap keeps the door visible while the Blobbi walks
-         * over. Visibility only — no scale/transform, so large doors don't jump.
+         * over. Visibility only; no scale/transform, so large doors don't jump.
          *
          * The two states are composed as alternatives rather than stacked, so
          * `opacity-0` and `opacity-100` are never emitted together: which of two
@@ -395,7 +395,7 @@ export function InteractiveElement({
         src={src}
         alt={alt}
         /*
-         * Sizing contract: `h-full` is intentional and load-bearing — elements
+         * Sizing contract: `h-full` is intentional and load-bearing, elements
          * sized by HEIGHT (town streetlights `h-[35%]`) or into a fixed square
          * box (mine cave / beach boat `size-*`) depend on it, and `object-contain`
          * keeps them undistorted.

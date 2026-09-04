@@ -1,5 +1,5 @@
 /**
- * Reading kind:31632 definitions FOR THE TOOLS — which is a different question
+ * Reading kind:31632 definitions FOR THE TOOLS, which is a different question
  * from the one `useItemCatalog` answers.
  *
  * `useItemCatalog` loads the game's canonical catalog and rejects every issuer
@@ -9,7 +9,7 @@
  * able to display somebody else's definition so you can inspect or derive from
  * it.
  *
- * So these queries parse without an issuer filter — and that widens NOTHING.
+ * So these queries parse without an issuer filter, and that widens NOTHING.
  * Nothing here feeds the catalog, the shop, or accessory resolution; the trust
  * boundary is still `parseOfficialItemDefinition`, still in the adapter, still
  * rejecting non-official events before they can reach gameplay. What this
@@ -19,7 +19,7 @@
  * ONE QUERY PER QUESTION, never one per row. The browser asks a single
  * by-author question; the inventory inspector asks a single by-address question
  * for every address it holds at once. That is what keeps a 40-item inventory
- * from opening 40 subscriptions — see `docs/game-item-tools.md`.
+ * from opening 40 subscriptions; see `docs/game-item-tools.md`.
  */
 
 import { useMemo } from 'react';
@@ -71,7 +71,7 @@ export function definitionsByAddressQueryKey(addresses: readonly string[]) {
 /**
  * Reduce per-relay results to the newest VALID event per address.
  *
- * Parse first, compare second — exactly like `selectNewestValidDefinitions` in
+ * Parse first, compare second, exactly like `selectNewestValidDefinitions` in
  * the catalog. A newer malformed event must not be able to hide an older good
  * one, and an event that fails to parse is not a definition at any age.
  *
@@ -208,7 +208,7 @@ export function useItemDefinitionsByAddress(addresses: readonly string[]) {
  * De-duplication is by address, not by event id: an addressable update is a new
  * event for an address that already had one, and showing both would misrepresent
  * how replaceable events work. Newest `created_at` wins, which is the same rule
- * the queries use — a slow relay replying with the previous event a second later
+ * the queries use, a slow relay replying with the previous event a second later
  * cannot demote what was just published.
  */
 export function upsertDefinitionRecord(
@@ -262,7 +262,7 @@ export function toDefinitionRecord(
  * Fetch ONE definition by address, on demand.
  *
  * A mutation rather than a query because it is triggered by a button press with
- * a value typed a moment earlier — there is no ongoing "current address" to
+ * a value typed a moment earlier; there is no ongoing "current address" to
  * keep fresh, and a query keyed on a half-typed address would fire a relay
  * request per keystroke.
  */

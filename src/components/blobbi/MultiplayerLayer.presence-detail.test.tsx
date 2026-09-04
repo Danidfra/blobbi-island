@@ -44,13 +44,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,
@@ -243,7 +243,7 @@ describe('a coarse hiding claim still hides the player', () => {
     /*
       Why the field is withheld by VALUE and not dropped. A remote client with
       no hiding claim renders the player normally, standing at the coordinates
-      they are hiding at — so "minimizing" the field harder would take somebody
+      they are hiding at, so "minimizing" the field harder would take somebody
       who is invisible and put them in plain sight, in the bush, for everyone.
     */
     const w = await world('standard');
@@ -303,7 +303,7 @@ describe('movement survives coarse presence', () => {
   it('THE COUNTER-PROOF: without a goal the player never leaves the start', async () => {
     /*
       The reason `goal` is kept at full precision under every policy. With no
-      goal the target falls back to the anchor — which is where the walk BEGAN —
+      goal the target falls back to the anchor, which is where the walk BEGAN,
       so a remote Blobbi simply stands still until the next heartbeat, up to
       twenty-five seconds later. That is not coarser presence, it is broken
       movement.
@@ -407,7 +407,7 @@ describe('what this client publishes', () => {
     const familyTags = JSON.stringify(presenceTemplates()[0].tags);
 
     // Tags are how a relay filters the room. Coarsening them would not hide the
-    // room — it would leave the player unable to find anybody in it.
+    // room: it would leave the player unable to find anybody in it.
     // The session id is random per mount and the expiry is a clock reading;
     // everything that IDENTIFIES the room must be identical.
     const comparable = (tags: string) =>

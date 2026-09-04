@@ -27,8 +27,8 @@ const EFFECT_ORDER: (keyof ItemEffects)[] = [
 /**
  * The one-line "what is this for" under an item's name.
  *
- * Derived from the definition's own `effects` when it carries no `description`
- * — which is the case for all ten published care definitions today. Writing
+ * Derived from the definition's own `effects` when it carries no `description`,
+ * which is the case for all ten published care definitions today. Writing
  * blurbs here instead would be inventing product copy for protocol data the
  * issuer owns; a stat summary is the same fact the item will actually apply.
  */

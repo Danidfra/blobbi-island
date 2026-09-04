@@ -5,8 +5,8 @@
  *
  *  - the renderer must produce identical output wherever it is mounted, so it
  *    cannot be quietly depending on being inside a world; and
- *  - every world concern — position, depth scale, z-index, ground shadow, the
- *    float bob — must stay in `BlobbiActor`, so the renderer stays portable.
+ *  - every world concern, position, depth scale, z-index, ground shadow, the
+ *    float bob: must stay in `BlobbiActor`, so the renderer stays portable.
  *
  * The third claim here is the local/remote one: both wrappers derive their
  * visual flags from the SAME pure resolver (`resolveActorRender`), so a seated
@@ -48,7 +48,7 @@ describe('the renderer renders identically inside and outside a world actor', ()
       </BlobbiActor>,
     );
 
-    // The actor moved, scaled, stacked and seated it — and none of that reached
+    // The actor moved, scaled, stacked and seated it, and none of that reached
     // the renderer's own DOM.
     expect(rendererHtml(wrapped.container)).toBe(rendererHtml(bare.container));
   });
@@ -69,7 +69,7 @@ describe('the renderer renders identically inside and outside a world actor', ()
     expect(anchor.style.left).toBe('20%');
     expect(anchor.style.zIndex).toBe('12');
     expect(anchor.style.transform).toBe('translate(-50%, -100%)');
-    // Depth scale lives on the rig, the shadow beside it — never on the box.
+    // Depth scale lives on the rig, the shadow beside it; never on the box.
     expect(rig.style.transform).toBe('scale(0.5)');
     expect(shadow).not.toBeNull();
     expect(box.style.transform).toBe('');
@@ -111,7 +111,7 @@ describe('local and remote actors derive the same visual flags', () => {
   ])('the %s pose resolves to one answer, whoever is asking', (_label, pose) => {
     // "Local" and "remote" differ only in how they OBTAIN the pose (own state
     // vs. presence fields). Given the same pose they must agree on every
-    // visual consequence — that is the whole point of the shared resolver.
+    // visual consequence: that is the whole point of the shared resolver.
     expect(resolveActorRender(pose, ctx)).toEqual(resolveActorRender(pose, ctx));
   });
 
@@ -131,7 +131,7 @@ describe('local and remote actors derive the same visual flags', () => {
 
   it('both wrappers read hidden-ness from the resolver, not from raw state', () => {
     // Phase 3 left the remote layer reading `!!player.hiddenIn` directly while
-    // the local one already read the resolved flag. Same answer today — but two
+    // the local one already read the resolved flag. Same answer today, but two
     // sources for one decision is exactly how they drift apart later.
     for (const wrapper of ['MovableBlobbi.tsx', 'MultiplayerLayer.tsx']) {
       const source = readFileSync(join(process.cwd(), 'src/components/blobbi', wrapper), 'utf8');

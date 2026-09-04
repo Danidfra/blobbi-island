@@ -1,4 +1,4 @@
-# Coin Economy — Current-State Audit
+# Coin Economy: Current-State Audit
 
 Audit-only. No production code was changed, no migration performed, nothing
 published.
@@ -8,7 +8,7 @@ published.
   (`Merge branch 'blobbi-economy-reset' into production`)
 - **Working tree:** clean (no uncommitted changes, no untracked files)
 - **Upstreams:** `nostr/production` = HEAD (0 ahead / 0 behind).
-  `origin/main` and `nostr/main` are **23 commits behind** HEAD — the economy
+  `origin/main` and `nostr/main` are **23 commits behind** HEAD, the economy
   work exists only on `production`, it has never been merged to `main`.
 - **Validation at audit time:** `npm test` → exit 0
   (tsc clean, workspace typecheck clean, eslint 0 errors / 17 pre-existing
@@ -33,7 +33,7 @@ The Beach Treasure Hunt is classified separately in
 [`beach-treasure-hunt-current-state-audit.md`](beach-treasure-hunt-current-state-audit.md):
 **complete and Coin-reward-connected; item reward deliberately not connected.**
 
-Two genuine findings remain, neither of which is a legacy-Coin dependency —
+Two genuine findings remain, neither of which is a legacy-Coin dependency,
 see [§10](#10-findings).
 
 ---
@@ -42,19 +42,19 @@ see [§10](#10-findings).
 
 Read from the diffs, not the messages.
 
-### `e9a48a3` — `feat(beach): add treasure hunt minigame foundation`
+### `e9a48a3`: `feat(beach): add treasure hunt minigame foundation`
 **Beach gameplay.** 48 files, +7168. Adds the pure simulation
 (`src/beach/treasure-hunt/`: generator, detector, digging, reducer, policy,
-result, seeded RNG, geometry — all with tests), the UI layer
+result, seeded RNG, geometry; all with tests), the UI layer
 (`TreasureHuntModal/Game/Intro/Results/Shack`, `field-transform`,
 `detector-audio`, `treasure-hunt-config`), the Beach shack interactable and
 stand point, final artwork, and the `/dev/treasure-hunt` harness.
-**Rewards deliberately staged out** — the commit body says "keep rewards
+**Rewards deliberately staged out**: the commit body says "keep rewards
 simulation-only pending the Coin cutover", and the code matches: no wallet,
 no ledger, no relay import anywhere in the Beach tree at this commit.
 *Complete for its stated scope, intentionally staged.*
 
-### `038fc5d` — `feat(economy): add canonical Blobbi Coin foundation`
+### `038fc5d`: `feat(economy): add canonical Blobbi Coin foundation`
 **Coin infrastructure + the actual migration.** 58 files, +5402/−1539. This is
 the cutover commit:
 - registers the Coin in `src/protocol/event-registry.ts`, adds the single
@@ -73,10 +73,10 @@ the cutover commit:
 The commit body is honest that the bootstrap and the adoption-coupled grant
 were expected to be reworked. *Complete migration, one staged piece.*
 
-### `258b5db` — `refactor(economy): initialize canonical Island Coins`
+### `258b5db`: `refactor(economy): initialize canonical Island Coins`
 **Cleanup + the reset the previous commit anticipated.** 36 files.
-- **deletes `useCoinBootstrap`** (the legacy 11125 → 31633 migration) entirely
-  — there is now *no* legacy migration at all;
+- **deletes `useCoinBootstrap`** (the legacy 11125 → 31633 migration) entirely,
+  there is now *no* legacy migration at all;
 - decouples the initial allocation from first-egg adoption
   (`useFirstEggAdoption` no longer imports any economy module);
 - adds `src/inventory/economy-entry.ts`: 200 Coins once per pubkey, proven by
@@ -90,15 +90,15 @@ were expected to be reworked. *Complete migration, one staged piece.*
 - updates `NIP.md`, `INVENTORY_ARCHITECTURE.md`, the event registry doc.
 *Complete.*
 
-### `9b75f22` — `chore(deps): upgrade Blobbi Kit to 0.4.0`
+### `9b75f22`: `chore(deps): upgrade Blobbi Kit to 0.4.0`
 Dependency bump only (3 files). No economy content.
 
-### `24fa40e` — merge of `blobbi-economy-reset` into `production`
+### `24fa40e`: merge of `blobbi-economy-reset` into `production`
 No content of its own.
 
 ---
 
-## 3. Canonical Coin identity — verified, not assumed
+## 3. Canonical Coin identity, verified, not assumed
 
 **Stable address**
 
@@ -109,19 +109,19 @@ No content of its own.
 | Question | Answer | Evidence |
 |---|---|---|
 | Hardcoded in a registry? | Yes | `src/protocol/event-registry.ts:714` (`BLOBBI_COIN_D`), entry at `:1071-1094`, `status: 'active'` |
-| Single identity module? | Yes | `src/inventory/coin.ts` — derives the address via `officialItemAddress()`, never hand-written |
-| Issuer | `OFFICIAL_ITEM_ISSUER_PUBKEY` (`src/inventory/constants.ts:23`) — the same trust root as all 20 official items |
+| Single identity module? | Yes | `src/inventory/coin.ts`: derives the address via `officialItemAddress()`, never hand-written |
+| Issuer | `OFFICIAL_ITEM_ISSUER_PUBKEY` (`src/inventory/constants.ts:23`): the same trust root as all 20 official items |
 | type / category | `currency` / `currency` |
 | `max_stack` | **Deliberately absent** from the published definition. The app enforces `MAX_COIN_BALANCE = 1_000_000_000` in the wallet instead (`coin.ts:62`) |
 | symbol / name / image | `🪙` / `Blobbi Coin` / front + back Blossom URLs |
-| Fetched by the production catalog? | Yes — via the ordinary official-item path (`useItemCatalog` + exact-issuer trust), with a bundled fallback |
-| **Actually published and verified?** | **Yes — verified live during this audit** |
+| Fetched by the production catalog? | Yes, via the ordinary official-item path (`useItemCatalog` + exact-issuer trust), with a bundled fallback |
+| **Actually published and verified?** | **Yes, verified live during this audit** |
 
 I fetched
 `naddr1qvzqqqrmjqpzp8hm35cytwn48umxf4grxz95j7pn26ex5m2lfw2yh7kyywd0ucafq…`
 from the relay. The returned event:
 
-- id `fe3fce5a69d3fd93341a4b2d689bf3c97a986882fd5380d39ea1de8176d82797` —
+- id `fe3fce5a69d3fd93341a4b2d689bf3c97a986882fd5380d39ea1de8176d82797`,
   **exactly** the diagnostic id recorded in `coin.ts:55`;
 - `pubkey` = the official issuer; kind 31632; `d = blobbi:currency:coin`;
 - tags match the registry record field-for-field (`name`, `type`, `category`,
@@ -132,7 +132,7 @@ from the relay. The returned event:
 
 So this is not a fixture-only or registry-only claim: the definition is real,
 issuer-signed, and matches the code. The event id is correctly documented as
-*diagnostics only* — identity is the address.
+*diagnostics only*: identity is the address.
 
 ---
 
@@ -144,7 +144,7 @@ number.
 
 | File / module | Surface | What it reads | Class | Notes |
 |---|---|---|---|---|
-| `src/inventory/useCoinWallet.ts:43` `useCoinBalance` | the ONE balance reader | `getQuantity(inventory, BLOBBI_COIN_ADDRESS)` from the kind:31633 query | **A** | `null` while unknown — never a fake zero |
+| `src/inventory/useCoinWallet.ts:43` `useCoinBalance` | the ONE balance reader | `getQuantity(inventory, BLOBBI_COIN_ADDRESS)` from the kind:31633 query | **A** | `null` while unknown; never a fake zero |
 | `src/components/blobbi/BlobbiInfoModal.tsx:118,514-532` | player profile / HUD balance | `useCoinBalance` | **A** | separate loading + error + retry states |
 | `src/components/blobbi/FoodShopModal.tsx:54,142` | shop balance + affordability | `useCoinBalance` | **A** | `null` ⇒ purchase disabled, not "0" |
 | `src/components/blobbi/ArcadePassModal.tsx:67,75` | pass affordability | `useCoinBalance` | **A** | display only; wallet re-reads for the charge |
@@ -170,7 +170,7 @@ fails the suite.
 
 | Writer / file | Trigger | Writes 11125? | Writes 31633? | Fresh read? | Serialized? | Safe? |
 |---|---|---|---|---|---|---|
-| `src/inventory/coin-wallet.ts` | **every** Coin movement | **No** | Yes (Coin qty) | Yes, in-lock | Yes — queued cross-tab Web Lock **+** shared per-user chain | **Yes** |
+| `src/inventory/coin-wallet.ts` | **every** Coin movement | **No** | Yes (Coin qty) | Yes, in-lock | Yes, queued cross-tab Web Lock **+** shared per-user chain | **Yes** |
 | `MiningGame.tsx:88` → `grantCoins` | mining session end | No | via wallet | via wallet | via wallet | Yes |
 | `beach/rewards/provisional-authorization.ts:113` → `grantCoins` | eligible hunt finished | No | via wallet | via wallet | via wallet | Yes |
 | `usePurchaseItem.ts:87` → `spendCoins(+grantLines)` | single purchase | No | via wallet, **atomic** | via wallet | via wallet | Yes |
@@ -183,15 +183,15 @@ fails the suite.
 
 **Writer topology:**
 
-- **Exactly one canonical Coin writer** — `coin-wallet.ts`. No dual-write, no
+- **Exactly one canonical Coin writer**: `coin-wallet.ts`. No dual-write, no
   legacy-only writer, no temporary bridge.
 - `useCoinsMutation.ts` is **deleted from disk** and a contract test
   (`coin-cutover.contract.test.ts:43-49`) fails the suite if any production
   file so much as mentions the name.
-- No production module can construct a `['coins', …]` tag — enforced at
+- No production module can construct a `['coins', …]` tag, enforced at
   `coin-cutover.contract.test.ts:32-41`.
 - No module outside the three wallet files may pass `BLOBBI_COIN_ADDRESS` into
-  `applyMutation` — enforced at `:72-91`.
+  `applyMutation`: enforced at `:72-91`.
 - The kind:11125 serializer no longer manages `coins`; the tag rides the
   unknown-tag passthrough verbatim (`blobbi-parsers.ts:336-344,376`), enforced
   at `:166-181`.
@@ -212,7 +212,7 @@ leaves the coins spent. The UI copy says exactly that
 | `ArcadePassModal` | `useCoinBalance` | ✅ |
 | `MiningGame` results | computed reward + wallet outcome phase | ✅ |
 | `TreasureHuntIntro` / `TreasureHuntResults` | policy numbers + wallet outcome | ✅ |
-| `EconomyEntryNotice` | allocation *status* text only — renders no number | n/a |
+| `EconomyEntryNotice` | allocation *status* text only, renders no number | n/a |
 | `ArcadeTicketBalance` | Arcade **Ticket** qty (a different currency) | n/a |
 | `BlobbiHUD` / `hud-primitives` / `PetStatusBar` / `VirtualWorld` | **no coin display at all** | n/a |
 | Dev tools (`/dev/treasure-hunt`, `/dev/equipment`, Equipment Lab) | simulation only; never a Coin | n/a |
@@ -224,7 +224,7 @@ reads the single `useIslandInventory` query, keyed by pubkey (so logout/login
 cannot expose another account's balance). A contract test pins the HUD reader
 specifically (`coin-cutover.contract.test.ts:155-164`).
 
-There is no coin counter in the persistent world HUD — the balance lives in the
+There is no coin counter in the persistent world HUD, the balance lives in the
 profile modal, the shop and the pass dialog. That is a product observation, not
 a migration defect.
 
@@ -237,15 +237,15 @@ Migrated in `038fc5d` (`src/components/blobbi/MiningGame.tsx`).
 | Question | Answer |
 |---|---|
 | Still awards 11125 `coins`? | **No.** The absolute-`coins`-republish-from-React-cache path is gone. |
-| Grants official inventory Coins? | Yes — `grantCoins({opId, amount, label:'mine-reward'})` (`:88`). |
+| Grants official inventory Coins? | Yes, `grantCoins({opId, amount, label:'mine-reward'})` (`:88`). |
 | Same canonical writer as everything else? | Yes. |
-| Once per completed session? | Yes — one `opId` minted at **Start** (`:74`), plus a `finishedRef` guard (`:103`) covering both finish paths (auto + button). |
-| Serialized? | Yes — cross-tab Web Lock + shared per-user write chain, inside the wallet. |
-| Fresh relay read? | Yes — in-lock, and `refreshFromRelay()` on cave entry so energy isn't spent from a stale snapshot (`:69-72`). |
-| Preserves unrelated inventory? | Yes — the lossless `buildInventoryTemplate` (items, contexts, grants, content, unknown tags all ride through). |
-| Rollback / reconciliation? | No rollback (a published replaceable event cannot be un-published — correct). Reconciliation: durable ledger + read-back verification + `reconcileOp`. |
+| Once per completed session? | Yes; one `opId` minted at **Start** (`:74`), plus a `finishedRef` guard (`:103`) covering both finish paths (auto + button). |
+| Serialized? | Yes, cross-tab Web Lock + shared per-user write chain, inside the wallet. |
+| Fresh relay read? | Yes, in-lock, and `refreshFromRelay()` on cave entry so energy isn't spent from a stale snapshot (`:69-72`). |
+| Preserves unrelated inventory? | Yes, the lossless `buildInventoryTemplate` (items, contexts, grants, content, unknown tags all ride through). |
+| Rollback / reconciliation? | No rollback (a published replaceable event cannot be un-published, correct). Reconciliation: durable ledger + read-back verification + `reconcileOp`. |
 | Can refresh/retry duplicate? | **No.** The ledger short-circuits an applied `opId`; a blocked/ambiguous record refuses a second publish. |
-| Cap / cooldown? | Balance ceiling only. **No per-session or per-day cap on mining income** — the drop table alone bounds it. See §10.2. |
+| Cap / cooldown? | Balance ceiling only. **No per-session or per-day cap on mining income**: the drop table alone bounds it. See §10.2. |
 
 Reward states are surfaced honestly in the results UI: `granting` / `applied` /
 `ambiguous` / `failed` with distinct copy (`MiningGame.tsx:222-240`).
@@ -294,26 +294,26 @@ finish ─► buildTreasureHuntResult(round)         [pure]
 
 The trust model is stated repeatedly and accurately in the source: this is a
 **provisional, client-trusted** issuance path. The ledgers/locks/read-backs
-prevent accidental duplication and loss — not cheating.
+prevent accidental duplication and loss; not cheating.
 
 ---
 
 ## 9. Shops, Arcade Pass, and kind:11125 status
 
-### 9.1 Shop spending — fully migrated, and strictly better than before
+### 9.1 Shop spending, fully migrated, and strictly better than before
 
 | Aspect | State |
 |---|---|
-| Prices | `src/inventory/shop-catalog.ts` — validated against the official registry; only `consumable` categories may be priced, so **currency can never be sold for currency** (`:130-141`) |
+| Prices | `src/inventory/shop-catalog.ts`: validated against the official registry; only `consumable` categories may be priced, so **currency can never be sold for currency** (`:130-141`) |
 | Balance | `useCoinBalance` for display; the **wallet's fresh in-lock read** for the actual charge |
 | Deduction | `spendCoins` |
 | Item grant | `grantLines` on the **same** `spendCoins` operation |
-| Atomic? | **Yes — one kind:31633 replacement event carries charge + items.** The old two-event "items granted but coins not charged" leak is structurally gone |
+| Atomic? | **Yes; one kind:31633 replacement event carries charge + items.** The old two-event "items granted but coins not charged" leak is structurally gone |
 | Touches owner profile? | **No** |
-| All shops on one path? | Yes — `usePurchaseItem` (single) and `useBatchPurchase` (cart) both call `spendCoins`; `FoodShopModal` is the only shop UI |
+| All shops on one path? | Yes, `usePurchaseItem` (single) and `useBatchPurchase` (cart) both call `spendCoins`; `FoodShopModal` is the only shop UI |
 | Free items | Skip the wallet entirely; plain inventory grant |
 
-### 9.2 Arcade Pass — fully migrated
+### 9.2 Arcade Pass, fully migrated
 
 Reads `useCoinBalance`, spends via `spendCoins` with a per-attempt `opId`
 (`ArcadePassModal.tsx:67,98`). Insufficient funds are rejected by the wallet
@@ -321,7 +321,7 @@ against a fresh read, not against the rendered number. A synchronous
 `inFlightRef` guard prevents same-tick double-charge (`:86`). Ambiguous
 outcomes get their own honest copy.
 
-**`useCoinsMutation` is gone** — file deleted, zero importers, and a contract
+**`useCoinsMutation` is gone**: file deleted, zero importers, and a contract
 test keeps it deleted. No other legacy Coin-specific profile mutation
 abstraction exists anywhere in `src/`.
 
@@ -329,15 +329,15 @@ abstraction exists anywhere in `src/`.
 
 | Question | Answer |
 |---|---|
-| `coins` still in the current type? | Yes — `OwnerProfile.coins?: number` and `OwnerProfileOptionalTags.coins?: string`, both carrying explicit OBSOLETE doc comments |
-| Still parsed? | Yes — `blobbi-parsers.ts:91` |
+| `coins` still in the current type? | Yes, `OwnerProfile.coins?: number` and `OwnerProfileOptionalTags.coins?: string`, both carrying explicit OBSOLETE doc comments |
+| Still parsed? | Yes, `blobbi-parsers.ts:91` |
 | Still serialized / published? | **No.** Removed from `MANAGED_OWNER_PROFILE_TAG_NAMES`; the serializer emits no `coins` tag; a pre-existing tag rides the unknown-tag passthrough verbatim |
-| Read only for backward compat? | Yes — and in fact read by *nothing*. It is inert data, not even a fallback |
-| Tests pin it as current behavior? | No. `blobbi-profile-storage-opacity.test.ts:88` asserts the tag still *parses* and survives republish — that's compat, not canonicity |
-| Docs still call it the balance? | **Yes, in three places** — see §11 |
+| Read only for backward compat? | Yes, and in fact read by *nothing*. It is inert data, not even a fallback |
+| Tests pin it as current behavior? | No. `blobbi-profile-storage-opacity.test.ts:88` asserts the tag still *parses* and survives republish; that's compat, not canonicity |
+| Docs still call it the balance? | **Yes, in three places**: see §11 |
 
 This is the correct end state: **legacy read compatibility** without **legacy
-production ownership**. Deleting the parse is *not* recommended — it is
+production ownership**. Deleting the parse is *not* recommended; it is
 deliberate, documented, and harmless, and it keeps the historic tag shape
 legible.
 
@@ -345,18 +345,18 @@ legible.
 
 ## 10. Findings
 
-### 10.1 The two Arcade Ticket writers bypass the shared serialization — a real drift risk on the shared kind:31633 event
+### 10.1 The two Arcade Ticket writers bypass the shared serialization, a real drift risk on the shared kind:31633 event
 
 > **RESOLVED** by `fix(economy): preserve coin deltas and serialize shared
 > inventory writes`. Both writers now run inside `runInventoryTransaction`
 > (`src/inventory/inventory-transaction.ts`), on the same cross-tab lock name
 > and the same per-tab chain as the Coin wallet, with the shared monotonic
-> `created_at`. The same commit fixed a MORE severe defect this audit missed —
+> `created_at`. The same commit fixed a MORE severe defect this audit missed,
 > see §10.4. Kept below as the record of what was found.
 
 `src/inventory/arcade-reward-writer.ts` and
 `src/inventory/arcade-prize-spend-writer.ts` do a fresh read, mutate through the
-canonical helper, and build with the canonical lossless template — all correct.
+canonical helper, and build with the canonical lossless template; all correct.
 But unlike **every other** kind:31633 writer they:
 
 - do **not** call `serializeInventoryWrite(pubkey, …)` (the shared per-user
@@ -369,7 +369,7 @@ But unlike **every other** kind:31633 writer they:
 
 Failure mode: a ticket grant and a Coin mutation whose read-modify-write windows
 overlap both build from the same base; kind:31633 is replaceable, so
-newest-wins silently discards the loser's delta — which may be the Coin change.
+newest-wins silently discards the loser's delta, which may be the Coin change.
 
 **This is not a leftover from the migration; it predates it.** But it *became*
 relevant at the cutover: before, Coins lived in kind:11125 and an arcade write
@@ -384,7 +384,7 @@ through `serializeInventoryWrite` + the cross-tab lock and adopt the monotonic
 ### 10.2 No Mine income cap
 
 Beach income is bounded three ways (per-round cap 25, 10 rewarded hunts per UTC
-day, minimum participation). The Mine has **none** of these — only the gem drop
+day, minimum participation). The Mine has **none** of these; only the gem drop
 table and player patience. Not a correctness bug, and out of scope for a
 migration audit, but it is the one place the two Coin sources are governed by
 visibly different policy.
@@ -393,7 +393,7 @@ visibly different policy.
 
 The audit checked that every writer performed a *fresh* read; it did not ask
 what happens when that read RESOLVES EMPTY. Because kind:31633 is replaceable,
-building on an empty base does not lose a delta — it replaces the player's
+building on an empty base does not lose a delta; it replaces the player's
 entire inventory. A relay that does not carry (or has not caught up with) the
 event turned a `+20` Mine reward into a total balance of 20, wiping Coins,
 Arcade Tickets and every consumable, and the write even read back as verified.
@@ -418,7 +418,7 @@ transaction primitive AND by `useInventoryMutation`. Regression coverage:
 - **Double bootstrap / double allocation:** the marker + quantity travel in one
   replaceable event, the in-lock `precondition` re-checks the marker on the
   exact base, and the op id is stable (never randomly minted). A rejected read
-  is treated as *unknown*, never as *empty* — the service publishes nothing
+  is treated as *unknown*, never as *empty*, the service publishes nothing
   rather than fabricating a base.
 - **Coin caught by `max_stack:1` machinery:** no. `LAB_OFFICIAL_ITEMS` is
   projected from `ADDRESSED_OFFICIAL_COSMETICS` + effect items only; the Coin is
@@ -430,9 +430,9 @@ transaction primitive AND by `useInventoryMutation`. Regression coverage:
   action (`useUseItem.ts:115-117`).
 - **Coin as an arcade prize:** no. The six-prize catalog is hardcoded to three
   cosmetics + three effects.
-- **Coin degraded to `unknown` category:** no — `currency` survives the whole
+- **Coin degraded to `unknown` category:** no, `currency` survives the whole
   adapter path, pinned by `src/inventory/currency-category.test.ts`.
-- **Currency sold in the shop:** structurally impossible —
+- **Currency sold in the shop:** structurally impossible,
   `CONSUMABLE_ITEM_CATEGORIES` excludes `currency`, and pricing a non-consumable
   is a hard validation error.
 
@@ -444,8 +444,8 @@ Three documents still describe kind:11125 as the live balance:
 
 | Doc | Lines | Stale claim |
 |---|---|---|
-| `docs/INVENTORY_MANUAL_VALIDATION.md` | §3, ~58–69 | "Coins decrease in **11125** by the local shop price"; "Ordering: item grant (31633) publishes BEFORE coin deduct (11125). On coin failure, item is kept and a partial-success warning is shown (favor-user)". **All three statements are now wrong** — the purchase is one atomic event |
-| `docs/arcade-foundation.md` | ~448–457 | "`useCoinsMutation` resolving means … the freshest available kind:11125 was fetched…" — describes a deleted module and a retired publish model |
+| `docs/INVENTORY_MANUAL_VALIDATION.md` | §3, ~58–69 | "Coins decrease in **11125** by the local shop price"; "Ordering: item grant (31633) publishes BEFORE coin deduct (11125). On coin failure, item is kept and a partial-success warning is shown (favor-user)". **All three statements are now wrong**: the purchase is one atomic event |
+| `docs/arcade-foundation.md` | ~448–457 | "`useCoinsMutation` resolving means … the freshest available kind:11125 was fetched…": describes a deleted module and a retired publish model |
 | `NIP.md` | 27, ~68 | Summary row still reads "Player profile: coins, owned pets…"; the notable-tags list still shows `["coins", "<number>"]` with no obsolete marker (unlike the inventory note directly beneath it, and unlike the accurate note at line 124) |
 
 Already correct and needing nothing: `blobbi-coin-cutover.md`,
@@ -468,8 +468,8 @@ carries an explicit superseded/historical status header).
 | Owner profile (kind:11125) | canonical balance holder | inert parsed field; never serialized | **complete (legacy compat)** | keep the parse; update docs (§11) |
 | Initial allocation | coupled to first-egg adoption / legacy bootstrap | marker-proven, atomic, once per pubkey | **complete** | none |
 | Dev tools | n/a | simulation-only; never touch a Coin | **complete** | none |
-| Arcade Ticket writers | n/a (tickets always lived in 31633) | shared `runInventoryTransaction` | **complete** | none — fixed after this audit (§10.1) |
-| Any 31633 publish base | fresh read, empty answer trusted | fresh read, empty answer **confirmed** | **complete** | none — fixed after this audit (§10.4) |
+| Arcade Ticket writers | n/a (tickets always lived in 31633) | shared `runInventoryTransaction` | **complete** | none, fixed after this audit (§10.1) |
+| Any 31633 publish base | fresh read, empty answer trusted | fresh read, empty answer **confirmed** | **complete** | none, fixed after this audit (§10.4) |
 
 ---
 
@@ -495,7 +495,7 @@ Narrow and mechanical:
 4. Add a regression test for interleaved ticket-grant / coin-spend.
 
 This closes the only remaining path by which a Coin balance can be silently
-lost, and it is cleanup — not a redesign. Everything else in the Coin cutover is
+lost, and it is cleanup; not a redesign. Everything else in the Coin cutover is
 done.
 
 **Explicitly not recommended:** deleting the kind:11125 `coins` parse (§9.3),

@@ -1,12 +1,12 @@
 /**
- * Beach Treasure Hunt — reward CALCULATION, as pure math.
+ * Beach Treasure Hunt, reward CALCULATION, as pure math.
  *
  * Deterministic from `(finalized result, policy)` and nothing else: no
  * randomness after the field was generated, no multipliers, no jackpot, no
  * hidden odds. Missed digs earn nothing; litter still contributes positively
  * (the cleanup framing); valuables contribute more because their unit values
  * (2–6) exceed litter's (1). The output is integers throughout, bounded by
- * an explicit per-round maximum — never silently clamped elsewhere.
+ * an explicit per-round maximum; never silently clamped elsewhere.
  *
  * This module knows nothing about persistence, ledgers, wallets or the
  * daily window: authorization lives in `provisional-authorization.ts`, and
@@ -32,7 +32,7 @@ export type RewardEligibility =
 
 /**
  * The minimum-participation rule (documented in the audit + intro copy):
- * ≥ `minDigs` accepted digs AND ≥ `minActiveSeconds` of hunt time — except a
+ * ≥ `minDigs` accepted digs AND ≥ `minActiveSeconds` of hunt time, except a
  * round that legitimately found EVERY target, which qualifies at any speed.
  * `ended-by-player` (an explicit early end) is accepted only past the same
  * threshold; an abandoned round never reaches this function because the
@@ -63,7 +63,7 @@ export interface TreasureHuntCoinReward {
 
 /**
  * The deterministic payout for an ELIGIBLE finalized result. Returns `null`
- * for an ineligible one — callers must check {@link rewardEligibility} when
+ * for an ineligible one, callers must check {@link rewardEligibility} when
  * they need the reason.
  */
 export function calculateTreasureHuntReward(

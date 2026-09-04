@@ -1,5 +1,5 @@
 /**
- * Air Hockey physics — the rules a rally depends on, checked with numbers.
+ * Air Hockey physics, the rules a rally depends on, checked with numbers.
  *
  * Every test here calls a pure function. Nothing renders, nothing waits for a
  * frame, and nothing asserts a pixel: that is the whole point of keeping the
@@ -82,8 +82,8 @@ describe('integration and drag', () => {
     expect(small.vy).toBeCloseTo(big.vy, 6);
 
     // Position is Euler-integrated, so it agrees to the size of the step rather
-    // than exactly. Over a tenth of a second — six frames, far longer than the
-    // loop ever accumulates — twelve fixed steps and one big one land within
+    // than exactly. Over a tenth of a second, six frames, far longer than the
+    // loop ever accumulates, twelve fixed steps and one big one land within
     // 0.2 of a table unit of each other, a twentieth of the puck's radius and
     // well below anything a collision can notice.
     let short = puck({ vx: 100, vy: 40 });
@@ -104,7 +104,7 @@ describe('speed clamping', () => {
     const clamped = clampSpeed(300, 400, PUCK_MAX_SPEED);
     expect(Math.hypot(clamped.vx, clamped.vy)).toBeCloseTo(PUCK_MAX_SPEED, 6);
     // A per-axis clamp would change this ratio, turning a fast diagonal into a
-    // different angle — which is why it is a scale and not two clamps.
+    // different angle: which is why it is a scale and not two clamps.
     expect(clamped.vy / clamped.vx).toBeCloseTo(400 / 300, 6);
   });
 
@@ -154,7 +154,7 @@ describe('wall rebounds', () => {
     expect(bounced.puck.vy).toBeGreaterThan(0);
   });
 
-  it('lets the puck through the goal mouth — the end rail has a hole in it', () => {
+  it('lets the puck through the goal mouth, the end rail has a hole in it', () => {
     const open = resolveWalls(puck({ x: TABLE_CENTER_X, y: 1, vx: 0, vy: -100 }));
     expect(open.hit).toBeNull();
     expect(open.puck.vy).toBe(-100);
@@ -258,7 +258,7 @@ describe('mallet strikes', () => {
     expect(first.puck).toEqual(second.puck);
     expect(Number.isFinite(first.puck.x)).toBe(true);
     expect(Number.isFinite(first.puck.vy)).toBe(true);
-    // Pushed away from the mallet's own goal — the opponent's end here.
+    // Pushed away from the mallet's own goal, the opponent's end here.
     expect(first.puck.vy).toBeGreaterThan(0);
   });
 });
@@ -439,7 +439,7 @@ describe('swept mallet contact', () => {
   it('is byte-for-byte the discrete test for any sub-radius movement', () => {
     // The symmetry guarantee, and it is load-bearing. The opponent's mallet
     // never moves more than 1.6 units in a step and an ordinary hand never more
-    // than about 2.7, so BOTH sides must take the plain path — otherwise the
+    // than about 2.7, so BOTH sides must take the plain path; otherwise the
     // sweep silently gives one side earlier, weaker contacts than the other.
     // Measured, when it did: the opponent went from losing every match to
     // winning every match.
@@ -458,7 +458,7 @@ describe('swept mallet contact', () => {
   });
 
   it('engages only once a discrete test could actually miss', () => {
-    // Just past the puck's radius the sweep turns on — and that is exactly the
+    // Just past the puck's radius the sweep turns on, and that is exactly the
     // point at which a mallet could step over the puck without touching it.
     const stationary = puck({ x: 50, y: 80 });
     const over = resolveMalletSwept(

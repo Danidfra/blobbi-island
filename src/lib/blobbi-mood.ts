@@ -2,7 +2,7 @@
  * How a Blobbi's state READS to its owner.
  *
  * Pure presentation. Every value here is derived from `analyzeCareStatus`
- * output that already exists — `condition`, `urgentNeed`, `sleepState` — and
+ * output that already exists, `condition`, `urgentNeed`, `sleepState`, and
  * nothing new is computed, no threshold is invented and no state is added. What
  * this module owns is the difference between
  *
@@ -30,7 +30,7 @@
 import type { CareNeed, CareUrgency, PetCondition, SleepState } from '@/lib/blobbi-types';
 
 export interface BlobbiMood {
-  /** The face. Decorative — `label` carries the meaning. */
+  /** The face. Decorative, `label` carries the meaning. */
   emoji: string;
   /** One short phrase, in the second person's voice. */
   label: string;
@@ -133,7 +133,7 @@ export type BlobbiNeedKey = (typeof BLOBBI_NEEDS)[number]['key'];
  *
  * The same `<= 25` / `<= 50` boundaries `getStatUrgency` already uses to decide
  * urgency, so a meter that looks low and a need that reports urgent can never
- * disagree. Presentation only — it computes no state.
+ * disagree. Presentation only; it computes no state.
  */
 export function needLevel(value: number): 'good' | 'low' | 'critical' {
   if (value <= 25) return 'critical';

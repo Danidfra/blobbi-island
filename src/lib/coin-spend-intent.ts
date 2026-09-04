@@ -1,10 +1,10 @@
 /**
- * Spend intents — the durable identity of ONE logical Coin purchase attempt.
+ * Spend intents: the durable identity of ONE logical Coin purchase attempt.
  *
  * The wallet (`coin-wallet.ts`) is exactly-once **per opId**: a retried spend
  * that reuses its opId is reconciled in-lock and can never debit twice. What
- * the wallet cannot know is which USER GESTURES are the same logical purchase
- * — and before this module both spend surfaces minted a fresh random opId per
+ * the wallet cannot know is which USER GESTURES are the same logical purchase,
+ * and before this module both spend surfaces minted a fresh random opId per
  * click, so retrying after an AMBIGUOUS outcome (the publish may have landed)
  * was an independent debit. This module closes that gap:
  *
@@ -19,7 +19,7 @@
  *   → provably-unsent failure    → keep; reusing an unsent opId is harmless
  * ```
  *
- * An intent is matched by surface + amount + normalized grant lines — but ONLY
+ * An intent is matched by surface + amount + normalized grant lines, but ONLY
  * while it is open. Closing on definitive completion is what lets the same
  * cart be bought again intentionally later with a fresh identity; the payload
  * is never a permanent idempotency key.
@@ -33,12 +33,12 @@
  *
  * There was briefly a second, sessionStorage-backed surface for the old
  * visit-scoped Arcade Pass, whose delivery really did end with the tab. Nothing
- * is tab-scoped any more — the Arcade Pass is a 24-hour entitlement redeemed
- * with Arcade Tickets, not a Coin purchase — so the split is gone rather than
+ * is tab-scoped any more, the Arcade Pass is a 24-hour entitlement redeemed
+ * with Arcade Tickets, not a Coin purchase, so the split is gone rather than
  * kept warm for a hypothetical caller.
  *
  * Writes are read-back verified, like the Coin-op ledger: a caller that cannot
- * durably record the intent MUST NOT charge — an unrecorded ambiguous spend is
+ * durably record the intent MUST NOT charge, an unrecorded ambiguous spend is
  * exactly the unretriable double-debit this module exists to prevent.
  *
  * ## Bounds
@@ -47,7 +47,7 @@
  * is missing or provably unsent (`prepared`/`failed`) are deleted unless they
  * match the requested payload, and CLOSED-but-lingering `applied` intents are
  * pruned after {@link APPLIED_INTENT_RETENTION_MS}. Possibly-published intents
- * (`publishing`/`ambiguous`) are never garbage-collected — each one is a real
+ * (`publishing`/`ambiguous`) are never garbage-collected; each one is a real
  * open question about the player's balance.
  */
 
@@ -66,7 +66,7 @@ export interface SpendIntentLine {
 }
 
 export interface SpendIntent {
-  /** Also the wallet opId — one identity for the whole logical purchase. */
+  /** Also the wallet opId; one identity for the whole logical purchase. */
   readonly intentId: string;
   readonly surface: SpendSurface;
   /** Total Coin cost of the purchase. */
@@ -189,7 +189,7 @@ function isCollectible(record: CoinOpRecord | null, intent: SpendIntent, now: nu
     return true;
   }
   if (record.status === 'applied') {
-    // Definitively complete but never closed by its flow — see the retention doc.
+    // Definitively complete but never closed by its flow; see the retention doc.
     return now - intent.createdAt > APPLIED_INTENT_RETENTION_MS;
   }
   return false; // publishing / ambiguous: a real open question, never dropped.
@@ -213,7 +213,7 @@ export interface OpenedSpendIntent {
 }
 
 /**
- * Open the intent for one logical purchase — reusing the existing open intent
+ * Open the intent for one logical purchase, reusing the existing open intent
  * when this is a retry of the same purchase (same surface, amount and lines).
  *
  * `mintId` supplies the identity for a NEW intent (the caller's opId minting,
@@ -238,7 +238,7 @@ export function openSpendIntent(
 
   // Garbage-collect this surface first, so abandoned unsent intents are
   // bounded, then pick the retry target:
-  // - applied-and-aged past retention is pruned even when it matches — an
+  // - applied-and-aged past retention is pruned even when it matches, an
   //   ancient completed purchase must never capture a genuinely new
   //   identical one;
   // - otherwise a MATCHING intent is reused, including one with no wallet
@@ -294,7 +294,7 @@ export function openSpendIntent(
 
 /**
  * Close an intent after its purchase DEFINITIVELY completed and delivered
- * (`applied`/`already-applied`, plus — for the pass — the pass actually
+ * (`applied`/`already-applied`, plus: for the pass, the pass actually
  * stored). Closing is what gives the next identical purchase a fresh identity.
  */
 export function closeSpendIntent(

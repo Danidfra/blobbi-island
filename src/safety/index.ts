@@ -5,7 +5,7 @@
  * the {@link useIslandSafetyPolicy} hook, the {@link IslandSafetyPolicy} type,
  * and whichever pure admission helper guards the boundary it is working on. The
  * profile union, the two policy literals and the resolver are exported for the
- * provider, for tests and for future safety-layer work — an ESLint rule keeps
+ * provider, for tests and for future safety-layer work, an ESLint rule keeps
  * them from being imported by feature code, because a capability check is what
  * belongs at a call site, not a comparison against who the player is.
  *

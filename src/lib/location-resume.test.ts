@@ -5,7 +5,7 @@
  * The boundary tests here are the load-bearing ones. `isPresenceAlive` is a
  * strict `>`, so a presence whose expiration equals `now` is spent. Relaxing it
  * to `>=` to make a resume test pass would silently widen how long every remote
- * Blobbi stays on screen — which is exactly the coupling these tests exist to
+ * Blobbi stays on screen, which is exactly the coupling these tests exist to
  * make visible.
  */
 
@@ -48,7 +48,7 @@ interface PresenceOptions {
 }
 
 /**
- * A presence event shaped exactly like `buildPresence31950` writes them —
+ * A presence event shaped exactly like `buildPresence31950` writes them,
  * including `expiration = created_at + EXP_SECONDS`, which is the only reason
  * an age in seconds and a lifetime verdict are related at all.
  */
@@ -110,7 +110,7 @@ function presence(options: PresenceOptions = {}): NostrEvent {
   };
 }
 
-// `explainPresenceEvent` reads the wall clock (that is the point — it is the
+// `explainPresenceEvent` reads the wall clock (that is the point; it is the
 // live multiplayer gate). Pin the clock to NOW so both consumers are asked the
 // same question in the shared-rule tests below.
 beforeEach(() => {
@@ -158,7 +158,7 @@ describe('resolveInitialIslandLocation', () => {
       expect(decision.location).toBe('beach');
     });
 
-    it(`age ${EXP_SECONDS}s — expiration exactly equals now — is stale`, () => {
+    it(`age ${EXP_SECONDS}s: expiration exactly equals now, is stale`, () => {
       const decision = resolve(answered([presence({ createdAt: NOW - EXP_SECONDS })]));
       expect(decision.outcome.kind).toBe('stale-presence');
       expect(decision.location).toBe(DEFAULT_ISLAND_LOCATION);
@@ -300,8 +300,8 @@ describe('resolveInitialIslandLocation', () => {
      * every floor, so resuming a player upstairs without one stranded them, and
      * this policy had to send them to the entrance instead.
      *
-     * The arcade charges for PLAYS now, not for presence — one Arcade Token per
-     * game, bought at the counter on the ground floor — and the elevator is open
+     * The arcade charges for PLAYS now, not for presence; one Arcade Token per
+     * game, bought at the counter on the ground floor, and the elevator is open
      * to everyone. With no entitlement to check, an arcade floor resumes exactly
      * like Town does.
      */
@@ -412,7 +412,7 @@ describe('resolveInitialIslandLocation', () => {
 
     it('clamps an in-range but off-floor position onto the scene’s walkable area', () => {
       // Inside world-percent space on the wire, but well above Town's walkable
-      // floor band (an arch spanning y ≈ 63.5–78.3) — the shape a room whose
+      // floor band (an arch spanning y ≈ 63.5–78.3): the shape a room whose
       // floor moved between builds would produce.
       const offFloor = { x: 50, y: 40 };
       const decision = resolve(
@@ -453,7 +453,7 @@ describe('resolveInitialIslandLocation', () => {
     });
   });
 
-  it('restores only the coarse location and a standing position — no seat, hiding spot or activity', () => {
+  it('restores only the coarse location and a standing position; no seat, hiding spot or activity', () => {
     const seated = presence({ location: 'stage', createdAt: NOW - 5 });
     const event: NostrEvent = {
       ...seated,
@@ -473,7 +473,7 @@ describe('resolveInitialIslandLocation', () => {
     expect(decision.outcome).toEqual({ kind: 'fresh-presence', location: 'stage' });
     // The decision is a location and a standing position. Whatever the presence
     // also claimed about seats, hiding or sessions is not carried out of this
-    // module — there is nowhere in the result to put it.
+    // module: there is nowhere in the result to put it.
     expect(Object.keys(decision).sort()).toEqual(['location', 'outcome', 'position']);
     const serialized = JSON.stringify(decision);
     expect(serialized).not.toContain('seatId');
@@ -483,7 +483,7 @@ describe('resolveInitialIslandLocation', () => {
   });
 });
 
-describe('resolveActorSpawn — what the scene actually mounts with', () => {
+describe('resolveActorSpawn: what the scene actually mounts with', () => {
   it('uses the bootstrap position when a session was resumed', () => {
     const resumed = { x: 38.5, y: 72.4 };
     expect(resolveActorSpawn(resumed, 'town', null)).toEqual(resumed);

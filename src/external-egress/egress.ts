@@ -16,7 +16,7 @@
  *
  * ## Why the decision refuses before the browser, not after
  *
- * A denied capability must fail *before* `window.open` is reached — not by
+ * A denied capability must fail *before* `window.open` is reached; not by
  * hiding the button that would have called it. Hiding UI is presentation; a
  * component that still holds the callback is one prop away from being reachable,
  * and a modified build has the callback regardless. `decideEgress` returning
@@ -35,7 +35,7 @@ export type EgressRequest =
   | {
       readonly class: 'external-link';
       readonly url: string;
-      /** Optional context for the dialog — never the destination authority. */
+      /** Optional context for the dialog; never the destination authority. */
       readonly label?: string;
     }
   | {
@@ -54,7 +54,7 @@ export type EgressDenial =
   | { readonly reason: 'capability'; readonly egressClass: EgressClass }
   /** The URL was refused by `classifyDestination`. */
   | { readonly reason: 'invalid-destination'; readonly detail: DestinationRejection }
-  /** The URL resolved to Blobbi Island itself — internal navigation, not egress. */
+  /** The URL resolved to Blobbi Island itself, internal navigation, not egress. */
   | { readonly reason: 'internal-destination' }
   /** An unknown platform id. */
   | { readonly reason: 'unknown-platform' }
@@ -64,7 +64,7 @@ export type EgressDenial =
 /** What the confirmation shows. Every field is locally derived. */
 export interface EgressDestination {
   readonly egressClass: EgressClass;
-  /** The parsed host — `t.me`, `github.com`. The truthful part. */
+  /** The parsed host, `t.me`, `github.com`. The truthful part. */
   readonly host: string;
   /** A trusted local name for the destination, when one exists. */
   readonly label?: string;
@@ -102,7 +102,7 @@ export function decideEgress(
 
   switch (request.class) {
     case 'native-share': {
-      // Nothing to validate — the destination is whatever the operating system
+      // Nothing to validate, the destination is whatever the operating system
       // offers, which is exactly why this class has its own capability.
       if (!canNativeShare(request.data)) return denied({ reason: 'unsupported' });
       return { outcome: 'allowed', destination: null };
@@ -166,7 +166,7 @@ export function canNativeShare(data: ShareData): boolean {
 /**
  * Actually leave. **The only place the application opens a window or shares.**
  *
- * Takes a request that has already been decided — it does not re-check the
+ * Takes a request that has already been decided; it does not re-check the
  * policy, because a second check here would suggest the first one was optional.
  * The provider is what guarantees the pairing; the structural test is what
  * guarantees there is no other caller.
@@ -174,7 +174,7 @@ export function canNativeShare(data: ShareData): boolean {
  * ## Opener isolation
  *
  * Every window is opened `noopener,noreferrer`. Without `noopener` the opened
- * page gets a live `window.opener` handle to this tab and can navigate it —
+ * page gets a live `window.opener` handle to this tab and can navigate it,
  * `target="_blank"` tabnabbing, which the scattered `window.open` calls this
  * module replaces were all vulnerable to. Centralising it means it is now true
  * everywhere by construction rather than in the places somebody remembered.

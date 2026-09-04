@@ -3,7 +3,7 @@
  *
  * Written the way the dance policy's tests are: every bonus, both edges of the
  * margin tiers, the cap, and every route to zero. The totals are PINNED on
- * purpose — an economy change must arrive as a deliberate edit here, not as a
+ * purpose: an economy change must arrive as a deliberate edit here, not as a
  * side effect.
  */
 import { describe, it, expect } from 'vitest';
@@ -85,7 +85,7 @@ describe('the policy is live and self-describing', () => {
   });
 });
 
-describe('margin tiers — one tier, never cumulative', () => {
+describe('margin tiers: one tier, never cumulative', () => {
   it.each([
     [7, 2],
     [6, 1],
@@ -114,7 +114,7 @@ describe('worked examples from the documented policy', () => {
     expect(tickets({ playerScore: 7, opponentScore: 5 }).quantity).toBe(6);
   });
 
-  it('a 7–5 Easy win pays 2 + 3 = 5 — no difficulty bonus on Easy', () => {
+  it('a 7–5 Easy win pays 2 + 3 = 5; no difficulty bonus on Easy', () => {
     expect(tickets({ playerScore: 7, opponentScore: 5, difficulty: 'easy' }).quantity).toBe(5);
   });
 

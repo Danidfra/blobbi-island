@@ -24,7 +24,7 @@
  *
  * `effects` is `{ "<context>": { "<stat>": <value> } }`, not a flat bag. The
  * suggestions are Blobbi's stats because this is Blobbi's tool, but the context
- * and the key are both free text — an item that affects another game's stats is
+ * and the key are both free text, an item that affects another game's stats is
  * a perfectly good item.
  */
 
@@ -81,7 +81,7 @@ export interface ContentEditorProps {
    *
    * Read for ONE purpose: choosing which `visual` shape to show first for an
    * item whose visual is still blank. It is never written into content and
-   * never overrides a visual the author has already claimed — `visual.kind`
+   * never overrides a visual the author has already claimed, `visual.kind`
    * decides that, exactly as it does for a reader.
    */
   category?: string;
@@ -541,7 +541,7 @@ function StructuredMode({
 }
 
 /**
- * The `visual` block — TWO SHAPES behind one heading.
+ * The `visual` block: TWO SHAPES behind one heading.
  *
  * A wearable answers "where on the body does this sit?" (`slot`); a visual
  * effect answers "which locally-implemented effect does this grant?" (`kind`,
@@ -551,7 +551,7 @@ function StructuredMode({
  *
  * Which shape is shown follows `visual.kind`, the same discriminator a reader
  * uses. The `category` prop only decides the default for a visual nobody has
- * claimed yet — it never overrides what the author actually typed.
+ * claimed yet: it never overrides what the author actually typed.
  */
 function VisualFields({
   content,
@@ -579,8 +579,8 @@ function VisualFields({
           <h4 className="text-xs font-semibold">visual</h4>
           <p className="text-[11px] text-muted-foreground">
             {isEffect
-              ? 'Names the effect this item grants. The effect itself is implemented locally — an event never carries animation code.'
-              : 'Describes where a wearable sits. It never says who is wearing it — that is inventory data, not a definition.'}
+              ? 'Names the effect this item grants. The effect itself is implemented locally, an event never carries animation code.'
+              : 'Describes where a wearable sits. It never says who is wearing it; that is inventory data, not a definition.'}
           </p>
         </div>
         <div className="flex gap-1 rounded-lg border p-0.5">
@@ -652,7 +652,7 @@ function VisualFields({
               }
               // Picking a known effect fills the slot it actually occupies, so
               // the two cannot silently disagree. An already-typed slot is left
-              // alone — the author may be publishing for a different client.
+              // alone: the author may be publishing for a different client.
               const slot = slotForEffectId(effect);
               patchVisual({
                 effect,

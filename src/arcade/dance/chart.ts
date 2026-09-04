@@ -1,11 +1,11 @@
 /**
- * Blobbi Dance — the note chart contract, and the one authored chart.
+ * Blobbi Dance: the note chart contract, and the one authored chart.
  *
  * ## Deterministic, committed, and validated before anything plays
  *
  * A chart is never generated at run time from a clock or a random source. This
- * one is *derived* from committed source data — sixteen bar patterns written as
- * plain strings — so the data a human edits is legible and the data the engine
+ * one is *derived* from committed source data, sixteen bar patterns written as
+ * plain strings: so the data a human edits is legible and the data the engine
  * judges against is exact. Same input, same notes, every run, on every device.
  *
  * `validateDanceChart` runs BEFORE the countdown, not during the run. A chart
@@ -65,7 +65,7 @@ export interface DanceNote {
    */
   readonly id: string;
   readonly lane: DanceLane;
-  /** Milliseconds from the track's zero — lead-in included. */
+  /** Milliseconds from the track's zero, lead-in included. */
   readonly timeMs: number;
 }
 
@@ -73,7 +73,7 @@ export interface DanceChart {
   readonly id: string;
   /** Chart schema revision. Refused if it is not {@link DANCE_CHART_VERSION}. */
   readonly version: number;
-  /** The track this chart is written against, by id — never by filename. */
+  /** The track this chart is written against, by id; never by filename. */
   readonly trackId: DanceTrackId;
   readonly difficulty: DanceDifficulty;
   /**
@@ -92,12 +92,12 @@ export interface DanceChart {
 // ── Authored source data ────────────────────────────────────────────────────
 
 /**
- * Thirty-two bars, eight eighth-note slots each, at 120 BPM — 2 seconds per bar.
+ * Thirty-two bars, eight eighth-note slots each, at 120 BPM: 2 seconds per bar.
  *
  * Structured A / A′ / B / A″ so it reads as music rather than as a difficulty
  * ramp: eight bars introducing one lane per beat, eight adding offbeats, eight
  * of the busiest patterns in the chart, and eight that land it. Nothing is faster
- * than an eighth note, so the hardest moment asks for four inputs per second —
+ * than an eighth note, so the hardest moment asks for four inputs per second,
  * playable on a phone with two thumbs.
  *
  * 110 notes across 64 seconds of music.
@@ -226,7 +226,7 @@ export type DanceChartValidation =
  * The smallest gap at which two notes in the SAME lane are distinguishable.
  *
  * Two notes in one lane closer together than the Perfect window cannot both be
- * hit — one input would be inside both windows and the engine resolves exactly
+ * hit: one input would be inside both windows and the engine resolves exactly
  * one note per input, so the second is an unavoidable miss. That is not a
  * difficulty spike, it is an unwinnable chart, so it is a validation error.
  */

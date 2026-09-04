@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt — the PRODUCTION modal: binds the real reward service to the
+ * Treasure Hunt: the PRODUCTION modal: binds the real reward service to the
  * view layer. Everything else lives in `TreasureHuntModalView.tsx`, which
  * deliberately imports no wallet/ledger/relay code (the dev harness and the
  * tests inject a mock service there instead).

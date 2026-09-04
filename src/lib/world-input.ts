@@ -6,17 +6,17 @@
  * and MultiplayerLayer), plus a narrower third check in
  * `useCancelInteractionOnWorldClick`. A UI element added to one list and
  * forgotten in the other shows up as the local Blobbi walking under a modal
- * while presence stays put — this module is the single answer.
+ * while presence stays put; this module is the single answer.
  *
  * Three distinct questions, three exports:
  *
- *  - {@link shouldTriggerWorldMove} — may this event start a world walk?
+ *  - {@link shouldTriggerWorldMove}, may this event start a world walk?
  *    Used by the local input adapter (MovableBlobbi) and the presence click
  *    publisher (MultiplayerLayer), which must always agree.
- *  - {@link isWithinMoveBlockingUi} — did this event originate on an element
+ *  - {@link isWithinMoveBlockingUi}, did this event originate on an element
  *    that manages its own interaction lifecycle (`data-block-move`)? Used to
  *    decide whether a world tap cancels a pending walk-to-interact.
- *  - {@link BLOCK_UI_SELECTOR} — the one selector list behind both.
+ *  - {@link BLOCK_UI_SELECTOR}, the one selector list behind both.
  *
  * Interactive world objects (doors, seats, bushes, machines) carry
  * `data-block-move` and stop propagation themselves; they are never made
@@ -60,15 +60,15 @@ const isPrimaryPointer = (ev: MouseEvent | PointerEvent) =>
  * interactive ancestor, and:
  *
  *  - any UI element in the chain ({@link BLOCK_UI_SELECTOR}) blocks the move;
- *  - a DIFFERENT world surface in the chain blocks it (nested surfaces —
- *    e.g. a preview world inside a modal — own their events);
+ *  - a DIFFERENT world surface in the chain blocks it (nested surfaces,
+ *    e.g. a preview world inside a modal, own their events);
  *  - a remote player sprite (`[data-player-key]`) blocks it: clicking another
  *    Blobbi is a social action, never local movement;
  *  - the event must originate inside `container`;
  *  - mouse/pointer input must be an unmodified primary-button press.
  *
  * Caller-specific guards (photo-booth mode, "was this my own Blobbi?") stay at
- * the call sites — they are policy about the caller's state, not about the
+ * the call sites; they are policy about the caller's state, not about the
  * event.
  */
 export function shouldTriggerWorldMove(
@@ -95,7 +95,7 @@ export function shouldTriggerWorldMove(
 
 /**
  * Whether an event target sits inside an element that manages its own
- * interaction lifecycle (`data-block-move`) — interactive world objects, UI
+ * interaction lifecycle (`data-block-move`): interactive world objects, UI
  * chrome, remote Blobbi sprites.
  *
  * Used by the pending-interaction world-click canceller: a pointerdown that

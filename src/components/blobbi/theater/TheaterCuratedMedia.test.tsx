@@ -6,7 +6,7 @@
  * approved video is playing and the host can swap it a second later, so a check
  * on the input surface would cover the one case that never mattered.
  *
- * The load-bearing assertion throughout is `players` — the fake YouTube
+ * The load-bearing assertion throughout is `players`: the fake YouTube
  * constructor records every player ever built. If an unapproved video appears
  * there, an iframe for it existed, and no amount of subsequent teardown makes
  * that acceptable.
@@ -51,7 +51,7 @@ const FIXTURE_CATALOG: readonly ApprovedMedia[] = Object.freeze([
 
 // The fixture reaches the code through `TheaterStage`'s `catalog` prop rather
 // than a module mock: the catalog is read through default parameters inside pure
-// functions, so a mocked constant would never reach them — the real functions
+// functions, so a mocked constant would never reach them, the real functions
 // close over the real one.
 
 // ── In-memory relay ────────────────────────────────────────────────────────
@@ -396,7 +396,7 @@ describe('a host swapping the video after a guest has joined', () => {
 
   it('never builds a player for the unapproved swap', async () => {
     // THE test. The guest is already watching something approved; the host
-    // changes it. The new video must never reach a player at all — not briefly,
+    // changes it. The new video must never reach a player at all; not briefly,
     // not muted, not paused.
     const content = hostSession(APPROVED);
     mount('family');
@@ -499,7 +499,7 @@ describe('a curated host cannot broadcast unapproved media', () => {
     await settle();
 
     // There is no URL box to type into, so the only route to a set-media command
-    // is the shelf — and the shelf only holds approved entries.
+    // is the shelf, and the shelf only holds approved entries.
     fireEvent.click(screen.getByRole('button', { name: 'The Approved Film' }));
     await settle();
 

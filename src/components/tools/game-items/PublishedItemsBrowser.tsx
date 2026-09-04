@@ -5,7 +5,7 @@
  * ## Identity is the address, never the `d`
  *
  * Two different pubkeys may both publish `blobbi:accessory:party-hat`, and they
- * are two different items — relays will serve both, forever. This browser
+ * are two different items, relays will serve both, forever. This browser
  * therefore keys, de-duplicates, sorts and filters on the full
  * `31632:<pubkey>:<d>` address, and labels every row with whose key signed it:
  * `Official`, `You`, or `Third party`. Merging rows that share a `d` would
@@ -17,7 +17,7 @@
  * Rows come from a TanStack query; publishing writes the new record straight
  * into that cache (`upsertDefinitionRecord`), so a publication appears here
  * immediately. Because de-duplication is by address with newest-wins, an update
- * REPLACES its row rather than adding a second one — which is exactly what a
+ * REPLACES its row rather than adding a second one, which is exactly what a
  * replaceable event does on a relay.
  */
 

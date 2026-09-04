@@ -4,7 +4,7 @@
  * `LOCATION_BACKGROUNDS` is the ONLY location→background table in the app.
  * Production rendering (PlayingView), multiplayer depth/z math
  * (MultiplayerLayer), the presence adapter (presence-ground), the walkable API
- * (multiplayer.ts) and the dev room harness must all resolve through it — two
+ * (multiplayer.ts) and the dev room harness must all resolve through it, two
  * of them used to carry byte-identical handwritten copies, and a room added to
  * one but not the others rendered remotes with the wrong boundary.
  */

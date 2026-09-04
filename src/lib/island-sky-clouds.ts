@@ -1,5 +1,5 @@
 /**
- * Cloud actors — three individual clouds that cross the sky, and nothing else.
+ * Cloud actors: three individual clouds that cross the sky, and nothing else.
  *
  * ## What this replaces, and why
  *
@@ -11,7 +11,7 @@
  *  1. **Density.** Thirteen cloud groups per tile, tiled twice across the band,
  *     put roughly two dozen shapes on screen simultaneously. The result read as a
  *     continuous blanket of pale circles rather than as weather.
- *  2. **Clipping.** A repeated background tile is hard-clipped at its own edge —
+ *  2. **Clipping.** A repeated background tile is hard-clipped at its own edge,
  *     gradients do not bleed into the next repetition. Any cloud whose lobes
  *     reached within a few percent of the tile boundary was sliced in half, and
  *     the slice reappeared at the start of the next tile. That is the "visibly
@@ -25,7 +25,7 @@
  * Each actor travels a distance that is **longer than it needs to be**: the world
  * width, plus the cloud's own width, plus clearance on both sides, plus an
  * explicit `offscreenWaitPx`. At a constant linear speed that surplus becomes
- * time the cloud spends completely outside the viewport — a real gap, produced by
+ * time the cloud spends completely outside the viewport, a real gap, produced by
  * one linear keyframe and no JavaScript. `offscreenWaitSeconds` reports it.
  *
  * Because the three actors have different speeds, different wait distances and
@@ -57,7 +57,7 @@ export interface IslandCloudActor {
   /** Vertical placement within the sky layer, for the ordinary cloud shape. */
   topPercent: number;
   /**
-   * The width the **travel arithmetic clears**, in world pixels — the widest this
+   * The width the **travel arithmetic clears**, in world pixels, the widest this
    * actor can ever render, across every shape it may take at every size it is
    * allowed. It is deliberately not the rendered width.
    *
@@ -70,7 +70,7 @@ export interface IslandCloudActor {
   /**
    * Sizes this actor may take. Only `cloud-a` is permitted `large`, which makes
    * "never all three large at once" a structural impossibility rather than a
-   * statistical hope — and keeps the depth ladder intact, since the largest size
+   * statistical hope: and keeps the depth ladder intact, since the largest size
    * only ever appears on the lowest path.
    */
   allowedSizes: readonly IslandCloudSize[];
@@ -102,7 +102,7 @@ export interface IslandCloudActor {
   opacity: number;
   /**
    * Where the actor sits when travel is disabled (reduced motion). Chosen so the
-   * three rest at different widths as well as different heights — a sparse static
+   * three rest at different widths as well as different heights, a sparse static
    * composition rather than a stack.
    */
   restPx: number;
@@ -125,7 +125,7 @@ export const ISLAND_CLOUD_EDGE_MARGIN_PX = 60;
  * below this line stops reading as sky and starts competing with buildings,
  * hills, tree lines and the interactive art in front of them.
  *
- * Every actor's *drawn* silhouette — not just its box — stays above this, which
+ * Every actor's *drawn* silhouette, not just its box, stays above this, which
  * `island-sky-clouds.test.ts` checks arithmetically so it cannot regress by an
  * eyeballed tweak.
  */
@@ -140,7 +140,7 @@ export const ISLAND_CLOUD_MAX_BOTTOM_PERCENT = 26;
  * Size, height and speed are one coherent depth cue rather than three
  * independent knobs: the small cloud is the highest, palest and slowest (far
  * away), the large one is the lowest of the three, most opaque and fastest
- * (nearest). All three still sit in the upper sky — the large cloud is lower
+ * (nearest). All three still sit in the upper sky, the large cloud is lower
  * only because it is *nearer*, never to separate it from the others.
  *
  * ## Density
@@ -183,7 +183,7 @@ export const ISLAND_CLOUD_ACTORS: readonly IslandCloudActor[] = [
     restPx: 840,
   },
   {
-    // Upper-middle path. Small or medium — never large.
+    // Upper-middle path. Small or medium; never large.
     id: 'cloud-b',
     direction: 'rightToLeft',
     topPercent: 8.5,
@@ -241,7 +241,7 @@ export const ISLAND_CLOUD_SHAPE_PERIOD = 300;
  * tuning a probability.
  *
  * Positions are spread across the period and deliberately not evenly spaced, so a
- * player does not learn a rhythm. Counts: 4 egg, 4 baby, 4 adult, 3 heart, 1 poop —
+ * player does not learn a rhythm. Counts: 4 egg, 4 baby, 4 adult, 3 heart, 1 poop,
  * which is 1.33 % / 1.33 % / 1.33 % / 1.00 % / 0.33 %, and 5.33 % in total.
  */
 export const ISLAND_CLOUD_SPECIAL_SLOTS: readonly (readonly [number, IslandCloudShape])[] = [
@@ -279,7 +279,7 @@ function mod(value: number, modulus: number): number {
  *
  * Derived from the island epoch and the actor's own fixed cycle length, so it is
  * a pure function of UTC time. Two clients with roughly synchronised clocks
- * compute the same index and therefore see the same cloud — the same property the
+ * compute the same index and therefore see the same cloud, the same property the
  * sky's phase relies on, applied to cloud variation.
  *
  * `floor` rather than truncation, so indices decrease monotonically before the
@@ -338,7 +338,7 @@ const PRIORITY: readonly string[] = ISLAND_CLOUD_ACTORS.map((actor) => actor.id)
  * Every passage of `other` that overlaps `actor`'s passage `cycleIndex`.
  *
  * The window compared is the whole passage, not just its visible part, so the
- * answer cannot change while the cloud is on screen — which is what makes a
+ * answer cannot change while the cloud is on screen, which is what makes a
  * formation stable for its entire visible passage. At most a handful of indices,
  * because no cycle is more than ~2.4× another.
  */
@@ -376,7 +376,7 @@ export interface IslandCloudPassage {
 /**
  * Everything about one cloud passage: which silhouette, at what size, where.
  *
- * Pure, and a function of the passage index alone — so it cannot change while the
+ * Pure, and a function of the passage index alone, so it cannot change while the
  * cloud is visible, and a new one is only chosen when the index advances, which
  * happens while the actor is offscreen in its travel wait.
  *
@@ -447,7 +447,7 @@ export function islandCloudPassageAt(
 }
 
 /**
- * The widest this actor can ever render — the value `widthPx` must be at least, so
+ * The widest this actor can ever render, the value `widthPx` must be at least, so
  * that the travel endpoints clear the edge for every shape and size it may take.
  * Asserted by a test rather than trusted.
  */
@@ -461,7 +461,7 @@ export function islandCloudWidestRenderedPx(actor: IslandCloudActor): number {
 
 /**
  * Vertical extent of an actor's drawn silhouette, as percentages of the world
- * height — the numbers the upper-sky constraint is actually about.
+ * height: the numbers the upper-sky constraint is actually about.
  */
 export function islandCloudInkSpanPercent(
   actor: IslandCloudActor,
@@ -469,7 +469,7 @@ export function islandCloudInkSpanPercent(
   shape: IslandCloudShape = 'normal',
   size?: IslandCloudSize,
 ): { topPercent: number; bottomPercent: number } {
-  // Defaults to the actor's WORST case — its largest allowed size — because that is
+  // Defaults to the actor's WORST case, its largest allowed size, because that is
   // the value the upper-sky budget has to hold for.
   const worstSize =
     size ??
@@ -504,7 +504,7 @@ export interface IslandCloudTravel {
  *
  * Both endpoints are outside `[0, worldWidthPx]` by at least the cloud's own
  * width plus {@link ISLAND_CLOUD_EDGE_MARGIN_PX}, in both directions, so the
- * reverse-travelling actor is a true mirror rather than an approximation — its
+ * reverse-travelling actor is a true mirror rather than an approximation; its
  * offscreen start edge, offscreen end edge, transform direction and reset point
  * are all reflected.
  */
@@ -536,7 +536,7 @@ export function islandCloudTravel(
  * Is the actor at least partly within the world at this point of its cycle?
  *
  * Pure, so a test can sample the whole cycle and prove the composition never
- * becomes a row of clouds — and never goes permanently empty either.
+ * becomes a row of clouds, and never goes permanently empty either.
  */
 export function islandCloudOnScreenAt(
   actor: IslandCloudActor,

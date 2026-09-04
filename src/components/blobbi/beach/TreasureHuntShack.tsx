@@ -5,13 +5,13 @@
  * `src/lib/beach-shack-config.ts`. Since Phase 1B.1 the shack is a real
  * `<button>` rather than an `InteractiveElement`, for two reasons:
  *
- *  1. **Keyboard.** The generic element is a div with a click handler —
+ *  1. **Keyboard.** The generic element is a div with a click handler,
  *     unreachable by keyboard. A button gives focus, Enter/Space activation
  *     and a visible focus ring for free, and keyboard activation routes
  *     through the SAME canonical walk-to-interact call the pointer path uses.
  *  2. **Composable feedback.** The affordance transforms (hover/focus grow,
  *     press compression, arrival hop) live on a dedicated animation layer,
- *     and the horizontal flip on a separate inner layer — two elements, two
+ *     and the horizontal flip on a separate inner layer, two elements, two
  *     transforms, nothing overwrites anything (the trap the generic
  *     element's `hover:scale-110`-on-the-same-node pattern would create).
  *
@@ -21,7 +21,7 @@
  * and the hunt opens immediately.
  *
  * The wrapper carries no transform (stacking-context rule), and the hitbox
- * is the wrapper box — mirroring the art changes no geometry.
+ * is the wrapper box, mirroring the art changes no geometry.
  */
 
 import { useEffect, useRef, useState } from 'react';

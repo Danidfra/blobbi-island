@@ -15,7 +15,7 @@
  *
  * The two decorative chairs are row B's outermost pair. The original flex row
  * was pushed 6 % outside the world on each side, so their centres land at
- * x ≈ −0.6 % and ≈ 100.7 % — off the edges of the world, unreachable by any
+ * x ≈ −0.6 % and ≈ 100.7 %, off the edges of the world, unreachable by any
  * walk. They are still DRAWN, because deleting them would visibly change the
  * room, and {@link occupiableTheaterSeats} is what every occupancy question
  * should be asked of.
@@ -23,7 +23,7 @@
  * Replaces six flex rows of anonymous `<InteractiveElement alt="Stage Chair">`
  * clones. Those produced 28 chairs that all collapsed to the same
  * `data-chair-id`, which made occupancy, arrival and "which seat am I in?"
- * unanswerable questions. Every seat here has a stable, unique id instead —
+ * unanswerable questions. Every seat here has a stable, unique id instead,
  * exactly the pattern `town-bushes-config.ts` established for hiding spots, and
  * the id that later carries into multiplayer presence.
  *
@@ -43,7 +43,7 @@
  * ## What is deliberately absent
  *
  * Occupancy. Who is sitting where is runtime state derived from local state and
- * (later) multiplayer presence — never configuration.
+ * (later) multiplayer presence; never configuration.
  */
 
 import { constrainPosition } from '@/lib/boundaries';
@@ -56,7 +56,7 @@ export type SeatRow = 'a' | 'b' | 'c';
 
 export interface TheaterSeatConfig {
   /**
-   * Stable id — local seated state, DOM lookup and (later) presence all key on
+   * Stable id: local seated state, DOM lookup and (later) presence all key on
    * this. Format: `theater-seat-<row><n>`, numbered left to right across the
    * whole row (the centre aisle does not restart the numbering).
    */
@@ -89,13 +89,13 @@ export interface TheaterSeatConfig {
   /**
    * Sprite scale multiplier applied ONLY while seated. Descends by row so the
    * three rows read as depth in a room that has no perspective scaling at all
-   * (there is deliberately no `locationScalingConfig['stage-inside.png']` —
+   * (there is deliberately no `locationScalingConfig['stage-inside.png']`,
    * continuous y-scaling would make a Blobbi grow and shrink while walking the
    * aisle).
    */
   seatedScale: number;
   /**
-   * Fixed chair z-index. CONSTANT — never raised to occlude a Blobbi. Depth
+   * Fixed chair z-index. CONSTANT; never raised to occlude a Blobbi. Depth
    * comes from the Blobbi's own y-position bands
    * (`backgroundZIndexConfigs['stage-inside.png']`), which already interleave
    * correctly with these values.
@@ -108,7 +108,7 @@ export interface TheaterSeatConfig {
    *
    * `false` marks a **decorative chair**: it is drawn, and that is all. It
    * cannot be clicked, cannot start a walk, can never become `sittingIn`, and is
-   * excluded from {@link occupiableTheaterSeats} — so occupancy APIs built on
+   * excluded from {@link occupiableTheaterSeats}, so occupancy APIs built on
    * that list cannot accidentally count it.
    */
   occupiable: boolean;
@@ -212,7 +212,7 @@ function buildRow(spec: RowSpec): TheaterSeatConfig[] {
 export const theaterSeats: TheaterSeatConfig[] = ROW_SPECS.flatMap(buildRow);
 
 /**
- * The seats a Blobbi can actually sit in. **This is the occupancy universe** —
+ * The seats a Blobbi can actually sit in. **This is the occupancy universe**,
  * any "who is sitting where", "is the room full", "pick a free seat" question
  * must be asked of this list, never of {@link theaterSeats}.
  */
@@ -224,7 +224,7 @@ export const decorativeTheaterSeats: TheaterSeatConfig[] = theaterSeats.filter((
 /** 26. Asserted against the geometry by `theater-seats-config.test.ts`. */
 export const THEATER_OCCUPIABLE_SEAT_COUNT = 26;
 
-/** 2 — row B's outermost chairs, which hang off the edges of the world. */
+/** 2: row B's outermost chairs, which hang off the edges of the world. */
 export const THEATER_DECORATIVE_CHAIR_COUNT = 2;
 
 const SEATS_BY_ID = new Map(theaterSeats.map((seat) => [seat.id, seat]));
@@ -260,11 +260,11 @@ const SEATED_BLOBBI_SIZE = 'xl' as const;
  * so front/middle/back rows sink proportionally and changing a row's
  * seatedScale keeps the same visual cushion contact.
  *
- * CALIBRATION — 0.5 is DERIVED, not eyeballed: the last known-good
+ * CALIBRATION: 0.5 is DERIVED, not eyeballed: the last known-good
  * (pre-ground-anchor) renderer placed the seated body's CENTER on the cushion
  * line with center-origin scaling, so its visible bottom sat at
  * `cushion + scaledBody/2`. Solving `ratio = (desiredPose − cushion) /
- * scaledBody` against that legacy bottom gives exactly 0.5 for every row —
+ * scaledBody` against that legacy bottom gives exactly 0.5 for every row,
  * one global ratio reproduces the legacy seated look (head and shoulders over
  * the own backrest, lower body tucked into the chair). An interim 0.3 sat the
  * body visibly too high in the chair.
@@ -276,15 +276,15 @@ export const SEAT_CONTACT_RATIO = 0.5;
  *
  *   pose = cushion line + SEAT_CONTACT_RATIO × (seated-scaled body height)
  *
- * Reached via `goTo(..., immediate)`, deliberately bypassing the walk boundary
- * — a chair cushion is not walkable floor. DOM-free, so every client and test
+ * Reached via `goTo(..., immediate)`, deliberately bypassing the walk boundary,
+ * a chair cushion is not walkable floor. DOM-free, so every client and test
  * computes the same point; local and remote both consume it through
  * `resolveSeatedRender`.
  */
 export function seatAnchorPosition(seat: TheaterSeatConfig): { x: number; y: number } {
   const cushion = seatCushionPoint(seat);
   // Full seated-scaled body height in world percent, via the canonical
-  // center↔ground offset source (2 × half height — no private re-derivation).
+  // center↔ground offset source (2 × half height; no private re-derivation).
   const seatedBodyPercent = 2 * blobbiHalfHeightPercent(SEATED_BLOBBI_SIZE, seat.seatedScale);
   return {
     x: cushion.x + (seat.seatedOffset?.xPercent ?? 0),
@@ -296,7 +296,7 @@ export function seatAnchorPosition(seat: TheaterSeatConfig): { x: number; y: num
  * The walk APPROACH fraction for a seat: the floor at the seat sprite's front
  * base (just below the sprite, clamped into the walk boundary by
  * `computeSeatTarget`). Distinct from `interactionTarget`, which is the
- * CUSHION fraction used by the seated pose — walking must aim at the floor in
+ * CUSHION fraction used by the seated pose, walking must aim at the floor in
  * front of the chair, never at the cushion itself.
  */
 export const SEAT_APPROACH_TARGET = { x: 0.5, y: 1.05 } as const;
@@ -304,7 +304,7 @@ export const SEAT_APPROACH_TARGET = { x: 0.5, y: 1.05 } as const;
 /**
  * DOM-free mirror of the runtime approach target (`TheaterSeat`'s
  * `computeSeatTarget` with {@link SEAT_APPROACH_TARGET}), clamped into the
- * theater walk boundary — the GROUND point the feet stop on before the seated
+ * theater walk boundary, the GROUND point the feet stop on before the seated
  * snap. Used by tests and dev diagnostics.
  */
 export function seatApproachPosition(seat: TheaterSeatConfig): { x: number; y: number } {

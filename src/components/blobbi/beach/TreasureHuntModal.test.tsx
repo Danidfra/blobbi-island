@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt controller — screen flow, pause and interruption, the
+ * Treasure Hunt controller, screen flow, pause and interruption, the
  * exit-confirmation rule, and the audio engine's lifecycle (built on Start,
  * silenced by close: no beep may outlive the shell).
  */
@@ -286,7 +286,7 @@ describe('exit rule', async () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('unmounting disposes the engine — no beep outlives the shell', async () => {
+  it('unmounting disposes the engine; no beep outlives the shell', async () => {
     const { view, engines } = renderModal();
     await startHunt();
     view.unmount();
@@ -314,7 +314,7 @@ describe('finish and results', async () => {
     // Practice framing: says plainly that nothing durable was granted, and
     // never claims an inventory grant.
     expect(
-      screen.getByText('Practice round — no Coins were awarded.')
+      screen.getByText('Practice round: no Coins were awarded.')
     ).toBeInTheDocument();
     expect(screen.queryByText(/inventory/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/added to/i)).not.toBeInTheDocument();
@@ -392,7 +392,7 @@ describe('tool switching, audio and actor suppression', async () => {
     await frames();
     await frames();
     expect(engine.update).toHaveBeenCalled(); // resumes from the live signal
-    expect(engines).toHaveLength(1); // same engine — nothing duplicated
+    expect(engines).toHaveLength(1); // same engine; nothing duplicated
   });
 
   it('selecting the shovel docks and deactivates the detector; reselecting restores it', async () => {

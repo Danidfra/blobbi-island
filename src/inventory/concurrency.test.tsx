@@ -8,7 +8,7 @@
  *    consumptions of the FINAL unit cannot both succeed locally.
  *
  * Cross-device / cross-tab conflicts are NOT covered by in-memory serialization
- * (documented limitation) — two independent app instances can still both read
+ * (documented limitation): two independent app instances can still both read
  * the same remote snapshot before either publishes.
  */
 

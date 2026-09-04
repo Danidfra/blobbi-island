@@ -1,5 +1,5 @@
 /**
- * Whose words appear on a player's screen — the one place that decides.
+ * Whose words appear on a player's screen, the one place that decides.
  *
  * ## The threat
  *
@@ -14,7 +14,7 @@
  * `strangerAuthoredNames: false` means **never show an authored name**, not
  * "show it if it passes a profanity check". Weakening it to the latter would
  * make a denylist the boundary, and a denylist loses to `come find me on
- * discord` — which is clean, and is the message that actually matters.
+ * discord`: which is clean, and is the message that actually matters.
  *
  * So a curated experience substitutes a deterministic alias unconditionally. The
  * prohibited-text classifier is available here for a *different* case (§
@@ -23,8 +23,8 @@
  *
  * ## Resolve once, at the model boundary
  *
- * Every display of a remote name — the hover label, its `title` and
- * `aria-label`, the info modal's heading, the actor's tooltip — reads
+ * Every display of a remote name, the hover label, its `title` and
+ * `aria-label`, the info modal's heading, the actor's tooltip, reads
  * `BlobbiVisual.name`. So the substitution happens where a stranger's kind 31124
  * BECOMES that field, and every consumer downstream is safe without knowing this
  * module exists. Patching each component would have been six chances to miss
@@ -45,9 +45,9 @@ import { containsProhibitedText } from '@/user-text';
  * ## Reusing `genUserName`
  *
  * Deliberately the existing generator rather than a second identity-naming
- * system. It already satisfies everything an alias needs — deterministic from a
+ * system. It already satisfies everything an alias needs, deterministic from a
  * pubkey, no relay lookup, no authored input, stable across renders and
- * reloads, ASCII letters and one space, bounded length — and its vocabulary
+ * reloads, ASCII letters and one space, bounded length, and its vocabulary
  * (twenty-four adjectives × twenty-four animals) is clean. This module's test
  * asserts every one of the 576 outputs against the prohibited-text classifier,
  * so "clean" is checked rather than assumed.
@@ -56,7 +56,7 @@ import { containsProhibitedText } from '@/user-text';
  * vocabulary can diverge later without touching consumers.
  *
  * **Not a security identifier.** The generator's hash is small and collisions
- * are common — two strangers can share an alias. That is fine for a label whose
+ * are common: two strangers can share an alias. That is fine for a label whose
  * job is "something to call them"; anywhere identity matters, the pubkey is
  * used instead (see `player-safety`'s settings list, which shows an npub).
  */
@@ -80,7 +80,7 @@ export interface ResolveRemoteNameOptions {
    * Off by default, because Standard's current behaviour is to show the name and
    * this phase does not quietly change it. It exists so that a future profile
    * which permits authored names cannot accidentally become a place prohibited
-   * text is rendered — the distinction is in the API rather than in somebody
+   * text is rendered, the distinction is in the API rather than in somebody
    * remembering.
    */
   readonly screenAuthoredText?: boolean;

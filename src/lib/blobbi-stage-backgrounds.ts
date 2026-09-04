@@ -1,10 +1,10 @@
 /**
- * Blobbi Island — the Blobbi STAGE BACKGROUND slot.
+ * Blobbi Island: the Blobbi STAGE BACKGROUND slot.
  *
  * ## What this replaces
  *
  * The Blobbi window used to draw one hardcoded PNG behind the Blobbi, reached
- * through `getBlobbiBackground('blobbi-bg-default')` — a lookup table with one
+ * through `getBlobbiBackground('blobbi-bg-default')`: a lookup table with one
  * row, fed by a prop default that nothing ever overrode. The picture was not a
  * choice, it was a constant with a map around it.
  *
@@ -30,7 +30,7 @@
  *
  *   what exists   → this registry (built-ins), plus, for anything unlockable,
  *                   a trusted kind:31632 definition addressed by
- *                   `31632:<issuer>:<d>` — the exact identity rule
+ *                   `31632:<issuer>:<d>`: the exact identity rule
  *                   `official-visual-effect-items.ts` already uses
  *   what is owned → kind:31633 quantity, as for every other item
  *   what is chosen→ the `background` tag of the kind:11125 Blobbonaut profile,
@@ -39,7 +39,7 @@
  *                   Nothing was invented; a managed tag stopped being unused.
  *
  * Ids are the STABLE part. A built-in's id is its own; an unlockable one's id
- * is its full `31632:<issuer>:<d>` address — never an event id, because a
+ * is its full `31632:<issuer>:<d>` address; never an event id, because a
  * kind:31632 definition is addressable and its issuer republishes it (new event
  * id, same address) whenever metadata changes.
  */
@@ -50,12 +50,12 @@ import { ASSET_DIRS } from '@/lib/asset-paths';
  * The canonical aspect ratio of the stage box, as a CSS `aspect-ratio` value.
  *
  * 2:3 PORTRAIT, and this is the fix for the bug the redesign inherited. The
- * shipped backdrop is 484×726 — portrait — and the stage container asked for
+ * shipped backdrop is 484×726, portrait, and the stage container asked for
  * `aspect-square` and then `object-cover`. Cover preserves the image's ratio
  * and fills the box, so a 2:3 picture in a 1:1 box loses a THIRD of its height,
  * cropped equally from top and bottom: the painted floor the Blobbi is supposed
- * to stand on was cut away, which is why the Blobbi — anchored to the bottom of
- * the box — appeared to float in the middle of a scene with no ground.
+ * to stand on was cut away, which is why the Blobbi, anchored to the bottom of
+ * the box: appeared to float in the middle of a scene with no ground.
  *
  * The box now matches the art, so `cover` has nothing to crop. Backgrounds are
  * authored to this ratio; one that is not simply gets covered as before, which
@@ -72,7 +72,7 @@ export type StageBackgroundArt =
    *
    * Not a shortcut for a missing asset: it is the one backdrop that follows the
    * player's theme, so a Lantern Night island gets a dusk stage rather than a
-   * midday photo. It is also what proves the slot is a slot — a background that
+   * midday photo. It is also what proves the slot is a slot, a background that
    * is not an image at all still selects, renders and falls back like any
    * other.
    */
@@ -86,7 +86,7 @@ export type StageBackgroundUnlock =
    * Owned as an item: a trusted official kind:31632 definition, held with
    * quantity > 0 in the player's kind:31633 inventory.
    *
-   * `address` is the FULL `31632:<issuer>:<d>` — the `d` alone would let anyone
+   * `address` is the FULL `31632:<issuer>:<d>`: the `d` alone would let anyone
    * publish a definition with the same identifier and unlock the background for
    * free, which is the exact hazard `official-visual-effect-items.ts` documents.
    */
@@ -129,7 +129,7 @@ const studio: StageBackground = {
 const islandSky: StageBackground = {
   id: 'blobbi-bg-island-sky',
   name: 'Island Sky',
-  description: 'Open sky over warm sand — and it follows your theme.',
+  description: 'Open sky over warm sand, and it follows your theme.',
   emoji: '🌅',
   art: {
     kind: 'gradient',
@@ -159,7 +159,7 @@ export const DEFAULT_STAGE_BACKGROUND: StageBackground = studio;
  * value is typed `string`: a selection outlives the build that wrote it. A
  * player who chose a seasonal backdrop that has since been removed, whose
  * profile carries a value written by another Blobbi client, or who is running a
- * cached bundle, gets the default studio — never a blank stage.
+ * cached bundle, gets the default studio; never a blank stage.
  */
 export function resolveStageBackground(id: string | undefined | null): StageBackground {
   return (id ? byId.get(id) : undefined) ?? DEFAULT_STAGE_BACKGROUND;
@@ -174,7 +174,7 @@ export function isKnownStageBackgroundId(id: string | undefined | null): boolean
  * Whether the player may select `background`.
  *
  * Built-ins are always selectable. An item-backed background needs the item in
- * kind:31633 with quantity > 0 — possession, checked against the inventory and
+ * kind:31633 with quantity > 0, possession, checked against the inventory and
  * never inferred from the fact that it was previously selected. This is the
  * same rule `decidePlacementEntry` applies to cosmetics, and it is written here
  * so that shipping an unlockable backdrop later is a registry entry rather than

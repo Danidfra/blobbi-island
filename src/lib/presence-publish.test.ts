@@ -32,7 +32,7 @@ describe('the presence publisher tells signing apart from sending', () => {
     await expect(publish({ kind: 31950, tags: [] })).resolves.toBeUndefined();
   });
 
-  it('any other relay failure is transient and thrown as-is — never a refusal', async () => {
+  it('any other relay failure is transient and thrown as-is; never a refusal', async () => {
     const nostr = { event: vi.fn(async () => { throw new Error('relay refused'); }) };
     const publish = createPresencePublisher({ user: signer('ok'), nostr });
     await expect(publish({ kind: 31950, tags: [] })).rejects.toThrow('relay refused');

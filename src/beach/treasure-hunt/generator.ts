@@ -1,5 +1,5 @@
 /**
- * Beach Treasure Hunt — seeded target generation.
+ * Beach Treasure Hunt, seeded target generation.
  *
  * `generateTreasureTargets(seed, policy)` builds the round's buried field
  * deterministically: same seed + same policy → the identical targets, ids,
@@ -13,7 +13,7 @@
  * - A **placement that cannot satisfy the constraints for this seed** (a
  *   valid-looking but overly tight separation, say) is a runtime possibility
  *   and returns a typed `{ ok: false }` failure after the explicit attempt
- *   budget. The generator never quietly drops targets to "make it fit" — a
+ *   budget. The generator never quietly drops targets to "make it fit": a
  *   round either has exactly `policy.targetCount` targets or it does not
  *   exist.
  *

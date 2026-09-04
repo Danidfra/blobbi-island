@@ -14,8 +14,8 @@ human action. Nothing here should be automated into the app.
 | --- | --- |
 | Canonical `d` | `blobbi:currency:arcade-ticket` |
 | Canonical address | `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-ticket` |
-| Artwork | ✅ live — `https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp` |
-| Registry status | ✅ **`active`** — published and verified on both official relays (see §7) |
+| Artwork | ✅ live, `https://assets.blobbi.pet/items/arcade/arcade-ticket-v1.webp` |
+| Registry status | ✅ **`active`**: published and verified on both official relays (see §7) |
 | Client behaviour | The relay definition is used when reachable; the bundled fallback in `src/inventory/catalog-fallback.ts` renders identically offline, artwork included. |
 
 **This document is now a record, not a to-do.** §2–§6 describe how the event was
@@ -32,7 +32,7 @@ Verified: `HTTP/2 200`, `content-type: image/webp`,
 `access-control-allow-origin: *`.
 
 Because the asset is served **immutable**, a future revision must be a new
-versioned filename (`-v2.webp`) and a republished definition — never a mutated
+versioned filename (`-v2.webp`) and a republished definition; never a mutated
 `-v1`. The URL is written in exactly one place in the codebase,
 `ARCADE_TICKET_IMAGE_URL` in `src/protocol/event-registry.ts`, and flows from
 there into the bundled fallback, the generated registry document and the
@@ -47,7 +47,7 @@ using the canonical registry values. Tag order is the builder's. A test
 (`src/protocol/arcade-ticket-publication.test.ts`) re-runs the builder and fails
 if this file and the builder ever disagree, so what follows is not a hand copy.
 
-**Unsigned event** — save as `arcade-ticket.json`:
+**Unsigned event**: save as `arcade-ticket.json`:
 
 ```json
 {
@@ -95,14 +95,14 @@ requires.
 
 ### Supplied only at signing time
 
-The builder returns exactly three keys — `kind`, `tags`, `content`. Every tag
+The builder returns exactly three keys, `kind`, `tags`, `content`. Every tag
 above is one we passed: it auto-generates nothing, adds no `alt` unless asked,
 and emits no `max_stack` and no `created_at`.
 
 | Field | Set by |
 | --- | --- |
 | `created_at` | the signer, at signing time (unix seconds) |
-| `pubkey` | the signer — must be the official issuer |
+| `pubkey` | the signer, must be the official issuer |
 | `id` | derived from the serialized event at signing time |
 | `sig` | the signer |
 
@@ -112,11 +112,11 @@ and emits no `max_stack` and no `created_at`.
 | --- | --- |
 | `type: "currency"` | The `type` tag is a free string in the package; `currency` distinguishes it from the 19 `consumable` items. |
 | `category: "currency"` | Read by `resolveFromDefinition`. Accepted because `currency` is in the adapter's `VALID_CATEGORIES`, which derives from `ITEM_CATEGORIES`. Without it a valid definition would silently resolve to `unknown`. |
-| `image` | Production artwork. Preferred over the emoji by the client's visual resolution order. The 19 published definitions have no `image` tag — none has artwork yet — so this is an addition, not a divergence. |
+| `image` | Production artwork. Preferred over the emoji by the client's visual resolution order. The 19 published definitions have no `image` tag, none has artwork yet, so this is an addition, not a divergence. |
 | `version: "1"` | Carried by all 19 published definitions. The definition schema revision, not the item's. |
 | `context: "game:blobbi"` | Carried by all 19. Scopes the item to this game and is relay-indexable. |
 | `alt: "Game item definition: Arcade Ticket"` | Matches the `Game item definition: <name>` form used by all 19, rather than repeating the description. The human-readable description still travels in `metadata.description`. |
-| `metadata.action: null` | The single field that keeps tickets out of every care flow: `useUseItem` throws `Item has no usable action` for a null action. Omitting the key is equivalent — the adapter accepts only a *string* action — but `null` is explicit for a human reading the event. |
+| `metadata.action: null` | The single field that keeps tickets out of every care flow: `useUseItem` throws `Item has no usable action` for a null action. Omitting the key is equivalent, the adapter accepts only a *string* action, but `null` is explicit for a human reading the event. |
 | `metadata.stages` | Schema-required by the resolved view model; carries no meaning while `action` is null. |
 | `effects: {"game:blobbi": {}}` | Deliberately empty: a currency has no Blobbi stat effects. Keeps the content shape identical to the other 19. |
 | `metadata.stackable: true` | Spelled with the `k`, matching all 19 published definitions (19/19 on both relays use `"stackable"`; none uses `"stacable"`). Declarative only: quantities live in the kind:31633 `a` tags as decimal integers, so items stack regardless of this field. Nothing in the package or in Island reads it. |
@@ -154,7 +154,7 @@ needs no new tooling and no new script.
 
 ### Key-handling rules
 
-- **Never** put the key in a command argument — argv is visible to `ps` and
+- **Never** put the key in a command argument, argv is visible to `ps` and
   lands in shell history.
 - **Never** put it in a file in the repo, in `.env`, in an example, or in a
   commit.
@@ -187,7 +187,7 @@ cat arcade-ticket.json | nak event --sec "$BUNKER_URI" --force-sign \
   wss://relay.ditto.pub wss://relay.dreamith.to
 ```
 
-Set `BUNKER_URI` without leaking it into history — either with a leading space
+Set `BUNKER_URI` without leaking it into history; either with a leading space
 (needs `HISTCONTROL=ignorespace` / `setopt HIST_IGNORE_SPACE`) or by reading it
 from the macOS Keychain in a subshell:
 
@@ -210,7 +210,7 @@ rm arcade-ticket.json          # it is scratch, not a repository artifact
 
 ## 5. Verification procedure
 
-Fetch the exact address back from **each relay separately** — a single query
+Fetch the exact address back from **each relay separately**: a single query
 across both cannot tell you which one has it. `nak req` verifies signatures by
 default.
 
@@ -252,9 +252,9 @@ nak req -k 31632 \
 
 ---
 
-## 6. Activation procedure — only after §5 passes on BOTH relays
+## 6. Activation procedure; only after §5 passes on BOTH relays
 
-**Completed on 2026-07-28** — recorded here for the next definition. Do not start these until the event is confirmed present on both relays.
+**Completed on 2026-07-28**: recorded here for the next definition. Do not start these until the event is confirmed present on both relays.
 
 1. In `src/protocol/event-registry.ts`, change the Arcade Ticket's
    `status: 'reserved'` to `status: 'active'`.
@@ -274,7 +274,7 @@ the tests are written so that skipping it fails loudly.
 
 ### Known gap to decide during activation
 
-`ItemBagModal` renders `definition.emoji` only — it has no `<img>` branch, so
+`ItemBagModal` renders `definition.emoji` only; it has no `<img>` branch, so
 the bag will show 🎟️ even once the artwork is live. This is pre-existing
 behaviour shared by all 20 items (none other has artwork), not a regression.
 `ArcadeTicketBalance` *does* follow the image → emoji resolution order. Decide at
@@ -283,7 +283,7 @@ today would affect only this item.
 
 ---
 
-## 7. Publication record — verified 2026-07-28
+## 7. Publication record, verified 2026-07-28
 
 Fetched independently from each official relay, id recomputed from the canonical
 serialization, and Schnorr signature verified with `nostr-tools`.
@@ -300,7 +300,7 @@ serialization, and Schnorr signature verified with `nostr-tools`.
 | Signatures | ✅ valid |
 | Event ids | ✅ recomputed from the serialization and matching |
 
-### Two valid signings exist — this is fine
+### Two valid signings exist; this is fine
 
 The publish command ran **twice**, 162 seconds apart, producing two
 independently valid events for the same address:
@@ -318,7 +318,7 @@ needed and no client can observe a difference.
 
 ### Why no event id is recorded in the canonical registry
 
-The registry stores the **address**, not an event id, and deliberately so — this
+The registry stores the **address**, not an event id, and deliberately so; this
 publication is the demonstration. An event id is not a stable reference for an
 addressable kind:
 
@@ -329,6 +329,6 @@ addressable kind:
 
 Recording one in `src/protocol/event-registry.ts` would add a field that nothing
 can validate, that goes stale silently, and that the generated document would
-present as canonical — exactly the manually-drifting source the registry exists
+present as canonical: exactly the manually-drifting source the registry exists
 to prevent. The address is the stable identity; the ids above are a
 point-in-time verification record, which is what this section is.

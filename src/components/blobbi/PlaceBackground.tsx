@@ -135,7 +135,7 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
             Clickable ground/surface layer (only this recebe data-world-surface).
 
             It also PUBLISHES the world grade as a CSS custom property. Every world
-            sprite — buildings, doors, props, bushes, furniture — is an <img> inside
+            sprite: buildings, doors, props, bushes, furniture, is an <img> inside
             here, and until now only the background plate above was graded, so at
             night the plate darkened to brightness 0.70 while the sprites sitting on
             it stayed at 1.0. Bright saturated art (the Town bushes especially) read
@@ -143,7 +143,7 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
 
             A custom property is the fix rather than a wrapper because `filter` on a
             wrapper would create a stacking context and flatten this layer's
-            z-indexes — and the Blobbi's z-index is computed from its Y position
+            z-indexes: and the Blobbi's z-index is computed from its Y position
             precisely so it can walk BEHIND a bush or a building. Collapsing that
             would break occlusion. A custom property is inert: it creates no
             stacking context, moves nothing, and changes no pointer behaviour.

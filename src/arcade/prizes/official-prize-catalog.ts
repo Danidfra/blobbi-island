@@ -1,15 +1,15 @@
 /**
- * The INITIAL official Arcade Prize catalog — six real kind:31632 items.
+ * The INITIAL official Arcade Prize catalog, six real kind:31632 items.
  *
  * This replaces the temporary fixture catalogue as what the Prize Counter
  * SHOWS. It deliberately contains only STABLE CATALOG DATA:
  *
  *   - the item's stable full address (`31632:<official-issuer>:<d>`), derived
- *     from the canonical registry's address builder — never a current event id,
+ *     from the canonical registry's address builder; never a current event id,
  *     which changes on every republish of an addressable definition;
  *   - the ticket price;
  *   - a deterministic sort order;
- *   - the availability state (all `available` — see below);
+ *   - the availability state (all `available`: see below);
  *   - the canonical definition's `max_stack`, proving the prize is unique.
  *
  * Names, artwork, descriptions and rarity are NOT duplicated here: the Prize
@@ -20,8 +20,8 @@
  * ## Redemption is LIVE
  *
  * Every entry is `availability: 'available'`. A redemption spends Arcade
- * Tickets and grants the item into kind:31633 in ONE replacement event —
- * `src/inventory/arcade-cosmetic-redeemer.ts` — driven by the same hardened
+ * Tickets and grants the item into kind:31633 in ONE replacement event,
+ * `src/inventory/arcade-cosmetic-redeemer.ts`: driven by the same hardened
  * ledger, lock, strict publish and never-respend rules the Arcade Pass uses.
  * The type still admits `'preview'` so a single entry can be pulled from sale
  * by changing data rather than code.
@@ -33,22 +33,22 @@
  * cosmetic or effect item, refuses a `max_stack` other than 1 (these prizes are
  * unique wearables), and derives the address from the issuer key. A catalog
  * entry that does not resolve cleanly is a module-load failure, not a shelf
- * card that pretends to be redeemable — the same rule
+ * card that pretends to be redeemable, the same rule
  * `official-visual-effect-items.ts` applies to the renderer bindings.
  *
  * ## Ticket prices are PROVISIONAL
  *
  * The repository has no production ticket-earning rate yet (no arcade game
- * grants tickets in production — see `src/arcade/reward-policy.ts`), so these
+ * grants tickets in production; see `src/arcade/reward-policy.ts`), so these
  * values cannot claim economic balance. They encode the intended acquisition
  * LADDER, documented in `docs/arcade-prize-catalog.md`:
  *
- *   Block Builder Cap  (uncommon)   200 — first reachable prize
- *   Golden Sparkles    (rare)       400 — short-term goal
- *   Stargazer Glasses  (rare)       500 — short-to-medium goal
- *   Starlight Bow Tie  (epic)       900 — medium-term goal
- *   Mystic Fog         (epic)     1 100 — medium-term goal
- *   Celestial Aura     (legendary) 2 500 — long-term headline prize
+ *   Block Builder Cap  (uncommon)   200, first reachable prize
+ *   Golden Sparkles    (rare)       400, short-term goal
+ *   Stargazer Glasses  (rare)       500, short-to-medium goal
+ *   Starlight Bow Tie  (epic)       900, medium-term goal
+ *   Mystic Fog         (epic)     1 100, medium-term goal
+ *   Celestial Aura     (legendary) 2 500, long-term headline prize
  *
  * Rebalancing later must edit THIS module only. The Celestial Seraph Necklace
  * (mythic) is deliberately absent: it is reserved for a future special
@@ -58,7 +58,7 @@
  *
  * `src/arcade/` is barred from the inventory/relay layers by
  * `boundaries.test.ts`. `@/protocol/event-registry` is pure identity data and
- * an address builder — no relay, no query, no write path — and deriving the
+ * an address builder, no relay, no query, no write path, and deriving the
  * address here is what keeps a hand-typed (possibly wrong) issuer out of the
  * catalog.
  */
@@ -71,7 +71,7 @@ import {
 
 import type { ArcadePrize } from './prize-catalogue';
 
-/** What kind of item a prize unlocks — drives the type chip and the preview. */
+/** What kind of item a prize unlocks, drives the type chip and the preview. */
 export type OfficialArcadePrizeKind = 'accessory' | 'effect';
 
 export type OfficialArcadePrizeAvailability =
@@ -83,10 +83,10 @@ export type OfficialArcadePrizeAvailability =
 export interface OfficialArcadePrize {
   /** The kind:31632 `d` tag of the official item. */
   readonly d: string;
-  /** `31632:<official-issuer>:<d>` — stable identity, derived, never an event id. */
+  /** `31632:<official-issuer>:<d>`: stable identity, derived, never an event id. */
   readonly itemAddress: string;
   readonly kind: OfficialArcadePrizeKind;
-  /** Arcade Tickets. Positive integer. Provisional — see module doc. */
+  /** Arcade Tickets. Positive integer. Provisional; see module doc. */
   readonly tickets: number;
   /** Deterministic shelf position, ascending. Unique per entry. */
   readonly sortOrder: number;
@@ -94,14 +94,14 @@ export interface OfficialArcadePrize {
   readonly featured?: boolean;
   readonly availability: OfficialArcadePrizeAvailability;
   /**
-   * The published `max_stack` of the canonical definition — 1 for every prize
+   * The published `max_stack` of the canonical definition: 1 for every prize
    * here. This is ITEM POLICY read from the registry, not a catalog opinion:
    * it is what makes "you already own it" a refusal rather than a second sale.
    */
   readonly maxOwned: number;
-  /** Registry display name — FALLBACK ONLY; the fetched definition wins. */
+  /** Registry display name: FALLBACK ONLY; the fetched definition wins. */
   readonly fallbackName: string;
-  /** Registry emoji — FALLBACK ONLY; the fetched definition wins. */
+  /** Registry emoji: FALLBACK ONLY; the fetched definition wins. */
   readonly fallbackSymbol: string;
 }
 
@@ -146,7 +146,7 @@ export function officialArcadePrize(
   }
   return Object.freeze({
     d,
-    // Derived from the issuer key, never typed out — the address IS the
+    // Derived from the issuer key, never typed out, the address IS the
     // identity, and a hand-copied one is a wrong item waiting to happen.
     itemAddress: officialItemAddress(d),
     kind,
@@ -200,7 +200,7 @@ export function officialArcadePrizeByAddress(
  *
  * The parts that MATTER to the machine are all derived, never invented:
  *
- *  - `id` is the `d` tag — stable identity, recorded in every ledger record,
+ *  - `id` is the `d` tag, stable identity, recorded in every ledger record,
  *    and never an event id (kind:31632 is addressable and republished);
  *  - `price` is the catalog's ticket price, frozen into the record at
  *    reservation so a later rebalance cannot change what an in-flight
@@ -212,8 +212,8 @@ export function officialArcadePrizeByAddress(
  *  - `catalogVersion` names this catalog, so a record priced here is never
  *    mistaken for one priced by the fixture list.
  *
- * `title` may be improved by the caller from the fetched kind:31632 definition
- * — it is confirmation copy, not identity — but the registry fallback is
+ * `title` may be improved by the caller from the fetched kind:31632 definition,
+ * it is confirmation copy, not identity, but the registry fallback is
  * always present so a relay outage cannot leave a prize nameless.
  */
 export function officialArcadePrizeAsRedeemable(

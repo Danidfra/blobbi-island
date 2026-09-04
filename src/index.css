@@ -11,7 +11,7 @@ img {
 }
 
 /* ==========================================================================
-   Blobbi Island — Design tokens
+   Blobbi Island: Design tokens
    ==========================================================================
 
    Three layers, in strict dependency order. Nothing below a layer may be
@@ -30,7 +30,7 @@ img {
    the colour as `hsl(var(--island-wood) / <alpha-value>)`. That single move is
    what makes the whole app themeable: the ~650 existing
    `text-island-ink` / `bg-island-cream` / `border-island-wood/30` call sites
-   keep working verbatim — opacity modifiers included — and start reading from
+   keep working verbatim: opacity modifiers included, and start reading from
    the active theme instead of a literal baked into tailwind.config.ts.
 
    Adding a theme is therefore a block of channel triplets in
@@ -42,7 +42,7 @@ img {
    ## Themes are attributes, not classes
 
    The active theme is `data-island-theme` on <html>. Tailwind's `dark:` variant
-   is still class-based and is deliberately left unused — see the note by the
+   is still class-based and is deliberately left unused; see the note by the
    `.dark` block below.
    ========================================================================== */
 
@@ -55,22 +55,22 @@ img {
   --island-page: 38 100% 96%;      /* #FFF8EC page behind the wood frame */
   --island-sky: 199 88% 80%;       /* #9DDCF9 */
   --island-ocean: 197 78% 63%;     /* #55BFEA the sea, informational */
-  --island-focus: 197 78% 40%;     /* deeper ocean — must clear 3:1 on every surface */
+  --island-focus: 197 78% 40%;     /* deeper ocean, must clear 3:1 on every surface */
   --island-grass: 113 46% 62%;     /* #7CCB72 success / play */
-  --island-grass-dark: 115 36% 33%;/* label text / edge on cream — not a fill */
+  --island-grass-dark: 115 36% 33%;/* label text / edge on cream; not a fill */
   --island-sand: 43 82% 81%;       /* #F6DFA6 secondary surface */
   --island-wood: 27 40% 54%;       /* #B9855B frame / primary */
   --island-wood-dark: 30 42% 35%;  /* frame edge, and label text on sand */
   --island-cream: 43 100% 92%;     /* #FFF4D8 panel */
   --island-cream-2: 42 88% 87%;    /* #FBEAC2 panel, muted */
-  --island-purple: 257 70% 56%;    /* mascot accent — readable as text AND as a surface */
+  --island-purple: 257 70% 56%;    /* mascot accent, readable as text AND as a surface */
   --island-ink: 30 38% 16%;        /* #3A2A1A text */
   --island-ink-soft: 31 24% 34%;   /* #6B5742 muted text */
   --island-danger: 6 62% 46%;      /* destructive + error text */
   --island-warn: 36 80% 57%;       /* #E9A23B */
 
   /* Radius scale. `--radius` is the shadcn contract (Tailwind's lg/md/sm read
-     from it); the two above it are the game surfaces — a framed modal and the
+     from it); the two above it are the game surfaces, a framed modal and the
      wood frame itself are deliberately rounder than a form control. */
   --radius: 1rem;
   --radius-panel: 1.25rem;
@@ -137,9 +137,9 @@ img {
        panel-muted .......... cream-2
        secondary surface .... sand
        text / text-muted .... ink / ink-soft
-       primary .............. wood-DARK — the frame is `wood`, but a button
+       primary .............. wood-DARK: the frame is `wood`, but a button
                               has to carry readable text and the frame does not
-       accent ............... mascot purple — highlights, active state
+       accent ............... mascot purple, highlights, active state
        success .............. grass
        danger ............... soft coral
        focus ................ a deeper ocean, contrast-checked */
@@ -195,7 +195,7 @@ img {
    * "dark mode" would flip the cozy daytime world into a grey social app, which
    * is the one outcome this design system exists to prevent. An evening island
    * is a THEME (a palette in `src/lib/island-themes.ts`), authored deliberately
-   * with the game's own colours — not an inversion.
+   * with the game's own colours; not an inversion.
    *
    * The selector stays so that any residual `dark:` utility, or a `system`
    * preference reaching <html>, resolves to the active theme rather than to a
@@ -204,7 +204,7 @@ img {
    * documents the decision at the place someone would look for it.
    */
   .dark {
-    /* deliberately empty — see above */
+    /* deliberately empty: see above */
   }
 }
 
@@ -221,7 +221,7 @@ img {
      A Nostr theme may carry TWO fonts (Ditto's `f` tag, body and title roles).
      Both default to the island's own type and are overwritten by
      `island-theme-media.ts` with a sanitised family plus this same stack as the
-     fallback — so a theme font that never loads (dead host, offline, CORS
+     fallback: so a theme font that never loads (dead host, offline, CORS
      refusal) leaves the game in Comfortaa rather than in whatever the browser
      would otherwise pick.
 
@@ -233,7 +233,7 @@ img {
      `font-family: Comfortaa` on a shared primitive would silently pin every
      surface below it. The one deliberate exception is `.font-mono`, applied to
      hex addresses, event ids and filenames, where a proportional face makes the
-     value harder to read — see `docs/themes.md`. */
+     value harder to read; see `docs/themes.md`. */
   :root {
     --island-font-body: Comfortaa, system-ui, sans-serif;
     --island-font-display: var(--island-font-body);
@@ -247,7 +247,7 @@ img {
      A Nostr theme may also carry a BACKGROUND IMAGE. Ditto puts it on `body`,
      which is right for a feed scrolling over it; the island is a drawn world,
      so it goes on the page BEHIND the wood frame and nowhere else. Town, Beach,
-     Mine and the Arcade keep their own art at every viewport size — a theme may
+     Mine and the Arcade keep their own art at every viewport size, a theme may
      dress the room the game sits in, never the game.
 
      `data-theme-background` is set by `applyThemeBackground` alongside the
@@ -834,7 +834,7 @@ img {
   }
 }
 /* ==========================================================================
-   Island day/night sky — decorative motion only
+   Island day/night sky: decorative motion only
    ==========================================================================
 
    The sky's *state* (gradient, sun and moon position, star and cloud opacity)
@@ -843,7 +843,7 @@ img {
    the cloud drift and a very slow star breathe.
 
    Both are decoration. Time of day is communicated by colour, by where the sun
-   and moon are, and by whether stars are out — never by motion alone — so
+   and moon are, and by whether stars are out, never by motion alone, so
    stopping these animations removes no information whatsoever.
    ========================================================================== */
 
@@ -851,7 +851,7 @@ img {
   One cloud actor crossing the sky.
 
   The endpoints are per-element custom properties rather than fixed values, so a
-  single pair of keyframes serves all three actors and both travel directions —
+  single pair of keyframes serves all three actors and both travel directions,
   `--island-cloud-from` and `--island-cloud-to` are simply swapped for the
   reverse-travelling one. Each is constant on its element, so the animation
   interpolates between two already-resolved transforms and needs no `@property`
@@ -876,12 +876,12 @@ img {
 }
 
 /* ==========================================================================
-   Island day/night sky — world sprite grading
+   Island day/night sky: world sprite grading
    ==========================================================================
 
    The location background plate is graded by an inline `filter` in
-   PlaceBackground. Every OTHER piece of world art — building shells, doors,
-   props, bushes, streetlights, floors, furniture — is a separate <img> inside the
+   PlaceBackground. Every OTHER piece of world art, building shells, doors,
+   props, bushes, streetlights, floors, furniture, is a separate <img> inside the
    world-content layer, and those were left ungraded: at night the plate dropped
    to brightness 0.70 while the sprites standing on it stayed at 1.0. The Town
    bushes made it obvious, because `bush-1..3.png` are highly saturated greens
@@ -906,15 +906,15 @@ img {
    Adding one would be an obvious refinement and a real regression. The `transition`
    shorthand resets every transition longhand, and this selector
    (`[attr] img`, specificity 0-1-1) outranks the class selectors that world sprites
-   already rely on — `.bush-sway-target` declares `transition: transform 0.3s` on the
+   already rely on, `.bush-sway-target` declares `transition: transform 0.3s` on the
    bush image itself, so a transition here would silently kill the bush hover sway.
    Tailwind's `transition-*` utilities on any future sprite image would lose the same
    way.
 
    Nothing is lost by leaving it out. The grade is recomputed on the sky's ten-second
    tick, and its fastest ramp moves `artworkBrightness` by about 0.003 per tick, so
-   the sprites step by an imperceptible amount while the plate — which keeps its own
-   inline transition — eases between the same values. The two can never diverge by
+   the sprites step by an imperceptible amount while the plate, which keeps its own
+   inline transition: eases between the same values. The two can never diverge by
    more than a single tick's worth.
    ========================================================================== */
 [data-island-world-graded] img {
@@ -925,7 +925,7 @@ img {
   ── The opt-out contract ─────────────────────────────────────────────────────
 
   `data-island-world-grade="exclude"` means "this image is not environment art;
-  leave its own rendering alone." Put it on the image, or on any wrapper — both
+  leave its own rendering alone." Put it on the image, or on any wrapper; both
   forms below are matched, because the two things that need it today are wrappers
   and a future sprite may want it on the image itself.
 
@@ -937,7 +937,7 @@ img {
   - **The local Blobbi** (`MovableBlobbi`, on the `.blobbi-character` wrapper) and
     **remote players** (`MultiplayerLayer`, on the `[data-player-key]` wrapper).
     Their bodies are inline `<svg>` from `dangerouslySetInnerHTML`, which an `img`
-    rule cannot reach — but their **accessory overlays are real `<img>` elements**.
+    rule cannot reach: but their **accessory overlays are real `<img>` elements**.
     Without this, a hat would darken at night while the head it sits on did not.
   - **Future emissive or UI-like world sprites.** A lamp glow, a screen, a marker
     that must stay at full brightness can opt out at its own call site instead of
@@ -947,7 +947,7 @@ img {
   separate emissive layer, so grading them is correct. Exclusion is for art that
   demonstrably needs it, not for anything that depicts a light.
 
-  The attribute carries no phase logic and no colour — it only says "skip me", so
+  The attribute carries no phase logic and no colour; it only says "skip me", so
   there is still exactly one source of truth for what night looks like.
 */
 [data-island-world-graded] img[data-island-world-grade='exclude'],
@@ -970,7 +970,7 @@ img {
   Reduced motion, from two independent directions.
 
   1. The OS preference, honoured in CSS so it needs no JavaScript, no re-render
-     and no hook — it applies even before React hydrates.
+     and no hook: it applies even before React hydrates.
   2. The DEV harness's `data-island-sky-reduced-motion` attribute, which lets a
      developer check the reduced-motion presentation without changing their
      system settings.
@@ -980,7 +980,7 @@ img {
   actually asked for it.
 
   Turning the cloud animation off leaves each actor on its own inline
-  `transform`, which IslandSkyLayer sets to that actor's resting offset — three
+  `transform`, which IslandSkyLayer sets to that actor's resting offset, three
   clouds at three different widths and three different heights. The static
   composition is deliberately sparse rather than a stack, and nothing about the
   time of day was being communicated by the movement in the first place.
@@ -997,13 +997,13 @@ img {
   }
 }
 
-/* ── Blobbi Dance — arcade cabinet presentation ────────────────────────────
+/* ── Blobbi Dance, arcade cabinet presentation ────────────────────────────
    CSS-only decoration for the dance machine.
 
    Three rules hold everything in this block together:
 
      1. **Only `transform`, `opacity` and `box-shadow` animate.** No width, no
-        height, no top/left — nothing that forces layout while the song plays.
+        height, no top/left: nothing that forces layout while the song plays.
      2. **Nothing here is driven by React state.** The frame loop toggles a class
         or a data attribute a handful of times a second; the browser owns the
         tween. A decoration must never queue a re-render at 60 Hz, because the
@@ -1120,7 +1120,7 @@ img {
   animation: dance-mascot-wobble 420ms ease-out;
 }
 
-/* The reaction bubble is static markup whose visibility is an attribute switch —
+/* The reaction bubble is static markup whose visibility is an attribute switch,
    no mount, no unmount, no state update per hit. */
 [data-dance-reaction] {
   opacity: 0;
@@ -1137,7 +1137,7 @@ img {
 
 /* Touch lanes: no text selection, no iOS tap flash, no double-tap zoom, and no
    page scrolling started from inside a lane button. Deliberately scoped to the
-   lane controls — the rest of the document scrolls normally. */
+   lane controls: the rest of the document scrolls normally. */
 .dance-touch-lane {
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
@@ -1146,13 +1146,13 @@ img {
 }
 
 
-/* ── Air Hockey — table overlays ───────────────────────────────────────────
+/* ── Air Hockey, table overlays ───────────────────────────────────────────
    The playfield itself is a canvas, so there is almost nothing to style: the
    puck, the mallets, the trail and the impact rings are drawn in
    `hockey-draw.ts` and suppressed there under reduced motion.
 
-   What is left is the two DOM overlays that sit ON the table — the countdown
-   and the goal banner — and both use the same single entrance. It is named
+   What is left is the two DOM overlays that sit ON the table, the countdown
+   and the goal banner, and both use the same single entrance. It is named
    `arcade-*` rather than `hockey-*` because a countdown popping in is not a
    fact about air hockey, and Pool will want the identical thing.
 
@@ -1253,7 +1253,7 @@ img {
    Arrival veil + title, the Coin-grant burst, the welcome card. Every one of
    these is a short, in-frame moment; under reduced motion the components
    render without these classes, so no keyframe below needs a media guard of
-   its own — but the guard is here too, as belt and braces. */
+   its own: but the guard is here too, as belt and braces. */
 @keyframes blobbi-arrival-veil {
   0% { opacity: 1; }
   70% { opacity: 1; }

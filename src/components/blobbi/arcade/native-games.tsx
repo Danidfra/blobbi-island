@@ -16,7 +16,7 @@ import { AirHockeyMachine } from './hockey/AirHockeyMachine';
 import { PoolMachine } from './pool/PoolMachine';
 
 /**
- * The launch resolver — the one place a game id becomes a React component.
+ * The launch resolver, the one place a game id becomes a React component.
  *
  * `catalogue.ts` is pure data and must stay that way: the moment it imports a
  * component, every consumer of the registry (a test, the reward boundary, a
@@ -27,8 +27,8 @@ import { PoolMachine } from './pool/PoolMachine';
  *
  * ## Failing safely is the whole job
  *
- * The resolver takes a full {@link ArcadeLaunchRequest} — the game, the machine
- * the player is standing at, and which kind of screen asked — rather than a bare
+ * The resolver takes a full {@link ArcadeLaunchRequest}, the game, the machine
+ * the player is standing at, and which kind of screen asked, rather than a bare
  * id. That signature is the correction: a resolver that answers "is there a
  * component for this id?" quietly implies every resolved game can run anywhere,
  * and that implication is what let Blobbi Dance be launched from a pool table.
@@ -42,7 +42,7 @@ import { PoolMachine } from './pool/PoolMachine';
  *     and `availability: 'playable'` still fails on the first check.
  *  2. **Wrong machine.** A `dedicated-machine` game names the machines it
  *     belongs to; Blobbi Dance names `arcade-dance-machine` and nothing else, so
- *     no other machine can produce a Blobbi Dance run — and therefore no result
+ *     no other machine can produce a Blobbi Dance run, and therefore no result
  *     can carry another machine's id.
  *  3. **Wrong surface.** A dedicated game is never launchable from the shared
  *     catalogue, and a shared-cabinet game is never launchable as if it were a
@@ -50,7 +50,7 @@ import { PoolMachine } from './pool/PoolMachine';
  *  4. **No implementation.** A registry entry can be added before its component
  *     exists; the lookup misses and the launch is refused.
  *  5. **The caller ignored all of the above.** The room checks the same
- *     conditions before it changes view, so this is belt and braces — which is
+ *     conditions before it changes view, so this is belt and braces, which is
  *     the correct amount for the boundary between "somebody else's code" and
  *     "our reward path".
  *
@@ -72,7 +72,7 @@ export interface NativeArcadeGameProps {
   /**
    * Leave the game.
    *
-   * WHERE that lands — the catalogue it was launched from, or the arcade room —
+   * WHERE that lands, the catalogue it was launched from, or the arcade room,
    * is the navigation model's decision (`exitGame`), not the game's. The room
    * aborts any live run through the reducer before changing view, so a game
    * never has to decide what leaving means either.
@@ -86,7 +86,7 @@ export interface NativeArcadeGameProps {
    * The turnstile that charges Arcade Tokens for a run.
    *
    * Passed down rather than reached for, so `src/arcade` stays a domain layer
-   * that cannot touch an inventory writer — the boundary test enforces that,
+   * that cannot touch an inventory writer, the boundary test enforces that,
    * and this is the seam that respects it. Omitted, every machine plays free.
    */
   readonly gameEntry?: ArcadeGameEntry;
@@ -104,7 +104,7 @@ export type NativeArcadeGameRenderer = (props: NativeArcadeGameProps) => ReactNo
  *
  * Every renderer takes the same {@link NativeArcadeGameProps} and forwards it to
  * a controller with the same shape. That is not an accident of three games
- * looking alike — it is the dedicated-machine pattern, written down in
+ * looking alike: it is the dedicated-machine pattern, written down in
  * `docs/blobbi-air-hockey.md` §2 and followed here for the third time without
  * needing a single change to this file's structure.
  */
@@ -159,7 +159,7 @@ export const NATIVE_ARCADE_GAME_IDS: readonly string[] = Object.freeze(
  * Resolve a launch request to a renderer, or `null` when it must not be
  * launched.
  *
- * `null` is not an error state to recover from — it is the answer. The caller
+ * `null` is not an error state to recover from; it is the answer. The caller
  * shows the player a plain message and leaves them where they were.
  */
 export function resolveNativeArcadeGame(

@@ -42,7 +42,7 @@
  * ```
  *
  * `mergePetStateTags` preserves unknown tags verbatim, so the marker survives
- * ordinary care writes — which is what makes a later read able to prove that
+ * ordinary care writes, which is what makes a later read able to prove that
  * THIS operation's event landed. Each settlement drops previous `blobbi_op`
  * tags before adding its own, so exactly one is ever present and the event
  * cannot accumulate one marker per session forever.
@@ -50,7 +50,7 @@
  * Honest limit: the marker is app-specific, opaque, and carries no protocol
  * meaning. It is evidence for reconciliation, not a public schema. And if some
  * other client republishes this pet without preserving unknown tags, the
- * marker is lost — reconciliation then reports `ambiguous` and the operation
+ * marker is lost, reconciliation then reports `ambiguous` and the operation
  * stays unresolved rather than silently subtracting twice.
  */
 
@@ -229,7 +229,7 @@ export function createEnergySettler(deps: EnergySettlementDeps): EnergySettler {
             );
             const appliedDelta = Math.max(0, Math.min(MAX_PET_ENERGY, energyBefore)) - energyAfter;
 
-            // No durable record, no publish — the rule the arcade learned.
+            // No durable record, no publish, the rule the arcade learned.
             const publishing = record({
               opId: op.opId,
               petId: op.petId,

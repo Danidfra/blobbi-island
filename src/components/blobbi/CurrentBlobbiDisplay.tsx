@@ -1,11 +1,11 @@
 /**
- * CurrentBlobbiDisplay — the LOCAL-PLAYER wrapper around the pure renderer.
+ * CurrentBlobbiDisplay: the LOCAL-PLAYER wrapper around the pure renderer.
  *
  * This component owns the data side: it resolves the current companion via
  * Nostr-backed hooks (`useBlobbis`, `useBlobbonautProfile`), fetches the local
  * player's equipped accessories, normalizes them, and hands everything to the
  * pure `BlobbiRendererView` as explicit props. Remote players do NOT go
- * through here — `RemoteBlobbiSprite` uses `BlobbiRendererView` directly, so
+ * through here, `RemoteBlobbiSprite` uses `BlobbiRendererView` directly, so
  * rendering someone else's Blobbi never subscribes to the local player's data.
  *
  * `visualOverride` remains supported for the info modal's read-only remote
@@ -23,7 +23,7 @@
  * read-only preview of another player's Blobbi rendered it wearing *your* hats.
  * Accessories are not a property of "the local user"; they are a property of
  * the Blobbi being drawn, and a caller that does not supply them does not have
- * them. Fetching another player's equipment is out of scope — the honest render
+ * them. Fetching another player's equipment is out of scope, the honest render
  * of "unknown equipment" is none.
  *
  * Geometry lives entirely in the pure renderer: one square fixed-px box per
@@ -35,7 +35,7 @@
  * resolved here and handed to the renderer as plain URLs (see
  * lib/island-accessory-sources.ts and docs/game-item-image-views.md). Which
  * accessories are drawn at all is a separate, unchanged question answered by
- * the package's rear-view slot rules — a published `back` image never makes a
+ * the package's rear-view slot rules, a published `back` image never makes a
  * face-only accessory visible from behind.
  */
 import { useId, useMemo } from "react";
@@ -71,7 +71,7 @@ export interface CurrentBlobbiDisplayProps {
   /**
    * Normalized gaze direction (each axis roughly -1..1). When provided, the
    * Blobbi's face is nudged slightly toward this direction to convey "looking".
-   * Undefined (the default) renders statically — used by previews/modals/cards.
+   * Undefined (the default) renders statically, used by previews/modals/cards.
    */
   eyeOffset?: { x: number; y: number };
   /**
@@ -79,7 +79,7 @@ export interface CurrentBlobbiDisplayProps {
    * behind: same body, colours, silhouette, limbs, accessories and particles,
    * with the face (eyes, pupils, mouth, nose/beak/whiskers, blush) not drawn.
    *
-   * This is a semantic rendering mode, not a CSS trick — the SVG itself is
+   * This is a semantic rendering mode, not a CSS trick, the SVG itself is
    * derived (`loadBlobbiSvg(..., 'rear')`), so nothing of the face survives in
    * the DOM and no mirroring is involved. Face-only accessories are hidden too
    * (see `REAR_VIEW_HIDDEN_SLOTS`).
@@ -91,7 +91,7 @@ export interface CurrentBlobbiDisplayProps {
     specialMark?: string;
   };
   /**
-   * Accessories to draw on a {@link visualOverride}. Plain, serializable data —
+   * Accessories to draw on a {@link visualOverride}. Plain, serializable data,
    * the caller states what that Blobbi is wearing.
    *
    * Meaningful ONLY alongside `visualOverride`: without an override the local
@@ -108,10 +108,10 @@ export interface CurrentBlobbiDisplayProps {
    *
    *   no `visualOverride`                     → the local companion's ACTIVE
    *     effects (ownership + kind:31634, resolved at the app root); an
-   *     `effectsOverride` replaces them — this is the preview path, purely
+   *     `effectsOverride` replaces them; this is the preview path, purely
    *     visual and never persisted.
    *   `visualOverride`, no `effectsOverride`  → that visual, no effects (the
-   *     honest render of unknown state — see the accessory ownership table).
+   *     honest render of unknown state; see the accessory ownership table).
    *   `visualOverride` + `effectsOverride`    → that visual, exactly those.
    *
    * Plain serializable data. Passing `[]` explicitly means "no effects".
@@ -121,7 +121,7 @@ export interface CurrentBlobbiDisplayProps {
    * Extra `itemAddress → definition` entries for resolving accessory ARTWORK.
    *
    * The equipment context only carries definitions for what a Blobbi already
-   * WEARS — that is all the world stage ever needs. A preview surface asks a
+   * WEARS: that is all the world stage ever needs. A preview surface asks a
    * different question ("what would this look like on me?"), and the answer
    * involves items the Blobbi does not wear, whose artwork the context has
    * therefore never resolved. Without this the accessory placed correctly and
@@ -153,7 +153,7 @@ export function CurrentBlobbiDisplay({
   facing = "front",
 }: CurrentBlobbiDisplayProps) {
   // SVG id namespace for this instance. A caller-supplied `idSuffix` always
-  // wins — remote actors and tests depend on a stable, meaningful id.
+  // wins: remote actors and tests depend on a stable, meaningful id.
   //
   // The fallback is `useId()` rather than `Math.random()`: React guarantees it
   // is unique per component instance AND identical between a server render and
@@ -163,7 +163,7 @@ export function CurrentBlobbiDisplay({
   const generatedId = useId();
   const scopeId = idSuffix ?? `bb${generatedId}`;
 
-  // Local-player data. These hooks are the reason this wrapper exists — the
+  // Local-player data. These hooks are the reason this wrapper exists, the
   // pure renderer below must never call them.
   const { data: blobbis } = useBlobbis();
   const { data: profile } = useBlobbonautProfile();
@@ -182,7 +182,7 @@ export function CurrentBlobbiDisplay({
   // which way this Blobbi is turned, so the resolver is built per `facing`
   // rather than being a module constant. Item definitions stay entirely on this
   // side of the boundary: the package's resolver contract still receives only
-  // `{ code, slot, url }` and still returns plain URLs — `code` is now the item
+  // `{ code, slot, url }` and still returns plain URLs, `code` is now the item
   // ADDRESS, which is opaque to the renderer.
   //
   // Read from context, not fetched here: this component renders once per Blobbi
@@ -242,7 +242,7 @@ export function CurrentBlobbiDisplay({
     // Effects follow the visual, exactly like accessories (see the prop doc):
     // an override visual draws only explicitly supplied effects; the local
     // companion draws its resolved ACTIVE effects, unless a preview override
-    // replaces them. Gated by `showAccessories` with the same reasoning —
+    // replaces them. Gated by `showAccessories` with the same reasoning,
     // a caller that asked for a bare Blobbi gets a bare Blobbi.
     const wornEffects = visualOverride
       ? effectsOverride

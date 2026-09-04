@@ -1,5 +1,5 @@
 /**
- * Publishing a polaroid publicly — the decision, and the event.
+ * Publishing a polaroid publicly, the decision, and the event.
  *
  * ## What this governs, and what it deliberately does not
  *
@@ -8,7 +8,7 @@
  * required for the island to work at all, and none of it is what
  * `publicNotePublishing` is about.
  *
- * That capability governs exactly one thing — the player taking something they
+ * That capability governs exactly one thing, the player taking something they
  * made and posting it, publicly and permanently, to the wider Nostr network
  * under their own key. Today that is one surface: the PhotoBooth's kind 1
  * polaroid share. Reading the capability as "no Nostr events" would have broken
@@ -23,8 +23,8 @@
  * published.
  *
  * So {@link permitPhotoShare} requires BOTH capabilities and is consulted once,
- * before the first byte moves. Checking them where they are used — upload gate at
- * the uploader, note gate at the publisher — would mean a profile that allows
+ * before the first byte moves. Checking them where they are used, upload gate at
+ * the uploader, note gate at the publisher, would mean a profile that allows
  * uploads and forbids notes performs a permanent public upload and then discovers
  * it may not post. The two capabilities remain independent; it is this
  * *operation* that needs both.
@@ -34,7 +34,7 @@
  * This phase is about permission, not about redesigning social posting. The
  * builder below emits exactly the event the PhotoBooth emitted before: a kind 1
  * note (NIP-10) with `t` hashtags and a NIP-92 `imeta` tag carrying `url`, `m`,
- * `summary` and `alt` — all NIP-94 fields, so the attachment is standard. No new
+ * `summary` and `alt`: all NIP-94 fields, so the attachment is standard. No new
  * kind, no custom tag, no Blobbi-specific publishing convention.
  */
 
@@ -89,7 +89,7 @@ export interface PhotoShareInput {
  * The kind 1 note, byte-for-byte what the PhotoBooth published before.
  *
  * Pure and exported so a test can pin the shape without a signer, a relay or a
- * network — which is what makes "the publication shape is unchanged" a checkable
+ * network: which is what makes "the publication shape is unchanged" a checkable
  * claim rather than a promise.
  */
 export function buildPhotoShareEvent(input: PhotoShareInput): {

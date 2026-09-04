@@ -7,7 +7,7 @@
  * flow deliver two very different things. Both live implementations satisfy it:
  *
  *  - the six cosmetics, delivered into kind:31633 by the SPEND'S OWN event
- *    (`src/inventory/arcade-cosmetic-redeemer.ts`, `atomicWithSpend: true`) —
+ *    (`src/inventory/arcade-cosmetic-redeemer.ts`, `atomicWithSpend: true`),
  *    there `grantPrize` writes nothing and verifies instead;
  *  - the Arcade Pass, delivered into the expiring entitlement store
  *    (`src/arcade/prizes/arcade-pass-prize.ts`), which genuinely is a second
@@ -24,11 +24,11 @@
  *  - it is **namespaced local storage**, per owner pubkey, under a key that
  *    says `temp` out loud;
  *  - it is **not** the kind:31633 inventory, is never mixed into the ticket
- *    event, and must never be presented as authoritative — another device
+ *    event, and must never be presented as authoritative, another device
  *    knows nothing about it;
  *  - it sits behind {@link ArcadePrizeOwnership} precisely so the real
  *    deliveries can replace it writer-by-writer without the Prize Counter
- *    changing shape — which is exactly what the cosmetics and the Pass did.
+ *    changing shape: which is exactly what the cosmetics and the Pass did.
  *
  * ## Idempotency is PER DELIVERY ATTEMPT, not per prize
  *
@@ -38,7 +38,7 @@
  * legitimately run several times) never increments the count, while a NEW
  * confirmed redemption of a repeatable prize increments it exactly once. A
  * non-repeatable prize additionally never counts past one, whatever ids
- * arrive — preventing the duplicate purchase is the redemption boundary's job
+ * arrive: preventing the duplicate purchase is the redemption boundary's job
  * (eligibility refuses an owned prize; the ledger blocks a second redemption),
  * and this store is the belt-and-braces behind it.
  *
@@ -64,12 +64,12 @@ export interface OwnedPrizeRecord {
 
 /**
  * The delivery capability the redemption hook holds. Async by contract even
- * though the temporary implementation is synchronous storage — the real
+ * though the temporary implementation is synchronous storage, the real
  * writers (inventory, badges, effects, furniture) will not be.
  */
 export interface ArcadePrizeOwnership {
   /**
-   * `true` when this delivery rides on the SPEND'S OWN kind:31633 event — the
+   * `true` when this delivery rides on the SPEND'S OWN kind:31633 event, the
    * debit and the grant are one replacement event, so they land together or
    * not at all (`src/inventory/arcade-cosmetic-redeemer.ts`).
    *
@@ -85,7 +85,7 @@ export interface ArcadePrizeOwnership {
    * every grant, and the question that makes per-attempt idempotency testable.
    */
   hasDelivery(pubkey: string, prizeId: string, redemptionId: string): Promise<boolean>;
-  /** Deliver one redemption. Idempotent per `redemptionId` — see the header. */
+  /** Deliver one redemption. Idempotent per `redemptionId`: see the header. */
   grantPrize(pubkey: string, prize: ArcadePrize, redemptionId: string): Promise<void>;
   listOwnedPrizes(pubkey: string): Promise<readonly OwnedPrizeRecord[]>;
 }
@@ -144,7 +144,7 @@ export function createLocalPrizeOwnership(now: () => number = Date.now): ArcadeP
       const all = readAll(pubkey);
       const existing = all[prize.id];
 
-      // The SAME attempt again — the recovery path re-running. Nothing moves.
+      // The SAME attempt again, the recovery path re-running. Nothing moves.
       if (existing?.deliveredRedemptionIds.includes(redemptionId)) return;
 
       const record: OwnedPrizeRecord = existing

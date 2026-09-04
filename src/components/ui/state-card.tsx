@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { MascotBlobbi } from "@/components/blobbi/MascotBlobbi";
 
 /**
- * StateCard — the island's loading, empty, error and waiting states.
+ * StateCard: the island's loading, empty, error and waiting states.
  *
  * Every screen that fetches something needs these four, and left to themselves
  * every screen invents them: a bare `<Loader2 className="animate-spin" />`
  * here, a grey "No items found" paragraph there, a red sentence somewhere else.
  * That inconsistency is most visible exactly where the game is least in
- * control — a slow relay, an empty inventory, a settlement still confirming —
+ * control: a slow relay, an empty inventory, a settlement still confirming,
  * which is the worst moment for the UI to look unfinished.
  *
  * One component, one shape: mascot, title, message, optional action, optional
@@ -18,14 +18,14 @@ import { MascotBlobbi } from "@/components/blobbi/MascotBlobbi";
  *
  * ## The kinds
  *
- * - `loading` — we asked and are waiting. The mascot floats, a spinner sits on
+ * - `loading`: we asked and are waiting. The mascot floats, a spinner sits on
  *   its shoulder.
- * - `pending` — something is happening that we cannot cancel and must not
+ * - `pending`: something is happening that we cannot cancel and must not
  *   present as an error: a Coin settlement confirming, a mine session closing.
  *   Distinct from `loading` because the copy and the stakes differ, and because
  *   an offered "Retry" would be actively wrong.
- * - `empty` — the answer arrived and it is nothing.
- * - `error` — the answer did not arrive. The mascot sleeps.
+ * - `empty`: the answer arrived and it is nothing.
+ * - `error`: the answer did not arrive. The mascot sleeps.
  *
  * `compact` drops the mascot and the padding for use inside a panel or a modal
  * body, where a full-size mascot would push the real content off screen.
@@ -38,7 +38,7 @@ interface StateCardProps {
   title: string;
   message?: string;
   /**
-   * Primary action — Retry, Create, Go shopping.
+   * Primary action: Retry, Create, Go shopping.
    *
    * Deliberately ignored for `pending`: that state exists precisely for work
    * the player cannot influence, and a button that cannot help is worse than
@@ -46,7 +46,7 @@ interface StateCardProps {
    */
   actionLabel?: string;
   onAction?: () => void;
-  /** Secondary slot — a RelaySelector on an empty state, a hint, a balance. */
+  /** Secondary slot: a RelaySelector on an empty state, a hint, a balance. */
   children?: React.ReactNode;
   /** Inline form: no mascot, tighter padding. For use inside a panel. */
   compact?: boolean;

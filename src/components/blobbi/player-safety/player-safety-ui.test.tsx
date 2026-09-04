@@ -187,7 +187,7 @@ describe('report', () => {
     });
     openReport();
 
-    // Shown, so the reporter can see what they would be attaching — and NOT
+    // Shown, so the reporter can see what they would be attaching, and NOT
     // attached, because opening a card is not a decision about a message.
     expect(screen.getByTestId('report-evidence').textContent).toBe('be quiet');
     expect(screen.getByTestId('report-include-message')).not.toBeChecked();
@@ -214,7 +214,7 @@ describe('report', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save report' }));
 
     const [stored] = listReports();
-    // A pointer and the rendered meaning — not the event.
+    // A pointer and the rendered meaning; not the event.
     expect(stored.evidence?.eventId).toBe('e'.repeat(64));
     expect(stored.evidence?.renderedText).toBe('be quiet');
     expect(JSON.stringify(stored)).not.toContain('s'.repeat(128));
@@ -283,7 +283,7 @@ describe('settings', () => {
 
   it('identifies players by key, never by a name they chose', () => {
     // A list built to stop showing you someone's words must not show you their
-    // words — and a blocked player could otherwise write into this screen by
+    // words: and a blocked player could otherwise write into this screen by
     // renaming their Blobbi.
     setPlayerBlocked(RUDE, true);
     const dialog = openSettings();

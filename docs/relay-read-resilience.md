@@ -2,13 +2,13 @@
 
 Status: **implemented.** Player state now survives an uncertain relay. The Mine
 durable-session / end-of-run energy settlement is deliberately NOT part of this
-phase — see [`mine-session-settlement-audit.md`](mine-session-settlement-audit.md).
+phase: see [`mine-session-settlement-audit.md`](mine-session-settlement-audit.md).
 
 ---
 
 ## 1. Why `NPool.query()`'s empty result is insufficient
 
-`NPool.query()` — the API every read in this app went through — **never
+`NPool.query()`: the API every read in this app went through, **never
 throws**. Its own documentation says so:
 
 > *"If the signal is aborted, this method will return partial results instead of
@@ -32,8 +32,8 @@ known player with 1 Blobbi
 → "Your nest is empty. You don't have a Blobbi yet."
 ```
 
-A *thrown* error would have been safe — React Query keeps the previous `data`
-behind an error — but the pool never threw, so that path was unreachable.
+A *thrown* error would have been safe: React Query keeps the previous `data`
+behind an error: but the pool never threw, so that path was unreachable.
 
 ## 2. The new read-completion semantics
 
@@ -44,7 +44,7 @@ only forwards `EOSE`/`CLOSED` once every routed relay has sent them:
 | Observed | Outcome |
 |---|---|
 | `EVENT…` then `EOSE` | `answered` |
-| `EOSE` with no events | `answered` with `events: []` — **the only confirmed empty** |
+| `EOSE` with no events | `answered` with `events: []`: **the only confirmed empty** |
 | our deadline elapses first | `unknown('timeout')` |
 | caller's signal aborts | `unknown('aborted')` |
 | `CLOSED` before `EOSE` | `unknown('closed')` |
@@ -57,7 +57,7 @@ observable.
 
 **Partial reads are `unknown`, not partial results.** If events arrived and then
 the deadline elapsed, `partialCount` records how many, but the outcome is
-`unknown` — "3 of your 5 Blobbis" is a worse lie than "we don't know yet".
+`unknown`: "3 of your 5 Blobbis" is a worse lie than "we don't know yet".
 
 ### What this deliberately does NOT claim
 
@@ -79,8 +79,8 @@ readRelayConfirmedOrThrow(...)               → NostrEvent[]
 ```
 
 `RelayReadUnknownError` carries `reason` and `partialCount`. Its message is a
-stable vocabulary — `relay-read-timeout`, `relay-read-closed`,
-`relay-read-aborted`, `relay-read-unreachable` — for logs and tests. **Product
+stable vocabulary, `relay-read-timeout`, `relay-read-closed`,
+`relay-read-aborted`, `relay-read-unreachable`: for logs and tests. **Product
 UI never renders it**: the UI only needs "we know there are none" versus "we
 could not establish the state".
 
@@ -102,7 +102,7 @@ answered empty → read again
 unknown                         → unknown
 ```
 
-Bounded to exactly two reads — no loop, no backoff, no sleep — and only the
+Bounded to exactly two reads, no loop, no backoff, no sleep, and only the
 empty branch pays the second round-trip, so the common case costs nothing.
 
 **Where it is applied, and why:**
@@ -125,12 +125,12 @@ The invariant: **known-good state is never downgraded by doubt.**
   so React Query retains the last successful `data` behind `error`.
 - The selection screen keeps rendering the pet cards when a refetch fails, with
   a quiet `Reconnecting…` note. It does *not* swap the collection for an error
-  screen — that would be the same destructive downgrade in friendlier clothes.
+  screen: that would be the same destructive downgrade in friendlier clothes.
 - The error screen ("The nest is hiding") is only for **nothing known + read
   unusable**.
 - `"You don't have a Blobbi yet."` renders only from a **confirmed** empty list
-  (`Array.isArray(blobbis) && !hasBlobbis && !isReadUnusable`). `undefined` —
-  never successfully read — is explicitly not an empty nest.
+  (`Array.isArray(blobbis) && !hasBlobbis && !isReadUnusable`). `undefined`,
+  never successfully read: is explicitly not an empty nest.
 
 ## 5. Player routing invariant
 
@@ -147,7 +147,7 @@ while playing:
   known list, no selectable companion → selection
 
 before the world:
-  unchanged — route to the selection screen, which renders its own
+  unchanged: route to the selection screen, which renders its own
   loading / unknown / confirmed-empty states honestly
 ```
 
@@ -182,7 +182,7 @@ writers' error contracts, and strict publish.
   produces `unknown`, which is retained-and-quiet. Disabling it without evidence
   would trade a fixed problem for a staleness problem.
 - **Timeouts are unchanged** (2 s for `useBlobbis`, 3 s for profile/status/
-  inventory). They were never the bug — misclassifying them was. Raising them
+  inventory). They were never the bug, misclassifying them was. Raising them
   would only slow down the honest "unknown" signal. Mobile resume is worth
   re-measuring against real relays before adjusting; there is no evidence yet
   that justifies a change.
@@ -191,19 +191,19 @@ writers' error contracts, and strict publish.
 
 Ranked by consequence:
 
-1. **`useFirstEggAdoption`** (`src/hooks/useFirstEggAdoption.ts`) — reads the
+1. **`useFirstEggAdoption`** (`src/hooks/useFirstEggAdoption.ts`): reads the
    owner profile as a **merge base for a republish**. A false empty would build
    a fresh profile and drop existing fields. Same class as the inventory base.
    Left alone here because adoption's *expected* case genuinely is an absent
    profile, so the change needs its own tests.
-2. **`fetchInventory`** (the non-confirming kind:31633 read) — still used by
+2. **`fetchInventory`** (the non-confirming kind:31633 read): still used by
    `useUseItem`'s ownership guard and `useEquipmentMutation`. A false empty
    blocks a legitimate action ("Not enough X"), which is annoying but not
    destructive.
-3. **`usePlacementState`** (kind:31634) — a false empty makes equipped cosmetics
+3. **`usePlacementState`** (kind:31634): a false empty makes equipped cosmetics
    briefly disappear. Presentation only.
 4. **`PlayingView`** single-Blobbi read, `MultiplayerLayer`, `useSharedPlayback`,
-   `useAuthor`, `useLoggedInAccounts`, `useBlobbiCoreProbe` — presence, social
+   `useAuthor`, `useLoggedInAccounts`, `useBlobbiCoreProbe`: presence, social
    and metadata reads where a transient empty is self-correcting.
 
 ## 9. Remaining Mine work (next phase)

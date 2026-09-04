@@ -1,22 +1,22 @@
 /**
- * The shopping mall's staircase — the regression that obstacle avoidance caused,
+ * The shopping mall's staircase, the regression that obstacle avoidance caused,
  * and the contract that keeps it fixed.
  *
  * ## The bug this file exists for
  *
  * The mall is the one location whose walkable floor is not a blob: three levels
- * joined by narrow stair columns. It also contains ZERO `MovementBlocker`s —
+ * joined by narrow stair columns. It also contains ZERO `MovementBlocker`s,
  * every storefront is painted scenery.
  *
  * The first route planner treated "this straight line leaves the walkable
  * polygon" as an obstruction. So a walk from the ground floor to any upper-level
  * target found a segment that left the floor, looked for the blocker
- * responsible, found none — the mall has none — and returned `null`. `goTo`
+ * responsible, found none, the mall has none, and returned `null`. `goTo`
  * refuses a null route, so the Blobbi did not move a single pixel. Every
  * storefront on the middle level, and the whole top level, became unreachable;
  * the click was silently dropped, then the pending interaction stalled itself
  * out. Measured before the fix: all four upper-level destinations, from all five
- * start positions, in both directions — `null` every time.
+ * start positions, in both directions, `null` every time.
  *
  * ## What actually distinguishes the two things
  *
@@ -26,8 +26,8 @@
  * furniture; the contour was never its business.
  *
  * So these tests do not stop at "a route was returned". They SIMULATE the walk
- * the controller would run — same fixed-timestep stepping, same
- * `constrainPosition` clamp, same waypoint advance — and assert that it arrives,
+ * the controller would run, same fixed-timestep stepping, same
+ * `constrainPosition` clamp, same waypoint advance, and assert that it arrives,
  * that it stays on the floor, and that it goes up the stairs to get there.
  */
 
@@ -93,7 +93,7 @@ interface WalkResult {
   /** Every position the walk passed through, in order. */
   path: Position[];
   frames: number;
-  /** Positions the boundary had to move — there should never be any. */
+  /** Positions the boundary had to move; there should never be any. */
   offFloor: Position[];
 }
 
@@ -103,7 +103,7 @@ interface WalkResult {
  * Deliberately a re-implementation of the rAF body rather than a mock of it:
  * fixed 16 ms steps at the default 120 design-px/s, move toward the current
  * waypoint, clamp with `constrainPosition`, advance when inside
- * `MOVEMENT_SNAP_PX`. Behaviour is asserted, not frame counts — the only thing
+ * `MOVEMENT_SNAP_PX`. Behaviour is asserted, not frame counts, the only thing
  * the frame budget does is stop a stuck walk from running forever.
  */
 function walk(
@@ -187,7 +187,7 @@ describe('the regression itself', () => {
 
     expect(isOnFloor(start, MALL)).toBe(true);
     expect(isOnFloor(target, MALL)).toBe(true);
-    // Nothing solid is involved at all — the mall registers no blockers.
+    // Nothing solid is involved at all, the mall registers no blockers.
     expect(planRoute(start, target, MALL, [])).not.toBeNull();
   });
 
@@ -227,7 +227,7 @@ describe('ground floor → middle level', () => {
   it('does not stall at the stair corner', () => {
     // The corner is where the ground floor, the connector triangle and the
     // stair column meet. A walk that gets stuck there stops making progress
-    // while still far from its target — which is precisely what "it gets stuck
+    // while still far from its target, which is precisely what "it gets stuck
     // around a stair corner" looked like.
     const target = BADGES_STORE_FACADE.walkTarget;
     const route = planRoute(GROUND, target, MALL, [])!;
@@ -249,7 +249,7 @@ describe('ground floor → middle level', () => {
     // The mall has two: the left column joins the ground floor to the middle
     // walkway, and the right one carries on from the walkway to the top. A walk
     // to the top has to use them in that order, and nothing in this file (or in
-    // the planner) knows that — it falls out of the boundary data.
+    // the planner) knows that; it falls out of the boundary data.
     const top = { x: 50, y: 33 };
     expect(isOnFloor(top, MALL)).toBe(true);
     const route = planRoute(GROUND, top, MALL, [])!;
@@ -305,7 +305,7 @@ describe('middle level → ground floor', () => {
 
 describe('the mall still refuses what it should', () => {
   it('will not walk to a point outside the mall floor', () => {
-    // Off the walkable polygon entirely — mid-air between two levels.
+    // Off the walkable polygon entirely, mid-air between two levels.
     const midAir = { x: 50, y: 75 };
     expect(isOnFloor(midAir, MALL)).toBe(false);
     expect(planRoute(GROUND, midAir, MALL, [])).toBeNull();
@@ -346,7 +346,7 @@ describe('every mall storefront asks for somewhere that exists', () => {
     const derivedFromSpriteBase = { x: 57.7, y: 61.0 };
     expect(isOnFloor(derivedFromSpriteBase, MALL)).toBe(false);
     expect(planRoute(GROUND, derivedFromSpriteBase, MALL, [])).toBeNull();
-    // And the point actually used instead is only a little below it — the
+    // And the point actually used instead is only a little below it, the
     // correction is minimal, not a relocation.
     const used = EXIT_POSITIONS['shop:clothing-store-inside'];
     expect(Math.abs(used.x - derivedFromSpriteBase.x)).toBeLessThan(1);

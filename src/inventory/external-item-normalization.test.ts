@@ -5,15 +5,15 @@
  * whole cross-game feature:
  *
  * 1. **Island already understands a partner's item generically.** The Farm's
- *    Strawberry definition contains no Blobbi vocabulary at all — no item id,
- *    no action, no stages, no effects, no slot — and the EXISTING
+ *    Strawberry definition contains no Blobbi vocabulary at all; no item id,
+ *    no action, no stages, no effects, no slot, and the EXISTING
  *    `resolveFromDefinition` still produces a correct, renderable item from it.
  *    No Farm-specific parsing was added to make this true.
  *
  * 2. **Trust did not widen.** `parseOfficialItemDefinition` means exactly what
  *    it meant before: official BLOBBI items only. The partner path is a
  *    separate, narrower-purpose parser, and the trust decision it makes is
- *    about the ISSUER's whole pubkey — never about a `d`.
+ *    about the ISSUER's whole pubkey; never about a `d`.
  *
  * The fixture's id and signature are verified first, so an assertion about how
  * Strawberry resolves is an assertion about a real published event and not
@@ -79,7 +79,7 @@ describe('generic normalization of a partner definition', () => {
       'A fresh strawberry harvested on the farm.',
     );
 
-    // The PRIMARY image is the unmarked `image` tag, chosen by the package —
+    // The PRIMARY image is the unmarked `image` tag, chosen by the package,
     // an inventory cell must never show a pose-specific view.
     expect(primaryItemImageUrl(resolved)).toBe(FARM_STRAWBERRY_PRIMARY_IMAGE);
     expect(resolved.images[0].marker).toBeUndefined();

@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — turning kind:31634 placements into renderer input.
+ * Blobbi Island: turning kind:31634 placements into renderer input.
  *
  * THE BOUNDARY THIS FILE DEFENDS. `@blobbi/react` draws accessories from
  * `{ code, slot, x, y, scale, rot, flipX?, url? }` where x/y are percentages of
@@ -7,7 +7,7 @@
  * placement that may carry a 2D or 3D reference, an Euler or quaternion
  * rotation, a 2D or 3D scale, and any number of fields neither library knows.
  * Neither of them should learn the other's model, so the translation happens
- * here — in Island, which is the only party that knows both.
+ * here: in Island, which is the only party that knows both.
  *
  * DEFAULTS LIVE HERE, NOT IN THE PROTOCOL. The package deliberately writes no
  * rendering defaults into a parsed document: a placement with no `position` is
@@ -47,7 +47,7 @@ export const PLACEMENT_RENDER_DEFAULTS = {
 /**
  * The reference coordinate system Island writes and can draw.
  *
- * Percent of a 100x100 box with a top-left origin — the same space the
+ * Percent of a 100x100 box with a top-left origin, the same space the
  * renderer's x/y percentages already live in, so no conversion is ever needed
  * and none is ever performed.
  */
@@ -65,7 +65,7 @@ export const ISLAND_PLACEMENT_REFERENCE = {
  * An ABSENT reference is accepted: a document that carries no coordinates needs
  * no coordinate system, and one that does carries them in the only space this
  * client writes. A reference that is present and is anything other than 2D
- * percent is refused — a 3D metre position means something this renderer cannot
+ * percent is refused, a 3D metre position means something this renderer cannot
  * represent.
  */
 export function referenceIsRenderable(
@@ -91,7 +91,7 @@ export type TransformResult =
  *
  * `code` is the ITEM ADDRESS, not a legacy accessory code. The renderer treats
  * it as an opaque stable identity and hands it back to the source resolver,
- * which is the only thing that needs to know it is an address — so the package
+ * which is the only thing that needs to know it is an address, so the package
  * stays free of Blobbi concepts and the renderer stays free of Nostr ones.
  */
 export function toAccessoryPlacementInput(
@@ -118,7 +118,7 @@ export function toAccessoryPlacementInput(
       return { ok: false, reason: 'unsupported-rotation' };
     }
     // 2D rotation is the z component. x/y tilts are out-of-plane and are
-    // ignored rather than refused — a hat tipped 3° forward still reads as
+    // ignored rather than refused, a hat tipped 3° forward still reads as
     // that hat, and refusing would hide it entirely.
     rot = typeof rotation.z === 'number' ? rotation.z : PLACEMENT_RENDER_DEFAULTS.rot;
   }
@@ -145,7 +145,7 @@ export function toAccessoryPlacementInput(
  *
  * The entry `id` IS the slot. One equipped item per slot is Island's model, and
  * making the id the slot means `setEquippedPlacementForSlot`'s last-wins
- * collapse and a plain id lookup agree by construction — there is never an
+ * collapse and a plain id lookup agree by construction; there is never an
  * `id: "abc123"` in a slot whose name is `head`.
  *
  * Only fields the player actually set are written. An item at the default
@@ -155,7 +155,7 @@ export function toAccessoryPlacementInput(
  */
 export function buildEquipEntry(options: {
   itemAddress: string;
-  /** A wearable accessory slot or a visual-effect slot — same document. */
+  /** A wearable accessory slot or a visual-effect slot, same document. */
   slot: PlacementSlot;
   x?: number;
   y?: number;

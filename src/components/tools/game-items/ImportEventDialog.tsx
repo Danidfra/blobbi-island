@@ -1,10 +1,10 @@
 /**
- * "Import event JSON" — paste a whole kind:31632 event and get the form back.
+ * "Import event JSON": paste a whole kind:31632 event and get the form back.
  *
  * The parse is a PURE function (`importEventJson`), so this component holds no
  * conversion logic of its own: it collects text, shows what came back, and
  * hands the finished form up. Nothing here reaches a relay, a signer or a
- * publish mutation — importing is an editor action, and the only way to publish
+ * publish mutation: importing is an editor action, and the only way to publish
  * remains the review dialog's explicit button.
  *
  * ## Two-step, like "Load published"
@@ -12,14 +12,14 @@
  * Importing REPLACES the editor, which autosaves into the same draft slot. So
  * when the editor holds real work, the import is parsed and held while the user
  * confirms, rather than applied and apologised for. With an empty or untouched
- * editor it applies immediately — a confirmation nobody needs is just a click.
+ * editor it applies immediately, a confirmation nobody needs is just a click.
  *
  * ## What the summary is for
  *
  * The pasted JSON is somebody's authored artefact and may be subtly wrong: the
  * wrong `d`, no image, an unsigned draft mistaken for a published event. The
- * summary states what was actually understood — identity, image count,
- * preserved unknown tags, provenance — BEFORE anything replaces the editor,
+ * summary states what was actually understood, identity, image count,
+ * preserved unknown tags, provenance: BEFORE anything replaces the editor,
  * because that is the moment the author can still say no.
  */
 
@@ -134,7 +134,7 @@ export function ImportEventDialog({
               />
               <p className="text-[11px] text-muted-foreground">
                 <code>id</code>, <code>pubkey</code>, <code>created_at</code> and{' '}
-                <code>sig</code> are optional — an unsigned draft imports fine. Any
+                <code>sig</code> are optional: an unsigned draft imports fine. Any
                 that are present are shown as provenance and are not attached: this
                 becomes a local draft that publishes under your own key.
               </p>
@@ -221,7 +221,7 @@ export function ImportSummary({ imported }: { imported: ImportedEvent }) {
       <ul className="space-y-0.5 text-[11px] text-muted-foreground">
         <li>
           {form.images.length === 0
-            ? 'No image tag — add artwork in the Images section.'
+            ? 'No image tag, add artwork in the Images section.'
             : `${primaryImages.length} primary + ${markedImages.length} marked view(s).`}
         </li>
         <li>
@@ -249,7 +249,7 @@ export function ImportSummary({ imported }: { imported: ImportedEvent }) {
         {provenance && (
           <li>
             {provenance.isSigned ? 'Signed' : 'Unsigned'} paste
-            {provenance.pubkey && ` by ${provenance.pubkey.slice(0, 12)}…`} — imported
+            {provenance.pubkey && ` by ${provenance.pubkey.slice(0, 12)}…`}, imported
             as a new local draft.
           </li>
         )}

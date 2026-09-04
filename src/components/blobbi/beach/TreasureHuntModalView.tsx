@@ -1,17 +1,17 @@
 /**
- * Treasure Hunt — the contained-game controller (VIEW layer).
+ * Treasure Hunt: the contained-game controller (VIEW layer).
  *
  * Split from the production wrapper (`TreasureHuntModal.tsx`) so this module
  * imports NO wallet, ledger or relay code: the reward service arrives as a
  * prop (type-only import), which is what lets the dev harness and the tests
- * drive the full flow with an in-memory fake — and lets the harness's
+ * drive the full flow with an in-memory fake, and lets the harness's
  * no-write-path boundary test hold by import graph, not by promise.
  *
  * The Beach counterpart of `AirHockeyMachine`: it owns the screen flow
- * (intro → searching → results), the round state (the PURE reducer's state —
+ * (intro → searching → results), the round state (the PURE reducer's state,
  * there is no second copy of the game anywhere), the drift-resistant clock,
  * the interruption policy, the audio engine's lifecycle, the
- * exit-confirmation rule — and, since the Coin cutover, the REWARD lifecycle
+ * exit-confirmation rule: and, since the Coin cutover, the REWARD lifecycle
  * around a hunt:
  *
  * ```
@@ -25,14 +25,14 @@
  *
  * The reward machinery is consumed through {@link TreasureHuntRewardsService}
  * so the production wrapper injects the real hook while tests and the dev
- * harness inject a fully mocked service — the view never talks to a relay,
+ * harness inject a fully mocked service, the view never talks to a relay,
  * a ledger or a wallet directly.
  *
  * ## Trust model (repeated here on purpose)
  *
  * Rewards are PROVISIONAL and client-trusted: the official client authorizes
  * them locally and publishes the grant itself. Reservations, op ids and the
- * durable ledgers give exactly-once application and refresh-safety — not
+ * durable ledgers give exactly-once application and refresh-safety; not
  * cheat-proofing. See `docs/blobbi-coin-cutover.md`.
  */
 
@@ -87,7 +87,7 @@ interface TreasureHuntModalBaseProps {
   onClose: () => void;
   /**
    * LOCAL-ONLY actor suppression while a hunt is actually running (searching
-   * or results — not the intro, where the Island is still the scene). This is
+   * or results: not the intro, where the Island is still the scene). This is
    * a presentation callback and must never be wired to the published hidden
    * pose; see the presence note in `PlayingView`.
    */
@@ -144,7 +144,7 @@ export function TreasureHuntModalView({
   /**
    * Abandon a still-searching rewarded hunt: the slot is consumed or
    * released per the documented participation rule (the service decides).
-   * Finished rounds are never abandoned — their reward intent must survive.
+   * Finished rounds are never abandoned, their reward intent must survive.
    */
   const abandonIfSearching = useCallback(() => {
     const current = roundRef.current;
@@ -171,7 +171,7 @@ export function TreasureHuntModalView({
   }, [abandonIfSearching, disposeAudio, setTool]);
 
   // Closing the shell (or unmounting mid-run) must silence and forget
-  // everything: no beep — and no dangling reservation — may outlive it.
+  // everything: no beep, and no dangling reservation, may outlive it.
   useEffect(() => {
     if (!open) resetLocalState();
   }, [open, resetLocalState]);
@@ -208,7 +208,7 @@ export function TreasureHuntModalView({
       policy: dev?.policy ?? TREASURE_HUNT_UI_POLICY,
     });
     if (!created.ok) {
-      setStartError('The tide scrambled this hunt — please try starting again.');
+      setStartError('The tide scrambled this hunt, please try starting again.');
       return;
     }
     // The audio engine is built INSIDE the click, BEFORE any await, so the
@@ -286,7 +286,7 @@ export function TreasureHuntModalView({
     });
   }, [digCount, elapsedBucket]);
 
-  // A finished round moves to results exactly once, whatever ended it — and
+  // A finished round moves to results exactly once, whatever ended it, and
   // a rewarded round hands its finalized result to the (provisional)
   // authorization exactly once.
   useEffect(() => {

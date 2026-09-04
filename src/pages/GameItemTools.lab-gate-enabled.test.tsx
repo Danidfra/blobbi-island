@@ -1,5 +1,5 @@
 /**
- * The Equipment Lab's build gate — the ENABLED build
+ * The Equipment Lab's build gate, the ENABLED build
  * (`VITE_ENABLE_LIVE_INVENTORY_LAB=true`).
  *
  * The disabled twin is `GameItemTools.lab-gate.test.tsx`; see its module doc
@@ -11,7 +11,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 const labMounts = vi.hoisted(() => vi.fn());
 
 // The page and the flag module both read the env at THEIR import time, so
-// the variable is stubbed before the page is (dynamically) imported below —
+// the variable is stubbed before the page is (dynamically) imported below,
 // exactly what a VITE_ENABLE_LIVE_INVENTORY_LAB=true build does statically.
 vi.stubEnv('VITE_ENABLE_LIVE_INVENTORY_LAB', 'true');
 

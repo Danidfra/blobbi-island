@@ -3,7 +3,7 @@
  *
  * This is a source-level guard rather than a behavioral test, because the
  * failure it prevents is a reintroduction: someone restores a helper "just for
- * one screen", and Island quietly has two equipment systems again — one the
+ * one screen", and Island quietly has two equipment systems again; one the
  * renderer reads and one the editor writes, which is exactly the split-brain
  * this migration removed.
  *

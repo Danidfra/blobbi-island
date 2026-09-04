@@ -6,8 +6,8 @@
  *
  *   - a hostile kind 21201 never becomes a bubble under Family, while the SAME
  *     event still does under Standard;
- *   - a spoofed structured message — a valid phrase id with abusive text bolted
- *     on — renders the catalog phrase and never the text, in EITHER profile;
+ *   - a spoofed structured message, a valid phrase id with abusive text bolted
+ *     on: renders the catalog phrase and never the text, in EITHER profile;
  *   - a template renders the sentence this build reconstructs, not anything the
  *     sender wrote;
  *   - refusing a message never removes the person who sent it.
@@ -40,13 +40,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,

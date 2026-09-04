@@ -7,7 +7,7 @@
  * matches state by position, so every toggle unmounted the entire game and
  * mounted a fresh copy: the Blobbi reappeared at its spawn point, the seat was
  * gone, the YouTube player was destroyed, presence started a new session id, and
- * a host silently lost the watch session it had created — a session nobody else
+ * a host silently lost the watch session it had created, a session nobody else
  * could ever control, because authority is the author's pubkey.
  *
  * Nothing navigated. Nothing reloaded. It was a remount, which is why these
@@ -70,7 +70,7 @@ function installFullscreenApi() {
   });
 }
 
-/** Something OTHER than the shell root goes fullscreen — e.g. the video iframe. */
+/** Something OTHER than the shell root goes fullscreen, e.g. the video iframe. */
 async function fullscreenSomethingElse(element: Element) {
   await act(async () => {
     fullscreenElement = element;
@@ -161,7 +161,7 @@ describe('BlobbiAppShell across a fullscreen toggle', () => {
     expect(mounts).toBe(1);
   });
 
-  it('ignores a DESCENDANT going fullscreen — the video owns that layer, not the shell', async () => {
+  it('ignores a DESCENDANT going fullscreen, the video owns that layer, not the shell', async () => {
     // The theater's fullscreen button requests fullscreen on the YouTube iframe.
     // A shell that treated "something is fullscreen" as "I am fullscreen" would
     // switch layout underneath a video it never fullscreened.

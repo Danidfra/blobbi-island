@@ -2,7 +2,7 @@
  * The PORTABILITY proof for the pure renderer (Phase 4).
  *
  * Everything below renders `BlobbiRendererView` from plain, serializable data
- * with NO providers at all — no `TestApp`, no QueryClient, no Nostr provider,
+ * with NO providers at all; no `TestApp`, no QueryClient, no Nostr provider,
  * no router, no world/presence context, no mocks. Nothing is stubbed out,
  * because there is nothing to stub: if the renderer's subtree reached any of
  * those, these renders would throw.
@@ -14,7 +14,7 @@
  * through a re-export).
  *
  * Every case here is also a case a future `@blobbi/react` consumer will hit on
- * day one — incomplete relay data, a stage nobody sent, an accessory whose
+ * day one: incomplete relay data, a stage nobody sent, an accessory whose
  * numbers are broken, several Blobbis on one page.
  */
 import { describe, it, expect } from 'vitest';
@@ -76,7 +76,7 @@ describe('renders from plain data with no providers whatsoever', () => {
 
     expect(svgOf(front.container)).not.toBeNull();
     expect(svgOf(rear.container)).not.toBeNull();
-    // Same Blobbi, different drawing — not a CSS mirror of the same markup.
+    // Same Blobbi, different drawing; not a CSS mirror of the same markup.
     expect(rear.container.innerHTML).not.toBe(front.container.innerHTML);
     expect(rear.container.innerHTML).not.toContain('blobbi-pupil');
   });
@@ -92,7 +92,7 @@ describe('renders from plain data with no providers whatsoever', () => {
 
     expect(sleeping.container.innerHTML).not.toBe(awake.container.innerHTML);
     // `isSleeping` and the legacy seated `eyesClosed` mean the same thing to
-    // the drawing, and the render model collapses them — so they must produce
+    // the drawing, and the render model collapses them, so they must produce
     // byte-identical markup.
     expect(seated.container.innerHTML).toBe(sleeping.container.innerHTML);
   });
@@ -142,7 +142,7 @@ describe('renders from plain data with no providers whatsoever', () => {
     expect(none.container.querySelectorAll('[data-accessory-layer-group]')).toHaveLength(0);
   });
 
-  it('renders an incomplete visual — the minimum a consumer can send', () => {
+  it('renders an incomplete visual, the minimum a consumer can send', () => {
     // No stage, no colors, no name: everything a relay might omit.
     const { container } = render(<BlobbiRendererView visual={{}} instanceId="plain-empty" />);
     expect(svgOf(container)).not.toBeNull();
@@ -228,7 +228,7 @@ describe('independent simultaneous instances stay isolated', () => {
     expect(new Set(ids).size, 'duplicate SVG ids across instances').toBe(ids.length);
 
     // Every url(#…) reference resolves to an id that exists in the SAME
-    // document — the failure mode of colliding ids is a reference silently
+    // document: the failure mode of colliding ids is a reference silently
     // binding to another Blobbi's gradient.
     const refs = Array.from(container.innerHTML.matchAll(/url\(#([^)]+)\)/g)).map((m) => m[1]);
     expect(refs.length).toBeGreaterThan(0);
@@ -238,7 +238,7 @@ describe('independent simultaneous instances stay isolated', () => {
   });
 
   it('two renderers given the SAME instance id are the caller getting what they asked for', () => {
-    // Not a bug to defend against here — a documented contract. Callers that
+    // Not a bug to defend against here, a documented contract. Callers that
     // need isolation pass distinct ids (remote actors key by pubkey+session);
     // callers that intentionally render the same Blobbi twice may share one.
     const { container } = render(

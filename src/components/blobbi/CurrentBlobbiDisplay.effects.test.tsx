@@ -2,7 +2,7 @@
  * ACTIVE VISUAL EFFECTS, end to end through the real renderer (Phase 9).
  *
  * The pure resolver's tests prove which effects become active; this file
- * proves the WIRING — that the resolved effects arrive from the shared
+ * proves the WIRING; that the resolved effects arrive from the shared
  * equipment context, reach `BlobbiRendererView.effects`, and obey the
  * ownership table:
  *
@@ -47,7 +47,7 @@ function equipmentWith(effects: readonly BlobbiVisualEffect[]) {
 
 function effectIds(container: HTMLElement): string[] {
   // One effect renders in more than one layer group (behind/in front of the
-  // body), so the DOM carries the marker several times per effect — the
+  // body), so the DOM carries the marker several times per effect, the
   // DISTINCT ids are what identify which effects are drawn.
   return [
     ...new Set(
@@ -78,7 +78,7 @@ describe('local companion path', () => {
     expect(container.querySelectorAll('[data-blobbi-effect-layer]')).toHaveLength(0);
   });
 
-  it('an effectsOverride replaces the persisted effects — the preview path', () => {
+  it('an effectsOverride replaces the persisted effects, the preview path', () => {
     const { container } = render(
       <CharacterEquipmentContext.Provider value={equipmentWith(ACTIVE)}>
         <CurrentBlobbiDisplay effectsOverride={[{ id: 'mystic-fog' }]} />
@@ -106,7 +106,7 @@ describe('local companion path', () => {
   });
 });
 
-describe('visualOverride path — effects follow the visual, never the viewer', () => {
+describe('visualOverride path: effects follow the visual, never the viewer', () => {
   const OVERRIDE_VISUAL = {
     stage: 'adult' as const,
     adultType: 'catti',
@@ -117,7 +117,7 @@ describe('visualOverride path — effects follow the visual, never the viewer', 
 
   it('draws NO effects for an override visual unless explicitly supplied', () => {
     // The local player's active aura must not appear on a preview of someone
-    // else's Blobbi — same rule as accessories since Phase 5.
+    // else's Blobbi: same rule as accessories since Phase 5.
     const { container } = render(
       <CharacterEquipmentContext.Provider value={equipmentWith(ACTIVE)}>
         <CurrentBlobbiDisplay visualOverride={OVERRIDE_VISUAL} />

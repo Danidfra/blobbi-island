@@ -188,7 +188,7 @@ describe('editing a published item', () => {
     getApi().loadEvent(definitionEvent(SIGNER));
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/d — item identifier/)).toBeDisabled();
+      expect(screen.getByLabelText(/d: item identifier/)).toBeDisabled();
     });
     expect(screen.getByText(/Publishing replaces this address/i)).toBeInTheDocument();
   });
@@ -198,12 +198,12 @@ describe('editing a published item', () => {
     getApi().loadEvent(definitionEvent(SIGNER));
 
     await waitFor(() =>
-      expect(screen.getByLabelText(/d — item identifier/)).toBeDisabled(),
+      expect(screen.getByLabelText(/d: item identifier/)).toBeDisabled(),
     );
     fireEvent.click(screen.getByRole('button', { name: /Create as a new item/ }));
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/d — item identifier/)).toBeEnabled();
+      expect(screen.getByLabelText(/d: item identifier/)).toBeEnabled();
     });
     expect(getApi().form.loaded).toBeNull();
   });

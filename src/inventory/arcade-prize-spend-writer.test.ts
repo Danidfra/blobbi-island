@@ -4,7 +4,7 @@
  * Same shape as `arcade-reward-writer.test.ts` and pinning the mirror-image
  * properties: unrelated items survive, the base is the newest relay event, the
  * balance can never go negative, a ticket-only inventory works, legacy kinds
- * are never touched, and a timeout is a failure — never a success.
+ * are never touched, and a timeout is a failure; never a success.
  */
 import { describe, it, expect } from 'vitest';
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -107,7 +107,7 @@ describe('spending', () => {
   it('works with a ticket-only inventory, and omits a zeroed entry', async () => {
     const { writer, published } = harness({ events: [inventoryEvent([[TICKETS, 40]])] });
     await writer.spendTickets(redemption(40));
-    // Spending the whole balance leaves no entry at all — the canonical
+    // Spending the whole balance leaves no entry at all, the canonical
     // builder omits zero quantities rather than writing `0`.
     expect(itemsOf(published[0])).toEqual({});
   });
@@ -132,7 +132,7 @@ describe('spending', () => {
     expect(published).toHaveLength(0);
   });
 
-  it('refuses an empty inventory the same way — never a negative balance', async () => {
+  it('refuses an empty inventory the same way; never a negative balance', async () => {
     const { writer, published } = harness({ events: [] });
     await expect(writer.spendTickets(redemption(40))).rejects.toMatchObject({
       reason: 'insufficient-tickets',
@@ -162,7 +162,7 @@ describe('spending', () => {
     expect(published).toHaveLength(0);
   });
 
-  it('lets a publish failure through RAW — the boundary classifies it, not the writer', async () => {
+  it('lets a publish failure through RAW, the boundary classifies it, not the writer', async () => {
     const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
     const { writer } = harness({
       events: [inventoryEvent([[TICKETS, 100]])],
@@ -188,7 +188,7 @@ describe('reading the balance back', () => {
     expect(await writer.readTicketQuantity()).toBe(73);
   });
 
-  it('reports 0 — not null — for an empty inventory that read fine', async () => {
+  it('reports 0: not null, for an empty inventory that read fine', async () => {
     const { writer } = harness({ events: [] });
     expect(await writer.readTicketQuantity()).toBe(0);
   });

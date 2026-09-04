@@ -138,7 +138,7 @@ describe('remote players', () => {
   it('marks a real presence-driven player wrapper as excluded', async () => {
     const { container } = await setup();
     const player = container.querySelector(`[data-player-key="${REMOTE_KEY}"]`);
-    expect(player, 'no remote player rendered — fixture problem, not a contract one').not.toBeNull();
+    expect(player, 'no remote player rendered, fixture problem, not a contract one').not.toBeNull();
     expect(player).toHaveAttribute('data-island-world-grade', 'exclude');
   });
 

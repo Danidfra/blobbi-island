@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * Typewriter effect hook — reveals text character-by-character.
+ * Typewriter effect hook, reveals text character-by-character.
  *
  * Adapted from Ditto's onboarding/hooks/useTypewriter.ts (pure React, no
  * external dependencies). Used by the Island first-egg hatching ceremony.

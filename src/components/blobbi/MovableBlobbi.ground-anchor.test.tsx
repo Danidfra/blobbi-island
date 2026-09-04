@@ -1,10 +1,10 @@
 /**
- * GROUND-ANCHOR semantics — the Phase 2 actor contract
+ * GROUND-ANCHOR semantics: the Phase 2 actor contract
  * (replaces the Phase 0 legacy center-anchor pin tests deliberately).
  *
  *   - the stored position is the actor's GROUND-CONTACT point: the anchor uses
  *     `translate(-50%, -100%)`, so the box's bottom-center sits on left/top;
- *   - the visual rig grows upward and scales around `bottom center` — depth
+ *   - the visual rig grows upward and scales around `bottom center`: depth
  *     scale never moves the feet off the stored point;
  *   - the ground shadow is CENTERED on the stored point and never inherits
  *     the float bob;
@@ -99,13 +99,13 @@ describe('ground-anchor actor semantics', () => {
     expect(anchor().style.transform).toBe('translate(-50%, -100%)');
   });
 
-  it('depth scaling happens around BOTTOM CENTER on the rig — the feet never move', () => {
+  it('depth scaling happens around BOTTOM CENTER on the rig, the feet never move', () => {
     const { anchor, rig } = setup();
 
     const expectedScale = resolveBlobbiScale(INITIAL, BACKGROUND, BOUNDARY);
     expect(expectedScale).not.toBe(1); // the fixture room really ramps
 
-    // The anchor itself carries translation only — never scale (it is the
+    // The anchor itself carries translation only; never scale (it is the
     // chat-bubble portal anchor).
     expect(anchor().style.transform).toBe('translate(-50%, -100%)');
 
@@ -121,7 +121,7 @@ describe('ground-anchor actor semantics', () => {
     const { anchor, rig } = setup();
 
     const before = { left: anchor().style.left, top: anchor().style.top };
-    // Snap toward the back of the room — the scale changes, the anchor is
+    // Snap toward the back of the room, the scale changes, the anchor is
     // still exactly the stored ground point.
     act(() => {
       screen.getByTestId('snap-back').click();

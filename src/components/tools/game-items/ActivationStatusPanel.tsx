@@ -1,5 +1,5 @@
 /**
- * "Is this cosmetic wearable yet?" — shown on a published item's card.
+ * "Is this cosmetic wearable yet?": shown on a published item's card.
  *
  * DIAGNOSTIC ONLY. Every control here copies text to the clipboard. Nothing on
  * this panel publishes an event, mutates an inventory, or edits the mapping:
@@ -7,8 +7,8 @@
  * that could perform it would defeat the purpose of having an explicit trust
  * mapping at all.
  *
- * The panel renders for cosmetics only. A consumable has no activation story —
- * it is used, never worn — so showing it an empty checklist would be noise.
+ * The panel renders for cosmetics only. A consumable has no activation story,
+ * it is used, never worn, so showing it an empty checklist would be noise.
  */
 
 import { CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
@@ -82,7 +82,7 @@ export function ActivationStatusPanel({
                   // an unbreakable 70-character token is what pushes this whole
                   // card wider than a phone.
                   <span className="ml-1 break-words text-muted-foreground">
-                    — {finding.detail}
+                    ({finding.detail})
                   </span>
                 ) : null}
               </span>

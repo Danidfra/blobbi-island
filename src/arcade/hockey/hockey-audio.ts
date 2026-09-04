@@ -1,11 +1,11 @@
 /**
- * Air Hockey — four short sounds, and nothing that keeps time.
+ * Air Hockey: four short sounds, and nothing that keeps time.
  *
  * The contrast with `dance-audio.ts` is the whole design. Blobbi Dance JUDGES
  * against `AudioContext.currentTime`, so its engine is a scheduler with a
  * lookahead and a clock other code reads. Air Hockey judges against nothing: the
  * simulation is a fixed-step loop that would play identically in silence. So
- * this is a **feedback** engine, not a timing one — it is handed events that
+ * this is a **feedback** engine, not a timing one; it is handed events that
  * have already happened and makes a noise about them.
  *
  * That difference is why it is fifty lines instead of four hundred, and why
@@ -14,7 +14,7 @@
  * unavailable, and the game never asks whether sound exists.
  *
  * It shares the ONE arcade `AudioContext` (`arcade-audio.ts`) and the one
- * persisted mute setting, so muting the dance machine mutes this too — which is
+ * persisted mute setting, so muting the dance machine mutes this too, which is
  * what a player means by "turn the arcade down".
  */
 
@@ -56,7 +56,7 @@ export type HockeyAudioFactory = () => HockeyAudioEngine;
  *
  * **Call this from a user-gesture handler** (the Start click). An
  * `AudioContext` constructed outside one starts suspended and silently produces
- * nothing — the same rule `arcade-audio.ts` documents, obeyed here rather than
+ * nothing: the same rule `arcade-audio.ts` documents, obeyed here rather than
  * rediscovered.
  */
 export function createHockeyAudio(): HockeyAudioEngine {
@@ -93,7 +93,7 @@ export function createHockeyAudio(): HockeyAudioEngine {
     osc.start(now);
     osc.stop(now + durationS + 0.02);
     // Nodes disconnect themselves when they stop, so nothing accumulates over a
-    // four-minute match — which is the failure mode a per-hit sound invites.
+    // four-minute match: which is the failure mode a per-hit sound invites.
     osc.onended = () => {
       try {
         gain.disconnect();

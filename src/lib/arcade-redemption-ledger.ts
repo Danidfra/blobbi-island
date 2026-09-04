@@ -1,5 +1,5 @@
 /**
- * The redemption ledger — durable, per-owner records of Prize Counter
+ * The redemption ledger, durable, per-owner records of Prize Counter
  * redemptions, plus the synchronous same-document lock.
  *
  * The sibling of `arcade-claim-ledger.ts`, kept separate because the two
@@ -7,12 +7,12 @@
  * bought?") and will be replaced by different things. The storage rules are
  * the ones the claim ledger established:
  *
- *  - **`localStorage`, keyed by owner pubkey** — two tabs must see the same
+ *  - **`localStorage`, keyed by owner pubkey**: two tabs must see the same
  *    records, or the same prize could be spent for twice;
- *  - **persist means write AND read back** — a record that did not survive the
+ *  - **persist means write AND read back**: a record that did not survive the
  *    write does not exist, and the caller must treat that as a refusal to
  *    proceed rather than a warning;
- *  - **this is bug protection, not anti-fraud** — a modified client can edit
+ *  - **this is bug protection, not anti-fraud**: a modified client can edit
  *    all of it. Its job is to stop double-clicks, remounts and refreshes from
  *    double-spending an honest player's tickets.
  */
@@ -54,7 +54,7 @@ export function readRedemption(
 
 /**
  * Write a redemption record durably. Returns `false` when the record did not
- * survive the write (quota, private mode, a hostile environment) — and the
+ * survive the write (quota, private mode, a hostile environment): and the
  * caller must then refuse to publish anything, because a spend with no durable
  * record would be offered again after a refresh.
  */

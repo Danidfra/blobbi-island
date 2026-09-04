@@ -3,7 +3,7 @@
  *
  * The defect: `ArcadeGameShell` portaled to `document.body` and sized itself in
  * viewport units (`w-screen h-[100dvh]`), so walking up to a cabinet blacked out
- * the whole page — the cozy wood frame, the shell header and footer and the page
+ * the whole page, the cozy wood frame, the shell header and footer and the page
  * behind them all disappeared behind a full-viewport dialog. It read as "this
  * website opened a modal", which is exactly what a machine's screen is not.
  *
@@ -114,7 +114,7 @@ describe('an open arcade surface', () => {
   it('is measured against the stage, never against the viewport', () => {
     renderInFrame();
     const className = shell()!.className;
-    // `absolute inset-0` against the host — the game window — with a small inset
+    // `absolute inset-0` against the host, the game window, with a small inset
     // on wider screens so the room shows through the soft backdrop.
     expect(className).toContain('absolute');
     expect(className).toContain('inset-0');

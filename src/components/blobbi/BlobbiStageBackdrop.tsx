@@ -5,7 +5,7 @@ import type { StageBackground } from '@/lib/blobbi-stage-backgrounds';
  * The picture behind the Blobbi on its stage.
  *
  * One component for both kinds of backdrop, because "is it a bitmap or a
- * gradient" is the backdrop's business and not the window's — the stage asks
+ * gradient" is the backdrop's business and not the window's, the stage asks
  * for a background and gets one. An image keeps `BackgroundLayer`'s load /
  * error handling (a remote-ish asset that can 404 degrades to the themed
  * gradient rather than to a broken-image glyph); a gradient is a single painted

@@ -1,5 +1,5 @@
 /**
- * Signing and publishing a kind:31632 definition — the one place in the tools
+ * Signing and publishing a kind:31632 definition, the one place in the tools
  * that produces a signature.
  *
  * ## Why this does not go through `useNostrPublish`
@@ -22,7 +22,7 @@
  *
  * ## Nothing here is automatic
  *
- * The mutation is invoked from exactly one place — the explicit "Sign and
+ * The mutation is invoked from exactly one place, the explicit "Sign and
  * publish" button inside the review dialog. It is never wired to a form change,
  * a blur, a keyboard shortcut, or the completion of an upload.
  */
@@ -74,7 +74,7 @@ const CLIENT_TAG = ['client', 'blobbi'];
  *
  * The mutation resolves even when NO relay accepted the event: the caller shows
  * the per-relay table either way, and a form is never cleared on a partial
- * failure. It rejects only when there is no signer or the signer refuses —
+ * failure. It rejects only when there is no signer or the signer refuses,
  * the two cases where no event exists at all.
  */
 export function usePublishItemDefinition() {

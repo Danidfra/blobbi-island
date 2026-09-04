@@ -64,7 +64,7 @@ describe('raw produce', () => {
 });
 
 describe('what does NOT become usable', () => {
-  it('a trusted issuer\'s item without edible-food semantics — category alone is not enough', () => {
+  it('a trusted issuer\'s item without edible-food semantics, category alone is not enough', () => {
     const material = { ...strawberry, type: 'material', topics: ['crop'] };
     expect(hasRawProduceSemantics(material)).toBe(false);
     expect(resolveExternalItemCompatibility({ definition: material })).toBeNull();

@@ -4,7 +4,7 @@
  * The whole safety architecture is capability checks at data boundaries, and
  * every one of those boundaries reads a policy. If the island can mount before
  * a profile has been chosen, each of them answers once under whatever policy
- * happened to be in scope — and some of those answers are events on a relay,
+ * happened to be in scope, and some of those answers are events on a relay,
  * an upload that has begun, or a stranger's text already on screen. None of
  * them can be taken back.
  *
@@ -41,7 +41,7 @@ function ResolutionProbe() {
 }
 
 /**
- * Something that publishes the moment it mounts — presence, a chat
+ * Something that publishes the moment it mounts, presence, a chat
  * subscription, an uploader, a photo share. Which one does not matter; that it
  * cannot mount unresolved does.
  */
@@ -129,7 +129,7 @@ describe('while a profile is being resolved', () => {
   });
 
   it('runs no capability-gated side effect at all', () => {
-    // The list of what this stands for is long — presence publication, the chat
+    // The list of what this stands for is long, presence publication, the chat
     // subscription, the Blossom uploader, a kind 1 share, a theater session,
     // the adoption writer. Every one of them mounts inside the island, so the
     // proof is that the island does not mount.

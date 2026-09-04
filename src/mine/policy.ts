@@ -1,10 +1,10 @@
 /**
- * The Mine's economy policy — pure data and pure functions, in one place.
+ * The Mine's economy policy, pure data and pure functions, in one place.
  *
  * Everything that decides what a mining run is WORTH lives here: the gem
  * table, the drop distribution, what a dig costs and when a run ends. The
  * React component draws the cave; it does not own a single balance number.
- * Nothing here touches Nostr, the wallet, storage or React — settlement
+ * Nothing here touches Nostr, the wallet, storage or React, settlement
  * remains `mine-settlement.ts`'s job and the durable record remains
  * `mine-session-ledger.ts`'s.
  *
@@ -24,7 +24,7 @@
  *
  * ## Why energy is a real boundary
  *
- * Nothing in this client regenerates energy passively — there is no decay or
+ * Nothing in this client regenerates energy passively; there is no decay or
  * recovery loop, and no sleep/wake reset (the one that used to exist was an
  * optimistic update in an unreferenced example component, and both are gone).
  * The only real source of energy is a consumable bought with Coins, and every
@@ -39,7 +39,7 @@
  *
  * So `buy energy → mine → buy more energy` shrinks a balance rather than
  * growing it, and it shrinks faster than that ratio suggests because energy
- * below {@link MINE_MIN_ENERGY} cannot be dug at all — a drink bought at the
+ * below {@link MINE_MIN_ENERGY} cannot be dug at all, a drink bought at the
  * floor yields three rewarded digs (~21.6 Coins) for 30. `policy.test.ts`
  * asserts this for every purchasable item, so a price cut or an effect buff
  * fails the build rather than quietly opening a faucet.
@@ -62,7 +62,7 @@
  *   energy without spending Coins);
  * - an energy-restoring item's price falls or its `energy` effect rises far
  *   enough that energy costs less than {@link MINE_COIN_PER_ENERGY} per
- *   point — i.e. more than ~1.39 energy per Coin;
+ *   point: i.e. more than ~1.39 energy per Coin;
  * - the gem table, {@link MINE_ENERGY_PER_DIG} or {@link MINE_MIN_ENERGY}
  *   move, since all three feed that ratio;
  * - Blobbis become cheaply or freely mintable in-app, which would turn "more
@@ -78,7 +78,7 @@ export interface MineGemSpec {
   /** Coins this gem contributes to a run's raw reward. */
   readonly value: number;
   /**
-   * Exclusive upper bound on the roll that selects this gem — the ORIGINAL
+   * Exclusive upper bound on the roll that selects this gem, the ORIGINAL
    * cascading threshold, kept as a literal. See the note on the table below.
    */
   readonly threshold: number;
@@ -105,7 +105,7 @@ export type MineGemKind = 'stone' | 'gem-1' | 'gem-2' | 'gem-3';
  * The thresholds are the source of truth and the weights are derived from
  * them, not the other way around. That ordering is not stylistic: summing
  * `0.05 + 0.1` in binary floating point gives `0.15000000000000002`, so a
- * roll of exactly `0.15` — which the original gave to gem-1 — would land on
+ * roll of exactly `0.15`: which the original gave to gem-1, would land on
  * gem-2 instead. Tiny, but it is a real change to the drop odds, and this
  * phase extracts the policy without altering it. The parity sweep in
  * `policy.test.ts` catches exactly this.
@@ -142,7 +142,7 @@ export const MINE_ENERGY_PER_DIG = 10;
 
 /**
  * The run ends once energy is at or below this. A dig that brings energy to
- * this level is the last one and yields NO gem — the original stop condition,
+ * this level is the last one and yields NO gem, the original stop condition,
  * preserved exactly.
  */
 export const MINE_MIN_ENERGY = 20;

@@ -5,7 +5,7 @@
  * only. Everything a shelf card SHOWS is joined here, in resolution order:
  *
  *   name / artwork / rarity / description → the kind:31632 catalog
- *     (fetched definition first, bundled registry fallback second — the same
+ *     (fetched definition first, bundled registry fallback second, the same
  *      `useItemCatalog` map every other item surface reads);
  *   slot                                  → the effect registry for effects,
  *                                           the published `visual.slot` for
@@ -18,7 +18,7 @@
  *
  * READ-ONLY BY CONSTRUCTION. This hook consumes queries and context that
  * already exist app-wide; it adds no subscription, and it imports no mutation
- * of any kind — the reward-flow boundary test pins that for the whole Prize
+ * of any kind, the reward-flow boundary test pins that for the whole Prize
  * Counter import graph.
  */
 
@@ -47,7 +47,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 const TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
-/** One prize, fully resolved for display. Plain data — no callbacks. */
+/** One prize, fully resolved for display. Plain data; no callbacks. */
 export interface ResolvedArcadePrize {
   readonly prize: OfficialArcadePrize;
   /** Display name: published definition first, registry fallback second. */
@@ -71,7 +71,7 @@ export interface ResolvedArcadePrize {
   /** Currently worn/active on the companion (kind:31634, policy-filtered). */
   readonly equipped: boolean;
   /**
-   * Ticket affordability: `null` while the balance is unknown — "we could not
+   * Ticket affordability: `null` while the balance is unknown, "we could not
    * check" must never be presented as "you cannot afford it".
    */
   readonly affordable: boolean | null;
@@ -106,8 +106,8 @@ export function useOfficialArcadePrizes(
     const prizes = orderedOfficialArcadePrizes(catalog).map(
       (prize): ResolvedArcadePrize => {
         const definition = itemCatalog?.byAddress.get(prize.itemAddress);
-        // Two registry views of the same effect item: the TYPED one — the same
-        // full-address trust gate the activation path uses — for
+        // Two registry views of the same effect item: the TYPED one, the same
+        // full-address trust gate the activation path uses, for
         // `effectId`/`effectSlot` as renderer types, and the canonical one for
         // display fallbacks (primary image lives only there).
         const effectRegistration = resolveOfficialVisualEffectItem(prize.itemAddress);

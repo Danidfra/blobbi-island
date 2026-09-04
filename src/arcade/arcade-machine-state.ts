@@ -1,5 +1,5 @@
 /**
- * The arcade's shared minigame lifecycle — one pure reducer, no exceptions.
+ * The arcade's shared minigame lifecycle; one pure reducer, no exceptions.
  *
  * Modelled on `src/lib/theater-state.ts`, which proved the pattern in this
  * codebase: a single `status` value that every view derives from, so no two
@@ -28,7 +28,7 @@
  *
  * 1. **`playing` is the only state that advances a game.** `countdown` counts,
  *    `paused` freezes; neither may accumulate score. The reducer cannot enforce
- *    "did not advance" for a game it does not simulate — it enforces the thing
+ *    "did not advance" for a game it does not simulate; it enforces the thing
  *    it CAN: a result is only accepted from `playing`.
  * 2. **`paused` preserves the run.** Same `runId`, same machine, same game;
  *    resuming returns to `playing` with nothing reset.
@@ -46,7 +46,7 @@
  *    This is necessary and NOT sufficient, and Phase 3 learned that the hard
  *    way: a run whose publish was unconfirmed never reaches `rewarded`, so this
  *    set does not cover it, and a "retry" of an additive grant that actually
- *    landed pays it twice. The durable claim ledger is what covers that case —
+ *    landed pays it twice. The durable claim ledger is what covers that case,
  *    see `src/lib/arcade-claim-ledger.ts` and `docs/blobbi-dance.md` §8.
  * 8. **Replay is a NEW run.** New `runId`, cleared result. Never a re-run of an
  *    old one.
@@ -57,7 +57,7 @@
  * ## Deliberately absent
  *
  * React, DOM, timers, audio, relays, inventory, and any component reference.
- * The state is plain JSON — `arcade-machine-state.test.ts` asserts that.
+ * The state is plain JSON, `arcade-machine-state.test.ts` asserts that.
  */
 
 import type { ArcadeDifficulty, ArcadeGameResult } from './types';
@@ -131,7 +131,7 @@ export const INITIAL_ARCADE_MACHINE_STATE: ArcadeMachineState = {
 
 export type ArcadeEvent =
   /**
-   * The Blobbi ARRIVED at a machine and the shell opened. Never fired on click —
+   * The Blobbi ARRIVED at a machine and the shell opened. Never fired on click,
    * see `ArcadeMachine.tsx`.
    *
    * Always a clean slate: opening a machine can never resume a previous run,
@@ -164,7 +164,7 @@ export type ArcadeEvent =
 /** States in which a run exists and has not yet produced a result. */
 const ADVANCING: readonly ArcadeStatus[] = ['countdown', 'playing', 'paused'];
 
-/** True while a run is live — used by the shell to decide whether to warn. */
+/** True while a run is live, used by the shell to decide whether to warn. */
 export function isRunInProgress(state: ArcadeMachineState): boolean {
   return ADVANCING.includes(state.status);
 }
@@ -188,7 +188,7 @@ export function isRunRewarded(state: ArcadeMachineState, runId: string | null): 
  * Whether `claim` would do anything right now.
  *
  * The shell disables the claim button on this, and the reducer enforces the same
- * rule — belt and braces, because a disabled button is a UI courtesy and the
+ * rule: belt and braces, because a disabled button is a UI courtesy and the
  * reducer is the actual guarantee.
  */
 export function canClaim(state: ArcadeMachineState): boolean {
@@ -255,7 +255,7 @@ export function arcadeMachineReducer(
 
     case 'pause':
       // Pausing a countdown is legitimate (the tab was hidden mid "3, 2, 1"),
-      // and resuming returns to `playing` — the countdown is not replayed,
+      // and resuming returns to `playing`: the countdown is not replayed,
       // because the shell owns the countdown and will re-run it if it wants to.
       if (state.status !== 'playing' && state.status !== 'countdown') return state;
       return { ...state, status: 'paused' };
@@ -304,7 +304,7 @@ export function arcadeMachineReducer(
 
     case 'claim-succeeded': {
       if (state.status !== 'claiming' || state.runId === null) return state;
-      // Invariant 7: the one-way door closes here, and only here — on CONFIRMED
+      // Invariant 7: the one-way door closes here, and only here, on CONFIRMED
       // success. An attempted claim leaves no trace, so a failure stays retryable.
       const runId = state.runId;
       return {

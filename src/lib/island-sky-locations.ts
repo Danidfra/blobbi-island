@@ -18,7 +18,7 @@
  * ## `enabled` is about the scene, `artworkSkyReady` is about the asset
  *
  * A location is `enabled` when it is a scene that *should* share the island's
- * sky — every outdoor scene, and the one interior whose windows look out on it.
+ * sky: every outdoor scene, and the one interior whose windows look out on it.
  * `artworkSkyReady` records whether its artwork has actually had the sky region
  * cut out yet.
  *
@@ -26,7 +26,7 @@
  * scene by scene while this feature was being built, so the flag spent most of that
  * time partly false; it is kept because it gates nothing and it is the honest place
  * to record the state if a future scene is enabled before its art is done. A scene
- * marked `false` still gets the world-lighting grade — its sky is simply hidden
+ * marked `false` still gets the world-lighting grade; its sky is simply hidden
  * behind opaque pixels, and it starts working with no code change when the art
  * lands. Nothing forces the sky through opaque pixels.
  *
@@ -45,7 +45,7 @@ export interface LocationSkyConfig {
   /** Draw the night star field. */
   showStars: boolean;
   /**
-   * Scales the time-of-day grade — both the artwork filter and the scene veil —
+   * Scales the time-of-day grade; both the artwork filter and the scene veil,
    * for this location, `0..1`. Lower it for a scene whose art is already dark or
    * whose readability is tight; `1` means "grade exactly as authored".
    */
@@ -53,7 +53,7 @@ export interface LocationSkyConfig {
   /**
    * Has this location's artwork had its sky region made transparent yet?
    *
-   * Documentation and QA signal only — it deliberately does not gate anything.
+   * Documentation and QA signal only; it deliberately does not gate anything.
    * `false` means "the sky is correct but invisible here until the art lands".
    */
   artworkSkyReady: boolean;
@@ -69,7 +69,7 @@ export interface LocationSkyConfig {
  * the room stays lit, which is exactly what the split between the sky layer
  * (behind the plate, showing through its transparent panes) and the grade (a
  * filter on the plate and a veil over the scene) allows. So an interior keeps
- * `enabled: true` for the sky and takes THIS strength for the grade — a whisper
+ * `enabled: true` for the sky and takes THIS strength for the grade, a whisper
  * rather than nothing, so the room shares the island's warmth at dusk without
  * ever reading as a darkened room. At deep night it comes to a brightness of
  * 0.97 on the artwork and a veil of 1.4 % over the scene.
@@ -89,7 +89,7 @@ const DISABLED: LocationSkyConfig = {
 };
 
 /**
- * Explicit for every `LocationId` — a `Record`, not a `Partial`, so adding a
+ * Explicit for every `LocationId`: a `Record`, not a `Partial`, so adding a
  * location to the union is a type error here until somebody decides whether it
  * has a sky.
  */
@@ -120,7 +120,7 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
   },
   'back-yard': {
     enabled: true,
-    // The strip above the fence is ~28% of the frame — about 195 world pixels, and
+    // The strip above the fence is ~28% of the frame, about 195 world pixels, and
     // every cloud's ink stays above 26%, so a passage fits with room to spare.
     // Clouds were off here while the sky was still painted into the artwork.
     showClouds: true,
@@ -135,7 +135,7 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
     showStars: true,
     worldLightStrength: 1,
     artworkSkyReady: true,
-    note: 'Mine EXTERIOR — transparent sky above the conifer line. The interior is `cave-open`.',
+    note: 'Mine EXTERIOR: transparent sky above the conifer line. The interior is `cave-open`.',
   },
   'nostr-station': {
     enabled: true,
@@ -153,10 +153,10 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
     showClouds: true,
     showStars: true,
     // An interior lit by its own lamps: the night is in the windows, not in
-    // the room — see `INTERIOR_WINDOW_LIGHT_STRENGTH`.
+    // the room: see `INTERIOR_WINDOW_LIGHT_STRENGTH`.
     worldLightStrength: INTERIOR_WINDOW_LIGHT_STRENGTH,
     artworkSkyReady: true,
-    note: 'Plaza INTERIOR — the only interior with a sky. Its three arched windows are cut out of `plaza-inside.webp`; every other pixel of the plate is opaque.',
+    note: 'Plaza INTERIOR: the only interior with a sky. Its three arched windows are cut out of `plaza-inside.webp`; every other pixel of the plate is opaque.',
   },
 
   home: DISABLED,
@@ -175,7 +175,7 @@ export const LOCATION_SKY_CONFIG: Record<LocationId, LocationSkyConfig> = {
   },
   'cave-open': {
     ...DISABLED,
-    note: 'Cave INTERIOR despite the id — the artwork is `cave-inside.png`.',
+    note: 'Cave INTERIOR despite the id, the artwork is `cave-inside.png`.',
   },
 };
 

@@ -11,7 +11,7 @@ import { constrainPosition } from '@/lib/boundaries';
  * bed sprite's center (the legacy center-era pose was `bedY - 5`; its visual
  * equivalent under ground semantics is `bedY - 5 + halfBody(xl, scale 1) =
  * bedY + 4.2`). Snapping to it uses `goTo(..., immediate)`, which deliberately
- * bypasses the walk boundary — the bed surface is not walkable floor.
+ * bypasses the walk boundary, the bed surface is not walkable floor.
  */
 export const BED_SLEEP_POSE_Y_OFFSET = 4.2;
 

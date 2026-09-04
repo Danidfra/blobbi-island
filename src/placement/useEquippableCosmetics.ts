@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the cosmetics a player may actually equip right now.
+ * Blobbi Island: the cosmetics a player may actually equip right now.
  *
  * This is the production catalog for the equipment UI, and it is built by
  * INTERSECTION rather than by listing:
@@ -11,7 +11,7 @@
  *
  * There is deliberately NO hardcoded accessory list behind this. If no official
  * cosmetic definition has been published, the list is empty and the UI says so
- * honestly — it does not fall back to a bundled catalogue of legacy accessories
+ * honestly: it does not fall back to a bundled catalogue of legacy accessories
  * that nobody can prove ownership of.
  *
  * Items that fail a gate are not silently dropped: they are returned in
@@ -93,7 +93,7 @@ export function useEquippableCosmetics(form?: string): EquippableCosmetics {
     const available: EquippableCosmetic[] = [];
     const unavailable: UnavailableCosmetic[] = [];
 
-    // The trusted set is the registry's official cosmetics — an address, not a
+    // The trusted set is the registry's official cosmetics, an address, not a
     // `d`. Anyone may publish `blobbi:cosmetic:<anything>`; only the official
     // issuer's address counts.
     for (const official of ADDRESSED_OFFICIAL_COSMETICS) {

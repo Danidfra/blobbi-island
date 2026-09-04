@@ -1,5 +1,5 @@
 /**
- * The six prizes, proven redeemable — identity first.
+ * The six prizes, proven redeemable, identity first.
  *
  * Before anything may be sold for Arcade Tickets it has to be provable that
  * what the player receives is the OFFICIAL item and not a lookalike. These
@@ -67,7 +67,7 @@ describe('every prize resolves to a canonical official definition', () => {
     }
   });
 
-  it('addresses the ISSUER’s item, derived — never a hand-typed string', () => {
+  it('addresses the ISSUER’s item, derived; never a hand-typed string', () => {
     for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
       expect(prize.itemAddress).toBe(officialItemAddress(prize.d));
       expect(prize.itemAddress).toBe(`31632:${OFFICIAL_ISSUER_PUBKEY}:${prize.d}`);
@@ -75,7 +75,7 @@ describe('every prize resolves to a canonical official definition', () => {
   });
 
   it('uses no event id as identity, anywhere in the chain', () => {
-    // A 64-hex token that is not the issuer key would be an event id — the one
+    // A 64-hex token that is not the issuer key would be an event id, the one
     // thing an addressable definition guarantees will change.
     for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
       const redeemable = officialArcadePrizeAsRedeemable(prize);
@@ -104,7 +104,7 @@ describe('every prize resolves to a canonical official definition', () => {
     }
   });
 
-  it('classifies all six as REDEEMABLE — none is blocked', () => {
+  it('classifies all six as REDEEMABLE; none is blocked', () => {
     // The scope claim, stated as a test: no prize on this shelf is a preview
     // pretending to be for sale, and none is for sale without a definition.
     for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
@@ -119,7 +119,7 @@ describe('every prize resolves to a canonical official definition', () => {
       expect(officialArcadePrizeByAddress(prize.itemAddress)).toBe(prize);
     }
     expect(officialArcadePrizeById('blobbi:cosmetic:not-a-prize')).toBeNull();
-    // Same `d`, different issuer — a different item by a different author.
+    // Same `d`, different issuer, a different item by a different author.
     expect(
       officialArcadePrizeByAddress(
         `31632:${'b'.repeat(64)}:blobbi:effect:celestial-aura`,
@@ -190,7 +190,7 @@ describe('the redemption record derived from a prize', () => {
     }
   });
 
-  it('is never repeatable — one confirmed purchase is the last one', () => {
+  it('is never repeatable: one confirmed purchase is the last one', () => {
     for (const prize of OFFICIAL_ARCADE_PRIZE_CATALOG) {
       const redeemable = officialArcadePrizeAsRedeemable(prize);
       expect(redeemable.repeatable).toBeUndefined();

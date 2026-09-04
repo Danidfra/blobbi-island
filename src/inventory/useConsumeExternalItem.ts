@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — consuming an item owned in an inventory ANOTHER GAME writes.
+ * Blobbi Island: consuming an item owned in an inventory ANOTHER GAME writes.
  *
  * This is the source-aware sibling of `useUseItem`. That hook debits
  * `blobbi:island` through Island's own kind:31633 transaction; this one
@@ -8,7 +8,7 @@
  * (`care-effect.ts`) and nothing else, on purpose: the Island path keeps its
  * existing semantics, tests and ordering untouched.
  *
- * ## Ordering — SPEND FIRST, and why
+ * ## Ordering: SPEND FIRST, and why
  *
  * ```
  *   1. validate: action, Blobbi exists, stage allowed, inventory is the player's
@@ -32,8 +32,8 @@
  *
  * ## A batch is ONE action
  *
- * `quantity: N` publishes ONE kind:1416 with `["quantity", "N"]` — the spec's
- * one-item-per-event, any-quantity model — and applies ONE feed whose stat
+ * `quantity: N` publishes ONE kind:1416 with `["quantity", "N"]`: the spec's
+ * one-item-per-event, any-quantity model, and applies ONE feed whose stat
  * effects and XP scale N times (`planCareEffect` with `quantity: N`; the
  * shared XP rule is already per-unit × quantity) while the care streak,
  * `last_meal`, `last_interaction`, the kind:31124 revision and the kind:1124
@@ -63,8 +63,8 @@
  * from another device may take the last unit, in which case the owner's next
  * fold VOIDS this one. Island applies the effect as soon as the spend is
  * established because waiting for the owner to fold is not a browser-only
- * UX anyone would accept. The residual cost — a Blobbi fed from a spend that
- * is later voided — is bounded to that concurrent multi-device race, is
+ * UX anyone would accept. The residual cost, a Blobbi fed from a spend that
+ * is later voided, is bounded to that concurrent multi-device race, is
  * exactly the class of leak `useUseItem` already tolerates, and is documented
  * in `docs/INVENTORY_ARCHITECTURE.md`.
  */
@@ -151,7 +151,7 @@ export interface ConsumeExternalItemInput {
   petId: string;
   /**
    * Units to consume in THIS operation (default 1). One kind:1416 carrying
-   * `quantity N`, one effect scaled N times, one action lifecycle — never N
+   * `quantity N`, one effect scaled N times, one action lifecycle; never N
    * spends, never N feeds. See the module doc.
    */
   quantity?: number;
@@ -530,7 +530,7 @@ export function useConsumeExternalItem() {
           relayHint: relays[0],
           onSpendEstablished: (record) => {
             // The spend is on a relay. Merge it into the external event
-            // store so the effective quantity drops now — through the same
+            // store so the effective quantity drops now, through the same
             // merge a live relay delivery uses. The raw snapshot is never
             // touched, which is what keeps the later pending → folded
             // transition from subtracting it twice.

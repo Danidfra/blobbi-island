@@ -11,12 +11,12 @@
  *
  * A build artifact only proves something about the source that produced it.
  * `npm test` runs `vitest` BEFORE `vite build`, so `dist/` here is always from a
- * PREVIOUS run — and a `dist/` older than `src/` proves nothing at all. Rather
+ * PREVIOUS run: and a `dist/` older than `src/` proves nothing at all. Rather
  * than pass vacuously, this file:
  *
  *  - always asserts the source-level gate, which needs no build at all and is
  *    where most of the real protection lives;
- *  - **never asserts against a `dist/` that predates `src/`** — those checks are
+ *  - **never asserts against a `dist/` that predates `src/`**: those checks are
  *    reported as SKIPPED, so "not verified" is visible rather than silently
  *    green;
  *  - fails loudly if `dist/` is missing or stale while `REQUIRE_FRESH_BUILD=1`
@@ -62,8 +62,8 @@ const buildIsFresh = distChunks.length > 0 && newestMtime(distChunks) >= newestM
 describe('production build excludes the DEV harnesses', () => {
   it('has a fresh build to inspect when one is required', () => {
     if (!REQUIRE_FRESH_BUILD) return;
-    expect(distExists, 'REQUIRE_FRESH_BUILD=1 but dist/ is missing — build first').toBe(true);
-    expect(buildIsFresh, 'REQUIRE_FRESH_BUILD=1 but dist/ is older than src/ — rebuild').toBe(
+    expect(distExists, 'REQUIRE_FRESH_BUILD=1 but dist/ is missing, build first').toBe(true);
+    expect(buildIsFresh, 'REQUIRE_FRESH_BUILD=1 but dist/ is older than src/, rebuild').toBe(
       true,
     );
   });
@@ -142,7 +142,7 @@ describe('production build excludes the DEV harnesses', () => {
     // `/tools/game-items` is internal but deliberately NOT a dev harness: the
     // official issuer publishes item definitions from the deployed site, and
     // its real boundary is the signature it requires plus the catalog's own
-    // issuer check — not the absence of a chunk. This asserts the distinction
+    // issuer check: not the absence of a chunk. This asserts the distinction
     // stays intentional, so nobody "tidies" it into the DEV list and silently
     // removes the ability to publish from production.
     const router = readFileSync(join(ROOT, 'src/AppRouter.tsx'), 'utf8');
@@ -163,7 +163,7 @@ describe('production build excludes the DEV harnesses', () => {
       .filter((f) => /\.tsx?$/.test(f))
       .filter((f) => !/pages\/Dev(Arcade|Theater|Rooms|BlobbiEffects|TreasureHunt)\.tsx$/.test(f))
       // Test files are not production modules. They name the harnesses on
-      // purpose — this one does, and so does the effect registry's own test,
+      // purpose: this one does, and so does the effect registry's own test,
       // which asserts that the preview is its only importer.
       .filter((f) => !/\.test\.tsx?$/.test(f))
       .filter((f) =>

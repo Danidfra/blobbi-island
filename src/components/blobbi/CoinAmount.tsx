@@ -1,9 +1,9 @@
 /**
- * CoinAmount — the one way a Blobbi Coin balance/amount is rendered.
+ * CoinAmount: the one way a Blobbi Coin balance/amount is rendered.
  *
  * Uses the OFFICIAL published Coin artwork resolved from the registry
  * constants, degrading to the published `symbol` emoji when the image cannot
- * load. `amount === null` renders an explicit unavailable state — a balance
+ * load. `amount === null` renders an explicit unavailable state, a balance
  * that could not be read must never look like a real zero.
  */
 

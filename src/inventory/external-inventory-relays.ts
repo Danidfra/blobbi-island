@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — WHERE other games' inventories live, and how Island reads
+ * Blobbi Island: WHERE other games' inventories live, and how Island reads
  * them.
  *
  * Island's own pool routes every read and write to the one configured relay
@@ -7,7 +7,7 @@
  * another game writes: the Farm publishes `farm:main`, its kind:1417 folds and
  * accepts kind:1416 spends on ITS relay set, and a snapshot that landed on one
  * of those relays but not on Island's would make Island derive a balance
- * from a stale base — or publish a spend where the Farm never looks.
+ * from a stale base, or publish a spend where the Farm never looks.
  *
  * So cross-game reads and the spend publish fan out over ONE policy:
  *
@@ -19,7 +19,7 @@
  * deduplicated, in that order. It is defined here once; nothing else in the
  * cross-game path carries a relay list of its own.
  *
- * Reads merge every relay's answer and deduplicate by event id — relays hold
+ * Reads merge every relay's answer and deduplicate by event id, relays hold
  * different subsets, and an immutable event delivered by three relays is one
  * event. One relay answering is enough to have AN answer; every relay failing
  * is not an empty result, it is an unusable read and the caller is told so.

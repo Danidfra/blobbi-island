@@ -9,7 +9,7 @@ interface LocationProviderProps {
    * Where this session opens, once the resume decision has been made.
    *
    * BOOTSTRAP ONLY. It is adopted at most once, without a scene transition, and
-   * only before the player has navigated — see {@link bootstrappedRef}. A later
+   * only before the player has navigated; see {@link bootstrappedRef}. A later
    * change to this prop cannot move anyone; `useIslandLocationResume` resolves
    * once by construction, and this latch means location stays owned by
    * `setCurrentLocation` even if it did not.
@@ -27,7 +27,7 @@ interface LocationProviderProps {
    * scene's canonical spawn, which is what every non-resumed entry uses.
    *
    * Consumed by `PlayingView` as `MovableBlobbi`'s `initialPosition`, so the
-   * actor's FIRST rendered frame is already in the right place — there is no
+   * actor's FIRST rendered frame is already in the right place; there is no
    * follow-up effect that moves it afterwards.
    */
   initialPosition?: Position | null;
@@ -51,7 +51,7 @@ export function LocationProvider({
 
   /**
    * Has the initial location been settled? True as soon as EITHER the resume
-   * decision was adopted OR the player navigated — whichever happens first wins
+   * decision was adopted OR the player navigated, whichever happens first wins
    * permanently, so an in-flight resume can never override a real move.
    */
   const bootstrappedRef = useRef(initialLocation !== undefined);
@@ -97,7 +97,7 @@ export function LocationProvider({
   // NOTE: this context does not touch the Arcade Pass at all, and must not.
   //
   // It used to revoke the pass on leaving the arcade, and a `beforeunload`
-  // handler used to revoke it on reload — which is why a pass bought for 20
+  // handler used to revoke it on reload, which is why a pass bought for 20
   // coins vanished on refresh once location resume started restoring where you
   // were. Both are gone along with the visit-scoped pass itself.
   //

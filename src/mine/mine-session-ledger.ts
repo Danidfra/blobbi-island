@@ -2,8 +2,8 @@
  * The durable Mine session record.
  *
  * This is an ECONOMIC record, not a savegame. It exists so that the two
- * value-bearing writes at the end of a run — the Coin reward and the energy
- * cost — survive an unmount, a reload, a backgrounded phone, and can be
+ * value-bearing writes at the end of a run, the Coin reward and the energy
+ * cost: survive an unmount, a reload, a backgrounded phone, and can be
  * finished or reconciled later under the SAME operation ids.
  *
  * Gameplay state (holes, mined items, animation, each click) is deliberately
@@ -41,7 +41,7 @@ export type MineSessionStatus =
   | 'energy-pending'
   /** Both sides settled. */
   | 'settled'
-  /** Never finalized — no reward, no cost. */
+  /** Never finalized: no reward, no cost. */
   | 'abandoned';
 
 export interface MineSessionRecord {
@@ -49,7 +49,7 @@ export interface MineSessionRecord {
   readonly petId: string;
   readonly status: MineSessionStatus;
   readonly startedAt: number;
-  /** Energy shown when the run began. Gameplay only — never a write base. */
+  /** Energy shown when the run began. Gameplay only; never a write base. */
   readonly startEnergy: number;
   /** Frozen at finalization. Positive integer. */
   readonly energyDelta?: number;
@@ -82,7 +82,7 @@ export const MINE_SESSION_HEARTBEAT_MS = 15 * 1000;
  * abandon its session.
  *
  * Comfortably more than {@link MINE_SESSION_HEARTBEAT_MS} because background
- * tabs have their timers throttled to roughly once a minute — a live but
+ * tabs have their timers throttled to roughly once a minute, a live but
  * backgrounded run must not be mistaken for a dead one. The flip side is that
  * a hard crash keeps the Mine closed for at most this long, which is the
  * trade-off: an occasional short wait after a crash, versus one tab silently
@@ -161,7 +161,7 @@ export function readMineSessions(pubkey: string | undefined): MineSessionRecord[
 }
 
 /**
- * Persist and VERIFY by reading back. Returns false when storage refused —
+ * Persist and VERIFY by reading back. Returns false when storage refused,
  * the caller must then refuse to start (or to advance) a value-bearing
  * session: no durable identity, no value-bearing operation.
  */
@@ -180,12 +180,12 @@ export function persistMineSession(
 }
 
 /**
- * `open` records — gameplay that was started and never finished.
+ * `open` records: gameplay that was started and never finished.
  *
  * Split by liveness rather than returned raw, because the two halves mean
  * opposite things: a session still being heartbeaten belongs to a tab that is
  * playing right now and must be left alone, while one that went quiet is
- * debris and can be abandoned (it owes nothing — no reward was frozen and no
+ * debris and can be abandoned (it owes nothing; no reward was frozen and no
  * energy was ever published).
  */
 export function partitionOpenMineSessions(
@@ -198,7 +198,7 @@ export function partitionOpenMineSessions(
   for (const record of readMineSessions(pubkey)) {
     if (record.status !== 'open') continue;
     // `updatedAt` is refreshed by the playing tab's heartbeat. A clock that
-    // jumped backwards makes the age negative, which reads as "just touched" —
+    // jumped backwards makes the age negative, which reads as "just touched",
     // the safe direction, since it errs toward preserving a live run.
     if (nowMs - record.updatedAt > ttlMs) stale.push(record);
     else active.push(record);
@@ -275,7 +275,7 @@ export function clearMineSessions(pubkey?: string): void {
 // ── Operation identities ───────────────────────────────────────────────────
 //
 // Deterministic and namespaced, so a retry after a reload derives exactly the
-// same ids from the same session — never a fresh one — and so the Coin and
+// same ids from the same session, never a fresh one, and so the Coin and
 // energy ledgers can never collide on a shared key.
 
 export function mineCoinOpId(sessionId: string): string {

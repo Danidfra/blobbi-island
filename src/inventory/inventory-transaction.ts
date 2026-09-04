@@ -4,7 +4,7 @@
  * kind:31633 is a REPLACEABLE event: a publish does not patch the inventory, it
  * REPLACES it. Every writer therefore has to build its event from the newest
  * authoritative state, and any two writers that build concurrently from the
- * same base will silently destroy each other's work — whichever lands last
+ * same base will silently destroy each other's work, whichever lands last
  * wins, whole.
  *
  * Before this module the Coin wallet had the full discipline (cross-tab lock,
@@ -22,14 +22,14 @@
  *
  * The player's 100 Coins, their Arcade Tickets and every consumable are gone,
  * and the write even verifies: the read-back genuinely matches the (wrong)
- * expectation. This produced the reported Mine bug — a 20-Coin reward
+ * expectation. This produced the reported Mine bug, a 20-Coin reward
  * REPLACING a 100-Coin balance instead of adding to it.
  *
  * A resolved-empty read is not proof of an empty inventory. It is ambiguous:
  * either a genuinely new account, or a relay that does not carry (or has not
  * caught up with) the event. {@link readAuthoritativeInventoryBase} resolves
  * that ambiguity with a confirming re-read before an empty base is ever used
- * to build a replacement event — the same rule `economy-entry.ts` already
+ * to build a replacement event, the same rule `economy-entry.ts` already
  * applied to the initial allocation, promoted to the shared layer so it
  * protects every write instead of one.
  *
@@ -53,7 +53,7 @@
  * base, which is still always an authoritative in-lock relay read.
  *
  * Idempotency, balance policy, optimistic UI and reconciliation are
- * deliberately NOT here — they differ per writer and live with their callers
+ * deliberately NOT here; they differ per writer and live with their callers
  * (the Coin op ledger, the arcade claim ledger). This module only guarantees
  * that no writer can build on a snapshot another writer is concurrently
  * replacing, and that no writer can replace a real inventory with an empty one.
@@ -85,7 +85,7 @@ const PUBLISH_TIMEOUT_MS = 5000;
 /**
  * The relay surface a transaction needs: the shared READ surface plus publish.
  * Re-exported read helpers keep ONE definition of "the authoritative base" for
- * every writer — the transaction primitive and `useInventoryMutation` alike.
+ * every writer: the transaction primitive and `useInventoryMutation` alike.
  */
 export interface InventoryTransactionNostr extends InventoryReadNostr {
   event: (event: NostrEvent, options?: { signal?: AbortSignal }) => Promise<void>;
@@ -110,7 +110,7 @@ export function inventoryWriteLockName(pubkey: string): string {
  * `created_at` for the next replacement event.
  *
  * Nostr timestamps are second-resolution and NIP-01 breaks a tie between two
- * replaceable events by lowest id — so two writes inside one wall-clock second
+ * replaceable events by lowest id, so two writes inside one wall-clock second
  * must not tie, or one silently loses. Strictly greater than the event being
  * replaced, always.
  */
@@ -125,8 +125,8 @@ export function nextInventoryCreatedAt(
  * Provably-pre-publish, or explicitly-ambiguous, transaction failures.
  *
  * `originalError` is the error the relay/signer actually threw, when there was
- * one. Callers whose contract is to let a failure through RAW — the arcade
- * claim and redemption boundaries classify the thrown value themselves —
+ * one. Callers whose contract is to let a failure through RAW, the arcade
+ * claim and redemption boundaries classify the thrown value themselves,
  * rethrow it instead of this wrapper, so wrapping here never changes what a
  * caller's own error vocabulary means.
  */
@@ -154,12 +154,12 @@ export function unwrapInventoryTransactionError(error: unknown): unknown {
 }
 
 /**
- * Did this write end AMBIGUOUS — possibly published, possibly not?
+ * Did this write end AMBIGUOUS, possibly published, possibly not?
  *
  * `publish-timeout` and `publish-unknown` both mean the relay gave no usable
  * verdict: the event MAY have landed. Callers that surface outcomes (the free
  * shop grants, item consumption, the lab) translate this into their existing
- * `ambiguous` vocabulary instead of reporting a definite failure — and never
+ * `ambiguous` vocabulary instead of reporting a definite failure, and never
  * report success. The authoritative state is whatever the next confirmed read
  * returns.
  */
@@ -182,7 +182,7 @@ export interface InventoryTransactionPublishOptions
   /**
    * Called with the signed replacement event AFTER signing and BEFORE it is
    * sent to the relay. This is the one moment a caller can durably record
-   * which exact event is about to be (possibly) published — the evidence that
+   * which exact event is about to be (possibly) published, the evidence that
    * lets an ambiguous outcome be reconciled by event id later. Must not
    * throw: an exception here aborts the publish and propagates raw.
    */
@@ -289,7 +289,7 @@ export async function runInventoryTransaction<T>(
               signal: AbortSignal.timeout(PUBLISH_TIMEOUT_MS),
             });
             // THE ONE CACHE RECONCILIATION POINT. A relay accepted this exact
-            // event, so it is now the newest inventory state — more recent
+            // event, so it is now the newest inventory state, more recent
             // than anything a still-propagating relay can answer with. Every
             // writer runs through here, so none of them needs to patch
             // quantities itself. Recording happens only on a definite accept:

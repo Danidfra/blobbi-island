@@ -7,7 +7,7 @@
  * assertions rather than left as folklore:
  *
  *  1. The canonical box is expressed as LITERAL Tailwind classes, never built
- *     by string concatenation — a JIT scanner can only see literals.
+ *     by string concatenation, a JIT scanner can only see literals.
  *  2. Those literals mean exactly the pixel sizes in `BLOBBI_RENDER_SIZE_PX`.
  *  3. This repository's Tailwind config actually scans the package. Without
  *     that glob every Blobbi renders in a zero-sized box, and nothing else in
@@ -28,7 +28,7 @@ const REPO_ROOT = resolve(PACKAGE_ROOT, '../..');
 const TAILWIND_STEP_PX = 4;
 
 /**
- * The consuming application's `content` globs — the actual scan list, with
+ * The consuming application's `content` globs, the actual scan list, with
  * comments stripped, so an assertion about what Tailwind SEES is not fooled by
  * a comment that merely mentions a path.
  */
@@ -112,12 +112,12 @@ describe('the canonical box is delivered as scannable Tailwind classes', () => {
     // It does not: the effect CSS is package-owned text, so the delivery
     // contract above is unchanged and a consumer who adds effects has nothing
     // new to configure. What must stay true is that the RENDERER file itself
-    // grew no new class names — the effect classes live behind the walker.
+    // grew no new class names, the effect classes live behind the walker.
     const renderer = readFileSync(join(PACKAGE_ROOT, 'src/BlobbiRendererView.tsx'), 'utf8');
     expect(renderer).not.toContain('blobbi-fx-');
 
     // And no effect class may be built by concatenation anywhere, which is what
-    // would make it invisible to any scanner — including a human's grep.
+    // would make it invisible to any scanner, including a human's grep.
     const effects = readFileSync(
       join(PACKAGE_ROOT, 'src/effects/BlobbiEffectLayers.tsx'),
       'utf8',

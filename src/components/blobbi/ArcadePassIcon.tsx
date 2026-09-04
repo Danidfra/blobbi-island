@@ -6,7 +6,7 @@ import {
 } from '@/hooks/useArcadePass';
 
 /**
- * The Arcade Pass indicator — both limits, always.
+ * The Arcade Pass indicator; both limits, always.
  *
  * The Pass includes a finite number of free plays inside a 24-hour window, so
  * a chip that showed only the clock would keep promising free games after the
@@ -30,8 +30,8 @@ export function ArcadePassIcon() {
   if (!isActive) return null;
 
   const label = isUsable
-    ? `Arcade Pass — ${formatFreePlays(remainingFreePlays)}, ${formatPassRemaining(remainingMs)} left`
-    : 'Arcade Pass — free plays used, games cost Arcade Tokens again';
+    ? `Arcade Pass: ${formatFreePlays(remainingFreePlays)}, ${formatPassRemaining(remainingMs)} left`
+    : 'Arcade Pass: free plays used, games cost Arcade Tokens again';
 
   return (
     <div

@@ -44,7 +44,7 @@ describe('the external-spend ledger', () => {
     expect(readExternalSpendOp(PUBKEY, 's1')?.status).toBe('established');
   });
 
-  it('an established spend can never become failed — the debit exists', () => {
+  it('an established spend can never become failed, the debit exists', () => {
     persistExternalSpendOp(PUBKEY, record('established'));
     expect(persistExternalSpendOp(PUBKEY, record('failed'))).toBe(false);
   });

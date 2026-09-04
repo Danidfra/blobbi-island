@@ -9,7 +9,7 @@ import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback'
  *
  * "Primary" is load-bearing now that a definition may publish several `image`
  * tags: an inventory cell is a compact, unposed collection cell, so it always
- * wants the item's default picture and never a pose-specific view — a hat's
+ * wants the item's default picture and never a pose-specific view, a hat's
  * `side-left` artwork in a grid would misrepresent the item. See
  * `docs/game-item-image-views.md`.
  *

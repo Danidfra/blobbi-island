@@ -62,7 +62,7 @@ function petEvent(
       ['seed', 'abc'],
       ['adult_type', 'bloomi'],
       ['base_color', '#fff'],
-      // An unknown tag from another client — must survive every write.
+      // An unknown tag from another client, must survive every write.
       ['ditto_xp', '123'],
       ...extraTags,
     ],
@@ -153,7 +153,7 @@ describe('the delta is applied to FRESH state, never the session snapshot', () =
     expect(tagValue(relay.getStored()!, 'energy')).toBe('30');
   });
 
-  it('bounds at zero and settles ONCE — the remainder is forgiven', async () => {
+  it('bounds at zero and settles ONCE, the remainder is forgiven', async () => {
     const relay = makeRelay(petEvent({ energy: 10 }));
     const settler = createEnergySettler({ nostr: relay.nostr, user: relay.user });
 
@@ -261,7 +261,7 @@ describe('exactly-once', () => {
     );
     const settler = createEnergySettler({ nostr: relay.nostr, user: relay.user });
 
-    // The ledger is empty (storage cleared after publish) — trust the relay.
+    // The ledger is empty (storage cleared after publish): trust the relay.
     const outcome = await settler.settleEnergyDelta({
       opId: 'mine:s1:energy', petId: PET_ID, amount: 30, label: 'mine-energy',
     });
@@ -404,7 +404,7 @@ describe('the op marker survives ORDINARY pet writes', () => {
       opId: 'mine:s1:energy', petId: PET_ID, amount: 20, label: 'mine-energy',
     });
 
-    // The publish landed, and THEN a care action republished the pet — the
+    // The publish landed, and THEN a care action republished the pet, the
     // marker rides through the generic writer's unknown-tag passthrough.
     relay.setStored(
       petEvent({

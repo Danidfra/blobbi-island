@@ -4,7 +4,7 @@
  * These tests treat the sixteen supplied signed events as authoritative input
  * and fail the build if the canonical registry, the trusted effect registry or
  * the renderer disagrees with what is actually published. They run entirely on
- * bundled fixtures — no production relay is queried.
+ * bundled fixtures: no production relay is queried.
  *
  * They also pin the identity rules: stable addresses (issuer + `d`) are what
  * the runtime keys on, and the event ids here are current-revision facts that
@@ -125,7 +125,7 @@ describe('published official item events (fixtures)', () => {
     const ids = OFFICIAL_ITEM_EVENT_FIXTURES.map((f) => f.event.id);
     expect(new Set(ids).size).toBe(ids.length);
     // The trusted registry resolves by ADDRESS. Feeding it an event id must
-    // resolve nothing — ids are current-revision facts, not identity.
+    // resolve nothing: ids are current-revision facts, not identity.
     for (const id of ids) {
       expect(resolveOfficialVisualEffectItem(id)).toBeNull();
     }
@@ -222,7 +222,7 @@ describe('published effect items agree with the trusted registry and the rendere
     }
   });
 
-  it('exactly Golden Sparkles, Mystic Fog and Celestial Aura carry arcade-prize — and the registry agrees', () => {
+  it('exactly Golden Sparkles, Mystic Fog and Celestial Aura carry arcade-prize, and the registry agrees', () => {
     const withTopic = EFFECT_EVENT_FIXTURES.filter((f) =>
       topics(f.event.tags).includes('arcade-prize'),
     ).map((f) => f.d);

@@ -11,7 +11,7 @@
  * the sentence a distressed child would take at face value, and telling it to
  * them at the moment they most need to be told the truth is the worst possible
  * time to be optimistic about a roadmap. When a destination exists this copy
- * changes; until then it stays honest — see `docs/player-safety-controls.md`.
+ * changes; until then it stays honest; see `docs/player-safety-controls.md`.
  *
  * ## Report and Block are separate, and the pairing is explicit
  *
@@ -78,7 +78,7 @@ export function ReportPlayerDialog({
     ATTACHING THE MESSAGE IS A CHOICE, and it starts unmade.
 
     Opening a card and pressing Report used to attach whatever the player had
-    last said, automatically — so a report about someone standing too close
+    last said, automatically: so a report about someone standing too close
     quietly saved a sentence they wrote about something else. The reporter is
     the one who knows whether the message is the point.
 
@@ -124,7 +124,7 @@ export function ReportPlayerDialog({
 
       They fail for different reasons and they matter differently. Blocking is
       the one that actually protects the player, so it is never skipped because
-      the report could not be saved — and the report failing is never hidden
+      the report could not be saved, and the report failing is never hidden
       because the block worked.
 
       Both writers read back what they wrote, so `false` here means the decision

@@ -1,5 +1,5 @@
 /**
- * Spend-intent identity — the durable "same logical purchase" record.
+ * Spend-intent identity: the durable "same logical purchase" record.
  *
  * The contract under test: retrying an unresolved purchase reuses ONE
  * identity; a closed purchase never leaks its identity to a later identical
@@ -118,7 +118,7 @@ describe('durability matches delivery lifetime', () => {
   it('an intent survives a reload simulation (fresh read from storage)', () => {
     const cart = { surface: 'shop-purchase' as const, amount: 20, lines: [{ address: APPLE, amount: 2 }] };
     const first = openSpendIntent(PUBKEY, cart, mint)!;
-    // Nothing in memory carries over in this module — every call re-reads
+    // Nothing in memory carries over in this module; every call re-reads
     // storage, so this IS the reload behavior.
     const after = openSpendIntentsFor(PUBKEY, 'shop-purchase');
     expect(after.map((i) => i.intentId)).toEqual([first.intent.intentId]);
@@ -147,7 +147,7 @@ describe('garbage collection is bounded and never drops a possibly-published int
     expect(open[0].lines[0].address).toBe(APPLE);
   });
 
-  it('publishing/ambiguous intents survive GC — each is a real open question', () => {
+  it('publishing/ambiguous intents survive GC; each is a real open question', () => {
     const first = openSpendIntent(PUBKEY, { surface: 'shop-purchase', amount: 5, lines: [{ address: PIZZA, amount: 1 }] }, mint)!;
     persistCoinOp(PUBKEY, opRecord(first.intent.intentId, 'ambiguous'));
 
@@ -170,7 +170,7 @@ describe('garbage collection is bounded and never drops a possibly-published int
     const retry = openSpendIntent(PUBKEY, cart, mint, now)!;
     expect(retry.reused).toBe(true);
 
-    // After the window: the identical cart is a genuinely new purchase —
+    // After the window: the identical cart is a genuinely new purchase,
     // the aged applied intent is pruned rather than captured.
     clock += APPLIED_INTENT_RETENTION_MS + 1;
     const fresh = openSpendIntent(PUBKEY, cart, mint, now)!;

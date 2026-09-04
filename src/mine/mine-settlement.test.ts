@@ -1,9 +1,9 @@
 /**
- * Mine session settlement — the lifecycle, and what a failure costs.
+ * Mine session settlement, the lifecycle, and what a failure costs.
  *
  * The behaviour being replaced: energy was published on every click, so an
  * interruption left the cost paid and the reward unearned. Everything here is
- * about the inverse guarantee — **an interrupted run costs nothing, and a
+ * about the inverse guarantee, **an interrupted run costs nothing, and a
  * partial settlement always leaves the player up, never down.**
  */
 
@@ -232,7 +232,7 @@ describe('an interrupted run costs nothing', () => {
     expect(energyCalls).toHaveLength(0);
   });
 
-  it('recovery LEAVES a live open session alone — another tab may be playing it', async () => {
+  it('recovery LEAVES a live open session alone, another tab may be playing it', async () => {
     const { settlement } = makeDeps();
     const started = await settlement.startSession({ petId: PET_ID, startEnergy: 100 });
     if (!started.ok) throw new Error('start failed');

@@ -7,8 +7,8 @@
  *    walking across the theater and changing seats all keep it. Only an explicit
  *    leave, or leaving the location, clears it.
  *  • **No cleanup event may outrank the movement it follows.** Presence is
- *    ordered by `seq`, so an `idle` clear published a tick after a walk — no
- *    `goal`, higher `seq` — is taken by every remote client as the newest word,
+ *    ordered by `seq`, so an `idle` clear published a tick after a walk; no
+ *    `goal`, higher `seq`: is taken by every remote client as the newest word,
  *    and the Blobbi freezes mid-aisle instead of walking. Because movement no
  *    longer clears anything but the seat, there is no such event to publish.
  *
@@ -37,13 +37,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,
@@ -167,7 +167,7 @@ async function setup(props: { sittingIn?: string | null; activitySession?: strin
     await act(async () => {});
   };
 
-  /** A real world click — the same path a player takes to walk somewhere. */
+  /** A real world click, the same path a player takes to walk somewhere. */
   const walk = async () => {
     const world = container.querySelector('[data-testid="world"]') as HTMLElement;
     vi.spyOn(world, 'getBoundingClientRect').mockReturnValue({
@@ -246,7 +246,7 @@ describe('moving while in a shared activity', () => {
     expect('seatId' in move).toBe(false);
     // …and NOT the session ending.
     expect(move.activity).toEqual({ type: 'shared-playback', session: SESSION });
-    // The walk itself is intact — this is what remote clients animate.
+    // The walk itself is intact; this is what remote clients animate.
     expect(move.goal).toBeDefined();
     expect(move.goal?.to).toBeDefined();
   });
@@ -307,7 +307,7 @@ describe('moving while in a shared activity', () => {
     published.length = 0;
 
     // Seat-to-seat: the walk stands you up, the arrival seats you again, and the
-    // session is untouched throughout — no leave, no rejoin, no new code.
+    // session is untouched throughout; no leave, no rejoin, no new code.
     await h.walk();
     await h.update({ sittingIn: null });
     await h.update({ sittingIn: OTHER_SEAT });

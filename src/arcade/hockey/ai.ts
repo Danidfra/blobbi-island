@@ -1,5 +1,5 @@
 /**
- * Air Hockey — the opponent.
+ * Air Hockey: the opponent.
  *
  * A **target-based controller with four modes**, not a puck mirror and not a
  * per-frame dice roll. It is pure: `stepHockeyAi` takes the world and its own
@@ -16,7 +16,7 @@
  *  - **Perception lags.** The AI does not steer toward the puck; it steers
  *    toward a `perceived` puck that chases the real one with a time constant of
  *    {@link HockeyAiProfile.reactionMs}. Without it the opponent reacts inside
- *    one 8 ms step and no shot can ever beat it — it is not hard, it is
+ *    one 8 ms step and no shot can ever beat it; it is not hard, it is
  *    unbeatable, which is a different and much less interesting thing.
  *  - **Decisions are held.** The MODE is re-chosen only every
  *    `decisionIntervalMs`; between decisions the target is recomputed
@@ -31,7 +31,7 @@
  * ## Randomness
  *
  * Every random number comes from the caller's seeded generator, drawn only when
- * a decision is made — never per frame and never during a React render. Two runs
+ * a decision is made; never per frame and never during a React render. Two runs
  * with the same seed and the same inputs produce the same opponent, which is
  * what makes the AI testable at all.
  */
@@ -59,10 +59,10 @@ import type { ArcadeDifficulty } from '../types';
 /**
  * What the opponent is trying to do right now.
  *
- * - `defend` — hold the line between the puck and its own goal. The default.
- * - `intercept` — the puck is coming; go to where it WILL be, not where it is.
- * - `strike` — the puck is loose in its half; get behind it and drive it back.
- * - `recover` — the puck is past it, or it has wandered; go home first.
+ * - `defend`: hold the line between the puck and its own goal. The default.
+ * - `intercept`: the puck is coming; go to where it WILL be, not where it is.
+ * - `strike`: the puck is loose in its half; get behind it and drive it back.
+ * - `recover`: the puck is past it, or it has wandered; go home first.
  */
 export type HockeyAiMode = 'defend' | 'intercept' | 'strike' | 'recover';
 
@@ -76,7 +76,7 @@ export interface HockeyAiState {
    * Where a strike is aimed, chosen once when `strike` is entered.
    *
    * Held rather than recomputed so the opponent cannot re-aim as the player
-   * moves — which is exactly the "perfect instantaneous reaction" the brief
+   * moves: which is exactly the "perfect instantaneous reaction" the brief
    * rules out, wearing a different hat.
    */
   readonly aimX: number;
@@ -88,7 +88,7 @@ export interface HockeyAiState {
    * exactly why: the prediction error of `predictCrossingX` is PROPORTIONAL to
    * how far the puck travels sideways, so a shot straight down the middle is
    * predicted perfectly however low `predictionSkill` is set. A straight shot
-   * could therefore never beat the opponent — six hundred hits and not one goal
+   * could therefore never beat the opponent, six hundred hits and not one goal
    * across four hundred simulated seconds. An absolute error is the missing
    * piece: it is small, it is held for the length of a decision so it never
    * looks like jitter, and it is the difference between a keeper and a wall.
@@ -119,13 +119,13 @@ export interface HockeyAiProfile {
    * How much of a wall-folded interception prediction the opponent actually
    * trusts, 0..1.
    *
-   * The single most important beatability knob. `predictCrossingX` is EXACT —
-   * it unfolds every rail bounce — and an opponent that acts on it is not a
+   * The single most important beatability knob. `predictCrossingX` is EXACT,
+   * it unfolds every rail bounce, and an opponent that acts on it is not a
    * good player, it is a solved one: it meets every shot, including banked
    * ones no person could read, and a match ends 0–0 after four hundred
    * simulated seconds. Blending the prediction back toward where the puck is
    * NOW is what turns "solved" into "reads the play well", and it degrades
-   * exactly the way a person does — a straight shot stays easy to meet, a long
+   * exactly the way a person does, a straight shot stays easy to meet, a long
    * banked one gets progressively less well covered.
    */
   readonly predictionSkill: number;
@@ -222,14 +222,14 @@ export interface HockeyAiInput {
 
 export interface HockeyAiStep {
   readonly state: HockeyAiState;
-  /** Already clamped into the opponent's half — the caller need not re-check. */
+  /** Already clamped into the opponent's half, the caller need not re-check. */
   readonly target: Vec2;
   /**
    * How gently to arrive, in table units. Zero means "at full speed".
    *
    * Per-mode, and that is not a detail: easing in is what stops the opponent
    * vibrating on a defensive spot it can never sit exactly on, and it is
-   * precisely wrong for a SHOT — a mallet that decelerates as it reaches the
+   * precisely wrong for a SHOT, a mallet that decelerates as it reaches the
    * puck taps it instead of hitting it, which is how an opponent ends up unable
    * to score at all.
    */
@@ -255,7 +255,7 @@ export function stepHockeyAi(input: HockeyAiInput): HockeyAiStep {
   const alpha = 1 - Math.exp(-dt / Math.max(0.001, profile.reactionMs / 1000));
   // A puck that is not a number is not something anyone can see. Keeping the
   // previous belief means one bad frame cannot poison the opponent's perception
-  // for the rest of the match — the match step recovers the puck itself on the
+  // for the rest of the match, the match step recovers the puck itself on the
   // very next step, and by then this is looking at a real one again.
   const visible =
     Number.isFinite(puck.x) &&
@@ -368,7 +368,7 @@ function targetFor(
 
         A first pass targeted the point just BEHIND the puck. The mallet
         obediently travelled there, decelerated into it, and nudged the puck a
-        few units — an opponent that touched the puck constantly and could not
+        few units: an opponent that touched the puck constantly and could not
         score in four hundred simulated seconds. The missing half is the
         FOLLOW-THROUGH: a shot is a move to a point on the far side of the
         puck, so contact happens at speed and in the direction of the goal.
@@ -402,7 +402,7 @@ function targetFor(
  * The defensive line: on the segment from its own goal toward the puck, a fixed
  * distance out.
  *
- * Following the puck's x directly is the mirror behaviour the brief rules out —
+ * Following the puck's x directly is the mirror behaviour the brief rules out,
  * it looks robotic and it leaves the near post open on every cross. Sitting on
  * the goal-to-puck line covers the angle instead, which is both correct and
  * what a person does.

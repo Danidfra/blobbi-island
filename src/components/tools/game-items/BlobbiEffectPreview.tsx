@@ -2,8 +2,8 @@
  * "What would this EFFECT look like on an actual Blobbi?"
  *
  * The effect-item counterpart to `BlobbiAccessoryPreview`, and it exists for a
- * blunt reason: an effect item's artwork is a token — a star charm, a mist
- * bottle, a prism — that represents the effect in an inventory row. Pasting
+ * blunt reason: an effect item's artwork is a token, a star charm, a mist
+ * bottle, a prism; that represents the effect in an inventory row. Pasting
  * that token onto a Blobbi's head, which is what the accessory preview would
  * do, shows something the game will never draw. The effect is what the item
  * grants, so the effect is what gets previewed.
@@ -12,7 +12,7 @@
  *
  * The Blobbi is a fixture (shared with the accessory preview so the two tabs
  * agree). Nothing is equipped, owned, granted or published, and the item's
- * address is never consulted — the preview draws the effect id the author
+ * address is never consulted, the preview draws the effect id the author
  * typed, precisely BECAUSE that is not how the game decides. In the game an
  * effect runs only when a trusted item address resolves to it
  * (`src/effects/official-visual-effect-items.ts`); here the author is asking
@@ -22,13 +22,13 @@
  * ## An unimplemented id gets a labelled stand-in, never a blank box
  *
  * `@blobbi/react` draws twelve effects. An id outside that set is a valid thing
- * to publish — another client may know it — but this client cannot draw it, and
+ * to publish: another client may know it, but this client cannot draw it, and
  * an empty preview reads as a broken item rather than an unimplemented one.
  *
  * So an unknown id borrows a real effect from its declared `effectSlot` and is
  * labelled unmistakably as an approximation (`resolveEffectPreview`). The two
- * things the author can act on — where it will sit, and that THIS client draws
- * nothing for it — are both stated. What is never done is pretending the
+ * things the author can act on, where it will sit, and that THIS client draws
+ * nothing for it, are both stated. What is never done is pretending the
  * stand-in is the item's own effect.
  */
 
@@ -136,8 +136,8 @@ export function BlobbiEffectPreview({ effect, effectSlot }: BlobbiEffectPreviewP
       <div className="space-y-1.5 text-[11px] text-muted-foreground">
         {resolved.kind === 'none' ? (
           <p>
-            No <code>visual.effect</code> yet. Name the effect this item grants — or
-            just its <code>effectSlot</code> — and it will be drawn here.
+            No <code>visual.effect</code> yet. Name the effect this item grants, or
+            just its <code>effectSlot</code>: and it will be drawn here.
           </p>
         ) : known ? (
           <>
@@ -178,7 +178,7 @@ export function BlobbiEffectPreview({ effect, effectSlot }: BlobbiEffectPreviewP
               ) : (
                 <>
                   <code>{trimmed}</code> is not an effect this client implements, so
-                  Blobbi Island would draw nothing for it — that is still valid to
+                  Blobbi Island would draw nothing for it; that is still valid to
                   publish, and a newer client may know it.
                 </>
               )}{' '}

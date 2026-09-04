@@ -1,14 +1,14 @@
-# /dev/equipment — the simulation harness (Phase 9.5b)
+# /dev/equipment: the simulation harness (Phase 9.5b)
 
 A dev-only route (`import.meta.env.DEV`-gated in `AppRouter`, excluded from
-production builds — `src/dev-routes.test.ts`) for testing all sixteen
+production builds, `src/dev-routes.test.ts`) for testing all sixteen
 official items visually, with **local simulation only**: it signs nothing,
 publishes nothing, and never touches the real kind:31633/31634 state.
 
 ## 1–4. Purpose and the sixteen items
 
-The harness shows every published official item — four wearables and twelve
-visual effects — derived from the same canonical projection the Equipment Lab
+The harness shows every published official item, four wearables and twelve
+visual effects: derived from the same canonical projection the Equipment Lab
 uses (`LAB_OFFICIAL_ITEMS`, itself a projection of the Phase-9 registries):
 full stable `31632:<issuer>:<d>` addresses, never event ids, no second
 hand-maintained list. Display data prefers resolved kind:31632 definitions
@@ -20,7 +20,7 @@ availability, and the simulated owned/equipped state.
 ## 2–3. Simulated inventory and placements
 
 State lives in a pure reducer (`src/lib/dev-equipment-simulation.ts`):
-quantities keyed by full address (owned = the published max_stack — 1, never
+quantities keyed by full address (owned = the published max_stack: 1, never
 more, through any control), placement entries shaped exactly like a
 kind:31634 document (one per slot, same-slot replacement, unrelated slots
 preserved). Bulk actions (own/clear wearables, effects, all sixteen; reset)
@@ -37,7 +37,7 @@ empties the placements.
 
 ## 6. Renderer-path reuse
 
-The preview is not a mock-up — the simulated state feeds the REAL production
+The preview is not a mock-up, the simulated state feeds the REAL production
 code:
 
 ```
@@ -53,7 +53,7 @@ stale diagnostics and effect ordering here are the same behavior production
 has, and the Diagnostics card shows each refusal with the policy's own
 reason. The renderer-only effect gallery remains separately at
 `/dev/blobbi-effects` (raw `BlobbiRendererView` driving, no ownership
-simulation) — that page's activation panel and this harness complement each
+simulation): that page's activation panel and this harness complement each
 other.
 
 ## 7–9. Simulation vs the live account
@@ -76,7 +76,7 @@ VITE_ENABLE_LIVE_INVENTORY_LAB=true
 
 then FULLY restart Vite (hot reload cannot change build-time variables), or
 run `npm run dev:inventory-lab`. Flag enabled: the card offers "Open Live
-Equipment Lab", a deep link to `/tools/game-items?tab=lab` — validated by
+Equipment Lab", a deep link to `/tools/game-items?tab=lab`: validated by
 `coerceToolTab`, so in a disabled build the same link safely lands on the
 Item Studio and can never reveal the Lab.
 

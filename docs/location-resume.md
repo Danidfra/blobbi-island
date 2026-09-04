@@ -15,7 +15,7 @@ survives a reload and the elevator is the only way off those floors.
 ## Why this exists
 
 `LocationProvider` opened every session with `useState('town')`. There was no
-competing authority — no stored location, no route segment, nothing — so a
+competing authority: no stored location, no route segment, nothing, so a
 reload, including a reload after an error recovery, always dropped the player in
 Town however far from Town they actually were.
 
@@ -27,17 +27,17 @@ player's current island location, and it already has a lifetime rule.
 | | |
 | --- | --- |
 | Kind | `31950` (addressable, `d = session:<uuid>`) |
-| Constant | `EXP_SECONDS = 35` — `src/lib/multiplayer.ts` |
+| Constant | `EXP_SECONDS = 35`: `src/lib/multiplayer.ts` |
 | Predicate | `isPresenceAlive(expiration, now)` → `expiration > now` |
 | Basis | The **NIP-40 `expiration` tag**, written by `buildPresence31950` as `created_at + EXP_SECONDS` |
 
 `isPresenceAlive` is the single comparison. Its two consumers:
 
-1. **Remote visibility** — `explainPresenceEvent` (`src/lib/multiplayer.ts`)
+1. **Remote visibility**: `explainPresenceEvent` (`src/lib/multiplayer.ts`)
    rejects any presence it returns `false` for. That rejection is the first gate
    every incoming event passes, so a failing event never enters the presence
    map and never renders a remote player.
-2. **Local resume** — `resolveInitialIslandLocation`
+2. **Local resume**: `resolveInitialIslandLocation`
    (`src/lib/location-resume.ts`).
 
 `location-resume.test.ts` walks a table of ages across the boundary and asserts
@@ -94,7 +94,7 @@ else's.
 
 The location arrives as a string from a relay. Only strings that are keys of
 `LOCATION_BACKGROUNDS` are accepted, so a resumed location always has a scene to
-render. That set is derived from the record rather than written out again — the
+render. That set is derived from the record rather than written out again, the
 compiler already forces it to stay exhaustive, and a second hand-kept list would
 be free to drift.
 
@@ -110,7 +110,7 @@ empty.
 
 It then navigates to Town anyway, and that is safe here for a specific reason:
 **this read owns no data.** The resilience rule exists to stop an uncertain
-relay destroying player state. The resume decision is not state — nothing is
+relay destroying player state. The resume decision is not state; nothing is
 persisted, no location is written anywhere, and no "you were in Town" fact is
 recorded as a result. The only cost of a wrong guess is one walk back.
 
@@ -136,8 +136,8 @@ Presence carries two points, and neither is plainly "where the player is":
 | stationary (`idle`, heartbeat) | the live position | absent |
 | walking (`moving`) | where the walk **started** | `{from, to, v, ts}` |
 
-So mid-walk, `anchor` is already *behind* the player — `publishMove` writes the
-walk's origin there — and `goal.to` is where it ends.
+So mid-walk, `anchor` is already *behind* the player, `publishMove` writes the
+walk's origin there: and `goal.to` is where it ends.
 
 Resume takes **`goal?.to ?? anchor`**. That is not a guess: it is exactly what
 `processPresenceEvent` uses as the target for every REMOTE copy of that player
@@ -145,7 +145,7 @@ Resume takes **`goal?.to ?? anchor`**. That is not a guess: it is exactly what
 the local player somewhere no other client ever drew them.
 
 `goal.to` is taken as a **static point**. The goal itself never enters the
-decision — there is no field on the result to hold it — so a reload can never
+decision: there is no field on the result to hold it, so a reload can never
 resume walking toward a target chosen 30 seconds ago.
 
 ### Coordinates
@@ -162,13 +162,13 @@ A coordinate off the relay is never trusted onto the screen:
 | Input | Result |
 | --- | --- |
 | Non-numeric, `NaN`, `Infinity`, missing | canonical spawn |
-| Outside 0–100 world-percent space | canonical spawn — malformed, not merely out of bounds; clamping `x: -9999` onto an edge would invent a spot the player never occupied |
-| In range but off the scene's walkable floor | **clamped** by `constrainPosition` against `locationBoundaries` — the scene's own existing policy |
+| Outside 0–100 world-percent space | canonical spawn, malformed, not merely out of bounds; clamping `x: -9999` onto an edge would invent a spot the player never occupied |
+| In range but off the scene's walkable floor | **clamped** by `constrainPosition` against `locationBoundaries`: the scene's own existing policy |
 | Valid | used as-is |
 
 Positions the app itself publishes already pass this untouched: `goal.to` is
 clamped by `clampToWalkable` at publish time, and every published anchor is a
-live actor position. The clamp branch exists for history — a room whose floor
+live actor position. The clamp branch exists for history, a room whose floor
 moved between builds.
 
 ## What is NOT restored
@@ -177,18 +177,18 @@ moved between builds.
 are sub-states with their own ownership and expiry rules, and a boot cannot
 honour those rules.
 
-- **`goal` / active walking** — a restored goal is a walk toward a target that
+- **`goal` / active walking**: a restored goal is a walk toward a target that
   made sense 30 seconds ago (the classic case being an old walk-to-door target).
   The presence layer already refuses to reuse stale movement targets when a
   player re-enters a room; resume follows the same rule.
-- **`seatId`** — a seat claim is advisory occupancy arbitrated live among
+- **`seatId`**: a seat claim is advisory occupancy arbitrated live among
   everyone in the room. Reasserting one at boot would claim a chair on the
   strength of an event nobody else is still holding.
-- **`activity`** — shared-playback membership belongs to being in the room.
+- **`activity`**: shared-playback membership belongs to being in the room.
   `PlayingView` clears it on every location change and starts at `null`; walking
   back into the theater does not silently rejoin a session, and neither does
   reloading into it.
-- **`hiddenIn`** — pose state, reset by `useBlobbiPoseController` on mount.
+- **`hiddenIn`**: pose state, reset by `useBlobbiPoseController` on mount.
 
 ## Room-specific behaviour after a reload
 
@@ -196,20 +196,20 @@ honour those rules.
 
 `cave-open` restores like any other room. A mining **run** does not.
 
-The Mine's lifecycle deliberately abandons an unfinished run on unmount — no
+The Mine's lifecycle deliberately abandons an unfinished run on unmount; no
 energy charged, no Coins granted (`docs/mine-session-settlement.md`). Resume does
 not touch that: `MiningGame` mounts at its instructions screen with no session
 minted, exactly as if the player had walked in through the cave mouth.
 `MineResumeBoundary.test.tsx` pins it, and fails if resume ever grows the ability
 to rehydrate a run.
 
-### Arcade — and the Arcade Pass lifecycle
+### Arcade: and the Arcade Pass lifecycle
 
 `arcade` (the entrance) always restores. `arcade-1` and `arcade-minus1` restore
 **if and only if the player still holds a valid Arcade Pass.**
 
 Those two floors are reachable only through the elevator, and `ArcadeRoom`'s
-elevator is pass-gated **on every floor** — including the one you arrive on. A
+elevator is pass-gated **on every floor**: including the one you arrive on. A
 player restored upstairs without a pass would be stranded: the only exit refuses
 them. So the entitlement is checked, and an unentitled player lands at the
 entrance, where a pass can be bought. It is never granted: presence records
@@ -217,7 +217,7 @@ position, and position is not payment.
 
 #### Why the pass used to vanish on reload
 
-`sessionStorage` survives a reload in the same tab — that is what it is for. The
+`sessionStorage` survives a reload in the same tab; that is what it is for. The
 pass disappeared anyway because `LocationProvider` deleted it on the way out:
 
 ```js
@@ -229,12 +229,12 @@ window.addEventListener('beforeunload', () => {
 
 That handler was defensible before location resume: a reload always landed you
 in Town, so you really had left the arcade. The moment reloads started restoring
-where you were, it became a double charge — buy a pass, refresh, buy it again.
+where you were, it became a double charge, buy a pass, refresh, buy it again.
 
 **The product rule is unchanged**: the pass is valid until the player leaves the
 arcade. What changed is that a *reload is no longer mistaken for leaving*.
 Revocation now happens on the one thing that actually means "left": the location
-ceasing to be an arcade location, enforced in two places that agree —
+ceasing to be an arcade location, enforced in two places that agree,
 
 | Trigger | Where |
 | --- | --- |
@@ -251,7 +251,7 @@ none of them location changes, and none of them revoke the pass.
 
 ### Theater / stage
 
-`stage` restores directly — entering it is ungated. Seat occupancy and shared
+`stage` restores directly: entering it is ungated. Seat occupancy and shared
 watch-session membership do not come back, per **Location only** above.
 
 ## How the flash is avoided
@@ -259,14 +259,14 @@ watch-session membership do not come back, per **Location only** above.
 `BlobbiIsland` holds the playing branch on the loading screen until the resume
 decision settles, and `LocationProvider` takes the decision as its *initial*
 `useState` value. So the world's first committed render is already the restored
-location — there is no Town backdrop, no Town spawn, no Town presence publish,
+location: there is no Town backdrop, no Town spawn, no Town presence publish,
 and therefore nothing to teleport away from.
 
 The position rides along the same path rather than racing it. `MovableBlobbi` is
 keyed on `currentLocation`, so its `initialPosition` is read at the actor's first
 mount in a scene; `resolveActorSpawn` supplies the bootstrap position there and
 the canonical spawn everywhere else. **No effect moves the actor after the scene
-is up** — there is no correcting step to see.
+is up**: there is no correcting step to see.
 
 The wait is bounded by the read's own deadline, and in practice is already over:
 the presence read starts in parallel with the Blobbi and companion reads that
@@ -285,13 +285,13 @@ Resume runs once and then gets out of the way. Two independent latches:
    changed decision cannot move a player who is already somewhere.
 
 The same latch covers position: location and position are adopted in one commit,
-and `setCurrentLocation` clears `bootstrapPosition` immediately — not on the far
-side of the fade — so from the first navigation onward the destination scene's
+and `setCurrentLocation` clears `bootstrapPosition` immediately; not on the far
+side of the fade, so from the first navigation onward the destination scene's
 own spawn rules own it. A late presence answer can change neither.
 
 After boot, location is owned entirely by `LocationContext` and the normal
 navigation path. Presence continues to be published by the existing publisher,
-which reads the live `currentLocation` — so the restored location goes out on the
+which reads the live `currentLocation`: so the restored location goes out on the
 wire through the ordinary path, and no second publisher exists.
 
 ## Multi-tab
@@ -309,12 +309,12 @@ presence is the only source.
 
 ## Desktop and mobile
 
-Identical. There is no device-specific timeout and no device-specific branch —
+Identical. There is no device-specific timeout and no device-specific branch,
 the same `EXP_SECONDS`, the same read deadline, the same position handling
 everywhere. No pointer or viewport input reaches any of this logic.
 
 A mobile suspend/resume inside the 35 s window resumes exactly like a desktop
-refresh, and an orientation change — which remounts React components — is not a
+refresh, and an orientation change, which remounts React components, is not a
 location change, so it neither re-runs the bootstrap nor touches the Arcade Pass.
 The only mobile-specific behaviour on this path is the pre-existing portrait
 gate, which sits above location entirely.
@@ -327,6 +327,6 @@ gate, which sits above location entirely.
 | `src/lib/location-resume.ts` | The pure decision: `resolveInitialIslandLocation` |
 | `src/hooks/useIslandLocationResume.ts` | One bounded EOSE-aware read, once per entry |
 | `src/contexts/LocationContext.tsx` | `initialLocation` / `initialPosition`, bootstrap latch, arcade-exit revocation |
-| `src/lib/location-initial-position.ts` | `resolveActorSpawn` — bootstrap position vs canonical spawn |
+| `src/lib/location-initial-position.ts` | `resolveActorSpawn`: bootstrap position vs canonical spawn |
 | `src/components/blobbi/PlayingView.tsx` | Mounts the actor at the resolved spawn |
 | `src/pages/BlobbiIsland.tsx` | Holds the world until the decision settles |

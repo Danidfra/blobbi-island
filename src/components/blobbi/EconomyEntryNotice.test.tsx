@@ -1,5 +1,5 @@
 /**
- * Pre-world economy-entry notice — copy and visibility contract.
+ * Pre-world economy-entry notice, copy and visibility contract.
  *
  * Speaks only when there is something to say (applying / ambiguous /
  * retryable failure), stays silent for checking/applied/idle, offers retry
@@ -117,7 +117,7 @@ describe('EconomyEntryNotice', () => {
     const { container } = render(<EconomyEntryNotice />);
 
     // The shared CoinIcon (artwork, or the published symbol when it cannot
-    // load) — the same mark every other economy surface uses.
+    // load): the same mark every other economy surface uses.
     expect(
       container.querySelector('[data-coin-icon], [data-coin-icon-fallback]'),
     ).not.toBeNull();

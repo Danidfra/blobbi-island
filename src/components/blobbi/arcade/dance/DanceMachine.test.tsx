@@ -1,5 +1,5 @@
 /**
- * Blobbi Dance — lifecycle and integration coverage.
+ * Blobbi Dance: lifecycle and integration coverage.
  *
  * The REAL controller, the REAL shell, the REAL lifecycle reducer, the REAL
  * judgement engine and the REAL reward hook. Two things are substituted, and
@@ -65,9 +65,9 @@ vi.mock('@nostrify/react', async () => {
  * The machine and the game, kept apart but never mismatched.
  *
  * The machine says WHERE a run happened and the registry says WHAT was played.
- * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine` — it is a
- * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else
- * — so the harness uses the id the product uses. A brief corrective pass ran
+ * For Blobbi Dance the machine is ALWAYS `arcade-dance-machine`: it is a
+ * dedicated machine's game, and `canLaunchArcadeGame` refuses it anywhere else,
+ * so the harness uses the id the product uses. A brief corrective pass ran
  * this game from a generic cabinet, which would have written a cabinet's id
  * into a ticket claim.
  */
@@ -350,7 +350,7 @@ describe('the run', () => {
 });
 
 describe('interruption and closing', () => {
-  it('PAUSES when the window merely loses focus — a run is not lost to an alt-tab', async () => {
+  it('PAUSES when the window merely loses focus, a run is not lost to an alt-tab', async () => {
     const { audio } = renderMachine();
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
     await tick(audio, NEON_HOP_TRACK.leadInMs);
@@ -362,7 +362,7 @@ describe('interruption and closing', () => {
 
     expect(shell()).toHaveAttribute('data-arcade-status', 'paused');
     expect(audio.engine.state).toBe('paused');
-    // The run is still there — it can be resumed and still finish for tickets.
+    // The run is still there; it can be resumed and still finish for tickets.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^resume/i }));
     });
@@ -396,7 +396,7 @@ describe('interruption and closing', () => {
     });
   });
 
-  it('does not resurrect an aborted run — replay is a new one', async () => {
+  it('does not resurrect an aborted run, replay is a new one', async () => {
     const { audio } = renderMachine();
     fireEvent.click(screen.getByRole('button', { name: /^start$/i }));
     await tick(audio, NEON_HOP_TRACK.leadInMs);
@@ -497,7 +497,7 @@ describe('results and replay', () => {
     expect(results.querySelector('[data-dance-grade="S"]')).not.toBeNull();
     expect(within(results).getByText('100%')).toBeInTheDocument();
     // The visible line and the screen-reader summary both say it, which is the
-    // point — the result must be readable without chasing an animation.
+    // point: the result must be readable without chasing an animation.
     expect(within(results).getAllByText(/full combo/i).length).toBeGreaterThanOrEqual(2);
   });
 
@@ -584,8 +584,8 @@ describe('claiming', () => {
   });
 
   it('says nothing was saved, and offers a retry, only for a PROVABLE pre-publish failure', async () => {
-    // A writer that can prove no relay stored the event. The real one cannot —
-    // `NPool.event` gives no per-relay breakdown — so this branch exists for
+    // A writer that can prove no relay stored the event. The real one cannot,
+    // `NPool.event` gives no per-relay breakdown, so this branch exists for
     // signer refusals and for a future client with a richer contract.
     const writer = createFakeWriter({
       publishError: new ArcadeRewardWriterError('signer said no', 'sign-failed'),
@@ -608,7 +608,7 @@ describe('claiming', () => {
     expect(shell()).toHaveAttribute('data-arcade-status', 'results');
   });
 
-  it('offers a read-only status check — NOT "Try again" — when verification is inconclusive', async () => {
+  it('offers a read-only status check: NOT "Try again", when verification is inconclusive', async () => {
     // THE regression, at the UI level. A "Try again" button here is what turned
     // a 3-ticket reward into 6.
     const writer = createFakeWriter({ quantities: [0, 3] });
@@ -692,7 +692,7 @@ describe('claiming', () => {
     expect(shell()).toHaveAttribute('data-arcade-status', 'rewarded');
   });
 
-  it('stays unresolved — and silent about safety — when reconciliation is inconclusive', async () => {
+  it('stays unresolved: and silent about safety, when reconciliation is inconclusive', async () => {
     const writer = createFakeWriter({ quantities: [0, 0, 0, 0] });
     await playAndClaim(writer);
     await act(async () => {

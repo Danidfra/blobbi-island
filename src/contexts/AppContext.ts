@@ -4,8 +4,8 @@ import { createContext } from "react";
  * The id of the active Island theme.
  *
  * Deliberately `string` and not a union of the ids that exist in this build.
- * A stored preference outlives the build that wrote it — a removed seasonal
- * theme, or a player on a cached bundle — and the recovery for an id this
+ * A stored preference outlives the build that wrote it, a removed seasonal
+ * theme, or a player on a cached bundle, and the recovery for an id this
  * build does not know is to fall back to the default, which
  * `resolveIslandTheme` does at the point of use. Widening the type here is what
  * keeps that fallback the ONLY place the question is asked; a union would push
@@ -18,7 +18,7 @@ export type Theme = string;
 
 export interface AppConfig {
   /**
-   * Active Island theme id — see `src/lib/island-themes.ts`.
+   * Active Island theme id; see `src/lib/island-themes.ts`.
    *
    * This field previously held `"light" | "dark" | "system"`. Blobbi Island has
    * no generic light/dark mode (an evening island is a THEME, authored with the
@@ -36,7 +36,7 @@ export interface AppConfig {
    * cannot order the two and adopts the remote unconditionally, which silently
    * reverts the choice the player just made.
    *
-   * Absent means UNKNOWN — a config written before this field existed, or a
+   * Absent means UNKNOWN, a config written before this field existed, or a
    * player who has never changed theme. Unknown yields to the account, which is
    * the behaviour that shipped before it.
    */
@@ -51,8 +51,8 @@ export interface AppConfig {
    * needing a second rule: a choice that is not this account's does not
    * outrank this account's.
    *
-   * Absent when the choice was made signed out, or by a caller that did not say
-   * — both of which yield to the account, the safe direction.
+   * Absent when the choice was made signed out, or by a caller that did not say,
+   * both of which yield to the account, the safe direction.
    */
   themeChosenBy?: string;
   /** Selected relay URL */

@@ -1,11 +1,11 @@
 /**
- * Ditto's ENCRYPTED APP SETTINGS — where "the theme I am using" actually lives.
+ * Ditto's ENCRYPTED APP SETTINGS, where "the theme I am using" actually lives.
  *
  * ## The mistake this module exists to correct
  *
  * The first interop attempt assumed kind:16767 was Ditto's active-theme state.
- * It is not. In the current Ditto source, `useActiveProfileTheme` — the only
- * reader of 16767 — is consumed by exactly two files, `ProfilePage.tsx` and
+ * It is not. In the current Ditto source, `useActiveProfileTheme`: the only
+ * reader of 16767, is consumed by exactly two files, `ProfilePage.tsx` and
  * `FollowPage.tsx`. Kind 16767 DECORATES A PROFILE: it is a public
  * advertisement of your palette so other people see your colours when they look
  * at you.
@@ -23,7 +23,7 @@
  * Ditto, and to notice a theme chosen in Ditto.
  *
  * Ditto *does* also read 16767 on pageload (`NostrSync.tsx`, when
- * `autoShareTheme` — which defaults to `true`), but it writes the result into
+ * `autoShareTheme`: which defaults to `true`), but it writes the result into
  * `customTheme` and, in its own words, does "NOT change the `theme` value". So
  * a 16767 alone is invisible in Ditto unless that account's mode already
  * happens to be `'custom'`. Both channels are needed; only one of them decides.
@@ -34,7 +34,7 @@
  * deliberate and narrow decision, and the safety comes from the merge rule:
  *
  *   - the current blob is read FRESH and decrypted before every write;
- *   - if it cannot be decrypted, **nothing is written** — a failed read must
+ *   - if it cannot be decrypted, **nothing is written**: a failed read must
  *     never become "the user had no settings", which would publish a blob
  *     containing a theme and erase their feed settings, filters and relays;
  *   - only `theme`, `customTheme` and `lastSync` are touched. Every other key,
@@ -58,7 +58,7 @@ export const NIP78_KIND = 30078;
  * "ditto"` (see `src/App.tsx` in the Ditto repo).
  *
  * Hardcoded rather than derived because Island is not Ditto and has no
- * `appId` of its own to substitute — this is the address of a specific other
+ * `appId` of its own to substitute; this is the address of a specific other
  * application's settings, and pretending otherwise would invite writing to the
  * wrong one.
  */
@@ -67,7 +67,7 @@ export const DITTO_SETTINGS_D = `${DITTO_APP_ID}/metadata`;
 
 /** The subset of Ditto's settings Island understands. Everything else passes through. */
 export interface DittoThemeSettings {
-  /** `'light' | 'dark' | 'system' | 'custom'` — Ditto's theme MODE. */
+  /** `'light' | 'dark' | 'system' | 'custom'`: Ditto's theme MODE. */
   theme?: string;
   /** Rendered by Ditto only when `theme === 'custom'`. */
   customTheme?: ThemeConfig;
@@ -87,7 +87,7 @@ function readThemeConfig(value: unknown): ThemeConfig | undefined {
   if (!colorsRaw || typeof colorsRaw !== 'object') return undefined;
   const colors = colorsRaw as Record<string, unknown>;
 
-  // Ditto stores HSL channel triplets here, not hex — the hex encoding is the
+  // Ditto stores HSL channel triplets here, not hex, the hex encoding is the
   // EVENT format. A blob that fails this is not defaulted; it is refused, so a
   // corrupt settings entry cannot paint an unreadable island.
   const background = colors.background;
@@ -143,7 +143,7 @@ function readBackground(value: unknown): ThemeBackground | undefined {
 /**
  * Parse a DECRYPTED settings blob.
  *
- * Returns `null` for anything that is not a JSON object — and that `null` is
+ * Returns `null` for anything that is not a JSON object, and that `null` is
  * load-bearing: it is the difference between "this user has no settings" and
  * "we could not read this user's settings", and only the first may ever lead to
  * a write.
@@ -188,7 +188,7 @@ export function themeConfigFromDittoSettings(
  *
  * Everything not named here is spread through untouched, including keys added
  * to Ditto after this was written. `lastSync` is milliseconds, and it is what
- * orders this write against a selection made on another device — it is also the
+ * orders this write against a selection made on another device; it is also the
  * mechanism that survives two selections inside one wall-clock second, which
  * a second-resolution `created_at` cannot.
  */
@@ -213,7 +213,7 @@ export function dittoSettingsFilter(pubkey: string) {
  * Tags for a kind:30078 settings event, matching Ditto's writer.
  *
  * Ditto emits `d`, `title` and `client`. Island emits `d` and `title` with the
- * same values, and its own `client` — a settings blob written from the island
+ * same values, and its own `client`: a settings blob written from the island
  * should say so, and Ditto never reads the tag.
  */
 export function dittoSettingsTags(): string[][] {

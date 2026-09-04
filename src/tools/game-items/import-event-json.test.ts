@@ -1,7 +1,7 @@
 /**
  * IMPORTING a pasted kind:31632 event into the Item Studio.
  *
- * The importer deliberately owns no parsing of its own — it validates the
+ * The importer deliberately owns no parsing of its own; it validates the
  * envelope and hands the result to `eventToForm`, the same function "Load
  * published" uses. So these tests are mostly about the two things that ARE new:
  * what a pasted blob may look like, and what happens to provenance a paste
@@ -130,7 +130,7 @@ describe('importing an unsigned kind:31632 draft', () => {
     expect(form.content.description).toBe(GOLDEN_DESCRIPTION);
   });
 
-  it('needs no id or sig — an unsigned draft is the point', () => {
+  it('needs no id or sig, an unsigned draft is the point', () => {
     const bare = importEventJson(
       JSON.stringify({
         kind: KIND_GAME_ITEM_DEFINITION,
@@ -299,7 +299,7 @@ describe('importing image tags', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('leaves the primary replaceable — the row is ordinary editable state', () => {
+  it('leaves the primary replaceable, the row is ordinary editable state', () => {
     const { form } = unwrap(withImages);
     const replaced = {
       ...form,

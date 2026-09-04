@@ -10,7 +10,7 @@ import { DEFAULT_ISLAND_THEME_ID, resolveIslandTheme } from '@/lib/island-themes
 /**
  * The theme contract as the app actually experiences it: what is on <html>
  * after boot, what a stored preference does, what an unusable stored
- * preference does, and — the one that matters for a game — what switching a
+ * preference does, and, the one that matters for a game, what switching a
  * theme costs the thing the player is in the middle of.
  *
  * Assertions are on the custom properties and the id attribute, never on
@@ -73,7 +73,7 @@ function ThemeControls() {
       <button
         type="button"
         onClick={() =>
-          // A theme object whose id this build cannot resolve — the runtime
+          // A theme object whose id this build cannot resolve, the runtime
           // equivalent of a removed seasonal theme still being selected.
           setTheme({ ...themes[0], id: 'a-theme-that-was-removed', source: 'builtin' })
         }
@@ -88,7 +88,7 @@ function ThemeControls() {
  * Deliberately bare: `AppProvider` and nothing else.
  *
  * That is the point of `useTheme` being relay-free. Reading and setting the
- * theme needs no query client, no signer and no relay — the network half lives
+ * theme needs no query client, no signer and no relay, the network half lives
  * in `useThemeSelection`, which only the picker uses. If this harness ever has
  * to grow a provider, the split has been eroded.
  */

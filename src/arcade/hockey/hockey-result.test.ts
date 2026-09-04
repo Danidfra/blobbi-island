@@ -1,5 +1,5 @@
 /**
- * Air Hockey result — the join between a match and the shared arcade contract.
+ * Air Hockey result, the join between a match and the shared arcade contract.
  *
  * The whole point of these tests is that a result is the ONE thing that leaves
  * the game: the lifecycle validates it, the results panel renders it, and one
@@ -121,8 +121,8 @@ describe('building the arcade result', () => {
   });
 
   it('carries a negative margin in stats, where negatives are legal', () => {
-    // `score` must be a non-negative integer by contract, so the margin — which
-    // is the interesting number and can be negative — travels separately.
+    // `score` must be a non-negative integer by contract, so the margin, which
+    // is the interesting number and can be negative, travels separately.
     const lost = buildAirHockeyResult({
       ...RESULT_INPUT,
       match: summariseHockeyMatch(decided(1, 7)),

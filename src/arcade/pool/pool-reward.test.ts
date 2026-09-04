@@ -2,7 +2,7 @@
  * Pool reward-policy tests.
  *
  * Written the way the dance and hockey policies' tests are: every bonus, the
- * cap, and every route to zero. The totals are PINNED on purpose — an economy
+ * cap, and every route to zero. The totals are PINNED on purpose, an economy
  * change must arrive as a deliberate edit here, not as a side effect.
  */
 import { describe, it, expect } from 'vitest';
@@ -109,7 +109,7 @@ describe('worked examples from the documented policy', () => {
     expect(tickets({ legalEight: false }).quantity).toBe(7);
   });
 
-  it('a clean legal-8 Easy win pays 2 + 3 + 1 + 1 = 7 — no difficulty bonus on Easy', () => {
+  it('a clean legal-8 Easy win pays 2 + 3 + 1 + 1 = 7; no difficulty bonus on Easy', () => {
     expect(tickets({ difficulty: 'easy' }).quantity).toBe(7);
   });
 
@@ -125,7 +125,7 @@ describe('worked examples from the documented policy', () => {
     expect(award.eligible).toBe(true);
   });
 
-  it('losing on your own early 8-ball still pays the floor — never negative', () => {
+  it('losing on your own early 8-ball still pays the floor; never negative', () => {
     const award = tickets({ won: false, earlyEightLoss: true, scratches: 2, fouls: 3 });
     expect(award.quantity).toBe(2);
   });

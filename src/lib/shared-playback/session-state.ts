@@ -3,11 +3,11 @@
  *
  * One function per side of the contract:
  *
- *  - {@link transition} — the HOST's: an intent plus the current canonical state
+ *  - {@link transition}, the HOST's: an intent plus the current canonical state
  *    produce ONE snapshot, from which both the ephemeral command and the
  *    addressable state are built. Invariant I2 (both events describe the same
  *    state) holds because there is only ever one computation.
- *  - {@link applyCommandToContent} — the GUEST's: a validated command folds into
+ *  - {@link applyCommandToContent}, the GUEST's: a validated command folds into
  *    the canonical state it holds, so a client that only ever sees commands
  *    still ends up with the same content the host published.
  *
@@ -71,7 +71,7 @@ export interface SessionTransition {
 /**
  * Compute the next canonical state and its matching command.
  *
- * `rev` is `current.rev + 1` for every action — it is *reserved* here and only
+ * `rev` is `current.rev + 1` for every action; it is *reserved* here and only
  * *committed* when the addressable publish is accepted (§11.2). A caller that
  * abandons the action (signing declined, the player refused) must drop this
  * whole object, not half-apply it.
@@ -105,7 +105,7 @@ export function transition(
     }
 
     case 'seek': {
-      // A seek never changes play/pause — "jump there and carry on doing what we
+      // A seek never changes play/pause, "jump there and carry on doing what we
       // were doing" is what every seek control in the UI means.
       const position = boundPosition(action.position);
       return {
@@ -235,7 +235,7 @@ export function applyCommandToContent(
  * Why re-anchor instead of republishing the byte-identical event: receivers
  * enforce `|updatedAt − created_at × 1000| ≤ 5 min` (§4.4 (10)), so a frozen
  * `updatedAt` would make the host's own keepalives *invalid* to every receiver
- * after five minutes — precisely during the long pauses the keepalive exists to
+ * after five minutes, precisely during the long pauses the keepalive exists to
  * survive. Re-anchoring also keeps the passive clock-offset samples meaningful
  * (§8.2), which the same frozen timestamp would poison.
  *
@@ -255,13 +255,13 @@ export function keepaliveContent(
    * is defined as a sample of the host's player (§8.1), so the player is the
    * authority on it. Extrapolating instead means that the moment the host
    * stalls, buffers, or is nudged by the provider's own controls, the session
-   * keeps publishing a timeline the host is not on — and guests follow that
+   * keeps publishing a timeline the host is not on, and guests follow that
    * instead of the host.
    */
   live?: { position: number },
 ): SharedPlaybackSessionContent {
   if (current.playback.state === 'paused') {
-    // Time-independent, and only host ACTIONS may move a paused playhead — a
+    // Time-independent, and only host ACTIONS may move a paused playhead, a
     // stalled or re-buffering player must not be able to rewrite it.
     return { ...current, playback: { ...current.playback, updatedAt: nowMs } };
   }

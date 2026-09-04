@@ -5,7 +5,7 @@
  * and `wss://relay.dreamith.to` on 2026-07-28, its id was recomputed from the
  * canonical serialization and its Schnorr signature verified. Pinning the actual
  * bytes is what makes "the relay definition wins over the fallback" a checkable
- * claim rather than a hopeful one — a change to either the published event or to
+ * claim rather than a hopeful one, a change to either the published event or to
  * our resolution order shows up here.
  *
  * Note on ids: TWO valid signings of this definition exist (the publish command
@@ -122,7 +122,7 @@ describe('relay definition takes precedence over the bundled fallback', () => {
   });
 });
 
-describe('offline parity — relays unavailable', () => {
+describe('offline parity: relays unavailable', () => {
   it('renders the SAME image from the bundled fallback', () => {
     const offline = bundledFallbackDefinition(ADDRESS)!;
     const online = resolveItemDefinition(

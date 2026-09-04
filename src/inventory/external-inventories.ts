@@ -1,11 +1,11 @@
 /**
- * Blobbi Island — AUTHOR-WIDE kind:31633 discovery, and the read model for the
+ * Blobbi Island: AUTHOR-WIDE kind:31633 discovery, and the read model for the
  * inventories this game does not own.
  *
  * ## The shape of the problem
  *
  * kind:31633 is addressable: `31633:<owner>:<d>`. The `d` scopes the inventory,
- * and the protocol deliberately declines to name a canonical one — a player has
+ * and the protocol deliberately declines to name a canonical one, a player has
  * as many inventories as the games they play give them, each one written by the
  * game that owns it. Blobbi Island owns and writes exactly one, `blobbi:island`
  * (`ISLAND_INVENTORY_D`). A harvest in another game credits THAT game's
@@ -26,8 +26,8 @@
  *
  * ## READ ONLY, and structurally so
  *
- * This module imports nothing from the write layer — not `useInventoryMutation`,
- * not `inventory-transaction`, not the event builder — and exposes no way to
+ * This module imports nothing from the write layer; not `useInventoryMutation`,
+ * not `inventory-transaction`, not the event builder, and exposes no way to
  * turn a `DiscoveredInventory` back into a publishable event. That is not a
  * convention; `inventory-write-topology.contract.test.ts` asserts it against
  * the real source tree.
@@ -36,13 +36,13 @@
  * inventory, it replaces the whole event. Two applications performing
  * read-modify-write on the same coordinate from different origins have no
  * shared lock (a Web Lock is same-origin), no compare-and-swap, and no revision
- * protocol they both honour — so the second writer silently discards the
+ * protocol they both honour, so the second writer silently discards the
  * first's work. Reading is safe and needs no coordination; writing needs
  * coordination semantics that do not exist yet.
  *
  * ## Foreign tags are not ours to read
  *
- * A discovered inventory may carry tags this client does not model — a
+ * A discovered inventory may carry tags this client does not model, a
  * `revision` counter, `e` markers another game uses for harvest idempotency,
  * anything else. This module surfaces the item references and the inventory's
  * own identity and contexts, and interprets nothing else. Unmanaged tags are
@@ -75,7 +75,7 @@ export interface DiscoveredInventoryItem {
 /**
  * A kind:31633 inventory owned by the player and written by somebody else.
  *
- * Carries its PROVENANCE — which inventory context it is — because that is
+ * Carries its PROVENANCE, which inventory context it is, because that is
  * what lets the UI show where an item lives without merging anything, and what
  * makes "Blobbi does not write this one" expressible at all.
  */
@@ -104,7 +104,7 @@ export interface DiscoveredInventory {
    */
   fold?: GameInventoryFoldReference;
   /**
-   * The parsed package inventory the fields above were read from — the exact
+   * The parsed package inventory the fields above were read from, the exact
    * object `resolveGameInventoryState` needs. Exposed so the derivation can be
    * handed the snapshot without re-parsing the event.
    */
@@ -132,7 +132,7 @@ export interface SelectInventoriesOptions {
  *    another. A malformed `farm:main` cannot hide a good `guild:chest`.
  * 2. **Parse before compare.** An event that does not parse is not an
  *    inventory at any age, so it is discarded before the recency comparison
- *    rather than winning it — otherwise a newer broken event would shadow an
+ *    rather than winning it; otherwise a newer broken event would shadow an
  *    older good one and the player's items would vanish.
  * 3. **Deterministic ties.** Equal `created_at` resolves to the lexicographically
  *    lowest event id, which is NIP-01's own rule for replaceable events, so two
@@ -151,7 +151,7 @@ export function selectNewestInventoryPerContext(
     if (options.owner !== undefined && event.pubkey !== options.owner) continue;
 
     // Parse FIRST. `parseInventoryEvent` is the package's permissive parser
-    // with the recommended `last` duplicate strategy — the same one the Island
+    // with the recommended `last` duplicate strategy, the same one the Island
     // inventory uses, so both readers agree about what an inventory is.
     const parsed = parseInventoryEvent(event);
     if (!parsed) continue;

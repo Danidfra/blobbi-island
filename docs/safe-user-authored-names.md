@@ -1,18 +1,18 @@
 # Safe user-authored names
 
-**Status:** built in full. **No Nostr kind, tag or schema changed** — the name
+**Status:** built in full. **No Nostr kind, tag or schema changed**: the name
 is still a plain `name` tag on kind 31124, published by the same writer.
 
 | | Built | Selected by a shipped profile |
 |---|---|---|
-| **own naming** (`ownFreeTextNaming`) | ✅ | ✅ — Family is curated |
-| **stranger names** (`strangerAuthoredNames`) | ✅ | ❌ — **dormant**, see below |
+| **own naming** (`ownFreeTextNaming`) | ✅ | ✅: Family is curated |
+| **stranger names** (`strangerAuthoredNames`) | ✅ | ❌, **dormant**, see below |
 
 > ### Update (2026-08-25, Phase F.1): remote-name substitution is dormant
 >
 > The shipped Family policy now sets `strangerAuthoredNames: true`, so a
 > curated player currently sees the names other players chose. Everything in
-> §3, §5 and §6 below still works and is still tested — against a hand-built
+> §3, §5 and §6 below still works and is still tested, against a hand-built
 > policy rather than a profile, because no shipped profile selects that branch
 > today.
 >
@@ -29,7 +29,7 @@ is still a plain `name` tag on kind 31124, published by the same writer.
 > validated at the writer; free-text chat is still dropped rather than masked;
 > the classifier is still defence in depth with one consumer. The capability
 > matrix was updated to say `true` rather than leaving it `false` and rendering
-> authored names anyway — an honest gap beats a matrix that lies.
+> authored names anyway, an honest gap beats a matrix that lies.
 >
 > **To restore it:** set the capability back to `false`. There is nothing to
 > rebuild.
@@ -47,7 +47,7 @@ in kind 31124 and it is rendered above their Blobbi to everyone in the room.
 
 After Phases B–E it was the **last** surface where a stranger could put words of
 their own choosing in front of a curated player. Chat is structured, item names
-are issuer-locked, theater media is catalogued — a name field was the way
+are issuer-locked, theater media is catalogued, a name field was the way
 through.
 
 Two separate problems, and they need different answers:
@@ -77,7 +77,7 @@ REMOTE NAME
 **There is no rename.** `finalizeAdoption` is the only writer of a Blobbi name,
 which is why one check covers the whole own-name path. A boundary test asserts no
 second module writes a `name` tag alongside kind 31124, so adding a rename fails
-that test — which is exactly when the decision to route it through the same
+that test: which is exactly when the decision to route it through the same
 validator has to be made.
 
 ## 3. Where the boundaries are
@@ -87,8 +87,8 @@ validator has to be made.
 A stranger's authored text becomes `BlobbiVisual.name` in **two** places, and
 both now resolve through the same function:
 
-- `MultiplayerLayer.fetchBlobbi31124` — the presence-driven visual;
-- `PlayingView.handleOtherBlobbiClick` — the info modal's later refresh from the
+- `MultiplayerLayer.fetchBlobbi31124`: the presence-driven visual;
+- `PlayingView.handleOtherBlobbiClick`: the info modal's later refresh from the
   full event, which would otherwise have undone the first.
 
 Everything downstream reads `visual.name`: the hover label, its `title` and
@@ -100,7 +100,7 @@ words simply never become display text.
 
 ### Own names: at the writer, not the composer
 
-`admitOwnBlobbiName` runs as the **first statement** of the adoption run —
+`admitOwnBlobbiName` runs as the **first statement** of the adoption run,
 before the profile is read, before anything is signed, before anything reaches a
 relay. A test asserts that ordering and that `signEvent` is never called for a
 refused name.
@@ -110,7 +110,7 @@ makes the rule true.
 
 ## 4. Standard behaviour
 
-Unchanged, deliberately — and since Phase F.1, this is what **both** shipped
+Unchanged, deliberately: and since Phase F.1, this is what **both** shipped
 profiles do for stranger names.
 
 - Stranger names render as authored, exactly as before.
@@ -118,7 +118,7 @@ profiles do for stranger names.
   trim/non-empty rules.
 - **Standard is not quietly censored.** The prohibited-text classifier is not
   applied to it. Adding a restriction to an existing experience is a product
-  change, and this phase does not smuggle one in — a test asserts a hostile
+  change, and this phase does not smuggle one in, a test asserts a hostile
   authored name still renders under Standard.
 
 ## 5. Curated behaviour
@@ -146,13 +146,13 @@ words they are.
 ```
 
 Sixteen adjectives × sixteen nouns = **256 combinations**, every word and every
-pairing read. The longest, `Bouncy Sparkle`, is fourteen characters — comfortably
+pairing read. The longest, `Bouncy Sparkle`, is fourteen characters, comfortably
 inside the existing limit.
 
 Validation is **structural, not filter-based**: exactly two words, single space,
 both from the lists, in that order. `Hello Friend` is refused. `message me on
 telegram` is refused. `Rocket` is refused. A modified client does not send
-profanity — it sends a clean sentence — and only a closed vocabulary refuses one.
+profanity: it sends a clean sentence, and only a closed vocabulary refuses one.
 
 The published name is an ordinary name string. No new kind, no naming event, no
 `curated_name` tag.
@@ -161,8 +161,8 @@ The published name is an ordinary name string. No new kind, no naming event, no
 
 `safeBlobbiAlias(pubkey)` **reuses the existing `genUserName`** rather than
 inventing a second identity-naming system. It already satisfies everything an
-alias needs — deterministic from a pubkey, no relay lookup, no authored input,
-stable across renders and reloads, ASCII letters and one space, bounded length —
+alias needs: deterministic from a pubkey, no relay lookup, no authored input,
+stable across renders and reloads, ASCII letters and one space, bounded length,
 and its vocabulary is clean. A test asserts a broad sample of outputs against the
 prohibited-text classifier, so "clean" is checked rather than assumed.
 
@@ -170,13 +170,13 @@ It is wrapped under its own name so the intent is legible at the call site and s
 the vocabulary can diverge later without touching consumers.
 
 **Not a security identifier.** The generator's hash is small and collisions are
-common — two strangers can share an alias. That is fine for a label whose job is
+common: two strangers can share an alias. That is fine for a label whose job is
 "something to call them". Where identity matters, the pubkey is used instead: the
 block/mute settings list shows an abbreviated npub for exactly this reason.
 
 ## 7. The prohibited-text classifier
 
-`src/user-text/` — a small, reusable primitive that safety surfaces invoke
+`src/user-text/`: a small, reusable primitive that safety surfaces invoke
 **deliberately**. It is not applied to every string in the app; a boundary test
 asserts it has exactly one consumer today.
 
@@ -201,7 +201,7 @@ breaks the match rather than being skipped.
 Digits are deliberately not boundaries: `fuck123` is the same word with a number
 on it.
 
-The naive version — `value.includes('ass')` — blocks *class*, *grass*, *pass* and
+The naive version, `value.includes('ass')`, blocks *class*, *grass*, *pass* and
 *assassin*. The test suite pins a list of words that must survive: `Scunthorpe`,
 `Penistone`, `Sussex`, `Essex`, `Middlesex`, `unisex`, `peacock`, `cockatoo`,
 `shiitake`, `Matsushita`, `analysis`, `therapist`, `assassin`, `Dickens`,
@@ -239,7 +239,7 @@ A player who named a Blobbi under free-text naming and later moves to a curated
 experience keeps that name. Nothing rewrites their kind 31124, and nothing
 renames their pet.
 
-`ownFreeTextNaming` restricts **what may be created**, not what already exists —
+`ownFreeTextNaming` restricts **what may be created**, not what already exists,
 its own documentation calls it "name your own Blobbi with free text", which is an
 authoring capability. Destroying a name a child chose, in the name of protecting
 them, would be a worse outcome than the one being prevented.
@@ -256,7 +256,7 @@ result is cached per Blobbi address. A naming-policy change now clears that cach
 and drops the cached visuals, so already-visible players re-resolve.
 
 Without it, changing the policy would leave authored names on screen until a
-reload — and a safety control that needs a page refresh is one that did not take
+reload: and a safety control that needs a page refresh is one that did not take
 effect. Family is not selectable yet, and since Phase F.1 both shipped profiles
 agree on this capability anyway, so this cannot fire today; it is here so that
 the day it can, the architecture already behaves.
@@ -270,7 +270,7 @@ frame). Each has an `sr-only` label, and the assembled name is announced through
 `aria-live="polite"` so a screen reader hears it change.
 
 There is no disabled text field and no copy explaining what the player may not
-do — an experience without free-text naming simply has a chooser instead. No age
+do: an experience without free-text naming simply has a chooser instead. No age
 language anywhere.
 
 ## 12. Limitations
@@ -293,9 +293,9 @@ Also unresolved, and out of scope here:
   restriction exists and is unselected; see the status note at the top.
 - **Alias identity is unsolved, and that is why the substitution is dormant.**
   No disambiguation, no pubkey suffix, no local nickname, no contact-aware
-  naming — deliberately unbuilt. Deciding the social identity model comes
+  naming: deliberately unbuilt. Deciding the social identity model comes
   first.
-- **`useThemePublish` publishes kind 36767 with a player-chosen theme name** —
+- **`useThemePublish` publishes kind 36767 with a player-chosen theme name**,
   player-authored public content with no capability governing it. Recorded as a
   consumer for a future user-authored public-content pass. Blobbi-name vocabulary
   must NOT be applied to theme names; they are a different domain.

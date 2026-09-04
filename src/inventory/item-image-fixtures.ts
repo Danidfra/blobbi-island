@@ -18,7 +18,7 @@
  *    into production code cannot make one resolve as an official item
  *    (`parseOfficialItemDefinition` rejects it on the issuer check alone).
  *
- * URLs point at `fixtures.invalid` — a reserved TLD that can never resolve — so
+ * URLs point at `fixtures.invalid`: a reserved TLD that can never resolve, so
  * nothing here can accidentally hit the network.
  */
 
@@ -106,7 +106,7 @@ export const FIXTURE_FULL_TURNAROUND = itemDefinitionEventFixture(
 );
 
 /**
- * No unmarked image at all — legal, and the reason the library's primary
+ * No unmarked image at all, legal, and the reason the library's primary
  * selection falls back to the first entry instead of returning nothing.
  * Ordered side-first so "first valid image" is provably NOT the front view.
  */
@@ -129,7 +129,7 @@ export const FIXTURE_DUPLICATE_FRONT = itemDefinitionEventFixture(
   ],
 );
 
-/** Two unmarked images — a `multiple-primary-images` warning, not a rejection. */
+/** Two unmarked images, a `multiple-primary-images` warning, not a rejection. */
 export const FIXTURE_MULTIPLE_PRIMARIES = itemDefinitionEventFixture(
   'fixture:accessory:multiple-primaries',
   [
@@ -159,7 +159,7 @@ export const FIXTURE_INVALID_IMAGE_TAGS = itemDefinitionEventFixture(
   ],
 );
 
-/** No `image` tag whatsoever — the item renders its emoji/placeholder. */
+/** No `image` tag whatsoever, the item renders its emoji/placeholder. */
 export const FIXTURE_NO_IMAGES = itemDefinitionEventFixture(
   'fixture:accessory:no-images',
   [],

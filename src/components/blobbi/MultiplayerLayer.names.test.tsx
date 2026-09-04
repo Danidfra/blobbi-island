@@ -1,7 +1,7 @@
 /**
  * Stranger names, proven against the real world layer.
  *
- * A pure resolver test proves the rule; this proves the WIRING — that the
+ * A pure resolver test proves the rule; this proves the WIRING; that the
  * authored text does not survive anywhere on the way to a screen. The
  * assertions deliberately search the whole rendered subtree's markup rather
  * than one element, because the ways a name leaks are exactly the ones nobody
@@ -11,8 +11,8 @@
  * Harness follows `MultiplayerLayer.hiding.test.tsx`.
  *
  * These mount a POLICY rather than a profile. The shipped Family policy now
- * permits stranger-authored names — a deferred product decision, see
- * `docs/safe-user-authored-names.md` — so a test keyed on the profile name
+ * permits stranger-authored names, a deferred product decision, see
+ * `docs/safe-user-authored-names.md`: so a test keyed on the profile name
  * would prove only what today's literals happen to say. The rule under test is
  * the capability, and a hand-built policy is how you state it.
  */
@@ -190,7 +190,7 @@ async function setup(policy: IslandSafetyPolicy) {
   return {
     container,
     actor: () => container.querySelector(`[data-player-key="${REMOTE_KEY}"]`),
-    /** Everything rendered — text, attributes, hidden nodes alike. */
+    /** Everything rendered: text, attributes, hidden nodes alike. */
     markup: () => container.innerHTML,
   };
 }
@@ -209,7 +209,7 @@ describe('an experience that permits authored names', () => {
     expect(label?.getAttribute('title')).toBe(CLEAN_NAME);
   });
 
-  it('is unchanged for a hostile name — this phase does not censor it', async () => {
+  it('is unchanged for a hostile name; this phase does not censor it', async () => {
     blobbiName = HOSTILE_NAME;
     const world = await setup(STANDARD_POLICY);
     expect(world.markup()).toContain('some-other-app');
@@ -242,7 +242,7 @@ describe('an experience that does not permit authored names', () => {
   });
 
   it('withholds even a perfectly clean authored name', async () => {
-    // `strangerAuthoredNames: false` means never, not "unless it looks fine" —
+    // `strangerAuthoredNames: false` means never, not "unless it looks fine",
     // a filter would have passed the hostile one above.
     const world = await setup(NO_AUTHORED_NAMES);
     expect(world.markup()).not.toContain(CLEAN_NAME);
@@ -263,7 +263,7 @@ describe('an experience that does not permit authored names', () => {
     expect(label?.getAttribute('title')).toBe(alias);
   });
 
-  it('keeps the player visible — the name is substituted, not the person', async () => {
+  it('keeps the player visible, the name is substituted, not the person', async () => {
     const world = await setup(NO_AUTHORED_NAMES);
     expect(world.actor()).toBeTruthy();
   });

@@ -3,7 +3,7 @@
  *
  * `MovableBlobbi` (the local player) and `MultiplayerLayer` (remote players)
  * each used to carry their own private copy of the dynamic-scale and
- * dynamic-z-index calculations — ~50 identical lines, twice. Any change made in
+ * dynamic-z-index calculations: ~50 identical lines, twice. Any change made in
  * one and forgotten in the other shows up as the local player rendering
  * differently from how everyone else sees them, which is the one class of bug a
  * shared watch room cannot tolerate. This module is the single implementation
@@ -63,7 +63,7 @@ export function boundaryYRange(boundary: Boundary | undefined): { minY: number; 
 /**
  * Perspective scale for a Blobbi standing at `position`.
  *
- * Returns 1 for rooms without a `locationScalingConfig` entry — including the
+ * Returns 1 for rooms without a `locationScalingConfig` entry, including the
  * theater, deliberately: the three seat rows are discrete, and a continuous
  * y-ramp would make a Blobbi grow and shrink as it walked the centre aisle.
  * Seated depth comes from the per-seat {@link resolveSeatedRender} scale instead.
@@ -108,14 +108,14 @@ export interface SeatedRender {
   seat: TheaterSeatConfig;
   /** World-percent POSE anchor the Blobbi is pinned to (body bottom = cushion). */
   position: Position;
-  /** Which way it is turned — theater seats all face the screen. */
+  /** Which way it is turned, theater seats all face the screen. */
   facing: 'front' | 'back';
   /** Multiplier for the sprite wrapper ONLY (never the anchor). */
   scale: number;
   /**
    * Stacking order while seated: just behind the OWN chair's backrest and in
    * front of every farther row. Derived from the seat row rather than the
-   * standing y-bands — the bands map GROUND y for standing actors, and a
+   * standing y-bands: the bands map GROUND y for standing actors, and a
    * seated pose y would land in the wrong band (the sitter's head would hide
    * behind the next row's chairs).
    */
@@ -134,7 +134,7 @@ export interface SeatedRender {
  *
  * Callers must multiply {@link SeatedRender.scale} into the sprite's INNER
  * wrapper transform only. The outer positioned element is the chat-bubble portal
- * anchor and the logical world position — scaling it would move every bubble.
+ * anchor and the logical world position, scaling it would move every bubble.
  */
 export function resolveSeatedRender(seatId: string | null | undefined): SeatedRender | null {
   const seat = getTheaterSeat(seatId);

@@ -56,7 +56,7 @@ describe('shop catalog', () => {
 });
 
 /**
- * The price table is a SEPARATE domain from the protocol registry — local
+ * The price table is a SEPARATE domain from the protocol registry, local
  * economy configuration, not a definition fact. That is only safe because it is
  * validated against the canonical registry rather than trusted.
  */

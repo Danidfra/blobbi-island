@@ -1,5 +1,5 @@
 /**
- * Which EXPERIENCE this client is presenting — and, deliberately, nothing else.
+ * Which EXPERIENCE this client is presenting, and, deliberately, nothing else.
  *
  * ## This is not an age field
  *
@@ -24,7 +24,7 @@
  * Two members, and adding a third must be a deliberate act: every profile is a
  * complete capability matrix somebody has to maintain, reason about and test.
  * The union is exhaustive-switched in `resolve.ts`, so a third member fails to
- * compile until its policy exists — which is the point.
+ * compile until its policy exists, which is the point.
  *
  * ## Why this type barely leaves this directory
  *
@@ -36,9 +36,9 @@
 /**
  * The experiences Blobbi Island can present.
  *
- * - `'standard'` — the island as it ships today: free-text chat, an open
+ * - `'standard'`: the island as it ships today: free-text chat, an open
  *   theater catalog, working external links and shares.
- * - `'family'` — the reduced-risk experience defined by
+ * - `'family'`: the reduced-risk experience defined by
  *   {@link ../../docs/family-safety-policy.md}. Defined and tested, **not yet
  *   selectable by anyone**; see `resolve.ts`.
  */
@@ -58,7 +58,7 @@ export const EXPERIENCE_PROFILES: readonly ExperienceProfile[] = Object.freeze([
  *
  * The guard exists for the boundary that does not exist yet: when a profile
  * becomes selectable it will be read back from storage, and storage returns
- * `unknown`. Validating there — rather than casting — is what stops a corrupted
+ * `unknown`. Validating there, rather than casting, is what stops a corrupted
  * or hand-edited value from reaching {@link resolveSafetyPolicy}.
  *
  * Note what it deliberately does NOT do: it does not pick a fallback. Choosing

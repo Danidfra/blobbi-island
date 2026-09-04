@@ -7,7 +7,7 @@
  * re-renders in a loop.
  *
  * Because the store's `storage` listener fires in every other tab, a component
- * using these hooks updates when the player blocks someone in a different tab —
+ * using these hooks updates when the player blocks someone in a different tab,
  * with no extra machinery here.
  */
 
@@ -46,8 +46,8 @@ export function usePlayerRelationship(pubkey: string | null | undefined): Player
 /**
  * Subscribe to relationship changes without re-rendering on them.
  *
- * For the places that must EVICT state when someone is blocked — the presence
- * map, the bubble queue — where the reaction is imperative and a re-render is
+ * For the places that must EVICT state when someone is blocked, the presence
+ * map, the bubble queue, where the reaction is imperative and a re-render is
  * beside the point.
  */
 export function useOnPlayerSafetyChange(onChange: () => void): void {

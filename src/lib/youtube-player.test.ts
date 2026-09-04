@@ -2,7 +2,7 @@
  * Coverage for the YouTube adapter, against a fake `YT` global.
  *
  * The point of the adapter is that everything above it can be tested without a
- * browser; this suite is the other half — the small amount of code that DOES
+ * browser; this suite is the other half, the small amount of code that DOES
  * touch the global API, exercised without a network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -399,7 +399,7 @@ describe('createYouTubeAdapter', () => {
     expect(adapter.getTitle()).toBeNull();
   });
 
-  it('destroys the underlying player — leaving the room must stop the audio', async () => {
+  it('destroys the underlying player, leaving the room must stop the audio', async () => {
     const { adapter } = await build();
     adapter.destroy();
     expect(lastPlayer!.calls).toContain('destroy');

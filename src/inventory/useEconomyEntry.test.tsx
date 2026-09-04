@@ -1,5 +1,5 @@
 /**
- * React binding — one root controller drives the allocation; status readers
+ * React binding: one root controller drives the allocation; status readers
  * observe without triggering; accounts stay isolated across switches.
  */
 
@@ -81,7 +81,7 @@ function RetryProbe() {
   );
 }
 
-/** A read that cannot be completed — the relay hiccup that stranded players. */
+/** A read that cannot be completed, the relay hiccup that stranded players. */
 function failReads() {
   nostrFake.query.mockImplementation(async () => {
     const error = new Error('read timed out');
@@ -181,7 +181,7 @@ describe('useEconomyEntry binding', () => {
     await waitFor(() => expect(published).toHaveLength(2));
     expect(published[1].pubkey).toBe(PUBKEY_B);
 
-    // Switching back re-uses A's settled state — no third publish.
+    // Switching back re-uses A's settled state; no third publish.
     currentPubkey = PUBKEY_A;
     rerender(makeApp(<Controller />));
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -195,7 +195,7 @@ describe('useEconomyEntry binding', () => {
  * badly". These assert the recovery a player can actually reach.
  */
 describe('failure recovery', () => {
-  it('a settled failure can be retried in the same session — no page reload', async () => {
+  it('a settled failure can be retried in the same session; no page reload', async () => {
     failReads();
     render(makeApp(<><Controller /><RetryProbe /></>));
 
@@ -228,7 +228,7 @@ describe('failure recovery', () => {
     const { rerender } = render(makeApp(<><Controller /><RetryProbe /></>));
     await waitFor(() => expect(screen.getByTestId('retry')).toHaveTextContent('failed'));
 
-    // Sign out, then back in as the same account — without a page reload.
+    // Sign out, then back in as the same account, without a page reload.
     healReads();
     currentPubkey = null;
     rerender(makeApp(<><Controller /><RetryProbe /></>));
@@ -296,7 +296,7 @@ describe('failure recovery', () => {
     expect(published).toHaveLength(1);
   });
 
-  it('a marker-present account at ZERO Coins stays at zero — a retry adds nothing', async () => {
+  it('a marker-present account at ZERO Coins stays at zero, a retry adds nothing', async () => {
     // Spent down to nothing: the balance is not proof, the marker is.
     stored.set(PUBKEY_A, markedInventory(PUBKEY_A, 0));
 

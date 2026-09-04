@@ -11,7 +11,7 @@ import {
 import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry';
 
 /**
- * ArcadeTicketBalance — a read-only chip showing how many Arcade Tickets the
+ * ArcadeTicketBalance: a read-only chip showing how many Arcade Tickets the
  * player holds.
  *
  * ## Why this is a separate component from `ArcadePassIcon`
@@ -27,7 +27,7 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  * | quantity | boolean | integer |
  *
  * So `ArcadePassIcon` is left completely untouched, and this component owns the
- * balance. It reads the canonical inventory hook — it never polls
+ * balance. It reads the canonical inventory hook; it never polls
  * `sessionStorage`, and it never reads the pass.
  *
  * ## Read-only, and read-only on purpose
@@ -39,13 +39,13 @@ import { ARCADE_TICKET_D, officialItemAddress } from '@/protocol/event-registry'
  * ## Zero-quantity behaviour
  *
  * By default the chip is hidden at zero, matching the Item Bag convention
- * (`quantity > 0`) — outside the arcade a permanent "0" would be a nag.
+ * (`quantity > 0`): outside the arcade a permanent "0" would be a nag.
  *
  * Inside the arcade the games now award tickets, so the arcade HUD passes
  * `showZero` and the chip becomes a persistent counter with three DISTINCT
  * states, never a false zero:
  *
- *  - a number, including a genuine `0` — an empty inventory is an answer;
+ *  - a number, including a genuine `0`: an empty inventory is an answer;
  *  - `…` while the first inventory read is still in flight;
  *  - `–` when the inventory could not be read at all, labelled "unavailable"
  *    for assistive tech, because "you have zero" and "we could not check" are
@@ -135,7 +135,7 @@ export function ArcadeTicketBalance({ className, showZero = false }: ArcadeTicke
       {/*
         Visual resolution order matches the catalog's: the `image` (from the
         published definition, or from the bundled fallback when relays are
-        unreachable) wins, and the emoji is the last resort — including when the
+        unreachable) wins, and the emoji is the last resort, including when the
         image itself fails to load.
       */}
       {showImage ? (

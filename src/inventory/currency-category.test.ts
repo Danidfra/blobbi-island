@@ -5,7 +5,7 @@
  * category the adapter does not know about silently degrades a perfectly valid
  * fetched definition to `unknown`, and an `unknown` item is then dropped from
  * every UI that groups by category. These tests prove `currency` survives the
- * whole path — relay definition → adapter → resolved view model → fallback —
+ * whole path: relay definition → adapter → resolved view model → fallback,
  * while genuinely unknown categories still degrade safely.
  */
 
@@ -88,7 +88,7 @@ describe('protocol adapter accepts the currency category', () => {
     expect(resolved.category).toBe('currency');
 
     // For an address with NO bundled fallback there is nothing to fall back to,
-    // so it degrades to `unknown` — which is the safe classification.
+    // so it degrades to `unknown`: which is the safe classification.
     const stranger = resolveItemDefinition(
       '31632:deadbeef:blobbi:mystery:thing',
       new Map(),

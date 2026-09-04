@@ -4,7 +4,7 @@
  * The second half is the more important one. Communication V2 drops a
  * free-text message entirely under a curated policy; running it through a
  * profanity filter and rendering a masked version instead would be a strict
- * downgrade — `$%&#@` still tells a child someone is shouting at them, and
+ * downgrade, `$%&#@` still tells a child someone is shouting at them, and
  * `come find me on discord` passes every filter ever written. These tests make
  * that regression fail loudly rather than quietly.
  */
@@ -66,7 +66,7 @@ describe('chat stays drop-based', () => {
   });
 
   it('leaves the free-text capability check exactly as it was', () => {
-    // The rule is the capability, not the content — `admitChatMessage` still
+    // The rule is the capability, not the content, `admitChatMessage` still
     // decides by class and never inspects words.
     const admission = code(join(SRC, 'safety/chat-admission.ts'));
     expect(admission).toContain('policy.freeTextChat');
@@ -101,7 +101,7 @@ describe('names resolve at the model boundary', () => {
 
   it('is the only thing world labels read', () => {
     // The label, its title and its aria-label all come from `visual.name`,
-    // which is already resolved — so no component needs to know this rule
+    // which is already resolved, so no component needs to know this rule
     // exists, and a seventh surface added later is safe by default.
     const layer = code(join(SRC, 'components/blobbi/MultiplayerLayer.tsx'));
     expect(layer).toContain('aria-label={player.visual.name}');
@@ -156,7 +156,7 @@ describe('the own-name writer has one validator', () => {
     expect(writers.sort()).toEqual([
       // The generic tag builder, called by the adoption writer.
       'src/hooks/useBlobbiEvents.ts',
-      // The adoption writer itself — where `admitOwnBlobbiName` is enforced.
+      // The adoption writer itself, where `admitOwnBlobbiName` is enforced.
       'src/hooks/useFirstEggAdoption.ts',
       // A parser, not a writer.
       'src/lib/blobbi-parsers.ts',

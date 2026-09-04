@@ -9,7 +9,7 @@
  * `setIslandSkyDev` is a no-op, the store never changes, and
  * `useSyncExternalStore` never notifies a subscriber. The production sky is
  * therefore automatic and deterministic by construction rather than by CSS
- * hiding a panel — the same approach `DebugOverlaysContext` already takes.
+ * hiding a panel, the same approach `DebugOverlaysContext` already takes.
  *
  * A module-level store rather than a React context, deliberately: a context would
  * have to be mounted in `App.tsx` *and* `TestApp.tsx`, coupling every test to a
@@ -28,8 +28,8 @@ export const isSkyDevMode = import.meta.env.DEV;
 
 export interface IslandSkyDevState {
   /**
-   * `'auto'` — the real accelerated clock, which is the only production state.
-   * `'fixed'` — hold `dayProgress`. Freezing, picking a phase and dragging the
+   * `'auto'`: the real accelerated clock, which is the only production state.
+   * `'fixed'`: hold `dayProgress`. Freezing, picking a phase and dragging the
    * slider all land here; they differ only in how the value was chosen, and
    * collapsing them keeps the resolution rule a single line.
    */
@@ -112,7 +112,7 @@ export function islandSkyDevFreezeOverride(
  *
  * `hidden` empties the sky of everything but the actor under inspection, so a
  * silhouette can be judged without another cloud in frame. `parkPx` is a fixed
- * `translateX` that replaces the travel animation — the whole point of preview
+ * `translateX` that replaces the travel animation, the whole point of preview
  * mode is not waiting for a passage to come round.
  */
 export interface IslandCloudDevPresentation {
@@ -128,7 +128,7 @@ export interface IslandCloudDevPresentation {
  * Pure, and **read-only with respect to the production policy**: it returns what to
  * draw *instead*, and never feeds back into `islandCloudPassage`. With the default
  * state every field is `null`/`false`, so the caller uses the UTC-derived passage
- * unchanged — which is what makes "back to Auto" an instant restore rather than a
+ * unchanged: which is what makes "back to Auto" an instant restore rather than a
  * reset of something that was mutated.
  *
  * Overrides apply only to `cloudActorId`; the other two actors stay on production
@@ -158,8 +158,8 @@ export function resolveIslandCloudDev(
  * Where a previewed cloud is parked, in world pixels.
  *
  * **Not centred**, which was the obvious choice and the wrong one: every sky-ready
- * location puts its main structure in the horizontal middle — Plaza's town hall,
- * Town's three shopfronts — so a centred preview sat behind the scenery with only a
+ * location puts its main structure in the horizontal middle: Plaza's town hall,
+ * Town's three shopfronts, so a centred preview sat behind the scenery with only a
  * sliver showing. Parking over the left quarter puts the silhouette in the open sky
  * both scenes actually have, which is the whole point of preview mode.
  *

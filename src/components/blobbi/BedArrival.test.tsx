@@ -155,7 +155,7 @@ describe('bed flow (pending-interaction based)', () => {
     expect(state().dataset.pose).toBe('standing');
   });
 
-  it('a world tap cancels a pending bed walk before arrival — no sleep fires later', () => {
+  it('a world tap cancels a pending bed walk before arrival; no sleep fires later', () => {
     // Far from the bed: the request starts a WALK (no immediate fire).
     const { state, world } = setup({ x: 20, y: 95 });
 

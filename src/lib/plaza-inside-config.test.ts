@@ -2,10 +2,10 @@
  * The Plaza interior's geometry, checked against itself.
  *
  * Every number in `plaza-inside-config.ts` was measured on the redrawn plate;
- * these tests hold the numbers that have to AGREE with each other — the spawn
+ * these tests hold the numbers that have to AGREE with each other, the spawn
  * with the boundary, the stand points with the floor and the blockers, the
  * door sprite with the door painted behind it, the fountain's plinth with its
- * blocker — and walk the routes a player actually takes, the way
+ * blocker: and walk the routes a player actually takes, the way
  * `mall-routing.test.ts` does, so a boundary edit that strands the balcony or
  * the shops fails here rather than in someone's hands.
  */
@@ -53,7 +53,7 @@ const BLOCKERS: readonly RouteBlocker[] = plazaInsideBlockers;
 const STAIRS = { x: PLAZA_OCCLUSION.stairsX, y: [PLAZA_OCCLUSION.landingTop, 73.6] } as const;
 
 /**
- * Run the walk the controller would run — the same simulation
+ * Run the walk the controller would run, the same simulation
  * `mall-routing.test.ts` uses: fixed 16 ms steps, move toward the waypoint,
  * clamp with `constrainPosition`, advance inside `MOVEMENT_SNAP_PX`.
  */
@@ -223,13 +223,13 @@ describe('the six storefronts', () => {
   it('are all "coming soon" until their rooms exist, and say so', () => {
     for (const store of plazaStorefronts) {
       expect(isStorefrontOpen(store), store.id).toBe(false);
-      expect(storefrontAccessibleName(store)).toBe(`${store.name} — coming soon`);
+      expect(storefrontAccessibleName(store)).toBe(`${store.name}: coming soon`);
     }
     // The contract for opening one later: a destination, nothing else.
-    expect(storefrontAccessibleName({ name: 'Books', destination: 'plaza' })).toBe('Books — go inside');
+    expect(storefrontAccessibleName({ name: 'Books', destination: 'plaza' })).toBe('Books: go inside');
   });
 
-  it('are reached on foot from the landing — the ground floor ones by the stairs', () => {
+  it('are reached on foot from the landing, the ground floor ones by the stairs', () => {
     for (const store of plazaStorefronts) {
       const result = routeAndWalk(PLAZA_INSIDE_SPAWN, store.standPoint);
       expect(result.arrived, store.id).toBe(true);
@@ -362,7 +362,7 @@ describe('walking the balcony', () => {
 
   it('keeps the feet behind the parapet\'s plate at every column', () => {
     // The plate's base, probed per column: 46.2 at x = 1, 46.7 at x = 4,
-    // 47.6 at x = 10, 48.3 at x = 15, 49.3 along the centre run — and its top
+    // 47.6 at x = 10, 48.3 at x = 15, 49.3 along the centre run, and its top
     // edge 2.2 below the corridor everywhere (see the parapet test above).
     const plateBase = (x: number) => (Math.min(x, 100 - x) >= 27 ? 49.3 : 46.2 + (Math.min(x, 100 - x) - 1) * (3.1 / 26));
     for (const x of [PLAZA_CORRIDOR.left, 4, 10, 15, 21.8, 35, 65, 78, 90, PLAZA_CORRIDOR.right]) {
@@ -440,7 +440,7 @@ describe('the stair rails', () => {
   it('a click on a rail is projected inside the column, and the walk never touches the rail', () => {
     // From the flight proper down. Beside the landing (y < 49) the corridor
     // line, one row up, is nearer to the rail than the column is, and a click
-    // there lands behind the railing instead — also floor, also off the rail.
+    // there lands behind the railing instead, also floor, also off the rail.
     for (const y of [50, 60, 70]) {
       const [left, right] = railFacesAt(y);
       // The nearest floor to a point on the rail is the column's slanted edge,

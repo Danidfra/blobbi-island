@@ -6,13 +6,13 @@
 >
 > **Phase 5 (extraction):** the renderer now lives in the local workspace
 > package **`@blobbi/react`** (`packages/blobbi-react/`). Every rule below is
-> unchanged — only the file paths moved. Path references in this document are
+> unchanged: only the file paths moved. Path references in this document are
 > updated in place; see [`blobbi-package-readiness.md`](./blobbi-package-readiness.md)
 > for the boundary and `packages/blobbi-react/README.md` for the consumer-facing
 > contract.
 
 > **Phase 8 (visual effects):** the renderer gained an `effects` prop and three
-> effect layers — `behind`, `mid` (between the body and the front accessories)
+> effect layers, `behind`, `mid` (between the body and the front accessories)
 > and `front`. **This contract is unchanged:** the canonical box, accessory
 > geometry, layer ranks and purity split all hold exactly as written below.
 > Effects are `position: absolute` + `pointer-events: none` decoration that
@@ -44,7 +44,7 @@ editor edits against it. Implemented in
 
 - Values are the previous **desktop** (`md:` breakpoint) sizes of the visible
   body SVG, so the primary in-world look is unchanged and the old sub-768 px
-  size step is gone. **No responsive variants are permitted in the ladder** —
+  size step is gone. **No responsive variants are permitted in the ladder**,
   inside the fixed 1046×697 `VirtualWorld` design space, the world transform is
   the only thing that scales the Blobbi with the viewport.
 - `xl` (128) is the accessory editor's box; saved placements keep their meaning
@@ -53,14 +53,14 @@ editor edits against it. Implemented in
   the box via `className` through tailwind-merge (the shell's account chip
   passes `size-full`); such callers must not render accessories.
 - Room-level size intent still comes from `src/lib/location-blobbi-sizes.ts`
-  (`lg`/`xl` per room) — unchanged; it now resolves to one deterministic box.
+  (`lg`/`xl` per room): unchanged; it now resolves to one deterministic box.
 
 ## 3. Body SVG fitting
 
 The body wrapper is `absolute inset-0` in the box; the SVG string carries
 `width="100%" height="100%"` (added by `ensureSvgFillsContainer`) and a square
 `viewBox` (`0 0 100 100` baby, `0 0 200 200` adult) with default
-`preserveAspectRatio` (`xMidYMid meet`) — it fills the box exactly, distorts
+`preserveAspectRatio` (`xMidYMid meet`): it fills the box exactly, distorts
 nothing, and overflows nothing. Transparent and framed modes share this
 geometry; `transparent={false}` only adds the decorative circular frame.
 
@@ -75,7 +75,7 @@ accessory's **center**. They are stored with decimal precision:
 `parseFiniteNumber` preserves decimals (the legacy `parseInt` truncation is
 gone) and serialization rounds to 2 decimals only to stop float noise.
 Absent/invalid values fall back to the shared `EQUIP_TAG_DEFAULTS`
-(x 50, y 50, scale 1, rot 0, refw/refh 100) — both parsers now agree (the old
+(x 50, y 50, scale 1, rot 0, refw/refh 100): both parsers now agree (the old
 `x:'50'` vs `x:'5'` split is fixed).
 
 ## 5. Accessory scale semantics
@@ -105,17 +105,17 @@ aura (-20) → back (-10) → [BODY 0] → neckwear (10) → face-mark (20)
 Same-slot ties order by code. Unknown/legacy slots fall back **in front** of
 the body (rank 60) so nothing silently disappears. Rear view still drops
 `eyewear`/`face-mark`/`handheld` (`REAR_VIEW_HIDDEN_SLOTS`). The body remains
-one SVG element — no artificial body layers in Phase 1.
+one SVG element: no artificial body layers in Phase 1.
 
 **Intentional visual change:** `back` and `aura` accessories now paint BEHIND
 the body (they previously painted above it in relay-tag order).
 
-## 7. refw / refh — decision: Path B (compatibility only)
+## 7. refw / refh, decision: Path B (compatibility only)
 
 Every writer in the repository pins `refw`/`refh` to `100`
 (`AccessoryEditPanel`, `AccessoryInventoryUI`, `DebugAccessoriesModal`), and
 `blobbi-types.ts` documents the tag with `"refw","100","refh","100"`. They
-name the reference space the coordinates are expressed in — and since x/y are
+name the reference space the coordinates are expressed in, and since x/y are
 already normalized 0–100 percentages, that space is the identity. Applying a
 pixel-dimension conversion would corrupt already-normalized coordinates, so:
 **they are parsed, validated and round-tripped for compatibility, but apply no
@@ -126,17 +126,17 @@ runtime conversion.** The Nostr event schema is unchanged.
 - **`BlobbiRendererView`** (`packages/blobbi-react/src/BlobbiRendererView.tsx`) is
   **pure**: renders exclusively from props (visual identity, size token,
   sleep/facing/gaze, pre-normalized accessory placements, instance id). It
-  calls no Nostr, profile, or equipment hooks — its test suite renders it with
+  calls no Nostr, profile, or equipment hooks; its test suite renders it with
   zero providers as proof.
 - **`CurrentBlobbiDisplay`** is the **local-player wrapper**: it resolves the
   current companion (`useBlobbis` + `useBlobbonautProfile`), fetches equipment
   (`useAccessoryManagement`), normalizes placements
   (`normalizeAccessoryPlacements`), and passes props down. `visualOverride`
-  remains for the info modal's read-only remote preview — and since Phase 5 an
+  remains for the info modal's read-only remote preview, and since Phase 5 an
   override draws ONLY the accessories the caller supplies via
   `accessoryOverride`, never the local player's (see §9).
 - **Remote players** (`RemoteBlobbiSprite` in `MultiplayerLayer.tsx`) use
-  `BlobbiRendererView` directly with explicit visual props — rendering someone
+  `BlobbiRendererView` directly with explicit visual props, rendering someone
   else's Blobbi no longer subscribes to the local player's data. Remote
   accessories stay off (unchanged behavior).
 - **`AccessoryOverlay`** is now editor-only (interactive drag/wheel surface in
@@ -152,7 +152,7 @@ Movement, boundaries, depth scaling, z-index, shadows, seats/beds/hiding,
 presence, chat anchors, room sizing choices (`location-blobbi-sizes.ts`), and
 both actor wrappers (`MovableBlobbi`, `RemoteBlobbiSprite`). `MascotBlobbi`
 (decorative, own explicit 80–240 px ladder, no accessories) and `BlobbiCard`
-keep their own visual identity deliberately — they are not actor renderers.
+keep their own visual identity deliberately; they are not actor renderers.
 
 Also Island-specific: **equipment ownership**. The renderer draws exactly the
 accessories it is handed. `CurrentBlobbiDisplay` decides which those are, and
@@ -167,7 +167,7 @@ component:
 
 Before this, the local player's equipment was drawn on top of *any* visual, so
 the info modal's read-only preview of another player's Blobbi rendered it in
-your hats. Fetching another player's equipment remains out of scope — the
+your hats. Fetching another player's equipment remains out of scope, the
 honest render of unknown equipment is none.
 
 Also Island-specific: **which picture an accessory uses**. The package's
@@ -176,17 +176,17 @@ Also Island-specific: **which picture an accessory uses**. The package's
 published kind:31632 image views, so the renderer receives plain URLs and never
 learns a view marker existed. See
 [docs/game-item-image-views.md](./game-item-image-views.md). This changes the
-picture only — `REAR_VIEW_HIDDEN_SLOTS` still decides *which* accessories a
+picture only, `REAR_VIEW_HIDDEN_SLOTS` still decides *which* accessories a
 rear-facing Blobbi wears.
 
 ## 10. What Phase 1 intentionally did NOT solve (since implemented in Phase 2)
 
-- **Ground/foot anchoring** — IMPLEMENTED in Phase 2: the Island actor
+- **Ground/foot anchoring**: IMPLEMENTED in Phase 2: the Island actor
   (`BlobbiActor`) now mounts this renderer above a GROUND anchor
   (`translate(-50%, -100%)`, bottom-center scaling). The renderer itself is
   unchanged: it still just fills its canonical box; where that box is anchored
   is the Island's business (see docs/blobbi-ground-anchor-implementation.md).
-- Shadow geometry — now attached to the ground anchor (Phase 2).
+- Shadow geometry: now attached to the ground anchor (Phase 2).
 - The stage/form silhouette fill-fraction differences inside the box.
 - Touch/pointer-event accessory dragging (editor remains mouse-based;
   follow-up item).
@@ -196,22 +196,22 @@ rear-facing Blobbi wears.
 
 ## 11. Known intentional visual differences (Phase 1)
 
-1. Sub-768 px viewports: the body no longer shrinks a step — it keeps desktop
+1. Sub-768 px viewports: the body no longer shrinks a step; it keeps desktop
    proportions relative to the room (the old `md:` jump is gone).
 2. At `lg`, the box now equals the visible body (96 px), so the ground shadow
    and chat-bubble anchor sit at the body's visual edge exactly as they always
    did at `xl` (previously the body overflowed the 80 px box by 8 px).
 3. `back`/`aura` accessories paint behind the body (§6).
 4. Accessories at non-`xl` sizes are a few px larger (one canonical ratio
-   instead of four divergent multiplier tables); `xl` — the editor and the
-   most common accessory context — is pixel-identical.
+   instead of four divergent multiplier tables); `xl`: the editor and the
+   most common accessory context, is pixel-identical.
 
-## 12. Phase 5 — extraction (no contract change)
+## 12. Phase 5, extraction (no contract change)
 
 The renderer moved to `@blobbi/react` without any change to the rules above.
 Verified by re-running the Phase 4 fingerprint comparison: **17 renderer
-outputs — every stage, size token, facing, eye state, gaze case, framed mode,
-accessory set and degenerate input — hash byte-identically before and after
+outputs: every stage, size token, facing, eye state, gaze case, framed mode,
+accessory set and degenerate input, hash byte-identically before and after
 extraction.**
 
 File relocations (contents unchanged unless noted):
@@ -236,6 +236,6 @@ Two behavioral notes, both intentional:
   in the phase.
 
 Phase 9 note: `BlobbiRendererView.effects` is now fed on the local-companion
-path from ownership-backed kind:31634 state, still as plain `{ id }` data —
+path from ownership-backed kind:31634 state, still as plain `{ id }` data,
 the package remains protocol-agnostic. See
 [`blobbi-effect-activation.md`](./blobbi-effect-activation.md).

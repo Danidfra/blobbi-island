@@ -1,7 +1,7 @@
 /**
  * The pure half: who may share, and exactly what gets published.
  *
- * The event assertions are here to pin the shape rather than to describe it —
+ * The event assertions are here to pin the shape rather than to describe it,
  * this phase changed permission, not social posting, and a test that fails if
  * the tags move is the thing that makes "unchanged" checkable.
  */

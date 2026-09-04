@@ -2,7 +2,7 @@
  * The rule that decides whether an actor exists.
  *
  * The case that matters most is `unknown-local-identity`: the bug this module
- * was written for did not involve a wrong answer, it involved NO answer — the
+ * was written for did not involve a wrong answer, it involved NO answer, the
  * local pubkey had not resolved yet, so "is this me?" quietly evaluated to
  * "no", and the player's own Blobbi walked onto the screen twice.
  */
@@ -47,7 +47,7 @@ describe('remote presence admission', () => {
 
   it.each([[''], [undefined], [null]])('admits nobody while the local identity is %s', (value) => {
     // Not "admit and hope". If we cannot say who we are, we cannot say that
-    // somebody else is not us — and presence self-heals within a heartbeat.
+    // somebody else is not us, and presence self-heals within a heartbeat.
     expect(admit({ localPubkey: value })).toEqual({
       ok: false,
       reason: 'unknown-local-identity',

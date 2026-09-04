@@ -1,11 +1,11 @@
 /**
- * Treasure Hunt — the ONE conversion boundary between pointer pixels and the
+ * Treasure Hunt: the ONE conversion boundary between pointer pixels and the
  * pure model's normalized field coordinates.
  *
  * Pure math, no DOM: callers hand in the playfield's `getBoundingClientRect()`
  * numbers and get field points back, so the whole mapping is unit-testable.
- * The shape mirrors `hockey-draw.ts`'s `fitTable`/`toTableUnits` pair — a
- * letterboxed, aspect-locked stage whose inverse mapping is exact — with one
+ * The shape mirrors `hockey-draw.ts`'s `fitTable`/`toTableUnits` pair, a
+ * letterboxed, aspect-locked stage whose inverse mapping is exact, with one
  * extra layer: the model's field maps to the SAND sub-rectangle of the
  * artwork, not to the whole image. The water strip and the decorative shell
  * borders are scenery; a dig can only land on sand.
@@ -84,7 +84,7 @@ export interface FieldMapping {
 
 /**
  * Container-local px → logical field point. Returns `null` for non-finite
- * input, a degenerate layout, or a point outside the sand rect — the strict
+ * input, a degenerate layout, or a point outside the sand rect, the strict
  * form the shovel uses: a dig aimed at the water is refused, never moved.
  */
 export function containerPointToField(
@@ -115,7 +115,7 @@ export function containerPointToField(
 /**
  * The clamped form the DETECTOR uses: a drag that leaves the sand keeps the
  * coil pinned to the nearest sand edge instead of dropping the gesture. This
- * is the documented controller rule — clamping is for the continuously
+ * is the documented controller rule, clamping is for the continuously
  * dragged coil only; digs use the strict form above. Still `null` on
  * non-finite input or a degenerate layout: garbage is rejected, not clamped.
  */
@@ -141,7 +141,7 @@ export function containerPointToFieldClamped(
 /**
  * Logical field point → CSS percent offsets WITHIN the image box. The image
  * box is the positioned parent of every game object, so percentages keep the
- * markup resolution-independent — the exact inverse of the mappings above.
+ * markup resolution-independent: the exact inverse of the mappings above.
  */
 export function fieldPointToImagePercent(
   point: Point,

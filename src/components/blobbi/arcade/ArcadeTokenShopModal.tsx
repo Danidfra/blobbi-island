@@ -1,5 +1,5 @@
 /**
- * The token counter — where Blobbi Coins become Arcade Tokens.
+ * The token counter, where Blobbi Coins become Arcade Tokens.
  *
  * This is the counter that used to sell the old Coin-priced Arcade Pass. It
  * sells the arcade's entry currency now, which is the same booth doing the
@@ -64,7 +64,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
       }
       const message =
         result.outcome === 'blocked'
-          ? 'Your earlier purchase is still being verified — nothing new was charged. Try again in a moment.'
+          ? 'Your earlier purchase is still being verified; nothing new was charged. Try again in a moment.'
           : 'That purchase could not be confirmed yet. Buying the same amount again checks this attempt first, so you cannot be charged twice for it.';
       setError(message);
       toast({ title: 'Purchase not confirmed', description: message, variant: 'destructive' });
@@ -108,7 +108,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
 
           The two states are told apart carefully. A Pass covers a LIMITED
           number of plays, so "you don't need tokens" is true only while the
-          allowance lasts — telling an exhausted pass holder the same thing
+          allowance lasts: telling an exhausted pass holder the same thing
           would send them away from the one counter that can help them.
         */}
         {hasPass && passUsable && (
@@ -125,7 +125,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
             className="rounded-panel border border-island-wood/30 bg-island-cream-2/60 px-3 py-2 text-sm text-island-ink"
             data-pass-notice="exhausted"
           >
-            Your Arcade Pass free plays are used up. Games cost Arcade Tokens again —
+            Your Arcade Pass free plays are used up. Games cost Arcade Tokens again,
             the pass itself expires in {formatPassRemaining(remainingMs)}.
           </p>
         )}
@@ -155,7 +155,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
 
         <p className="text-center text-xs text-island-ink-soft">
           Tokens are what you spend to play. Arcade Tickets are what the games
-          pay you — take those to the prize counter.
+          pay you: take those to the prize counter.
         </p>
 
         {error && (

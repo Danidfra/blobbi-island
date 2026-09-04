@@ -10,7 +10,7 @@
  *  - `javascript:` executes in this origin. A `javascript:` URL reaching
  *    `window.open` is script injection with extra steps.
  *  - `data:` and `blob:` render attacker-controlled content that the address bar
- *    presents as a page. There is no legitimate case here — the PhotoBooth's
+ *    presents as a page. There is no legitimate case here, the PhotoBooth's
  *    `blob:`/`data:` URLs go to a download link and an `<img>`, never to a
  *    navigation.
  *  - `http:` is a downgrade, and nothing in the product needs it.
@@ -29,7 +29,7 @@
  *
  * ## The host is the truth
  *
- * Confirmation shows `classifyDestination().host`, parsed from the URL — never a
+ * Confirmation shows `classifyDestination().host`, parsed from the URL; never a
  * label the caller passed in. A label is presentation; the host is where the
  * player is actually going, and if the two disagree the player must be shown the
  * one that is true.
@@ -50,7 +50,7 @@ export type Destination =
       readonly kind: 'external';
       /** The normalized absolute URL that will be opened. */
       readonly url: string;
-      /** The hostname, lowercased and stripped of `www.` — what the player is shown. */
+      /** The hostname, lowercased and stripped of `www.`: what the player is shown. */
       readonly host: string;
     }
   | { readonly kind: 'internal'; readonly url: string }

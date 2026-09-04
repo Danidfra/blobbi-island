@@ -4,7 +4,7 @@
  * The Pass covers a LIMITED number of plays, so "you don't need tokens right
  * now" is true only while the allowance lasts. Telling an exhausted pass
  * holder the same thing would send them away from the one counter that can
- * help them — which is the copy bug these tests exist to prevent.
+ * help them: which is the copy bug these tests exist to prevent.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
@@ -81,7 +81,7 @@ describe('with an exhausted pass', () => {
 });
 
 describe('with an expired pass', () => {
-  it('goes quiet — an expired pass explains nothing', () => {
+  it('goes quiet: an expired pass explains nothing', () => {
     grantArcadePass(PUBKEY, {
       redemptionId: 'r1',
       nowMs: Date.now() - 25 * 60 * 60 * 1000,

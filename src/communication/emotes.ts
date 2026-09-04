@@ -6,7 +6,7 @@
  * `'clap'` is the protocol; `'👏'` is one way to draw it. Sending the glyph
  * would tie the wire format to a Unicode revision, make the payload
  * unvalidatable against a small set (any emoji is a "valid" emoji), and leave no
- * room to replace the emoji with real Blobbi artwork later — which is the
+ * room to replace the emoji with real Blobbi artwork later, which is the
  * likeliest next step. It would also mean a receiver rendering a character an
  * author chose, which is precisely what structured communication exists to
  * avoid.

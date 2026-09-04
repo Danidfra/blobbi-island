@@ -1,8 +1,8 @@
 /**
- * Shared Playback Session — protocol constants.
+ * Shared Playback Session, protocol constants.
  *
  * Every number here comes from `docs/protocol/shared-playback-session.md`
- * (Appendix — constants). They are gathered in one file so a value can never be
+ * (Appendix: constants). They are gathered in one file so a value can never be
  * spelled differently in two places, and so a reviewer can diff the whole
  * protocol's tuning against the specification in one screen.
  */
@@ -74,7 +74,7 @@ export const SKIP_STEP_S = 10;
 
 // ── Value bounds (§4.4) ────────────────────────────────────────────────────
 
-/** 24 h ceiling on a position — rejects absurd values outright. */
+/** 24 h ceiling on a position, rejects absurd values outright. */
 export const MAX_POSITION_S = 86400;
 export const MIN_RATE = 0.25;
 export const MAX_RATE = 4;

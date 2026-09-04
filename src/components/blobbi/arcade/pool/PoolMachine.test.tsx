@@ -1,5 +1,5 @@
 /**
- * Pool — lifecycle, input and integration coverage.
+ * Pool: lifecycle, input and integration coverage.
  *
  * The REAL controller, the REAL shell, the REAL lifecycle reducer, the REAL
  * simulation and the REAL fixed-step loop. Three things are substituted, and
@@ -7,7 +7,7 @@
  *
  *  - **`requestAnimationFrame` and the clock**, so a frame is driven by hand
  *    rather than by waiting for real ones. This is not a shortcut around the
- *    loop — the loop under test is the shipping one, and it is what turns those
+ *    loop: the loop under test is the shipping one, and it is what turns those
  *    driven frames into fixed simulation steps.
  *  - **the audio engine**, because jsdom has no `AudioContext`.
  *  - **the 2D canvas context**, which jsdom does not implement. The picture is
@@ -163,7 +163,7 @@ function onTheEightTable(): PoolMatchState {
   };
 }
 
-/** A frame where the player's only shot is straight into a pocket — a scratch. */
+/** A frame where the player's only shot is straight into a pocket, a scratch. */
 function scratchTable(): PoolMatchState {
   const base = createPoolMatch({ seed: 99 });
   return {
@@ -284,7 +284,7 @@ function stubTableRect() {
 
   // The component measured a ZERO rect on mount, because that is all jsdom
   // gives. Until it measures again the transform has `scale: 0` and every
-  // pointer maps to the middle of the table — which is not a coordinate bug in
+  // pointer maps to the middle of the table, which is not a coordinate bug in
   // the component, it is the correct answer for a box with no size. A resize is
   // how the real page tells it the layout happened.
   act(() => {
@@ -324,7 +324,7 @@ function pullAndRelease(from: { x: number; y: number }, to: { x: number; y: numb
   pointer('pointerdown', from);
   pointer('pointermove', to);
   pointer('pointerup', to);
-  // The shot lands in a REF, not in React state — that is the whole point of
+  // The shot lands in a REF, not in React state; that is the whole point of
   // the render strategy. One frame is what publishes it to the HUD, so the
   // assertions below read what a player would actually see.
   tick(16);
@@ -347,7 +347,7 @@ beforeEach(() => {
   // driven frame reports a delta of zero and the simulation never moves.
   nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => clock);
   // jsdom has no 2D context and logs a "not implemented" error if asked for
-  // one. Returning null is the same answer, quietly — and it exercises the
+  // one. Returning null is the same answer, quietly, and it exercises the
   // component's own null-context path.
   getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 });
@@ -581,7 +581,7 @@ describe('the cue', () => {
   });
 
   it('drops the shot when the gesture is cancelled', () => {
-    // `pointercancel` is the browser taking the gesture over — a system scroll,
+    // `pointercancel` is the browser taking the gesture over, a system scroll,
     // a palm, a rotation mid-drag. Firing on the strength of it is the worst
     // possible reading.
     readyToShoot();

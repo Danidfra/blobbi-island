@@ -44,7 +44,7 @@ describe('grants and lookups', () => {
     ]);
   });
 
-  it('is idempotent per redemption id — the recovery path may run twice', async () => {
+  it('is idempotent per redemption id, the recovery path may run twice', async () => {
     await store.grantPrize(OWNER, SNACK, 'r1');
     await store.grantPrize(OWNER, SNACK, 'r1');
     const [owned] = await store.listOwnedPrizes(OWNER);
@@ -63,7 +63,7 @@ describe('grants and lookups', () => {
 
   it('never counts a NON-repeatable prize past one, whatever ids arrive', async () => {
     await store.grantPrize(OWNER, GLASSES, 'r1');
-    await store.grantPrize(OWNER, GLASSES, 'r2'); // upstream bug — belt and braces
+    await store.grantPrize(OWNER, GLASSES, 'r2'); // upstream bug, belt and braces
     const [owned] = await store.listOwnedPrizes(OWNER);
     expect(owned.count).toBe(1);
     expect(owned.deliveredRedemptionIds).toEqual(['r1', 'r2']);

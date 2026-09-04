@@ -14,8 +14,8 @@ import { ArcadeRewardPanel } from '../ArcadeRewardPanel';
 /**
  * The result of one match.
  *
- * The match half — who won, by how much, how long it took, and a handful of
- * numbers worth being pleased about — is this component's own. The ticket half
+ * The match half, who won, by how much, how long it took, and a handful of
+ * numbers worth being pleased about, is this component's own. The ticket half
  * is the shared {@link ArcadeRewardPanel}, exactly as on the dance and pool
  * results screens: `HOCKEY_REWARD_POLICY` is active, so a finished match shows
  * its award, its breakdown, and the claim. The panel's honesty rules (an
@@ -127,13 +127,13 @@ export function AirHockeyResults({
         isLoggedIn={isLoggedIn}
         showDebugDetails={showDebugDetails}
         dataPrefix="hockey"
-        ineligibleHint="Play the match to the final goal and the tickets are yours — win or lose."
+        ineligibleHint="Play the match to the final goal and the tickets are yours, win or lose."
       />
 
       <p className="rounded-2xl border-2 border-island-wood/25 p-3 text-xs blobbi-text-muted">
         {won
           ? 'Nicely done. Try the match again on a tougher opponent.'
-          : 'Close the angle with your mallet before the puck reaches your goal — sitting on the line lets it in.'}
+          : 'Close the angle with your mallet before the puck reaches your goal, sitting on the line lets it in.'}
       </p>
 
       {showDebugDetails && (

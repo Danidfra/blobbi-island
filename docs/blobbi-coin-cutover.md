@@ -1,8 +1,8 @@
-# Blobbi Coin — the Official Currency Cutover and Provisional Beach Rewards
+# Blobbi Coin: the Official Currency Cutover and Provisional Beach Rewards
 
 Status: **implemented (amended by the economy reset).** The canonical
 production Coin balance is the official Blobbi Coin quantity in the player's
-kind:31633 inventory. kind:11125 `coins` is OBSOLETE historical data — never
+kind:31633 inventory. kind:11125 `coins` is OBSOLETE historical data; never
 migrated, never read for economic decisions, never displayed, never updated;
 preserved opaquely on republish. Beach Treasure Hunt pays provisional,
 client-trusted Coin rewards. The initial 200-Coin allocation happens at
@@ -24,11 +24,11 @@ implementation; its risk analysis remains the reference).
   symbol 🪙. Registered in `src/protocol/event-registry.ts` and resolved
   through the established official-item path (exact-issuer trust, bundled
   fallback offline). The currently observed revision's event id is recorded
-  in `src/inventory/coin.ts` **for diagnostics only — never identity**.
+  in `src/inventory/coin.ts` **for diagnostics only; never identity**.
 - `max_stack` is intentionally absent from the published definition (optional
   per the inventory spec; games MAY ignore it). The application enforces its
   own ceiling, `MAX_COIN_BALANCE = 1_000_000_000`
-  (`src/inventory/coin.ts`), in the wallet — violations are rejected, never
+  (`src/inventory/coin.ts`), in the wallet, violations are rejected, never
   silently clamped.
 - One identity module: `src/inventory/coin.ts` (`BLOBBI_COIN_ADDRESS`,
   `BLOBBI_COIN_D`, `BLOBBI_COIN_ISSUER`, `BLOBBI_COIN_SYMBOL`, images,
@@ -49,24 +49,24 @@ mutation surface, generalizing the arcade ticket writer's guarantees:
   per-tab inventory write chain;
 - fresh newest-event read (raw, for `created_at`) before every build;
   deterministic latest selection;
-- `created_at = max(now, previous + 1)` — no same-second ties;
+- `created_at = max(now, previous + 1)`: no same-second ties;
 - **strict publish**: a timeout or unclassifiable error is `ambiguous`, never
   success; ambiguity reconciles read-only (balance vs recorded
   `balanceBefore`) and never blind-retries;
 - read-back verification (`applied.verified`);
 - unrelated inventory entries ride the canonical builder untouched;
-- optional `grantLines`: item grants in the SAME replacement event — shop
+- optional `grantLines`: item grants in the SAME replacement event, shop
   purchases are now atomic (charge + items in one event), retiring the old
   "items granted but coins not charged" leak.
 
 Reads: `useCoinBalance()` (from the canonical inventory query; `null` while
-unknown — an unavailable balance is never a fake zero).
+unknown: an unavailable balance is never a fake zero).
 
 **Honest limits:** ledger and locks are per browser profile; cross-device
 gives no exactly-once (bounded: op ids never leave the device that minted
 them). Nothing here is server-authoritative or cheat-proof.
 
-## 3. Economy entry — the exactly-once initial allocation (economy reset)
+## 3. Economy entry, the exactly-once initial allocation (economy reset)
 
 There is NO legacy migration. A historic kind:11125 `coins` tag is obsolete
 data: never migrated, never summed, never displayed, never used for
@@ -75,7 +75,7 @@ unknown-tag passthrough on every republish, verbatim, forever. A legacy user
 with 50,000 profile coins and one with 0 are treated identically.
 
 Every authenticated pubkey receives 200 Coins exactly once for economy v1,
-at its first authenticated Island entry — independent of profile existence,
+at its first authenticated Island entry, independent of profile existence,
 Blobbi ownership, adoption, legacy values, current balance, other inventory
 items, localStorage, and device.
 
@@ -92,14 +92,14 @@ items, localStorage, and device.
 - retries are safe by construction: marker present ⇒ done; marker absent on
   a RESOLVED (EOSE) read ⇒ granting again republishes marker + quantity
   together and cannot double-apply. A read that fails proves nothing and
-  publishes nothing — an empty base is never fabricated from an unanswered
+  publishes nothing: an empty base is never fabricated from an unanswered
   read, and the first-ever publish requires a confirming second read;
 - one stable op id per economy version (never minted randomly); the in-lock
   wallet `precondition` re-checks the marker on the exact base the event
   extends, so a concurrent tab's win becomes a no-op;
 - two devices converge by replaceable-event semantics (newest wins, each
   device grants onto its own fresh base): the tested race settles on ONE
-  marker and ONE +200 — never a stable 400. Not server-authoritative.
+  marker and ONE +200; never a stable 400. Not server-authoritative.
 
 **Adoption is currency-free.** `useFirstEggAdoption` publishes the baby
 (31124) and the profile (11125) and nothing else; profile creation writes NO
@@ -115,20 +115,20 @@ items, localStorage, and device.
 | Mine payout | wallet grant, op id minted at session start; states granting/applied/ambiguous/failed+retry; fresh status re-read on cave entry |
 | `useCoinsMutation` (old 11125 writer) | **deleted** |
 | `useUpdateOwnerProfile` / `useCreateOwnerProfile` | no coin fields; update refuses an empty cache base (no more tag wipes / fabricated profiles) |
-| `useSetCurrentCompanion` | selects the NEWEST profile (sorted) before republishing — the stale-rollback hazard is closed |
+| `useSetCurrentCompanion` | selects the NEWEST profile (sorted) before republishing, the stale-rollback hazard is closed |
 | `useOptimizedStatus.updateOwnerCoins` | removed |
 | Contract tests | `src/inventory/coin-cutover.contract.test.ts` pins: no production `['coins', …]` authoring, no dual-read fallback, wallet-only mutations, writer stays deleted |
 
 ## 5. Beach Treasure Hunt rewards (provisional)
 
-**Access:** free — no entry fee, no energy, no consumables; the shack never
+**Access:** free: no entry fee, no energy, no consumables; the shack never
 locks. **Limited:** rewards, 10 rewarded hunts per UTC-day window
 (`src/beach/rewards/policy.ts`); unlimited practice afterwards, clearly
 labeled.
 
 **Round eligibility:** started as a rewarded hunt (slot reserved at START,
 cross-tab atomic), legitimately finished (time expired / shovel spent / all
-found / explicit end past the floor), ≥ 1 accepted dig AND ≥ 20 s active —
+found / explicit end past the floor), ≥ 1 accepted dig AND ≥ 20 s active,
 except a full all-targets clear, which qualifies at any speed. Abandoned
 rounds earn nothing.
 
@@ -143,7 +143,7 @@ Litter contributes positively (1/unit); valuables more (2–6/unit). No
 multipliers, no jackpot, no randomness after generation, no item value.
 
 **Simulated economics** (500 seeded rounds, deterministic 5-perfect-dig
-player — the competent-play ceiling; pinned by
+player: the competent-play ceiling; pinned by
 `src/beach/rewards/coin-reward.test.ts`):
 
 | min | p10 | p25 | median | p75 | p90 | max | mean |
@@ -201,5 +201,5 @@ guaranteed, and no UI copy claims otherwise.
 
 Dev simulation: `/dev/treasure-hunt` injects a fully MOCKED reward service
 (in-memory; publishes nothing) with selectable grant/recovery outcomes
-(applied / timeout-ambiguous / fail-before-publish) and a simulated refresh —
+(applied / timeout-ambiguous / fail-before-publish) and a simulated refresh,
 no real publishing exists on that route.

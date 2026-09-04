@@ -1,5 +1,5 @@
 /**
- * The approved-media shelf — what a curated theater offers instead of a URL box.
+ * The approved-media shelf, what a curated theater offers instead of a URL box.
  *
  * ## Why a shelf rather than a disabled input
  *
@@ -11,7 +11,7 @@
  * ## Titles come from the catalog
  *
  * Every word on this shelf is written in `src/theater-media/catalog.ts`. Nothing
- * here is supplied by a host, by a session, or by YouTube — which is what makes
+ * here is supplied by a host, by a session, or by YouTube, which is what makes
  * an approved video id safe to show a name for at all.
  *
  * ## The empty state is honest

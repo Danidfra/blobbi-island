@@ -126,7 +126,7 @@ describe('the composed cave structure', () => {
     renderRoom('mine');
     for (const img of [front(), preview()]) {
       // The grade reaches `[data-island-world-graded] img` unless something
-      // opts out — neither the image nor any ancestor may.
+      // opts out: neither the image nor any ancestor may.
       expect(img.closest("[data-island-world-grade='exclude']")).toBeNull();
       expect(img.closest('[data-island-world-graded]')).not.toBeNull();
     }
@@ -137,7 +137,7 @@ describe('the composed cave structure', () => {
     /*
       Any of these on the wrapper would trap the three z-indexes inside the cave,
       leaving the whole structure to be sorted against the Blobbi as one block at
-      `z-index: auto` — i.e. under it — so the Blobbi would walk in front of the
+      `z-index: auto`: i.e. under it, so the Blobbi would walk in front of the
       arch and never appear to stand in the mouth. `transform` is the one that
       actually regressed: the wrapper was centred with `-translate-x-1/2`.
     */
@@ -193,7 +193,7 @@ describe('the composed cave structure', () => {
     const { depth } = mineCaveStructure;
 
     /*
-      This used to assert the opposite — that the arch sorted ABOVE a Blobbi
+      This used to assert the opposite; that the arch sorted ABOVE a Blobbi
       standing at the approach anchor, so it would appear to stand in the mouth.
       That was the bug: the anchor is at y = 82.4, six percent of the world in
       FRONT of the rock, which meets the path at y = 76. The reading only ever
@@ -297,7 +297,7 @@ describe('activating the entrance', () => {
     /*
       A real tap on a <button> fires touchstart AND then a synthetic click.
       React 18 registers `touchstart` at the root as a PASSIVE listener, so an
-      `onTouchStart` handler cannot `preventDefault()` that click away — which is
+      `onTouchStart` handler cannot `preventDefault()` that click away, which is
       why this component activates from `onClick` alone. Firing both here is the
       regression guard: a second activation would replace the first pending
       interaction, and the replacement's `onCancel` would clear the lock the tap
@@ -326,7 +326,7 @@ describe('activating the entrance', () => {
     renderRoom('mine');
 
     // Keyboard activation of a <button> is dispatched by the browser as a
-    // click, which jsdom does not synthesise — so the contract worth pinning is
+    // click, which jsdom does not synthesise, so the contract worth pinning is
     // that the target IS a button and that a click runs the interaction.
     expect(hotspot().tagName).toBe('BUTTON');
     expect(hotspot()).toHaveAttribute('type', 'button');

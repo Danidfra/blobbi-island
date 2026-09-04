@@ -1,8 +1,8 @@
 /** Custom DOM events the world (PlayingView) listens for from the shell dock. */
 export const DOCK_EVENTS = {
   /**
-   * Open the Communication panel (quick phrases, phrase builder, emotes and —
-   * where the policy allows it — free text).
+   * Open the Communication panel (quick phrases, phrase builder, emotes and,
+   * where the policy allows it, free text).
    *
    * Replaces the old `focus-chat` / `send-chat` pair. Sending no longer travels
    * through a DOM event at all: the panel is rendered by `PlayingView`, which

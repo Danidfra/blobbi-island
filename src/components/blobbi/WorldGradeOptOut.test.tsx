@@ -3,13 +3,13 @@
  *
  * The day/night system grades every `<img>` inside `[data-world-surface]` so that
  * scenery darkens at night. Characters must not be graded, and the first version of
- * that exclusion was keyed on `.blobbi-character img` / `[data-player-key] img` —
+ * that exclusion was keyed on `.blobbi-character img` / `[data-player-key] img`,
  * two hardcoded descendant selectors. Auditing the actual DOM turned up two things
  * those selectors got wrong:
  *
  *  1. **The Blobbi body is an inline `<svg>`**, injected by
  *     `CurrentBlobbiDisplay` via `dangerouslySetInnerHTML`. An `img`-scoped rule
- *     never reached it, so the body was never at risk — and the exclusion was doing
+ *     never reached it, so the body was never at risk, and the exclusion was doing
  *     nothing for it. What the exclusion *does* protect is the **accessory overlay**,
  *     which is real `<img>` elements.
  *  2. **They only matched descendants.** If `.blobbi-character` ever landed on an
@@ -98,12 +98,12 @@ describe('the local Blobbi', () => {
       The two structural facts the contract depends on, pinned at their source.
 
       This fixture has no logged-in Blobbi to render, so the body cannot be asserted
-      from the DOM here — but the *mechanism* is what matters and it is unambiguous:
-      the pure renderer (`BlobbiRendererView`, which every path — local wrapper,
-      remote sprite, previews — now ends in) injects the body with
+      from the DOM here, but the *mechanism* is what matters and it is unambiguous:
+      the pure renderer (`BlobbiRendererView`, which every path, local wrapper,
+      remote sprite, previews: now ends in) injects the body with
       `dangerouslySetInnerHTML`, and renders accessories as `<img>`. Together they
       are the reason the exclusion protects accessories rather than the Blobbi
-      itself, and the reason extending the grade rule to `svg` would be a mistake —
+      itself, and the reason extending the grade rule to `svg` would be a mistake,
       it would reach the body.
     */
     const rendererView = readFileSync(
@@ -126,7 +126,7 @@ describe('the local Blobbi', () => {
 
   it('excludes every image inside it, whatever the subtree contains', async () => {
     // Accessory overlays are the real images here. Whether or not this fixture has
-    // equipment to render, any image that appears must be covered — so the check is
+    // equipment to render, any image that appears must be covered, so the check is
     // over the real subtree rather than over a planted element.
     const { character } = await setupLocal();
     for (const img of Array.from(character.querySelectorAll('img'))) {

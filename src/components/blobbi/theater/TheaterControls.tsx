@@ -83,7 +83,7 @@ function Timeline({ controller, snapshot }: ControlsProps) {
 interface LocalControlsProps extends ControlsProps {
   /**
    * Fullscreen can be refused by the browser (no user activation, an iframe
-   * without `allowfullscreen`, iOS). Saying so is the whole point — a button
+   * without `allowfullscreen`, iOS). Saying so is the whole point, a button
    * that silently does nothing is worse than no button.
    */
   onFullscreenDenied: () => void;
@@ -210,7 +210,7 @@ interface HostControlsProps extends ControlsProps {
 }
 
 /**
- * Host controls — the full global surface.
+ * Host controls: the full global surface.
  *
  * Every button here maps one-to-one onto a shared-playback action, in the same
  * order the protocol lists them: play/pause, timeline, ±10, restart, rate, change
@@ -266,7 +266,7 @@ export function HostControls({ controller, snapshot, onChangeVideo, onFullscreen
 }
 
 /**
- * Guest controls — local only.
+ * Guest controls: local only.
  *
  * Deliberately renders NO global control and no timeline handle: a guest cannot
  * play, pause, seek or change the video, and the UI says so by omission rather

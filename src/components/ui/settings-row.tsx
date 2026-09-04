@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * SettingsRow — the island's list row.
+ * SettingsRow: the island's list row.
  *
  * `[icon] Label / description ……………… [value] [control or chevron]`
  *
@@ -15,15 +15,15 @@ import { cn } from "@/lib/utils";
  * lives on the island's panel colours and presses like a game button.
  *
  * Despite the name it is not only for settings. Any list where the player picks
- * one of several labelled things — the account menu, the elevator's floors, a
- * list of relays — is this row. The alternative is what the game had: five
+ * one of several labelled things, the account menu, the elevator's floors, a
+ * list of relays, is this row. The alternative is what the game had: five
  * hand-written `flex items-center gap-2 rounded-md p-2 hover:bg-…` strings that
  * had already drifted apart on padding, radius and hover colour.
  *
  * ## Interactive or not
  *
  * Pass `onClick` (or `href`) and it renders a real `<button>`/`<a>` with hover,
- * press and focus states. Omit it and it renders a `<div>` — for a row whose
+ * press and focus states. Omit it and it renders a `<div>`: for a row whose
  * trailing slot holds the control, like a Switch, where making the whole row a
  * button would nest an interactive element inside another one.
  */
@@ -32,18 +32,18 @@ export interface SettingsRowProps {
   /** Decorative mark: an emoji, a lucide icon, a small image. Never announced. */
   icon?: React.ReactNode;
   label: React.ReactNode;
-  /** Secondary line. Truncates to one line — keep it short. */
+  /** Secondary line. Truncates to one line; keep it short. */
   description?: React.ReactNode;
   /**
    * Trailing content: a value, a Switch, a Badge. A row with a control here
-   * should NOT also be clickable — put the interaction on the control.
+   * should NOT also be clickable, put the interaction on the control.
    */
   trailing?: React.ReactNode;
   /** Makes the row a button. Adds a chevron unless `trailing` is given. */
   onClick?: () => void;
   /** Makes the row a link. Adds a chevron unless `trailing` is given. */
   href?: string;
-  /** Renders in the danger colour — log out, delete, leave. */
+  /** Renders in the danger colour, log out, delete, leave. */
   tone?: "default" | "danger";
   /**
    * Marks the row as the current one in a list.
@@ -51,7 +51,7 @@ export interface SettingsRowProps {
    * Emits `aria-current` as well as the tint, so the state is not colour-only.
    * `aria-current` is the right attribute for a list of destinations or
    * settings; a list of mutually exclusive OPTIONS wants radio semantics
-   * instead, which is a different control — see ThemePicker.
+   * instead, which is a different control; see ThemePicker.
    */
   selected?: boolean;
   disabled?: boolean;
@@ -170,7 +170,7 @@ export function SettingsRow({
  * A titled group of rows.
  *
  * The rows sit on the panel with a hairline between them rather than each
- * carrying its own border — one line between two rows, not two stacked. The
+ * carrying its own border; one line between two rows, not two stacked. The
  * label is outside the group, in the small-caps style Ditto uses for settings
  * sections, so the group itself stays quiet.
  */

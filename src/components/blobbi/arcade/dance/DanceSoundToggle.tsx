@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
  *
  * ## Why mute and not volume
  *
- * The arcade audio boundary persists exactly one sound setting — a global
- * `blobbi:arcade:audio-muted` flag — and the dance engine already reads it when
+ * The arcade audio boundary persists exactly one sound setting, a global
+ * `blobbi:arcade:audio-muted` flag: and the dance engine already reads it when
  * it builds a context and honours `setMuted` while one is running. A volume
  * slider would need a new persisted setting, a new engine parameter and a new
  * migration; a mute toggle needs none of those, because the machinery is already
@@ -15,15 +15,15 @@ import { cn } from '@/lib/utils';
  * ## Why muting is safe for the clock
  *
  * The engine mutes by taking the master gain to zero. The `AudioContext` keeps
- * running, `currentTime` keeps advancing, and the schedule is untouched — so a
+ * running, `currentTime` keeps advancing, and the schedule is untouched, so a
  * muted run is judged by exactly the same clock as a loud one. Muting is a
  * volume decision, never a timing one.
  *
  * ## Why the name never changes
  *
  * A toggle button has ONE name and a separate pressed state. Naming it for the
- * action instead — "Mute the music" when unmuted, "Turn the music on" when muted
- * — reads correctly on screen but contradicts itself out loud: a screen reader
+ * action instead, "Mute the music" when unmuted, "Turn the music on" when muted,
+ * reads correctly on screen but contradicts itself out loud: a screen reader
  * announces "Turn the music on, toggle button, **pressed**", which says the
  * opposite of what it means.
  *

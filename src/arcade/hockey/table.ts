@@ -1,17 +1,17 @@
 /**
- * Air Hockey — the table, and every number the simulation is tuned by.
+ * Air Hockey: the table, and every number the simulation is tuned by.
  *
  * ## Table units, not pixels
  *
  * The whole simulation runs in a fixed **100 × 160 table-unit box** and knows
  * nothing about the screen. A pixel-sized simulation would change its own
- * physics when the dialog is resized — a puck travelling "200 px per second"
- * crosses a phone in a third of the time it crosses a laptop — and it would make
+ * physics when the dialog is resized, a puck travelling "200 px per second"
+ * crosses a phone in a third of the time it crosses a laptop, and it would make
  * every physics test depend on a layout. So the canvas maps table units to
  * pixels at draw time and pointer coordinates back to table units at input time,
  * and nothing between those two edges has an opinion about size.
  *
- * The box is described here as PORTRAIT — 100 across, 160 along — with the
+ * The box is described here as PORTRAIT: 100 across, 160 along, with the
  * player defending `y = 160` and the opponent `y = 0`. Every constant, every
  * physics function and every test in this directory speaks that language.
  *
@@ -31,13 +31,13 @@
  * frictionless and rebound near-perfectly; a faithful simulation of that is
  * exhausting to play on a phone, because the puck never settles and never gives
  * you a beat to think in. {@link PUCK_DRAG_PER_SECOND} is therefore higher than
- * reality and {@link PUCK_MIN_SPEED} stops the consequence of that — a puck
+ * reality and {@link PUCK_MIN_SPEED} stops the consequence of that, a puck
  * drifting to a halt in a corner while both players wait.
  */
 
 /** Table width, in table units. */
 export const TABLE_WIDTH = 100;
-/** Table height, in table units. Portrait — see the module note. */
+/** Table height, in table units. Portrait; see the module note. */
 export const TABLE_HEIGHT = 160;
 export const TABLE_CENTER_X = TABLE_WIDTH / 2;
 export const TABLE_CENTER_Y = TABLE_HEIGHT / 2;
@@ -46,7 +46,7 @@ export const PUCK_RADIUS = 4;
 export const MALLET_RADIUS = 7;
 
 /**
- * Half the goal mouth, in table units — so the mouth is 46 of 100 wide.
+ * Half the goal mouth, in table units, so the mouth is 46 of 100 wide.
  *
  * Wider than a real table's, deliberately, and the number came out of
  * measurement rather than taste. A keeper standing 20 units off its line blocks
@@ -63,7 +63,7 @@ export const PUCK_MAX_SPEED = 170;
 /**
  * The floor a live puck is held at.
  *
- * Not a physical effect — a rule. Without it a rally can end with the puck
+ * Not a physical effect, a rule. Without it a rally can end with the puck
  * creeping along a rail for twenty seconds while neither player can reach it,
  * which is the single most common way an air hockey game stops being a game.
  */
@@ -125,7 +125,7 @@ export const SERVE_SPEED = 62;
 /** Maximum deviation of a serve from straight down the table, in radians. */
 export const SERVE_SPREAD_RADIANS = 0.55;
 
-/** "3 — 2 — 1 — GO", before the opening serve. */
+/** "3: 2, 1, GO", before the opening serve. */
 export const COUNTDOWN_MS = 3000;
 /** How long the puck sits in the goal after it goes in. */
 export const GOAL_PAUSE_MS = 1300;
@@ -138,7 +138,7 @@ export const SERVE_DELAY_MS = 900;
  * Measured rather than guessed. Playing the opponent controller against a
  * mirrored copy of itself over thirty-six simulated matches, **first to 7**
  * lands between about 160 seconds (Easy, a one-sided win) and about 260
- * (Normal, a long one) — two and a half to four and a half minutes, which is
+ * (Normal, a long one): two and a half to four and a half minutes, which is
  * the arcade-session length the brief asks for.
  *
  * First to 5 ended matches at around a hundred seconds, before a new player had
@@ -168,7 +168,7 @@ export interface HockeyZone {
  * The player owns the bottom half; the opponent owns the top.
  *
  * The centre line is a hard limit on the mallet's CENTRE, so half a mallet may
- * overhang it — which is how a real table plays, and is what makes a
+ * overhang it: which is how a real table plays, and is what makes a
  * centre-line interception feel possible rather than mysteriously blocked.
  */
 export const PLAYER_ZONE: HockeyZone = Object.freeze({

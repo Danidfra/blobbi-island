@@ -1,11 +1,11 @@
 /**
- * Air Hockey match — the state machine, and the invariants a fair game needs.
+ * Air Hockey match, the state machine, and the invariants a fair game needs.
  *
  * The whole match is one pure function over plain numbers, so a point can be
  * played, a goal counted and a match decided by calling `stepHockeyMatch` in a
- * loop. No canvas, no frames, no clock. The awkward questions — "can the same
+ * loop. No canvas, no frames, no clock. The awkward questions, "can the same
  * goal score twice?", "can a pointer flung off screen break anything?", "does a
- * match ever fail to end?" — are all answerable here, which is exactly why the
+ * match ever fail to end?": are all answerable here, which is exactly why the
  * simulation is not inside the component.
  */
 
@@ -341,7 +341,7 @@ describe('player input is immediate', () => {
 
   it('cannot jump THROUGH the puck, however far the pointer moves', () => {
     // The property the removed speed limit used to provide, now provided by the
-    // swept resolver — and provided better, because it also covers a genuine
+    // swept resolver: and provided better, because it also covers a genuine
     // teleport rather than merely making one impossible.
     const parked: HockeyMatchState = {
       ...createHockeyMatch({ seed: 9 }),

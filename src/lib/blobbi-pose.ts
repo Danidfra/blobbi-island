@@ -10,7 +10,7 @@
  *    (`sittingIn`/`hiddenIn`/bed sleep) and renders through this resolver;
  *  - remote: `MultiplayerLayer` derives a pose from presence fields
  *    (`seatId` won via occupancy, `hiddenIn`) and renders through the SAME
- *    resolver — so a seated/hidden remote can never be drawn differently from
+ *    resolver: so a seated/hidden remote can never be drawn differently from
  *    the seated/hidden local player.
  *
  * The pose is presentation state, not movement state: the movement
@@ -18,7 +18,7 @@
  * actor is, and pose anchors (seat cushion, bed) are explicit exceptions
  * entered only through `snapTo(...)`.
  *
- * Deliberately NOT a state machine framework — a discriminated union and one
+ * Deliberately NOT a state machine framework, a discriminated union and one
  * pure function are all the coherence this needs.
  */
 
@@ -89,7 +89,7 @@ export interface ActorRender {
 }
 
 /**
- * Resolve the complete visual consequence of a pose. Pure — same inputs, same
+ * Resolve the complete visual consequence of a pose. Pure, same inputs, same
  * output, for local, remote, tests and dev harnesses alike.
  */
 export function resolveActorRender(
@@ -120,7 +120,7 @@ export function resolveActorRender(
       };
     }
     // Unknown / decorative / stale seat id: a hostile or outdated claim can
-    // never pin an actor to an off-world chair — render standing instead.
+    // never pin an actor to an off-world chair, render standing instead.
   }
 
   const standing: ActorRender = {

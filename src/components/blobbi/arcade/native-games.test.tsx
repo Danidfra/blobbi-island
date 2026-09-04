@@ -1,12 +1,12 @@
 /**
- * The launch resolver — every way it must refuse.
+ * The launch resolver; every way it must refuse.
  *
  * This is the boundary between "a machine was reached" and "a game is running",
  * and therefore the boundary in front of the reward path. A resolver that
  * answers "is there a component for this id?" quietly implies every resolved
  * game can run anywhere, and that implication is what let Blobbi Dance be
- * launched from a pool table. It now takes the whole launch request — the game,
- * the machine and the kind of screen that asked — and refuses on any of them.
+ * launched from a pool table. It now takes the whole launch request, the game,
+ * the machine and the kind of screen that asked, and refuses on any of them.
  *
  * These tests do not render anything. The resolver's job is to answer
  * "component or `null`?", and that answer is checkable without a DOM.
@@ -165,8 +165,8 @@ describe('what is refused outright', () => {
     /*
       Every dedicated machine now has a built game, so there is no shipped
       `coming-soon` entry left to iterate over. The rule still has to hold, and
-      this is the harder version of it: take Pool — which DOES have a component
-      registered — mark it coming-soon, and check the resolver refuses anyway.
+      this is the harder version of it: take Pool, which DOES have a component
+      registered: mark it coming-soon, and check the resolver refuses anyway.
 
       That is stronger than the old loop was. It proves the refusal comes from
       `availability`, not from the lookup happening to miss.

@@ -1,5 +1,5 @@
 /**
- * Treasure Hunt — the detector's voice. A feedback engine in the
+ * Treasure Hunt: the detector's voice. A feedback engine in the
  * `hockey-audio.ts` mold: it is handed the current signal and makes short
  * noises about it; it keeps no time and the game plays identically in
  * silence.
@@ -10,7 +10,7 @@
  * from the game's tick; when enough time has passed since the last beep for
  * the current intensity, one self-terminating blip is scheduled and the
  * timestamp advances. Repeat interval shortens and pitch rises as the signal
- * strengthens — the classic detector feel — and the interval floor doubles as
+ * strengthens: the classic detector feel, and the interval floor doubles as
  * the throttle, so a fast sweep can never machine-gun (the same guard as
  * pool's `COLLIDE_MIN_GAP_S`). Pause simply stops calling `update`; there is
  * no timer here to cancel.
@@ -58,7 +58,7 @@ const BEEP_GAP_STRONG_S = 0.12;
 const BEEP_FREQ_WEAK = 320;
 const BEEP_FREQ_STRONG = 960;
 
-/** **Call from a user-gesture handler** (the Start click) — see arcade-audio. */
+/** **Call from a user-gesture handler** (the Start click): see arcade-audio. */
 export function createDetectorAudio(): DetectorAudioEngine {
   let muted = isArcadeMuted();
   const context = ensureArcadeAudio();

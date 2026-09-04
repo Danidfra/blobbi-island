@@ -1,5 +1,5 @@
 /**
- * Blobbi Dance — the presentation constants the stage and the results share.
+ * Blobbi Dance: the presentation constants the stage and the results share.
  *
  * Kept out of the components so the numbers that decide how the game LOOKS are
  * in one legible place, and so a test can assert against the same values the
@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
  *
  * This is a READABILITY setting, not a timing one: it changes how far ahead the
  * player can see and nothing about when a note is due. 1.6 s at 120 BPM is a
- * little over three beats — long enough to read a pattern, short enough that the
+ * little over three beats, long enough to read a pattern, short enough that the
  * field is not a wall of arrows on a phone.
  */
 export const NOTE_APPROACH_MS = 1600;
@@ -54,7 +54,7 @@ export interface DanceLaneVisual {
    * game; the arrow and this letter are the information.
    */
   readonly keyCap: string;
-  /** The falling token's face. Decoration only — never the sole signal. */
+  /** The falling token's face. Decoration only; never the sole signal. */
   readonly token: string;
   /** The receptor's resting ring. */
   readonly receptor: string;
@@ -144,7 +144,7 @@ export const JUDGMENT_VISUALS: Readonly<
  * The judgement readout's fixed half.
  *
  * Position and centring live here rather than in the animation, so a reduced-
- * motion player — who gets no animation at all — still sees the word in the
+ * motion player: who gets no animation at all, still sees the word in the
  * right place. The animation only ever adds scale and opacity on top.
  */
 export const JUDGMENT_READOUT_CLASS =
@@ -180,7 +180,7 @@ export function judgmentReadoutClass(
 export interface DanceComboTier {
   readonly id: 'none' | 'start' | 'hot' | 'blazing' | 'unreal';
   readonly min: number;
-  /** Applied to the combo number. Scale only — the box never changes size. */
+  /** Applied to the combo number. Scale only, the box never changes size. */
   readonly className: string;
   /** A field-wide emphasis for the top tiers. Restrained on purpose. */
   readonly fieldClassName: string;
@@ -230,7 +230,7 @@ export const DANCE_GRADE_VISUALS: Readonly<
   S: { praise: 'Flawless dancing!', ring: 'border-amber-400 bg-amber-400/15', text: 'text-amber-600' },
   A: { praise: 'Brilliant rhythm!', ring: 'border-emerald-500 bg-emerald-500/15', text: 'text-emerald-700' },
   B: { praise: 'Nice moves!', ring: 'border-sky-500 bg-sky-500/15', text: 'text-sky-700' },
-  C: { praise: 'Good going — keep dancing!', ring: 'border-island-purple bg-island-purple/15', text: 'text-island-purple' },
+  C: { praise: 'Good going; keep dancing!', ring: 'border-island-purple bg-island-purple/15', text: 'text-island-purple' },
   D: { praise: 'Warming up! Try that one again.', ring: 'border-island-wood bg-island-wood/15', text: 'text-island-wood-dark' },
 };
 
@@ -242,7 +242,7 @@ export function gradeVisual(grade: string) {
  * How many sparks a receptor throws on a hit.
  *
  * A fixed, tiny number rendered ONCE as static markup and replayed by a CSS
- * class toggle — never spawned per hit. An unbounded particle system is the one
+ * class toggle: never spawned per hit. An unbounded particle system is the one
  * decoration that can genuinely cost a rhythm game its frame budget.
  */
 export const RECEPTOR_SPARK_COUNT = 5;

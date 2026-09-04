@@ -5,7 +5,7 @@
  * The shop is the other compact, unposed context in the app. Two properties:
  *
  *  1. a definition that publishes several views is still SOLD with its default
- *     picture — a `back` marker exists to dress a Blobbi, not to advertise;
+ *     picture: a `back` marker exists to dress a Blobbi, not to advertise;
  *  2. when an issuer says what an item looks like, that beats
  *     `FOOD_IMAGES`, which is an inferred path into this repository's `public/`
  *     tree rather than a published fact.
@@ -91,9 +91,9 @@ function renderShop(definition?: ResolvedBlobbiItemDefinition) {
  * The shop's apple artwork.
  *
  * Located by the tile's `data-item-art` slot rather than by `alt="Apple"`.
- * The image is decorative — `ItemTile` renders the item's name as text right
+ * The image is decorative, `ItemTile` renders the item's name as text right
  * beneath it, so an `alt` repeating that name would make a screen reader
- * announce "Apple" twice — and a locator is not a reason to keep markup wrong.
+ * announce "Apple" twice, and a locator is not a reason to keep markup wrong.
  */
 const appleImage = () => {
   const tile = screen.getByText('Apple').closest('[class*="rounded-panel"]')!;

@@ -4,7 +4,7 @@
  * ## The question this answers
  *
  * `LocationProvider` used to open every session with `useState('town')`, so a
- * reload — including a reload after an error recovery — always dropped the
+ * reload: including a reload after an error recovery, always dropped the
  * player in Town, however far from Town they actually were. There was no second
  * authority to consult: no stored location, no route segment, nothing. Town was
  * simply the initial value.
@@ -12,7 +12,7 @@
  * Meanwhile the app already publishes exactly the fact that was missing.
  * Kind:31950 presence carries the player's current island location, and the
  * multiplayer layer already has a rule for when such an event stops meaning
- * "this Blobbi is here" — the NIP-40 expiration written by
+ * "this Blobbi is here": the NIP-40 expiration written by
  * `buildPresence31950`, checked by `isPresenceAlive`.
  *
  * So this module asks the presence the player themselves published, and applies
@@ -23,7 +23,7 @@
  *
  * ## Why stale presence goes to Town
  *
- * Not a fallback — a decision. Presence expiring is what removes a Blobbi from
+ * Not a fallback, a decision. Presence expiring is what removes a Blobbi from
  * every other client's world. A player whose presence lapsed has *left*, as far
  * as the island is concerned. Restoring them into that location days later
  * would resurrect a position the world already forgot, and would do it
@@ -67,8 +67,8 @@ export function isArcadeLocation(location: string): boolean {
  *
  * Derived from `LOCATION_BACKGROUNDS` rather than written out again: that
  * record is typed `Record<LocationId, string>`, so the compiler already forces
- * it to stay exhaustive, and membership in it is precisely the property we need
- * — a key present here has a scene to render. A second hand-maintained list
+ * it to stay exhaustive, and membership in it is precisely the property we need,
+ * a key present here has a scene to render. A second hand-maintained list
  * would be free to drift into claiming a location that renders nothing.
  */
 const RENDERABLE_LOCATIONS: ReadonlySet<string> = new Set(Object.keys(LOCATION_BACKGROUNDS));
@@ -85,7 +85,7 @@ function readWirePoint(value: unknown): Position | null {
   if (typeof x !== 'number' || typeof y !== 'number') return null;
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   // World-percent space is 0–100 by definition. A value outside it is not an
-  // out-of-bounds position to be clamped, it is a malformed one — clamping
+  // out-of-bounds position to be clamped, it is a malformed one, clamping
   // `x: -9999` to an edge would silently invent a location the player was never
   // at. Those fall through to the scene's canonical spawn instead.
   if (x < 0 || x > 100 || y < 0 || y > 100) return null;
@@ -113,7 +113,7 @@ function readWirePoint(value: unknown): Position | null {
  * ever drew them.
  *
  * `goal.to` is taken as a STATIC point. The goal itself is never carried into
- * the decision — there is no field on the result to put it in — so a reload can
+ * the decision: there is no field on the result to put it in, so a reload can
  * never resume walking toward a target chosen 30 seconds ago.
  *
  * ## Coordinates
@@ -136,8 +136,8 @@ function resolveResumePosition(content: unknown, location: LocationId): Position
 
   // The destination scene's OWN policy decides what is in bounds. A position
   // that was walkable when published (both `goal.to` and every published anchor
-  // already are) survives this untouched; one that is not — a room whose floor
-  // moved between builds — is clamped onto the floor rather than dropping the
+  // already are) survives this untouched; one that is not, a room whose floor
+  // moved between builds, is clamped onto the floor rather than dropping the
   // player through it.
   const boundary = locationBoundaries[getBackgroundForLocation(location)] ?? FALLBACK_BOUNDARY;
   const constrained = constrainPosition(ground, boundary);
@@ -150,7 +150,7 @@ function resolveResumePosition(content: unknown, location: LocationId): Position
  * NOTE the deliberate absence of a pass-gated floor table.
  *
  * The arcade floors used to need an Arcade Pass to be in, so a player restored
- * upstairs without one was stranded — the only exit refused them — and this
+ * upstairs without one was stranded, the only exit refused them, and this
  * policy had to land them at the entrance instead. The elevator is open to
  * everyone now: the arcade charges for PLAYS (one Arcade Token each), not for
  * standing in the building. With no gated floor there is nothing to check, and
@@ -176,7 +176,7 @@ export type LocationResumeOutcome =
   /** The relay answered, and it holds no usable presence for this player. */
   | { readonly kind: 'no-presence' }
   /**
-   * The read never completed. NOT an empty result and never recorded as one —
+   * The read never completed. NOT an empty result and never recorded as one,
    * see `src/lib/relay-read.ts`.
    */
   | { readonly kind: 'unknown-read'; readonly reason: RelayReadUnknownReason };
@@ -188,7 +188,7 @@ export interface LocationResumeDecision {
    * Where in that location to place the actor, in INTERNAL ground coordinates,
    * already validated against the destination scene's walkable area.
    *
-   * `null` means "use the scene's canonical spawn" — no presence position, a
+   * `null` means "use the scene's canonical spawn": no presence position, a
    * malformed one, or a location the player is not being restored into anyway.
    * There is deliberately no goal, seat, pose or activity beside it: this is a
    * standing position and nothing else.
@@ -261,7 +261,7 @@ function toCandidate(event: NostrEvent, islandId: string): ResumeCandidate | nul
 /**
  * The newest candidate, by ordinary newest-event semantics.
  *
- * `created_at` decides, so a second tab that published more recently wins —
+ * `created_at` decides, so a second tab that published more recently wins,
  * which is the answer multi-tab should give. The `id` tie-break only makes the
  * same-second case deterministic; it carries no meaning. Note this picks the
  * newest event and then judges it, rather than searching for the newest event

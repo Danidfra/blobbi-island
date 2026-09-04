@@ -2,7 +2,7 @@
  * Cross-app theme interoperability with Ditto.
  *
  * Every fixture in this file is transcribed from the CURRENT Ditto source at
- * `/Users/filemon/Developer/ditto` — `src/lib/themeEvent.ts`,
+ * `/Users/filemon/Developer/ditto`: `src/lib/themeEvent.ts`,
  * `src/hooks/useEncryptedSettings.ts`, `src/components/NostrSync.tsx`,
  * `src/hooks/useTheme.ts` and `src/hooks/usePublishTheme.ts`. Nothing here is
  * invented; where a shape looks odd it is because Ditto's is.
@@ -49,7 +49,7 @@ function event(partial: Partial<NostrEvent> & Pick<NostrEvent, 'kind' | 'tags'>)
 // Ditto's own builders, reproduced verbatim so the parity tests compare Island
 // against Ditto rather than against Island's idea of Ditto.
 //
-// Source: ditto `src/lib/themeEvent.ts` — `buildColorTags`, `buildFontTags`,
+// Source: ditto `src/lib/themeEvent.ts`: `buildColorTags`, `buildFontTags`,
 // `buildBackgroundTag`, `buildThemeDefinitionTags`, `buildActiveThemeTags`.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -154,7 +154,7 @@ const CONFIG: ThemeConfig = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('kind:36767 — definition parity with Ditto', () => {
+describe('kind:36767: definition parity with Ditto', () => {
   it('builds byte-identical tags for the same input', () => {
     expect(
       buildThemeDefinitionTags({
@@ -221,7 +221,7 @@ describe('kind:36767 — definition parity with Ditto', () => {
   });
 });
 
-describe('kind:16767 — active-theme parity with Ditto', () => {
+describe('kind:16767: active-theme parity with Ditto', () => {
   it('builds byte-identical tags for a theme with a source definition', () => {
     expect(
       buildActiveThemeTags({
@@ -240,7 +240,7 @@ describe('kind:16767 — active-theme parity with Ditto', () => {
    * THE Ditto → Island bug.
    *
    * Ditto publishes a SELF-CONTAINED active theme for every selection that did
-   * not come from a kind:36767 definition — a built-in preset, an edited
+   * not come from a kind:36767 definition, a built-in preset, an edited
    * palette, a colour tweak. Those events carry no `a` tag, and of course no
    * Island tag. Island's previous resolver required one or the other and
    * therefore ignored the single most common event Ditto produces.
@@ -274,17 +274,17 @@ describe('kind:16767 — active-theme parity with Ditto', () => {
   });
 });
 
-describe('kind:30078 — Ditto encrypted settings', () => {
+describe('kind:30078: Ditto encrypted settings', () => {
   /**
    * THE Island → Ditto bug.
    *
    * Ditto's app theme is NOT kind:16767. `useActiveProfileTheme` (16767) is
-   * consumed only by ProfilePage and FollowPage — it decorates a PROFILE.
+   * consumed only by ProfilePage and FollowPage; it decorates a PROFILE.
    * Ditto's own active theme is `AppConfig.theme` + `AppConfig.customTheme`,
    * synced across devices as NIP-78 kind:30078 under `d = "ditto/metadata"`,
    * NIP-44 encrypted to self.
    *
-   * On pageload Ditto does read 16767 (when `autoShareTheme`, default true) —
+   * On pageload Ditto does read 16767 (when `autoShareTheme`, default true),
    * but it writes the result to `customTheme` ONLY and explicitly never touches
    * `theme`. So an Island-published 16767 is invisible in Ditto unless that
    * account's mode already happens to be `'custom'`.
@@ -340,7 +340,7 @@ describe('kind:30078 — Ditto encrypted settings', () => {
   });
 
   it('refuses to build a write from an unreadable blob', () => {
-    // A failed decrypt must not become "the user had no settings" — that would
+    // A failed decrypt must not become "the user had no settings": that would
     // publish a blob containing only a theme and erase everything else.
     expect(parseDittoThemeSettings('{not json')).toBeNull();
     expect(parseDittoThemeSettings('')).toBeNull();

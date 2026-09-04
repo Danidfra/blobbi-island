@@ -1,10 +1,10 @@
 /**
- * The Planck world, on its own — the spike that had to be convincing before any
+ * The Planck world, on its own, the spike that had to be convincing before any
  * of it was wired into a match.
  *
  * Everything here drives the REAL engine headlessly. Planck is pure JavaScript
  * with no DOM and no async initialisation, so a whole shot is a loop over
- * `world.step` in Node — which is the main reason it was chosen.
+ * `world.step` in Node, which is the main reason it was chosen.
  *
  * Tolerances are deliberately loose where the contract is a direction or a
  * range. A sequential-impulse solver does not produce exact numbers and
@@ -131,7 +131,7 @@ describe('the world', () => {
     // ball off with nearly everything.
     //
     // The speed is chosen so the object ball comes to rest BEFORE the far
-    // cushion — otherwise the resting position measures a round trip rather than
+    // cushion: otherwise the resting position measures a round trip rather than
     // the collision.
     const run = shoot([ball(CUE_BALL, 40, 50), ball(1, 100, 50)], { angle: 0, speed: 70 });
     expect(run.ball(CUE_BALL).x).toBeCloseTo(100 - BALL_DIAMETER, 0);
@@ -448,7 +448,7 @@ describe('pockets', () => {
 
   it('lets a ball run along a rail PAST a side pocket', () => {
     // A real side pocket does not swallow a ball travelling parallel to its
-    // mouth, and the mouth-plane test is what gets this right — a capture
+    // mouth, and the mouth-plane test is what gets this right, a capture
     // circle round the pocket centre could not.
     //
     // It is checked by where the ball GOES, not where it stops: at this speed it

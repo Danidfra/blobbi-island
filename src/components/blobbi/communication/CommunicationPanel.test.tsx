@@ -4,7 +4,7 @@
  * The Family assertions are about ABSENCE, not disablement: there is no
  * composer in the tree, no textbox to find, and no tab that leads to one. A
  * disabled box telling a child what they may not do is both a worse experience
- * and a weaker guarantee — a mounted composer is one `onSend` away from being
+ * and a weaker guarantee, a mounted composer is one `onSend` away from being
  * reachable.
  *
  * What this file does NOT prove is safety. The panel is presentation; the

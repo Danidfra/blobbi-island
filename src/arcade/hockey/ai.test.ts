@@ -1,5 +1,5 @@
 /**
- * Air Hockey opponent — the behaviour, and the limits it can never exceed.
+ * Air Hockey opponent, the behaviour, and the limits it can never exceed.
  *
  * Two kinds of test, and the distinction is deliberate.
  *
@@ -118,8 +118,8 @@ describe('difficulty profiles', () => {
   });
 
   it('never lets the opponent hit as hard as the player can', () => {
-    // The player's mallet is not speed-limited at all any more — it is wherever
-    // the pointer is — so the comparison is against the strike clamp, which is
+    // The player's mallet is not speed-limited at all any more; it is wherever
+    // the pointer is, so the comparison is against the strike clamp, which is
     // the only bound either side actually shares. The opponent must stay under
     // it: it steers by arithmetic and the player by hand, and that advantage is
     // what keeps a human opponent's imprecision fair.
@@ -248,7 +248,7 @@ describe('behaviour', () => {
     expect(target.y).toBeLessThan(TABLE_CENTER_Y / 2);
   });
 
-  it('does not mirror the puck’s x — it covers the angle instead', () => {
+  it('does not mirror the puck’s x; it covers the angle instead', () => {
     // A mirror is the behaviour that reads as robotic and leaves the far post
     // open on every cross. Covering the goal-to-puck line does not.
     const wide = 6;
@@ -257,7 +257,7 @@ describe('behaviour', () => {
       mallet: mallet(),
     });
     expect(Math.abs(target.x - wide)).toBeGreaterThan(10);
-    // Still shaded toward the puck's side, though — it is not ignoring it.
+    // Still shaded toward the puck's side, though; it is not ignoring it.
     expect(target.x).toBeLessThan(TABLE_CENTER_X);
   });
 
@@ -300,12 +300,12 @@ describe('behaviour', () => {
     expect(state.mode).toBe('strike');
     // Past the puck, toward the player's end.
     expect(target.y).toBeGreaterThan(world.puck.y);
-    // And at full speed — easing in is what turns a shot into a tap.
+    // And at full speed, easing in is what turns a shot into a tap.
     expect(arriveRadius).toBe(0);
   });
 
   it('sets up behind the puck first when it is on the wrong side of it', () => {
-    // Level with the puck rather than well past it — past it is `recover`,
+    // Level with the puck rather than well past it, past it is `recover`,
     // which is a different problem with a different answer.
     const world = {
       puck: puck({ x: TABLE_CENTER_X, y: 45, vx: 2, vy: 2 }),

@@ -116,7 +116,7 @@ export function makeCommandEvent(overrides: {
   };
 }
 
-/** §16.1–16.7 — the canonical half of the timeline. */
+/** §16.1–16.7: the canonical half of the timeline. */
 export const CANONICAL_EXAMPLES: Array<{ label: string; event: NostrEvent }> = [
   {
     label: '16.1 rev 0 · created, paused at zero',
@@ -187,7 +187,7 @@ export const CANONICAL_EXAMPLES: Array<{ label: string; event: NostrEvent }> = [
   },
 ];
 
-/** §16.8–16.16 — the ephemeral half. */
+/** §16.8–16.16: the ephemeral half. */
 export const COMMAND_EXAMPLES: Array<{ label: string; event: NostrEvent }> = [
   {
     label: '16.8 rev 1 · play',

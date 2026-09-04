@@ -19,7 +19,7 @@ import { useIslandLocationResume } from "@/hooks/useIslandLocationResume";
 import { nextGameState, type GameState } from "./blobbi-island-state";
 
 /**
- * The island this page is. Matches `MultiplayerLayer`'s `islandId` default —
+ * The island this page is. Matches `MultiplayerLayer`'s `islandId` default,
  * presence is scoped by an `island:<id>` tag, and a resume must only consider
  * presence from the island being entered.
  */
@@ -48,12 +48,12 @@ export function BlobbiIsland() {
   const { data: blobbis, isLoading: isLoadingBlobbis, error: blobbiError } = useBlobbis();
   const { data: profile, isLoading: isLoadingCompanion, error: companionError } = useBlobbonautProfile();
   // Where this session opens, from the player's own kind:31950 presence. Runs in
-  // parallel with the Blobbi/companion reads above — all three are relay
+  // parallel with the Blobbi/companion reads above; all three are relay
   // round-trips started at the same moment, so resuming normally costs no extra
   // wall-clock, and its read has its own hard deadline either way.
   const locationResume = useIslandLocationResume(ISLAND_ID);
   const currentCompanionId = profile?.currentCompanion;
-  // Track a manual (session) selection by ID only — never a snapshot object.
+  // Track a manual (session) selection by ID only; never a snapshot object.
   // Resolving the live Blobbi from the ['blobbis'] cache keeps selectedBlobbi
   // reactive: if the chosen Blobbi's stats/appearance are updated, the playing
   // view re-reads the fresh object instead of a stale copy captured at click.
@@ -63,7 +63,7 @@ export function BlobbiIsland() {
   // When the player switches Blobbi *while already playing*, we keep the world
   // (PlayingView + multiplayer presence) MOUNTED and show the selection as an
   // overlay. Unmounting the world would reset the local position to spawn and
-  // wipe the remote-players list — so instead we overlay and let the live world
+  // wipe the remote-players list, so instead we overlay and let the live world
   // swap only the Blobbi identity in place. This flag drives that overlay.
   const [isSwitchingBlobbi, setIsSwitchingBlobbi] = useState(false);
 
@@ -80,7 +80,7 @@ export function BlobbiIsland() {
   // COMPANION PRESERVATION: the last companion we actually resolved. The
   // profile read can become temporarily unusable (relay timeout), and without
   // this the derived selection would collapse to null and eject a playing
-  // player. The fallback is deliberately narrow — it re-selects the SAME
+  // player. The fallback is deliberately narrow; it re-selects the SAME
   // Blobbi we already had, only while it is still present in the known pet
   // list. It never picks a different Blobbi (the `allPets[0]` shape in
   // `useOptimizedStatus` is for a player who has never chosen one, not for
@@ -186,7 +186,7 @@ export function BlobbiIsland() {
   // Called by the ceremony ONLY after the baby kind 31124 publish has succeeded
   // (the ceremony gates onComplete on that publish). Because useBlobbis filters
   // out eggs, we must refetch the collection and confirm the new baby is present
-  // BEFORE entering the world — otherwise the derived-state effect could bounce
+  // BEFORE entering the world; otherwise the derived-state effect could bounce
   // back to selection while the baby is still refetching. We select the new
   // Blobbi first, await the collection refetch, then enter playing.
   const handleHatchComplete = async (blobbiId: string) => {
@@ -199,7 +199,7 @@ export function BlobbiIsland() {
       try {
         await queryClient.refetchQueries({ queryKey: ['blobbis', user.pubkey] });
       } catch {
-        // A refetch hiccup shouldn't trap the player on the ceremony — the
+        // A refetch hiccup shouldn't trap the player on the ceremony, the
         // baby was published successfully. Enter playing anyway; the selection
         // resolves on the next natural refetch.
       }
@@ -264,8 +264,8 @@ export function BlobbiIsland() {
 
       case 'playing':
         // Hold the world until we know where it opens. Mounting PlayingView on
-        // the Town default and correcting it a moment later would render Town —
-        // backdrop, spawn, presence publish and all — then visibly teleport the
+        // the Town default and correcting it a moment later would render Town,
+        // backdrop, spawn, presence publish and all; then visibly teleport the
         // player. The wait is bounded by the presence read's own deadline and,
         // in practice, is already over: it started with the Blobbi and companion
         // reads that had to finish before this branch could be reached.
@@ -300,7 +300,7 @@ export function BlobbiIsland() {
 
   // "In the world" means the world is actually mounted. While the resume
   // decision is still pending the playing branch renders the loading screen, so
-  // the game chrome must stay off — HUD over a loading screen would be the same
+  // the game chrome must stay off: HUD over a loading screen would be the same
   // half-entered state the gate exists to avoid.
   const isPlaying = gameState === 'playing' && locationResume.isSettled;
 
@@ -314,7 +314,7 @@ export function BlobbiIsland() {
     reading. Every one of them would otherwise have started under whatever
     policy happened to be in scope.
 
-    Today this never holds — the profile is a literal, so resolution is complete
+    Today this never holds, the profile is a literal, so resolution is complete
     on the first render and production mounts exactly as it always has. The gate
     is what makes that a STATEMENT rather than an accident, and it is what a
     guardian-owned read will hang from without a single consumer changing.
@@ -335,8 +335,8 @@ export function BlobbiIsland() {
         {/* Economy-entry status, in and out of the world. Before the world it
             speaks whenever the initial allocation is applying, ambiguous or
             needs a retry. In the world it narrows to the states the Coins
-            surface cannot reach the player with — a failed allocation and the
-            attempt that follows a retry — because that surface lives inside a
+            surface cannot reach the player with, a failed allocation and the
+            attempt that follows a retry, because that surface lives inside a
             modal the player may never open. */}
         <EconomyEntryNotice inWorld={isPlaying} />
         {/* The first minutes: arrival, the initial Coin grant, the welcome. In

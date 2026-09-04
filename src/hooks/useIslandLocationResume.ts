@@ -9,7 +9,7 @@
  * entirely by `LocationContext` and the normal navigation path, so a heartbeat
  * arriving mid-session cannot move the player. The query is pinned with
  * `staleTime: Infinity` and every automatic refetch disabled, and
- * `LocationProvider` latches its bootstrap independently — either alone would
+ * `LocationProvider` latches its bootstrap independently; either alone would
  * be sufficient; both together make "cannot teleport" structural rather than
  * incidental.
  *
@@ -20,7 +20,7 @@
  * (`src/lib/relay-read.ts`). That rule is about *destroying player data*, and
  * it is not weakened here: this read owns no data. Its only product is a
  * navigation choice for a session that has not started yet, and there is
- * nothing to preserve or erase — no location is persisted, and nothing about
+ * nothing to preserve or erase; no location is persisted, and nothing about
  * "you were in Town" is ever written.
  *
  * So `unknown` resolves to the default location and is *classified* as unknown
@@ -123,7 +123,7 @@ export function useIslandLocationResume(islandId: string): IslandLocationResume 
   if (data) return { ...data, isSettled: true };
 
   // `readRelay` returns its failures rather than throwing, so `error` here means
-  // something structural (a missing pool, a bug) — not a relay condition. Settle
+  // something structural (a missing pool, a bug): not a relay condition. Settle
   // anyway: an unreachable decision must never leave the world unmountable.
   if (status === 'error') {
     return {

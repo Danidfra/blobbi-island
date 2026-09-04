@@ -2,7 +2,7 @@
  * Redemption-hook lifecycle tests.
  *
  * The REAL hook, the REAL state machine, the REAL ledger in real (test)
- * localStorage — with a fake spend writer and a fake ownership store, so every
+ * localStorage: with a fake spend writer and a fake ownership store, so every
  * branch is reachable and nothing can publish. The properties pinned here are
  * the ones that protect an honest player's tickets: one spend per attempt,
  * double-clicks and remounts cannot double-spend, an unresolved spend is never
@@ -274,7 +274,7 @@ describe('exactly-once', () => {
     expect(first.result.current.state.phase).toBe('spend-unresolved');
     first.unmount();
 
-    // A fresh mount — a refresh, a reopened counter.
+    // A fresh mount, a refresh, a reopened counter.
     const second = mount({ writer: fakeSpendWriter() });
     act(() => {
       second.result.current.hydrateForPrize(GLASSES);
@@ -462,7 +462,7 @@ describe('durable persistence is a prerequisite for publishing', () => {
   it('a persistence failure AFTER a possibly-published spend never becomes retryable', async () => {
     // The publish times out (possibly landed); the unresolved transition then
     // refuses to persist. The durable record stays `spending`, which must
-    // hydrate as unresolved — never as a fresh Redeem.
+    // hydrate as unresolved; never as a fresh Redeem.
     const spy = failLedgerWritesContaining('"status":"spend-unresolved"');
     const writer = fakeSpendWriter({
       spendError: Object.assign(new Error('timeout'), { name: 'TimeoutError' }),
@@ -498,7 +498,7 @@ describe('durable persistence is a prerequisite for publishing', () => {
     await act(async () => {
       await result.current.redeem(GLASSES);
     });
-    // Delivery proceeded despite the bookkeeping failure — it is idempotent
+    // Delivery proceeded despite the bookkeeping failure; it is idempotent
     // per redemption id and the durable `spent` record kept it recoverable.
     expect(result.current.state.phase).toBe('confirmed');
     expect(writer.spendCount()).toBe(1);
@@ -506,7 +506,7 @@ describe('durable persistence is a prerequisite for publishing', () => {
     spy.mockRestore();
   });
 
-  it('does NOT report confirmed when the final record will not persist — and finalizes later without re-granting', async () => {
+  it('does NOT report confirmed when the final record will not persist, and finalizes later without re-granting', async () => {
     const spy = failLedgerWritesContaining('"status":"confirmed"');
     const writer = fakeSpendWriter();
     const ownership = fakeOwnership();
@@ -516,7 +516,7 @@ describe('durable persistence is a prerequisite for publishing', () => {
     });
     expect(result.current.state.phase).toBe('delivery-recovery');
     expect(result.current.state.message).toMatch(/could not record/i);
-    // The prize IS delivered — only the record is missing.
+    // The prize IS delivered; only the record is missing.
     expect(ownership.incrementCount()).toBe(1);
     spy.mockRestore();
 
@@ -535,7 +535,7 @@ describe('durable persistence is a prerequisite for publishing', () => {
 });
 
 describe('exact-balance reconciliation in the hook', () => {
-  it('stays unresolved when the balance dropped by MORE than the price — the concurrent-spend case', async () => {
+  it('stays unresolved when the balance dropped by MORE than the price, the concurrent-spend case', async () => {
     // baseline 100, price 40, this publish never landed, another tab spent 50:
     // the balance now reads 50. The old "at least the price" rule would have
     // delivered a prize that was never paid for; the exact rule refuses.
@@ -556,7 +556,7 @@ describe('exact-balance reconciliation in the hook', () => {
 });
 
 describe('publication error classification', () => {
-  it('treats a PROVEN all-relay rejection as retryable — only a proving writer can say so', async () => {
+  it('treats a PROVEN all-relay rejection as retryable; only a proving writer can say so', async () => {
     const rejecting = fakeSpendWriter({
       spendError: new ArcadePrizeSpendError('every relay refused', 'publish-rejected'),
     });
@@ -569,7 +569,7 @@ describe('publication error classification', () => {
     expect(result.current.state.message).toMatch(/nothing was saved/i);
   });
 
-  it('treats a GENERIC publication error as possibly published — unresolved, no retry', async () => {
+  it('treats a GENERIC publication error as possibly published, unresolved, no retry', async () => {
     // The production writer lets unrecognised publish errors through raw, and
     // NPool's contract cannot prove no relay stored the event.
     const writer = fakeSpendWriter({ spendError: new Error('socket closed') });
@@ -618,7 +618,7 @@ describe('repeatable prizes', () => {
     ).toHaveLength(2);
   });
 
-  it('hydrates a repeatable prize with only confirmed history to IDLE — redeemable again', async () => {
+  it('hydrates a repeatable prize with only confirmed history to IDLE, redeemable again', async () => {
     const { result } = mount({ writer: fakeSpendWriter() });
     await act(async () => {
       await result.current.redeem(SNACK);
@@ -679,7 +679,7 @@ describe('repeatable prizes', () => {
       await second.result.current.finishDelivery(SNACK, pending[0]);
     });
     expect(second.result.current.state.phase).toBe('confirmed');
-    // One attempt, one count — the retry re-delivered the SAME redemption id.
+    // One attempt, one count, the retry re-delivered the SAME redemption id.
     expect(second.result.current.ownedCounts.get(SNACK.id)).toBe(1);
     const owned = await ownershipAfterRefresh.listOwnedPrizes(PUBKEY);
     expect(owned[0].deliveredRedemptionIds).toHaveLength(1);
@@ -738,7 +738,7 @@ function fakeAtomicOwnership(options: { ownedFrom?: () => boolean } = {}) {
 }
 
 describe('atomic redemption', () => {
-  it('confirms without a second write — the grant rode on the spend event', async () => {
+  it('confirms without a second write, the grant rode on the spend event', async () => {
     let landed = false;
     const writer = fakeSpendWriter();
     const spend = writer.spendTickets.bind(writer);
@@ -817,7 +817,7 @@ describe('atomic redemption', () => {
   });
 
   it('will NOT respend while the outcome is genuinely unknown', async () => {
-    // Prize absent, balance moved — evidence of OTHER writes, not of this one.
+    // Prize absent, balance moved, evidence of OTHER writes, not of this one.
     // Reads: [0] the baseline, [1] the reconciliation.
     const writer = fakeSpendWriter({
       quantities: [100, 55],
@@ -897,7 +897,7 @@ describe('atomic redemption', () => {
       await result.current.redeem(GLASSES);
     });
 
-    // The shared cache is the UI boundary — no surface patches quantities.
+    // The shared cache is the UI boundary; no surface patches quantities.
     expect(invalidate).toHaveBeenCalledWith({ queryKey: inventoryQueryKey(PUBKEY) });
   });
 });

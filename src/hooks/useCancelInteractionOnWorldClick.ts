@@ -7,8 +7,8 @@ import type { PendingInteractionApi } from './usePendingInteraction';
  * Cancel a pending walk-to-interact when the player taps a *different* world
  * point.
  *
- * Extracted from `InteractiveElements` so the arcade — which now owns its own
- * `usePendingInteraction` instance — gets the identical behaviour rather than a
+ * Extracted from `InteractiveElements` so the arcade, which now owns its own
+ * `usePendingInteraction` instance: gets the identical behaviour rather than a
  * second, subtly different copy of it.
  *
  * Interactive elements carry `data-block-move` and stop propagation, so a

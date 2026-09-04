@@ -1,8 +1,8 @@
 /**
- * The Care Store storefront in the shopping mall — and the Photo Booth it
+ * The Care Store storefront in the shopping mall, and the Photo Booth it
  * traded places with.
  *
- * The facade is the door — there is no separate door overlay asset — so what
+ * The facade is the door, there is no separate door overlay asset, so what
  * has to hold is: it is drawn from the real artwork, it stands on the middle
  * level between the plant and the Clothing Store rather than on top of either,
  * and clicking it walks the player onto the mall's walkway before changing
@@ -10,7 +10,7 @@
  *
  * That last part is the one worth guarding. The facade's own base sits above
  * the mall's walkable band, so a derived "floor at this sprite's base" target
- * would be unreachable and the storefront would look dead — the arcade counters'
+ * would be unreachable and the storefront would look dead, the arcade counters'
  * historical failure, recorded in `arcade-room-config.ts`.
  *
  * ## Why the placement assertions are about INK, not boxes
@@ -19,7 +19,7 @@
  * padding, so two boxes can sit flush while the pictures inside them show a gap,
  * and two boxes can be clear of each other while the ink overlaps. Comparing raw
  * `bottom-[…]` / `left-[…]` values would therefore pass while the scene looks
- * wrong — which is exactly the trap the facade's own anchor had to dodge. So
+ * wrong: which is exactly the trap the facade's own anchor had to dodge. So
  * everything below is computed in PAINTED geometry.
  *
  * ## And why the facade must not MOVE
@@ -94,7 +94,7 @@ async function renderMall() {
 const facade = () => screen.getByAltText(CARE_STORE_FACADE.alt).parentElement!;
 
 /**
- * Parse a Tailwind percentage utility like `left-[50%]` — or `-left-[2.5%]`,
+ * Parse a Tailwind percentage utility like `left-[50%]`: or `-left-[2.5%]`,
  * which is how the Badges Store hangs off the frame's left edge.
  */
 function pct(className: string, prefix: string): number {
@@ -104,8 +104,8 @@ function pct(className: string, prefix: string): number {
 }
 
 /**
- * Each sprite's transparent padding, as a fraction of the sprite — measured from
- * its own alpha channel, so these survive any resize — plus its real pixel size.
+ * Each sprite's transparent padding, as a fraction of the sprite, measured from
+ * its own alpha channel, so these survive any resize, plus its real pixel size.
  */
 const ART = {
   care: { w: 567, h: 391, left: 0.0159, right: 0.0159, bottom: 0.0537 },
@@ -113,13 +113,13 @@ const ART = {
    * The Coffee Shop, now the replacement `.webp`. The sprite it replaced was
    * 579×385 with essentially no padding; this one is a 1536×1024 box with real
    * margins, which is why its own `bottom-[…]` and `left-[…]` moved when the
-   * artwork did — it paints the same stall in the same place.
+   * artwork did: it paints the same stall in the same place.
    */
   coffee: { w: 1536, h: 1024, left: 0.0228, right: 0.0208, bottom: 0.0254 },
   /** The ground-floor potted plant beside the Coffee Shop. */
   plant: { w: 136, h: 252, left: 0.0147, right: 0.0809, bottom: 0.0119 },
   /**
-   * The Clothing Store, the Care Store's right-hand neighbour — now the
+   * The Clothing Store, the Care Store's right-hand neighbour, now the
    * open-front `.webp` that replaced the old `.png` + door pair. Its 3.19 %
    * side and 2.93 % bottom margins are why its box is wider and its
    * `bottom-[…]` higher than the sprite it replaced: the two land on the same
@@ -127,7 +127,7 @@ const ART = {
    */
   clothing: { w: 1536, h: 1024, left: 0.0319, right: 0.0319, bottom: 0.0293 },
   /**
-   * The Badges Store, the Care Store's other middle-level neighbour — replaced
+   * The Badges Store, the Care Store's other middle-level neighbour, replaced
    * again with a 1536×1024 render whose padding is nothing like either sprite
    * before it. Its 2.93 % bottom margin is why its box offsets had to move to
    * keep the shared floor line: the facades sit at different box offsets and
@@ -141,7 +141,7 @@ const ART = {
  * The mall's LEFT structural pillar, probed off `shopping-mall-inside.png`.
  *
  * It is what defines the open side of the Care Store's bay now that the plant
- * beside it is gone — the facade is sized to reach it.
+ * beside it is gone, the facade is sized to reach it.
  */
 const LEFT_PILLAR = { left: 22.2, right: 25.4 } as const;
 
@@ -221,7 +221,7 @@ describe('the Care Store and the Photo Booth swapped places', () => {
     const booth = boxOf(boothEl(), 'left');
     const coffee = boxOf(coffeeEl(), 'left');
 
-    // Their PAINTED bases line up, which is the claim — the boxes cannot,
+    // Their PAINTED bases line up, which is the claim, the boxes cannot,
     // because the two sprites carry different transparent padding.
     const boothInk = painted(booth, ART.booth);
     const coffeeInk = painted(coffee, ART.coffee);
@@ -279,7 +279,7 @@ describe('the replaced storefront artwork', () => {
 
   it('renders no image without a source', async () => {
     const { container } = await renderMall();
-    // The Coffee Shop carried an empty `<img />` above its stall — a broken
+    // The Coffee Shop carried an empty `<img />` above its stall, a broken
     // image box the artwork happened to cover. It went with the swap.
     const sourceless = [...container.querySelectorAll('img')].filter(
       (img) => !img.getAttribute('src'),
@@ -353,7 +353,7 @@ describe('the storefront is part of the mall scene', () => {
     const care = painted(boxOf(facade().parentElement!, 'left'), ART.care);
 
     // With the plant gone, the pillar is the open side of the bay. The facade
-    // now runs from its inner face to the Clothing Store — the bay is the
+    // now runs from its inner face to the Clothing Store, the bay is the
     // storefront, rather than the storefront sitting in the middle of it.
     expect(care.left).toBeGreaterThanOrEqual(LEFT_PILLAR.right - 0.5);
     expect(care.left).toBeLessThan(LEFT_PILLAR.right + 1.5);
@@ -379,7 +379,7 @@ describe('the storefront is part of the mall scene', () => {
     const box = boxOf(facade().parentElement!, 'left');
 
     // Widening the sprite makes it taller, which thickens the transparent film
-    // under its artwork, which sinks the painted base — unless the anchor
+    // under its artwork, which sinks the painted base, unless the anchor
     // follows it down. The raw anchor is therefore NOT its neighbours' 38.5 %,
     // and the painted baselines are.
     expect(box.bottom).toBeLessThan(38.5);
@@ -430,8 +430,8 @@ describe('the storefront is part of the mall scene', () => {
 
   it('keeps the click target on the facade itself, whatever size it is', async () => {
     await renderMall();
-    // The clickable element IS the sprite's own box — `InteractiveElement` wraps
-    // the image — so resizing the facade resizes the hit area with it. Nothing
+    // The clickable element IS the sprite's own box, `InteractiveElement` wraps
+    // the image: so resizing the facade resizes the hit area with it. Nothing
     // here may hard-code a target that could drift from the picture.
     expect(facade().contains(screen.getByAltText(CARE_STORE_FACADE.alt))).toBe(true);
     expect(facade().parentElement!.className).toContain(

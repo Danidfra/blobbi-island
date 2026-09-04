@@ -21,7 +21,7 @@ import {
 import { isEquippableSlot } from '@/placement/policy';
 
 /**
- * The fitting room — "how would this look on my Blobbi?", and nothing else.
+ * The fitting room, "how would this look on my Blobbi?", and nothing else.
  *
  * ## Write-free, structurally
  *
@@ -37,8 +37,8 @@ import { isEquippableSlot } from '@/placement/policy';
  * ## How the preview is drawn
  *
  * Through the REAL renderer, not a mock-up. `CurrentBlobbiDisplay` already
- * accepts explicit `visualOverride` / `accessoryOverride` / `effectsOverride`
- * — the Arcade's `PrizePreviewStage` established the pattern — so the fitting
+ * accepts explicit `visualOverride` / `accessoryOverride` / `effectsOverride`,
+ * the Arcade's `PrizePreviewStage` established the pattern, so the fitting
  * room composes an accessory list and lets the renderer do what it does on the
  * world stage: same sprite, same slot rules, same rear-view hiding.
  *
@@ -51,8 +51,8 @@ import { isEquippableSlot } from '@/placement/policy';
  *
  * Everything official and wearable, in two visually distinct groups:
  *
- *   OWNED           — kind:31633 says you hold it. Try it on freely.
- *   PREVIEW ONLY    — real, published, and not yours. Shown because a fitting
+ *   OWNED: kind:31633 says you hold it. Try it on freely.
+ *   PREVIEW ONLY: real, published, and not yours. Shown because a fitting
  *                     room you can only use for things you already bought is a
  *                     mirror, not a shop. Labelled so it never implies ownership.
  *
@@ -112,7 +112,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
    * The outfit being tried on: slot → item address.
    *
    * Keyed by SLOT, which is what makes "a second hat replaces the first" fall
-   * out of the data instead of needing a rule. Local state only — it is created
+   * out of the data instead of needing a rule. Local state only; it is created
    * with the dialog and dies with it.
    */
   const [tryingOn, setTryingOn] = useState<Record<string, string>>({});
@@ -157,7 +157,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
    *
    * The equipment context only resolves definitions for what the Blobbi already
    * wears, which is everything the world stage needs and not nearly enough for
-   * a fitting room — the whole point here is items it does NOT wear. Handing the
+   * a fitting room, the whole point here is items it does NOT wear. Handing the
    * catalog's own definitions to the renderer is what makes the preview draw.
    * It grants nothing: a definition says what a thing looks like.
    */
@@ -170,7 +170,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
    * The accessory list the renderer draws: the Blobbi's REAL equipment, with
    * each tried-on item replacing whatever occupies its slot.
    *
-   * Exactly what equipping would produce — which is the point. A preview that
+   * Exactly what equipping would produce, which is the point. A preview that
    * composed differently from the real thing would be a lie told carefully.
    */
   const previewAccessories = useMemo((): readonly AccessoryPlacementInput[] => {
@@ -255,7 +255,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
           idSuffix="fitting-room-preview"
           /* Fully explicit composition: the companion's own visual, its real
              equipment with the tried-on items layered over it, and its real
-             effects untouched. Nothing persisted — see the module doc. */
+             effects untouched. Nothing persisted; see the module doc. */
           visualOverride={visual}
           accessoryOverride={previewAccessories}
           effectsOverride={effects}
@@ -273,7 +273,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
 
       <p className="shrink-0 text-center text-xs text-island-ink-soft" role="status">
         {!companion
-          ? 'Shown on a sample Blobbi — sign in to dress your own.'
+          ? 'Shown on a sample Blobbi, sign in to dress your own.'
           : previewCount === 0
             ? `${visual.name} is wearing what they already own.`
             : `Trying on ${previewCount} item${previewCount === 1 ? '' : 's'}. Nothing is saved.`}

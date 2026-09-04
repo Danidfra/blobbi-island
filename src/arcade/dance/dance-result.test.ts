@@ -69,7 +69,7 @@ describe('building a result', () => {
     expect(JSON.parse(JSON.stringify(build()))).toEqual(build());
   });
 
-  it('is deterministic — same input, identical object', () => {
+  it('is deterministic: same input, identical object', () => {
     expect(build()).toEqual(build());
   });
 

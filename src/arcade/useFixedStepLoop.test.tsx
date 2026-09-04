@@ -1,5 +1,5 @@
 /**
- * The shared fixed-step loop — the three things it must get right.
+ * The shared fixed-step loop, the three things it must get right.
  *
  * Every assertion here is about a failure that would be invisible in a browser
  * until it was catastrophic: a simulation that runs at a different speed on

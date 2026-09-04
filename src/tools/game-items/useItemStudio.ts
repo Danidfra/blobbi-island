@@ -1,7 +1,7 @@
 /**
  * The Item Studio's state machine: one form, and everything derived from it.
  *
- * Kept out of the components so the editor sections stay dumb — each one
+ * Kept out of the components so the editor sections stay dumb; each one
  * receives a slice of the form and a setter, and none of them knows how an
  * event is built. The derivation chain runs on every keystroke and touches no
  * network at all:
@@ -64,7 +64,7 @@ export interface ItemStudioApi {
   validation: StudioValidation;
   /**
    * Browser load results per image URL. Exposed so the editor and the preview
-   * share ONE set of probes — mounting `useImageProbes` twice would load every
+   * share ONE set of probes, mounting `useImageProbes` twice would load every
    * image twice and let the two copies disagree about what failed.
    */
   probes: ReadonlyMap<string, import('./validation').ImageProbe>;
@@ -72,7 +72,7 @@ export interface ItemStudioApi {
   address: string | null;
   /**
    * Whether publishing would REPLACE an existing address rather than create a
-   * new one — i.e. the form was loaded from a published event and `d` is
+   * new one: i.e. the form was loaded from a published event and `d` is
    * unchanged.
    */
   updatesLoadedAddress: boolean;
@@ -106,7 +106,7 @@ export function useItemStudio(pubkey: string | undefined): ItemStudioApi {
 
   /**
    * Swap the entire form. Used for loading a draft, loading a published event,
-   * and resetting — all of which are deliberate acts that establish a new
+   * and resetting: all of which are deliberate acts that establish a new
    * baseline, so the dirty flag clears rather than sets.
    */
   const replaceForm = useCallback((next: ItemFormState) => {

@@ -1,5 +1,5 @@
 /**
- * Classification: the descriptive tags that are neither identity nor artwork —
+ * Classification: the descriptive tags that are neither identity nor artwork,
  * `category`, `symbol`, `rarity`, `max_stack`, `version`.
  *
  * `category` is free text with suggestions rather than a select, and that is a
@@ -86,7 +86,7 @@ export function ClassificationSection({
         <Field
           id="item-rarity"
           label="rarity"
-          hint="Display metadata only — it grants nothing."
+          hint="Display metadata only: it grants nothing."
         >
           <Select
             value={form.rarity === '' ? NO_RARITY : form.rarity}
@@ -151,7 +151,7 @@ export function ClassificationSection({
       <div className="grid gap-5 border-t pt-4 sm:grid-cols-2">
         <TagListEditor
           id="item-contexts"
-          label="context — which games this item belongs to"
+          label="context: which games this item belongs to"
           values={form.contexts}
           onChange={(contexts) => patch({ contexts })}
           suggestions={CONTEXT_SUGGESTIONS}
@@ -161,7 +161,7 @@ export function ClassificationSection({
 
         <TagListEditor
           id="item-topics"
-          label="t — topics"
+          label="t: topics"
           values={form.topics}
           onChange={(topics) => patch({ topics })}
           suggestions={TOPIC_SUGGESTIONS}

@@ -3,8 +3,8 @@
  *
  * Hooks throw for two audiences at once. Some messages are written for the
  * player ("Only 2 Strawberry left", "That Blobbi is too young for this") and
- * should reach them verbatim. Others are diagnostics — a relay URL, an event
- * coordinate, `kind:31633`, a pubkey, "All relays failed", "signal aborted" —
+ * should reach them verbatim. Others are diagnostics, a relay URL, an event
+ * coordinate, `kind:31633`, a pubkey, "All relays failed", "signal aborted",
  * and mean nothing to a player except that something is broken in a way they
  * cannot act on. Toasts used to forward `error.message` unread, so both kinds
  * reached the screen.
@@ -15,7 +15,7 @@
  * the surface's fallback. Throw {@link PlayerFacingError} to bypass the
  * heuristic for copy that is deliberate but would trip it.
  *
- * Nothing here changes what is thrown or logged — diagnostics still go to the
+ * Nothing here changes what is thrown or logged, diagnostics still go to the
  * console and the dev tools untouched. Only the toast copy is decided here.
  */
 

@@ -1,4 +1,4 @@
-# Player Session Resilience — Why an Existing Player Sees "Your nest is empty"
+# Player Session Resilience: Why an Existing Player Sees "Your nest is empty"
 
 Audit-only. No production behaviour was changed.
 
@@ -23,12 +23,12 @@ Companion: [`mine-session-settlement-audit.md`](mine-session-settlement-audit.md
 > **Authentication never breaks. The relay layer silently converts every read
 > failure into "the player owns nothing", and the app treats that as a fact.**
 
-`NPool.query` — the pool the whole app reads through — **never throws**. On
+`NPool.query`: the pool the whole app reads through, **never throws**. On
 timeout, abort, or any internal error it resolves with *partial results*, which
 is usually `[]`. Every consumer therefore sees a **successful, empty** answer.
 `useBlobbis` writes `[]` over the player's known Blobbis, `BlobbiIsland` routes
-`'playing' → 'selection'`, and the selection screen — seeing no error and no
-pets — renders "Your nest is empty. You don't have a Blobbi yet."
+`'playing' → 'selection'`, and the selection screen, seeing no error and no
+pets: renders "Your nest is empty. You don't have a Blobbi yet."
 
 This is the **same defect class** as the kind:31633 empty-base bug fixed in
 `a1036e9` ("relay returned no event ≠ the state does not exist"), in the pet and
@@ -38,7 +38,7 @@ profile read path, where nothing confirms it.
 
 ## 2. The proof
 
-`node_modules/@nostrify/nostrify/dist/NPool.js` — its own doc comment, line 137:
+`node_modules/@nostrify/nostrify/dist/NPool.js`: its own doc comment, line 137:
 
 > *"If the signal is aborted, this method will return partial results instead of
 > throwing."*
@@ -67,9 +67,9 @@ async query(filters, opts) {
 
 | # | Scenario | Result |
 |---|---|---|
-| 1 | Real `NPool.query` against an unreachable relay with `AbortSignal.timeout(300)` | `resolved=true length=0 after 304ms` — **no throw** |
-| 2 | `useBlobbis`: load 1 pet, then a refetch that resolves `[]` | `before=1 pets → after=0 pets, isError=false` — **good state erased, reported as success** |
-| 3 | `useBlobbis`: load 1 pet, then a refetch that **throws** | `before=1 → after=1, isError=true` — the safe path, **which NPool never takes** |
+| 1 | Real `NPool.query` against an unreachable relay with `AbortSignal.timeout(300)` | `resolved=true length=0 after 304ms`: **no throw** |
+| 2 | `useBlobbis`: load 1 pet, then a refetch that resolves `[]` | `before=1 pets → after=0 pets, isError=false`: **good state erased, reported as success** |
+| 3 | `useBlobbis`: load 1 pet, then a refetch that **throws** | `before=1 → after=1, isError=true`: the safe path, **which NPool never takes** |
 | 4 | `BlobbiIsland` routing expression while `'playing'` | `blobbis: []` → `'selection'`; `blobbiError` → `'selection'`; `selectedBlobbi: null` → `'selection'` |
 | 5 | `BlobbiSelectionScreen` with `data: []`, `error: null`, `currentCompanion: 'blobbi-a'` | renders **"Your nest is empty" / "You don't have a Blobbi yet."** |
 
@@ -97,10 +97,10 @@ localStorage logins  →  useNostrLogin()  →  loginToUser()  →  NUser  →  
 
 | State | Representation | Reachable from a relay failure? |
 |---|---|---|
-| `AUTHENTICATED` | `user !== undefined` | — |
-| `AUTH_LOADING` | **does not exist** — resolution is synchronous | — |
+| `AUTHENTICATED` | `user !== undefined` |, |
+| `AUTH_LOADING` | **does not exist**: resolution is synchronous |, |
 | `SIGNED_OUT` | `user === undefined` (no stored login) | **No** |
-| `AUTH_ERROR` | **does not exist** — a bad login is silently skipped | No |
+| `AUTH_ERROR` | **does not exist**: a bad login is silently skipped | No |
 
 So the login screen (`gameState === 'login'`, gated on `!user`) is *not* what
 players are seeing. The symptom is entirely **player-data resolution**, and the
@@ -147,10 +147,10 @@ inputs it distinguishes are *loading*, *threw*, and *count*.
 
 Three additional ways to hit it with pets actually owned:
 
-1. **Resolved-empty read** (the main one) — `blobbis === []`.
-2. **Partial read** — NPool returns *some* events before aborting; if none of
+1. **Resolved-empty read** (the main one): `blobbis === []`.
+2. **Partial read**: NPool returns *some* events before aborting; if none of
    the returned ones are modern, `modernBlobbis` is empty. Silent.
-3. **Egg-only / legacy-only owner** — `useBlobbis` drops `stage === 'egg'`
+3. **Egg-only / legacy-only owner**: `useBlobbis` drops `stage === 'egg'`
    (`useBlobbis.ts:100`) and the screen drops non-modern Blobbis; both are
    deliberate, but both render the same destructive copy.
 
@@ -180,8 +180,8 @@ BlobbiIsland: selectedBlobbi = manualSelectionId ?? profile.currentCompanion
             → gameState switch → PlayingView | BlobbiSelectionScreen
 ```
 
-**Four overlapping caches hold pet/profile data** — `['blobbis']`,
-`['pet-states']`, `['blobbonaut-profile']`, `['owner-profile']` — each fetched
+**Four overlapping caches hold pet/profile data**: `['blobbis']`,
+`['pet-states']`, `['blobbonaut-profile']`, `['owner-profile']`: each fetched
 by a different function with different timeouts and stale times, and each able
 to disagree with the others.
 
@@ -189,12 +189,12 @@ to disagree with the others.
 
 | Layer | unknown / loading | known non-empty | known empty | error / unreachable | stale-but-known |
 |---|---|---|---|---|---|
-| `NPool.query` | — | events | `[]` | **collapsed into `[]`** | — |
+| `NPool.query` |: | events | `[]` | **collapsed into `[]`** |, |
 | `useBlobbis` | `isLoading` | `data.length>0` | `data=[]` | **never reached** | data + `isStale` |
 | `useBlobbonautProfile` | `isLoading` | profile | `null` | **never reached** | data |
 | `useOptimizedStatus` | `isLoading` | pets | `[]` / `null` | **never reached** | data |
-| `BlobbiIsland` | `'loading'` (≤2 s) | `'playing'` | `'selection'` | `'selection'` | — |
-| Selection screen | loading screen | grid | **"nest is empty"** | error screen (unreachable) | — |
+| `BlobbiIsland` | `'loading'` (≤2 s) | `'playing'` | `'selection'` | `'selection'` |, |
+| Selection screen | loading screen | grid | **"nest is empty"** | error screen (unreachable) |, |
 
 **Every layer collapses `error/unreachable` into `known empty`.** The collapse
 happens once, in the dependency, and every layer above inherits it.
@@ -216,7 +216,7 @@ happens once, in the dependency, and every layer above inherits it.
 Sites 5 and 7 are the interesting pair: TanStack *does* retain `data` on a
 thrown error (reproduction 3), so the app **has** the good state and chooses not
 to use it. But because NPool never throws, those branches are close to dead code
-in practice — the real path is site 2.
+in practice: the real path is site 2.
 
 ---
 
@@ -233,9 +233,9 @@ BlobbiIsland.tsx:65-75         useOptimizedStatus.ts:88-92
 ```
 
 - If the profile read resolves empty, `profile` becomes `null`,
-  `currentCompanionId` becomes `undefined`, and — when the player entered the
+  `currentCompanionId` becomes `undefined`, and, when the player entered the
   world automatically rather than by clicking a card (`manualSelectionId ===
-  null`) — `selectedBlobbi` becomes `null` → **`'selection'`**, i.e. the player
+  null`): `selectedBlobbi` becomes `null` → **`'selection'`**, i.e. the player
   is ejected *even though `blobbis` is intact*.
 - `useOptimizedStatus` instead falls back to `allPets[0]`, so the HUD can show a
   **different Blobbi** than the one the world thinks is active.
@@ -244,7 +244,7 @@ So "has pets but the companion is temporarily unresolved" is **not**
 distinguished from "has no pets": both end in `'selection'`, and if `blobbis`
 is also empty at that moment, in the destructive empty copy.
 
-`useSetCurrentCompanion` is the one place that gets this right — it holds an
+`useSetCurrentCompanion` is the one place that gets this right; it holds an
 optimistic value and only invalidates after `confirmCompanionOnRelay` confirms
 (read-your-write). That pattern is exactly what the read path lacks.
 
@@ -264,7 +264,7 @@ Global defaults (`src/App.tsx:28-36`): `refetchOnWindowFocus: false`,
 `refetchOnReconnect` is **not** set → TanStack default **`true`**.
 
 Note `refetchOnWindowFocus: false` means desktop tab-switching is *not* a
-trigger — a useful negative result. `refetchOnReconnect: true` means every
+trigger: a useful negative result. `refetchOnReconnect: true` means every
 network flap is.
 
 ---
@@ -277,7 +277,7 @@ Nothing in the failure depends on input device; both symptoms are pure data-laye
 
 - Tab switch / blur / focus: no refetch (`refetchOnWindowFocus: false`). Not a trigger.
 - Minimised window: `refetchInterval` pauses (`refetchIntervalInBackground`
-  defaults `false`) and fires on return — one extra empty-risk read on resume.
+  defaults `false`) and fires on return; one extra empty-risk read on resume.
 - Multiple tabs: independent QueryClients, no cross-tab coordination for pet state.
 - Slow network: the 2 s `useBlobbis` timeout is the tightest in the app and the
   most likely to abort → `[]`.
@@ -292,7 +292,7 @@ Nothing in the failure depends on input device; both symptoms are pure data-laye
 - Network switching (Wi-Fi ⇄ cellular): same reconnect burst.
 - The 2 s / 3 s timeouts are aggressive for mobile radios waking from idle.
 - Orientation change: `BlobbiIsland` re-renders and `BlobbiPortraitGate` can
-  replace the tree in portrait — local Mine state does not survive rotation.
+  replace the tree in portrait, local Mine state does not survive rotation.
 - No PWA/service-worker wrapper is present; no AudioContext dependency in this path.
 
 **Conclusion:** the symptom should be markedly more frequent on mobile and after
@@ -303,7 +303,7 @@ resume, which matches "especially noticeable" reports.
 ## 10. Dev-vs-production
 
 Not dev-specific. `StrictMode` is **not** used (`src/main.tsx` renders
-`<App/>` directly — verified), there are no dev-only query settings, and the
+`<App/>` directly: verified), there are no dev-only query settings, and the
 reproductions above use production hooks with a production `NPool`. The empty
 catch is in the shipped dependency.
 
@@ -344,13 +344,13 @@ Recommended UI per state:
 | `player-data-loading` (no cache) | loading screen |
 | `known-nonempty` | world / grid |
 | `player-data-stale` (cache + failed read) | **keep last known pets**, subtle reconnecting indicator, **stay in `'playing'`** |
-| `player-data-error` (no cache + failed read) | "We couldn't reach your Blobbis" + Retry — never the empty copy |
+| `player-data-error` (no cache + failed read) | "We couldn't reach your Blobbis" + Retry; never the empty copy |
 | `known-empty-nest` | empty nest + Hatch, **only after a confirmed empty read** |
 
 ### The one structural change everything else depends on
 
 The app cannot distinguish these states while its read primitive erases the
-distinction. A thin wrapper is needed — the read-side twin of
+distinction. A thin wrapper is needed, the read-side twin of
 `readAuthoritativeInventoryBase` from `a1036e9`:
 
 ```ts
@@ -366,7 +366,7 @@ async function queryOrThrow(nostr, filters, { timeoutMs }) {
 ```
 
 with an **empty-confirming second read** before any empty result is accepted as
-authoritative for pets/profile — exactly the rule already proven for kind:31633.
+authoritative for pets/profile: exactly the rule already proven for kind:31633.
 Once reads can say "unknown", TanStack's existing `data`-retention (reproduction
 3) gives stale-while-revalidate for free, and the gates in §6 can be corrected.
 
@@ -392,29 +392,29 @@ committed as a regression suite on request.
 
 ---
 
-## 12. Ranked root causes — with resolution status
+## 12. Ranked root causes, with resolution status
 
-1. **FIXED** — `NPool.query` never throws; every relay failure became a
+1. **FIXED**: `NPool.query` never throws; every relay failure became a
    successful `[]`/`null`. Replaced by the EOSE-aware reader in
    `src/lib/relay-read.ts`, which reports `unknown` instead.
-2. **FIXED** — `useBlobbis` / `useBlobbonautProfile` / `useOptimizedStatus` (and
+2. **FIXED**: `useBlobbis` / `useBlobbonautProfile` / `useOptimizedStatus` (and
    both kind:31633 reads) now throw on unknown, so React Query retains the
    known-good data instead of overwriting it.
-3. **FIXED** — the routing rule is `nextGameState()`, which leaves `'playing'`
+3. **FIXED**: the routing rule is `nextGameState()`, which leaves `'playing'`
    only on a CONFIRMED empty list or a known list with no selectable companion.
    The last resolved companion is preserved across profile uncertainty.
-4. **FIXED** — the destructive empty copy requires `Array.isArray(blobbis) &&
+4. **FIXED**: the destructive empty copy requires `Array.isArray(blobbis) &&
    !hasBlobbis && !isReadUnusable`. Cached pets survive a failed refetch behind
    a quiet `Reconnecting…` note; nothing-known + unusable read gets an error or
    reconnecting state.
-5. **PARTIALLY FIXED** — the `refreshFromRelay` identity bug is fixed (11 → 1
+5. **PARTIALLY FIXED**: the `refreshFromRelay` identity bug is fixed (11 → 1
    refresh; 38 → 18 relay reads per session). The 8 per-click kind:31124
    publishes are deliberately unchanged: that is the Mine settlement phase.
-6. **REVIEWED, UNCHANGED** — `refetchOnReconnect: true` was an amplifier, not a
+6. **REVIEWED, UNCHANGED**: `refetchOnReconnect: true` was an amplifier, not a
    cause. A reconnect burst now yields `unknown` (retained, quiet) rather than
    fabricated empties. Disabling it without evidence would trade a fixed problem
    for a staleness problem.
-7. **OPEN (not destructive)** — four overlapping pet/profile caches with two
+7. **OPEN (not destructive)**: four overlapping pet/profile caches with two
    companion-resolution rules remain. Consolidating them is a cache-architecture
    change, deliberately out of scope; the contradictory *fallback* was resolved
    in finding 3.

@@ -1,7 +1,7 @@
 /**
  * The Item Studio's activation diagnostics.
  *
- * What is being protected here is not the pixels — it is the CLAIM the panel
+ * What is being protected here is not the pixels; it is the CLAIM the panel
  * makes. "Wearable" is a statement about this repository's trusted identity
  * registry AND about what the definition itself declares, and it must be false
  * for a third party's event even when that event carries the exact `d` the
@@ -83,7 +83,7 @@ describe('the Block Builder Cap, as published', () => {
 
   it('needs no registry edit, because it is already registered', () => {
     // The snippet is still derivable, but the panel only shows it when the item
-    // is NOT wearable — asserted here so the two never drift apart.
+    // is NOT wearable, asserted here so the two never drift apart.
     expect(activationStatus(subject()).wearable).toBe(true);
   });
 });

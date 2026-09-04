@@ -1,5 +1,5 @@
 /**
- * Concurrent kind:31633 writers — the lost-update regression.
+ * Concurrent kind:31633 writers, the lost-update regression.
  *
  * Coins and Arcade Tickets are two quantities in ONE replaceable event. Before
  * the shared transaction primitive the Coin wallet held a cross-tab lock and
@@ -7,7 +7,7 @@
  * their read-modify-write windows could overlap and whichever event landed
  * last silently resurrected the other currency's old value.
  *
- * These tests overlap the writers on purpose — every call is started before
+ * These tests overlap the writers on purpose; every call is started before
  * the previous one is awaited, and the fake relay yields on every read so the
  * interleaving is real rather than notional.
  */
@@ -128,7 +128,7 @@ describe('a Coin write and a Ticket write never lose each other', () => {
       now: () => FROZEN_NOW,
     });
 
-    // Started together, awaited together — the queue decides the order.
+    // Started together, awaited together, the queue decides the order.
     await Promise.all([
       wallet.grantCoins({ opId: 'mine-1', amount: 20, label: 'mine-reward' }),
       ticketWriter.publishTicketGrant({ tickets: 10 } as never),
@@ -320,7 +320,7 @@ describe('writers are mutually excluded, not merely usually lucky', () => {
    * Each writer gets its own labelled view of one shared store, so the exact
    * interleaving is recorded. A writer that does not join the shared queue
    * starts reading while another writer's transaction is still open, and the
-   * log shows it — deterministically, with no reliance on which promise
+   * log shows it, deterministically, with no reliance on which promise
    * happens to settle first.
    */
   it('no writer opens a read while another writer holds the queue', async () => {

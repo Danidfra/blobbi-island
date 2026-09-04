@@ -28,7 +28,7 @@ export interface CreateOwnerProfileInput {
   name: string;
   // NOTE: no `coins` field. The Coin balance is kind:31633 (the wallet);
   // profile creation and updates have no coin responsibility since the
-  // cutover — see `src/inventory/coin-wallet.ts`.
+  // cutover: see `src/inventory/coin-wallet.ts`.
   /** Interaction level */
   pettingLevel?: number;
   /** Total Blobbis the user has ever owned */
@@ -79,7 +79,7 @@ function createOwnerProfileTags(input: CreateOwnerProfileInput): string[][] {
   if (input.achievements) {
     input.achievements.forEach(achievement => tags.push(['achievements', achievement]));
   }
-  // Consumable inventory is NOT written to kind:11125 — it lives in
+  // Consumable inventory is NOT written to kind:11125; it lives in
   // kind:31632/31633. A freshly created profile therefore never carries a
   // `storage` tag, and there is no input field that could add one.
 
@@ -136,7 +136,7 @@ export function useUpdateOwnerProfile() {
       // Get existing owner profile data from cache
       const existingProfile = queryClient.getQueryData(['owner-profile', user.pubkey]) as OwnerProfile | null;
 
-      // An empty base would republish a fabricated profile — wiping unknown
+      // An empty base would republish a fabricated profile, wiping unknown
       // tags and every field the cache never held. Refuse instead: a profile
       // update without a loaded profile is a caller bug, not a state to
       // repair by clobbering the replaceable event.
@@ -485,7 +485,7 @@ export function useUpdatePetState() {
       // Use merge utility to preserve unknown tags from Ditto
       const tags = mergePetStateTags(mergedPet);
 
-      // Equipment is NOT on kind:31124 any more — it lives in the character's
+      // Equipment is NOT on kind:31124 any more; it lives in the character's
       // kind:31634 placement document, which this republish does not touch.
       // Re-attaching `equip` tags here used to be necessary so a care action
       // did not wipe a player's hats; now it would write a second, stale copy

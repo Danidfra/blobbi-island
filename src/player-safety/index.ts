@@ -1,5 +1,5 @@
 /**
- * Player safety — Mute, Block and Report.
+ * Player safety: Mute, Block and Report.
  *
  * "I do not want to interact with THIS player", as opposed to `src/safety/`,
  * which answers "what may this EXPERIENCE do". Both gate the same ingest paths

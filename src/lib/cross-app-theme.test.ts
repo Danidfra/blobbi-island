@@ -74,12 +74,12 @@ describe('Ditto select → Island startup', () => {
     expect(remote.id).toBe(`nostr:36767:${AUTHOR}:harbour-dusk`);
   });
 
-  it('adopts a SELF-CONTAINED theme — the case Ditto produces most often', () => {
+  it('adopts a SELF-CONTAINED theme, the case Ditto produces most often', () => {
     /*
       This is the Ditto → Island bug, in one assertion.
 
       Selecting a preset, or nudging a colour, produces a 16767 with three `c`
-      tags, an `alt`, maybe a `title` — and NO `a` tag, because there is no
+      tags, an `alt`, maybe a `title`: and NO `a` tag, because there is no
       definition behind it. The previous resolver required a name and returned
       early. There is nothing wrong with the event; it is complete.
     */
@@ -97,8 +97,8 @@ describe('Ditto select → Island startup', () => {
   });
 
   it('prefers the encrypted settings over the public event', () => {
-    // 30078 is what Ditto RENDERS. If the two disagree — a 16767 that has not
-    // caught up, or one the user published from another client — the settings
+    // 30078 is what Ditto RENDERS. If the two disagree, a 16767 that has not
+    // caught up, or one the user published from another client, the settings
     // blob wins, because that is the one Ditto is looking at.
     const newer: ThemeConfig = { ...HARBOUR, title: 'Newer' };
     const remote = resolveRemoteSelection({

@@ -6,14 +6,14 @@
  * A greyed-out text field with an explanation underneath is a worse experience
  * than a chooser, and it invites copy nobody should have to write. Two
  * dropdowns and a name that assembles itself as you change them is a nicer way
- * to name a pet than typing into a box — the restriction happens to be the
+ * to name a pet than typing into a box, the restriction happens to be the
  * feature.
  *
  * ## Native `<select>`, on purpose
  *
  * The same reasoning as the theater's phrase builder: it is the best touch
  * control on every phone with no work, it is keyboard- and screen-reader-correct
- * by default, and it renders in place rather than through a portal — which
+ * by default, and it renders in place rather than through a portal, which
  * matters because the ceremony runs inside the island's own frame.
  *
  * ## This is not the boundary

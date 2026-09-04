@@ -12,8 +12,8 @@ import { DanceMascot } from './DanceMascot';
 /**
  * The results screen for one dance run.
  *
- * The *score* half — the grade, the celebration, the metric tiles and the
- * judgement counts — is this component's own. The *ticket* half is the shared
+ * The *score* half, the grade, the celebration, the metric tiles and the
+ * judgement counts: is this component's own. The *ticket* half is the shared
  * {@link ArcadeRewardPanel}: the claim phases, the honesty rules and the
  * unresolved-claim protections are documented there and are identical across
  * all three dedicated games. This screen keeps its established
@@ -171,7 +171,7 @@ export function DanceResults({
         isLoggedIn={isLoggedIn}
         showDebugDetails={showDebugDetails}
         dataPrefix="dance"
-        ineligibleHint="Dance the whole song through and the tickets are yours — your score still counts either way."
+        ineligibleHint="Dance the whole song through and the tickets are yours, your score still counts either way."
       />
     </div>
   );

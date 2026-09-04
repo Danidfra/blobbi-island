@@ -1,5 +1,5 @@
 /**
- * Public publishing — the boundary for putting player-made content onto the
+ * Public publishing: the boundary for putting player-made content onto the
  * wider Nostr network.
  *
  * Deliberately narrow. Game protocol writes (presence, chat, pet state,

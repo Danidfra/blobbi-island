@@ -23,13 +23,13 @@ import {
  *
  *  1. **The clickable area is a hole.** `mine-open-cave.webp` is mostly rock
  *     with a transparent arch in the middle, and an `<img>` receives pointer
- *     events across its whole rectangle — transparent pixels included. A
+ *     events across its whole rectangle, transparent pixels included. A
  *     door-overlay element here would swallow clicks on the entire hillside.
  *     So the art is inert (`pointer-events: none`) and a separate transparent
  *     `<button>` covers only the opening.
  *  2. **The reveal is three-state, not two.** `InteractiveElement`'s `'door'`
  *     effect is hover-or-a-900ms-touch-timer. The cave has to stay lit for as
- *     long as the Blobbi is walking towards it — however long that takes — which
+ *     long as the Blobbi is walking towards it, however long that takes, which
  *     means following the pending interaction rather than a timeout.
  *
  * ## Layers, back to front
@@ -70,7 +70,7 @@ export function MineCaveEntrance({
   const [isPreviewing, setIsPreviewing] = useState(false);
   /**
    * Locked open. Set on activation and cleared *only* by the pending
-   * interaction — it fires, or it is cancelled (a tap on other ground, a
+   * interaction: it fires, or it is cancelled (a tap on other ground, a
    * location change, unmount). Never by a timer, and never by the pointer
    * leaving: the Blobbi may still be walking.
    */
@@ -104,7 +104,7 @@ export function MineCaveEntrance({
    *
    * It hangs off `onClick` alone, deliberately. A tap fires `touchstart` and
    * then a synthetic `click`, and the usual way to suppress the second is
-   * `preventDefault()` in `onTouchStart` — but React 18 registers `touchstart`
+   * `preventDefault()` in `onTouchStart`: but React 18 registers `touchstart`
    * at the root as a PASSIVE listener, so that call does nothing. Handling both
    * events would therefore activate twice on every tap, and the second
    * `requestInteraction` replaces the first: the replacement cancels it, and the
@@ -126,7 +126,7 @@ export function MineCaveEntrance({
       the second has already re-locked the entrance, and the cave would go dark
       mid-walk. Only the newest request is allowed to release the lock; an
       `onCancel` from a superseded one is stale and ignored. A cancellation from
-      anywhere else — other ground, another element, the location changing —
+      anywhere else: other ground, another element, the location changing,
       still matches the current id and resets normally.
     */
     const id = (requestIdRef.current += 1);
@@ -142,7 +142,7 @@ export function MineCaveEntrance({
       cave lights up the moment it is clicked/tapped rather than when the walk
       finishes. It has to happen BEFORE `requestInteraction`, because an
       interaction that is already satisfied (the Blobbi is standing on the
-      approach anchor) fires its `action` synchronously from inside that call —
+      approach anchor) fires its `action` synchronously from inside that call,
       and that action releases the lock. Setting it afterwards would leave the
       entrance lit while the room changes underneath it.
     */
@@ -177,14 +177,14 @@ export function MineCaveEntrance({
   return (
     /*
       Percentage placement inside the scaled VirtualWorld, and `pointer-events-none`
-      so the rock — which covers a wide slice of the path — never intercepts a
+      so the rock: which covers a wide slice of the path, never intercepts a
       movement click. Only the hotspot opts back in.
 
       Centred by arithmetic rather than by `-translate-x-1/2`, and this is
       load-bearing: a `transform` creates a stacking context, which would trap
       the three z-indexes below INSIDE this element. The wrapper would then be
       sorted against the Blobbi as one block at `z-index: auto`, i.e. underneath
-      it — so the Blobbi would walk in front of the whole cave and never appear
+      it: so the Blobbi would walk in front of the whole cave and never appear
       to stand in the mouth. Same reason there is no `filter`, `opacity`,
       `isolation`, `contain`, `will-change` or `z-index` here.
     */
@@ -214,7 +214,7 @@ export function MineCaveEntrance({
         }}
       >
         {/*
-          Idle black. Only ever behind the opening — the surrounding rock is
+          Idle black. Only ever behind the opening, the surrounding rock is
           opaque artwork, so the few percent of slack around the visible hole
           stay hidden at any scale. Fades out as the tunnel fades in.
         */}
@@ -243,8 +243,8 @@ export function MineCaveEntrance({
       </div>
 
       {/*
-        The arch. It is also what gives the wrapper its height — everything else
-        in here is absolutely positioned — so it stays in flow and only takes
+        The arch. It is also what gives the wrapper its height; everything else
+        in here is absolutely positioned, so it stays in flow and only takes
         `relative` to carry a z-index.
       */}
       <img

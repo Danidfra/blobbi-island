@@ -1,5 +1,5 @@
 /**
- * Air Hockey — the match, as one pure fixed-step function.
+ * Air Hockey: the match, as one pure fixed-step function.
  *
  * ```
  *   countdown ──3,2,1──► live ──goal──► goal ──┬── target reached ──► over
@@ -13,7 +13,7 @@
  * the single source of truth for score, phase and puck, and it is pure: no
  * clock, no `Math.random`, no DOM, no React. Every random number comes from a
  * seeded generator carried IN the state, so a match is reproducible from
- * `(seed, inputs)` — which is what lets `match.test.ts` assert "a goal scores
+ * `(seed, inputs)`: which is what lets `match.test.ts` assert "a goal scores
  * exactly once" by stepping numbers rather than by watching a canvas.
  *
  * ## The invariants this file exists to enforce
@@ -161,7 +161,7 @@ export interface HockeyStepResult {
 // ── Seeded randomness ───────────────────────────────────────────────────────
 
 /**
- * mulberry32 — a small, well-distributed 32-bit PRNG.
+ * mulberry32: a small, well-distributed 32-bit PRNG.
  *
  * Written out rather than pulled in as a dependency: it is nine lines, it needs
  * no cryptographic strength (it picks serve angles), and a match's determinism
@@ -214,7 +214,7 @@ export function createHockeyMatch({
   seed = 1,
 }: CreateHockeyMatchOptions = {}): HockeyMatchState {
   // The opening serve is a seeded coin toss, drawn here so it is fixed for the
-  // life of the match rather than at the moment of the serve — which means the
+  // life of the match rather than at the moment of the serve, which means the
   // opening cannot be re-rolled by pausing.
   const toss = nextRandom(seed >>> 0);
   return {
@@ -240,7 +240,7 @@ export function createHockeyMatch({
  * Send the puck out of the centre spot toward `side`'s half.
  *
  * The angle is drawn from the seeded generator inside a cone, so serves are
- * varied without ever being a straight gift down the middle — and, because
+ * varied without ever being a straight gift down the middle, and, because
  * `serveTo` is always the side that conceded, an opponent on a run keeps handing
  * the puck back to the player it is beating.
  */
@@ -258,8 +258,8 @@ function serve(
     PUCK_MAX_SPEED,
   );
 
-  // The centre spot is a legal place for either mallet's CENTRE to stand — the
-  // two zones meet on the line — so a player camped there would be handed the
+  // The centre spot is a legal place for either mallet's CENTRE to stand, the
+  // two zones meet on the line, so a player camped there would be handed the
   // puck inside their own mallet, and the next step would read that as a
   // full-strength free hit. Push it clear first, without touching its velocity.
   let puck: PuckState = {
@@ -301,7 +301,7 @@ export function stepHockeyMatch(
   // ambush, and it costs nothing because the puck is frozen.
   //
   // The player's mallet goes exactly where the pointer is, immediately; the
-  // opponent's is steered under a speed limit. That asymmetry is the point —
+  // opponent's is steered under a speed limit. That asymmetry is the point,
   // see `movePlayerMallet`. Tunnelling is handled below, by sweeping the path
   // both mallets travelled rather than by refusing to let them travel.
   const playerMallet = movePlayerMallet(

@@ -1,12 +1,12 @@
 /**
- * Lossless kind:31633 round-trip — the reset's first invariant.
+ * Lossless kind:31633 round-trip, the reset's first invariant.
  *
  * kind:31633 is a replaceable event: every write REPLACES the previous event
  * in full, so any data the canonical builder does not carry forward is
  * destroyed permanently. These tests prove that a stored inventory containing
- * every category of preservable data — non-empty content, `context` tags,
+ * every category of preservable data, non-empty content, `context` tags,
  * grant references, unknown/forward-compatible tags (including the economy
- * allocation marker), and unrelated item entries — survives each production
+ * allocation marker), and unrelated item entries, survives each production
  * mutation path, and that repeated rewrites never duplicate the preserved
  * tags.
  *

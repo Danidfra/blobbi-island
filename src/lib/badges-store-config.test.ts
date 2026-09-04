@@ -1,5 +1,5 @@
 /**
- * The Badges Store's geometry — the claims a player would notice being wrong.
+ * The Badges Store's geometry, the claims a player would notice being wrong.
  *
  * Everything here is computed in PAINTED coordinates, from each sprite's
  * measured alpha box, because a box is not a picture: two boxes can sit flush
@@ -8,7 +8,7 @@
  * placement.
  *
  * The room's own numbers come from `badges-store-inside.webp` AFTER the
- * `object-cover` crop — the image is 1.4506 wide-to-tall against the world's
+ * `object-cover` crop: the image is 1.4506 wide-to-tall against the world's
  * 1.5007, so image percent is not world percent and the raw file would give
  * answers that are wrong by 1.7 % at every edge.
  */
@@ -79,7 +79,7 @@ function painted(id: keyof typeof ART) {
   return {
     left: boxLeft + width * art.left,
     right: boxLeft + width * (1 - art.right),
-    /** World y of the lowest ink — the line the object stands on. */
+    /** World y of the lowest ink, the line the object stands on. */
     base: boxBottomY - heightPct * art.bottom,
     top: boxBottomY - heightPct * (1 - art.top),
   };
@@ -214,7 +214,7 @@ describe('the two display units are full-size shop furniture', () => {
     expect(Math.abs(caseWidth - rackWidth)).toBeLessThan(4);
     // ...but different furniture. Both are now anchored to their own wall, so
     // their POSITIONS are near-symmetric by design; what must stay distinct is
-    // the furniture — the rack is narrower and taller than the case.
+    // the furniture: the rack is narrower and taller than the case.
     expect(rackWidth).toBeLessThan(caseWidth);
     expect(rackInk.base - rackInk.top).toBeGreaterThan(caseInk.base - caseInk.top);
   });
@@ -249,16 +249,16 @@ describe('the two display units are full-size shop furniture', () => {
       const centre = (ink.left + ink.right) / 2;
       const behind = { x: centre, y: object.blocker!.y - 2 };
 
-      // In front — between the unit's base and the bottom of the frame.
+      // In front: between the unit's base and the bottom of the frame.
       expect(onFloor({ x: centre, y: ink.base + 4 }), id).toBe(true);
       expect(isBlocked({ x: centre, y: ink.base + 4 }, ALL_BLOCKERS), id).toBe(false);
 
-      // Behind — open floor past the footprint's back edge.
+      // Behind: open floor past the footprint's back edge.
       expect(onFloor(behind), id).toBe(true);
       expect(isBlocked(behind, ALL_BLOCKERS), id).toBe(false);
 
       // Beside, on the corridor side. Each unit is flush against its own wall,
-      // so only the inward side can be walkable — "where visually possible".
+      // so only the inward side can be walkable, "where visually possible".
       const inward =
         id === 'badges-store-display-case'
           ? { x: ink.right + 3, y: ink.base }
@@ -275,7 +275,7 @@ describe('the two display units are full-size shop furniture', () => {
       const blocker = object.blocker!;
       const paintedHeight = ink.base - ink.top;
 
-      // A shallow band, not the painted silhouette — even at twice the size.
+      // A shallow band, not the painted silhouette, even at twice the size.
       expect(blocker.height).toBeLessThan(paintedHeight / 4);
       // And no wider than the artwork that stands on it.
       expect(blocker.width).toBeLessThanOrEqual(ink.right - ink.left + 0.01);
@@ -292,7 +292,7 @@ describe('the two display units are full-size shop furniture', () => {
     for (const id of ['badges-store-display-case', 'badges-store-display-rack'] as const) {
       const object = badgesStoreObjects.find((o) => o.id === id)!;
       const ink = painted(id);
-      // Directly behind the footprint — the click that used to walk the Blobbi
+      // Directly behind the footprint, the click that used to walk the Blobbi
       // into the furniture and leave it there.
       const behind = {
         x: (ink.left + ink.right) / 2,

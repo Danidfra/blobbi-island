@@ -3,7 +3,7 @@
  *
  * The property under test is the one the whole design exists for: a redeemed
  * cosmetic's TICKET DEBIT and ITEM GRANT are the same kind:31633 replacement
- * event. Everything else here is the surrounding safety — the pre-publish
+ * event. Everything else here is the surrounding safety, the pre-publish
  * refusals, the untouched neighbours, the never-fabricated empty read, and the
  * delivery adapter that verifies instead of writing.
  */
@@ -31,7 +31,7 @@ const STRANGER = 'a'.repeat(64);
 const TICKETS = officialItemAddress(ARCADE_TICKET_D);
 const APPLE = officialItemAddress('blobbi:food:apple');
 
-/** The Block Builder Cap — 200 tickets, the cheapest real prize. */
+/** The Block Builder Cap: 200 tickets, the cheapest real prize. */
 const CAP = OFFICIAL_ARCADE_PRIZE_CATALOG.find(
   (p) => p.d === 'blobbi:cosmetic:block-builder-cap',
 )!;
@@ -141,13 +141,13 @@ describe('the debit and the grant are ONE event', () => {
     });
     await writer.spendTickets(redemption());
 
-    // THE invariant. Not "a spend event then a grant event" — one event.
+    // THE invariant. Not "a spend event then a grant event": one event.
     expect(published).toHaveLength(1);
     expect(itemsOf(published[0])).toEqual({ [TICKETS]: 300, [CAP_ADDRESS]: 1 });
     expect(published[0].kind).toBe(KIND_GAME_INVENTORY);
   });
 
-  it('grants quantity 1 — a prize is one prize, never a stack', async () => {
+  it('grants quantity 1: a prize is one prize, never a stack', async () => {
     const { writer, published } = harness({
       events: [inventoryEvent([[TICKETS, 200]])],
     });
@@ -197,8 +197,8 @@ describe('the debit and the grant are ONE event', () => {
     expect(published).toHaveLength(1);
     expect(published[0].pubkey).toBe(PUBKEY);
     // Every read this redemption makes is scoped to the player's own author
-    // and their own inventory `d`. Nobody else's kind:31633 is read, and — a
-    // replaceable event being addressed by author + kind + `d` — nobody
+    // and their own inventory `d`. Nobody else's kind:31633 is read, and, a
+    // replaceable event being addressed by author + kind + `d`: nobody
     // else's can be replaced by what is published here.
     expect(filters().length).toBeGreaterThan(0);
     for (const filter of filters()) {
@@ -245,7 +245,7 @@ describe('refusals happen BEFORE any publish', () => {
   });
 
   it('checks ownership against the AUTHORITATIVE base, not the caller', async () => {
-    // The player's screen may say "not owned" — another tab redeemed a second
+    // The player's screen may say "not owned": another tab redeemed a second
     // ago. The refusal is decided inside the write lock, on the newest event.
     const { writer, published } = harness({
       events: [inventoryEvent([[TICKETS, 500], [CAP_ADDRESS, 1]], 4000)],
@@ -272,7 +272,7 @@ describe('refusals happen BEFORE any publish', () => {
     expect(published).toEqual([]);
   });
 
-  it('reports a refusing signer as sign-failed — provably nothing was sent', async () => {
+  it('reports a refusing signer as sign-failed, provably nothing was sent', async () => {
     const { writer, published } = harness({
       events: [inventoryEvent([[TICKETS, 500]])],
       signError: new Error('user declined'),
@@ -333,7 +333,7 @@ describe('reads never fabricate an empty inventory', () => {
 
 describe('the delivery adapter verifies, it does not write', () => {
   it('sees the prize the moment the spend event is accepted, with no relay round trip', async () => {
-    // The relay keeps answering with the PREVIOUS event — the normal
+    // The relay keeps answering with the PREVIOUS event, the normal
     // propagation race. The confirmed event this tab published wins anyway.
     const { writer, ownership, published } = harness({
       events: [inventoryEvent([[TICKETS, 500]])],

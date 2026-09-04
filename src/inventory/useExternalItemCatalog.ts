@@ -1,23 +1,23 @@
 /**
- * Blobbi Island — resolving the kind:31632 definitions of items owned in
+ * Blobbi Island: resolving the kind:31632 definitions of items owned in
  * ANOTHER game's inventory.
  *
  * `useItemCatalog` answers "what are Blobbi's own items": one filter, the
  * official issuer, a fixed list of official `d` tags, a one-hour cache and
- * bundled fallbacks. It is deliberately closed — the game must not be at the
+ * bundled fallbacks. It is deliberately closed, the game must not be at the
  * mercy of a relay to know what an apple is.
  *
  * This hook answers a different question: a discovered inventory
  * (`external-inventories.ts`) names items by full address, and Island has never
  * heard of any of them. It cannot ship a fallback for an item it does not know,
- * and it must not invent one — so this resolves what the issuer actually
+ * and it must not invent one, so this resolves what the issuer actually
  * published, or nothing at all.
  *
  * ## Trust, then fetch. Never the other way round.
  *
  * Addresses are grouped by ISSUER and every issuer that is not a trusted
  * partner is dropped BEFORE a query is built. An untrusted issuer therefore
- * costs no connection, produces no cache entry and can never reach the UI —
+ * costs no connection, produces no cache entry and can never reach the UI,
  * the failure mode is a missing tile, which is the correct one.
  *
  * `parseTrustedItemDefinition` then re-checks the issuer on the returned
@@ -26,7 +26,7 @@
  * ## Why one query per issuer
  *
  * `authors` and `#d` in a single filter are ANDed, so one combined filter
- * across two issuers would also match issuer A publishing issuer B's `d` — the
+ * across two issuers would also match issuer A publishing issuer B's `d`: the
  * exact `d`-as-identity confusion this whole design refuses. One filter per
  * issuer keeps `31632:<issuer>:<d>` intact as the unit of identity, and there
  * are as many round trips as there are partner games in the player's
@@ -96,7 +96,7 @@ export interface IssuerRequest {
  * A relay hint we are willing to connect to.
  *
  * Nostr relay URLs are `ws://` or `wss://`. Anything else in that tag slot is
- * not a relay, so it is not "a hint we could not use" — it is not a hint.
+ * not a relay, so it is not "a hint we could not use": it is not a hint.
  */
 export function isUsableRelayHint(hint: string): boolean {
   if (!hint) return false;
@@ -161,7 +161,7 @@ export function groupTrustedRequests(
 /**
  * Newest VALID trusted definition per address, restricted to what was asked for.
  *
- * Parse first, compare second — the same rule `selectNewestValidDefinitions`
+ * Parse first, compare second, the same rule `selectNewestValidDefinitions`
  * follows for the official catalog, and for the same reason: a newer invalid
  * event must never hide an older good one. The extra `expected` containment
  * check means a relay that answers with events nobody requested cannot inject

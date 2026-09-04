@@ -1,5 +1,5 @@
 /**
- * What the start control of a paid machine must SAY — decided from the entry
+ * What the start control of a paid machine must SAY, decided from the entry
  * model alone, so every machine's label agrees with what `admit` will charge.
  * Kept out of the button component so React fast-refresh sees a pure
  * component file there.

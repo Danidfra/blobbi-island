@@ -1,5 +1,5 @@
 /**
- * useTreasureHuntRewards — the Beach reward service the Treasure Hunt modal
+ * useTreasureHuntRewards: the Beach reward service the Treasure Hunt modal
  * consumes.
  *
  * One object bundles everything reward-shaped so the modal's view layer can
@@ -8,7 +8,7 @@
  * provisional authorization call, abandonment, and startup recovery.
  *
  * Logged out (or in an environment without a session) the service reports
- * `windowStatus: null` and every hunt is a practice hunt — rewards simply
+ * `windowStatus: null` and every hunt is a practice hunt, rewards simply
  * never engage.
  */
 

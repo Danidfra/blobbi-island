@@ -1,5 +1,5 @@
 /**
- * DevEquipment — the SIMULATION harness for official wearables and effects
+ * DevEquipment: the SIMULATION harness for official wearables and effects
  * (dev-only route `/dev/equipment`; excluded from production builds).
  *
  * ## What this route is, since Phase 9.5b
@@ -7,7 +7,7 @@
  * A publish-free playground over ALL SIXTEEN official items: simulate
  * ownership, equip/replace/unequip, apply the documented seven-slot loadout,
  * flip form and facing, and watch the result render through the REAL
- * production paths —
+ * production paths,
  *
  *   simulated placements → `selectRenderablePlacements` →
  *     `toAccessoryPlacementInput` → accessory source resolution →
@@ -24,7 +24,7 @@
  * ## What this route is NOT
  *
  * It mutates nothing real: no `useInventoryMutation`, no
- * `useEquipmentMutation`, no signer, no publish, no query-cache writes — a
+ * `useEquipmentMutation`, no signer, no publish, no query-cache writes, a
  * boundary test pins the import graph. Real kind:31633/31634 writes live
  * EXCLUSIVELY in the flag-gated Equipment Lab (`/tools/game-items`,
  * `VITE_ENABLE_LIVE_INVENTORY_LAB=true`); the Live Account section at the
@@ -188,7 +188,7 @@ export function DevEquipment() {
           data-testid="dev-sim-banner"
           className="inline-block rounded border border-sky-400/50 bg-sky-50 px-2 py-1 text-xs font-bold text-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
         >
-          Simulation only — no Nostr events are published. Real writes live in
+          Simulation only: no Nostr events are published. Real writes live in
           the flag-gated Equipment Lab (see Live Account below).
         </p>
       </header>
@@ -321,7 +321,7 @@ export function DevEquipment() {
                           </Badge>
                           {kind === 'wearable' && (
                             <Badge variant="outline" className="text-[9px]">
-                              back view: {hasBackView ? 'published' : '—'}
+                              back view: {hasBackView ? 'published' : 'none'}
                             </Badge>
                           )}
                           {owned && (
@@ -411,12 +411,12 @@ export function DevEquipment() {
               {pipeline.hidden.map((h, i) => (
                 <p key={`h-${i}`} className="text-amber-700 dark:text-amber-400">
                   ✗ wearable {labItemByAddress(h.item)?.name ?? h.item} in{' '}
-                  {h.slot ?? '?'} — {h.reason}
+                  {h.slot ?? '?'}: {h.reason}
                 </p>
               ))}
               {pipeline.resolution.rejected.map((r, i) => (
                 <p key={`r-${i}`} className="text-amber-700 dark:text-amber-400">
-                  ✗ effect {r.registration.name} — {r.reason}:{' '}
+                  ✗ effect {r.registration.name}: {r.reason}:{' '}
                   {explainEffectRejection(r.reason)}
                 </p>
               ))}
@@ -432,7 +432,7 @@ export function DevEquipment() {
               <p>
                 Everything above is LOCAL SIMULATION. To put items in your real
                 kind:31633 inventory and equip them through real kind:31634
-                events, use the Equipment Lab in the Game Item Tools — it signs
+                events, use the Equipment Lab in the Game Item Tools; it signs
                 with your account and every write requires confirmation.
               </p>
               {LIVE_INVENTORY_LAB_ENABLED ? (
@@ -500,7 +500,7 @@ Then open: Tools → Game Items → Equipment Lab
               </div>
               <p className="text-[10px] text-muted-foreground">
                 Loadout: {LAB_TEST_LOADOUT.map((s) => s.slot).join(' · ')}. Steps
-                whose item is not simulated-owned are skipped — own all sixteen
+                whose item is not simulated-owned are skipped, own all sixteen
                 first, or enable the stale-placement override.
               </p>
               <ul className="space-y-0.5 text-[11px]" data-testid="dev-active-list">

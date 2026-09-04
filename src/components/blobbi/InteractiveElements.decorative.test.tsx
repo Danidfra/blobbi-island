@@ -1,6 +1,6 @@
 /**
  * Props that look interactive but lead nowhere are rendered as what they are:
- * decoration. No cursor, no hover, no click — and, where it helps, a small
+ * decoration. No cursor, no hover, no click, and, where it helps, a small
  * "Coming later". Artwork stays; only the false promise goes.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -58,10 +58,10 @@ describe('unfinished props are decoration', () => {
     expect(inert('Shopping coffe shop')).not.toBeNull();
   });
 
-  it('the plaza inside door still works — it is a real door', async () => {
+  it('the plaza inside door still works; it is a real door', async () => {
     // The plaza's kiosks (chill lounge, drawing wall, information) are no
     // longer composed sprites at all: the new plate paints six storefronts,
-    // each of which is a real, pressable hotspot — see `PlazaInsideRoom.test`.
+    // each of which is a real, pressable hotspot; see `PlazaInsideRoom.test`.
     await renderAt('plaza-inside');
     expect(screen.getByAltText('Plaza inside door open').closest('[data-inert-element]')).toBeNull();
     expect(document.querySelector('[data-inert-element]')).toBeNull();

@@ -1,10 +1,10 @@
 /**
- * Pool — the rule book, as one pure function over one shot.
+ * Pool: the rule book, as one pure function over one shot.
  *
  * `resolveShot` is asked exactly once per shot, by the match state machine, at
- * the moment every ball has stopped. It answers every question a turn has —
+ * the moment every ball has stopped. It answers every question a turn has,
  * was that a foul, who owns which group now, does the shooter go again, has
- * anybody won — and it answers them together, because they are not independent:
+ * anybody won: and it answers them together, because they are not independent:
  * whether a pot lets you continue depends on whether the shot was a foul, and
  * whether the shot was a foul depends on which group you own, and which group
  * you own may have been decided by that very pot.
@@ -23,7 +23,7 @@
  *
  *  1. The table starts with a legal rack: the 8-ball in the middle of the third
  *     row, one solid and one stripe in the back corners, the rest shuffled.
- *  2. **The player always breaks.** There is no lag and no alternating break —
+ *  2. **The player always breaks.** There is no lag and no alternating break,
  *     one machine, one match, and the interesting shot belongs to the person who
  *     walked up to the table.
  *  3. Solids and stripes stay **unassigned until the first legal pot after the
@@ -34,7 +34,7 @@
  *  6. Every foul gives the incoming player **ball-in-hand**: they may place the
  *     cue ball anywhere legal on the table.
  *  7. The three fouls are: **potting the cue ball** (a scratch), **hitting
- *     nothing at all**, and **hitting the wrong ball first** — an opponent's
+ *     nothing at all**, and **hitting the wrong ball first**: an opponent's
  *     ball, or the 8 before your group is gone.
  *  8. The 8-ball may only be potted once **every ball in your group is already
  *     down** and you strike the 8 first. Potting it before that **loses the
@@ -46,8 +46,8 @@
  * ### The one exception, and why it exists
  *
  * **The 8-ball on the break is not a loss.** It is returned to the foot spot and
- * play continues. Losing a match to the break — a shot whose whole point is that
- * you cannot control it — is the least fair thing an 8-ball game can do to a new
+ * play continues. Losing a match to the break, a shot whose whole point is that
+ * you cannot control it, is the least fair thing an 8-ball game can do to a new
  * player, and re-spotting is what real rule sets do about it. A scratch on the
  * same break is still a scratch.
  *
@@ -79,8 +79,8 @@ export type PoolFoul =
   /**
    * The cue ball ended up somewhere impossible and was recovered.
    *
-   * Cannot be produced by a legal shot — the cushions and the clamp see to that
-   * — so it exists for one purpose: giving the physics recovery path a rule to
+   * Cannot be produced by a legal shot, the cushions and the clamp see to that,
+   * so it exists for one purpose: giving the physics recovery path a rule to
    * apply instead of a crash. Treated exactly like a scratch.
    */
   | 'off-table';
@@ -149,9 +149,9 @@ export function groupCleared(balls: readonly PoolBall[], group: PoolGroup | null
  *
  * Three cases, and every one of them is a sentence a player would say:
  *
- *  - **Open table** — anything except the 8.
- *  - **Group assigned, balls left** — your own group only.
- *  - **Group cleared** — the 8, and nothing else.
+ *  - **Open table**: anything except the 8.
+ *  - **Group assigned, balls left**: your own group only.
+ *  - **Group cleared**: the 8, and nothing else.
  */
 export function legalTargets(
   balls: readonly PoolBall[],
@@ -178,7 +178,7 @@ export function isLegalFirstContact(
  * Everything the simulation observed during one shot.
  *
  * Accumulated by the match step while the balls roll, and read exactly once when
- * they stop. It carries observations only — no judgement, no score — because the
+ * they stop. It carries observations only, no judgement, no score, because the
  * judgement is {@link resolveShot}'s and having two places form an opinion is
  * how a foul ends up being counted twice.
  */
@@ -214,10 +214,10 @@ export interface ShotOutcome {
 }
 
 const FOUL_MESSAGE: Record<PoolFoul, string> = {
-  scratch: 'Scratch — the cue ball went down.',
-  'no-contact': 'Foul — the cue ball hit nothing.',
-  'wrong-ball-first': 'Foul — wrong ball hit first.',
-  'off-table': 'Foul — the cue ball left the table.',
+  scratch: 'Scratch: the cue ball went down.',
+  'no-contact': 'Foul: the cue ball hit nothing.',
+  'wrong-ball-first': 'Foul: wrong ball hit first.',
+  'off-table': 'Foul: the cue ball left the table.',
 };
 
 export interface ResolveShotInput {
@@ -225,9 +225,9 @@ export interface ResolveShotInput {
   /**
    * The table as it stood BEFORE the shot.
    *
-   * Before, and deliberately only before. Every question this function asks —
+   * Before, and deliberately only before. Every question this function asks,
    * was that ball legal to hit first, was the group already clear when the
-   * 8-ball went down — is a question about the table the shooter was looking at
+   * 8-ball went down, is a question about the table the shooter was looking at
    * when they took the shot. What the table looks like AFTERWARDS is fully
    * described by {@link ShotRecord.pocketed}, and passing it as well would be a
    * second, redundant source of truth about the same shot.
@@ -247,7 +247,7 @@ export interface ResolveShotInput {
  *     happened, and a foul on the same shot changes who won rather than whether
  *     the match is over.
  *  2. **Then fouls**, because a foul suppresses assignment and always passes the
- *     turn — a shot that pots one of your own AND scratches is still a scratch.
+ *     turn: a shot that pots one of your own AND scratches is still a scratch.
  *  3. **Then assignment**, because whether you continue depends on which group
  *     you have just been given.
  *  4. **Then continuation.**
@@ -272,7 +272,7 @@ export function resolveShot({ shot, ballsBefore, assignment }: ResolveShotInput)
   if (eightPotted && !shot.wasBreak) {
     // Legal only when the group was ALREADY clear before the shot and the 8 was
     // struck first. Potting your last group ball and the 8 together therefore
-    // loses — which is standard, and is the reading of rule 8 the rule list
+    // loses: which is standard, and is the reading of rule 8 the rule list
     // above states.
     const clearedBefore = groupCleared(ballsBefore, shooterGroup);
     const legal =
@@ -344,7 +344,7 @@ export function resolveShot({ shot, ballsBefore, assignment }: ResolveShotInput)
       ending: null,
       respotEight,
       message: continues
-        ? 'Good break — the table is still open.'
+        ? 'Good break: the table is still open.'
         : 'Break played. The table is open.',
     };
   }
@@ -407,7 +407,7 @@ export function resolveShot({ shot, ballsBefore, assignment }: ResolveShotInput)
         ? `Two down. ${shooter === 'player' ? 'Your' : 'Their'} shot again.`
         : `Potted. ${shooter === 'player' ? 'Your' : 'Their'} shot again.`
       : pottedObjects.length > 0
-        ? 'That was the wrong colour — turn over.'
-        : 'No pot — turn over.',
+        ? 'That was the wrong colour, turn over.'
+        : 'No pot: turn over.',
   };
 }

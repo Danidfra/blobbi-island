@@ -26,7 +26,7 @@
 import type { Position } from '@/lib/types';
 
 /**
- * World-percent position of an actor's GROUND-CONTACT point — where the feet
+ * World-percent position of an actor's GROUND-CONTACT point, where the feet
  * touch the floor. Constrained by room boundaries. The storage semantics of
  * every actor position since the ground-anchor migration.
  */
@@ -36,14 +36,14 @@ export type GroundPosition = Position;
  * A GROUND point an actor walks to before an interaction fires (a door's
  * base, the floor in front of a seat or machine). Always boundary-clamped
  * when produced by the canonical resolver, and consumed by
- * `requestInteraction` — never by pose snapping.
+ * `requestInteraction`: never by pose snapping.
  */
 export type ApproachTarget = GroundPosition;
 
 /**
  * An explicitly modeled VISUAL pose anchor (a seat cushion contact point, the
- * bed's sleeping spot). May sit OUTSIDE the walk boundary — furniture is not
- * floor — so it must only ever be applied with `snapTo(...)`, never as a walk
+ * bed's sleeping spot). May sit OUTSIDE the walk boundary, furniture is not
+ * floor: so it must only ever be applied with `snapTo(...)`, never as a walk
  * target.
  */
 export type PoseAnchor = Position;
@@ -56,7 +56,7 @@ export type PoseAnchor = Position;
 export type LegacyCenterPosition = Position;
 
 /**
- * A fractional point (0..1 per axis) inside an object's OWN rendered rect —
+ * A fractional point (0..1 per axis) inside an object's OWN rendered rect,
  * e.g. a seat's cushion line `{ x: 0.5, y: 0.2 }` or a door-base aim point.
  * Meaningless without the object; convert via `elementFractionToWorldPercent`.
  */

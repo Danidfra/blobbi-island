@@ -23,7 +23,7 @@ describe('official item registry', () => {
   it('contains 22 published official items and nothing reserved', () => {
     // All 22 definitions (19 consumables + the Arcade Ticket, Blobbi Coin
     // currencies) are published and issuer-signed. Purchasability is a
-    // separate question — see shop-catalog.test.ts.
+    // separate question: see shop-catalog.test.ts.
     expect(ACTIVE_OFFICIAL_ITEMS).toHaveLength(22);
     expect(RESERVED_OFFICIAL_ITEMS).toHaveLength(0);
     expect(DEPRECATED_OFFICIAL_ITEMS).toHaveLength(0);
@@ -153,7 +153,7 @@ describe('emoji fallback', () => {
 /**
  * Exact-metadata verification for every PUBLISHED (`active`) bundled fallback
  * against the values in the official kind:31632 events. Covers name, type,
- * category, effects, action, stages, emoji, and topics — not only
+ * category, effects, action, stages, emoji, and topics; not only
  * effects/action/stages.
  *
  * Iterates `ACTIVE_OFFICIAL_ITEMS`, so an item is only asserted here once its
@@ -197,7 +197,7 @@ describe('bundled fallback exact metadata (all 22 published items)', () => {
     // the 19 consumables it carries an `image` and has NO action and NO effects.
     cur_arcade_ticket: { name: 'Arcade Ticket', type: 'currency', category: 'currency', emoji: '🎟️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
     'blobbi-coin': { name: 'Blobbi Coin', type: 'currency', category: 'currency', emoji: '🪙', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'coin', 'official-currency', 'spendable', 'earnable', 'blobbi-coin'], effects: {} },
-    // The arcade's PAY-TO-PLAY currency — the opposite direction to the Ticket.
+    // The arcade's PAY-TO-PLAY currency, the opposite direction to the Ticket.
     'arcade-token': { name: 'Arcade Token', type: 'currency', category: 'currency', emoji: '🕹️', action: null, stages: ['egg', 'baby', 'adult'], topics: ['currency', 'arcade'], effects: {} },
   };
 

@@ -5,7 +5,7 @@
  * `31632:<pubkey>:<d>` address (from a browser row, a colleague, an inventory
  * entry), or you know the `d` of something you published yourself and would
  * rather not paste your own pubkey. The second form builds the address from the
- * active signer — it can never resolve to somebody else's event, which is
+ * active signer: it can never resolve to somebody else's event, which is
  * precisely why `d`-only lookup is safe to offer here and unsafe as a general
  * identity.
  *

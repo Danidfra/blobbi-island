@@ -3,8 +3,8 @@
  *
  * Nothing about the Arcade appears in these tests, and that is the point. The
  * wardrobe (`useEquippableCosmetics`) and the effects panel
- * (`useOwnedVisualEffects`) ask one question — "does kind:31633 hold this
- * official item?" — and an atomic redemption answers it by putting the item
+ * (`useOwnedVisualEffects`) ask one question, "does kind:31633 hold this
+ * official item?": and an atomic redemption answers it by putting the item
  * there. No arcade-specific unlock, no second registry, no special case.
  *
  * The other half of the claim is the separation: owning is kind:31633,
@@ -141,13 +141,13 @@ describe('a redeemed wearable is recognised by the normal wardrobe', () => {
     }
   });
 
-  it('is owned but NOT worn — a grant never equips', () => {
+  it('is owned but NOT worn, a grant never equips', () => {
     const { wrapper } = harness(
       ACCESSORY_PRIZES.map((p) => ({ address: p.itemAddress, quantity: 1 })),
     );
     const { result } = renderHook(() => useEquippableCosmetics('adult'), { wrapper });
     // `useEquippableCosmetics` answers ownership only. What is WORN comes from
-    // kind:31634, which this path never writes — the placement is `undefined`
+    // kind:31634, which this path never writes, the placement is `undefined`
     // for every freshly-owned prize.
     for (const entry of result.current.available) {
       expect(entry).not.toHaveProperty('placement');

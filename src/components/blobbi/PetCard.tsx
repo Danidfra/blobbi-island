@@ -5,7 +5,7 @@ import { BLOBBI_NEEDS, blobbiMood, needLevel, type BlobbiNeedKey } from '@/lib/b
 import type { CareNeed, CareUrgency, PetCondition, SleepState } from '@/lib/blobbi-types';
 
 /**
- * The pet card — "how is my Blobbi", as a game says it.
+ * The pet card, "how is my Blobbi", as a game says it.
  *
  * ## What this replaced
  *
@@ -22,13 +22,13 @@ import type { CareNeed, CareUrgency, PetCondition, SleepState } from '@/lib/blob
  *  2. **Needs as meters beside the pet**, icon-led, numbers secondary. Webkinz
  *     puts them next to the avatar; the meaning is carried by how full the bar
  *     is, not by a printed percentage.
- *  3. **Progression as progression.** A bar, a streak, a badge — things that
+ *  3. **Progression as progression.** A bar, a streak, a badge, things that
  *     look like they are going somewhere.
  *
  * ## Compact, not tiny
  *
  * The blocks are spaced for a window that has to hold all of them at once
- * without scrolling. What was tightened is DEAD SPACE — a 60px-tall trophy for
+ * without scrolling. What was tightened is DEAD SPACE, a 60px-tall trophy for
  * three short strings, a 30px emoji in a padded box, `gap-y-2.5` between bars
  * that are 10px tall. Type sizes, bar heights and touch targets are untouched:
  * the fix for a tall panel is not a smaller font.
@@ -37,7 +37,7 @@ import type { CareNeed, CareUrgency, PetCondition, SleepState } from '@/lib/blob
  *
  * No new state, no invented thresholds, no level system. `blobbiMood` and
  * `needLevel` are pure re-readings of `analyzeCareStatus` output, and
- * `needLevel`'s boundaries are `getStatUrgency`'s own — so a meter that looks
+ * `needLevel`'s boundaries are `getStatUrgency`'s own, so a meter that looks
  * low and a headline that says "Hungry" can never disagree. The game has raw XP
  * and no levels, so the card shows raw XP and no levels.
  */
@@ -76,7 +76,7 @@ const TONE_STYLES = {
  * The mood hero.
  *
  * `role="status"` so a screen reader hears the headline change when the pet's
- * state does — the same information the emoji carries for everyone else. The
+ * state does: the same information the emoji carries for everyone else. The
  * emoji is `aria-hidden`; the label is the accessible content.
  */
 export function MoodHero({
@@ -125,7 +125,7 @@ export function MoodHero({
  * One need meter.
  *
  * A real `progressbar` with the full ARIA quartet, because the bar IS the
- * information — a div that merely looks like a meter tells a screen-reader user
+ * information: a div that merely looks like a meter tells a screen-reader user
  * nothing. The value is also printed, small, so the number is available to
  * everyone without dominating.
  *
@@ -149,7 +149,7 @@ function NeedMeter({
   return (
     /*
       Icon chip + track on ONE row. The icon sits in its own little rounded
-      square — the tactile game treatment — and doubles as the row's anchor, so
+      square: the tactile game treatment, and doubles as the row's anchor, so
       the five meters read as a set of gauges rather than five form fields with
       captions. The label rides ABOVE the track, small, inside the row.
     */
@@ -225,13 +225,13 @@ export function NeedMeters({ stats, className }: { stats: PetCardStats; classNam
  * XP, care streak and generation as three small trophies rather than a
  * definition list. There is deliberately **no level and no XP bar**: the game
  * has raw experience and no thresholds, and drawing a bar would require
- * inventing a ceiling — a fake progress bar is worse than an honest number.
+ * inventing a ceiling, a fake progress bar is worse than an honest number.
  */
 export function ProgressionStrip({ stats, className }: { stats: PetCardStats; className?: string }) {
   return (
     /*
       ONE strip, not three boxes. Three independent bordered cards for three
-      short numbers was the strongest "card inside card" offender on the tab —
+      short numbers was the strongest "card inside card" offender on the tab,
       the trophies now share a single panel and are separated by hairlines,
       which is how a game HUD groups readouts that belong together.
     */
@@ -295,7 +295,7 @@ function toValues(value: string | string[] | undefined): string[] {
  * Personality, traits and mood as collectible-style chips.
  *
  * The model stores these as `string | string[]`, and the old card rendered the
- * array by joining it with commas — a database field printed verbatim. One chip
+ * array by joining it with commas, a database field printed verbatim. One chip
  * per value reads as character flavour instead, and costs less horizontal room
  * than the label-plus-value rows it replaces.
  */
@@ -312,7 +312,7 @@ export function TraitChips({ stats, className }: { stats: PetCardStats; classNam
     /*
       A NAMED group. A bare row of pills floating between two panels read as
       debris; a tiny "Personality" eyebrow ties them to the pet without
-      reverting to database-field styling — the values stay chips, the label
+      reverting to database-field styling, the values stay chips, the label
       stays whisper-quiet.
     */
     <div data-testid="trait-chips" className={cn('space-y-1', className)}>

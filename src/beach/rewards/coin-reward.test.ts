@@ -1,5 +1,5 @@
 /**
- * Reward calculation — determinism, bounds, and the simulated payout
+ * Reward calculation: determinism, bounds, and the simulated payout
  * distribution the provisional economics are tuned against.
  */
 

@@ -1,10 +1,10 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
-// Phase 5 polish: presentation only. The wooden plate IS the surface — tabs,
+// Phase 5 polish: presentation only. The wooden plate IS the surface, tabs,
 // inputs and buttons sit directly on the wood (small cream surfaces only where
 // readability needs it), like the pre-login "Enter Island" plate. No big cream
 // card. On mobile landscape the SAME square board image is rotated 90° (board
-// layer only — content is never rotated) and enlarged so it reads as a wider,
+// layer only: content is never rotated) and enlarged so it reads as a wider,
 // roomier horizontal sign.
 // Copy stays simplified and the credential stays clearly a Nostr secret key
 // (nsec), never a "passport".
@@ -132,13 +132,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   // badge/pill. Inline + box-decoration-clone so wrapped lines each get the
   // band; tiny horizontal padding + negative vertical margin keep it tight to
   // the text and add no layout height (so it never introduces scroll). No
-  // border-radius — a rounded shape would make the bounds noticeable.
+  // border-radius: a rounded shape would make the bounds noticeable.
   const woodMarkClass =
     'box-decoration-clone bg-[rgba(20,14,8,0.16)] px-[0.12em] [margin-block:-0.04em]';
 
   // FUTURE/EXPERIMENT: a wood/brown primary CTA could look like:
   //   'bg-gradient-to-b from-island-wood to-island-wood-dark border-island-cream/70 text-island-cream'
-  // Not used now — the purple CTA stays (clearer action color, matches Blobbi).
+  // Not used now, the purple CTA stays (clearer action color, matches Blobbi).
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -149,7 +149,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         onPointerDown={(e) => e.stopPropagation()}
         // Desktop/tablet/portrait: square board. Mobile landscape: the
         // already-horizontal mobile board (~1.64:1). Bounds fill most of the
-        // landscape viewport — roomy but no longer oversized; object-contain
+        // landscape viewport: roomy but no longer oversized; object-contain
         // on the image keeps the true aspect ratio.
         className='aspect-square h-auto w-[min(92vw,29rem)] max-w-[29rem] border-0 bg-transparent p-0 shadow-none landscape:max-md:aspect-[1381/842] landscape:max-md:h-[90svh] landscape:max-md:max-h-[90svh] landscape:max-md:w-[95vw] landscape:max-md:max-w-[95vw]'
       >
@@ -158,9 +158,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           Use your Nostr account to enter Blobbi Island.
         </DialogDescription>
 
-        {/* Wooden modal frame — BOARD LAYER ONLY. Desktop/tablet/portrait use
+        {/* Wooden modal frame: BOARD LAYER ONLY. Desktop/tablet/portrait use
             the square modal asset. Mobile landscape swaps to the dedicated
-            horizontal mobile board (already rotated in the asset itself — no
+            horizontal mobile board (already rotated in the asset itself; no
             CSS rotation). The content layer below is never rotated. */}
         <div className='pointer-events-none absolute inset-0 flex items-center justify-center'>
           <img
@@ -183,7 +183,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           />
         </div>
 
-        {/* Close — kept inside the safe area, clear of the corner vines. */}
+        {/* Close: kept inside the safe area, clear of the corner vines. */}
         <DialogClose
           aria-label='Close'
           className='absolute right-[13%] top-[12%] z-10 rounded-full bg-island-ink/40 p-1.5 text-island-cream transition-colors hover:bg-island-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-island-cream landscape:max-md:right-[10%] landscape:max-md:top-[10%]'
@@ -198,7 +198,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         <div className='absolute inset-0 flex items-center justify-center'>
           <div className='relative flex h-full w-full flex-col p-[14%] text-center landscape:max-md:px-[12%] landscape:max-md:py-[8%]'>
             {/* Header printed on the wood: cream text lifted by a stronger
-                layered text-shadow (no background pill — text only). */}
+                layered text-shadow (no background pill, text only). */}
             <div className='shrink-0 px-1'>
               <h2 className={cn(woodTextClass, 'text-xl font-bold landscape:max-md:text-lg')}>
                 <span className={woodMarkClass}>Sign in</span>
@@ -232,7 +232,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 in this subtree, so remounting never loses their values.
                 The flip is disabled on mobile landscape (cramped) and for
                 motion-reduce users. Overflow stays visible everywhere now that
-                the board/content area is tuned — content fits on both desktop
+                the board/content area is tuned, content fits on both desktop
                 and mobile landscape, so there's no internal scroll. A scroll
                 fallback is kept ONLY for very short portrait/phone viewports. */}
             <div
@@ -335,7 +335,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
             </div>
           </Tabs>
 
-          {/* Secondary signup action — visible but secondary, on the wood.
+          {/* Secondary signup action, visible but secondary, on the wood.
               On mobile landscape it's absolutely anchored to the bottom of the
               content area (just inside the board's safe padding) so it reads as
               a footer link and never competes with the login controls. Desktop

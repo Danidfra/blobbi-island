@@ -1,5 +1,5 @@
 /**
- * Applying a theme's FONTS and BACKGROUND MEDIA — the two fields that are not
+ * Applying a theme's FONTS and BACKGROUND MEDIA, the two fields that are not
  * colours, and the only place event-sourced data reaches a stylesheet.
  *
  * ## Why this is separate from the palette
@@ -14,7 +14,7 @@
  *
  *  - **URLs are https or they do not exist.** `sanitizeThemeUrl` parses and
  *    re-serialises, so what reaches CSS is the URL parser's own output with
- *    quotes and backslashes percent-encoded — a value that cannot terminate the
+ *    quotes and backslashes percent-encoded, a value that cannot terminate the
  *    `url("…")` string it sits in.
  *  - **Font families pass an allowlist**: Unicode letters and numbers, space,
  *    underscore, hyphen, apostrophe, period. Braces, semicolons, quotes and
@@ -33,13 +33,13 @@
  * `--island-font-display` defaults to the body font, so a theme that sets only
  * one still looks coherent. Ditto's `titleFont` maps here: in the Ditto source
  * it drives `--title-font-family`, which is applied to `<h2>` section headings,
- * sidebar item labels and `DialogTitle` — display typography generally, not
+ * sidebar item labels and `DialogTitle`: display typography generally, not
  * just a profile name.
  *
  * ## Scope: where a theme background is allowed to appear
  *
  * Ditto puts the theme wallpaper on `body`, which is right for a social feed
- * scrolling over it. Blobbi Island is a drawn world — Town, Beach, Mine and the
+ * scrolling over it. Blobbi Island is a drawn world: Town, Beach, Mine and the
  * Arcade are ART, and covering them with somebody's photograph would not be
  * theming the game, it would be vandalising it. So the background is applied to
  * the PAGE BEHIND THE WOOD FRAME and nowhere else. See `docs/themes.md`.
@@ -58,8 +58,8 @@ const FONT_OVERRIDE_STYLE_ID = 'island-theme-font';
  * The island's own type, and the fallback behind every theme font.
  *
  * Mirrors `fontFamily.sans` in `tailwind.config.ts`. It is a FALLBACK, not a
- * default that gets replaced: a theme font that fails to load — a dead host, an
- * offline device, a blocked request, a CORS refusal — leaves the game rendered
+ * default that gets replaced: a theme font that fails to load, a dead host, an
+ * offline device, a blocked request, a CORS refusal, leaves the game rendered
  * in Comfortaa rather than in whatever the browser would otherwise pick, because
  * `font-display: swap` shows the fallback until (and unless) the real face
  * arrives, and forever if it does not.
@@ -97,7 +97,7 @@ export interface SafeFont {
 /**
  * A theme font reduced to values that are safe in CSS, or `null`.
  *
- * This is where the interop fix lives. A font may arrive with **no URL** —
+ * This is where the interop fix lives. A font may arrive with **no URL**,
  * that is the normal shape in Ditto's own settings, because Ditto bundles its
  * curated families and only attaches a CDN link when publishing. Island has no
  * such bundle, so a family with no URL used to mean "hope it is installed",
@@ -114,7 +114,7 @@ export function safeFont(font: ThemeFont | undefined): SafeFont | null {
 
   // The author's own URL first, then the registry. Note the ORDER of the
   // validation: an explicit URL that fails (http, `javascript:`, malformed)
-  // falls back to the curated file rather than costing the theme its font —
+  // falls back to the curated file rather than costing the theme its font,
   // sanitising after resolution would have made a single bad character fatal
   // for a font we know exactly where to find.
   //
@@ -131,7 +131,7 @@ export function safeFont(font: ThemeFont | undefined): SafeFont | null {
  *
  * `font-weight` is the second half of the fix. A variable `.woff2` declared
  * with no weight descriptor matches 400 and nothing else, so every `font-bold`
- * heading, label and button in the island — and there are hundreds — would fall
+ * heading, label and button in the island, and there are hundreds, would fall
  * back to a synthetic smear of the 400 face instead of the file's real bold
  * axis. `100 900` is the range fontsource's `latin-wght-normal` files carry.
  *
@@ -160,7 +160,7 @@ export function fontStack(font: SafeFont | null): string {
  * `undefined` for both removes them and restores the island's type exactly.
  *
  * `body` is the font every surface inherits. `title` is Ditto's `titleFont`,
- * used by the island only for window titles and section headings — see the
+ * used by the island only for window titles and section headings; see the
  * header of this file for why that matches Ditto's own usage.
  */
 export function applyThemeFonts(fonts: {
@@ -180,7 +180,7 @@ export function applyThemeFonts(fonts: {
 
   // Rewritten, never appended: one theme is active at a time, so the element
   // holds exactly the faces in use and cannot accumulate the fonts of every
-  // theme the player has ever tried. A face with no resolvable URL is omitted —
+  // theme the player has ever tried. A face with no resolvable URL is omitted,
   // a rule with no `src` can never match, and the family may still be installed.
   const faces = [body, title]
     .filter((f): f is SafeFont => !!f?.url)
@@ -237,7 +237,7 @@ export function backgroundDeclarations(
  *
  * Written as custom properties rather than a rule against `body`, for the
  * reason in the header: the island decides WHERE a theme wallpaper is allowed
- * to show, and it is the page behind the wood frame — never the world. The
+ * to show, and it is the page behind the wood frame; never the world. The
  * stylesheet consumes these on one selector, so the scope is a single place to
  * read and a single place to change.
  */
@@ -263,7 +263,7 @@ export function applyThemeBackground(
   for (const [name, value] of Object.entries(declarations)) {
     root.style.setProperty(name, value);
   }
-  // A hook for surfaces that need to know a wallpaper is present — the frame
+  // A hook for surfaces that need to know a wallpaper is present, the frame
   // drops its own page tint so the image is not viewed through a wash.
   root.setAttribute('data-theme-background', background?.mode === 'tile' ? 'tile' : 'cover');
 }
@@ -290,7 +290,7 @@ const previewFaces = new Map<string, string>();
  *
  * Returns the `font-family` value to put on the preview container. Nothing
  * global changes: the caller scopes it to a card with an inline style, so
- * looking at a theme cannot restyle the island — only choosing it can.
+ * looking at a theme cannot restyle the island; only choosing it can.
  */
 export function previewFontStack(font: ThemeFont | undefined): string {
   if (typeof document === 'undefined') return ISLAND_FONT_STACK;

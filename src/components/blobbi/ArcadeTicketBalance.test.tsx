@@ -7,8 +7,8 @@
  *
  * Note on the `renderProbe` sibling: `NostrLoginProvider` inside `TestApp`
  * mounts its subtree asynchronously, so a synchronous `querySelector` straight
- * after `render()` always sees an empty container. The probe gives every test —
- * including the ones asserting ABSENCE — a positive thing to await first, so
+ * after `render()` always sees an empty container. The probe gives every test,
+ * including the ones asserting ABSENCE, a positive thing to await first, so
  * "not rendered" can never be confused with "not rendered YET".
  */
 
@@ -83,7 +83,7 @@ describe('ArcadeTicketBalance', () => {
     expect(chip()).toBeNull();
   });
 
-  it('renders nothing while loading, by default — no false zero', async () => {
+  it('renders nothing while loading, by default; no false zero', async () => {
     mockUseIslandInventory.mockReturnValue({ data: undefined, isLoading: true });
     render(
       <TestApp>
@@ -123,7 +123,7 @@ describe('ArcadeTicketBalance', () => {
   });
 
   it('renders the production artwork from the OFFLINE bundled fallback', async () => {
-    // No catalog data at all — i.e. every definition relay unreachable.
+    // No catalog data at all; i.e. every definition relay unreachable.
     await renderWith(4);
 
     const img = chip()!.querySelector('img');

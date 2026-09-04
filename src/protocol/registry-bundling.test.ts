@@ -4,7 +4,7 @@
  * `registry-markdown.ts` exists only to render documentation. Vite bundles what
  * is reachable from `index.html`, so the guarantee is simply that no module in
  * the application graph imports it. This test proves that by walking `src/` and
- * checking the import statements themselves — not a comment, not a convention.
+ * checking the import statements themselves; not a comment, not a convention.
  *
  * The canonical registry (`event-registry.ts`) is a different matter: the app
  * legitimately depends on it for item identities, so it IS bundled, and that is

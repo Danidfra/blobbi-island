@@ -1,5 +1,5 @@
 /**
- * /dev/treasure-hunt — the Beach Treasure Hunt harness.
+ * /dev/treasure-hunt: the Beach Treasure Hunt harness.
  *
  * SIMULATION ONLY. This page drives the pure seeded model
  * (`src/beach/treasure-hunt/`) and the real contained UI
@@ -13,7 +13,7 @@
  *
  * The stage box below provides a `StageOverlayContext` host (the same
  * mechanism `BlobbiFrame` uses), so the shell portals into a bounded,
- * resizable "screen" — which is what makes the mobile viewport presets work.
+ * resizable "screen": which is what makes the mobile viewport presets work.
  *
  * Forced-policy notes: every preset below still goes through
  * `validateTreasureHuntPolicy`. An invalid combination (e.g. a shovel
@@ -222,12 +222,12 @@ export function DevTreasureHunt() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
       <header className="mx-auto mb-3 max-w-5xl space-y-1">
-        <h1 className="text-xl font-bold">Beach Treasure Hunt — dev harness</h1>
+        <h1 className="text-xl font-bold">Beach Treasure Hunt, dev harness</h1>
         <p
           className="inline-block rounded-full bg-amber-200 px-3 py-1 text-sm font-semibold"
           data-simulation-only
         >
-          Simulation only — nothing is published, granted or saved.
+          Simulation only: nothing is published, granted or saved.
         </p>
         <p className="text-xs text-slate-600">
           End reasons: let the timer run out (disable unlimited time), burn every shovel use,
@@ -391,7 +391,7 @@ export function DevTreasureHunt() {
           )}
         </aside>
 
-        {/* Stage — the shell portals into this box via StageOverlayContext. */}
+        {/* Stage: the shell portals into this box via StageOverlayContext. */}
         <main className="flex-1">
           <div
             className="relative mx-auto overflow-hidden rounded-xl border border-slate-300 bg-slate-800"

@@ -2,10 +2,10 @@
  * The cosmetic redemption, end to end through the real surface.
  *
  * The REAL Prize Counter, the REAL redeem control, the REAL redemption hook,
- * the REAL atomic redeemer and the REAL inventory cache sync — against a fake
+ * the REAL atomic redeemer and the REAL inventory cache sync, against a fake
  * relay. What is asserted is what a player would actually experience:
  *
- *   pick a prize → Redeem — 200 Tickets → one event → tickets down, prize owned
+ *   pick a prize → Redeem for 200 Tickets → one event → tickets down, prize owned
  *   → the shelf says Owned, with no reload and no second click possible.
  *
  * And the refusals: not enough tickets, already owned, and a preview that
@@ -146,7 +146,7 @@ function renderCounter(
   options: {
     tickets?: number;
     owned?: { address: string; quantity: number }[];
-    /** Render the counter WITHOUT a redeem slot — the preview-only shelf. */
+    /** Render the counter WITHOUT a redeem slot, the preview-only shelf. */
     bare?: boolean;
   } = {},
 ) {
@@ -208,7 +208,7 @@ describe('the shelf stops saying redemption is being prepared', () => {
   });
 
   it('keeps the honest notice when no redeem slot is supplied', () => {
-    // Without a slot the counter is exactly what it was — preview-only, and
+    // Without a slot the counter is exactly what it was, preview-only, and
     // saying so. The two states must not drift apart.
     const { container } = renderCounter({ tickets: 1000, bare: true });
     expect(container.querySelector('[data-prize-counter-preview-notice]')).not.toBeNull();
@@ -223,7 +223,7 @@ describe('the shelf stops saying redemption is being prepared', () => {
       select(container, prize.d);
       const button = redeemButton(container)!;
       expect(button, prize.d).not.toBeNull();
-      expect(button.textContent).toBe(`Redeem — ${prize.tickets} Tickets`);
+      expect(button.textContent).toBe(`Redeem for ${prize.tickets} Tickets`);
       expect(button.disabled, prize.d).toBe(false);
     }
   });
@@ -256,7 +256,7 @@ describe('redeeming', () => {
     expect(itemsOf(published[0])[apple]).toBe(4);
   });
 
-  it('updates the ticket balance and the Owned chip immediately — no reload', async () => {
+  it('updates the ticket balance and the Owned chip immediately; no reload', async () => {
     const { container } = renderCounter({ tickets: 500 });
     const balance = () =>
       container.querySelector('[data-prize-counter-balance]')!.textContent;
@@ -351,7 +351,7 @@ describe('refusals', () => {
     fireEvent.click(button);
     expect(published).toEqual([]);
     expect(signEvent).not.toHaveBeenCalled();
-    // No reservation is recorded either — an insufficient balance must not
+    // No reservation is recorded either, an insufficient balance must not
     // leave a ledger record that later looks like a pending redemption.
     expect(Object.values(readRedemptions(OWNER))).toEqual([]);
   });

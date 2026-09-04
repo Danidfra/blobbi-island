@@ -1,10 +1,10 @@
 /**
- * Identity: `d`, `name`, `type`, `alt` — and the address they add up to.
+ * Identity: `d`, `name`, `type`, `alt`: and the address they add up to.
  *
  * The `d` tag is the only field in this whole editor that cannot be corrected
  * later. Everything else is a value inside an event; `d` (with the signer's
  * pubkey and the kind) IS the event's address, so changing it does not edit the
- * item — it points at a different item and leaves the original exactly where it
+ * item: it points at a different item and leaves the original exactly where it
  * was. This section is built around making that impossible to do by accident:
  *
  *  - the live address is always on screen, so you can see what you are about to
@@ -68,7 +68,7 @@ export function ItemIdentitySection({
     >
       <Field
         id="item-d"
-        label="d — item identifier"
+        label="d: item identifier"
         required
         error={fieldErrors.d}
         hint={
@@ -94,7 +94,7 @@ export function ItemIdentitySection({
             className="h-9 shrink-0 gap-1.5"
             disabled={dLocked || form.d.trim() === ''}
             onClick={() => patch({ d: slugifyDTag(form.d) })}
-            title="Lowercase, hyphenate and trim — colons are kept"
+            title="Lowercase, hyphenate and trim, colons are kept"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Normalize
@@ -194,7 +194,7 @@ export function ItemIdentitySection({
           id="item-alt"
           value={form.alt}
           rows={2}
-          placeholder="Game item: Party Hat — a cosmetic accessory for Blobbi."
+          placeholder="Game item: Party Hat, a cosmetic accessory for Blobbi."
           onChange={(event) => patch({ alt: event.target.value })}
         />
       </Field>

@@ -1,10 +1,10 @@
 /**
- * `<ClothingStoreRoom>` — the room's contract with the movement system, the
+ * `<ClothingStoreRoom>`: the room's contract with the movement system, the
  * shop and the fitting room.
  *
  * The claims under test:
  *
- *  1. the room renders CONTROLS and COLLISION and nothing else — the furniture
+ *  1. the room renders CONTROLS and COLLISION and nothing else, the furniture
  *     is painted into `clothing-store.webp`, so a sprite appearing here would be
  *     the old composition coming back;
  *  2. every floor footprint reaches the SHARED movement blocker context, not a
@@ -156,7 +156,7 @@ describe('the room renders controls, not furniture', () => {
 
   it('leaves the room for the mall', () => {
     renderRoom();
-    // `<BackArrow>` is a `data-block-move` div, not a button — the shared
+    // `<BackArrow>` is a `data-block-move` div, not a button, the shared
     // component, unchanged.
     fireEvent.click(document.querySelector('[data-block-move]')!);
     expect(setCurrentLocation).toHaveBeenCalledWith('shop');
@@ -292,7 +292,7 @@ describe('the two fitting rooms', () => {
 
     arriveAt(CLOTHING_STORE_FITTING_ROOM_RIGHT.id);
     expect(screen.getAllByTestId('fitting-room-modal')).toHaveLength(1);
-    // Two mounts across two separate openings — never two at once.
+    // Two mounts across two separate openings; never two at once.
     expect(fittingMounts).toHaveLength(2);
     expect(screen.queryByTestId('clothing-store-modal')).toBeNull();
   });
@@ -339,7 +339,7 @@ describe('the shop and the fitting room cannot stack', () => {
   it('a fitting-room arrival landing after the shop opened is ignored', () => {
     renderRoom();
     // Walk to a booth, then open the shop from the corner button before the
-    // Blobbi gets there — the arrival is now stale.
+    // Blobbi gets there, the arrival is now stale.
     fireEvent.click(hotspotEl(CLOTHING_STORE_FITTING_ROOM_LEFT.id));
     fireEvent.click(shopButton());
     act(() => requests[requests.length - 1].action());

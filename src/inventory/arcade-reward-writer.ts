@@ -12,7 +12,7 @@
  *
  * ## What it does, in order
  *
- * The whole read-modify-write runs inside {@link runInventoryTransaction} —
+ * The whole read-modify-write runs inside {@link runInventoryTransaction},
  * the SAME primitive the Coin wallet uses, on the SAME cross-tab lock name:
  *
  * ```
@@ -28,7 +28,7 @@
  * Sharing the lock is not tidiness: Coins and Arcade Tickets live in the SAME
  * replaceable kind:31633 event, so a ticket grant built from a base that a
  * concurrent coin grant is already replacing would silently roll the Coin
- * balance back — and a ticket grant built from an unconfirmed empty read would
+ * balance back: and a ticket grant built from an unconfirmed empty read would
  * erase the balance outright.
  *
  * Every step after the read is the same code path `useInventoryMutation` uses,
@@ -39,7 +39,7 @@
  *
  *  - **strict publish.** `useNostrPublish` swallows a 5-second timeout and
  *    resolves (correct for presence heartbeats, wrong for a one-shot grant of a
- *    scarce resource), so this signs and publishes locally instead — the same
+ *    scarce resource), so this signs and publishes locally instead, the same
  *    local-`strictPublish` pattern `useFirstEggAdoption` already established in
  *    this codebase.
  *  - **no optimistic update.** An optimistic balance is honest only when it is
@@ -49,7 +49,7 @@
  * ## kind:11125 is never touched
  *
  * Since the Coin cutover the canonical Coin balance is the official Blobbi
- * Coin quantity in kind:31633 — the same event this writer replaces — and a
+ * Coin quantity in kind:31633, the same event this writer replaces, and a
  * historic kind:11125 `coins` tag is obsolete data nothing here reads or
  * writes. The Arcade **Pass** (temporary `sessionStorage` floor access) is not
  * an item at all and has no address, so it cannot be confused with the Arcade
@@ -72,14 +72,14 @@ import {
 
 /**
  * The canonical Arcade Ticket address, derived from the official issuer and the
- * canonical `d` — never written out as a literal.
+ * canonical `d`: never written out as a literal.
  *
  * `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-ticket`
  */
 export const ARCADE_TICKET_ADDRESS = officialItemAddress(ARCADE_TICKET_D);
 
 /**
- * The slice of `useNostr()` this module needs — structurally the shared
+ * The slice of `useNostr()` this module needs, structurally the shared
  * inventory-transaction surface, because that is what this writer now is.
  */
 export type RewardWriterNostr = InventoryTransactionNostr;
@@ -99,13 +99,13 @@ export interface ArcadeRewardWriterDeps {
  * Every reason here means "this happened before the event could reach a relay",
  * which is what lets the claim boundary mark the attempt retryable instead of
  * unresolved. A failure that cannot prove its own timing must NOT be wrapped in
- * this class — it is thrown raw and classified as possibly-published.
+ * this class: it is thrown raw and classified as possibly-published.
  *
  * `publish-rejected` is the one reason the real writer never throws: proving
  * that no relay stored the event would need a per-relay OK/failure breakdown
  * that `NPool.event` does not surface (see the classifier in
- * `useArcadeReward.ts`). It exists so a writer that CAN prove it — the DEV
- * harness's fake, or a future client with a richer contract — has a way to say
+ * `useArcadeReward.ts`). It exists so a writer that CAN prove it, the DEV
+ * harness's fake, or a future client with a richer contract, has a way to say
  * so.
  */
 export class ArcadeRewardWriterError extends Error {
@@ -158,7 +158,7 @@ export function createArcadeTicketWriter(deps: ArcadeRewardWriterDeps): ArcadeRe
             amount: claim.tickets,
           });
           // STRICT publish: resolving means at least one relay accepted it. A
-          // timeout is NOT resolved through as "probably fine" — that is the
+          // timeout is NOT resolved through as "probably fine": that is the
           // defect this whole boundary exists for.
           await ctx.publish(next);
         });

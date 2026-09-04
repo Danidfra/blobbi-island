@@ -14,7 +14,7 @@
  * as a failed tile with a warning instead of an empty box.
  *
  * Uploads and URLs are the same thing here. A Blossom upload's only effect is
- * to fill in a row's URL — see `image-upload.ts` — so an item assembled from
+ * to fill in a row's URL, see `image-upload.ts`, so an item assembled from
  * uploads and one assembled from pasted CDN links are literally the same form.
  */
 
@@ -97,7 +97,7 @@ export function ImageManager({
           One row per <code>image</code> tag. The unmarked row is the primary
           image; the rest are named views. Recommended artwork is{' '}
           {RECOMMENDED_IMAGE_SIZE.width}&times;{RECOMMENDED_IMAGE_SIZE.height}{' '}
-          transparent PNG or WebP — anything else publishes fine and only warns.
+          transparent PNG or WebP, anything else publishes fine and only warns.
         </>
       }
       action={
@@ -160,7 +160,7 @@ export function ImageManager({
         <div className="space-y-2 rounded-xl border bg-muted/40 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium">
-              {uploads.entries.length} file(s) queued — check the suggested markers
+              {uploads.entries.length} file(s) queued: check the suggested markers
               before uploading.
             </p>
             <div className="flex gap-2">
@@ -234,7 +234,7 @@ export function ImageManager({
       {/* --- Rows ----------------------------------------------------------- */}
       {images.length === 0 ? (
         <p className="rounded-xl border border-dashed px-4 py-6 text-center text-xs text-muted-foreground">
-          No images yet. An item without artwork is valid — lists fall back to an
+          No images yet. An item without artwork is valid, lists fall back to an
           emoji or placeholder.
         </p>
       ) : (
@@ -339,7 +339,7 @@ function ImageRowEditor({
               : probe?.status === 'error'
                 ? 'load failed'
                 : url === ''
-                  ? '—'
+                  ? '-'
                   : 'checking…'}
           </p>
         </div>
@@ -443,7 +443,7 @@ function ImageRowEditor({
               </IconAction>
               {url !== '' && (
                 /*
-                  This URL is TYPED BY THE AUTHOR — the most untrusted string in
+                  This URL is TYPED BY THE AUTHOR, the most untrusted string in
                   the tool. As an anchor it would happily navigate to
                   `javascript:` or `data:`; through the egress boundary it is
                   parsed and refused unless it is `https:`, and the confirmation

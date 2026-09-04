@@ -4,7 +4,7 @@
  * The composer is UI. These tests bypass it entirely and call
  * `finalizeAdoption` directly, which is what a modified build, a console, or a
  * future second naming surface would do. The assertion that matters is that
- * nothing is **signed** — a refusal after signing would already have handed the
+ * nothing is **signed**: a refusal after signing would already have handed the
  * name to a signer, and a refusal after publishing would be no refusal at all.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';

@@ -1,5 +1,5 @@
 /**
- * The preserved tags — everything on a loaded event that no form field owns.
+ * The preserved tags; everything on a loaded event that no form field owns.
  *
  * This section exists so unknown-tag preservation is VISIBLE rather than
  * merely promised. When you load somebody's definition that carries a tag this

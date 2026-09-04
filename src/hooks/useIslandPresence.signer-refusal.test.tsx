@@ -1,6 +1,6 @@
 /**
  * The presence circuit breaker: a signer refusal pauses presence for the
- * lifecycle — one prompt, one quiet line, no loop — while transient failures
+ * lifecycle: one prompt, one quiet line, no loop, while transient failures
  * keep their existing retry behaviour and leaving the world resets everything.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

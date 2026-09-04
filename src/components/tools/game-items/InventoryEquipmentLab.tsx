@@ -1,5 +1,5 @@
 /**
- * Inventory & Equipment Lab — internal developer tool for REAL kind:31633 and
+ * Inventory & Equipment Lab, internal developer tool for REAL kind:31633 and
  * kind:31634 mutations against the CURRENT account.
  *
  * ## Access policy (see docs/inventory-equipment-lab.md)
@@ -7,28 +7,28 @@
  * BUILD-FLAG GATED: this component exists in a build only when
  * `VITE_ENABLE_LIVE_INVENTORY_LAB=true` (`src/lib/feature-flags.ts`); default
  * builds do not include its chunk, its tab, or any of its mutation hooks. The
- * flag — not route obscurity, not the signer — is the product access gate.
+ * flag: not route obscurity, not the signer, is the product access gate.
  * Within an enabled build, every write still requires an explicit
  * confirmation and a signature from the logged-in account, and can only ever
  * touch THAT account's own inventory and its own Blobbi's equipment document.
  * Without a signer every write control is disabled.
  *
  * The three roles stay visibly apart: the official ISSUER authored the
- * kind:31632 definitions (shown as the trust root); the PLAYER — the signer —
+ * kind:31632 definitions (shown as the trust root); the PLAYER, the signer,
  * owns kind:31633 and equips through kind:31634. This lab acts only as the
  * player.
  *
  * ## Every write is confirmed, and max_stack is respected
  *
- * EVERY real write — single-item add/remove/set, equip/unequip, stale
- * cleanup, bulk actions, the loadout, the stack repair — flows through ONE
+ * EVERY real write, single-item add/remove/set, equip/unequip, stale
+ * cleanup, bulk actions, the loadout, the stack repair, flows through ONE
  * confirmation surface ({@link PendingWrite}); `confirmPending` below is the
  * only code path in this component that invokes a writer, and a source test
  * pins that. Normal controls never plan a quantity above the item's published
  * `max_stack` (all sixteen current items: 1): "Add to inventory" means
  * `0 → 1` and is disabled once owned, bulk add ENSURES ownership rather than
  * incrementing, and a pre-existing over-max quantity is reported as an
- * anomaly for the explicit "Normalize stacks" repair — never silently
+ * anomaly for the explicit "Normalize stacks" repair; never silently
  * changed. There is deliberately NO control that can create an over-max
  * quantity.
  *
@@ -199,7 +199,7 @@ export function InventoryEquipmentLab() {
   //
   // Both `mutateAsync` invocations in this component live inside this handler
   // and nowhere else (pinned by a source-level test). Success closes the
-  // dialog; failure keeps it open with the state it described still true —
+  // dialog; failure keeps it open with the state it described still true,
   // rollback already restored the caches. While a publish is in flight both
   // dialog buttons and every row control are disabled, and Cancel is
   // unavailable rather than pretending an in-flight signature can be recalled.
@@ -223,24 +223,24 @@ export function InventoryEquipmentLab() {
           mutation,
         });
         toast({
-          title: write.kind === 'equipment' ? write.success : 'Test loadout — published',
+          title: write.kind === 'equipment' ? write.success : 'Test loadout, published',
         });
       }
       setPending(null);
     } catch (error) {
-      // An ambiguous inventory publish MAY have landed — say so instead of
+      // An ambiguous inventory publish MAY have landed, say so instead of
       // claiming nothing was published. The caches re-read the authoritative
       // state either way.
       toast(
         isAmbiguousInventoryPublish(error)
           ? {
-              title: 'Write not confirmed — it may or may not have landed',
+              title: 'Write not confirmed; it may or may not have landed',
               description:
                 'The relay gave no verdict in time; the inventory will reconcile from the authoritative state.',
               variant: 'destructive',
             }
           : {
-              title: 'Write failed — nothing further was published',
+              title: 'Write failed: nothing further was published',
               description:
                 error instanceof Error ? error.message : 'Publish failed.',
               variant: 'destructive',
@@ -326,7 +326,7 @@ export function InventoryEquipmentLab() {
       toast({
         title:
           plan.anomalies.length > 0
-            ? 'Nothing to change — only over-max anomalies (use Normalize)'
+            ? 'Nothing to change; only over-max anomalies (use Normalize)'
             : 'Nothing would change',
       });
       return;
@@ -348,7 +348,7 @@ export function InventoryEquipmentLab() {
       diff: plan.changes,
       anomalies: plan.anomalies,
       mutation: { type: 'set-many', targets: [...plan.targets] },
-      success: `${BULK_ACTION_LABELS[action]} — published`,
+      success: `${BULK_ACTION_LABELS[action]}: published`,
     });
   };
 
@@ -487,14 +487,14 @@ export function InventoryEquipmentLab() {
       <section className="rounded-lg border border-amber-400/50 bg-amber-50/40 p-3 text-xs dark:border-amber-700/50 dark:bg-amber-950/20">
         <p className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
           <FlaskConical className="h-3.5 w-3.5" />
-          Internal developer lab — every action here publishes REAL signed
+          Internal developer lab: every action here publishes REAL signed
           events, each behind its own confirmation. This surface exists only in
           builds with VITE_ENABLE_LIVE_INVENTORY_LAB=true.
         </p>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           <dt className="text-muted-foreground">Official item issuer (31632)</dt>
           <dd className="font-mono" data-testid="lab-issuer">
-            {shortHex(OFFICIAL_ITEM_ISSUER_PUBKEY)} — trust root; this lab never
+            {shortHex(OFFICIAL_ITEM_ISSUER_PUBKEY)}: trust root; this lab never
             writes as the issuer
           </dd>
           <dt className="text-muted-foreground">Inventory owner (31633)</dt>
@@ -502,7 +502,7 @@ export function InventoryEquipmentLab() {
             {signedIn ? (
               <>
                 {npub ? `${shortHex(npub, 12, 6)} · ` : ''}
-                {shortHex(user!.pubkey)} (you — the signer)
+                {shortHex(user!.pubkey)} (you: the signer)
               </>
             ) : (
               'no signer'
@@ -673,7 +673,7 @@ export function InventoryEquipmentLab() {
                     )}
                     {!owned && (
                       <Badge variant="destructive" className="text-[9px]">
-                        stale — not owned
+                        stale: not owned
                       </Badge>
                     )}
                     {owned && !hiddenReason && (
@@ -735,7 +735,7 @@ export function InventoryEquipmentLab() {
       <Dialog
         open={pending !== null}
         onOpenChange={(open) => {
-          // While a publish is in flight the dialog cannot be dismissed —
+          // While a publish is in flight the dialog cannot be dismissed,
           // an in-flight signature cannot honestly be "cancelled".
           if (!open && !busy) setPending(null);
         }}
@@ -791,7 +791,7 @@ export function InventoryEquipmentLab() {
                 <ul className="mt-0.5 space-y-0.5 text-muted-foreground">
                   {pending.anomalies.map((a) => (
                     <li key={a.address}>
-                      {a.name} ×{a.quantity} — quantity exceeds published
+                      {a.name} ×{a.quantity}: quantity exceeds published
                       max_stack:{a.maxStack}. Use “{BULK_ACTION_LABELS['normalize-stacks']}”
                       to repair it.
                     </li>
@@ -833,7 +833,7 @@ export function InventoryEquipmentLab() {
                   </p>
                   <p className="mt-1 text-muted-foreground">
                     Equipping requires ownership, so the publish would fail. Add
-                    the missing items first — that is a SEPARATE kind:31633
+                    the missing items first; that is a SEPARATE kind:31633
                     write with its own confirmation.
                   </p>
                   <Button
@@ -946,7 +946,7 @@ function LabItemRow({
   const image = definitionImage ?? item.image ?? undefined;
   // "Add to inventory" honours the published max_stack: for the current
   // sixteen (all max_stack:1) it means 0 → 1 and is disabled once owned.
-  // The set-quantity input is bounded the same way — no ordinary control can
+  // The set-quantity input is bounded the same way; no ordinary control can
   // create an over-max quantity, and no advanced override exists.
   const atOrAboveMax = item.maxStack !== null && quantity >= item.maxStack;
   const draftQuantity = Number.parseInt(quantityDraft, 10);

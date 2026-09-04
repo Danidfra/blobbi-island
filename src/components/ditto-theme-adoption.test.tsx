@@ -3,7 +3,7 @@
  * document.
  *
  * `cross-app-theme.test.ts` pins the resolution as pure functions; this pins the
- * wiring around it — the query, the sync, the config write, the palette, the
+ * wiring around it, the query, the sync, the config write, the palette, the
  * font and the wallpaper. It is the closest an automated test gets to the manual
  * cross-app checklist in `docs/themes.md`, and it is what would have caught the
  * original bug: every individual piece parsed correctly, and nothing happened.
@@ -103,7 +103,7 @@ const DITTO_THEME = {
     primary: hexToHslTriplet('#5b8cff'),
   },
   /*
-    NO URL — and that is the point.
+    NO URL: and that is the point.
 
     Ditto's `FontPicker.handleSelect` stores `{ family }` alone, because Ditto
     bundles its curated fonts and loads them with `import()`. A CDN link is
@@ -180,7 +180,7 @@ beforeEach(() => {
 describe('a Ditto account with a theme, opened in Island', () => {
   it('paints the palette, the font and the wallpaper from the settings blob', async () => {
     /*
-      ONLY the encrypted settings — no 16767 at all.
+      ONLY the encrypted settings; no 16767 at all.
 
       That is deliberate: this is the channel Ditto actually renders from, and
       Island read nothing from it before this phase. If the fallback were the
@@ -237,7 +237,7 @@ describe('a Ditto account with a theme, opened in Island', () => {
   });
 
   it('adopts from the public event alone when the settings cannot be read', async () => {
-    // A signer without NIP-44, so the settings channel is unavailable — and the
+    // A signer without NIP-44, so the settings channel is unavailable, and the
     // self-contained 16767 Ditto publishes is still a complete theme. This is
     // the event the previous implementation ignored entirely.
     currentUser = { pubkey: ME };

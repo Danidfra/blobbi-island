@@ -133,7 +133,7 @@ describe('cloud preview overrides', () => {
   it('forces a shape only on the selected actor', () => {
     const dev = { ...ISLAND_SKY_DEV_DEFAULTS, cloudActorId: 'cloud-b', cloudShape: 'heart' as const };
     expect(resolveIslandCloudDev('cloud-b', dev, AT).shape).toBe('heart');
-    // The other two stay on production selection — a preview must not rewrite the
+    // The other two stay on production selection, a preview must not rewrite the
     // whole sky.
     expect(resolveIslandCloudDev('cloud-a', dev, AT).shape).toBeNull();
     expect(resolveIslandCloudDev('cloud-c', dev, AT).shape).toBeNull();

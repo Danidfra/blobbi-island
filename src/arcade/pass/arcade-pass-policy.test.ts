@@ -4,7 +4,7 @@
  * The Pass has a price now, which it did not before, and the thing that
  * changed is the bound: a finite free-play allowance turns an unlimited waiver
  * into a number the price can be set above. These tests keep that arithmetic
- * honest — every input comes from the real reward policies, the real token
+ * honest: every input comes from the real reward policies, the real token
  * costs and the real prize catalog, so a rebalance that breaks the reasoning
  * fails here rather than shipping.
  */

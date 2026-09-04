@@ -10,26 +10,26 @@ import {
 } from './useOfficialArcadePrizes';
 
 /**
- * The Prize Counter — the six real official prizes, browsable and previewable.
+ * The Prize Counter, the six real official prizes, browsable and previewable.
  *
  * Since Phase 9.5 the shelf shows the INITIAL OFFICIAL CATALOG (three
- * accessories, three visual effects — `official-prize-catalog.ts`), with every
+ * accessories, three visual effects, `official-prize-catalog.ts`), with every
  * card resolved from the real kind:31632 definitions, the player's real
  * kind:31633 inventory and the real kind:31634 equipment state.
  *
  * ## Redemption is not wired HERE, deliberately
  *
  * This component imports NO spend writer, NO redemption hook, NO ownership
- * store and NO mutation of any kind — the reward-flow boundary test proves it
+ * store and NO mutation of any kind, the reward-flow boundary test proves it
  * against the import graph. That guarantee has not been traded away now that
  * the six cosmetics redeem for real: the counter still only SELECTS, RESOLVES
  * and PREVIEWS.
  *
  * Everything financial arrives as content, through two slots:
  *
- *  - {@link PrizeCounterProps.featureSlot} — a node rendered above the shelf,
+ *  - {@link PrizeCounterProps.featureSlot}, a node rendered above the shelf,
  *    where the Arcade Pass offer lives;
- *  - {@link PrizeCounterProps.redeemSlot} — a RENDER FUNCTION the detail panel
+ *  - {@link PrizeCounterProps.redeemSlot}, a RENDER FUNCTION the detail panel
  *    calls with the selected prize, where the cosmetic redeem control lives.
  *
  * Neither a `ReactNode` nor a callback carries an import, so the shelf's
@@ -96,7 +96,7 @@ export function PrizeCounter({ catalog, featureSlot, redeemSlot }: PrizeCounterP
 
   return (
     <div data-prize-counter className="flex h-full min-h-[320px] flex-col">
-      {/* ── The sign and the balance — always visible, on every width. ── */}
+      {/* ── The sign and the balance, always visible, on every width. ── */}
       <div className="shrink-0 border-b border-island-wood/20 bg-gradient-to-b from-island-purple/15 to-transparent px-3 pb-2 pt-3 sm:px-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p
@@ -128,7 +128,7 @@ export function PrizeCounter({ catalog, featureSlot, redeemSlot }: PrizeCounterP
         </div>
         {!isLoggedIn && (
           <p data-prize-counter-logged-out role="status" className="mt-1 text-xs blobbi-text-muted">
-            Log in to see your tickets and what you own — browsing is free.
+            Log in to see your tickets and what you own, browsing is free.
           </p>
         )}
         {/*
@@ -189,7 +189,7 @@ export function PrizeCounter({ catalog, featureSlot, redeemSlot }: PrizeCounterP
                 data-prize-empty="filter"
                 className="rounded-2xl border-2 border-dashed border-island-wood/30 p-6 text-center text-sm blobbi-text-muted"
               >
-                Nothing on this shelf yet — try another one.
+                Nothing on this shelf yet; try another one.
               </p>
             ) : (
               <ul

@@ -20,7 +20,7 @@ function buildWorld() {
 
 /**
  * Dispatch a bubbling pointer-style MouseEvent and evaluate the predicate
- * INSIDE the container's listener — exactly where production evaluates it
+ * INSIDE the container's listener, exactly where production evaluates it
  * (`composedPath()` is only populated while the event is dispatching).
  */
 function moveAllowed(container: HTMLElement, target: Element, init: MouseEventInit = {}): boolean {
@@ -47,7 +47,7 @@ describe('shouldTriggerWorldMove', () => {
         expect(moveAllowed(container, ground)).toBe(true);
   });
 
-  it('blocks taps on buttons — including nested icon content', () => {
+  it('blocks taps on buttons, including nested icon content', () => {
     const container = buildWorld();
     const button = document.createElement('button');
     const icon = document.createElement('span');
@@ -56,7 +56,7 @@ describe('shouldTriggerWorldMove', () => {
         expect(moveAllowed(container, icon)).toBe(false);
   });
 
-  it('blocks taps on interactive world objects — including nested images', () => {
+  it('blocks taps on interactive world objects, including nested images', () => {
     const container = buildWorld();
     const bush = document.createElement('div');
     bush.setAttribute('data-block-move', '');

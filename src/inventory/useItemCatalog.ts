@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — item catalog query hook (Phase 3).
+ * Blobbi Island: item catalog query hook (Phase 3).
  *
  * Loads the official kind:31632 Game Item Definitions from the official issuer,
  * preferring the official item relays and additionally using the app's
@@ -77,7 +77,7 @@ async function fetchOfficialDefinitions(
 ): Promise<Map<string, GameItemDefinition>> {
   // ONE filter covering consumables AND cosmetics. They are separate identity
   // lists but the same issuer, the same kind and the same cache, so splitting
-  // them would buy nothing and cost a second round trip per relay — and the
+  // them would buy nothing and cost a second round trip per relay, and the
   // accessory path explicitly must not add a query per Blobbi or per accessory.
   const filter = {
     kinds: [KIND_GAME_ITEM_DEFINITION],
@@ -101,8 +101,8 @@ async function fetchOfficialDefinitions(
  * Select the newest VALID official definition per address across event batches.
  *
  * Parsing/issuer-enforcement happens FIRST (via `parseOfficialItemDefinition`),
- * so a newer INVALID event or an event from a wrong issuer can never win over —
- * or hide — an older valid one, and never enters the fetched map at all.
+ * so a newer INVALID event or an event from a wrong issuer can never win over,
+ * or hide: an older valid one, and never enters the fetched map at all.
  * Exported for testing.
  */
 export function selectNewestValidDefinitions(
@@ -188,7 +188,7 @@ export function useItemCatalog() {
       }
 
       // Effect items resolve into the SAME map for the same reason cosmetics
-      // do — one catalog, one cache. Counted separately so the existing
+      // do: one catalog, one cache. Counted separately so the existing
       // coverage figures keep their meaning. A missing fetched definition
       // costs only description text and marked image views; ACTIVATION never
       // depends on this map (see src/effects/official-visual-effect-items.ts).

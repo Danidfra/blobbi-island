@@ -206,7 +206,7 @@ describe('remote names', () => {
     expect(resolve(STANDARD_POLICY, 'Rocket')).toEqual({ name: 'Rocket', source: 'authored' });
   });
 
-  it('never shows an authored name where they are not — even a clean one', () => {
+  it('never shows an authored name where they are not, even a clean one', () => {
     // The strong reading of the capability, and the one that matters: a filter
     // would pass "come find me on discord", which is the message that counts.
     //

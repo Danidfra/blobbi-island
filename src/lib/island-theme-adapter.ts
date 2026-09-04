@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the adapter from a Nostr theme's three colours to the
+ * Blobbi Island: the adapter from a Nostr theme's three colours to the
  * island's sixteen.
  *
  * ## The problem this solves
@@ -26,7 +26,7 @@
  * is SOLVED: its hue and saturation come from the theme, and its lightness is
  * walked until the pairings it participates in clear their WCAG threshold. A
  * theme with terrible colours therefore comes out legible rather than pretty,
- * which is the correct trade — the alternative is a game the player cannot
+ * which is the correct trade, the alternative is a game the player cannot
  * read.
  *
  * ## What is derived from what
@@ -41,11 +41,11 @@
  *
  * ## Scenery is blended, not replaced
  *
- * `sky`, `ocean` and `grass` colour the WORLD — the sea is a sea. Deriving them
+ * `sky`, `ocean` and `grass` colour the WORLD, the sea is a sea. Deriving them
  * from an arbitrary primary would give a purple ocean. Ignoring the theme
  * entirely would put a bright midday sky above dark dusk panels. So each takes
  * the default theme's hue, blended a third of the way toward the theme's
- * background, with its lightness moved into the theme's register — which is,
+ * background, with its lightness moved into the theme's register, which is,
  * by hand, exactly what Lantern Night does.
  */
 
@@ -66,7 +66,7 @@ import {
 
 type Hsl = { h: number; s: number; l: number };
 
-/** The default theme's palette — the reference the scenery blends from. */
+/** The default theme's palette, the reference the scenery blends from. */
 const REFERENCE = resolveIslandTheme(DEFAULT_ISLAND_THEME_ID).palette;
 
 function hsl(triplet: string, fallback: Hsl = { h: 0, s: 0, l: 50 }): Hsl {
@@ -96,8 +96,8 @@ function mix(a: Hsl, b: Hsl, t: number): Hsl {
  *
  * `direction` is the first way tried; if it runs out of range without
  * satisfying everything, the other way is tried from the start point. If
- * NEITHER can satisfy the set — which happens when a role must contrast with
- * both a very light and a very dark surface — the best-scoring lightness found
+ * NEITHER can satisfy the set, which happens when a role must contrast with
+ * both a very light and a very dark surface, the best-scoring lightness found
  * is returned. That is a deliberate "least bad", not a silent failure: the
  * caller has already ordered the constraints so the most important one is
  * weighted first, and the picker warns the player when the result is still
@@ -152,7 +152,7 @@ function solveLightness(
  * legibility bar (no text is involved) but a "can you see that this is a panel"
  * one. Bounded to 60 steps and returns the best it managed, because for a
  * surface at the very top or bottom of the lightness range there may be
- * nowhere left to go — and one flat surface is still better than a thrown error
+ * nowhere left to go, and one flat surface is still better than a thrown error
  * in the middle of applying somebody's theme.
  */
 function separate(from: Hsl, candidate: Hsl, step: number): Hsl {
@@ -183,8 +183,8 @@ function desaturate(base: Hsl, max: number): Hsl {
  *
  * Deterministic: the same three colours always produce the same sixteen, on
  * every device and in every build. That matters because the palette is not
- * stored — it is recomputed from the three colours every time the theme
- * resolves — so a non-deterministic derivation would mean a theme that looked
+ * stored: it is recomputed from the three colours every time the theme
+ * resolves: so a non-deterministic derivation would mean a theme that looked
  * different on reload.
  */
 export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
@@ -200,8 +200,8 @@ export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
   // one deepens them, which is what Cozy Day does by hand.
   //
   // The DIRECTION is chosen by where the background has room, not by whether
-  // the theme is dark. Those usually agree — a near-black page can only go up,
-  // a near-white one can only go down — but they part company exactly where it
+  // the theme is dark. Those usually agree, a near-black page can only go up,
+  // a near-white one can only go down, but they part company exactly where it
   // matters: a mid-lightness background counted as "light" would step its
   // panels DOWN into the 40s, where no text colour on earth clears 4.5:1.
   const step = bg.l < 58 ? 1 : -1;
@@ -211,7 +211,7 @@ export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
   // green at 50% and the same green at 55% differ by a ratio of 1.003, because
   // the green channel is already clipped at 1.0 in both and luminance barely
   // moves. So each step down the ladder also calms the colour, which moves
-  // luminance for any hue — and does nothing at all to an already-desaturated
+  // luminance for any hue, and does nothing at all to an already-desaturated
   // theme, where `min` keeps the author's value. `separate` is the backstop:
   // it widens the step until the two surfaces are actually distinguishable.
   const cream = separate(page, { ...bg, s: Math.min(bg.s, 62), l: clampL(bg.l + step * 5) }, step);
@@ -251,7 +251,7 @@ export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
   );
 
   // ── Chrome and actions ────────────────────────────────────────────────────
-  // The frame. Decorative, so it only owes 3:1 against the page — it carries no
+  // The frame. Decorative, so it only owes 3:1 against the page; it carries no
   // text, which is exactly why `--primary` points at `wood-dark` and not here.
   const wood = solveLightness(
     desaturate({ ...primary, l: dark ? 58 : 54 }, 45),
@@ -269,7 +269,7 @@ export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
     dark ? 'lighter' : 'darker',
   );
   // The accent. The theme's primary at full saturation, solved in BOTH
-  // directions — it is the accent button's surface and the colour of every
+  // directions: it is the accent button's surface and the colour of every
   // price, so a value that fixes one breaks the other unless both are held.
   const purple = solveLightness(
     primary,
@@ -307,7 +307,7 @@ export function paletteFromCoreColors(colors: CoreThemeColors): IslandPalette {
     ],
     dark ? 'lighter' : 'darker',
   );
-  // The readable counterpart of grass — a label colour, not a fill.
+  // The readable counterpart of grass, a label colour, not a fill.
   const grassDark = solveLightness(
     { ...grass, s: Math.min(grass.s, 40) },
     [{ against: creamT, min: 4.5 }],
@@ -357,8 +357,8 @@ function clampL(l: number): number {
  *
  * The reverse direction, and it is lossy by construction: sixteen authored
  * colours do not fit in three. The three chosen are the three that mean the
- * same thing in both models — the page, the body text, and the accent that
- * drives calls to action — so a Ditto user who applies an Island theme gets a
+ * same thing in both models, the page, the body text, and the accent that
+ * drives calls to action, so a Ditto user who applies an Island theme gets a
  * UI that reads like the island rather than a random tint of it.
  *
  * `purple` is published as `primary` and not `wood-dark`, because Ditto derives
@@ -396,7 +396,7 @@ export interface ContrastFinding {
  *
  * What is DONE with the answer is the policy question, and Island's answer is
  * deliberately not "block". A theme that fails is still offered and still
- * applies — it is the player's island — but the picker says so before they
+ * applies: it is the player's island, but the picker says so before they
  * choose, and the create flow says so before they publish. Silently correcting
  * would make the preview a lie; blocking would make Island reject themes Ditto
  * happily renders, which is the opposite of interoperable.
@@ -426,8 +426,8 @@ export function contrastFailures(palette: IslandPalette): ContrastFinding[] {
 /**
  * The interoperable theme a BUILT-IN Island theme publishes as.
  *
- * A built-in has no font and no background media — it is authored art
- * direction, and the island's own type is part of that — so the config is the
+ * A built-in has no font and no background media; it is authored art
+ * direction, and the island's own type is part of that, so the config is the
  * three colours plus the name. That is a complete, valid Ditto theme: it is
  * exactly what Ditto's own presets look like on the wire.
  */

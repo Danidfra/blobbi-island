@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — placement AUTHORIZATION POLICY.
+ * Blobbi Island: placement AUTHORIZATION POLICY.
  *
  * WHY THIS FILE EXISTS AT ALL.
  *
@@ -12,20 +12,20 @@
  *
  * So the policy is here, in one file, written down:
  *
- *   1. AUTHOR — the placement author must be allowed to modify the Blobbi.
+ *   1. AUTHOR: the placement author must be allowed to modify the Blobbi.
  *      Island's rule is the simplest sound one: the author must be the Blobbi's
  *      owner. Delegation does not exist on Island today; when it does, it is
  *      widened HERE and nowhere else.
- *   2. OWNERSHIP — equipping requires the item in the player's kind:31633
+ *   2. OWNERSHIP: equipping requires the item in the player's kind:31633
  *      inventory with quantity > 0. Placement is not possession, so this is
  *      checked against the inventory, never inferred from the placement.
- *   3. ISSUER — only cosmetics whose kind:31632 definition is signed by the
+ *   3. ISSUER: only cosmetics whose kind:31632 definition is signed by the
  *      official issuer are offered or rendered in production.
- *   4. FORM — when the definition declares a non-empty `visual.forms`, the
+ *   4. FORM: when the definition declares a non-empty `visual.forms`, the
  *      Blobbi's current form must be among them. An ABSENT `forms` is no
  *      restriction at all; a MALFORMED one (present but unusable, including
  *      `[]`) makes the definition invalid for normal production equipping.
- *   5. SLOT — the definition must declare a `visual.slot` this renderer
+ *   5. SLOT: the definition must declare a `visual.slot` this renderer
  *      supports, and the entry must claim that same slot. A missing or
  *      malformed slot is not equippable: Island cannot safely infer placement
  *      from an item id or a code prefix.
@@ -84,7 +84,7 @@ export function isEffectPlacementSlot(
 }
 
 /**
- * Any slot Island can write into a kind:31634 equipment document — a wearable
+ * Any slot Island can write into a kind:31634 equipment document, a wearable
  * accessory slot or a visual-effect slot. This is the vocabulary the mutation
  * layer validates against; which ITEMS may occupy which slot is a separate
  * question answered per item (wearables by their published `visual.slot`,
@@ -119,7 +119,7 @@ export type PlacementRejectionReason =
   | 'unsupported-mode'
   /**
    * The item is an official VISUAL-EFFECT item, which this wearable path never
-   * draws — it is resolved by `resolveActiveBlobbiEffects` instead. Reported
+   * draws: it is resolved by `resolveActiveBlobbiEffects` instead. Reported
    * here so a caller that feeds every entry through the wearable policy gets an
    * honest "not mine" rather than a misleading `untrusted-issuer`.
    */
@@ -154,7 +154,7 @@ function refuse(reason: PlacementRejectionReason): PlacementDecision {
  * Whether `authorPubkey` may modify the given Blobbi's equipment.
  *
  * Owner-only. A placement event signed by anyone else is a valid kind:31634
- * document that Island does not act on — it is not corrupt, it simply is not
+ * document that Island does not act on; it is not corrupt, it simply is not
  * about a Blobbi its author controls.
  */
 export function mayModifyCharacter(
@@ -169,12 +169,12 @@ export function mayModifyCharacter(
  *
  * Three outcomes, deliberately not two:
  *
- * - `'no-restriction'` — the issuer did not use the optional field. An absent
+ * - `'no-restriction'`: the issuer did not use the optional field. An absent
  *   field is silence, and silence is not a restriction: a plain cosmetic with
  *   no `forms` key fits every Blobbi.
- * - `'compatible'` / `'incompatible'` — the issuer declared a non-empty list,
+ * - `'compatible'` / `'incompatible'`: the issuer declared a non-empty list,
  *   so the current form must be in it.
- * - `'malformed'` — the issuer published something unusable (`forms: []`, a
+ * - `'malformed'`: the issuer published something unusable (`forms: []`, a
  *   non-array, or an array with no usable strings). That is a broken
  *   definition. Island refuses it for normal production equipping rather than
  *   guessing whether they meant "all forms" or "no forms".
@@ -202,7 +202,7 @@ export function formCompatibility(
 /**
  * Convenience predicate: may this item be worn on this form?
  *
- * A malformed `forms` declaration is NOT compatible — see
+ * A malformed `forms` declaration is NOT compatible; see
  * {@link formCompatibility} for why absent and malformed differ.
  */
 export function formIsCompatible(
@@ -324,7 +324,7 @@ export interface RenderablePlacement {
  * Filter parsed placement entries down to the ones production may draw.
  *
  * Deterministic slot conflict handling: when a document carries more than one
- * equipped entry for a slot — which the package tolerates and warns about —
+ * equipped entry for a slot, which the package tolerates and warns about,
  * the LAST one wins, matching `getLastEquippedPlacementBySlot` and the
  * last-wins semantics of `setEquippedPlacementForSlot`. The alternative
  * (drawing both) would stack two hats on one head.

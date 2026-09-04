@@ -25,7 +25,7 @@ import { CareStoreModal } from './CareStoreModal';
  * ## Presentation here, money elsewhere
  *
  * This component renders four blocker rectangles, two shop controls and a back
- * arrow. It imports no inventory writer, no wallet and no Nostr publisher — the whole
+ * arrow. It imports no inventory writer, no wallet and no Nostr publisher, the whole
  * financial surface arrives as `<CareStoreModal>`, mounted only while open, and
  * the modal in turn only calls the shared purchase hook. The room cannot spend a
  * Coin even by mistake.
@@ -38,15 +38,15 @@ import { CareStoreModal } from './CareStoreModal';
  * reachable, it carries its own accessible name, and `BLOCK_UI_SELECTOR` already
  * treats `button` as move-blocking, so tapping it never also starts a raw world
  * walk. It routes through the SAME `requestInteraction` path every door uses, so
- * the Blobbi walks over and the modal opens on arrival — never on the click.
+ * the Blobbi walks over and the modal opens on arrival; never on the click.
  *
  * ## Two ways in, one shop
  *
  * The counter is the immersive route; the corner Shop button is the obvious one.
  * They are two CONTROLS, not two shops: both set the single `isShopOpen` flag
  * this component owns, and there is exactly one `<CareStoreModal>` in the tree.
- * The only difference between them is the walk — the counter makes you go to the
- * till, the shortcut does not — which is the whole point of having both.
+ * The only difference between them is the walk, the counter makes you go to the
+ * till, the shortcut does not, which is the whole point of having both.
  */
 
 interface CareStoreRoomProps {
@@ -88,8 +88,8 @@ export function CareStoreRoom({ blobbiRef, selectedBlobbiId = null }: CareStoreR
       ))}
 
       {/*
-        The checkout. Unobtrusive by default — the artwork already looks like a
-        counter — and it lifts on hover/focus/press so the affordance is there on
+        The checkout. Unobtrusive by default, the artwork already looks like a
+        counter: and it lifts on hover/focus/press so the affordance is there on
         pointer, keyboard and touch alike.
       */}
       <button
@@ -106,8 +106,8 @@ export function CareStoreRoom({ blobbiRef, selectedBlobbiId = null }: CareStoreR
       />
 
       {/*
-        The persistent shortcut. Opens the shop where the player stands — no
-        walk — because its job is convenience, not immersion. Same handler, same
+        The persistent shortcut. Opens the shop where the player stands; no
+        walk: because its job is convenience, not immersion. Same handler, same
         state, same modal as the counter above.
       */}
       <button

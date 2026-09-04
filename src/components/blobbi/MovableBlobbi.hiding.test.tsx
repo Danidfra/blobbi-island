@@ -1,10 +1,10 @@
 /**
- * Coverage for `visualHidden` — how "hidden inside a hiding spot" (e.g. a Town
+ * Coverage for `visualHidden`: how "hidden inside a hiding spot" (e.g. a Town
  * bush) is rendered for the LOCAL player.
  *
  * The requirement is that the Blobbi is truly not painted (removing the bush art
  * must reveal empty ground, not a Blobbi behind it) while everything else keeps
- * working: the logical world position, the movement animation and — critically —
+ * working: the logical world position, the movement animation and, critically,
  * the world-click listener, so the very next click both reveals the Blobbi and
  * walks it out. That is why hiding does NOT reuse `isVisible`, which unmounts
  * the character together with its input handling.
@@ -103,7 +103,7 @@ describe('MovableBlobbi visualHidden (hidden in a hiding spot)', () => {
     h.hide();
 
     // Nothing of the Blobbi is painted: no sprite, no ground shadow, no
-    // drop-shadow filter — only the (empty) position anchor survives.
+    // drop-shadow filter: only the (empty) position anchor survives.
     expect(h.sprite()).not.toBeInTheDocument();
     const anchor = h.anchor();
     expect(anchor).toBeInTheDocument();

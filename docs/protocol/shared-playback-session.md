@@ -1,4 +1,4 @@
-# Shared Playback Session — Protocol Specification v1
+# Shared Playback Session: Protocol Specification v1
 
 Experimental application protocol for host-authoritative, synchronized playback of recorded
 media across Nostr clients, as used by the Blobbi Island theater.
@@ -38,9 +38,9 @@ not parse as this schema, rather than trusting the kind number alone.
 | --- | --- | --- | --- |
 | This repository | `grep -rn "21951\|31951"` over `*.ts, *.tsx, *.md, *.json` excluding `node_modules`/`dist` | none | none |
 | Official NIPs kind table | fetched `raw.githubusercontent.com/nostr-protocol/nips/master/README.md` (363 lines) | absent | absent |
-| `nostr-protocol/registry-of-kinds` | fetched `master/schema.yaml` (4 410 lines) — the machine-readable registry the NIPs README points to | absent | absent |
+| `nostr-protocol/registry-of-kinds` | fetched `master/schema.yaml` (4 410 lines): the machine-readable registry the NIPs README points to | absent | absent |
 | `nostrbook.dev/kinds` | fetched and grepped (91 KB) | absent | absent |
-| GitHub code search | `gh search code` — bare `31951`; `21951 nostr`; `"kind 21951"`; `"kinds: [31951]"`; `"shared-playback" nostr`; both numbers scoped to `--owner nostr-protocol` | no Nostr-related hit (bare `31951` returns only unrelated numeric data: stock CSVs, proxy lists, DOI fragments) | no hit |
+| GitHub code search | `gh search code`: bare `31951`; `21951 nostr`; `"kind 21951"`; `"kinds: [31951]"`; `"shared-playback" nostr`; both numbers scoped to `--owner nostr-protocol` | no Nostr-related hit (bare `31951` returns only unrelated numeric data: stock CSVs, proxy lists, DOI fragments) | no hit |
 | GitHub issue search | `gh search issues --repo nostr-protocol/nips "watch party"` | no hit | no hit |
 | Web search | synchronized-playback / watch-party NIP proposals; `nostr kind 31951 / 21951` | nothing relevant | nothing relevant |
 | **Live relays** | read-only `REQ` probe, no `EVENT` ever sent (§1.3) | 0 events | 0 events |
@@ -60,20 +60,20 @@ waited for `EOSE`, then held the live subscriptions open for 20 s. It never publ
 | `wss://relay.ditto.pub` | **configured default** (`src/App.tsx:40`) | yes | 0 | 0 | 0 | 0 |
 | `wss://relay.primal.net` | **configured preset** (`src/App.tsx:45`) | yes | 0 | 0 | 0 | 0 |
 | `wss://nos.lol` | known ecosystem | yes | 0 | 0 | 0 | 0 |
-| `wss://relay.nostr.band` | known ecosystem (indexer) | **no** — WebSocket handshake refused (non-101) from this environment | — | — | — | — |
-| `wss://relay.damus.io` | known ecosystem | **no** — WebSocket handshake refused (non-101) from this environment | — | — | — | — |
+| `wss://relay.nostr.band` | known ecosystem (indexer) | **no**: WebSocket handshake refused (non-101) from this environment |, |, |, |, |
+| `wss://relay.damus.io` | known ecosystem | **no**: WebSocket handshake refused (non-101) from this environment |, |, |, |, |
 
 All three reachable relays returned `EOSE` for every subscription with zero events, and no
-`NOTICE` or `CLOSED` — i.e. they accepted queries for both custom kinds and simply had nothing.
+`NOTICE` or `CLOSED`: i.e. they accepted queries for both custom kinds and simply had nothing.
 
-### 1.4 Limits of this evidence — read this before treating either kind as "free"
+### 1.4 Limits of this evidence, read this before treating either kind as "free"
 
 1. **Absence from relays and registries does not guarantee global uniqueness.** Nostr kind
    numbers are not allocated by anyone. Another application may already use `31951` or `21951`
    on relays that were not queried, or may adopt them tomorrow.
 2. **The `21951` result is weak by construction.** Kind `21951` is *ephemeral*: per NIP-01,
    relays are not expected to store events in `20000–29999`. A stored-event query returning zero
-   is therefore **uninformative** — it would return zero even if the kind were in heavy use.
+   is therefore **uninformative**: it would return zero even if the kind were in heavy use.
    Only the live subscription can observe usage, and a 20-second window across three relays is
    very thin evidence. Treat "no visible usage of 21951" as *no evidence of use*, not as
    *evidence of no use*.
@@ -98,7 +98,7 @@ host is discarded silently.
 | --- | --- | --- | --- |
 | **Session** | `31951` addressable event, `d` = session id | until `status: ended` or `expiration` | the recoverable source of truth |
 | **Room** | `r` tag | permanent | reusable physical/logical place (`blobbi-island:theater:main`) |
-| **Invitation code** | `c` tag | session lifetime | short, human-typable discovery handle — **not** a secret |
+| **Invitation code** | `c` tag | session lifetime | short, human-typable discovery handle, **not** a secret |
 | **Revision** | `rev` in both kinds' content | session lifetime | total order over canonical state transitions |
 | **Canonical state** | `31951` content | durable | media + play/pause + position + rate at a known instant |
 | **Command** | `21951` content | ~30 s | low-latency notification of a state transition |
@@ -125,19 +125,19 @@ host is discarded silently.
 
 **Invariants**
 
-* **I1** — A command is never the only source of truth. Any client that misses every `21951`
+* **I1**: A command is never the only source of truth. Any client that misses every `21951`
   for a transition is fully corrected by the next `31951` it receives.
-* **I2** — Both events for one action carry the **same `rev`** and describe the **same** state.
-* **I3** — `31951` alone is sufficient to reconstruct a correct client, from a single relay query.
-* **I4** — The ephemeral layer is a **latency optimization**. If a relay drops kind `21951`
+* **I2**: Both events for one action carry the **same `rev`** and describe the **same** state.
+* **I3**: `31951` alone is sufficient to reconstruct a correct client, from a single relay query.
+* **I4**: The ephemeral layer is a **latency optimization**. If a relay drops kind `21951`
   entirely, the product still works, with `31951`-only latency.
-* **I5** — Only the pubkey that authored the `31951` event may change session state in v1.
+* **I5**: Only the pubkey that authored the `31951` event may change session state in v1.
 
 ---
 
 ## 3. Session identity, room identity, invitation code
 
-### 3.1 `d` — session identity
+### 3.1 `d`: session identity
 
 * A **new, high-entropy value per session**. Never reused across sessions.
 * Recommended: lowercase UUIDv4 from `crypto.randomUUID()` (already used for presence session
@@ -153,7 +153,7 @@ host is discarded silently.
   This string is the only identifier other systems (presence, UI, deep links) are allowed to
   hold (§14).
 
-### 3.2 `r` — reusable room identity
+### 3.2 `r`: reusable room identity
 
 ```
 ["r", "blobbi-island:theater:main"]
@@ -166,7 +166,7 @@ host is discarded silently.
   always read together with `t = shared-playback`.
 * Enables "what is playing in the theater right now" queries (§16.7) without a session id.
 
-### 3.3 `c` — invitation code
+### 3.3 `c`: invitation code
 
 ```
 ["c", "B7X4QP"]
@@ -178,7 +178,7 @@ host is discarded silently.
 ABCDEFGHJKMNPQRSTUVWXYZ23456789
 ```
 
-Excluded: `0`, `O`, `1`, `I`, `L` (visually ambiguous) and `U`… — note `U` **is** included; only
+Excluded: `0`, `O`, `1`, `I`, `L` (visually ambiguous) and `U`…; note `U` **is** included; only
 the five listed glyphs are removed. Length 6 ⇒ `31⁶ = 887 503 681` codes.
 
 * **Case:** codes are generated and published **uppercase**; input is uppercased and trimmed
@@ -186,7 +186,7 @@ the five listed glyphs are removed. Length 6 ⇒ `31⁶ = 887 503 681` codes.
 * **Generation** MUST avoid modulo bias: draw bytes from `crypto.getRandomValues`, reject any
   byte `≥ 248` (`256 − 256 mod 31`), then index `byte mod 31`.
 * **Collision probability** is birthday-bounded: with `N` simultaneously live sessions,
-  `P ≈ N²/(2 × 8.875×10⁸)` — about `5.6×10⁻⁴` at `N = 1000`. Non-adversarial collisions are
+  `P ≈ N²/(2 × 8.875×10⁸)`: about `5.6×10⁻⁴` at `N = 1000`. Non-adversarial collisions are
   negligible; adversarial squatting on a code is trivially possible, which is why resolution
   (§13) never assumes uniqueness.
 * **The code is public.** It is an indexed tag on a public relay and is enumerable. It is a
@@ -194,7 +194,7 @@ the five listed glyphs are removed. Length 6 ⇒ `31⁶ = 887 503 681` codes.
 
 ---
 
-## 4. Kind 31951 — Shared Playback Session (addressable)
+## 4. Kind 31951: Shared Playback Session (addressable)
 
 ### 4.1 Tags
 
@@ -242,10 +242,10 @@ interface SharedPlaybackSessionContent {
 | Field | Meaning |
 | --- | --- |
 | `version` | Schema version. A client that does not implement a version MUST ignore the event rather than guess. `1` is the only defined value. |
-| `rev` | Non-negative, monotonically increasing integer, one step per canonical action. `0` is the creation revision. It is the primary ordering key (§7). Not a counter of *events* — a retried publish reuses its `rev`. |
+| `rev` | Non-negative, monotonically increasing integer, one step per canonical action. `0` is the creation revision. It is the primary ordering key (§7). Not a counter of *events*, a retried publish reuses its `rev`. |
 | `media.provider` / `media.id` | Identifies what to load. `id` is validated by provider-specific shape and, in Blobbi Island, additionally against the curated catalog (§10.7). |
 | `playback.state` | Intent, not observation. `playing` means "the timeline is advancing"; a guest that is buffering is still in a `playing` session. |
-| `playback.position` | Position **at the moment `updatedAt` was taken**, in seconds. Fractional allowed. This is a *sample*, not a live value — clients extrapolate (§8.1). |
+| `playback.position` | Position **at the moment `updatedAt` was taken**, in seconds. Fractional allowed. This is a *sample*, not a live value, clients extrapolate (§8.1). |
 | `playback.updatedAt` | The host's own wall clock in **milliseconds** when the sample was taken. Millisecond resolution exists precisely because `created_at` (seconds) is too coarse for playback timing. |
 | `playback.rate` | Speed multiplier applied to the extrapolation. `1` unless the host changed it. |
 | `permissions.mode` | `host-only` in v1. The field exists so a future `co-host` / `open` mode is additive. |
@@ -260,7 +260,7 @@ An event is accepted as a session state only if **all** hold:
 
 1. `kind === 31951`.
 2. `d`, `r`, `t: shared-playback`, `status`, `expiration` tags present; `d` non-empty.
-3. `expiration` parses as an integer and is `> now` (NIP-40 is advisory — relays may serve
+3. `expiration` parses as an integer and is `> now` (NIP-40 is advisory, relays may serve
    expired events, so the client filters).
 4. `content` parses as JSON and matches §4.2 structurally.
 5. `version === 1`.
@@ -273,7 +273,7 @@ An event is accepted as a session state only if **all** hold:
     means a malformed or hand-crafted event.
 11. `media.provider` is a supported provider and `media.id` matches that provider's shape.
 12. For a session the client is already tracking: `event.pubkey === knownHostPubkey`. **The host
-    of a session address can never change** — the address contains the pubkey, so this is a
+    of a session address can never change**: the address contains the pubkey, so this is a
     consistency check against spoofed addresses in UI input.
 13. Application layer (Blobbi Island, not the protocol): `media.id ∈ curated catalog`.
 
@@ -290,7 +290,7 @@ Rejected events are dropped silently with a debug log. Never partially applied.
 
 ---
 
-## 5. Kind 21951 — Shared Playback Command (ephemeral)
+## 5. Kind 21951: Shared Playback Command (ephemeral)
 
 ### 5.1 Tags
 
@@ -303,7 +303,7 @@ Rejected events are dropped silently with a debug log. Never partially applied.
 | `client` | 1, recommended | `blobbi-island` | |
 | `alt` | 1, recommended | e.g. `Shared playback command: seek` | NIP-31 |
 
-No `d` tag — ephemeral events are not addressable.
+No `d` tag: ephemeral events are not addressable.
 
 **30 s TTL rationale:** long enough to survive relay hops and a brief client stall; short enough
 that a replayed command is already invalid, and far shorter than the drift-correction interval so
@@ -326,19 +326,19 @@ type SharedPlaybackCommand =
 `position`, `updatedAt`, `rate` and `rev` carry **exactly the values published in the matching
 `31951`** (I2). A command is a self-contained absolute state, not a delta.
 
-### 5.3 Absolute positions only — no relative history
+### 5.3 Absolute positions only; no relative history
 
 The UI exposes **−10 s**, **+10 s** and **Restart** as distinct buttons, and the protocol records
 *intent* in `reason`, but the wire value is always the **resulting absolute position**:
 
-Illustration only — the revision below is arbitrary and unrelated to the §16 timeline:
+Illustration only: the revision below is arbitrary and unrelated to the §16 timeline:
 
 ```jsonc
 // +10 pressed at position 180 → correct: the RESULT is transmitted
 { "version": 1, "command": "seek", "rev": 42, "position": 190,
   "updatedAt": 1785175320000, "rate": 1, "reason": "skip-forward" }
 
-// WRONG — never do this
+// WRONG: never do this
 { "command": "skip-forward", "amount": 10 }
 ```
 
@@ -353,14 +353,14 @@ A command is applied only if **all** hold:
 
 1. `kind === 21951`.
 2. `expiration` present, parses, and is `> now`.
-3. Exactly one `a` tag, and it equals the address of the session the client is currently in —
+3. Exactly one `a` tag, and it equals the address of the session the client is currently in,
    compared **string-exact** after normalization (lowercase hex pubkey).
 4. `event.pubkey === hostPubkey` parsed out of that `a` tag. A command signed by anyone else is
-   discarded — this is the entire guest-cannot-control guarantee, and it is enforced by signature
+   discarded: this is the entire guest-cannot-control guarantee, and it is enforced by signature
    verification, not by UI.
 5. `content` parses as JSON and matches one variant of §5.2; `command` is a known literal.
 6. `version === 1`.
-7. `rev > lastAppliedRev` for that session (strictly greater — §7).
+7. `rev > lastAppliedRev` for that session (strictly greater, §7).
 8. Numeric bounds as in §4.4 (7)–(10), plus `set-media` media validation and the catalog check.
 9. The client is not in `ended` state for that session.
 
@@ -368,7 +368,7 @@ A command is applied only if **all** hold:
 
 Some relays reject or drop unknown ephemeral kinds. Clients MUST NOT depend on `21951`:
 
-* A client that never observes a `21951` is still correct (I4) — it follows `31951`.
+* A client that never observes a `21951` is still correct (I4): it follows `31951`.
 * After joining, if the client has received ≥ 2 canonical updates but zero commands, it MAY log
   "ephemeral channel unavailable" for diagnostics. It MUST NOT change behavior or warn the user.
 
@@ -436,11 +436,11 @@ same event; it never triggers for a well-behaved host.
 
 * A command or state with `rev ≤ lastAppliedRev` is **ignored**.
 * Equal `rev` from the same host is expected (the command/canonical pair, or a publish retry) and
-  is a **no-op** — the state was already applied.
+  is a **no-op**: the state was already applied.
 * Equal `rev` with *materially different* state (media, play/pause, or position differing by
   > 0.25 s) is a **protocol violation**. The client prefers the `31951` (canonical) event,
   applies rules 2–3 among candidates, and logs. **Legitimate hosts MUST NOT do this.**
-* A `rev` that jumps forward by more than 1 is normal — it means commands were missed. There is
+* A `rev` that jumps forward by more than 1 is normal; it means commands were missed. There is
   nothing to replay: the absolute state is complete.
 
 **`created_at` alone is never sufficient.** A user can hit pause, seek and play inside one
@@ -478,14 +478,14 @@ expectedPosition = clamp(expectedPosition, 0, duration > 0 ? duration : +∞)
 * `elapsedMs` is clamped to `[0, 24 h]` before use, so a wildly wrong clock or a resurrected event
   can never produce a negative or astronomical target.
 
-### 8.2 Clock strategy — do not assume synchronized clocks
+### 8.2 Clock strategy, do not assume synchronized clocks
 
 `updatedAt` is the **host's** wall clock. Guest clocks routinely differ by seconds (and phones
 that just woke from sleep can be worse). Using it raw would inject that error directly into every
 position computation. Using `created_at` instead does not help: it is the same host clock at
 second resolution, and relays may not correct it either.
 
-**Recommended v1 approach — passive per-host offset estimate. No extra events, no round trips.**
+**Recommended v1 approach: passive per-host offset estimate. No extra events, no round trips.**
 
 On every accepted event from the host (command *or* canonical, including keepalives):
 
@@ -496,7 +496,7 @@ offset  = median(last 8 samples)                       // clamped to ±5 min
 
 * Until the first sample exists, `offset = 0`.
 * The estimate is reset when the tracked session or host changes.
-* The median over-estimates true skew by roughly the median one-way relay latency — typically
+* The median over-estimates true skew by roughly the median one-way relay latency, typically
   well under 200 ms, i.e. an order of magnitude below the 750 ms ignore threshold (§8.3). Good
   enough, and it needs no protocol support at all.
 * A keepalive every 20 s (§12.3) guarantees the estimate keeps refreshing during long pauses.
@@ -536,7 +536,7 @@ Additional guards:
 | **Seek beyond end** | `+10 s` publishes `min(current + 10, duration − 0.25)` when duration is known, else `current + 10`; receivers clamp again. |
 | **Video ended** | Player state `ENDED (0)`: stop correcting, hold at the end, show "Video finished". A canonical `playing` state whose `expectedPosition ≥ duration` is treated as ended, not as a seek target. The host decides what happens next (restart / change media / end). |
 | **Unavailable, region-blocked, embed-disabled** | Local, per-client failures (§9.2). The client shows the reason and **stays in the session** (chat/presence continue). It publishes nothing and stops correcting. The host is not told (v1 has no guest→host channel), so the host UI states that guests may see errors independently. |
-| **Playback-rate mismatch** | If the canonical `rate` is not in `getAvailablePlaybackRates()`, apply the nearest available rate, **suspend drift correction**, and show "This device can't match the host's playback speed — you may be out of sync". Without this, an un-matchable rate would trigger a hard seek every 5 s forever. |
+| **Playback-rate mismatch** | If the canonical `rate` is not in `getAvailablePlaybackRates()`, apply the nearest available rate, **suspend drift correction**, and show "This device can't match the host's playback speed; you may be out of sync". Without this, an un-matchable rate would trigger a hard seek every 5 s forever. |
 | **Suspended browser tab** | Timers are throttled or stopped. On `visibilitychange → visible`, run a reconciliation immediately instead of waiting for the tick, and if the last canonical update is older than 90 s, re-query the session (§8.7) before reconciling. |
 | **Device sleep** | Detected the same way, plus a wall-clock jump check inside the tick: if the measured gap since the previous tick exceeds `2 ×` the interval, treat it as a wake, force an immediate re-query + reconcile, and discard the oldest clock samples (a slept device's clock may have been corrected by the OS). |
 | **Clock differences** | §8.2. |
@@ -547,7 +547,7 @@ Additional guards:
 1. Resolve the invitation code to a session address (§13).
 2. Validate `status === 'active'` and `expiration > now` (§4.4). Reject `ended`/expired with an
    explicit message.
-3. Load the media: `cueVideoById(media.id)` — **cue**, not load, so nothing plays before the
+3. Load the media: `cueVideoById(media.id)`: **cue**, not load, so nothing plays before the
    position is known.
 4. On `onReady`, compute `expectedPosition` (§8.1) with whatever offset estimate exists.
 5. `seekTo(expectedPosition, true)`.
@@ -568,7 +568,7 @@ On a valid `21951`:
 1. validate host authority (§5.4 (4));
 2. validate the session address (§5.4 (3));
 3. reject stale revisions (§7);
-4. **apply immediately** — this is the low-latency path;
+4. **apply immediately**: this is the low-latency path;
 5. record `lastAppliedRev` and the command's `position`/`updatedAt`/`rate` as the working state;
 6. reconcile later against the matching `31951` (same `rev` ⇒ no-op; that is the expected case).
 
@@ -580,7 +580,7 @@ the offset sample and `expiration`.
 After a relay reconnect (or a wake, or any suspicion of missed traffic):
 
 1. **Query the latest `31951`** for the session address (§16.4).
-2. **Discard local or cached playback state** — the queried canonical state wins outright,
+2. **Discard local or cached playback state**: the queried canonical state wins outright,
    regardless of `lastAppliedRev`, when its `rev` is greater or equal; a *lower* `rev` from the
    relay means the host's last publish has not landed yet, so keep the local state and re-query
    shortly.
@@ -613,11 +613,11 @@ When one participant buffers:
 
 | Situation | Detection | Shared meaning |
 | --- | --- | --- |
-| **Host user-initiated pause** | host UI action | canonical `state: 'paused'` — the only pause that is shared |
-| **Buffering** | `onStateChange → 3 (BUFFERING)` | none — local, invisible to the protocol |
-| **Video ended** | `onStateChange → 0 (ENDED)` | none in v1 — the host decides the next action |
-| **Autoplay blocked** | `playVideo()` called while canonical is `playing`, but state never becomes `1` within ~2 s | none — local; show "Tap to watch" |
-| **Player not ready** | no `onReady` yet, or state `−1 (UNSTARTED)` / `5 (CUED)` | none — hold all commands as "pending apply" and apply the newest on ready |
+| **Host user-initiated pause** | host UI action | canonical `state: 'paused'`: the only pause that is shared |
+| **Buffering** | `onStateChange → 3 (BUFFERING)` | none, local, invisible to the protocol |
+| **Video ended** | `onStateChange → 0 (ENDED)` | none in v1, the host decides the next action |
+| **Autoplay blocked** | `playVideo()` called while canonical is `playing`, but state never becomes `1` within ~2 s | none, local; show "Tap to watch" |
+| **Player not ready** | no `onReady` yet, or state `−1 (UNSTARTED)` / `5 (CUED)` | none, hold all commands as "pending apply" and apply the newest on ready |
 
 A guest that is buffering is still, protocol-wise, in a `playing` session. Nothing about local
 readiness is synchronized (§15).
@@ -643,9 +643,9 @@ Common to every control:
 | 4 | **Skip forward 10 s** | `seekTo(min(cur+10, dur−0.25), true)` | `seek`, `reason: 'skip-forward'`, **absolute** result | same position | +1 | identical to a direct seek | at/near the end: clamp; if already within 0.25 s of the end, no-op and publish nothing |
 | 5 | **Skip backward 10 s** | `seekTo(max(0, cur−10), true)` | `seek`, `reason: 'skip-backward'` | same position | +1 | identical to a direct seek | at 0: no-op, publish nothing |
 | 6 | **Restart** | `seekTo(0, true)` (+ `playVideo()` if paused and the host wants to start) | `seek`, `position: 0`, `reason: 'restart'` | `position: 0`, state preserved | +1 | seek to 0, match state | none beyond seek failure |
-| 7 | **Change media** | `cueVideoById(id)` then honor state | `set-media` with `media`, `state`, `position: 0` | new `media`, `position: 0`, state preserved | +1 | `cueVideoById`, seek 0, then match state; on autoplay refusal show "Tap to watch" | reject ids outside the curated catalog **before** publishing; if the new video errors (100/101/150) the host keeps the session and picks another — the failed id stays canonical until replaced |
+| 7 | **Change media** | `cueVideoById(id)` then honor state | `set-media` with `media`, `state`, `position: 0` | new `media`, `position: 0`, state preserved | +1 | `cueVideoById`, seek 0, then match state; on autoplay refusal show "Tap to watch" | reject ids outside the curated catalog **before** publishing; if the new video errors (100/101/150) the host keeps the session and picks another, the failed id stays canonical until replaced |
 | 8 | **Change playback rate** | `setPlaybackRate(r)` | `set-rate` with `rate: r` @ current position | `rate: r` | +1 | apply if available, else nearest + suspend correction (§8.4) | host only offers rates from its own `getAvailablePlaybackRates()`; rates outside `0.25–4` are refused locally |
-| 9 | **End session** | stop correcting; optionally `pauseVideo()` | `end-session` @ final position | `status: 'ended'`, `state: 'paused'`, final `position`, `expiration: now + 10 min` | +1 | stop synchronizing, keep the local player where it is, show "The host ended the session" | if the `31951` publish fails, retry hard — an un-ended session lingers until `expiration`; the ephemeral `end-session` alone is not durable |
+| 9 | **End session** | stop correcting; optionally `pauseVideo()` | `end-session` @ final position | `status: 'ended'`, `state: 'paused'`, final `position`, `expiration: now + 10 min` | +1 | stop synchronizing, keep the local player where it is, show "The host ended the session" | if the `31951` publish fails, retry hard, an un-ended session lingers until `expiration`; the ephemeral `end-session` alone is not durable |
 
 **Reserved-but-unused revisions.** If an action is abandoned (signing declined, local player
 refused), the reserved `rev` is **released** and reused by the next action. `rev` is only
@@ -666,8 +666,8 @@ drags.
 ```
 1. compute the resulting canonical state (rev, media, state, position, updatedAt, rate)
 2. apply it OPTIMISTICALLY to the host's local player
-3. publish 21951  (ephemeral command)  — fire-and-forget, not awaited
-4. publish 31951  (canonical state)    — awaited, retried with backoff
+3. publish 21951  (ephemeral command): fire-and-forget, not awaited
+4. publish 31951  (canonical state): awaited, retried with backoff
 5. commit rev, reconcile failures
 ```
 
@@ -677,7 +677,7 @@ is one small write; delaying it behind an awaited addressable publish would add 
 to every guest. Step 4 is the durable one and is therefore the one that gets retries and error
 surfacing.
 
-**Both events are built from the same immutable snapshot** computed in step 1 — one `updatedAt`,
+**Both events are built from the same immutable snapshot** computed in step 1; one `updatedAt`,
 one `rev`, one position. They are never recomputed per event, which is what makes I2 hold.
 
 ### 11.2 Revision commitment
@@ -694,11 +694,11 @@ one `rev`, one position. They are never recomputed per event, which is what make
 | Failure | Immediate effect | Recovery | UI |
 | --- | --- | --- | --- |
 | **`21951` ok, `31951` fails** | Connected guests are correct. A late joiner or reconnecting client would read a stale canonical state with a *lower* `rev`. | Retry `31951` with backoff (e.g. 3 attempts over ~6 s) reusing the **same** `rev` and the **same** `updatedAt`/`position` (idempotent: addressable replacement). The 20 s keepalive republishes the current state regardless, so the window closes even if retries fail. | host: "Syncing…" then silent on success |
-| **`31951` ok, `21951` fails** | Guests receive the change through their `31951` subscription instead — correct, just at normal latency. | **No corrective action.** This is exactly why guests subscribe to both (§16.5, §16.6). | none |
-| **Both fail** | Only the host moved. Guests continue extrapolating the previous canonical state and are *not* wrong — they are simply behind on the newest action. | Retry per above. If retries are exhausted, re-read the host's own canonical event from the relay and reconcile: if the relay's `rev` is lower, republish; if the local player has drifted from the relay's state, follow the relay. | host: **"Not synced — retrying"**, controls stay usable |
+| **`31951` ok, `21951` fails** | Guests receive the change through their `31951` subscription instead, correct, just at normal latency. | **No corrective action.** This is exactly why guests subscribe to both (§16.5, §16.6). | none |
+| **Both fail** | Only the host moved. Guests continue extrapolating the previous canonical state and are *not* wrong, they are simply behind on the newest action. | Retry per above. If retries are exhausted, re-read the host's own canonical event from the relay and reconcile: if the relay's `rev` is lower, republish; if the local player has drifted from the relay's state, follow the relay. | host: **"Not synced, retrying"**, controls stay usable |
 | **Signing rejected** (user dismisses the NIP-07/NIP-46 prompt) | Nothing was published. | **Revert the optimistic local action** (step 2) and release the reserved `rev`. | "Playback change cancelled" |
 | **Host loses connectivity** | Host plays on locally; guests keep extrapolating the last canonical state, which for `playing` remains correct. | On reconnect: re-read own `31951`; republish if the relay is behind; then resume keepalives. Guests see no canonical update; after 90 s they show "Host may have disconnected" but keep playing. | host: offline indicator |
-| **Relay delivers `31951` before `21951`** | Guests apply canonical `rev N`; the later command carries the *same* `rev N`. | The command is a **no-op** by §7 (not strictly greater). Nothing to fix — the ordering rules make delivery order irrelevant. | none |
+| **Relay delivers `31951` before `21951`** | Guests apply canonical `rev N`; the later command carries the *same* `rev N`. | The command is a **no-op** by §7 (not strictly greater). Nothing to fix, the ordering rules make delivery order irrelevant. | none |
 | **Guest receives `21951` for an unknown/newer media while its player is not ready** | Cannot apply yet. | Hold the newest pending state and apply on `onReady`; discard older pending states. | "Loading…" |
 
 The system remains recoverable from the addressable event under every row above (I3).
@@ -714,7 +714,7 @@ The system remains recoverable from the addressable event under every row above 
 | `active` | joinable; commands are accepted; canonical state is live |
 | `ended` | terminal; no further commands are accepted from any pubkey; clients stop synchronizing |
 
-There is no `paused` *session* status — pausing is playback state, not lifecycle.
+There is no `paused` *session* status, pausing is playback state, not lifecycle.
 
 ### 12.2 Creation
 
@@ -723,7 +723,7 @@ configures otherwise. Rationale: it guarantees that the first thing every joiner
 gesture-driven play, which sidesteps autoplay blocking entirely for the host and makes the first
 `play` a clean `rev: 1` transition.
 
-### 12.3 Expiration — recommended default **4 hours, rolling**
+### 12.3 Expiration: recommended default **4 hours, rolling**
 
 | Option | Assessment |
 | --- | --- |
@@ -738,7 +738,7 @@ gesture-driven play, which sidesteps autoplay blocking entirely for the host and
 * **Host-away detection is separate from expiration.** Guests treat "no canonical update for
   > 90 s" as *host may have disconnected* (a UI hint; playback continues). They do **not** treat a
   distant `expiration` as liveness.
-* A long TTL is safe here — unlike island presence (35 s, because ghost Blobbis must not render),
+* A long TTL is safe here, unlike island presence (35 s, because ghost Blobbis must not render),
   a lingering `31951` is only reachable by its code, is visibly stale, and is exactly what makes
   reconnect recovery possible.
 
@@ -780,7 +780,7 @@ Any later `21951` for that address is rejected (§5.4 (9)).
 ### 13.2 Resolution algorithm
 
 1. Normalize input: trim, uppercase, strip separators. Reject anything that is not exactly 6
-   characters from the alphabet in §3.3 — **before** querying.
+   characters from the alphabet in §3.3, **before** querying.
 2. Query as above (optionally `+ "#r": ["blobbi-island:theater:main"]` to scope to the theater).
 3. Drop every candidate that fails §4.4 validation.
 4. Drop candidates whose `c` tag does not match the normalized code **exactly** (a relay may
@@ -807,7 +807,7 @@ active** session with that code exists from **any** pubkey, generate a new code 
 Publicly indexed, enumerable, and guessable at scale. Guessing a code grants only what any
 observer already has: the ability to watch a video from a public curated catalog and to read a
 public session's state. No write capability follows from knowing a code (§6.1). If private
-sessions are ever required, that needs NIP-44 encryption to invited pubkeys — not a longer code
+sessions are ever required, that needs NIP-44 encryption to invited pubkeys; not a longer code
 (§15).
 
 ---
@@ -839,7 +839,7 @@ following the existing `hiddenIn` precedent (`src/lib/multiplayer.ts:59-72`):
 }
 ```
 
-* `PresenceContent.state` (`idle | moving | emote`) is **not** touched — it describes motion and
+* `PresenceContent.state` (`idle | moving | emote`) is **not** touched; it describes motion and
   is validated by `explainPresenceEvent`.
 * `seatId` and `activity` are optional; older clients ignore them.
 * Presence remains authoritative for **seat occupancy rendering**; the session event is
@@ -848,7 +848,7 @@ following the existing `hiddenIn` precedent (`src/lib/multiplayer.ts:59-72`):
 ### 14.3 Decoupling rules (enforced by dependency direction)
 
 ```
-src/lib/shared-playback/**        pure protocol library — no React, no DOM,
+src/lib/shared-playback/**        pure protocol library; no React, no DOM,
    ▲                              no imports from theater / seats / presence / rendering
    │
 src/hooks/useSharedPlayback.ts    React lifecycle, relay I/O
@@ -861,7 +861,7 @@ src/lib/multiplayer.ts            may hold the session ADDRESS STRING only
 * The protocol library MUST NOT import Blobbi rendering, seat config, presence, or chat.
 * The seat system MUST NOT import the protocol library. A seated Blobbi does not know a session
   exists.
-* Presence holds the session **address string** and nothing else — no rev, no position, no media.
+* Presence holds the session **address string** and nothing else; no rev, no position, no media.
 * The theater UI is the only place the two meet, and it joins them by id, not by shared state.
 * Chat stays kind `21201`, room-scoped, unaware of sessions (§15).
 
@@ -895,13 +895,13 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 
 | `rev` | host clock | action | canonical example | command example |
 | --- | --- | --- | --- | --- |
-| 0 | 18:00:00 | create, paused @ 0 | 16.1 | — |
+| 0 | 18:00:00 | create, paused @ 0 | 16.1 |, |
 | 1 | 18:00:30 | play | 16.2 | 16.8 |
 | 2 | 18:01:13 | pause @ 42.5 | 16.3 | 16.9 |
 | 3 | 18:01:35 | seek → 600 while playing | 16.4 | 16.10 |
-| 4 | 18:02:00 | +10 s → 635 | — | 16.11 |
-| 5 | 18:02:20 | −10 s → 645 | — | 16.12 |
-| 6 | 18:02:40 | restart → 0 | — | 16.13 |
+| 4 | 18:02:00 | +10 s → 635 |, | 16.11 |
+| 5 | 18:02:20 | −10 s → 645 |, | 16.12 |
+| 6 | 18:02:40 | restart → 0 |, | 16.13 |
 | 7 | 18:03:20 | change media | 16.5 | 16.14 |
 | 8 | 18:03:55 | rate → 1.25 @ 35 | 16.6 | 16.15 |
 | 9 | 18:05:00 | end session @ 116.25 | 16.7 | 16.16 |
@@ -910,7 +910,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 > differ slightly from `previous + elapsed` (buffering, frame quantization). That is expected and
 > is exactly why `position` is transmitted rather than inferred.
 
-### 16.1 — `31951` rev 0 · session created, paused at zero
+### 16.1, `31951` rev 0 · session created, paused at zero
 
 ```json
 {
@@ -933,7 +933,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.2 — `31951` rev 1 · playing
+### 16.2, `31951` rev 1 · playing
 
 ```json
 {
@@ -956,7 +956,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.3 — `31951` rev 2 · paused at 42.5 s
+### 16.3, `31951` rev 2 · paused at 42.5 s
 
 ```json
 {
@@ -979,7 +979,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.4 — `31951` rev 3 · seek to 600 s while playing
+### 16.4, `31951` rev 3 · seek to 600 s while playing
 
 ```json
 {
@@ -1002,7 +1002,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.5 — `31951` rev 7 · media changed (state preserved: playing, position reset)
+### 16.5, `31951` rev 7 · media changed (state preserved: playing, position reset)
 
 ```json
 {
@@ -1025,7 +1025,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.6 — `31951` rev 8 · playback rate 1.25
+### 16.6, `31951` rev 8 · playback rate 1.25
 
 ```json
 {
@@ -1048,7 +1048,7 @@ All events unsigned (`id`, `pubkey`, `sig` omitted).
 }
 ```
 
-### 16.7 — `31951` rev 9 · session ended
+### 16.7, `31951` rev 9 · session ended
 
 Note: `status: ended`, `state: paused`, final position, **shortened** expiration, `c` retained so
 a reconnecting guest resolving the code learns it ended.
@@ -1087,7 +1087,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 ]
 ```
 
-### 16.8 — `21951` rev 1 · play
+### 16.8, `21951` rev 1 · play
 
 ```json
 {
@@ -1105,7 +1105,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.9 — `21951` rev 2 · pause
+### 16.9, `21951` rev 2 · pause
 
 ```json
 {
@@ -1123,7 +1123,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.10 — `21951` rev 3 · direct seek to 600 s
+### 16.10, `21951` rev 3 · direct seek to 600 s
 
 ```json
 {
@@ -1141,7 +1141,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.11 — `21951` rev 4 · skip forward 10 s (absolute result 635)
+### 16.11, `21951` rev 4 · skip forward 10 s (absolute result 635)
 
 ```json
 {
@@ -1159,7 +1159,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.12 — `21951` rev 5 · skip backward 10 s (absolute result 645)
+### 16.12, `21951` rev 5 · skip backward 10 s (absolute result 645)
 
 ```json
 {
@@ -1177,7 +1177,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.13 — `21951` rev 6 · restart (absolute result 0)
+### 16.13, `21951` rev 6 · restart (absolute result 0)
 
 ```json
 {
@@ -1195,7 +1195,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.14 — `21951` rev 7 · set media
+### 16.14, `21951` rev 7 · set media
 
 ```json
 {
@@ -1213,7 +1213,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.15 — `21951` rev 8 · set playback rate
+### 16.15, `21951` rev 8 · set playback rate
 
 ```json
 {
@@ -1231,7 +1231,7 @@ Command events share this tag shape (only `expiration`, `alt` and `content` vary
 }
 ```
 
-### 16.16 — `21951` rev 9 · end session
+### 16.16, `21951` rev 9 · end session
 
 ```json
 {
@@ -1329,7 +1329,7 @@ Alternative for relays with weak `#a` indexing:
 }
 ```
 
-`status` is a mirror tag, not single-letter, so it is **not** reliably indexed — filter
+`status` is a mirror tag, not single-letter, so it is **not** reliably indexed, filter
 `status: active` client-side.
 
 ### 17.7 Sessions in the Blobbi theater
@@ -1350,10 +1350,10 @@ Alternative for relays with weak `#a` indexing:
 | Single-letter tags `d`, `r`, `c`, `a`, `p`, `t` are indexed | NIP-01 says relays index single-letter tags, but coverage varies; some relays index only a subset, or cap the number of indexed values per query. Always re-filter client-side (§13.2 (4), §5.4 (3)). |
 | Multi-letter tags (`provider`, `media`, `status`) are queryable | **They are not.** Present for readability only. Never build a filter on them. |
 | Addressable replacement works for a *custom* kind | Most relays implement NIP-01 ranges generically, but a relay that hardcodes known kinds may store `31951` as a regular event, accumulating versions. Clients must therefore pick the newest by §7 rather than trusting "one event per address". |
-| Ephemeral forwarding works for a *custom* kind | Some relays drop or reject unknown ephemeral kinds. Handle per §5.5 — degrade to `31951`-only. |
+| Ephemeral forwarding works for a *custom* kind | Some relays drop or reject unknown ephemeral kinds. Handle per §5.5, degrade to `31951`-only. |
 | NIP-40 expiration is enforced | Optional. Relays may serve expired events indefinitely; clients must filter (§4.4 (3)). |
 | `since` on an ephemeral subscription is meaningful | With nothing stored, `since` only affects any buffered replay. Harmless, but do not rely on it to backfill. |
-| Blobbi Island routes to a **single** relay | `NostrProvider` pins `reqRouter`/`eventRouter` to `config.relayUrl` (`src/components/NostrProvider.tsx:32-44`). A session is therefore only visible to clients on the same relay. Cross-relay sessions need a relay-hint strategy — out of scope for v1, but the `a` tag already carries a hint slot. |
+| Blobbi Island routes to a **single** relay | `NostrProvider` pins `reqRouter`/`eventRouter` to `config.relayUrl` (`src/components/NostrProvider.tsx:32-44`). A session is therefore only visible to clients on the same relay. Cross-relay sessions need a relay-hint strategy, out of scope for v1, but the `a` tag already carries a hint slot. |
 
 ---
 
@@ -1412,12 +1412,12 @@ not by two humans watching a video.
 Phases 1–3 contain **no protocol work**; Phase 4 is pure and offline; the network appears in
 Phase 5. Every phase is independently shippable and revertable.
 
-> **Prerequisite for the whole plan:** the audit's Phase-1 findings still apply — the theater's
+> **Prerequisite for the whole plan:** the audit's Phase-1 findings still apply, the theater's
 > screen mount is the transparent hole in `stage-inside.png`
 > (x 6.8–92.7 %, y 6.7–56.9 %; 16 : 9 player 617 × 347 px at x 19.8–78.8 %), and the dead chair
 > path must be removed rather than revived. See `docs/theater-watch-session-audit.md` §1.4, §1.10.
 
-### Phase 1 — Rear-facing Blobbi renderer
+### Phase 1: Rear-facing Blobbi renderer
 
 | | |
 | --- | --- |
@@ -1429,19 +1429,19 @@ Phase 5. Every phase is independently shippable and revertable.
 | **Two accounts?** | **No** |
 | **Done when** | All 34 forms render a plausible back view in a dev harness; test table green; no visual change when `facing="front"`. |
 
-### Phase 2 — Theater seat system
+### Phase 2: Theater seat system
 
 | | |
 | --- | --- |
 | **Goal** | 26 claimable seats with stable ids (`theater-seat-a1 … theater-seat-c10`), explicit arrival/leave, seated scale, rear-facing state, correct row depth, local occupancy. |
-| **Files** | `src/lib/theater-seats-config.ts` (new), `src/components/blobbi/theater/TheaterSeat.tsx` (new), stage branch of `src/components/blobbi/InteractiveElements.tsx`, `src/components/blobbi/PlayingView.tsx`, `src/components/blobbi/MovableBlobbi.tsx`, `src/lib/blobbi-world-render.ts` (new — extract the duplicated scale/z math), **deletion** of `_handleChairArrival`/`_handleChairLeave`/`_isSeated`/`_eyesClosed` |
+| **Files** | `src/lib/theater-seats-config.ts` (new), `src/components/blobbi/theater/TheaterSeat.tsx` (new), stage branch of `src/components/blobbi/InteractiveElements.tsx`, `src/components/blobbi/PlayingView.tsx`, `src/components/blobbi/MovableBlobbi.tsx`, `src/lib/blobbi-world-render.ts` (new, extract the duplicated scale/z math), **deletion** of `_handleChairArrival`/`_handleChairLeave`/`_isSeated`/`_eyesClosed` |
 | **Tests** | Config invariants (ids unique, 26 claimable + 2 non-claimable, claimable centers within 2–98 %, `zIndex` per row, `seatedScale` descending). Behavior harness mirroring `MovableBlobbi.hiding.test.tsx`: arrival sets `sittingIn`; any `onMoveStart` clears it; location change clears it; seated render has no shadow, no float, `facing="back"`, scale 0.85/0.78/0.72. |
-| **Risks** | Pixel drift converting flex `-space-x-4` rows to absolute placement (use the measured centers in the audit §1.8). Row C's seat anchor sits only 2.6 points inside the walk boundary — verify arrival fires; widen to `y: [74, 98]` if not. Removing the dead chair path touches arcade/station/shop chairs: migrate them with tests in the same commit. |
+| **Risks** | Pixel drift converting flex `-space-x-4` rows to absolute placement (use the measured centers in the audit §1.8). Row C's seat anchor sits only 2.6 points inside the walk boundary, verify arrival fires; widen to `y: [74, 98]` if not. Removing the dead chair path touches arcade/station/shop chairs: migrate them with tests in the same commit. |
 | **Dependencies** | Phase 1 (for `facing`) |
 | **Two accounts?** | **No** |
 | **Done when** | Sitting is explicit local state with a clean stand-up transition, every seat has a unique id, the two off-world seats are non-claimable, no dead chair code remains. |
 
-### Phase 3 — Local YouTube player
+### Phase 3: Local YouTube player
 
 | | |
 | --- | --- |
@@ -1453,19 +1453,19 @@ Phase 5. Every phase is independently shippable and revertable.
 | **Two accounts?** | **No** |
 | **Done when** | One player can watch a catalog video alone on desktop and iOS Safari, every control works locally, and leaving the room stops playback. |
 
-### Phase 4 — Shared-playback protocol library (pure)
+### Phase 4: Shared-playback protocol library (pure)
 
 | | |
 | --- | --- |
 | **Goal** | The whole protocol as deterministic, framework-free code: schemas, builders, parsers, validation, revision comparison, expected-position, clock-offset estimation, drift decision, invite-code generation/normalization/resolution. |
 | **Files** | `src/lib/shared-playback/types.ts`, `schema.ts`, `builders.ts`, `parse.ts`, `ordering.ts`, `timing.ts`, `invite-code.ts`, `index.ts`; `src/lib/blobbi-kinds.ts` (export `KIND_SHARED_PLAYBACK_SESSION = 31951`, `KIND_SHARED_PLAYBACK_COMMAND = 21951`); `NIP.md` (document both kinds); `docs/protocol/shared-playback-session.md` (this file, kept in sync) |
 | **Tests** | The correctness core, all offline: every validation rejection in §4.4 and §5.4 (one test per numbered rule); `compareRevisions` for greater-rev / equal-rev-different-`created_at` / equal-both-different-id; `expectedPosition` for paused, playing, `rate ≠ 1`, clamping, unknown duration, negative/absurd elapsed; `estimateClockOffset` convergence and outlier rejection; `driftAction` at 0.5/0.75/1.0/2.0/3.0 s; invite-code alphabet + no modulo bias (statistical) + normalization + all nine resolution branches of §13.2; round-trip build → parse for all 7 canonical and 9 command examples in §16. |
-| **Risks** | Schema churn later — mitigate by shipping `NIP.md` in the same commit and gating on `version`. Zod is already a dependency (`zod ^4.3.6`) and is the natural validator; keep it out of the hot path (validate on receive, not per tick). |
+| **Risks** | Schema churn later, mitigate by shipping `NIP.md` in the same commit and gating on `version`. Zod is already a dependency (`zod ^4.3.6`) and is the natural validator; keep it out of the hot path (validate on receive, not per tick). |
 | **Dependencies** | none (deliberately) |
 | **Two accounts?** | **No** |
 | **Done when** | 100 % of the protocol's decision logic is unit-tested with no React, no relay and no player; the §16 examples parse and re-serialize identically. |
 
-### Phase 5 — Session creation and join flow
+### Phase 5: Session creation and join flow
 
 | | |
 | --- | --- |
@@ -1474,55 +1474,55 @@ Phase 5. Every phase is independently shippable and revertable.
 | **Tests** | Hook tests with a mocked `nostr` (the project already has `subscribe`/`nostr.req` fallback patterns to mimic): create publishes `rev 0` paused at 0; code collision retry; resolution ambiguity surfaces a chooser instead of joining; expired/ended sessions are refused with the right message; guest UI renders no global controls. |
 | **Risks** | Duplicate-session creation by the same host (enforce one live session per pubkey per room locally); users mistyping codes (uppercase + trim + alphabet-restricted input). |
 | **Dependencies** | Phases 3, 4 |
-| **Two accounts?** | Not strictly — a second browser profile makes it far easier to see guest mode, but the flow can be smoke-tested with one account joining its own session's code as a guest view. |
+| **Two accounts?** | Not strictly, a second browser profile makes it far easier to see guest mode, but the flow can be smoke-tested with one account joining its own session's code as a guest view. |
 | **Done when** | Two clients (or two profiles) reach the same session via a 6-character code, and a fresh reload recovers the exact state from one query. |
 
-### Phase 6 — Ephemeral commands and canonical updates
+### Phase 6: Ephemeral commands and canonical updates
 
 | | |
 | --- | --- |
 | **Goal** | The full paired publication path with optimistic host application, guest application, out-of-order handling and publication-failure recovery. |
 | **Files** | `useSharedPlayback.ts`, `src/lib/shared-playback/publish.ts` (sequence + retry + rev commitment), `HostControls.tsx`, `TheaterScreen.tsx` |
 | **Tests** | Sequence tests with a mocked publisher: order is optimistic → `21951` → `31951`; both events carry the same `rev`/`updatedAt`/`position`; retry reuses the same `rev`; signing rejection reverts the optimistic action and releases the `rev`; `31951`-before-`21951` delivery is a no-op; a `rev` jump of +3 applies cleanly; a command from a non-host pubkey is discarded; a command for another session address is discarded. |
-| **Risks** | Publish storms from slider drags (debounce on `pointerup` + 3 s rate limit); `useNostrPublish` currently *swallows* failures for kind 31950 (`src/hooks/useNostrPublish.ts:44-48`) — the new kinds must get **real** error propagation, so this hook needs a non-swallowing path or a dedicated publisher. |
+| **Risks** | Publish storms from slider drags (debounce on `pointerup` + 3 s rate limit); `useNostrPublish` currently *swallows* failures for kind 31950 (`src/hooks/useNostrPublish.ts:44-48`): the new kinds must get **real** error propagation, so this hook needs a non-swallowing path or a dedicated publisher. |
 | **Dependencies** | Phase 5 |
 | **Two accounts?** | **Yes** for meaningful verification (guest application, ordering), though the failure matrix is unit-testable with mocks. |
 | **Done when** | Host actions appear on a second client within ~1 s via `21951`, and blocking the ephemeral kind still yields correct (slower) behavior via `31951`. |
 
-### Phase 7 — Drift, buffering and reconnection
+### Phase 7: Drift, buffering and reconnection
 
 | | |
 | --- | --- |
 | **Goal** | The 5 s passive check, hard-seek threshold, clock-offset estimation, buffering suspension, tab-suspension/device-sleep wake handling, relay reconnect, late join, missing-ephemeral recovery. |
 | **Files** | `src/lib/shared-playback/timing.ts`, `useSharedPlayback.ts`, `useYouTubePlayer.ts` |
 | **Tests** | Fake-timer tests: no network call is produced by any passive check (assert publisher not called); correction suspended while `BUFFERING`; a 2 s settle window after a seek; one hard seek max per tick; `visibilitychange` forces immediate reconciliation; a simulated wall-clock jump triggers re-query and discards old clock samples; a stale `lastCanonicalAtMs` (> 90 s) surfaces "host may have disconnected" without seeking wildly; `rate` unavailable ⇒ correction suspended, not a seek loop. |
-| **Risks** | Correction loops (seek → buffer → drift → seek) — guarded by the settle window and buffering suspension; over-correcting a paused session; throttled timers on mobile. |
+| **Risks** | Correction loops (seek → buffer → drift → seek): guarded by the settle window and buffering suspension; over-correcting a paused session; throttled timers on mobile. |
 | **Dependencies** | Phase 6 |
 | **Two accounts?** | **Yes** for the end-to-end drift and reconnect checks. |
 | **Done when** | Two clients stay within ~1 s over a 10-minute video across a tab reload, a network blip, a background tab, and a mid-video join. |
 
-### Phase 8 — Presence and multiplayer seats
+### Phase 8: Presence and multiplayer seats
 
 | | |
 | --- | --- |
 | **Goal** | `seatId` + `activity.session` in presence; remote seated rear-facing rendering; deterministic occupancy conflict handling; theater-leave cleanup. |
 | **Files** | `src/lib/multiplayer.ts` (`PresenceContent.seatId`, `activity`, `publishSit`, heartbeat preservation), `src/hooks/useIslandPresence.ts` (`sitAt`/`clearSit`, `PlayerRenderState`), `src/components/blobbi/MultiplayerLayer.tsx`, `src/lib/blobbi-world-render.ts`, `NIP.md` |
 | **Tests** | `multiplayer.seating.test.ts` beside `multiplayer.hiding.test.ts`: `seatId`/`activity` survive heartbeats, are absent from `publishMove`, are ordered by `seq`, are cleared on location change. Layer test: a remote with `seatId` renders at the seat anchor, rear-facing, at the row's seated scale; two players claiming one seat resolve to the **same** winner (lower hex pubkey) on both clients. Decoupling test: `src/lib/shared-playback/**` imports nothing from theater/seat/presence/render modules (assert via a static import scan). |
-| **Risks** | Local/remote render divergence from the duplicated scale/z math — the shared module lands in Phase 2 and is *used* here; presence content growth (keep fields optional and small). |
+| **Risks** | Local/remote render divergence from the duplicated scale/z math, the shared module lands in Phase 2 and is *used* here; presence content growth (keep fields optional and small). |
 | **Dependencies** | Phases 2, 5 |
 | **Two accounts?** | **Yes** |
 | **Done when** | Two profiles see each other seated in the correct seats, rear-facing, identically, and leaving the theater clears both seat and session references. |
 
-### Phase 9 — Two-account validation
+### Phase 9: Two-account validation
 
 | | |
 | --- | --- |
 | **Goal** | Manual end-to-end verification of the whole feature against real relays. |
 | **Files** | `docs/theater-manual-validation.md` (new checklist, mirroring `docs/INVENTORY_MANUAL_VALIDATION.md`) |
 | **Tests** | Scripted manual matrix: play · pause · timeline seek · +10 · −10 · restart · media change · rate change · one client buffering (throttle to 3G) · late join mid-video · relay reconnect (kill/restore network) · relay reordering (publish while one client is offline) · host ends session · guest native pause → auto-rejoin · guest with an unsupported rate · embed-disabled video · session expiry behavior. Record observed drift at 1, 5 and 10 minutes. |
-| **Risks** | Real-world relay latency and single-relay routing (`NostrProvider` pins one relay) may mask cross-relay problems — note explicitly as untested. |
+| **Risks** | Real-world relay latency and single-relay routing (`NostrProvider` pins one relay) may mask cross-relay problems; note explicitly as untested. |
 | **Dependencies** | Phases 1–8 |
-| **Two accounts?** | **Yes — mandatory.** Two identities *and* two browser profiles (multiple devices for the same pubkey is its own row in the matrix). |
+| **Two accounts?** | **Yes, mandatory.** Two identities *and* two browser profiles (multiple devices for the same pubkey is its own row in the matrix). |
 | **Done when** | Every row passes on desktop + mobile, and the observed drift stays inside the §8.3 ignore band in steady state. |
 
 ### 19.1 Phase dependency graph
@@ -1550,8 +1550,8 @@ Phases 1, 3 and 4 are mutually independent and can be built in parallel.
    code and issue search, and web search. A read-only relay probe of `relay.ditto.pub`,
    `relay.primal.net` and `nos.lol` returned **0 stored and 0 live events for both kinds**.
    Two ecosystem relays (`relay.nostr.band`, `relay.damus.io`) refused the WebSocket handshake
-   from this environment and were **not** checked. **The `21951` finding is weak by construction**
-   — ephemeral events are not stored, so only the 20-second live window carried any signal. None
+   from this environment and were **not** checked. **The `21951` finding is weak by construction**,
+   ephemeral events are not stored, so only the 20-second live window carried any signal. None
    of this guarantees global uniqueness.
 3. **Final `31951` schema.** Tags `d`, `r`, `c`, `t: shared-playback`, `t: <provider>`,
    `provider`, `media`, `status`, `client`, `alt`, `expiration`; content
@@ -1601,9 +1601,9 @@ Phases 1, 3 and 4 are mutually independent and can be built in parallel.
     Phases 1, 3 and 4 are parallelizable; the network appears only at Phase 5; two accounts
     become mandatory at Phase 6 and non-negotiable at Phase 9.
 14. **What must be reviewed before any source implementation begins.**
-    * **The two kind numbers**, accepting the §1.4 uniqueness caveat — especially that the
+    * **The two kind numbers**, accepting the §1.4 uniqueness caveat, especially that the
       `21951` probe is structurally weak.
-    * **The `31951` content schema** (§4.2) and **`21951` command union** (§5.2) — these are the
+    * **The `31951` content schema** (§4.2) and **`21951` command union** (§5.2): these are the
       hardest things to change once events are on relays.
     * **`updatedAt` in milliseconds** as a content field distinct from `created_at`.
     * **Host-only authority** and the decision that guests get no protocol write path in v1.
@@ -1615,7 +1615,7 @@ Phases 1, 3 and 4 are mutually independent and can be built in parallel.
     * **The 4 h rolling expiration** and 20 s keepalive cadence, and the 90 s host-away hint.
     * **The invitation alphabet and resolution rules**, including the deliberate refusal to
       silently join an ambiguous code.
-    * **The decoupling rules** (§14.3) — presence holds only the address string; the protocol
+    * **The decoupling rules** (§14.3): presence holds only the address string; the protocol
       library imports nothing from the game.
     * **The v1 exclusion list** (§15).
     * **Two open product decisions the protocol does not settle:** the initial curated catalog
@@ -1624,7 +1624,7 @@ Phases 1, 3 and 4 are mutually independent and can be built in parallel.
 
 ---
 
-## Appendix — constants
+## Appendix: constants
 
 ```
 KIND_SHARED_PLAYBACK_SESSION = 31951      addressable (30000..39999)

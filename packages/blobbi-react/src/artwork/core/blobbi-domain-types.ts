@@ -19,7 +19,7 @@ export type BlobbiLifeStage = 'egg' | 'baby' | 'adult';
 export type BlobbiState = 'active' | 'sleeping' | 'hibernating';
 
 /**
- * Progression process state — orthogonal to BlobbiState.
+ * Progression process state, orthogonal to BlobbiState.
  */
 export type BlobbiProgressionState = 'none' | 'incubating' | 'evolving';
 

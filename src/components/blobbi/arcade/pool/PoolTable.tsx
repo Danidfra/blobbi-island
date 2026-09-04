@@ -65,7 +65,7 @@ import {
 import { PoolSoundToggle } from './PoolSoundToggle';
 
 /**
- * Pool — the playable surface.
+ * Pool: the playable surface.
  *
  * ## Render strategy: the simulation is not React's business
  *
@@ -82,7 +82,7 @@ import { PoolSoundToggle } from './PoolSoundToggle';
  *
  * The simulation is therefore completely decoupled from render frequency:
  * `useFixedStepLoop` takes real elapsed time, hands the match fixed 1/120 s
- * steps, and throws away anything beyond a quarter of a second — so a stutter, a
+ * steps, and throws away anything beyond a quarter of a second, so a stutter, a
  * resize or a backgrounded tab can never produce one enormous physics step.
  *
  * ## The control: pull the cue back and let go
@@ -99,7 +99,7 @@ import { PoolSoundToggle } from './PoolSoundToggle';
  *    hands already know how to do.
  *  - **A tap is a re-aim, not a shot.** A drag shorter than
  *    {@link MIN_SHOT_POWER} does not fire, so tapping behind the ball simply
- *    points the cue — which is the discoverable way in for a player who has not
+ *    points the cue, which is the discoverable way in for a player who has not
  *    worked out the pull yet, and is also the guard against an accidental shot
  *    while the dialog is opening or the phone is being turned.
  *  - **Your finger is behind the ball, not on the target.** On a phone that is
@@ -129,7 +129,7 @@ export interface PoolTableProps {
   readonly onFinish: (result: ArcadeGameResult) => void;
   /** The run cannot continue. Never called with a result. */
   readonly onAbort: (reason: ArcadeAbortReason) => void;
-  /** Freeze — the tab was hidden or the window lost focus. Recoverable. */
+  /** Freeze: the tab was hidden or the window lost focus. Recoverable. */
   readonly onPause: () => void;
   readonly audio: PoolAudioEngine;
   readonly muted: boolean;
@@ -146,7 +146,7 @@ export interface PoolTableProps {
    * Build the match to play. Overridable for tests and the DEV harness.
    *
    * The production default seeds the match from the run id, so a run is
-   * reproducible and two runs are never identical — and so nothing in the render
+   * reproducible and two runs are never identical, and so nothing in the render
    * path ever calls `Math.random()`.
    */
   readonly createMatchState?: () => PoolMatchState;
@@ -176,7 +176,7 @@ const AIM_KEYS = new Set([
   'D',
 ]);
 
-/** The cue's aim and pull. Lives in a ref — it changes at pointer rate. */
+/** The cue's aim and pull. Lives in a ref; it changes at pointer rate. */
 interface AimRef {
   angle: number;
   power: number;
@@ -327,14 +327,14 @@ export function PoolTable({
   /**
    * The layout the CONTAINER asks for, measured. Changes when the window is
    * resized, when the phone is rotated, or when the shell's footer comes and
-   * goes — never from a user-agent string.
+   * goes: never from a user-agent string.
    */
   const [orientation, setOrientation] = useState<PoolOrientation>('landscape');
   /**
    * Whether the HUD goes BESIDE the table instead of above it.
    *
-   * The arcade's game window is short and very wide — about 956 × 382 of usable
-   * stage on a laptop — and a 214:114 table in a box that wide is bound by
+   * The arcade's game window is short and very wide, about 956 × 382 of usable
+   * stage on a laptop, and a 214:114 table in a box that wide is bound by
    * HEIGHT. A HUD stacked on top of it therefore does not cost a strip of table;
    * it costs a fifth of the table's every dimension while leaving 250 px of
    * width empty beside it. Putting the HUD in the empty column spends the width
@@ -345,8 +345,8 @@ export function PoolTable({
    * Where the table is actually DRAWN inside its box, in CSS pixels.
    *
    * The box fills its container and the canvas letterboxes inside it, so the two
-   * are not the same rectangle. Every overlay — the power meter, the sound
-   * toggle, the banner, the placement button — belongs on the TABLE, and
+   * are not the same rectangle. Every overlay, the power meter, the sound
+   * toggle, the banner, the placement button, belongs on the TABLE, and
    * anchoring them to the box leaves them floating in the letterbox margin.
    *
    * Published from `measure`, so it changes when the layout does and never
@@ -376,7 +376,7 @@ export function PoolTable({
    */
   const measure = useCallback(() => {
     // The CONTAINER decides the layout; the canvas decides the scale. Measuring
-    // the canvas for both would be circular — its own shape is a consequence of
+    // the canvas for both would be circular; its own shape is a consequence of
     // the layout we are trying to choose.
     const container = containerRef.current;
     if (container) {
@@ -444,10 +444,10 @@ export function PoolTable({
     if (typeof window === 'undefined') return;
 
     // Three signals, because each catches something the others do not:
-    //   • `resize`            — the window changed, on every platform;
-    //   • `orientationchange` — older mobile browsers fire it BEFORE a resize,
+    //   • `resize`: the window changed, on every platform;
+    //   • `orientationchange`: older mobile browsers fire it BEFORE a resize,
     //                           or instead of one;
-    //   • `ResizeObserver`    — the container changed without the window doing
+    //   • `ResizeObserver`: the container changed without the window doing
     //                           so, which is what happens when the shell's
     //                           footer appears or the app enters expanded mode.
     window.addEventListener('resize', measure);
@@ -474,7 +474,7 @@ export function PoolTable({
    * alternative is a shot fired along an angle the player chose against a table
    * that has since been re-laid, which is worse than making them drag again. The
    * aim ANGLE survives, because it is in table units and a rotation does not
-   * change it — only the half-finished pull is dropped.
+   * change it: only the half-finished pull is dropped.
    */
   useEffect(() => {
     measure();
@@ -620,7 +620,7 @@ export function PoolTable({
     if (!current) return;
 
     // Keyboard first, so a held key moves the cue at the same rate whatever the
-    // frame rate is doing. It writes the same aim ref the pointer does — one
+    // frame rate is doing. It writes the same aim ref the pointer does; one
     // target, two ways to move it, so neither path can produce something the
     // other cannot.
     const keys = keysRef.current;
@@ -870,7 +870,7 @@ export function PoolTable({
   /**
    * A cancelled or lost gesture drops the shot and keeps the aim.
    *
-   * `pointercancel` fires when the browser takes the gesture over — a system
+   * `pointercancel` fires when the browser takes the gesture over, a system
    * scroll, a palm rejection, the phone being rotated mid-drag. Firing the cue
    * on the strength of a pull the player did not finish is the worst possible
    * reading of that, so nothing is fired.
@@ -963,7 +963,7 @@ export function PoolTable({
   const placing = hud.turn === 'player' && hud.phase === 'ball-in-hand';
   const aiming = hud.turn === 'player' && hud.phase === 'aiming';
   /**
-   * The rival is deciding — NOT "the rival's shot is on its way".
+   * The rival is deciding: NOT "the rival's shot is on its way".
    *
    * Scoped to `thinking` alone on purpose. A first pass also covered the rival's
    * `rolling`, and the result read "Rival is lining up…" over a table full of
@@ -1073,7 +1073,7 @@ export function PoolTable({
 
       {/*
         The table. Centred, aspect-locked, and never wider or taller than its
-        box — and it is THIS box, measured, that decides which way round the
+        box: and it is THIS box, measured, that decides which way round the
         table is laid out.
       */}
       <div
@@ -1097,13 +1097,13 @@ export function PoolTable({
           /*
             The box FILLS its container and the canvas letterboxes inside it.
 
-            The obvious alternative — an aspect-locked element, which is what Air
-            Hockey uses — has a failure mode this game can actually reach. With
+            The obvious alternative: an aspect-locked element, which is what Air
+            Hockey uses: has a failure mode this game can actually reach. With
             `height: 100%` definite and `width: auto` from `aspect-ratio`,
             `max-width: 100%` clamps the width WITHOUT reducing the height, so
             the element stretches. That needs the element's ratio to disagree
             with its box, which is exactly what happens for the frame or two
-            between a device rotating and `measure` catching up — and a
+            between a device rotating and `measure` catching up, and a
             stretched table is not a cosmetic problem here, because a pointer
             position would no longer map back to a table unit the simulation
             agrees with. The shot would leave at a different angle from the one
@@ -1184,7 +1184,7 @@ export function PoolTable({
           )}
 
           {/* The banner: the one sentence saying what just happened. Never the
-              only channel — the same words go to the live region above. */}
+              only channel: the same words go to the live region above. */}
           {hud.banner && hud.phase !== 'ready' && (
             <div
               data-pool-banner
@@ -1208,7 +1208,7 @@ export function PoolTable({
               <p className="pointer-events-none rounded-full bg-black/60 px-3 py-0.5 text-[11px] font-semibold text-white">
                 {hud.placementLegal
                   ? 'Drag the cue ball anywhere on the table.'
-                  : 'That spot is taken — it will move to the nearest free one.'}
+                  : 'That spot is taken; it will move to the nearest free one.'}
               </p>
               <button
                 type="button"
@@ -1254,7 +1254,7 @@ export function PoolTable({
 
       {/*
         One short line of instructions, kept on screen rather than only on the
-        start panel — a player who came back after a pause should not have to
+        start panel: a player who came back after a pause should not have to
         remember. Dropped in expanded play: on a phone the gesture is obvious
         once, and the line costs a strip of table to say so.
       */}

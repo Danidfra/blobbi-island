@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — the live external inventory store, as React sees it.
+ * Blobbi Island: the live external inventory store, as React sees it.
  *
  * ```
  *   authoritative fetch  ──►  ONE query per player: ExternalInventoryEvents
@@ -18,19 +18,19 @@
  * current. A tail alone would miss whatever happened between mount and the
  * subscription; a fetch alone needs a refresh. Because the REQ carries no
  * `since`, the relay first replays every stored match (harmless: every merge
- * deduplicates) and then streams — so the tail is itself a second bootstrap,
+ * deduplicates) and then streams, so the tail is itself a second bootstrap,
  * which is what closes the gap.
  *
  * ## Every cache write reconciles; none replaces
  *
  * Relays are eventually consistent, so a refetch that misses a spend the
  * tail streamed a moment ago, or the snapshot the owner just published, is
- * an incomplete read — and an incomplete read must not make the balance go
+ * an incomplete read, and an incomplete read must not make the balance go
  * back UP. The reconciliation therefore lives at the ONE point where TanStack
  * writes the cache: the query's `structuralSharing` function. TanStack calls
  * it as `structuralSharing(state.data, newData)` inside `Query.setData`, for
  * a completed fetch and for every `setQueryData` alike, with the cache as it
- * is AT COMMIT TIME — so a live event that lands after the query function
+ * is AT COMMIT TIME, so a live event that lands after the query function
  * returned and before its result is committed is still reconciled, and the
  * query function simply returns what the relays taught. Forgetting happens
  * only when the store itself goes away: logout, a different player (a
@@ -42,8 +42,8 @@
  * with stored events and a FRESH EOSE. Every EOSE after the first is treated
  * as "we were away": the query is invalidated so the authoritative fetch
  * reconciles anything a different relay may hold. The same happens after the
- * iterator drops (2 s pause, then resubscribe), on `online`, and — the
- * TanStack default — on `refetchOnReconnect`. There is no polling, and there
+ * iterator drops (2 s pause, then resubscribe), on `online`, and, the
+ * TanStack default: on `refetchOnReconnect`. There is no polling, and there
  * is no loop: an invalidation refetches the SAME query; the tail is keyed on
  * the player, the relay policy and the address SET, none of which a refetch
  * changes unless a genuinely new context was discovered.
@@ -195,7 +195,7 @@ export function useExternalInventoryEvents() {
     // the moment of the write (`Query.setData` → `replaceData(state.data,
     // next)`), for the completed fetch and for every `setQueryData`, so no
     // write path can forget a known spend/fold or regress a newer valid
-    // snapshot. Same owner by construction — the key is the pubkey — and
+    // snapshot. Same owner by construction, the key is the pubkey, and
     // `reconcile` refuses another owner's store regardless.
     structuralSharing: (held: unknown, next: unknown) =>
       reconcileExternalInventoryStores(
@@ -291,8 +291,8 @@ export function useExternalInventoryLiveTail(
 /**
  * One missing manifest's fetch history, for the retry policy.
  *
- * `'unanswered'` — no relay gave a usable answer (timeout, offline, every
- * relay failed): the manifest MAY exist; try again soon. `'absent'` — at
+ * `'unanswered'`: no relay gave a usable answer (timeout, offline, every
+ * relay failed): the manifest MAY exist; try again soon. `'absent'`: at
  * least one relay answered and did not have it: it may still exist on a
  * relay that did not answer, or not yet, so retry with a longer wait.
  */
@@ -313,7 +313,7 @@ const FOLD_RETRY_MAX_BACKOFF_MS = 5 * 60_000;
  *
  * - never while a read for it is in flight;
  * - a transient failure is retried after a short wait, an answered absence
- *   after a longer one, both doubling per attempt up to a cap — so a chain
+ *   after a longer one, both doubling per attempt up to a cap, so a chain
  *   the owner never published cannot hammer the relays, and one that simply
  *   has not propagated yet is picked up at its deadline (one-shot wake-up)
  *   or on the next recovery trigger, whichever comes first;
@@ -335,7 +335,7 @@ export const foldRetryPolicy = {
   },
   /**
    * The read was cancelled by THIS client (the effect re-ran, the view
-   * changed, the component unmounted) — not by the network. It is eligible
+   * changed, the component unmounted): not by the network. It is eligible
    * again at once; the trigger that cancelled it is the one that retries.
    */
   aborted(attempt: FoldFetchAttempt | undefined, now: number): FoldFetchAttempt {
@@ -404,7 +404,7 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
   // The tail starts once the authoritative store exists: the addresses are
   // then known, so the REQ is opened ONCE with its full scope instead of
   // once for discovery and again after the fetch. Nothing is missed by
-  // waiting — the REQ carries no `since`, so the relay replays every stored
+  // waiting: the REQ carries no `since`, so the relay replays every stored
   // match when the tail attaches.
   useExternalInventoryLiveTail(query.data ? user?.pubkey : undefined, relays, addresses);
 
@@ -412,7 +412,7 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
   // fold it references derives as unresolved. Ask for the named ids by id;
   // a later live kind:1417 resolves it just as well. Retries are paced by
   // `foldRetryPolicy` and re-evaluated on RECOVERY TRIGGERS (a refetch
-  // completing, the view changing) — and, so that a quiet tab is not stuck
+  // completing, the view changing): and, so that a quiet tab is not stuck
   // once the network is healthy again, by ONE one-shot wake-up armed for the
   // nearest eligibility deadline. That is not polling: with nothing missing,
   // or nothing waiting on a deadline, no timer exists; when one fires it
@@ -436,7 +436,7 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
 
     // Arm ONE wake-up for the nearest deadline among the manifests still
     // waiting (not in flight, not yet eligible). Cleared whenever this effect
-    // re-runs — a live fold, a refetch, a view change — so a manifest that
+    // re-runs: a live fold, a refetch, a view change, so a manifest that
     // arrives before the deadline never causes a read, and there is never
     // more than one pending timer.
     const nearest = missing.reduce<number | null>((soonest, ref) => {
@@ -517,7 +517,7 @@ export function useExternalInventoryView(): ExternalInventoryViewResult {
 }
 
 /**
- * Fetch and derive ONE external inventory's state right now — the FRESH read
+ * Fetch and derive ONE external inventory's state right now, the FRESH read
  * a consumption performs immediately before signing a spend. Re-reads that
  * inventory's spends and folds from the relays (never `since`), against the
  * snapshot the caller already holds, plus this tab's established spends.

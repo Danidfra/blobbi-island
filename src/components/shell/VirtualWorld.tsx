@@ -6,8 +6,8 @@ import { WORLD_WIDTH, WORLD_HEIGHT } from "@/lib/world-coordinates";
  * The world's fixed virtual design resolution. All world art, object positions
  * (percent) AND object sizes (px/rem) were authored against this exact box, so
  * rendering the world at this fixed size and scaling the whole layer uniformly
- * keeps every element — background, Blobbi, furniture, buildings, arcade items,
- * doors, hotspots, interactives — perfectly aligned at any viewport size.
+ * keeps every element, background, Blobbi, furniture, buildings, arcade items,
+ * doors, hotspots, interactives, perfectly aligned at any viewport size.
  *
  * The values live in the pure coordinate module
  * (`src/lib/world-coordinates.ts`, the single source of truth).
@@ -19,7 +19,7 @@ interface VirtualWorldProps {
 }
 
 /**
- * VirtualWorld — a fixed {@link WORLD_WIDTH}×{@link WORLD_HEIGHT} coordinate
+ * VirtualWorld: a fixed {@link WORLD_WIDTH}×{@link WORLD_HEIGHT} coordinate
  * space, uniformly scaled (CSS transform) to fit its parent box and centered.
  *
  * Why this exists:

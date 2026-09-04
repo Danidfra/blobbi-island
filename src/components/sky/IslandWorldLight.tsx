@@ -3,12 +3,12 @@
  *
  * ## Why there is only one, and why it sits above the players
  *
- * The heavy half of the time-of-day grade is *not* here — it is a CSS `filter` on
+ * The heavy half of the time-of-day grade is *not* here; it is a CSS `filter` on
  * the location artwork itself (see `PlaceBackground`). That split is forced by the
  * artwork being transparent exactly where the sky shows through: a tint layer
  * placed under the world content would darken the sky along with the ground and
  * wash the stars out, because a sibling overlay cannot follow another element's
- * alpha channel. A filter can — it leaves transparent pixels transparent.
+ * alpha channel. A filter can; it leaves transparent pixels transparent.
  *
  * What is left for this layer is the part that *should* reach characters: a shared
  * warm or cool cast, so the Blobbi does not read as a daylight cut-out pasted onto
@@ -19,8 +19,8 @@
  * ## The readability budget
  *
  * Because it is above the content, this veil also covers remote players, name
- * labels, walk-up prompts and chat bubbles. So its alpha is capped low — 0.14 at
- * deep night before per-location scaling — which is a contrast decision, not a
+ * labels, walk-up prompts and chat bubbles. So its alpha is capped low: 0.14 at
+ * deep night before per-location scaling, which is a contrast decision, not a
  * taste one. At that weight a white chat bubble keeps ~86% of its luminance and
  * every interactive silhouette stays legible, while the artwork filter (which
  * cannot touch characters at all) carries the actual sense of night.

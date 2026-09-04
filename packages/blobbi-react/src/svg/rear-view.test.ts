@@ -4,8 +4,8 @@
  * The rear view is derived from the front artwork by deleting comment-delimited
  * face blocks (see `rear-view.ts`). That only stays correct as long as every
  * shipped SVG keeps using the comment convention, so this suite is table-driven
- * over EVERY Blobbi drawing — 16 adult forms × {base, sleeping} plus the baby's
- * two variants — and is the tripwire for new artwork that forgets a comment or
+ * over EVERY Blobbi drawing: 16 adult forms × {base, sleeping} plus the baby's
+ * two variants: and is the tripwire for new artwork that forgets a comment or
  * invents a new face label.
  */
 import { describe, it, expect } from 'vitest';
@@ -163,7 +163,7 @@ describe('rear-view SVG derivation', () => {
     expect(rear).not.toContain('Eyes (black patches + white base)');
   });
 
-  it('keeps the sleeping "Zzz" — a sleeping Blobbi reads from behind too', () => {
+  it('keeps the sleeping "Zzz": a sleeping Blobbi reads from behind too', () => {
     const rear = applyRearView(loadBlobbiSvg('baby', undefined, '#ff8800', '#0088ff', '#222', true, 'zzz', 'rear'));
     expect(rear).toMatch(/Zzz|Z's for sleeping/);
   });

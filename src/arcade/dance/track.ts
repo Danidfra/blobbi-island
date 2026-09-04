@@ -1,5 +1,5 @@
 /**
- * Blobbi Dance — the track contract.
+ * Blobbi Dance: the track contract.
  *
  * ## Why a track is not a filename
  *
@@ -23,7 +23,7 @@
  * UI effect) and no music of any kind, so option 1 of the phase brief (reuse an
  * existing repository-owned asset) has nothing to reuse and option 2 (add an
  * original recorded asset) is not something a code change can honestly produce.
- * Option 3 — a synthesised development track scheduled against the audio clock —
+ * Option 3: a synthesised development track scheduled against the audio clock,
  * is what ships, and `readiness: 'development'` says so in data rather than only
  * in a document.
  *
@@ -40,7 +40,7 @@ export type DanceTrackId = string;
 /**
  * How the audio for a track is produced.
  *
- * `synth` tracks carry no asset and therefore no licence question at all — the
+ * `synth` tracks carry no asset and therefore no licence question at all, the
  * waveform is computed in the browser from the parameters below.
  */
 export type DanceTrackSource =
@@ -83,7 +83,7 @@ export interface DanceTrack {
   readonly leadInMs: number;
   /**
    * Audio that continues after the last note, in milliseconds. The run does not
-   * end on the last note — it ends when the music does, so a missed final note
+   * end on the last note; it ends when the music does, so a missed final note
    * does not end the song a beat early.
    */
   readonly tailMs: number;
@@ -101,18 +101,18 @@ export function msPerBeat(bpm: number): number {
 const NEON_HOP_BPM = 120;
 const NEON_HOP_BEATS_PER_BAR = 4;
 const NEON_HOP_LEAD_IN_MS = 4 * msPerBeat(NEON_HOP_BPM); // one bar of count-in
-/** 32 bars of chart at 4 beats each — 64 seconds of playable music. */
+/** 32 bars of chart at 4 beats each: 64 seconds of playable music. */
 export const NEON_HOP_BARS = 32;
 const NEON_HOP_BODY_MS = NEON_HOP_BARS * NEON_HOP_BEATS_PER_BAR * msPerBeat(NEON_HOP_BPM);
 const NEON_HOP_TAIL_MS = 4 * msPerBeat(NEON_HOP_BPM); // one bar to land the ending
 
 /**
- * `blobbi-dance-neon-hop-v1` — 120 BPM, 32 bars, 68 seconds end to end.
+ * `blobbi-dance-neon-hop-v1`: 120 BPM, 32 bars, 68 seconds end to end.
  *
  * Synthesised in the browser (see `dance-audio.ts`): a four-on-the-floor kick, an
  * offbeat hat, a backbeat clap and a two-bar bass/lead motif, all scheduled
  * against `AudioContext.currentTime`. It is deliberately simple and deliberately
- * ours — there is nothing here to licence and nothing to take down.
+ * ours: there is nothing here to licence and nothing to take down.
  *
  * The `-v1` suffix is part of the identity. A retuned or re-recorded track is
  * `-v2` and a new record, because a chart written against these timings must not

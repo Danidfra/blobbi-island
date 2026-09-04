@@ -1,11 +1,11 @@
 /**
- * F-03 regression — the generic inventory mutation vs the value-bearing
+ * F-03 regression: the generic inventory mutation vs the value-bearing
  * writers, ACROSS tabs.
  *
  * Coins, Arcade Tickets and every consumable live in ONE replaceable
  * kind:31633 event. The per-tab write chain cannot serialize two different
  * tabs, so cross-tab exclusion is exactly what the shared queued Web Lock
- * exists for — and `useInventoryMutation` used to skip it, letting a free
+ * exists for: and `useInventoryMutation` used to skip it, letting a free
  * grant or a consumption decrement in one tab silently roll back a Coin or
  * Ticket movement in another.
  *
@@ -187,7 +187,7 @@ describe('a generic inventory mutation and a Coin wallet write racing across tab
       now: () => FROZEN_NOW,
     });
 
-    // Started together, awaited together — only the shared lock orders them.
+    // Started together, awaited together; only the shared lock orders them.
     await Promise.all([
       wallet.grantCoins({ opId: 'race-grant-1', amount: 20, label: 'mine-reward' }),
       runInventoryMutationTransaction(

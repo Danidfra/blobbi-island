@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 /**
- * DebugOverlaysContext — a single shared switch for developer-only VISUAL debug
+ * DebugOverlaysContext: a single shared switch for developer-only VISUAL debug
  * overlays (red boundaries, movement-blocker outlines, Blobbi position text,
  * multiplayer/session debug box, location debug, etc.).
  *
@@ -10,7 +10,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
  *     many components.
  *   - The control (and the overlays) only exist in development builds. In
  *     production `isDevMode` is false, the toggle is never rendered, and overlays
- *     never show — regardless of any persisted localStorage value.
+ *     never show: regardless of any persisted localStorage value.
  *   - Off by default, even in development, so the world looks clean on load.
  *
  * `isDevMode` uses Vite's `import.meta.env.DEV`, which is statically `false` in
@@ -88,7 +88,7 @@ export const DebugOverlaysProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 /**
- * useDebugOverlays — read/control the shared visual-debug-overlay switch.
+ * useDebugOverlays: read/control the shared visual-debug-overlay switch.
  *
  * Safe to call outside the provider (e.g. in tests): it falls back to a
  * production-like state where everything is off and the toggle is hidden.

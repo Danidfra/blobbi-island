@@ -2,7 +2,7 @@
  * Reloading inside the Mine restores the ROOM and nothing else.
  *
  * The distinction this pins is the whole reason location resume is safe to
- * ship. `cave-open` is a location like any other, so presence restores it — but
+ * ship. `cave-open` is a location like any other, so presence restores it, but
  * a mining run is not a location. It is a durable session with energy and Coins
  * attached, and the existing lifecycle deliberately ABANDONS an unfinished run
  * on unmount: no energy charged, no Coins granted (`docs/mine-session-settlement.md`).
@@ -10,7 +10,7 @@
  * Restoring the room must not quietly undo that. A resumed Mine has to look
  * exactly like walking into the cave: the instructions screen, no session, no
  * settlement. These tests fail if resume ever grows the ability to rehydrate a
- * run — which is the tempting next feature and the wrong one.
+ * run: which is the tempting next feature and the wrong one.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -74,7 +74,7 @@ describe('Mine after a location resume', () => {
 
   it('resumes no progress across a reload-shaped remount', () => {
     // Two mounts in a row is what a reload looks like to this component. The
-    // second must be as empty as the first — no clicks, no loot, no session.
+    // second must be as empty as the first; no clicks, no loot, no session.
     const first = render(<MiningGame />);
     first.unmount();
     render(<MiningGame />);

@@ -37,7 +37,7 @@ The library exposes:
 | `GameItemImage` | `{ url: string; marker?: string }` |
 | `GameItemImageMarker` / `GAME_ITEM_IMAGE_MARKERS` | the six known markers |
 | `GameItemImageMarkerValue` | a known marker **or** any other string |
-| `GameItemImageSource` | `{ images: readonly GameItemImage[] }` — the helper input |
+| `GameItemImageSource` | `{ images: readonly GameItemImage[] }`: the helper input |
 | `selectPrimaryGameItemImage(images)` | the primary entry, or `undefined` |
 | `getPrimaryItemImage(item)` | the primary URL, or `undefined` |
 | `getItemImageByMarker(item, marker)` | the first image with that marker |
@@ -50,7 +50,7 @@ Rules that matter downstream, all verified against the installed package in
 - an **unmarked** image is the primary/default;
 - when *every* image is marked, the **first** entry becomes the primary, so an
   only-marked definition still renders;
-- `marker` is the raw index-2 value, so **unknown markers survive verbatim** —
+- `marker` is the raw index-2 value, so **unknown markers survive verbatim**,
   `isGameItemImageMarker` narrows, it does not filter;
 - image tags with a missing or blank URL are **ignored**;
 - there is **no** `thumb` tag, **no** spritesheet and **no** turnaround format.
@@ -92,7 +92,7 @@ reciprocate: an item shipping a `back` view and no `front` view is telling us it
 front *is* the primary.
 
 **Side and diagonal views are never chosen as a front or back view.** They are
-different camera angles, not different qualities of the same angle — dropping a
+different camera angles, not different qualities of the same angle, dropping a
 side-view hat onto a front-facing Blobbi is a worse answer than dropping its
 primary image on it. They remain reachable only through the generic "first valid
 image" last resort, which exists so an item shipping nothing but a diagonal view
@@ -105,9 +105,9 @@ still renders.
 
 1. the requested pose's marked image from the definition;
 2. the definition's primary image;
-3. the definition's `front` view — only when resolving `back`;
+3. the definition's `front` view; only when resolving `back`;
 4. the definition's first valid image;
-5. the URL stored on the equip tag, or — **only when there is none** — the
+5. the URL stored on the equip tag, or, **only when there is none**, the
    generated remote URL for the code;
 6. the local `.webp` asset;
 7. the local `.png` asset.
@@ -118,7 +118,7 @@ that just failed only delays reaching one that works.
 
 Steps 1–4 are published facts; steps 5–7 are inferred paths, so **published
 artwork outranks a filename guess**. Step 5 deliberately keeps the historical
-`url || generated` pairing instead of listing both — appending the generated URL
+`url || generated` pairing instead of listing both, appending the generated URL
 after a stored one would add a network retry that never used to happen.
 
 ## 5. Item identity and issuer trust
@@ -145,7 +145,7 @@ guessable address.
 ## 6. Legacy accessory compatibility
 
 Accessories predate the item protocol here. An accessory with no definition
-behaves exactly as it did before this phase — same sources, same order:
+behaves exactly as it did before this phase, same sources, same order:
 
 ```text
 stored equip URL (or the generated remote URL when absent) → local .webp → local .png
@@ -165,7 +165,7 @@ nothing animates between view assets.
 
 **A published `back` image changes the picture, never the policy.** Which
 accessories are drawn from behind is still decided by the package's
-`REAR_VIEW_HIDDEN_SLOTS` — a face-only item stays hidden in rear view no matter
+`REAR_VIEW_HIDDEN_SLOTS`: a face-only item stays hidden in rear view no matter
 what it publishes.
 
 ## 8. Preserved but inactive views
@@ -177,7 +177,7 @@ current render path consumes them.
 
 This is why the Island model keeps the package's **ordered collection** rather
 than a `marker → url` map. A map would lose source order, duplicate markers, a
-second unmarked primary, and future markers — all things an issuer can
+second unmarked primary, and future markers; all things an issuer can
 legitimately publish.
 
 ## 9. Package boundary
@@ -193,8 +193,8 @@ kind:31632 event
 
 `@blobbi/react` knows nothing about kinds, tags, issuers, relays, inventory
 ownership, item definitions or view markers. Its `AccessorySourceResolver`
-contract is unchanged — a resolver still receives `{ code, slot, url }` and still
-returns `readonly string[]` — so the definition lookup and the requested pose are
+contract is unchanged: a resolver still receives `{ code, slot, url }` and still
+returns `readonly string[]`: so the definition lookup and the requested pose are
 **closed over at construction time** on the Island side.
 
 Enforced by `src/components/blobbi/renderer-boundary.test.ts` (the package
@@ -220,8 +220,8 @@ nothing raises a toast. They are inspectable in tests and dev tooling via
 
 ## 11. Fixtures and testing
 
-`src/inventory/item-image-fixtures.ts` holds **raw kind:31632 events** — not
-hand-built definition objects — so every test exercises the real parser. They
+`src/inventory/item-image-fixtures.ts` holds **raw kind:31632 events**: not
+hand-built definition objects: so every test exercises the real parser. They
 cover: primary only; primary + front + back; a full turnaround; only-marked;
 duplicate `front`; multiple primaries; an unknown marker; invalid/blank image
 tags; no images at all; back-only; front-only.
@@ -261,7 +261,7 @@ Explicitly **not** part of this work:
 ## 13. Authoring these images
 
 The `image` tags described here are authored and published through the internal
-Game Item Tools at `/tools/game-items` — see
+Game Item Tools at `/tools/game-items`: see
 [`game-item-tools.md`](./game-item-tools.md) for the image manager, the
 primary/unmarked rule, marker suggestions from filenames, and the front/back
 preview that uses the same resolution helpers documented above.
@@ -273,8 +273,8 @@ stand.
 ## 14. First activated accessory
 
 The non-goal "migrating legacy accessories" in §12 is now partially addressed:
-one accessory — the **Block Builder Cap**
-(`31632:9efb8d30…63a9:blobbi:cosmetic:block-builder-cap`) — resolves its artwork
+one accessory: the **Block Builder Cap**
+(`31632:9efb8d30…63a9:blobbi:cosmetic:block-builder-cap`): resolves its artwork
 through the `image` views documented above. Its `front` and `back` markers drive
 `itemImageSourcesForView`, and its `side-right` / `side-left` markers are parsed
 and reachable but never posed, exactly as §"why side/diagonal are not
@@ -285,6 +285,6 @@ build a source list, no side-facing Blobbi poses. The remaining 24 legacy
 accessories are unpublished and resolve through the legacy chain unchanged.
 
 See [`accessory-definition-migration.md`](./accessory-definition-migration.md).
-Visual-EFFECT items carry a single primary image (card artwork only — an
+Visual-EFFECT items carry a single primary image (card artwork only, an
 effect's look is local code, not an image): see
 [`blobbi-effect-activation.md`](./blobbi-effect-activation.md).

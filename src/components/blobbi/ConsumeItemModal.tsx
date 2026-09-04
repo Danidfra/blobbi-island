@@ -20,7 +20,7 @@ interface ConsumeItemModalProps {
   /** Resolved catalog definition (fetched 31632 or bundled fallback). */
   definition: ResolvedBlobbiItemDefinition;
   /**
-   * How many the player HAS — the number shown as "Available". For an item in
+   * How many the player HAS, the number shown as "Available". For an item in
    * another game's inventory this is the live effective quantity, and it may
    * change while the dialog is open.
    */

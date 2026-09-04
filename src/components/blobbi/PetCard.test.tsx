@@ -1,5 +1,5 @@
 /**
- * The pet card — that it reads like a pet, and still says everything.
+ * The pet card; that it reads like a pet, and still says everything.
  *
  * The redesign moved every fact somewhere new, so the risk is not that it looks
  * wrong but that something quietly stopped being shown. These tests hold the
@@ -31,7 +31,7 @@ const STATS: PetCardStats = {
 
 describe('the mood headline', () => {
   it('says one thing, chosen by precedence', () => {
-    // Asleep outranks everything — telling a sleeping pet it is tired would be
+    // Asleep outranks everything, telling a sleeping pet it is tired would be
     // a strange thing for the game to do.
     expect(
       blobbiMood({ condition: 'poor', urgency: 'high', urgentNeed: 'rest', sleepState: 'sleeping' })
@@ -95,7 +95,7 @@ describe('the need meters', () => {
     const bars = screen.getAllByRole('progressbar');
     expect(bars).toHaveLength(5);
 
-    // The bar IS the information, so it carries the full ARIA quartet — a div
+    // The bar IS the information, so it carries the full ARIA quartet, a div
     // that merely looks like a meter tells a screen-reader user nothing.
     const clean = screen.getByRole('progressbar', { name: 'Clean' });
     expect(clean).toHaveAttribute('aria-valuenow', '20');

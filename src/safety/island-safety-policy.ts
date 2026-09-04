@@ -1,5 +1,5 @@
 /**
- * The capability model — what a player may do, stated once.
+ * The capability model, what a player may do, stated once.
  *
  * ## The rule this type exists to enforce
  *
@@ -30,8 +30,8 @@
  * ## Where a capability must be enforced
  *
  * **At the data boundary, not the render boundary.** For anything a stranger can
- * author, the check belongs where the content is admitted — before it is queued,
- * cached or handed to a component — because a component only controls what
+ * author, the check belongs where the content is admitted, before it is queued,
+ * cached or handed to a component, because a component only controls what
  * *this* build draws, while a policy at the boundary also governs content that
  * arrives from a Standard client, a third-party client, or a future screen
  * nobody has written yet. See `chat-admission.ts` for the worked example and
@@ -43,7 +43,7 @@
  * not restrictions that Family adds; they are properties the island has today in
  * every profile, and turning any of them on would be a new product decision
  * rather than a configuration change. Typing them this way means a future
- * profile literal that tries to relax one does not type-check — the compiler
+ * profile literal that tries to relax one does not type-check, the compiler
  * asks the question instead of a reviewer having to notice.
  */
 
@@ -60,7 +60,7 @@ export interface IslandSafetyPolicy {
   /**
    * Which profile produced this policy.
    *
-   * Present for diagnostics, logging and the resolver's own tests — **not** as
+   * Present for diagnostics, logging and the resolver's own tests, **not** as
    * something feature code should branch on. If you find yourself reading this
    * field outside `src/safety/`, the capability you actually needed is missing
    * and should be added instead.
@@ -74,7 +74,7 @@ export interface IslandSafetyPolicy {
    *
    * **Both directions, one flag, deliberately.** Send and render can never
    * diverge, because a build that disabled composing while still rendering
-   * inbound text would remove the player's voice and keep every stranger's —
+   * inbound text would remove the player's voice and keep every stranger's,
    * the exact half-measure `docs/family-safety-audit.md` §18.2 names as the most
    * likely way to get this wrong. Enforced in `chat-admission.ts`.
    */
@@ -103,7 +103,7 @@ export interface IslandSafetyPolicy {
   /**
    * Private one-to-one messaging. **Invariant: absent in every profile.**
    *
-   * Blobbi Island has never had a private channel — no kind 4, no NIP-17/59, no
+   * Blobbi Island has never had a private channel; no kind 4, no NIP-17/59, no
    * `nip44` usage anywhere in `src/`. Recording it as a policy invariant turns
    * "we happen not to have built DMs" into "shipping DMs is a decision that has
    * to change this type", which is the difference the audit's §1 finding rests
@@ -118,13 +118,13 @@ export interface IslandSafetyPolicy {
    *
    * Free text authored by a stranger, attached to a body that moves around the
    * child's screen and persists in kind 31124. When this is `false` the renderer
-   * must substitute a neutral generated name — `genUserName` already derives a
+   * must substitute a neutral generated name, `genUserName` already derives a
    * stable, collision-resistant one from a pubkey.
    */
   readonly strangerAuthoredNames: boolean;
 
   /**
-   * Render another player's kind:0 profile metadata — picture, display name,
+   * Render another player's kind:0 profile metadata, picture, display name,
    * about, website. **Invariant: never, in any profile.**
    *
    * Today no code path does this, which is the single most valuable safety
@@ -149,7 +149,7 @@ export interface IslandSafetyPolicy {
   /**
    * Follow a link out of Blobbi Island to an arbitrary destination.
    *
-   * The capability covers the act of leaving, whatever the mechanism — anchor,
+   * The capability covers the act of leaving, whatever the mechanism, anchor,
    * `window.open`, a share intent. Phase B introduces the single egress helper
    * that will consult it; today the calls are scattered, which is itself the
    * finding (audit H-6).
@@ -186,7 +186,7 @@ export interface IslandSafetyPolicy {
    *
    * Today that means pasting any embeddable YouTube URL or id
    * (`youtube-url.ts`: "the theater accepts an OPEN catalog"). When this is
-   * `false` the theater needs an approved catalog to show instead — which does
+   * `false` the theater needs an approved catalog to show instead, which does
    * not exist yet, so a Family theater currently has nothing to play. That is a
    * known, documented gap for Phase E, not an oversight.
    */
@@ -221,7 +221,7 @@ export interface IslandSafetyPolicy {
    */
   readonly authoringTools: boolean;
 
-  // ── Playing together — preserved in every profile ────────────────────────
+  // ── Playing together, preserved in every profile ────────────────────────
 
   /**
    * See other players and be seen by them.
@@ -235,7 +235,7 @@ export interface IslandSafetyPolicy {
 
   /**
    * Take part in shared activities: sitting together, synchronized watch
-   * sessions, co-play. Also `true` in every profile — what a Family session may
+   * sessions, co-play. Also `true` in every profile, what a Family session may
    * *play* is governed by {@link openMediaEntry}, not by whether it may gather.
    */
   readonly sharedActivities: boolean;

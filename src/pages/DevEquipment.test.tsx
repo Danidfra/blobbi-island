@@ -4,14 +4,14 @@
  * What must hold:
  *
  *  - all sixteen official items appear, derived from the canonical registries
- *    (via the Lab projection — no second list);
+ *    (via the Lab projection; no second list);
  *  - simulation controls drive the REAL policy/activation/renderer paths:
  *    an owned+equipped effect renders through `resolveActiveBlobbiEffects`
  *    into real `[data-blobbi-effect]` DOM, an owned+equipped wearable renders
  *    through the real accessory translation, egg rejects the current items,
  *    and the stale override produces a diagnosed non-rendering placement;
  *  - NOTHING real moves: no signer call, no publish, no change to the real
- *    kind:31633 cache — asserted, not assumed;
+ *    kind:31633 cache: asserted, not assumed;
  *  - the Live Account section explains the flag-disabled workflow (this test
  *    env has no flag) and never mounts a mutation surface;
  *  - the import graph of the page + sim module reaches no writer, signer or
@@ -119,7 +119,7 @@ describe('the activation pipeline runs the REAL resolvers', () => {
   it('own + equip an effect renders it through the real effect path; unowned does not', async () => {
     const { container } = renderHarness();
 
-    // Not owned: the equip control is disabled — the ownership gate is real.
+    // Not owned: the equip control is disabled, the ownership gate is real.
     expect(screen.getByTestId(`dev-equip-${AURA_D}`)).toBeDisabled();
 
     fireEvent.click(screen.getByTestId(`dev-own-${AURA_D}`));
@@ -226,7 +226,7 @@ describe('nothing real moves', () => {
   });
 });
 
-describe('boundary — the harness cannot reach a writer', () => {
+describe('boundary: the harness cannot reach a writer', () => {
   const ENTRIES = [
     'src/pages/DevEquipment.tsx',
     'src/lib/dev-equipment-simulation.ts',
@@ -243,7 +243,7 @@ describe('boundary — the harness cannot reach a writer', () => {
 
   function specifiersOf(file: string): string[] {
     const source = readFileSync(file, 'utf8');
-    // `import type { … }` is erased at compile time — a type-only reference to
+    // `import type { … }` is erased at compile time, a type-only reference to
     // a writer's INPUT SHAPE (the lab planner names `InventorySetTarget`)
     // carries no code and cannot call anything, so the walk skips it.
     return [

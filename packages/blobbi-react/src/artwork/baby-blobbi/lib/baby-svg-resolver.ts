@@ -47,7 +47,7 @@ export function resolveBabySvg(blobbi: Blobbi, options: BabySvgResolverOptions =
  * Preload baby SVGs for quick switching
  */
 export function preloadBabySvgs(): void {
-  // Both SVGs are inlined constants — this function exists for API consistency
+  // Both SVGs are inlined constants; this function exists for API consistency
   // This function exists for API consistency
   getBabyBaseSvg();
   getBabySleepingSvg();

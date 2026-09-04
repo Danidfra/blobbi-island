@@ -8,7 +8,7 @@ import { StageOverlayContext } from '@/contexts/StageOverlayContext';
  * The contract every surface built on BlobbiModal inherits.
  *
  * These are the properties the game's hand-rolled `absolute inset-0` overlays
- * do NOT have, which is the whole reason the primitive exists — so they are
+ * do NOT have, which is the whole reason the primitive exists, so they are
  * asserted here once rather than re-asserted in each migrated surface's test.
  *
  * The presentations are exercised through the explicit `presentation` prop
@@ -174,7 +174,7 @@ describe('BlobbiModal sizing', () => {
   it.each(['sm', 'md', 'lg', 'xl', 'full'] as const)('applies the %s width', (size) => {
     open({ presentation: 'dialog', size });
     // Whatever the size, the base `max-w-lg` from DialogContent must be
-    // neutralised — otherwise lg, xl and full are all silently clamped to 32rem.
+    // neutralised: otherwise lg, xl and full are all silently clamped to 32rem.
     expect(screen.getByRole('dialog').className).toContain('max-w-none');
   });
 

@@ -58,7 +58,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   const blobbiRef = useRef<MovableBlobbiRef>(null);
   // Local Blobbi's attention *decision* (target identity) + the live positions
   // map. MovableBlobbi resolves the target's CURRENT position from these each
-  // frame, so the local Blobbi tracks a moving target continuously — the exact
+  // frame, so the local Blobbi tracks a moving target continuously, the exact
   // same mechanism RemoteBlobbiSprite uses, so local and remote can't diverge.
   const localAttentionRef = useRef<AttentionState>(emptyAttention());
   const livePositionsRef = useRef(new Map<string, Position>());
@@ -115,7 +115,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
    * Whose card is open, when it is another player's.
    *
    * Held in state rather than only in `currentRemoteRef` because the safety
-   * actions and the block-eviction effect below both need to re-render on it —
+   * actions and the block-eviction effect below both need to re-render on it,
    * a ref would leave the card showing someone who is no longer in the world.
    */
   const [readOnlyPubkey, setReadOnlyPubkey] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // The shared watch session the local player is participating in, as the
   // session ADDRESS STRING and nothing else. Owned here for the same reason
   // `sittingIn` is: the theater reports it, presence publishes it, and both need
-  // one answer. It is never a copy of playback state — what is playing lives in
+  // one answer. It is never a copy of playback state, what is playing lives in
   // the session event (see `docs/protocol/shared-playback-session.md` §14).
   const [activitySession, setActivitySession] = useState<string | null>(null);
 
@@ -134,7 +134,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // lifted here so the theater card can show it. Advisory, like seat occupancy.
   const [sessionParticipants, setSessionParticipants] = useState(1);
 
-  // Theater seats that should LOOK occupied — remote players whose presence
+  // Theater seats that should LOOK occupied, remote players whose presence
   // claims a seat, plus the local player's own. Derived by MultiplayerLayer
   // (which holds the live presence map) and lifted here so the seats, which are
   // rendered by a sibling, can read a single answer. Purely visual: it reserves
@@ -145,10 +145,10 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   // theater; presence must never point at a session the player has left.
   //
   // This is the ONLY implicit way out of a watch session. Standing up, walking
-  // around the theater and changing seats all keep it — the session belongs to
+  // around the theater and changing seats all keep it, the session belongs to
   // being in the room, not to a chair. Leaving the room also forgets the
   // session for good, so walking back in does not silently rejoin it.
-  // (Poses — seat, hiding spot, bed — reset inside useBlobbiPoseController.)
+  // (Poses: seat, hiding spot, bed, reset inside useBlobbiPoseController.)
   useEffect(() => {
     setActivitySession(null);
     forgetWatchSession(user?.pubkey);
@@ -159,7 +159,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
    *
    * Deliberately NOT the pose controller's `hiddenIn`: that state is published
    * to presence (`MultiplayerLayer` calls `hideAt(hiddenIn)`) and means "this
-   * player is hidden inside a world hiding spot" — remote clients stop drawing
+   * player is hidden inside a world hiding spot": remote clients stop drawing
    * the player entirely. Being inside a minigame dialog is not a world state;
    * remote players should keep seeing this Blobbi standing at the shack. This
    * flag only gates the local `MovableBlobbi` render and resets with the
@@ -527,7 +527,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   }, []);
 
   // The dock is a launcher: it asks for the communication panel and nothing
-  // more. Sending no longer travels through a DOM event — the panel is rendered
+  // more. Sending no longer travels through a DOM event, the panel is rendered
   // here, next to the publisher, and hands it a typed message directly.
   useEffect(() => {
     const open = () => setIsCommunicationOpen(true);
@@ -683,7 +683,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           arcade-scoped, so neither clutters the rest of the island.
         */}
         {/*
-          `showZero`: inside the arcade the counter is the point — the games
+          `showZero`: inside the arcade the counter is the point, the games
           award tickets, so a genuine zero, a loading read and an unavailable
           read each render distinctly instead of the chip silently hiding.
         */}

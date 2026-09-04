@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — Resolved item-definition model and bundled fallback catalog.
+ * Blobbi Island: Resolved item-definition model and bundled fallback catalog.
  *
  * A `ResolvedBlobbiItemDefinition` is the Island view model for an item. It is
  * produced by resolving, in order:
@@ -11,12 +11,12 @@
  * (`src/protocol/event-registry.ts`) rather than a second hand-maintained copy
  * of the same metadata. It exists so the game remains playable when relays are
  * unavailable and so the app never blocks on a fetch. It is not a
- * re-implementation of the protocol — parsing/validation of fetched definitions
+ * re-implementation of the protocol, parsing/validation of fetched definitions
  * is done by `@nostr-games/inventory`.
  *
  * For `active` items the fallback mirrors the currently-published kind:31632
  * events exactly. For `reserved` items (identity claimed, official event not
- * published yet — e.g. the Arcade Ticket) the fallback is what the definition
+ * published yet: e.g. the Arcade Ticket) the fallback is what the definition
  * WILL say, so the client renders the item correctly today and switches to the
  * published definition automatically the moment it exists.
  */
@@ -65,9 +65,9 @@ export type ItemCategory = ItemCategoryName;
  * - `slot`: `declared` is the only state Island can equip. `missing` means the
  *   issuer has not said where the cosmetic goes; `malformed` means they said
  *   something unusable. Island never infers a slot from an item id or a code
- *   prefix, so both are refused — but they are refused for different reasons
+ *   prefix, so both are refused, but they are refused for different reasons
  *   and the diagnostic says which.
- * - `forms`: `absent` means NO RESTRICTION — an optional field the issuer did
+ * - `forms`: `absent` means NO RESTRICTION, an optional field the issuer did
  *   not use. `declared` restricts the item to the listed forms. `malformed`
  *   (present but not a usable non-empty string array, including `[]`) makes the
  *   definition invalid for normal production equipping.
@@ -87,11 +87,11 @@ export interface DefinitionVisualDiagnostics {
  * re-reading raw content JSON. Nothing in the activation path reads them.
  */
 export interface DefinitionEffectVisual {
-  /** `visual.kind` — `'blobbi-effect'` marks a definition as an effect item. */
+  /** `visual.kind`: `'blobbi-effect'` marks a definition as an effect item. */
   kind: string | null;
-  /** `visual.effect` — the effect id the ISSUER claims. Untrusted. */
+  /** `visual.effect`: the effect id the ISSUER claims. Untrusted. */
   effect: string | null;
-  /** `visual.effectSlot` — the slot the ISSUER claims. Untrusted. */
+  /** `visual.effectSlot`: the slot the ISSUER claims. Untrusted. */
   effectSlot: string | null;
 }
 
@@ -140,7 +140,7 @@ export interface ResolvedBlobbiItemDefinition {
    *
    * Kept as the package's own ordered collection rather than a marker→url map:
    * a map would silently lose source order, duplicate markers, a second unmarked
-   * primary, and any marker a future spec version adds — all of which are things
+   * primary, and any marker a future spec version adds; all of which are things
    * an issuer can legitimately publish and which the Island must be able to
    * inspect. Empty for fallback/unknown items with no artwork.
    */
@@ -158,7 +158,7 @@ export interface ResolvedBlobbiItemDefinition {
    * renderer knows (`EQUIPPABLE_SLOTS`).
    *
    * `null` for every non-cosmetic item and for a cosmetic whose issuer did not
-   * declare one — which is NOT equippable in normal production UI, rather than
+   * declare one: which is NOT equippable in normal production UI, rather than
    * equippable somewhere guessed. Island cannot safely infer placement from an
    * item id, so a missing slot is a missing answer.
    */
@@ -166,14 +166,14 @@ export interface ResolvedBlobbiItemDefinition {
   /**
    * Blobbi forms this item is valid for, from `content.visual.forms`.
    *
-   * `null` means the issuer DECLARED NONE, which is no restriction at all — an
+   * `null` means the issuer DECLARED NONE, which is no restriction at all, an
    * optional metadata field being absent must never mean "supports no form".
    * A non-empty array restricts the item to exactly those forms.
    *
    * A `forms` key that is present but unusable (not an array, empty, or an
    * array with no usable strings) also lands here as `null`, but is recorded
    * separately in {@link ResolvedBlobbiItemDefinition.visualDiagnostics} as
-   * `malformed` — that case is a broken definition, not a universal one, and
+   * `malformed`: that case is a broken definition, not a universal one, and
    * Island refuses it for normal production equipping.
    */
   forms: readonly string[] | null;
@@ -197,7 +197,7 @@ export interface ResolvedBlobbiItemDefinition {
   /**
    * The published `rarity` tag, when one exists.
    *
-   * Display metadata only — never identity, never authorization, never a
+   * Display metadata only; never identity, never authorization, never a
    * price. Present for fetched definitions that carry the tag and for the
    * bundled effect-item fallback (whose recorded rarity mirrors the published
    * events); absent everywhere else.
@@ -296,7 +296,7 @@ export function bundledFallbackDefinition(
     emoji: meta.emoji,
     ...(meta.image ? { image: meta.image } : {}),
     // The bundled catalog knows exactly one artwork URL per item and no view
-    // markers, so its collection is a single UNMARKED primary — the same thing
+    // markers, so its collection is a single UNMARKED primary, the same thing
     // a definition with one plain `["image", url]` tag parses to. Pose-specific
     // views only ever come from a fetched definition.
     images: meta.image ? [{ url: meta.image }] : [],
@@ -348,8 +348,8 @@ export function unknownItemDefinition(
  * failed, this client genuinely does not know them, and inventing values here
  * would be the "second authoritative catalog" the migration exists to avoid.
  *
- * So this returns the little the registry legitimately records — name, symbol,
- * primary artwork — and states the rest honestly: `category: 'unknown'`,
+ * So this returns the little the registry legitimately records, name, symbol,
+ * primary artwork: and states the rest honestly: `category: 'unknown'`,
  * `action: null`, no effects, no topics. `source: 'fallback'` marks it, and a
  * fetched definition replaces it wholesale the moment one arrives.
  *
@@ -383,7 +383,7 @@ export function bundledCosmeticFallbackDefinition(
     // The bundled entry deliberately records NO slot and NO forms: both live in
     // the published definition's `content.visual`, and a second copy here would
     // be a second thing to keep in sync. A cosmetic whose definition could not
-    // be fetched is therefore not equippable until it is — which is the honest
+    // be fetched is therefore not equippable until it is, which is the honest
     // answer, since Island cannot know where to draw it.
     slot: null,
     forms: null,
@@ -406,7 +406,7 @@ export function bundledCosmeticFallbackDefinition(
  * `src/effects/official-visual-effect-items.ts`, not by this display fallback,
  * and duplicating those facts into a second shape would create a copy that can
  * drift. A missing fetched definition therefore costs only description text and
- * marked image views — never activation.
+ * marked image views; never activation.
  */
 export function bundledEffectItemFallbackDefinition(
   address: string,

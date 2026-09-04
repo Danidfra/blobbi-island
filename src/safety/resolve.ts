@@ -3,7 +3,7 @@
  *
  * This is the ONE place where a profile is compared against anything. Every
  * other module in the application receives a resolved {@link IslandSafetyPolicy}
- * and asks it about capabilities — see `island-safety-policy.ts` for why, and
+ * and asks it about capabilities; see `island-safety-policy.ts` for why, and
  * `eslint.config.js` for the rule that keeps it that way.
  */
 
@@ -15,13 +15,13 @@ import { FAMILY_POLICY, STANDARD_POLICY } from './policies';
  * The policy for a profile.
  *
  * The switch is exhaustive over {@link ExperienceProfile}, so adding a third
- * profile is a compile error here until its policy is written — which is the
+ * profile is a compile error here until its policy is written, which is the
  * cheapest possible reminder that a profile IS a complete capability matrix.
  *
  * **Anything that is not a known profile throws.** It does not fall back to
  * Standard, and it does not merge. A silent fallback is how an unreadable stored
  * profile turns into a permissive one, and a merge is how a policy ends up
- * half-restricted — neither failure would be visible at the call site, and both
+ * half-restricted: neither failure would be visible at the call site, and both
  * would be visible to a child. Callers holding untrusted input validate it with
  * `isExperienceProfile` first and choose their fallback deliberately.
  */
@@ -49,7 +49,7 @@ export function resolveSafetyPolicy(profile: ExperienceProfile): IslandSafetyPol
  * what any existing player sees.
  *
  * **Deferred, not imminent.** Blobbi Island V1 ships with Standard only, and
- * Family activation is postponed until after the core Island V1 is complete —
+ * Family activation is postponed until after the core Island V1 is complete,
  * see `docs/family-activation-readiness.md`. Nothing is waiting on this
  * constant; when the time comes, this is where the change starts.
  *
@@ -59,7 +59,7 @@ export function resolveSafetyPolicy(profile: ExperienceProfile): IslandSafetyPol
  * nothing stored. Two things must be true of that change and are worth writing
  * down before anyone makes it:
  *
- *  1. the fallback must never *downgrade* — a device whose guardian chose
+ *  1. the fallback must never *downgrade*, a device whose guardian chose
  *     `'family'` and whose storage read fails must not silently become Standard;
  *  2. the resolved policy must be available on the very first render, because a
  *     single frame of Standard is a frame in which a stranger's text can be

@@ -12,8 +12,8 @@
  *     the domains are not; the audit called this out explicitly.
  *
  * Import statements are matched, not free text, so the prose in
- * `arcade-reward-boundary.ts` — which discusses `useInventoryMutation` and
- * `useNostrPublish` at length — does not trip the check.
+ * `arcade-reward-boundary.ts`: which discusses `useInventoryMutation` and
+ * `useNostrPublish` at length, does not trip the check.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -62,7 +62,7 @@ const FORBIDDEN_IN_PURE_ARCADE = [
  * The list is explicit rather than a `use*.ts` glob so that adding one is a
  * decision recorded here. Every entry is a hook that owns a BROWSER concern no
  * pure module can (key events, visibility, animation frames) and still touches
- * no relay, no inventory and no component — the rest of the rules below apply to
+ * no relay, no inventory and no component, the rest of the rules below apply to
  * them unchanged.
  */
 const REACT_ALLOWED = new Set([
@@ -100,13 +100,13 @@ describe('game simulation stays reward-free', () => {
   // The dependency arrow points ONE way: a reward policy reads a result; the
   // physics, match reducers, rules and result builders know nothing about
   // rewards. A simulation that imported the economy could start shaping play
-  // around it — and a policy bug could then break a game.
-  // The reward layer itself — the per-game policies, the shared calculator and
-  // the claim boundary — is exempt: it is the thing being isolated FROM.
+  // around it: and a policy bug could then break a game.
+  // The reward layer itself, the per-game policies, the shared calculator and
+  // the claim boundary, is exempt: it is the thing being isolated FROM.
   //
   // `arcade-pass-policy.ts` is exempt for the same reason. It is not
   // simulation: it prices a Pass against what the reward tuning actually pays,
-  // and reading the live `participationFloor` is the whole point — a pricing
+  // and reading the live `participationFloor` is the whole point, a pricing
   // module fed hand-copied numbers would go stale the first time the economy
   // is tuned, which is exactly the failure it exists to prevent.
   const files = sourceFiles(ARCADE_DIR).filter(
@@ -154,14 +154,14 @@ describe('the Prize Counter keeps its boundaries', () => {
     }
   });
 
-  it('routes ticket SPENDING through exactly ONE component — the Arcade Pass offer', () => {
+  it('routes ticket SPENDING through exactly ONE component, the Arcade Pass offer', () => {
     /*
      * Phase 9.5 retired the temporary V1 redemption from every arcade surface,
      * and this assertion was `[]` for both lists.
      *
      * The Arcade Pass changed that, and only that. It is the first prize with
      * a real price and a real delivery, so exactly one component may reach the
-     * redemption hook — and NONE may reach the spend writer directly, because
+     * redemption hook: and NONE may reach the spend writer directly, because
      * the hook is what owns the durable ledger, the same-tick lock and the
      * reconcile-only unresolved state. A component that held the writer could
      * publish a spend with none of that around it.
@@ -170,7 +170,7 @@ describe('the Prize Counter keeps its boundaries', () => {
      * through slots rather than being imported by it: the Pass as a rendered
      * node, the cosmetics as a render function. The shelf's own write-free
      * import graph is pinned separately and unchanged in
-     * `prize-counter-boundaries.test.ts` — a list that grows here must NOT
+     * `prize-counter-boundaries.test.ts`: a list that grows here must NOT
      * make that one grow.
      */
     const componentFiles = sourceFiles(ARCADE_COMPONENTS_DIR).filter(
@@ -212,7 +212,7 @@ describe('the Prize Counter keeps its boundaries', () => {
     }
   });
 
-  it('keeps the Mini Arcade Cabinet out of Home — the future is not imported yet', () => {
+  it('keeps the Mini Arcade Cabinet out of Home, the future is not imported yet', () => {
     // No module whose path mentions Home may import prize code until the
     // furniture delivery actually exists.
     const allSrc = sourceFiles(join(process.cwd(), 'src'));
@@ -265,8 +265,8 @@ describe('no arcade component performs an inventory or coin write except the pas
 
   it('routes the ONE inventory write through useArcadeReward, and nowhere else', () => {
     // Phase 3 gave the arcade a reward; Arcade V1 extended it to all three
-    // dedicated games. The rule above still holds — no arcade component imports
-    // a raw write hook — because every grant goes through one named boundary:
+    // dedicated games. The rule above still holds; no arcade component imports
+    // a raw write hook, because every grant goes through one named boundary:
     // machine controllers use the shared `useArcadeRewardController` wiring,
     // which is the only module that calls `useArcadeReward`, which is the only
     // module allowed to hold an `ArcadeRewardWriter`. This asserts the exact
@@ -290,8 +290,8 @@ describe('no arcade component performs an inventory or coin write except the pas
       [
         // The shared claim panel, which imports the hook's STATE TYPE only.
         'src/components/blobbi/arcade/ArcadeRewardPanel.tsx',
-        // The three machine controllers — the components that can start a claim
-        // — reach the boundary ONLY through the shared controller wiring.
+        // The three machine controllers, the components that can start a claim,
+        // reach the boundary ONLY through the shared controller wiring.
         ...machines,
         // The results screens import the STATE TYPE only, so their props cannot
         // drift away from the phases the panel has to distinguish.
@@ -322,7 +322,7 @@ describe('no arcade component performs an inventory or coin write except the pas
     expect(hook.some((s) => /arcade-reward-writer/.test(s))).toBe(true);
 
     // And the writer itself never touches coins. Checked against IMPORTS, not
-    // free text — the module's header explains at length why kind:11125 is out
+    // free text: the module's header explains at length why kind:11125 is out
     // of scope, and a prose match would flag exactly the comment that says so.
     const writerImports = importsOf(
       join(process.cwd(), 'src/inventory/arcade-reward-writer.ts'),
@@ -332,7 +332,7 @@ describe('no arcade component performs an inventory or coin write except the pas
 
   it('leaves the ONE coin write at the Arcade Token counter, through the wallet', () => {
     // Buying Arcade Tokens is the arcade's only COIN write. It replaced the
-    // Arcade Pass purchase, which is no longer bought with Coins at all — the
+    // Arcade Pass purchase, which is no longer bought with Coins at all, the
     // pass is redeemed with Arcade Tickets at the prize counter.
     //
     // Like every Coin spend since the cutover it goes through the canonical
@@ -345,7 +345,7 @@ describe('no arcade component performs an inventory or coin write except the pas
 
     // The inventory mutation BINDING, not its module. `useInventoryMutation.ts`
     // also exports `getQuantity`, a pure reader over an already-fetched
-    // inventory, and reading a Token balance through it is exactly right — an
+    // inventory, and reading a Token balance through it is exactly right, an
     // import-path check would have to forbid that too. What must never appear
     // is a second writer: the wallet is the only thing that moves value here.
     const source = readFileSync(path, 'utf8');

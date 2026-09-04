@@ -27,7 +27,7 @@ describe('the start label says the price first', () => {
     expect(arcadeStartLabel({ entry: paid(1, 0, true), gameId: 'g', replay: true })).toBe('Play again');
   });
 
-  it('knows when the balance is short — and only then', () => {
+  it('knows when the balance is short, and only then', () => {
     expect(arcadeEntryLooksShort({ entry: paid(1, 0), gameId: 'g' })).toBe(true);
     expect(arcadeEntryLooksShort({ entry: paid(1, 1), gameId: 'g' })).toBe(false);
     expect(arcadeEntryLooksShort({ entry: paid(1, null), gameId: 'g' })).toBe(false); // unknown is not short
@@ -44,7 +44,7 @@ describe('the start button', () => {
     expect(button).toHaveAttribute('data-test-start', 'first');
     expect(button).toHaveAttribute('data-arcade-start-cost', '1');
     expect(button).not.toBeDisabled();
-    expect(screen.getByText(/Not enough Tokens yet — you have 0/)).toBeInTheDocument();
+    expect(screen.getByText(/Not enough Tokens yet; you have 0/)).toBeInTheDocument();
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
   });

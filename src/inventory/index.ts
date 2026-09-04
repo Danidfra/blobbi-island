@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — clean inventory architecture public surface.
+ * Blobbi Island: clean inventory architecture public surface.
  *
  * Source of truth:
  * - kind:31632 (official issuer) is the canonical item catalog;

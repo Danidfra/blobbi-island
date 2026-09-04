@@ -61,7 +61,7 @@ const template = buildGameItemDefinitionEvent({
 
 describe('kind:31632 publication template', () => {
   it('produces exactly these tags, in this order', () => {
-    // Order is the BUILDER's, not a preference: see dist/index.js:305-340 —
+    // Order is the BUILDER's, not a preference: see dist/index.js:305-340,
     // d/name/type, then optional category, image, …, version, then context,
     // then topics, then alt.
     expect(template.tags).toEqual([

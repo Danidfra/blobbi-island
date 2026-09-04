@@ -1,18 +1,18 @@
 /**
- * F-01 — ambiguous Coin spends must reconcile before a retry can debit again.
+ * F-01: ambiguous Coin spends must reconcile before a retry can debit again.
  *
  * The defect: both spend surfaces minted a fresh random opId per attempt, so
- * after a publish timeout (recorded `ambiguous` — the event MAY have landed)
+ * after a publish timeout (recorded `ambiguous`: the event MAY have landed)
  * a retry was an INDEPENDENT operation: if the original landed, the retry
  * debited a second time. The fix is the spend-intent identity
  * (`src/lib/coin-spend-intent.ts`): retrying the same logical purchase reuses
  * the same wallet opId, and the wallet's in-lock ledger check + read-only
- * reconciliation turn the retry into `already-applied` or `blocked` — never a
+ * reconciliation turn the retry into `already-applied` or `blocked`: never a
  * second debit until the previous operation is resolved.
  *
  * These tests drive the same open-intent → spend → close-on-applied sequence
  * the purchase hooks run, against a fake relay that can accept a publish AND
- * still time out — the exact shape of the real defect. Assertions are about
+ * still time out, the exact shape of the real defect. Assertions are about
  * balances and item quantities, not call counts.
  */
 
@@ -129,7 +129,7 @@ function makeSigner() {
   };
 }
 
-/** A fresh wallet instance — creating a second one models a reload. */
+/** A fresh wallet instance, creating a second one models a reload. */
 function makeWallet(relay: ReturnType<typeof makeRelay>, nowMs = 1_700_000_000_000) {
   const signer = makeSigner();
   return createCoinWallet({
@@ -189,7 +189,7 @@ describe('a spend that timed out but LANDED cannot debit twice', () => {
     const first = await confirmShopPurchase(wallet);
     expect(first.outcome.status).toBe('ambiguous');
 
-    // The player retries the same basket. Same intent, same opId — and the
+    // The player retries the same basket. Same intent, same opId, and the
     // wallet reconciles in-lock instead of publishing a second debit.
     relay.setPublishBehavior('ok');
     const second = await confirmShopPurchase(wallet);
@@ -263,7 +263,7 @@ describe('read-only recovery (reconcileOp) semantics', () => {
     expect(reconciled?.note).toBe('reconciled-by-event-id');
   });
 
-  it('never converts an unprovable spend into failure or success — it stays ambiguous and blocks', async () => {
+  it('never converts an unprovable spend into failure or success; it stays ambiguous and blocks', async () => {
     const relay = makeRelay(inventoryEvent(100, 1_000));
     const wallet = makeWallet(relay);
 
@@ -273,7 +273,7 @@ describe('read-only recovery (reconcileOp) semantics', () => {
     expect(first.outcome.status).toBe('ambiguous');
 
     // Even though the base event is still current, non-publication cannot be
-    // proven (the event could still be in flight) — no downgrade to `failed`.
+    // proven (the event could still be in flight): no downgrade to `failed`.
     const record = await wallet.reconcileOp(first.opId);
     expect(record?.status).toBe('ambiguous');
 

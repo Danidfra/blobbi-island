@@ -10,12 +10,12 @@
  * ONLY the first layer disables Publish. The spec expresses almost everything
  * else as SHOULD, and a tool that refuses to publish a valid-but-unusual
  * definition is a tool that lies about the protocol. A missing `alt`, a missing
- * primary image, an unknown marker, a 512×512 asset — all publishable, all
+ * primary image, an unknown marker, a 512×512 asset; all publishable, all
  * worth saying out loud.
  *
  * Blocking issues are never invented here. They come from
  * `validateGameItemDefinition`, from the builder throwing, or from content that
- * is not valid JSON — the three places the protocol actually says no. The one
+ * is not valid JSON, the three places the protocol actually says no. The one
  * judgement call is documented at {@link AMBIGUOUS_PRIMARY_CODE}.
  */
 
@@ -87,7 +87,7 @@ export interface StudioValidation {
  * Two DIFFERENT unmarked image URLs.
  *
  * The spec calls multiple primary images a SHOULD-level authoring mistake and
- * the parser reports it as a warning — an event carrying two is still a valid
+ * the parser reports it as a warning, an event carrying two is still a valid
  * definition, and this tool says so in the image layer. But
  * `buildGameItemDefinitionEvent` refuses to serialize an ambiguous primary, and
  * reimplementing the builder to get around that would violate the one rule this
@@ -95,8 +95,8 @@ export interface StudioValidation {
  * (what the protocol thinks) and as a blocking build error (what our builder
  * can actually emit).
  *
- * Two IDENTICAL unmarked URLs are not ambiguous — the builder de-duplicates
- * them — so those produce the warning alone and publish fine.
+ * Two IDENTICAL unmarked URLs are not ambiguous, the builder de-duplicates
+ * them: so those produce the warning alone and publish fine.
  */
 export const AMBIGUOUS_PRIMARY_CODE = 'ambiguous-primary-image';
 
@@ -158,7 +158,7 @@ function blockingIssues(input: ValidationInput): StudioIssue[] {
 
   if (buildError && out.length === 0) {
     // The builder's own message is the most precise thing available, so it is
-    // surfaced verbatim rather than paraphrased — but ONLY when nothing above
+    // surfaced verbatim rather than paraphrased, but ONLY when nothing above
     // already explains the failure. An empty form fails every required-field
     // check AND makes the builder throw; reporting both would tell the user
     // four things about three empty fields.
@@ -199,8 +199,8 @@ function protocolIssues(previewEvent: NostrEvent | null): StudioIssue[] {
   // with no author has no address: `parseGameItemDefinitionResult` THROWS
   // ("Cannot build address with empty pubkey") rather than reporting a warning,
   // which took the whole studio down as soon as a signed-out author filled in
-  // `d`, `name` and `type`. Signing out is not an error state here — the page
-  // says every part of it works signed out — so the parse is skipped until
+  // `d`, `name` and `type`. Signing out is not an error state here, the page
+  // says every part of it works signed out, so the parse is skipped until
   // there is an author to parse for.
   //
   // Nothing is lost by waiting: these are the package's own warnings about a
@@ -395,7 +395,7 @@ const COSMETIC_TYPES = new Set(['cosmetic']);
  * All suggestions, never blocking, and all decidable from the ITEM FORMAT
  * alone. Whether an effect id is one this client can actually draw is a
  * question about the renderer, and this module is the studio's pure domain
- * layer — it cannot import `@blobbi/react` without putting React in the middle
+ * layer: it cannot import `@blobbi/react` without putting React in the middle
  * of event building. That check lives in the preview panel
  * (`BlobbiEffectPreview`), which is also where an author naturally looks to see
  * whether anything is drawn.

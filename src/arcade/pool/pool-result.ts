@@ -1,7 +1,7 @@
 /**
  * Pool → the shared arcade result contract.
  *
- * Two shapes, and the split is the point — the same split `hockey-result.ts`
+ * Two shapes, and the split is the point, the same split `hockey-result.ts`
  * makes, for the same reason.
  *
  *  - {@link PoolMatchResult} is the game's OWN summary: an outcome, a group, a
@@ -19,7 +19,7 @@
  * ## Rewards are still not computed here
  *
  * `POOL_REWARD_POLICY` (in `pool-reward.ts`) is now active and reads the
- * `stats` keys below — exactly the join point this file promised, enabled with
+ * `stats` keys below, exactly the join point this file promised, enabled with
  * no change to this file, to the simulation, or to the result shape. The
  * division of labour is unchanged: this module SUMMARISES a frame; the policy
  * prices it; and nothing here publishes, persists or awards anything. This file
@@ -33,7 +33,7 @@ import type { PoolDifficulty } from './ai';
 import type { PoolMatchState, PoolMatchStats } from './match';
 import { groupNumbers, remainingInGroup, type PoolGroup } from './rules';
 
-/** Win or loss. Pool cannot draw — the 8-ball decides it either way. */
+/** Win or loss. Pool cannot draw, the 8-ball decides it either way. */
 export type PoolOutcome = 'win' | 'loss';
 
 /**
@@ -68,7 +68,7 @@ export interface PoolMatchResult {
   /**
    * True when the match ended because somebody potted the 8-ball, rather than
    * because the player left. A run that ends any other way never produces a
-   * result at all — the lifecycle reducer refuses one outside `playing` — so
+   * result at all, the lifecycle reducer refuses one outside `playing`, so
    * this is `true` for every result that exists today. It is recorded anyway,
    * because a future timed or best-of mode would make it vary and a reward
    * policy must be able to ask.
@@ -111,7 +111,7 @@ function groupFromCode(code: number): PoolGroup | null {
  *
  * Deterministic given its input: no clock, no randomness, no I/O. Accepts a
  * match in ANY phase so the caller does not have to guard, but only an `over`
- * match can be `completedNaturally` — a summary of an unfinished match is a
+ * match can be `completedNaturally`: a summary of an unfinished match is a
  * loss-shaped record of what was on the table, and it is never handed to the
  * lifecycle.
  */
@@ -173,7 +173,7 @@ export interface BuildPoolResultInput {
  * Build the one immutable {@link ArcadeGameResult} a finished match produces.
  *
  * `score` is how many of their own balls the player took off the table, because
- * that is the only number in this game a player would call a score — it runs 0
+ * that is the only number in this game a player would call a score; it runs 0
  * to 7 whether they won or lost, and it is the honest measure of how the frame
  * went. The arcade contract requires a non-negative integer, which it always is.
  *
@@ -223,7 +223,7 @@ export function buildPoolResult(input: BuildPoolResultInput): ArcadeGameResult {
  * rather than from a parallel copy the controller would have to keep in step. A
  * round-trip test pins the two together.
  *
- * Missing or malformed stats degrade to zero rather than throwing — a results
+ * Missing or malformed stats degrade to zero rather than throwing, a results
  * screen is not the place to discover a schema problem, and the validated result
  * that reached the reducer cannot have any.
  */

@@ -1,15 +1,15 @@
 /**
- * Blobbi Island — batch (multi-item) purchase flow.
+ * Blobbi Island: batch (multi-item) purchase flow.
  *
  * A single shop confirmation may include multiple DIFFERENT item types, each
  * with its own quantity. Since the Coin cutover the whole purchase is ONE
  * canonical wallet operation:
  *
  *   1. validate every line (positive integer quantity) and RESOLVE its price
- *      from the canonical catalog — see the pricing boundary below;
+ *      from the canonical catalog; see the pricing boundary below;
  *   2. normalize + merge duplicate addresses into a single line each;
  *   3. compute the TOTAL cost (overflow-protected);
- *   4. `spendCoins({ amount: total, grantLines })` — the wallet reads the
+ *   4. `spendCoins({ amount: total, grantLines })`: the wallet reads the
  *      FRESH inventory, validates the real balance (a stale HUD number is
  *      never spendable truth), and publishes EXACTLY ONE kind:31633 event
  *      carrying BOTH the coin deduction and every item grant.
@@ -29,7 +29,7 @@
  * nothing was ever mispriced in production, but the money-taking hook was
  * trusting presentation-layer input. That is the wrong trust boundary twice
  * over, because since the spend-intent work the TOTAL is also part of the
- * durable purchase identity — a wrong price would move both the charge and
+ * durable purchase identity, a wrong price would move both the charge and
  * the opId that makes a retry idempotent.
  *
  * So the contract is now `{ address, quantity }` and nothing else:
@@ -42,7 +42,7 @@
  *                     wallet call or an inventory grant. Unknown is not free.
  * ```
  *
- * Displayed prices remain the shop's own concern — it reads the same catalog,
+ * Displayed prices remain the shop's own concern; it reads the same catalog,
  * so the number on screen matches, but a rendered total is presentation and
  * this module never treats it as spendable truth.
  *
@@ -93,18 +93,18 @@ export interface BatchPurchaseResult {
   lines: BatchPurchaseResultLine[];
   totalCost: number;
   /**
-   * `applied`     — the purchase definitively completed (grant + charge in one
+   * `applied`: the purchase definitively completed (grant + charge in one
    *               event), now or on a previous attempt of the same cart.
-   * `stock-limit` — a line would have pushed a holding past the item's published
+   * `stock-limit`: a line would have pushed a holding past the item's published
    *               `max_stack`, judged against the FRESH authoritative inventory
    *               inside the wallet's lock. Nothing was charged and nothing was
    *               granted. This is what makes a unique wearable un-rebuyable
    *               even if the button that started it was stale.
-   * `ambiguous` — the publish MAY have landed; the spend intent is kept, so
+   * `ambiguous`: the publish MAY have landed; the spend intent is kept, so
    *               confirming the SAME cart again reconciles the original
    *               operation instead of debiting independently. The UI must
    *               not claim success.
-   * `blocked`   — a previous attempt of this cart is still unresolved and
+   * `blocked`: a previous attempt of this cart is still unresolved and
    *               could not yet be proven either way; nothing new was charged.
    */
   outcome: 'applied' | 'ambiguous' | 'blocked' | 'stock-limit';
@@ -122,7 +122,7 @@ const MAX_SAFE = Number.MAX_SAFE_INTEGER;
  * cart leaves no durable trace at all.
  *
  * Because the price comes from the address rather than the line, two lines for
- * the same item can no longer disagree about what it costs — the merge just
+ * the same item can no longer disagree about what it costs, the merge just
  * adds quantities and re-multiplies by the one canonical price.
  */
 export function normalizePurchaseLines(
@@ -153,7 +153,7 @@ export function normalizePurchaseLines(
     }
 
     // THE PRICING BOUNDARY. `priceForAddress` answers `null` for anything the
-    // catalog does not list — an unknown item, a malformed address, or an
+    // catalog does not list, an unknown item, a malformed address, or an
     // official item that is simply not for sale (the Arcade Ticket). Unknown
     // is NOT free: this is a commerce contract, not a generic grant API.
     const unitPrice = priceForAddress(line.address);
@@ -211,7 +211,7 @@ function assertNoUnhandledOutcome(outcome: never): never {
  * A shop can render "Owned" from a cached inventory and still be wrong: the
  * cache can lag, two tabs can race, and a stale button can be clicked. So the
  * question "would this push me past `max_stack`?" is asked where it can be
- * answered truthfully — inside the wallet's lock, against the exact base the
+ * answered truthfully: inside the wallet's lock, against the exact base the
  * replacement event would be built from. A false answer publishes nothing,
  * records nothing and charges nothing.
  *
@@ -258,15 +258,15 @@ export function useBatchPurchase() {
       }));
 
       // A zero-cost cart (every line CANONICALLY free) has no coin movement,
-      // so it goes through the ordinary inventory mutation — the same shared
-      // transaction, so the F-03 guarantees hold — instead of a wallet no-op.
+      // so it goes through the ordinary inventory mutation, the same shared
+      // transaction, so the F-03 guarantees hold, instead of a wallet no-op.
       // An ambiguous publish is surfaced as `ambiguous`, never as success or
       // a definite failure.
       //
       // Unreachable through the shipped catalog: `validateCoinPrices` requires
       // every listed price to be a POSITIVE integer, so nothing is free today.
       // The branch stays because it is the correct behaviour if that rule ever
-      // relaxes — and note it can only ever be reached by a canonical zero,
+      // relaxes: and note it can only ever be reached by a canonical zero,
       // never by an unpriced item, which is rejected during normalization.
       if (totalCost === 0) {
         try {
@@ -322,7 +322,7 @@ export function useBatchPurchase() {
       if (outcome.status === 'skipped') {
         // The stack precondition refused on the fresh in-lock base: nothing was
         // published and nothing recorded. The intent is closed because this
-        // cart is finished — retrying it would only be refused again.
+        // cart is finished, retrying it would only be refused again.
         closeSpendIntent(user.pubkey, 'shop-purchase', opened.intent.intentId);
         return { lines: resultLines, totalCost, outcome: 'stock-limit' };
       }

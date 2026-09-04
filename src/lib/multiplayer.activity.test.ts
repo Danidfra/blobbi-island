@@ -1,8 +1,8 @@
 /**
  * Coverage for the SHARED-ACTIVITY reference carried by presence (kind 31950).
  *
- * Presence answers exactly one question about a watch session — *which shared
- * activity is this visible player in?* — and carries only the session ADDRESS
+ * Presence answers exactly one question about a watch session, *which shared
+ * activity is this visible player in?*, and carries only the session ADDRESS
  * (`docs/protocol/shared-playback-session.md` §14.2, §14.3). It is not, and must
  * never become, a second copy of the playback state.
  *
@@ -11,7 +11,7 @@
  *  - leaving publishes presence with no `activity` field at all;
  *  - heartbeats preserve it, so a two-hour film does not drop you from the count;
  *  - MOVEMENT preserves it, because participation is not a claim about standing
- *    still — unlike `seatId`, which movement is defined to clear;
+ *    still: unlike `seatId`, which movement is defined to clear;
  *  - the parser treats anything that is not the documented shape as "no activity";
  *  - a client that knows nothing about the field still validates.
  */
@@ -86,7 +86,7 @@ describe('publishActivity', () => {
     expect(JSON.stringify(content)).not.toMatch(/"rev"|"position"|"playing"|"paused"|"media"/);
   });
 
-  it('describes motion as idle — joining a session is not a movement', async () => {
+  it('describes motion as idle, joining a session is not a movement', async () => {
     const c = collector();
     await publishActivity(c.publish, PARAMS, POS, ACTIVITY);
     expect(c.lastContent().state).toBe('idle');
@@ -118,7 +118,7 @@ describe('publishActivity', () => {
 });
 
 describe('activity across the presence lifecycle', () => {
-  it('is preserved by heartbeats — a long film must not drop you from the count', async () => {
+  it('is preserved by heartbeats, a long film must not drop you from the count', async () => {
     const c = collector();
     await publishHeartbeat(c.publish, PARAMS, POS, undefined, SEAT, ACTIVITY);
 
@@ -202,7 +202,7 @@ describe('parseActivity', () => {
     expect(parseActivity(value)).toBeUndefined();
   });
 
-  it('does NOT validate the address — that is the protocol layer\'s job', () => {
+  it('does NOT validate the address; that is the protocol layer\'s job', () => {
     // Presence must not grow a dependency on any one activity's addressing
     // rules; a syntactically wrong address is refused where it is used.
     expect(parseActivity({ type: 'shared-playback', session: 'not-an-address' })).toEqual({

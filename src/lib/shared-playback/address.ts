@@ -1,5 +1,5 @@
 /**
- * Session addresses — `31951:<host-pubkey-hex>:<session-d>`.
+ * Session addresses, `31951:<host-pubkey-hex>:<session-d>`.
  *
  * This string is the ONLY identifier other systems (presence, UI, deep links)
  * are allowed to hold (protocol §3.1, §14.3). It is self-describing: the host

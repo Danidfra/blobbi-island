@@ -1,5 +1,5 @@
 /**
- * `/tools/game-items` — the internal Game Item authoring and diagnostic tool.
+ * `/tools/game-items`: the internal Game Item authoring and diagnostic tool.
  *
  * ## Access policy
  *
@@ -12,7 +12,7 @@
  *
  * Signed out, everything works except publishing and Blossom uploads. Signed in
  * with a key that is not the official issuer, publishing works and is labelled
- * as third-party in the header, in the review dialog and on every browser row —
+ * as third-party in the header, in the review dialog and on every browser row,
  * see `signer-identity.ts` for why allowing that is the honest behavior.
  *
  * ## Owning the shared state
@@ -20,7 +20,7 @@
  * The three tabs are separate components but share one editor: opening an item
  * from the browser or the inventory inspector loads it into the studio and
  * switches tabs. That is why `useItemStudio` is mounted here rather than inside
- * `ItemStudio` — the tab that hands work to the editor must be able to reach it.
+ * `ItemStudio`: the tab that hands work to the editor must be able to reach it.
  *
  * Nothing on this page reloads. Publishing writes into the query cache, and
  * every list is a TanStack query that reacts to a newer event, an account
@@ -59,16 +59,16 @@ type ToolTab = 'studio' | 'published' | 'inventory' | 'lab';
 
 /**
  * The mutation-capable Inventory & Equipment Lab is BUILD-FLAG GATED
- * (`VITE_ENABLE_LIVE_INVENTORY_LAB=true`, default off — see
+ * (`VITE_ENABLE_LIVE_INVENTORY_LAB=true`, default off; see
  * `src/lib/feature-flags.ts`). In a disabled build the tab does not exist, no
- * Lab hook mounts, no tab-state value can select it — and the chunk is not
+ * Lab hook mounts, no tab-state value can select it, and the chunk is not
  * even EMITTED: the condition below is the inline `import.meta.env`
  * comparison (not the helper constant) because Vite statically replaces it,
  * letting the bundler eliminate the dead branch and its dynamic import, the
  * same mechanism that strips the `/dev/*` chunks. `LIVE_INVENTORY_LAB_ENABLED`
  * reads the identical variable, so the UI conditions below can never disagree
- * with this one. Signer checks remain necessary for any write, but the flag —
- * not route obscurity, not the signer — is the product access gate.
+ * with this one. Signer checks remain necessary for any write, but the flag,
+ * not route obscurity, not the signer, is the product access gate.
  */
 const InventoryEquipmentLab =
   import.meta.env.VITE_ENABLE_LIVE_INVENTORY_LAB === 'true'
@@ -98,7 +98,7 @@ export function GameItemTools() {
   // Initial tab may be deep-linked (`/tools/game-items?tab=lab`, used by the
   // dev equipment harness's Live Account section). The value goes through
   // `coerceToolTab`, so a forged or stale `lab` in a disabled build falls back
-  // to the studio — the deep link can never reveal a tab the build does not
+  // to the studio, the deep link can never reveal a tab the build does not
   // have. Selecting tabs afterwards does not rewrite the URL (matching the
   // page's existing behavior).
   const [searchParams] = useSearchParams();
@@ -170,7 +170,7 @@ export function GameItemTools() {
             </h1>
             <p className="text-xs text-muted-foreground">
               Author kind:31632 definitions and inspect kind:31633 inventories.
-              Internal tooling — not part of the game.
+              Internal tooling: not part of the game.
             </p>
           </div>
           <Link
@@ -237,7 +237,7 @@ export function GameItemTools() {
 
           {InventoryEquipmentLab !== null && (
             <TabsContent value="lab" className="pt-4">
-              {/* REAL kind:31633/31634 writes, developer-initiated only — the
+              {/* REAL kind:31633/31634 writes, developer-initiated only, the
                   inspector above stays read-only; the lab is where mutations
                   live, behind explicit confirmations, and only in builds that
                   set VITE_ENABLE_LIVE_INVENTORY_LAB=true. */}

@@ -13,7 +13,7 @@ import { MascotBlobbi } from '../../MascotBlobbi';
  * multiplayer layer and a live Nostr query. Mounting that inside a modal to make
  * it wave would drag every one of those dependencies into a rhythm game's frame
  * budget for a decoration. `MascotBlobbi` is the same artwork pipeline with none
- * of the wiring — a memoised SVG string, no hooks, no data — which is exactly
+ * of the wiring, a memoised SVG string, no hooks, no data, which is exactly
  * what the brief asks for: a small decorative Blobbi treatment rather than a
  * duplicated pet renderer.
  *
@@ -26,7 +26,7 @@ import { MascotBlobbi } from '../../MascotBlobbi';
  *
  * ## Why the mood is an attribute
  *
- * The frame loop reacts to a judgement by writing `data-mood` onto this node —
+ * The frame loop reacts to a judgement by writing `data-mood` onto this node,
  * one attribute write, a few times a second, and CSS owns the rest. Reacting
  * through React state would re-render the tree on every hit, at up to eight hits
  * a second, competing with the input handler for the main thread.
@@ -37,7 +37,7 @@ export type DanceMascotMood = 'idle' | 'perfect' | 'good' | 'miss';
 interface DanceMascotProps {
   /** Milliseconds per beat, so the bob is on the music rather than on a timer. */
   readonly beatMs: number;
-  /** True while the song is running — the bob only makes sense then. */
+  /** True while the song is running, the bob only makes sense then. */
   readonly dancing: boolean;
   readonly reducedMotion: boolean;
   readonly className?: string;

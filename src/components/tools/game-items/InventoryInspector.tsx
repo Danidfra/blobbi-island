@@ -18,7 +18,7 @@
  * fetched per row, which is why a 50-item inventory costs the same two
  * subscriptions as a 2-item one. Both queries live in TanStack Query, so a
  * newer inventory event, a newly published definition, an account change or a
- * relay change all refresh this view in place — there is no reload anywhere in
+ * relay change all refresh this view in place; there is no reload anywhere in
  * this file.
  */
 
@@ -100,7 +100,7 @@ export function InventoryInspector({
   if (!ownerPubkey) {
     return (
       <p className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-        Sign in to inspect your inventory. This panel never writes — it only reads
+        Sign in to inspect your inventory. This panel never writes; it only reads
         your kind:31633 event.
       </p>
     );
@@ -114,7 +114,7 @@ export function InventoryInspector({
           <div className="space-y-1">
             <h3 className="text-sm font-semibold">Inventory</h3>
             <p className="font-mono text-[11px] text-muted-foreground">
-              {inventory?.address ?? '—'}
+              {inventory?.address ?? '-'}
             </p>
           </div>
           <Button
@@ -142,7 +142,7 @@ export function InventoryInspector({
           <Stat label="Owner" value={shortHex(ownerPubkey)} mono />
           <Stat
             label="Event id"
-            value={inventory?.event.id ? shortHex(inventory.event.id) : '— (no event yet)'}
+            value={inventory?.event.id ? shortHex(inventory.event.id) : '(no event yet)'}
             mono
           />
           <Stat
@@ -150,7 +150,7 @@ export function InventoryInspector({
             value={
               inventory?.event.created_at
                 ? new Date(inventory.event.created_at * 1000).toLocaleString()
-                : '—'
+                : '-'
             }
           />
           <Stat label="Bundled fallbacks" value={String(summary.bundledCount)} />
@@ -382,7 +382,7 @@ function InventoryRow({
           {row.source === 'bundled' && (
             <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground">
               Shown from Blobbi Island&rsquo;s bundled metadata. No published
-              definition was found at this address — publishing one would replace
+              definition was found at this address, publishing one would replace
               this fallback everywhere in the game.
             </p>
           )}

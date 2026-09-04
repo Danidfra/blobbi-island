@@ -5,7 +5,7 @@
  * ## Why this has to exist
  *
  * Kind 21201 is ephemeral with a ~10 second expiration. A player reads something
- * upsetting, opens the player's card, picks Report — and by then the event is
+ * upsetting, opens the player's card, picks Report, and by then the event is
  * gone from the relay and from the bubble layer. Without a short-lived record,
  * every report about a message would be a report about nothing.
  *
@@ -15,8 +15,8 @@
  *
  * Keeping a room's chat history on disk to make reporting easier would build a
  * log of everything every child was told, on the child's own device, for a
- * feature they use once. The narrow version — the single latest message per
- * player, in RAM, dropped when they leave the room — is enough to file a report
+ * feature they use once. The narrow version, the single latest message per
+ * player, in RAM, dropped when they leave the room, is enough to file a report
  * about what just happened and cannot become anything else.
  *
  * It also holds the SIGNED original event rather than a copy of the text,
@@ -34,7 +34,7 @@ export interface RecentMessage {
   readonly event: NostrEvent;
   /** How this build classified it: `text` | `quick` | `template` | `emote`. */
   readonly messageClass: string;
-  /** What this build actually rendered — the local meaning of the ids. */
+  /** What this build actually rendered, the local meaning of the ids. */
   readonly renderedText: string;
   /** Local receive time, unix ms. */
   readonly receivedAt: number;
@@ -66,7 +66,7 @@ export function recentMessageFrom(pubkey: string): RecentMessage | null {
   return recent.get(pubkey.toLowerCase()) ?? null;
 }
 
-/** Forget one player's message — used when they are muted or blocked. */
+/** Forget one player's message, used when they are muted or blocked. */
 export function forgetMessagesFrom(pubkey: string): void {
   if (pubkey) recent.delete(pubkey.toLowerCase());
 }

@@ -1,5 +1,5 @@
 /**
- * The two boundaries, and — just as important — what they deliberately did NOT
+ * The two boundaries, and, just as important, what they deliberately did NOT
  * touch.
  *
  * `publicNotePublishing` is easy to over-apply. Read as "no Nostr", it would
@@ -83,7 +83,7 @@ describe('the public note has one writer', () => {
 describe('gameplay Nostr publishing is untouched', () => {
   it('leaves the shared publisher free of policy', () => {
     // A gate here would disable presence, chat, pet state, inventory, equipment
-    // and themes — the island would stop working.
+    // and themes: the island would stop working.
     const source = code(join(SRC, 'hooks/useNostrPublish.ts'));
     expect(source).not.toContain('useIslandSafetyPolicy');
     expect(source).not.toContain('publicNotePublishing');
@@ -96,7 +96,7 @@ describe('gameplay Nostr publishing is untouched', () => {
       .map(relative);
 
     // Presence/chat, pet state, owner profile, item use, equipment, themes,
-    // stage background — plus the photo share. (The kind:31633 inventory
+    // stage background: plus the photo share. (The kind:31633 inventory
     // writers are deliberately NOT here: they publish strictly through the
     // shared inventory transaction, which never treats a timeout as success.)
     expect(consumers.length).toBeGreaterThan(5);

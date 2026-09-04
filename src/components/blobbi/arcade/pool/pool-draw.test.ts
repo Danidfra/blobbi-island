@@ -1,5 +1,5 @@
 /**
- * The coordinate bridge — the one place a pointer becomes a table unit.
+ * The coordinate bridge, the one place a pointer becomes a table unit.
  *
  * Everything here is arithmetic, and it is the arithmetic the whole game rests
  * on: if `toTableUnits` is not the exact inverse of `applyTableTransform`, the
@@ -120,7 +120,7 @@ describe('pixels to table units and back', () => {
     }
   });
 
-  it('is a rotation, not a mirror — so a rebound on screen is the real one', () => {
+  it('is a rotation, not a mirror, so a rebound on screen is the real one', () => {
     // Checked by construction: two perpendicular table vectors must stay
     // perpendicular AND keep their handedness on screen.
     for (const orientation of LAYOUTS) {

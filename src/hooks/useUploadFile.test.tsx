@@ -3,7 +3,7 @@
  *
  * `usePhotoShare` already decides up front, so this is the second line: a future
  * caller that forgets to ask still cannot reach Blossom. The assertion is that
- * the uploader is never CONSTRUCTED, not merely that its result is discarded —
+ * the uploader is never CONSTRUCTED, not merely that its result is discarded,
  * constructing it means a signer is handed over and a network request follows.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,7 +95,7 @@ describe('Family', () => {
   });
 
   it('refuses before the logged-in check, so the reason is never mistaken', async () => {
-    // The refusal must not depend on being signed in — otherwise a signed-out
+    // The refusal must not depend on being signed in; otherwise a signed-out
     // Family player would be told to log in for something that would still be
     // refused afterwards.
     expect(isMediaUploadNotPermitted((await attempt('family')).error)).toBe(true);

@@ -6,17 +6,17 @@ import { getQuantity, useIslandInventory } from '@/inventory';
 /**
  * The ticket half of every dedicated game's results screen.
  *
- * Extracted, verbatim in behaviour, from the panel `DanceResults` shipped with
- * — because when Air Hockey and Pool earned reward policies, the alternative
+ * Extracted, verbatim in behaviour, from the panel `DanceResults` shipped with,
+ * because when Air Hockey and Pool earned reward policies, the alternative
  * was three hand-copied panels whose honesty rules would drift apart. The rules
  * this component enforces are the ones that panel was rebuilt around after a
  * real duplicate-grant defect:
  *
  * | phase | what the copy may say | what the button does |
  * | --- | --- | --- |
- * | `idle` + eligible | "claim these tickets" — never "you have them" | claim |
+ * | `idle` + eligible | "claim these tickets": never "you have them" | claim |
  * | `idle` + ineligible | why, in words, not a silent zero | nothing |
- * | `claiming` | "saving" — the button is out of action | nothing |
+ * | `claiming` | "saving": the button is out of action | nothing |
  * | `confirmed` | the tickets are in the inventory; the balance moved and was read back | nothing |
  * | `failed` | nothing was written; retry | claim again |
  * | `unresolved` | it MAY have been written; we will NOT send another grant | **check status, read-only** |
@@ -25,7 +25,7 @@ import { getQuantity, useIslandInventory } from '@/inventory';
  *
  * Two things must never appear: a confirmed balance increase the application
  * cannot substantiate, and a **"Try again" button on an unresolved claim**. The
- * second one is not a wording problem — an additive `+N` retried after a
+ * second one is not a wording problem, an additive `+N` retried after a
  * publish that actually landed is `+2N`, and re-reading the balance first does
  * not help, because the balance already includes the first grant.
  *
@@ -34,15 +34,15 @@ import { getQuantity, useIslandInventory } from '@/inventory';
  * `dataPrefix` keeps each game's long-standing test selectors intact
  * (`data-dance-reward`, `data-hockey-reward`, `data-pool-reward`), and
  * `ineligibleHint` is the one sentence of game-specific encouragement under a
- * zero — everything else is deliberately identical across the three games.
+ * zero: everything else is deliberately identical across the three games.
  *
  * ## The balance line
  *
  * The panel shows the CURRENT ticket balance from the canonical kind:31633
  * inventory (the same shared query the arcade HUD chip reads). Three states,
- * kept distinct on purpose: a number (including a genuine zero — an empty
+ * kept distinct on purpose: a number (including a genuine zero, an empty
  * inventory is an answer, not an error), "…" while the first read is in
- * flight, and "unavailable" when the read failed — never a false zero. After a
+ * flight, and "unavailable" when the read failed; never a false zero. After a
  * confirmed claim the reward hook invalidates the query, so the number the
  * player watches is the number that actually moved.
  */
@@ -64,7 +64,7 @@ interface ArcadeRewardPanelProps {
    */
   readonly dataPrefix: string;
   /**
-   * One game-specific sentence rendered after the ineligible reason — the
+   * One game-specific sentence rendered after the ineligible reason, the
    * "here is how to earn them" encouragement.
    */
   readonly ineligibleHint: string;
@@ -93,7 +93,7 @@ const PHASE_CHIP: Readonly<
 
 /**
  * The current ticket balance, from the same canonical query everything else
- * reads. Rendered only for a logged-in player — a logged-out one has no
+ * reads. Rendered only for a logged-in player, a logged-out one has no
  * inventory to misreport.
  */
 function BalanceLine({ prefix, itemAddress }: { prefix: string; itemAddress: string }) {
@@ -111,7 +111,7 @@ function BalanceLine({ prefix, itemAddress }: { prefix: string; itemAddress: str
     value = '…';
     state = 'loading';
   } else {
-    // Disabled query (no pubkey) — the caller should not have rendered us, but
+    // Disabled query (no pubkey): the caller should not have rendered us, but
     // never show a made-up number.
     value = '…';
     state = 'loading';
@@ -174,7 +174,7 @@ export function ArcadeRewardPanel({
   /**
    * Zero tickets, said kindly and said once.
    *
-   * A run can be ineligible for reasons that are nobody's fault — it was cut
+   * A run can be ineligible for reasons that are nobody's fault; it was cut
    * short, or it never reached the end. The copy names the reason and then says
    * the useful thing: how tickets are earned, which the Play again button is
    * right there to do.
@@ -202,7 +202,7 @@ export function ArcadeRewardPanel({
   const already = reward.phase === 'already-claimed';
   /**
    * The claim MAY have been published. The only action offered is a read-only
-   * status check — there is deliberately no path from here to another publish.
+   * status check: there is deliberately no path from here to another publish.
    */
   const unresolved = reward.phase === 'unresolved';
   const chip = PHASE_CHIP[reward.phase];

@@ -319,7 +319,7 @@ export function analyzeCareStatus(pet: PetState): CareStatus {
  * unknown-tag passthrough to avoid duplication.
  *
  * `storage` is deliberately NOT managed. Legacy kind:11125 consumable inventory
- * is not ours to read, write, normalize or delete — it is an opaque host
+ * is not ours to read, write, normalize or delete; it is an opaque host
  * extension tag, exactly as `@blobbi-kit/core` 0.3.0 treats it. Leaving it out
  * of this set routes it through the unknown-tag passthrough below, so existing
  * `storage` tags survive a republish verbatim (original order, arity and
@@ -339,7 +339,7 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
 // kind:31633, moved only by the Coin wallet (`src/inventory/coin-wallet.ts`).
 // A pre-existing `coins` tag is OBSOLETE HISTORICAL data: it is never
 // migrated, never read for economic decisions, never displayed and never
-// updated. It rides the unknown-tag passthrough verbatim on every republish —
+// updated. It rides the unknown-tag passthrough verbatim on every republish,
 // preserved opaquely, never treated as a balance again. Emitting a managed
 // `coins` tag here is precisely how a profile republish used to roll balances
 // back; no production writer may reintroduce it.
@@ -347,7 +347,7 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
 // NOTE the deliberate absence of `inv`.
 //
 // `inv` was the legacy kind:11125 accessory-ownership vocabulary. Island no
-// longer reads or writes it — ownership is kind:31633 — but it is still the
+// longer reads or writes it, ownership is kind:31633, but it is still the
 // PLAYER'S DATA, and this client is not the only one that may hold it. Leaving
 // it out of the managed set means it falls through the unknown-tag passthrough
 // and survives a republish verbatim, exactly like `storage`.
@@ -360,7 +360,7 @@ const MANAGED_OWNER_PROFILE_TAG_NAMES = new Set([
  * Builds managed tags from the profile's current state, then appends any unknown
  * tags from the original event so that tags set by Ditto are never dropped.
  *
- * Tags like `client` are NOT in the managed set — they are preserved as-is from
+ * Tags like `client` are NOT in the managed set; they are preserved as-is from
  * rawTags so multi-element tags (e.g. `['client', 'Ditto', '31990:...']`) keep
  * all their values.
  */
@@ -373,7 +373,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
     // author the canonical namespace. Additive + idempotent.
     ['b', rawTagValue(profile.rawTags, 'b') ?? BLOBBI_ECOSYSTEM_NAMESPACE],
     ['name', profile.name],
-    // `coins` is deliberately NOT emitted — see the managed-set note above.
+    // `coins` is deliberately NOT emitted; see the managed-set note above.
     ['pettingLevel', profile.pettingLevel.toString()],
     ['lifetimeBlobbis', profile.lifetimeBlobbis.toString()],
   ];
@@ -398,7 +398,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
   // Preserve unknown tags from the original event (tags we don't manage).
   // This keeps Ditto's tags like `blobbi_onboarding_done`, `xp`, `level`, `room`,
   // `client` (which may have 3+ elements), and legacy `storage`, exactly as they
-  // were — same order, same arity, same values.
+  // were: same order, same arity, same values.
   const unknownTags = profile.rawTags.filter(tag => !MANAGED_OWNER_PROFILE_TAG_NAMES.has(tag[0]));
   tags.push(...unknownTags);
 
@@ -414,7 +414,7 @@ export function mergeOwnerProfileTags(profile: OwnerProfile): string[][] {
  * Any tag NOT in this set is preserved as-is when republishing.
  * Tags like `seed`, `progression_state`, `progression_started_at`,
  * `last_decay_at`, and `client` (which may have 3+ elements) are NOT
- * managed — they come through from rawTags.
+ * managed: they come through from rawTags.
  *
  * `b` and `state` are managed: we author canonical values on write (preferring
  * any existing value from the source event), so they must be excluded from the
@@ -482,7 +482,7 @@ export function mergePetStateTags(
   // updated, e.g. an item action setting it to "now") over the stale raw tag
   // from the source event. Reading the raw tag first caused a regression where
   // `last_interaction` never advanced on feed/play/clean/medicine actions even
-  // though `care_streak` (read from the live `pet` field) did — leaving the two
+  // though `care_streak` (read from the live `pet` field) did, leaving the two
   // inconsistent. Fall back to the source-event tag, then to now, so the tag is
   // always emitted (satisfying the core-schema guarantee).
   const lastInteractionValue = pet.lastInteraction

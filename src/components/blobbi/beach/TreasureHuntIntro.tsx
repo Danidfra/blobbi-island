@@ -1,13 +1,13 @@
 /**
- * Treasure Hunt — the intro screen.
+ * Treasure Hunt: the intro screen.
  *
  * Three modes, decided by the reward window:
- * - `rewarded`       — slots remain today: "Start Hunt" earns Blobbi Coins;
- * - `practice-limit` — today's rewarded hunts are done: unlimited practice;
- * - `practice-only`  — rewards unavailable (no session): plain practice.
+ * - `rewarded`: slots remain today: "Start Hunt" earns Blobbi Coins;
+ * - `practice-limit`: today's rewarded hunts are done: unlimited practice;
+ * - `practice-only`: rewards unavailable (no session): plain practice.
  *
  * Unresolved reward operations from earlier sessions surface here as a
- * recovery banner — the app never silently grants again and never hides an
+ * recovery banner: the app never silently grants again and never hides an
  * uncertain payout.
  */
 
@@ -50,7 +50,7 @@ export function TreasureHuntIntro({
         🏖️
       </div>
       <p className="max-w-md text-base text-island-ink">
-        Somewhere under this sand there are lost treasures — and some litter that
+        Somewhere under this sand there are lost treasures, and some litter that
         would love a cleanup. Grab the metal detector and see what you can find!
       </p>
 
@@ -86,7 +86,7 @@ export function TreasureHuntIntro({
           className="max-w-md rounded-2xl bg-island-warn/20 px-4 py-2 text-sm text-island-ink"
           data-treasure-practice-notice
         >
-          <span className="font-semibold">Practice Hunt</span> — explore the
+          <span className="font-semibold">Practice Hunt</span>: explore the
           detector and learn how to find objects.
         </p>
       )}

@@ -1,8 +1,8 @@
 /**
  * Reward-writer tests.
  *
- * These exercise the REAL mutation composition — the real fresh-read, the real
- * `applyMutation`, the real `buildInventoryTemplate` — against a fake relay and
+ * These exercise the REAL mutation composition, the real fresh-read, the real
+ * `applyMutation`, the real `buildInventoryTemplate`: against a fake relay and
  * a fake signer. Nothing here publishes: the pool is an object literal, and a
  * test that reached a network would have to construct one.
  *
@@ -194,7 +194,7 @@ describe('granting tickets', () => {
     expect(itemsOf(h.published[0])[unknown]).toBe(7);
   });
 
-  it('preserves unknown NON-item tags — exactly as every other inventory write does', async () => {
+  it('preserves unknown NON-item tags, exactly as every other inventory write does', async () => {
     // This is the canonical `buildInventoryTemplate` behaviour, not something
     // the arcade introduced: kind:31633 is a replaceable event, so a write that
     // drops tags it does not model destroys other clients' (and our own
@@ -252,7 +252,7 @@ describe('refusals', () => {
     expect(h.published).toHaveLength(0);
   });
 
-  it('does NOT swallow a publish timeout — that is the whole point', async () => {
+  it('does NOT swallow a publish timeout; that is the whole point', async () => {
     const timeout = Object.assign(new Error('timed out'), { name: 'TimeoutError' });
     const h = harness({ publishError: timeout });
     await expect(h.writer.publishTicketGrant(claim())).rejects.toBe(timeout);
@@ -282,7 +282,7 @@ describe('reading back', () => {
     await expect(h.writer.readTicketQuantity()).resolves.toBe(0);
   });
 
-  it('reports NULL when the read itself fails — a failed read is not a failed write', async () => {
+  it('reports NULL when the read itself fails, a failed read is not a failed write', async () => {
     const writer = createArcadeTicketWriter({
       nostr: {
         query: async () => {

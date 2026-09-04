@@ -6,7 +6,7 @@
  * pressing "Create watch session" publishes exactly one canonical event; a code
  * that cannot exist never becomes a query; a guest applying the host's play does
  * not publish a play of their own. The protocol's own rules are proven offline
- * in `src/lib/shared-playback/*.test.ts` — what is proven here is the WIRING.
+ * in `src/lib/shared-playback/*.test.ts`: what is proven here is the WIRING.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { StrictMode } from 'react';
@@ -487,7 +487,7 @@ describe('joining', () => {
     await settle(6);
 
     await waitFor(() => expect(screen.getByText(/playback is controlled by the host/i)).toBeInTheDocument());
-    // Absent, not disabled — ownership of the screen has to be legible.
+    // Absent, not disabled, ownership of the screen has to be legible.
     expect(screen.queryByRole('button', { name: /^play$/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /^pause$/i })).toBeNull();
     expect(screen.queryByRole('slider', { name: /timeline/i })).toBeNull();
@@ -643,9 +643,9 @@ describe('joining', () => {
 /**
  * Fullscreen is a LOCAL, per-device control. Whatever the browser answers, it
  * must not touch the session: no navigation, no reload, no remount, no player
- * rebuild, no leave. The reported bug was none of those things at this level —
+ * rebuild, no leave. The reported bug was none of those things at this level,
  * it was the app shell swapping its tree (see
- * `src/components/shell/BlobbiAppShell.fullscreen.test.tsx`) — but the button
+ * `src/components/shell/BlobbiAppShell.fullscreen.test.tsx`): but the button
  * itself is the thing a user presses, so its contract is pinned here too.
  */
 describe('fullscreen', () => {
@@ -802,7 +802,7 @@ describe('fullscreen', () => {
     expect(players).toHaveLength(before.playerCount);
     expect(document.querySelectorAll('iframe')).toHaveLength(1);
     expect(sessions()).toHaveLength(1);
-    // Not one extra event of any kind — fullscreen is not a network action.
+    // Not one extra event of any kind, fullscreen is not a network action.
     expect(relay.events).toHaveLength(before.events);
   });
 
@@ -828,12 +828,12 @@ describe('fullscreen', () => {
 
 /**
  * A watch session belongs to the user's participation in the theater, not to a
- * chair. Standing up, walking and changing seats must all keep it — the local
+ * chair. Standing up, walking and changing seats must all keep it, the local
  * player is torn down with the seat (approved local behaviour), but membership,
  * the invitation code and host authority are not.
  *
  * The bug this pins: `seatId === null` used to mean `leaveSession()`, so a host
- * that stood up lost the session it had created — and nobody could take it over,
+ * that stood up lost the session it had created, and nobody could take it over,
  * because only its own pubkey can author that session.
  */
 describe('session continuity', () => {
@@ -1064,7 +1064,7 @@ describe('session continuity', () => {
  *   isInTheater             → whether any of this exists at all
  *
  * Watching alone, the screen is yours and standing up stops it. Watching
- * together, the film is still running for everybody else — so the screen stays,
+ * together, the film is still running for everybody else, so the screen stays,
  * the curtain stays up, the playhead keeps moving, and only the card goes away.
  */
 describe('standing up', () => {
@@ -1183,7 +1183,7 @@ describe('standing up', () => {
     await loadVideo();
     await createSession();
 
-    // Leaving the room unmounts the theater — the one path that must still mean
+    // Leaving the room unmounts the theater, the one path that must still mean
     // silence, session or no session.
     view.unmount();
     await settle(4);

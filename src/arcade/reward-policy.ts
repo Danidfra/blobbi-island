@@ -1,5 +1,5 @@
 /**
- * Arcade reward policy — pure, deterministic, and the only place a ticket count
+ * Arcade reward policy, pure, deterministic, and the only place a ticket count
  * is ever derived.
  *
  * **Nothing in this module grants anything.** It converts a finished result into
@@ -9,9 +9,9 @@
  * ## The shape, and why it is this shape
  *
  * Each game owns a small policy that answers exactly one question: *how many
- * tickets is this run worth on its own terms?* Everything else — the
+ * tickets is this run worth on its own terms?* Everything else, the
  * participation floor, the difficulty multiplier, the first-clear / daily /
- * personal-best bonuses, the daily anti-farming limit and the hard cap — is
+ * personal-best bonuses, the daily anti-farming limit and the hard cap, is
  * applied by ONE shared function, {@link calculateTicketAward}.
  *
  * That split is the point. If each game applied its own bonuses, each game would
@@ -80,16 +80,16 @@ export const ARCADE_REWARD_TUNING = {
 /**
  * How much of the shared economy a policy opts into.
  *
- * - **`scaled`** — the full pipeline: participation floor, difficulty
+ * - **`scaled`**: the full pipeline: participation floor, difficulty
  *   multiplier, first-clear / daily / personal-best bonuses, then the caps.
- * - **`flat`** — the policy's own `base` IS the award, subject only to the
+ * - **`flat`**: the policy's own `base` IS the award, subject only to the
  *   participation floor and the caps. The difficulty multiplier and the history
  *   bonuses are skipped.
  *
  * `flat` is not a loophole: a flat policy still cannot exceed the shared hard
  * cap, still cannot pay below the participation floor for a clear, and still
  * goes through this one function. It exists because a bonus the app cannot
- * SUBSTANTIATE must not be paid — the dance game ships with no first-clear
+ * SUBSTANTIATE must not be paid, the dance game ships with no first-clear
  * ledger, no personal-best store and no per-day rewarded-run counter, so a
  * `scaled` dance policy would have to be fed a context of permanent `false`s and
  * would advertise bonuses that can never fire.
@@ -126,7 +126,7 @@ export interface ArcadeRewardPolicy {
    * ONLY when every line has a non-empty label (after trimming) that is unique
    * within the breakdown and a non-negative integer ticket value, and the lines
    * sum to exactly what `base` returned. Anything else falls back to the single
-   * `Clear` line — a policy cannot pay a different number, hide a deduction, or
+   * `Clear` line: a policy cannot pay a different number, hide a deduction, or
    * double-render a line by describing itself creatively. Games with several
    * visible reasons (victory, difficulty, margin) use this so the results
    * screen can say why; a policy without one gets the single line, as the dance
@@ -192,7 +192,7 @@ export interface TicketAward {
   readonly subtotal: number;
   /** What the player actually gets. Always an integer ≥ 0. */
   readonly total: number;
-  /** A cap reduced the total — say so in the UI. */
+  /** A cap reduced the total, say so in the UI. */
   readonly capped: boolean;
   /** The daily anti-farming limit reduced this run to participation only. */
   readonly dailyLimitReached: boolean;
@@ -300,7 +300,7 @@ export function calculateTicketAward(
   // (after trimming) that is unique within the breakdown and a non-negative
   // integer ticket value, and the lines add up to the base actually paid; the
   // single `Clear` line remains the truth otherwise. Whatever the lines say,
-  // `base` — and therefore the quantity granted — is computed above from
+  // `base`: and therefore the quantity granted, is computed above from
   // `policy.base` alone.
   const baseLines = participationFloorApplied ? undefined : policy.baseBreakdown?.(result);
   const seenLabels = new Set<string>();
@@ -376,11 +376,11 @@ export function calculateTicketAward(
 
 /**
  * The full, self-describing answer to "what is this run worth, and may it be
- * paid?" — the object the claim boundary and the results UI both read.
+ * paid?": the object the claim boundary and the results UI both read.
  *
  * It exists on top of {@link TicketAward} because an award answers only "how
  * many". A claim needs to know WHICH item, under WHICH policy version, and
- * whether it is allowed at all — and a UI that has to infer "not eligible" from
+ * whether it is allowed at all, and a UI that has to infer "not eligible" from
  * `total === 0` will eventually infer it wrongly.
  *
  * **Computing one performs no writes.** It touches no storage, no relay and no
@@ -423,7 +423,7 @@ export interface CalculateArcadeRewardInput {
 }
 
 /**
- * Turn a finished result into a payable — or explicitly unpayable — grant.
+ * Turn a finished result into a payable, or explicitly unpayable, grant.
  *
  * Eligibility is refused, in this order, for: a non-production policy, a missing
  * or malformed item address, a rejected award (invalid result, wrong game, the
@@ -489,8 +489,8 @@ export function getRewardPolicy(gameId: string): ArcadeRewardPolicy | undefined 
  * Look up a policy that is cleared for production.
  *
  * Returns `undefined` for a draft policy, so a game whose policy has not been
- * deliberately promoted cannot pay out. All three dedicated games — dance,
- * air hockey and pool — now carry an `active` policy; a fourth game starts as
+ * deliberately promoted cannot pay out. All three dedicated games, dance,
+ * air hockey and pool, now carry an `active` policy; a fourth game starts as
  * `draft` and gets nothing back from here until promoted.
  */
 export function getProductionRewardPolicy(gameId: string): ArcadeRewardPolicy | undefined {

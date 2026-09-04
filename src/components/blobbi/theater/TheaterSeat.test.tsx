@@ -4,7 +4,7 @@
  * The chair system this replaces was inert: clicking a chair walked the Blobbi
  * to a point and nothing else ever happened, because the arrival handler was
  * never called and all 28 chairs shared one id. These tests pin the contract
- * that replaces it — unique ids, arrival-gated sitting, a fixed z-index, and
+ * that replaces it, unique ids, arrival-gated sitting, a fixed z-index, and
  * decoration-only off-world seats.
  */
 import { constrainPosition } from '@/lib/boundaries';
@@ -82,7 +82,7 @@ const seatA1 = getTheaterSeat('theater-seat-a1')!;
 const decorativeChair = getTheaterSeat('theater-seat-b1')!;
 
 describe('TheaterSeat', () => {
-  it('walks to the floor at the seat\'s front base — the APPROACH, never the cushion', () => {
+  it('walks to the floor at the seat\'s front base, the APPROACH, never the cushion', () => {
     // GROUND semantics: the feet stop on the floor in front of the chair
     // (SEAT_APPROACH_TARGET, just below the sprite base, boundary-clamped);
     // the cushion fraction belongs to the seated POSE (seatAnchorPosition).

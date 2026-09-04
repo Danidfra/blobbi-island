@@ -3,7 +3,7 @@
  *
  * The editor collects drag/scale/rotate patches per slot and saves them as ONE
  * complete kind:31634 replacement. These assert the batching, the default-
- * omission rule, and — most importantly — that an older client dragging a hat
+ * omission rule, and, most importantly, that an older client dragging a hat
  * does not delete fields a newer client wrote.
  */
 import { describe, it, expect } from 'vitest';

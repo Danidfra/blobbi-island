@@ -11,7 +11,7 @@
  *    still has a voice.
  *  - **The decision is about the class, never the content.** There is no field
  *    on the candidate that could carry words, which is what makes the spoofing
- *    attack a parser problem rather than an admission problem — see
+ *    attack a parser problem rather than an admission problem; see
  *    `src/communication/parse.test.ts` for the other half.
  */
 import { describe, expect, it } from 'vitest';

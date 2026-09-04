@@ -2,8 +2,8 @@
  * Behavioural coverage for the theater.
  *
  * These tests drive the real components against a fake `YT` global. They exist
- * because the previous suite tested the *parts* — the URL parser, the controller
- * against a fake adapter — and every one of them passed while the room was
+ * because the previous suite tested the *parts*, the URL parser, the controller
+ * against a fake adapter, and every one of them passed while the room was
  * visibly broken: it showed "Couldn't load the video player" to anyone who
  * walked in, and its Load Video button did nothing at all.
  *
@@ -139,7 +139,7 @@ afterEach(() => {
 
 // ── Seating gate ───────────────────────────────────────────────────────────
 
-describe('TheaterStage — before sitting down', () => {
+describe('TheaterStage: before sitting down', () => {
   it('renders no card, no player and no error', async () => {
     render(<TheaterStage seatId={null} />, { wrapper: TestApp });
     await settle();
@@ -170,7 +170,7 @@ describe('TheaterStage — before sitting down', () => {
 
 // ── Seated, nothing chosen ─────────────────────────────────────────────────
 
-describe('TheaterStage — seated with nothing playing', () => {
+describe('TheaterStage: seated with nothing playing', () => {
   it('shows the card with the URL input, and still no player', async () => {
     render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
@@ -208,7 +208,7 @@ describe('TheaterStage — seated with nothing playing', () => {
 
 // ── Submitting a video ─────────────────────────────────────────────────────
 
-describe('TheaterStage — loading a video', () => {
+describe('TheaterStage: loading a video', () => {
   it('reaches the player with the parsed id when Load Video is pressed', async () => {
     // The bug this pins: the button used to call `controller?.setMedia(...)` on
     // a controller that was always null, and nothing happened, silently.
@@ -282,7 +282,7 @@ describe('TheaterStage — loading a video', () => {
     await loadVideo();
 
     // The input is replaced by the loading row, so there is nothing to submit
-    // twice — the strongest possible form of "disabled".
+    // twice: the strongest possible form of "disabled".
     expect(screen.queryByRole('button', { name: /load video/i })).toBeNull();
     expect(players).toHaveLength(1);
   });
@@ -304,7 +304,7 @@ describe('TheaterStage — loading a video', () => {
 
 // ── Ready ──────────────────────────────────────────────────────────────────
 
-describe('TheaterStage — video ready', () => {
+describe('TheaterStage: video ready', () => {
   async function readyStage() {
     const view = render(<TheaterStage seatId={SEAT} />, { wrapper: TestApp });
     await settle();
@@ -430,7 +430,7 @@ describe('TheaterStage — video ready', () => {
 
 // ── Failures ───────────────────────────────────────────────────────────────
 
-describe('TheaterStage — failure states', () => {
+describe('TheaterStage: failure states', () => {
   it.each([
     [100, 'unavailable or private'],
     [101, 'embedding disabled'],
@@ -498,7 +498,7 @@ describe('TheaterStage — failure states', () => {
 
 // ── Strict Mode ────────────────────────────────────────────────────────────
 
-describe('TheaterStage — React Strict Mode', () => {
+describe('TheaterStage: React Strict Mode', () => {
   it('survives double-invoked effects with one live player and one script', async () => {
     delete window.YT;
     resetYouTubeApiCacheForTests();

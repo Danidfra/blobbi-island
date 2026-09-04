@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Shared "Enter Island" primary CTA style — the cozy, game-like purple pill with
+ * Shared "Enter Island" primary CTA style, the cozy, game-like purple pill with
  * a warm vertical gradient, cream border and layered depth shadow. Matches the
  * pre-login screen's primary button so all primary actions feel consistent.
  */

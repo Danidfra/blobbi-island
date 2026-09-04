@@ -14,7 +14,7 @@ import { ItemTile, PriceTag, QuantityBadge } from '@/components/ui/item-tile';
 
 describe('ItemTile', () => {
   it('is a plain element when it has no handler', () => {
-    // A display-only tile — the currency section of the item bag — must not
+    // A display-only tile, the currency section of the item bag, must not
     // be focusable or announce itself as pressable.
     render(<ItemTile name="Arcade Ticket" art="🎟️" quantity={7} />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

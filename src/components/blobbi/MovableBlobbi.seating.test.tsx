@@ -111,7 +111,7 @@ describe('seated Blobbi rendering', () => {
     expect(h.spriteWrapper().style.transform).toBe(`scale(${getTheaterSeat('theater-seat-c1')!.seatedScale})`);
   });
 
-  it('never scales the anchor — chat bubbles portal into it', () => {
+  it('never scales the anchor, chat bubbles portal into it', () => {
     const h = setup('theater-seat-a1');
     // Ground anchor (Phase 2): translation only, never scale.
     expect(h.anchor().style.transform).toBe('translate(-50%, -100%)');
@@ -158,7 +158,7 @@ describe('seated Blobbi rendering', () => {
 
   it('renders at the seat POSE with the row-derived seated z (parity with remotes)', () => {
     // A seated Blobbi is DRAWN at the seat's pose anchor with the row's
-    // seated z — identical inputs for local and remote seated stacking.
+    // seated z: identical inputs for local and remote seated stacking.
     const h = setup();
     h.sit('a1');
     const seat = getTheaterSeat('theater-seat-a1')!;

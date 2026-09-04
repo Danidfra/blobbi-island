@@ -6,14 +6,14 @@ import { cn } from '@/lib/utils';
  * The cabinet the dance game is played inside.
  *
  * Before this, Blobbi Dance drew a bordered grey box on the shell's cream
- * background — a generic application panel that happened to have arrows falling
+ * background: a generic application panel that happened to have arrows falling
  * down it. This adds the two things that make a screen read as an arcade
  * machine rather than a form: a **marquee** above it and a **bezel** around it.
  *
  * ## What it deliberately is not
  *
  * It is not a picture of a cabinet. There is no side art, no coin slot, no
- * joystick, and no image asset of any kind — the whole frame is four borders, a
+ * joystick, and no image asset of any kind, the whole frame is four borders, a
  * gradient and a row of CSS dots, because on a 320 px phone every pixel spent on
  * a drawing of a machine is a pixel taken from the lanes. The frame's job is to
  * FOCUS attention on the playfield, and a frame that crowds the playfield has
@@ -27,13 +27,13 @@ import { cn } from '@/lib/utils';
  */
 
 interface DanceCabinetProps {
-  /** Marquee headline — the song, not the game (the shell titles the game). */
+  /** Marquee headline: the song, not the game (the shell titles the game). */
   readonly title: string;
   /** One short line under the headline. Kept to a few words. */
   readonly subtitle?: string;
   /** The mascot, or nothing. Rendered at the marquee's left. */
   readonly mascot?: ReactNode;
-  /** Controls at the marquee's right — the sound toggle lives here. */
+  /** Controls at the marquee's right, the sound toggle lives here. */
   readonly actions?: ReactNode;
   /** A full-width strip under the marquee: the song progress bar during play. */
   readonly meter?: ReactNode;
@@ -44,7 +44,7 @@ interface DanceCabinetProps {
   readonly className?: string;
 }
 
-/** Marquee bulbs. A fixed handful of dots — decoration, and cheap. */
+/** Marquee bulbs. A fixed handful of dots, decoration, and cheap. */
 const BULBS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 export function DanceCabinet({

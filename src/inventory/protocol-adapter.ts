@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — thin protocol adapter (Phase 1).
+ * Blobbi Island: thin protocol adapter (Phase 1).
  *
  * This module is the ONLY place that bridges the framework-free
  * `@nostr-games/inventory` package to Island concerns (view models, relay
@@ -44,7 +44,7 @@ import { addressToItemId } from './registry';
  *
  * All three DERIVE from the canonical registry (`src/protocol/event-registry.ts`)
  * rather than repeating literal lists here. That is what guarantees a category
- * added to the registry — `currency`, for example — is accepted by the adapter
+ * added to the registry, `currency`, for example, is accepted by the adapter
  * instead of silently degrading a valid definition to `unknown`.
  */
 const VALID_ACTIONS: ReadonlySet<string> = new Set<string>(ITEM_ACTIONS);
@@ -88,7 +88,7 @@ export function parseOfficialItemDefinition(
  * ```
  *
  * Widening the official parser to admit a partner issuer would have made every
- * partner item an "official Blobbi item" everywhere at once — purchasable,
+ * partner item an "official Blobbi item" everywhere at once, purchasable,
  * equippable, effect-eligible, consumable. Adding a second, narrower-purpose
  * parser leaves every pre-existing gate saying exactly what it said before.
  */
@@ -194,7 +194,7 @@ function readEffectsFromContent(contentJson: unknown): {
  *   3. bundled itemId→emoji fallback;
  *   4. generic package emoji.
  *
- * Step 1 copies the package's parsed collection through UNCHANGED — same
+ * Step 1 copies the package's parsed collection through UNCHANGED, same
  * entries, same order, same markers, including markers this spec version does
  * not define. Island narrows the collection per render context later
  * (`item-image-resolution.ts`); it never narrows it here, because a lossy
@@ -247,7 +247,7 @@ function readVisualFromContent(contentJson: unknown): {
   // ABSENT IS NOT EMPTY. An issuer who says nothing about forms has placed no
   // restriction, so a plain cosmetic with no `forms` key fits every Blobbi.
   // An issuer who publishes `forms: []`, or a non-array, or an array with no
-  // usable strings, has said something that cannot be honoured — that is a
+  // usable strings, has said something that cannot be honoured; that is a
   // broken definition, not a universal one, and Island refuses to guess which
   // it meant.
   let forms: readonly string[] | null = null;
@@ -363,7 +363,7 @@ export function resolveFromDefinition(
     ...(description === undefined ? {} : { description }),
     // The published `rarity` tag, verbatim, when present. Display metadata.
     ...(def.rarity === undefined ? {} : { rarity: def.rarity }),
-    // Issuer-claimed effect fields, for diagnostics — never for activation.
+    // Issuer-claimed effect fields, for diagnostics; never for activation.
     ...(effectVisual === undefined ? {} : { effectVisual }),
     source: 'definition',
   };

@@ -2,7 +2,7 @@
 
 **Status: closed for V1** (was last stamped "Phase B", which it long outgrew).
 Every capability in this document is enforced at a data boundary with tests
-behind it — see the per-phase notes in
+behind it: see the per-phase notes in
 [`family-safety-audit.md`](./family-safety-audit.md).
 
 **Blobbi Island V1 ships with Standard Experience only.** Family mode is still
@@ -16,7 +16,7 @@ Communication V2 is specified in [`communication-v2.md`](./communication-v2.md);
 this document remains the capability contract.
 
 Rationale and evidence: [`family-safety-audit.md`](./family-safety-audit.md).
-This document is the implementation contract — what the pieces are, and the rules
+This document is the implementation contract, what the pieces are, and the rules
 for using them.
 
 ---
@@ -43,7 +43,7 @@ answer costs the player features, so it is answered dishonestly; and recording
 the answer creates exactly the data-protection exposure the question was meant to
 reduce. The way not to have that problem is to never have the field.
 
-So: **no `isChild`, no date of birth, no age band, no "adult" claim** — not in
+So: **no `isChild`, no date of birth, no age band, no "adult" claim**: not in
 this module, and not derived from it elsewhere.
 
 ### Why the union is tiny
@@ -71,14 +71,14 @@ features ask: "is this capability allowed?"
 |---|---|
 | `src/safety/experience-profile.ts` | the profile union, the enumeration, `isExperienceProfile` |
 | `src/safety/island-safety-policy.ts` | the `IslandSafetyPolicy` type and `assertPolicyInvariants` |
-| `src/safety/policies.ts` | `STANDARD_POLICY` and `FAMILY_POLICY` — the only two capability literals |
+| `src/safety/policies.ts` | `STANDARD_POLICY` and `FAMILY_POLICY`: the only two capability literals |
 | `src/safety/resolve.ts` | `resolveSafetyPolicy` and `ACTIVE_EXPERIENCE_PROFILE` |
 | `src/safety/island-safety-context.ts` | the context and `useIslandSafetyPolicy` |
 | `src/safety/IslandSafetyProvider.tsx` | mounts the resolved policy, once, in `App.tsx` |
 | `src/safety/chat-admission.ts` | the first enforcement helper: `admitChatMessage` |
 | `src/safety/index.ts` | the barrel; the public surface |
 
-The policy core is pure — no React, no relay, no storage, no clock — and
+The policy core is pure, no React, no relay, no storage, no clock, and
 `src/safety/boundaries.test.ts` proves it against the real import graph, in the
 same style as `src/arcade/boundaries.test.ts`. Only the context and the provider
 may import React.
@@ -96,7 +96,7 @@ that are already visible:
    injection point, so it exercises the same lookup the running game uses instead
    of a module mock.
 
-A missing provider yields `STANDARD_POLICY`, which is today's behaviour — so
+A missing provider yields `STANDARD_POLICY`, which is today's behaviour, so
 adding the context could not change any existing screen or test. **That default
 is a Phase A convenience with a real trade-off: failing *open* to the permissive
 profile is the wrong long-term default.** It is acceptable only while Standard IS
@@ -115,7 +115,7 @@ the shipped product and Family is unreachable. See §8.
 | `openMediaEntry` | `hideYouTubeInput` |
 
 A semantic name survives a rewrite of the feature that implements it. A
-presentational name does not — and, worse, it invites an implementation that
+presentational name does not, and, worse, it invites an implementation that
 hides a textarea while the subscription underneath keeps delivering the very
 content the name claims to have removed.
 
@@ -137,14 +137,14 @@ Three further rules:
 `STANDARD_POLICY` **describes what ships today**, capability for capability. It
 is what every existing player resolves to, so tightening it here would be a
 silent product change disguised as a refactor. Where the audit recommends a
-Standard-mode improvement — an interstitial before external links, for instance —
+Standard-mode improvement: an interstitial before external links, for instance,
 this file still says `externalLinks: true`, matching shipped behaviour. Those
 improvements belong to the phase that implements them, where they are visible.
 
 `FAMILY_POLICY` is defined, exhaustively tested, and **unreachable**.
 
 The shape of Family follows one finding from the audit: *the risk is concentrated
-in arbitrary text, arbitrary video and the exits — remove those three and keep the
+in arbitrary text, arbitrary video and the exits, remove those three and keep the
 world.*
 
 | | Standard | Family |
@@ -153,7 +153,7 @@ world.*
 | `predefinedPhrases` | ✅ | ✅ |
 | `emotes` | ✅ | ✅ |
 | `directMessages` | ❌ | ❌ *(invariant)* |
-| `strangerAuthoredNames` | ✅ | ✅ *(temporarily — see below)* |
+| `strangerAuthoredNames` | ✅ | ✅ *(temporarily; see below)* |
 | `strangerProfileMetadata` | ❌ | ❌ *(invariant)* |
 | `ownFreeTextNaming` | ✅ | ❌ |
 | `externalLinks` | ✅ | ❌ |
@@ -176,7 +176,7 @@ restriction above is acceptable *because* the island is still shared.
 
 Three capabilities are typed as the literal `false` rather than `boolean`:
 `directMessages`, `strangerProfileMetadata`, `arbitraryRemoteMedia`. They are not
-restrictions Family adds — they are properties the island has today in every
+restrictions Family adds: they are properties the island has today in every
 profile. Turning any of them on is a new product decision, not a configuration
 change, and the literal type means a profile that tries to relax one does not
 compile.
@@ -192,8 +192,8 @@ publishing must also allow the upload that completes it.
 Recorded now rather than discovered later:
 
 - **`openMediaEntry: false` now selects a curated shelf rather than an input**
-  (Phase E). The approved list is bundled — not fetched, so it has no "unknown"
-  state to fail open on — and it **ships empty**: choosing videos appropriate for
+  (Phase E). The approved list is bundled; not fetched, so it has no "unknown"
+  state to fail open on, and it **ships empty**: choosing videos appropriate for
   children is editorial work needing sign-off, not something to invent alongside
   the code. So a curated theater can still sit, host, join and watch in sync,
   and currently has nothing on the shelf. See
@@ -201,18 +201,18 @@ Recorded now rather than discovered later:
 - **`strangerAuthoredNames` is deferred, not unbuilt.** Phase F built the
   substitution: a policy with the capability `false` resolves every remote name
   to a deterministic alias where a stranger's kind 31124 becomes a
-  `BlobbiVisual`, unconditionally — even a clean name, because a filter would
+  `BlobbiVisual`, unconditionally: even a clean name, because a filter would
   pass "come find me on discord". The shipped Family policy has since been set
   back to `true` (Phase F.1) while the social identity model is decided: an
   island where every stranger is "Sunny Fox", and two of them share the alias,
   is not obviously better for a child than one where names are real, and
   friends, local nicknames and relationship-aware naming all change the answer.
   So the capability currently distinguishes neither shipped profile. That is a
-  real gap, recorded as one — the alternative, leaving it `false` and rendering
+  real gap, recorded as one, the alternative, leaving it `false` and rendering
   authored names anyway, would make this table a lie. The boundary is in place
   and tested against a hand-built policy, so restoring it is a literal change.
 - **`detailedPresence: false` now has a coarse shape** (Phase G), and it is
-  narrower than this note guessed. Dropping `hiddenIn` turned out to be wrong —
+  narrower than this note guessed. Dropping `hiddenIn` turned out to be wrong,
   a remote client with no hiding claim draws the player normally, standing at
   the coordinates they are hiding at, so removing the field would un-hide them.
   Its VALUE is withheld instead. `goal` and full coordinate precision stay: both
@@ -236,7 +236,7 @@ function ShareRow() {
 }
 ```
 
-For anything outside React, take the policy as a parameter — that is what keeps
+For anything outside React, take the policy as a parameter; that is what keeps
 the decision testable:
 
 ```ts
@@ -263,7 +263,7 @@ day the matrix changes.
 **At the data boundary, not the render boundary.**
 
 For anything a stranger can author, the check goes where the content is
-*admitted* — before it is queued, cached, or handed to a component.
+*admitted*: before it is queued, cached, or handed to a component.
 
 A component only controls what *this* build draws. A boundary check also governs
 content arriving from a Standard client, from a third-party client, or into a
@@ -288,14 +288,14 @@ relay → subscription → processChatEvent
 `admitChatMessage` is consulted in two places in `MultiplayerLayer`:
 
 - **inbound**, in `processChatEvent`, after the payload has been validated and
-  before anything can render or queue it — this is the one that protects a
+  before anything can render or queue it; this is the one that protects a
   player, because the sender is not necessarily this build;
 - **outbound**, in `sendMessage`, so no holder of the send ref can route around
   the composer.
 
 **Two separate concerns, deliberately kept apart.** Structure and bounds are the
 parser's job (`src/communication/parse.ts`); capability is admission's.
-Admission never inspects content — no length, no filter, no term list — and
+Admission never inspects content, no length, no filter, no term list, and
 under Standard it admits every class unconditionally. `chat-admission.test.ts`
 admits a hostile payload under Standard on purpose: it is a capability check, not
 a content filter, and the audit is explicit that a filter is not a substitute for
@@ -306,8 +306,8 @@ while carrying abusive text loses the text in the **parser**, which copies only
 ids; admission then sees an ordinary quick phrase, because that is all that is
 left of it. The words come from the local catalog, never from the wire.
 
-`src/safety/boundaries.test.ts` asserts the pipeline order structurally — parse
-before admit, admit before render, admit before `queueBubble` — so it cannot
+`src/safety/boundaries.test.ts` asserts the pipeline order structurally, parse
+before admit, admit before render, admit before `queueBubble`: so it cannot
 drift.
 
 ---
@@ -322,7 +322,7 @@ Two mechanisms, deliberately overlapping:
    `EXPERIENCE_PROFILES`, `isExperienceProfile` and `IslandSafetyPolicyContext`,
    and forces imports through the `@/safety` barrel. Freely importable:
    `useIslandSafetyPolicy`, `IslandSafetyProvider`, the `IslandSafetyPolicy`
-   type, and the admission helpers. No custom plugin was written — the built-in
+   type, and the admission helpers. No custom plugin was written, the built-in
    rule was enough.
 2. **`src/safety/boundaries.test.ts`.** Scans the real import graph and the
    actual identifiers, so a relative-path import or a re-export cannot route
@@ -339,7 +339,7 @@ while the reasoning is fresh.
 - **The fallback must never downgrade.** A device whose guardian chose `family`
   and whose storage read fails must not silently become Standard.
   `resolveSafetyPolicy` throws on unknown input rather than guessing, and
-  `isExperienceProfile` deliberately does not pick a fallback — choosing one is
+  `isExperienceProfile` deliberately does not pick a fallback, choosing one is
   the storage phase's decision, and it has a real wrong answer.
 - **The policy must be resolved on the first render.** A single frame of Standard
   is a frame in which a stranger's text can be admitted.
@@ -353,12 +353,12 @@ while the reasoning is fresh.
 Defined but unenforced. After Phase B, `freeTextChat`, `predefinedPhrases` and
 `emotes` have real call sites; after Phase D, so do `externalLinks`,
 `socialPlatformSharing`, `nativeShareSheet`, `relaySelection` and
-`authoringTools` — see
-[`external-egress-safety.md`](./external-egress-safety.md) §11 — after
+`authoringTools`: see
+[`external-egress-safety.md`](./external-egress-safety.md) §11: after
 Phase D.5, so do `mediaUploads` and `publicNotePublishing`, and after Phase E,
 so does `openMediaEntry`.
 
-After Phase F, so does `ownFreeTextNaming` — and so would
+After Phase F, so does `ownFreeTextNaming`: and so would
 `strangerAuthoredNames`, whose enforcement exists but which no shipped profile
 currently sets `false` (Phase F.1, above). After Phase G, so does
 `detailedPresence`.
@@ -367,7 +367,7 @@ currently sets `false` (Phase F.1, above). After Phase G, so does
 data boundary with a test behind it.
 
 **And nothing mounts before a profile is resolved** (Phase H.0). The provider
-now reports one of three states — `unprovided`, `resolving`, `resolved` — and
+now reports one of three states, `unprovided`, `resolving`, `resolved`, and
 `SafetyGate` renders the island only under the last of them. The shipped path
 resolves `standard` explicitly on the first render, so production is unchanged;
 what changed is that "nobody answered" is no longer a synonym for Standard. See
@@ -375,7 +375,7 @@ what changed is that "nobody answered" is no longer a synonym for Standard. See
 
 **A note on `publicNotePublishing`'s scope, because it is easy to over-apply.**
 It governs the player taking something they made and posting it publicly to the
-wider Nostr network under their own key — today, exactly one surface: the
+wider Nostr network under their own key, today, exactly one surface: the
 PhotoBooth's kind 1 polaroid. It is emphatically NOT "no Nostr events": presence,
 chat, pet state, inventory, equipment, themes and the owner profile are game
 protocol, are required for the island to work, and are untouched. A boundary test
@@ -386,14 +386,14 @@ The rest are still declarations. In audit-roadmap order:
 
 | Capability | Still needs |
 |---|---|
-| ~~`externalLinks`, `socialPlatformSharing`, `nativeShareSheet`~~ | **done in Phase D** — one egress boundary owns the capability check, URL validation, the confirmation and the only `window.open` / `navigator.share` in the codebase |
-| ~~`relaySelection`, `authoringTools`~~ | **done in Phase D** — the relay gate is on `AppProvider.updateConfig` (the single writer, not the three selector mounts); the tools route is guarded where it mounts |
-| ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B** — catalogs, phrase builder, emote grid, and enforcement at both boundaries |
-| ~~`openMediaEntry`~~ | **done in Phase E** — enforced in `admitTheaterMedia`, consulted by every path that can put media on screen (local input, session `set-media`, join, re-seat) and by the publication seam. Refusal happens before the state machine, so no player is ever constructed for unapproved media. It also derives the theater's fullscreen permission — see [`theater-media-safety.md`](./theater-media-safety.md) §9 |
-| ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5** — `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
-| ~~`ownFreeTextNaming`~~ | **done in Phase F** — validated at the adoption writer against an approved vocabulary, before the profile is read and before anything is signed. A curated experience gets a two-dropdown composer rather than a disabled field. See [`safe-user-authored-names.md`](./safe-user-authored-names.md) |
-| `strangerAuthoredNames` | **built in Phase F, dormant since Phase F.1** — the alias substitution works and is tested, but the shipped Family policy permits authored names again while the social identity model is decided. Nothing to build; a product decision to make |
-| ~~`detailedPresence`~~ | **done in Phase G** — one projection (`projectPresenceForPolicy`) between the local runtime state and the wire, applied inside the single builder every publisher funnels through. The audit disagreed with the guess: `hiddenIn` cannot be dropped (it would un-hide a hidden player) so its VALUE is withheld and the fact kept, while `goal` and full coordinate precision are load-bearing and published under every policy. See [`presence-data-minimization.md`](./presence-data-minimization.md) |
+| ~~`externalLinks`, `socialPlatformSharing`, `nativeShareSheet`~~ | **done in Phase D**: one egress boundary owns the capability check, URL validation, the confirmation and the only `window.open` / `navigator.share` in the codebase |
+| ~~`relaySelection`, `authoringTools`~~ | **done in Phase D**: the relay gate is on `AppProvider.updateConfig` (the single writer, not the three selector mounts); the tools route is guarded where it mounts |
+| ~~`predefinedPhrases`, `emotes`~~ | **done in Phase B**: catalogs, phrase builder, emote grid, and enforcement at both boundaries |
+| ~~`openMediaEntry`~~ | **done in Phase E**: enforced in `admitTheaterMedia`, consulted by every path that can put media on screen (local input, session `set-media`, join, re-seat) and by the publication seam. Refusal happens before the state machine, so no player is ever constructed for unapproved media. It also derives the theater's fullscreen permission, see [`theater-media-safety.md`](./theater-media-safety.md) §9 |
+| ~~`mediaUploads`, `publicNotePublishing`~~ | **done in Phase D.5**: `mediaUploads` is enforced inside `useUploadFile` (the app's one Blossom uploader), before the uploader is constructed; `publicNotePublishing` is enforced in `usePhotoShare`, the canonical writer for the PhotoBooth's kind 1 note. Both are decided before any network, so a refused share leaves no permanent upload behind |
+| ~~`ownFreeTextNaming`~~ | **done in Phase F**: validated at the adoption writer against an approved vocabulary, before the profile is read and before anything is signed. A curated experience gets a two-dropdown composer rather than a disabled field. See [`safe-user-authored-names.md`](./safe-user-authored-names.md) |
+| `strangerAuthoredNames` | **built in Phase F, dormant since Phase F.1**: the alias substitution works and is tested, but the shipped Family policy permits authored names again while the social identity model is decided. Nothing to build; a product decision to make |
+| ~~`detailedPresence`~~ | **done in Phase G**: one projection (`projectPresenceForPolicy`) between the local runtime state and the wire, applied inside the single builder every publisher funnels through. The audit disagreed with the guess: `hiddenIn` cannot be dropped (it would un-hide a hidden player) so its VALUE is withheld and the fact kept, while `goal` and full coordinate precision are load-bearing and published under every policy. See [`presence-data-minimization.md`](./presence-data-minimization.md) |
 
 Still not modelled as capabilities, and now built: **blocking, muting and
 reporting** shipped in Phase C. They deliberately did NOT become policy fields.
@@ -402,5 +402,5 @@ A `canBlock` capability would imply a profile in which blocking could be switche
 *off*, which is not a decision anyone should be able to make. Capabilities
 describe what an experience may **do**; these describe what a player may
 **protect themselves from**. Both gates run on the same ingest paths and neither
-depends on the other — see
+depends on the other; see
 [`player-safety-controls.md`](./player-safety-controls.md) §10.

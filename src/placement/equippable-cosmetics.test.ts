@@ -2,7 +2,7 @@
  * The production cosmetic catalog: what a player may equip, and why not.
  *
  * These assert the INTERSECTION rule that replaced the hardcoded accessory
- * catalogue — trusted definition ∩ owned ∩ supported slot ∩ compatible form —
+ * catalogue: trusted definition ∩ owned ∩ supported slot ∩ compatible form,
  * and the corrected forms policy, where an ABSENT `content.visual.forms` is no
  * restriction and a MALFORMED one is a broken definition.
  *
@@ -51,7 +51,7 @@ function withVisual(visual: unknown): ResolvedBlobbiItemDefinition {
   return resolveFromDefinition(def);
 }
 
-describe('slot policy — the definition is the only authority', () => {
+describe('slot policy: the definition is the only authority', () => {
   it('accepts a declared, supported slot', () => {
     const d = withVisual({ slot: 'headwear' });
     expect(d.slot).toBe('headwear');
@@ -88,7 +88,7 @@ describe('slot policy — the definition is the only authority', () => {
   });
 });
 
-describe('forms policy — absent is not empty', () => {
+describe('forms policy: absent is not empty', () => {
   it('treats an absent forms field as NO restriction', () => {
     const d = withVisual({ slot: 'headwear' });
     expect(d.forms).toBeNull();

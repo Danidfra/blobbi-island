@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — reading from and writing to SEVERAL relays at once.
+ * Blobbi Island: reading from and writing to SEVERAL relays at once.
  *
  * The app's shared `NPool` deliberately routes every request to the single
  * configured relay (see `NostrProvider`), which is right for gameplay traffic
@@ -11,7 +11,7 @@
  * publisher share ONE implementation instead of three.
  *
  * It is transport only. Nothing here parses, validates, selects or trusts an
- * event — `@nostr-games/inventory` and `protocol-adapter.ts` keep doing that.
+ * event, `@nostr-games/inventory` and `protocol-adapter.ts` keep doing that.
  * What this module adds is per-relay attribution: which relay answered, and
  * for a write, which relay accepted. A diagnostic tool that reports "published"
  * without saying where would be worse than useless.
@@ -34,7 +34,7 @@ export interface RelayPublishOutcome {
   ok: boolean;
   error?: string;
   /**
-   * The relay gave NO verdict — a timeout or abort. The event MAY have landed
+   * The relay gave NO verdict, a timeout or abort. The event MAY have landed
    * there. Callers publishing immutable economic events (a kind:1416 spend)
    * must treat this as "unknown", never as "rejected": retrying a timed-out
    * publish with a freshly signed event is how one debit becomes two.
@@ -54,7 +54,7 @@ const DEFAULT_PUBLISH_TIMEOUT_MS = 5000;
  * and one unreachable relay must not hide the events another one served.
  *
  * Connections are opened and closed per call. That is deliberately cheap and
- * stateless — these queries are rare (a catalog load, a browser refresh), and a
+ * stateless: these queries are rare (a catalog load, a browser refresh), and a
  * pool of long-lived sockets to relays the app otherwise never uses would be a
  * bigger cost than the handshake it saves.
  */

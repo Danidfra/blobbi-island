@@ -2,7 +2,7 @@
  * The window is a game screen, not a document.
  *
  * The claim under test: **the primary flow needs no vertical scrolling.** jsdom
- * has no layout engine, so nothing here can measure a pixel — a rendered
+ * has no layout engine, so nothing here can measure a pixel, a rendered
  * `h-[46%]` is zero and any height assertion would be theatre. What CAN be
  * pinned is the structural reason the old shape scrolled and the new one does
  * not:
@@ -74,13 +74,13 @@ describe('the Blobbi tab fits, and reads as a hierarchy', () => {
       The density pass proved the content fits (~360px in a ~525px budget) and
       then squandered the win by packing it into side-by-side blocks that read
       as six equally loud widgets. The corrective pass keeps the fit and adds
-      the order: one column, loudest first, quietest last — and the utility
+      the order: one column, loudest first, quietest last, and the utility
       strip is the ONLY two-column row left, because coins and the scene picker
       genuinely are peers.
     */
     const primary = modal.slice(
       modal.indexOf('value="primary"'),
-      modal.indexOf('Wardrobe — everything'),
+      modal.indexOf('Wardrobe: everything'),
     );
     const order = ['<MoodHero', '<NeedMeters', '<ProgressionStrip', '<TraitChips', 'data-coin-hud']
       .map((marker) => primary.indexOf(marker));
@@ -176,7 +176,7 @@ describe('collections are bounded, so the window cannot grow', () => {
 
     await screen.findByText('Apple');
     expect(screen.queryByText(/pick something/i)).toBeNull();
-    // Clicking a consumable opens the dialog — it does not grow the tab with a
+    // Clicking a consumable opens the dialog; it does not grow the tab with a
     // detail card first.
     fireEvent.click(screen.getByTestId(`item-${itemIdToAddress('food_apple')}`));
     expect(await screen.findByRole('dialog', { name: 'Use item' })).toBeInTheDocument();

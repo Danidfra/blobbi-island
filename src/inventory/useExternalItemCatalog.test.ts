@@ -5,7 +5,7 @@
  * query is constructed, which is the property worth testing: an item Island
  * will not show must also be an item Island does not connect to a relay about.
  *
- * `selectNewestTrustedDefinitions` is the second gate, on the way back in —
+ * `selectNewestTrustedDefinitions` is the second gate, on the way back in,
  * because what a relay serves is not necessarily what was asked for.
  */
 
@@ -44,7 +44,7 @@ describe('grouping by trusted issuer', () => {
     expect([...request.addresses]).toContain(STRAWBERRY);
   });
 
-  it('drops an untrusted issuer entirely — no request, so no query', () => {
+  it('drops an untrusted issuer entirely; no request, so no query', () => {
     expect(groupTrustedRequests([ref(`31632:${STRANGER}:anything`)])).toEqual([]);
   });
 
@@ -139,7 +139,7 @@ describe('selecting definitions coming back', () => {
       ...FARM_STRAWBERRY_EVENT,
       id: 'broken',
       created_at: FARM_STRAWBERRY_EVENT.created_at + 100,
-      // No `name`/`type` — not a definition at any age.
+      // No `name`/`type`: not a definition at any age.
       tags: [['d', 'farm:produce:strawberry']],
     };
     const selected = selectNewestTrustedDefinitions(

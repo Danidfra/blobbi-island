@@ -61,7 +61,7 @@ export function PlazaInsideRoom({ blobbiRef, selectedBlobbiId = null }: PlazaIns
   return (
     <>
       {/*
-        The door — closed art as the base, the open art as a hover/tap overlay
+        The door: closed art as the base, the open art as a hover/tap overlay
         (the shopping mall's store-door pattern). Deepest layer in the room, so
         the overlay's top step covers its base. The group is stretched
         vertically to fit the painted door behind it; see `PLAZA_DOOR`.

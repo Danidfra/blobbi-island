@@ -44,8 +44,8 @@ path.
 
 ## 2. Why event ids are never identity
 
-kind:31632 is addressable. The issuer republishes a definition — new event id,
-new signature, same `31632:<issuer>:<d>` address — whenever metadata changes.
+kind:31632 is addressable. The issuer republishes a definition, new event id,
+new signature, same `31632:<issuer>:<d>` address, whenever metadata changes.
 Anything keyed on an event id breaks on the first such update. The registry
 therefore stores no event ids; the currently published revisions live only in
 `src/effects/official-item-event-fixtures.ts` for tests and the dev inspector,
@@ -61,7 +61,7 @@ image URL. A third-party event that copies
 `{"visual":{"effect":"celestial-aura"}}` under its own pubkey forms a
 different address, resolves to nothing, and is refused on the wearable path as
 `untrusted-issuer`. The issuer-claimed `visual.effect` / `visual.effectSlot`
-ARE parsed (`effectVisual` on the resolved definition) — but only as
+ARE parsed (`effectVisual` on the resolved definition): but only as
 diagnostics for tests and the dev inspector, never as an activation input.
 
 ## 4–5. Ownership and placement requirements
@@ -76,7 +76,7 @@ Activation requires ALL of:
 
 Placement is never possession; possession is never placement; an official
 definition existing is neither. Equipping never decrements quantity and
-removing never increments it — kind:31633 is untouched in both directions.
+removing never increments it, kind:31633 is untouched in both directions.
 
 **Stale placements**: when an equipped item is no longer in the inventory, it
 is not rendered, the raw placement entry is preserved (rendering never
@@ -87,28 +87,28 @@ player-driven Remove action.
 
 Wearable slots (`headwear`, `eyewear`, `back`, `neckwear`, `handheld`,
 `face-mark`, `aura`, `color-overlay`) and effect slots (`aura`,
-`ground-local`, `ambient-particles`, `body-overlay` — derived from the
+`ground-local`, `ambient-particles`, `body-overlay`: derived from the
 renderer's `EFFECT_SLOT_ORDER`, never restated) form one combined vocabulary
 (`PlacementSlot` in `src/placement/policy.ts`). Rules:
 
 - at most one active placement per canonical slot name (exact comparison);
 - `aura` is deliberately shared: an image aura accessory and an aura effect
   conflict, so a Blobbi has one aura however it is drawn;
-- an effect item may only occupy its registered slot — a placement claiming a
+- an effect item may only occupy its registered slot, a placement claiming a
   different slot is refused (`slot-mismatch`), not relocated;
 - wearables continue to be validated against their published `visual.slot`;
 - event-declared slots never extend the trusted vocabulary.
 
-Examples: Celestial Aura + Golden Sparkles + Pixel Glitch + Mystic Fog — four
-slots, all active. Celestial Aura + Solar Radiance — one `aura` slot, the last
-equipped wins and equipping warns first. Necklace + Bow Tie — a `neckwear`
-conflict, independent of effects. Block Builder Cap + Celestial Aura — fine.
+Examples: Celestial Aura + Golden Sparkles + Pixel Glitch + Mystic Fog, four
+slots, all active. Celestial Aura + Solar Radiance; one `aura` slot, the last
+equipped wins and equipping warns first. Necklace + Bow Tie, a `neckwear`
+conflict, independent of effects. Block Builder Cap + Celestial Aura, fine.
 
 ## 7. Form validation
 
 Every current effect registers `forms: ["baby", "adult"]` (matching the
 published `visual.forms`). A known stage outside the registered forms is
-refused (`incompatible-form`) — so an egg activates nothing — and an unknown
+refused (`incompatible-form`): so an egg activates nothing, and an unknown
 stage is no restriction, so effects do not flicker off while the Blobbi list
 loads. "The item supports these forms" (registry fact) is deliberately
 separate from "this Blobbi currently has this form" (kind:31124 fact).
@@ -120,8 +120,8 @@ separate from "this Blobbi currently has this form" (kind:31124 fact).
 ownership → form, resolves same-slot duplicates deterministically (last valid
 equip wins, the loser is diagnosed as `slot-conflict`), and returns
 `{ effects, active, rejected }` with `effects` ordered by the renderer's
-canonical `EFFECT_SLOT_ORDER`. It is pure — no hooks, queries, signing,
-publishing, clock or randomness — which is what lets the dev simulator and the
+canonical `EFFECT_SLOT_ORDER`. It is pure; no hooks, queries, signing,
+publishing, clock or randomness, which is what lets the dev simulator and the
 tests drive it freely. The AUTHOR gate (document signed by the Blobbi's owner)
 is applied by the caller, `useCharacterEquipment`, which knows signatures.
 
@@ -132,7 +132,7 @@ official effect items go through the pure resolver, everything else through
 the wearable policy. `CharacterEquipment` gained `effects` (plain renderer
 input), `activeEffects` and `rejectedEffects`. The app-root
 `CharacterEquipmentProvider` resolves once; `CurrentBlobbiDisplay` reads the
-context and passes `effects` to `BlobbiRendererView` — no per-Blobbi
+context and passes `effects` to `BlobbiRendererView`: no per-Blobbi
 subscription, no new query, and `@blobbi/react` still receives only plain
 `{ id }` data, never an item definition or a Nostr event.
 
@@ -152,8 +152,8 @@ equipped state and compatibility; only owned, form-compatible official
 effects are actionable, with unowned/incompatible items in a collapsed locked
 list carrying honest reasons (`useOwnedVisualEffects`).
 
-**Preview** drives `CurrentBlobbiDisplay.effectsOverride` — the real renderer
-path — on the modal stage. It writes nothing (no 31633, no 31634, no
+**Preview** drives `CurrentBlobbiDisplay.effectsOverride`: the real renderer
+path: on the modal stage. It writes nothing (no 31633, no 31634, no
 publish), keeps the current form and worn accessories visible, is clearly
 badged, and cancelling (or leaving the tab, or landing a real mutation)
 restores the persisted view.
@@ -180,7 +180,7 @@ panel without clearing state; nothing calls `window.location.reload()`.
 ## 13–15. Stale placements, wearable compatibility
 
 Stale behavior is §4–5. Wearables and effects share the single per-character
-kind:31634 document — the audit (§4 of
+kind:31634 document: the audit (§4 of
 `docs/blobbi-placement-activation-audit.md`) records why that is safe. There
 is **no legacy migration in this phase because none is needed**: the legacy
 31124 equip path was already deleted before Phase 9, and
@@ -193,7 +193,7 @@ equipment ownership policy are unchanged and covered by their existing tests.
 Sixteen kind:31632 events by the official issuer
 (`9efb8d30…afe63a9`), all signature-verified: four wearables and twelve
 effects (fixtures: `src/effects/official-item-event-fixtures.ts`). Exactly
-three carry `arcade-prize` — **Golden Sparkles, Mystic Fog, Celestial Aura** —
+three carry `arcade-prize`: **Golden Sparkles, Mystic Fog, Celestial Aura**,
 which is acquisition metadata only and never affects rendering, ownership or
 placement. (The Phase-9 hand-off's "Rainbow Cream" heading was a typo; the
 signed event is Rainbow Dream.)
@@ -211,7 +211,7 @@ changes to movement, ground anchors, shadows, depth scaling or the theater.
 The safest design given this implementation: render a remote Blobbi's effects
 by reading that player's OWN kind:31634 equipment document and kind:31633
 inventory through **batched, shared queries** (one query for all on-screen
-players per kind, cached app-wide like the local provider — never one
+players per kind, cached app-wide like the local provider; never one
 subscription per remote Blobbi), then feeding the same pure resolver with the
 remote owner's data. Never trust effect ids carried in presence strings:
 presence should at most hint that equipment changed. The author gate
@@ -221,18 +221,18 @@ document safe to evaluate verbatim.
 ## 19. Future Arcade Grant flow
 
 Granting an arcade-prize effect item is an inventory mutation (kind:31633 +1
-through the existing writers) plus normal activation — nothing in the
+through the existing writers) plus normal activation; nothing in the
 activation path needs to change. The `arcadePrize` flag in the registry marks
 which items the Prize Counter may offer once Grant exists.
 
 ## Related documents
 
-- `docs/blobbi-visual-effects.md` — the renderer-side effect system (Phase 8)
-- `docs/blobbi-placement-activation-audit.md` — the Phase-9 pre-implementation audit
-- `docs/INVENTORY_ARCHITECTURE.md` — kind:31632/31633 stack
-- `docs/game-item-image-views.md` — accessory artwork views
-- `docs/blobbi-renderer-contract.md` — the renderer boundary
-- `docs/protocol/blobbi-island-event-registry.md` — generated kind registry (now includes 31634)
+- `docs/blobbi-visual-effects.md`: the renderer-side effect system (Phase 8)
+- `docs/blobbi-placement-activation-audit.md`: the Phase-9 pre-implementation audit
+- `docs/INVENTORY_ARCHITECTURE.md`: kind:31632/31633 stack
+- `docs/game-item-image-views.md`: accessory artwork views
+- `docs/blobbi-renderer-contract.md`: the renderer boundary
+- `docs/protocol/blobbi-island-event-registry.md`: generated kind registry (now includes 31634)
 
 Phase 9.5 additions: the internal
 [`inventory-equipment-lab.md`](./inventory-equipment-lab.md) exercises this

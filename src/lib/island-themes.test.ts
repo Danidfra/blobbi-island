@@ -23,7 +23,7 @@ import {
  *
  * Both are asserted here rather than defended by a build step, because the
  * failure they prevent (a theme added in one place and not the others) is
- * silent and cosmetic — exactly the kind that ships.
+ * silent and cosmetic, exactly the kind that ships.
  */
 
 const ROOT = resolve(__dirname, '../..');
@@ -34,15 +34,15 @@ describe('island theme registry', () => {
       for (const key of ISLAND_PALETTE_KEYS) {
         expect(theme.palette[key], `${theme.id} is missing "${key}"`).toBeTruthy();
       }
-      // No stray keys either — an extra one is a colour nothing reads.
+      // No stray keys either, an extra one is a colour nothing reads.
       expect(Object.keys(theme.palette).sort()).toEqual([...ISLAND_PALETTE_KEYS].sort());
     }
   });
 
   it('every palette value is bare HSL channels, never a colour', () => {
     // The Tailwind palette is declared as `hsl(var(--island-x) / <alpha-value>)`,
-    // so a hex or an `hsl(...)` here would break every class that uses the token
-    // — including, silently, every opacity modifier.
+    // so a hex or an `hsl(...)` here would break every class that uses the token,
+    // including, silently, every opacity modifier.
     for (const theme of islandThemes) {
       for (const key of ISLAND_PALETTE_KEYS) {
         expect(theme.palette[key], `${theme.id}.${key}`).toMatch(
@@ -82,7 +82,7 @@ describe('resolveIslandTheme', () => {
 
   it('falls back to the default for the legacy light/dark/system values', () => {
     // These were the previous meaning of AppConfig.theme. They are not
-    // migrated — they resolve through the same unknown-id path.
+    // migrated: they resolve through the same unknown-id path.
     for (const legacy of ['light', 'dark', 'system']) {
       expect(resolveIslandTheme(legacy).id).toBe(DEFAULT_ISLAND_THEME_ID);
     }

@@ -8,7 +8,7 @@ export interface UseSfxOptions {
   volume?: number;
   /**
    * Minimum time (ms) between two successful plays. A `play()` call that lands
-   * inside the cooldown window is ignored. Defaults to 500ms — enough to stop
+   * inside the cooldown window is ignored. Defaults to 500ms, enough to stop
    * the same effect from machine-gunning if the trigger fires repeatedly.
    */
   cooldownMs?: number;
@@ -26,7 +26,7 @@ export interface SfxApi {
 }
 
 /**
- * useSfx — a tiny, reusable one-shot sound-effect helper built on a single
+ * useSfx: a tiny, reusable one-shot sound-effect helper built on a single
  * `HTMLAudioElement`. Deliberately dependency-free (no audio libraries) and
  * resilient to the browser autoplay policy.
  *
@@ -90,11 +90,11 @@ export function useSfx(src: string, options: UseSfxOptions = {}): SfxApi {
       // reject under the autoplay policy. Swallow either way.
       if (result && typeof result.catch === 'function') {
         result.catch(() => {
-          /* autoplay blocked or decode failed — ignore, no sound is fine */
+          /* autoplay blocked or decode failed, ignore, no sound is fine */
         });
       }
     } catch {
-      /* extremely defensive: some engines throw synchronously — ignore */
+      /* extremely defensive: some engines throw synchronously, ignore */
     }
   }, [src, volume, cooldownMs]);
 

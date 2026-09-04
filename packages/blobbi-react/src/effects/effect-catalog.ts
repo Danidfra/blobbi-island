@@ -5,7 +5,7 @@
  * shape on this layer, scatter them inside these ranges, carry them with this
  * track animation and animate them in place with that one. Everything varying
  * is a range, and every value inside a range is drawn deterministically from
- * `deterministic.ts` — never from `Math.random()`.
+ * `deterministic.ts`: never from `Math.random()`.
  *
  * Expressing effects as data rather than as twelve components is what keeps the
  * renderer to a single generic walker, keeps the caps enforceable by a test
@@ -16,14 +16,14 @@
  *
  * `xPct`/`yPct` place a piece's CENTRE in the renderer box (0–100, the same
  * space accessory placements use). `sizePct` is the piece's width AND height as
- * a percentage of the box — the box is square, so one number keeps every shape
+ * a percentage of the box, the box is square, so one number keeps every shape
  * undistorted at every size token.
  *
  * ## Layers
  *
  * `behind` paints before the behind-accessories, `mid` between the body and the
  * front accessories, `front` after everything. An effect that needs depth uses
- * two groups on two layers — Mystic Fog's rear bank and foreground veil are the
+ * two groups on two layers: Mystic Fog's rear bank and foreground veil are the
  * clearest case.
  *
  * ## The resting state
@@ -58,7 +58,7 @@ export interface EffectTrackSpec {
   swayPct?: EffectRange;
   /**
    * A fixed rotation of the whole track. Applied ONLY when the track has no
-   * animation of its own — a static transform and an animated one on the same
+   * animation of its own, a static transform and an animated one on the same
    * element cannot both win, and silently losing one is worse than the rule.
    * Rotating the track swings the piece around the box centre AND turns it,
    * which is what arranges electric arcs radially around the body.
@@ -84,9 +84,9 @@ export interface EffectPieceSpec {
   glitchYPct?: EffectRange;
   /**
    * `backwards` keeps the FIRST keyframe applied during the initial
-   * animation-delay. Ambient particles deliberately omit it — they should be
+   * animation-delay. Ambient particles deliberately omit it; they should be
    * visible at their authored spots from the first frame, not fade in over
-   * their stagger window — but strike-synchronized pieces must stay dark until
+   * their stagger window, but strike-synchronized pieces must stay dark until
    * their cue.
    */
   fill?: 'backwards';
@@ -128,7 +128,7 @@ export interface BlobbiVisualEffectPreset {
  */
 export const MAX_PIECES_PER_EFFECT = 18;
 
-/** Cap across all four slots at once — the worst case a single Blobbi can be. */
+/** Cap across all four slots at once, the worst case a single Blobbi can be. */
 export const MAX_PIECES_TOTAL = 48;
 
 /** No decorative animation may cycle faster than this. Anti-flicker floor. */
@@ -158,7 +158,7 @@ const PASTEL = ['#ffc7de', '#ffe9b8', '#c9f2d4', '#bfe4ff', '#d9cdff'] as const;
 // Electric Charge is the one effect that is STRUCTURE, not scatter: a bolt is
 // a single connected channel, so it is drawn as SVG strokes with a dash-offset
 // draw-on (`LightningEffect.tsx`) rather than as catalog pieces. What remains
-// here is the part that IS particles — the tip and origin sparks — plus the
+// here is the part that IS particles, the tip and origin sparks, plus the
 // shared cycle constant both halves are timed against, so the sparks can pop
 // exactly when the leader arrives.
 
@@ -198,7 +198,7 @@ function strikeSpark(opts: {
  * Every effect this package draws.
  *
  * Ordered as the catalogue is presented to players (common → mythic), which is
- * NOT the render order — that is `EFFECT_SLOT_ORDER`, resolved per Blobbi.
+ * NOT the render order; that is `EFFECT_SLOT_ORDER`, resolved per Blobbi.
  */
 export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
   Record<BlobbiVisualEffectId, BlobbiVisualEffectPreset>
@@ -339,7 +339,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
           animation: 'blobbi-fx-rise',
           durationS: [5, 7],
           // A long, wide delay spread is what makes this read as intermittent
-          // bursts rather than a continuous cloud of hearts — with no timer and
+          // bursts rather than a continuous cloud of hearts, with no timer and
           // no state, because the stagger is baked into the delays.
           delayS: [0, 7],
           dyPct: [-48, -32],
@@ -504,7 +504,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
         },
       },
       {
-        // Enchantment motes glinting INSIDE the mist — the tell that this fog
+        // Enchantment motes glinting INSIDE the mist, the tell that this fog
         // is magical rather than meteorological. Slow, sparse, low.
         layer: 'front',
         count: 3,
@@ -605,7 +605,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
     groups: [
       {
         // On `mid`: over the body, under the front accessories. The body itself
-        // is never transformed or filtered — the fragments sit ON it, so the
+        // is never transformed or filtered, the fragments sit ON it, so the
         // silhouette, the face and any hat stay perfectly readable.
         layer: 'mid',
         count: 10,
@@ -657,7 +657,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
     description:
       'Bright electric arcs crackle around your Blobbi with the energy of a fully charged arcade machine.',
     // The bolts themselves are SVG strokes drawn by `LightningEffect` on the
-    // mid layer — see the module note above. These groups are the sparks that
+    // mid layer: see the module note above. These groups are the sparks that
     // ride the same 2.8 s cycle: a pair popping at each origin as the strike
     // leaves the ground, and one at each tip as the leader arrives.
     extraAnimations: ['blobbi-fx-bolt-draw', 'blobbi-fx-impact-flash'],
@@ -966,7 +966,7 @@ export const BLOBBI_VISUAL_EFFECT_PRESETS: Readonly<
   },
 };
 
-/** Total piece count of a preset — the number the caps are checked against. */
+/** Total piece count of a preset, the number the caps are checked against. */
 export function presetPieceCount(preset: BlobbiVisualEffectPreset): number {
   return preset.groups.reduce((total, group) => total + group.count, 0);
 }

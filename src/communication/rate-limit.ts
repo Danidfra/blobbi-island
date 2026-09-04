@@ -6,13 +6,13 @@
  * The deployed client used a single 500 ms send throttle, which was sized for
  * typing: composing a message is itself the rate limit, and 500 ms only stops
  * a held Enter key. Quick phrases and emotes remove that natural friction
- * entirely — a phrase is one tap, an emote is one tap, and a child discovering
+ * entirely: a phrase is one tap, an emote is one tap, and a child discovering
  * the emote grid will tap it as fast as it responds.
  *
  * So the cheaper the input, the higher the floor: free text keeps its 500 ms
  * (deliberately unchanged, so Standard chat feels exactly as it does today) and
- * the one-tap classes get 1000 ms. That is still responsive — you can wave, then
- * clap a second later — while making a stream of emotes over someone's head
+ * the one-tap classes get 1000 ms. That is still responsive; you can wave, then
+ * clap a second later, while making a stream of emotes over someone's head
  * impossible rather than merely rude.
  *
  * ## Inbound is enforced separately, on purpose
@@ -24,7 +24,7 @@
  *
  * It also replaces something that was doing this job by accident. The previous
  * receive path deduplicated on `pubkey:sessionId` within 2 s, which suppressed
- * *every* second message from a sender in that window — including two different
+ * *every* second message from a sender in that window, including two different
  * ones. That worked as a crude rate limit and was wrong as a deduplicator, and
  * it would have made "wave, then heart" silently drop the heart. Duplicate
  * suppression now keys on the event id, where it belongs, and the rate limit is
@@ -55,7 +55,7 @@ export const SEND_COOLDOWN_MS: Readonly<Record<IslandMessageClass, number>> = Ob
  *
  * Sized against the FASTEST send cooldown, not the slowest: free text may be
  * sent every 500 ms, so anything at or above that would throttle a player who is
- * simply typing quickly — a receiver-side limit that punishes well-behaved
+ * simply typing quickly, a receiver-side limit that punishes well-behaved
  * clients is a bug, not a protection. 400 ms leaves headroom for clock skew and
  * still bounds one sender to ~2.5 messages a second.
  *
@@ -64,7 +64,7 @@ export const SEND_COOLDOWN_MS: Readonly<Record<IslandMessageClass, number>> = Ob
  *
  * Note this is considerably more permissive than what shipped, where a
  * `pubkey:sessionId` dedupe key silently discarded every second message from a
- * sender within 2 s — including two DIFFERENT ones. That was duplicate
+ * sender within 2 s, including two DIFFERENT ones. That was duplicate
  * suppression doing rate limiting by accident, and doing both badly.
  */
 export const INBOUND_MIN_INTERVAL_MS = 400;
@@ -85,8 +85,8 @@ export interface InboundThrottle {
    * Whether a message from this sender may be rendered now.
    *
    * Calling it RECORDS the decision, so it must be called exactly once per
-   * message and only after cheaper checks (parse, location, policy) have passed
-   * — otherwise a stream of malformed events would consume a well-behaved
+   * message and only after cheaper checks (parse, location, policy) have passed,
+   * otherwise a stream of malformed events would consume a well-behaved
    * sender's budget.
    */
   admit(senderKey: string, now: number): boolean;

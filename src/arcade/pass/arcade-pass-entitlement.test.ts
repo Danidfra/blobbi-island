@@ -100,8 +100,8 @@ describe('spending the allowance', () => {
     //
     // Within a tab this holds regardless of the lock, because the critical
     // section is synchronous. The CROSS-TAB half cannot be reproduced in
-    // process — jsdom has no Web Locks and one thread cannot interleave two
-    // synchronous sections — so the lock's involvement is pinned structurally
+    // process: jsdom has no Web Locks and one thread cannot interleave two
+    // synchronous sections: so the lock's involvement is pinned structurally
     // by 'requests the per-account cross-tab lock' below instead.
     redeem();
     for (let i = 0; i < ARCADE_PASS_FREE_PLAYS - 1; i += 1) {
@@ -123,7 +123,7 @@ describe('spending the allowance', () => {
     const expired = T0 + ARCADE_PASS_DURATION_MS;
 
     expect(await consumeArcadeFreePlay(ALICE, expired)).toBe(false);
-    // The count is untouched — the clock ended it, not the allowance.
+    // The count is untouched, the clock ended it, not the allowance.
     expect(readArcadePass(ALICE)!.remainingFreePlays).toBe(ARCADE_PASS_FREE_PLAYS);
     expect(arcadePassRemainingFreePlays(ALICE, expired)).toBe(0);
   });
@@ -137,7 +137,7 @@ describe('spending the allowance', () => {
   it('requests the per-account cross-tab lock, exclusively', async () => {
     // The structural half of the concurrency guarantee. jsdom has no Web
     // Locks, so without this the suite would pass identically if the lock were
-    // deleted — the in-tab result is the same either way.
+    // deleted: the in-tab result is the same either way.
     const requests: { name: string; mode: string | undefined }[] = [];
     const locks = {
       request: async (
@@ -220,7 +220,7 @@ describe('the two predicates answer different questions', () => {
       await consumeArcadeFreePlay(ALICE, T0 + 1);
     }
 
-    // Still worth showing — the record has not expired — but it buys nothing.
+    // Still worth showing, the record has not expired, but it buys nothing.
     expect(hasActiveArcadePass(ALICE, T0 + 1)).toBe(true);
     expect(hasUsableArcadePass(ALICE, T0 + 1)).toBe(false);
     expect(arcadePassRemainingMs(ALICE, T0 + 1)).toBeGreaterThan(0);
@@ -292,7 +292,7 @@ describe('no stacking', () => {
 });
 
 describe('persistence', () => {
-  it('survives a reload — every read goes back to storage', async () => {
+  it('survives a reload: every read goes back to storage', async () => {
     redeem();
     await consumeArcadeFreePlay(ALICE, T0 + 1);
 
@@ -302,7 +302,7 @@ describe('persistence', () => {
   });
 
   it('rejects a record with no allowance rather than inventing one', () => {
-    // A pre-allowance record could only come from the dev harness — the Pass
+    // A pre-allowance record could only come from the dev harness, the Pass
     // was never purchasable before the bound existed. Granting it an unknown
     // number of free plays would be inventing plays nobody paid for.
     localStorage.setItem(

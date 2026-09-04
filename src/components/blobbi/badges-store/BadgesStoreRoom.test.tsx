@@ -1,5 +1,5 @@
 /**
- * `<BadgesStoreRoom>` — the room's contract with the movement system and the
+ * `<BadgesStoreRoom>`: the room's contract with the movement system and the
  * shop.
  *
  * The claims under test:
@@ -9,7 +9,7 @@
  *     context, not a private list only this component can see;
  *  3. the three fixtures walk the Blobbi over and open the shop ON ARRIVAL,
  *     never on the click;
- *  4. four controls, one shop — no ordering of clicks and arrivals produces two.
+ *  4. four controls, one shop; no ordering of clicks and arrivals produces two.
  *
  * The modal is stubbed: this file is about the room, and the room importing
  * nothing from the badge domain is the point of the split.
@@ -150,7 +150,7 @@ describe('the shop renders', () => {
   });
 });
 
-describe('the things that do something look like it — and do not move', () => {
+describe('the things that do something look like it, and do not move', () => {
   it('each is a named button', () => {
     renderRoom();
     for (const id of WALK_IN_OBJECTS) {

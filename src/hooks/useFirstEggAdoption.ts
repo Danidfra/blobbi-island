@@ -1,15 +1,15 @@
 /**
- * useFirstEggAdoption — first-egg adoption for a brand-new Blobbonaut.
+ * useFirstEggAdoption: first-egg adoption for a brand-new Blobbonaut.
  *
  * IMPORTANT (orphan-egg fix): this hook is split into two clearly separated
  * responsibilities so that mounting the ceremony can NEVER publish a real event:
  *
- *   1. `generatePreview()` — a PURE, synchronous, local-only function. It derives
+ *   1. `generatePreview()`: a PURE, synchronous, local-only function. It derives
  *      a deterministic egg preview using `@blobbi-kit/core` helpers (seed,
  *      canonical d-tag, visual traits). It publishes NOTHING. This is what the
  *      ceremony uses to render the egg/baby during the animation.
  *
- *   2. `finalizeAdoption(preview, name)` — the ONLY function that publishes real
+ *   2. `finalizeAdoption(preview, name)`: the ONLY function that publishes real
  *      Nostr events, and only when the user submits the final name.
  *
  * finalizeAdoption publish sequence (hardened against orphan/partial profiles):
@@ -23,7 +23,7 @@
  *      kind 11125 event carrying the merged has[] + current_companion.
  *
  * Adoption is currency-independent (economy reset): it publishes ONLY the two
- * events above — never kind:31633, never a Coin grant, never a `coins` tag.
+ * events above: never kind:31633, never a Coin grant, never a `coins` tag.
  * The exactly-once 200-Coin initial allocation happens at economy entry
  * (`src/inventory/economy-entry.ts`), decoupled from adoption entirely; a new
  * and an existing profile follow the identical adoption path.
@@ -39,7 +39,7 @@
  *     baby coordinate + the same final profile (kind 31124 is replaceable, so
  *     re-publishing the same d is a harmless overwrite, not a duplicate).
  *
- * Design decision — egg events are NOT published at all.
+ * Design decision: egg events are NOT published at all.
  * Island does not support/display eggs, and kind 31124 is a replaceable
  * (addressable) event keyed by `31124:<pubkey>:<d>`. Publishing an egg and then
  * immediately a baby to the same coordinate would just overwrite the egg, adding
@@ -53,13 +53,13 @@
  *   fire-and-forget writes like presence/movement). That leniency is unsafe for
  *   adoption: a baby publish that timed out on every relay would be treated as
  *   success, the profile would then be published, `onComplete` would fire, and
- *   the app would enter `playing` — but on reload the baby wouldn't be found and
+ *   the app would enter `playing`: but on reload the baby wouldn't be found and
  *   the user would bounce back to the empty nest.
  *
  *   So this hook publishes the two adoption events through a small, local
  *   `strictPublish` helper (see below) that signs with the same signer + client
- *   tag as `useNostrPublish` but treats ANY failure to publish — timeout, abort,
- *   or all-relays-rejected — as a hard rejection. Success therefore means the
+ *   tag as `useNostrPublish` but treats ANY failure to publish, timeout, abort,
+ *   or all-relays-rejected: as a hard rejection. Success therefore means the
  *   underlying pool's `.event()` resolved, i.e. AT LEAST ONE configured relay
  *   accepted the event (NPool.event rejects only when ALL relays reject/fail).
  *   This is scoped to adoption; no other publisher is changed.
@@ -100,7 +100,7 @@ import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
  * How many times one signed adoption event is offered to the relays.
  *
  * Three, not one. The previous single attempt turned any momentary relay
- * hiccup into a failed ceremony — and the first attempt is the expensive one,
+ * hiccup into a failed ceremony, and the first attempt is the expensive one,
  * because it pays for opening the socket as well as for the publish.
  *
  * Three, not thirty: a player is watching a spinner, and a relay that has
@@ -112,7 +112,7 @@ const PUBLISH_ATTEMPTS = 3;
 /**
  * The budget for one publish attempt.
  *
- * The first is longer because it may include a cold WebSocket handshake — the
+ * The first is longer because it may include a cold WebSocket handshake, the
  * old flat 5 s covered connect, publish and the relay's OK on a mobile
  * connection, which is not the generous window it looks like. Later attempts
  * are shorter: the socket is warm by then, so a slow one is a bad sign rather
@@ -122,7 +122,7 @@ function publishTimeoutMs(attempt: number): number {
   return attempt === 0 ? 8000 : 5000;
 }
 
-/** The profile read's budget. Two reads at most — see the call site. */
+/** The profile read's budget. Two reads at most; see the call site. */
 const PROFILE_READ_TIMEOUT_MS = 3000;
 
 /**
@@ -130,8 +130,8 @@ const PROFILE_READ_TIMEOUT_MS = 3000;
  *
  * A named error rather than the pool's `AggregateError: All promises were
  * rejected`, which is what the ceremony used to log and which says nothing
- * about what went wrong or what to do. The `kind` says WHICH write failed —
- * the baby or the profile that links it in — and that distinction is what the
+ * about what went wrong or what to do. The `kind` says WHICH write failed,
+ * the baby or the profile that links it in, and that distinction is what the
  * retry path is built around.
  */
 export class AdoptionPublishError extends Error {
@@ -191,7 +191,7 @@ export function useFirstEggAdoption() {
         signer that refuses is a permanent condition (a rejected extension
         prompt, a dead bunker) and retrying it would re-prompt the player. A
         relay that did not answer is transient, and the SAME signed event is
-        what goes back out — same id, same signature — so a retry that lands
+        what goes back out, same id, same signature, so a retry that lands
         after a silent success is a duplicate the relay collapses rather than a
         second Blobbi.
       */
@@ -205,7 +205,7 @@ export function useFirstEggAdoption() {
       let lastError: unknown;
       for (let attempt = 0; attempt < PUBLISH_ATTEMPTS; attempt += 1) {
         try {
-          // Rejects on timeout/abort OR when every relay rejects — no leniency.
+          // Rejects on timeout/abort OR when every relay rejects; no leniency.
           // `NPool.event` resolves as soon as ONE relay accepts.
           await nostr.event(event, {
             signal: AbortSignal.timeout(publishTimeoutMs(attempt)),
@@ -218,7 +218,7 @@ export function useFirstEggAdoption() {
 
       /*
         Every attempt failed. Rejecting with a NAMED error rather than the
-        pool's `AggregateError: All promises were rejected` — which is what the
+        pool's `AggregateError: All promises were rejected`: which is what the
         ceremony used to log and what tells a player nothing at all. The cause
         is attached for diagnostics; the ceremony maps this to its own copy.
       */
@@ -229,7 +229,7 @@ export function useFirstEggAdoption() {
 
   /**
    * PURE, local-only. Generates a deterministic egg preview. Publishes nothing.
-   * Safe to call on ceremony mount — refreshing/abandoning creates zero events.
+   * Safe to call on ceremony mount, refreshing/abandoning creates zero events.
    */
   const generatePreview = useCallback((): BlobbiEggPreview => {
     if (!user?.pubkey) throw new Error('User is not logged in');
@@ -240,7 +240,7 @@ export function useFirstEggAdoption() {
    * The ONLY real publish path. Called on final naming submit.
    *
    * Builds the desired final profile in memory, publishes the final baby state
-   * FIRST, then — only if that succeeds — publishes exactly one final profile
+   * FIRST, then: only if that succeeds, publishes exactly one final profile
    * event linking the baby in (has[] + current_companion). Idempotent per hook
    * instance (guards double-submit). Resolves with the new Blobbi's canonical
    * d-tag on success; rejects on failure (the ceremony must NOT call onComplete
@@ -256,12 +256,12 @@ export function useFirstEggAdoption() {
         const pubkey = user.pubkey;
 
         /*
-          THE own-name boundary — before the profile is read, before anything is
+          THE own-name boundary: before the profile is read, before anything is
           signed, before anything reaches a relay.
 
           The composer is UI. This is what stops a direct caller publishing
           `message me on telegram` as a Blobbi name in a curated experience: a
-          clean sentence passes every filter, so the rule is structural — the
+          clean sentence passes every filter, so the rule is structural, the
           name must be one the approved vocabulary can express.
 
           Under an experience that permits free-text naming this applies exactly
@@ -285,7 +285,7 @@ export function useFirstEggAdoption() {
           `NPool.query` cannot fail: a timeout, a dead socket and a genuinely
           new player all come back as `[]`. That difference is the whole story
           here, because the profile this reads is the base the FINAL profile is
-          built on — an unanswered read used to look like "this player has no
+          built on: an unanswered read used to look like "this player has no
           profile", and the event published a moment later would carry a `has[]`
           containing only the new Blobbi. Every previously adopted Blobbi would
           be dropped from the ownership list by a slow relay.
@@ -294,7 +294,7 @@ export function useFirstEggAdoption() {
           this class of state (ownership lists, the companion profile): an empty
           answer is read twice before it is believed, and an unusable one throws
           instead of resolving empty. Adoption then fails and the player retries,
-          which is the correct outcome — far better than succeeding into a
+          which is the correct outcome, far better than succeeding into a
           profile that has quietly forgotten their other Blobbis.
         */
         const profileEvents = await readRelayConfirmedOrThrow(
@@ -311,7 +311,7 @@ export function useFirstEggAdoption() {
         //       buildBlobbonautTags + name + coins; for an existing profile we
         //       start from its current tags/content. Then we union has[] (never
         //       shrink) with the new d and set current_companion. This is the
-        //       single profile event we will publish AFTER the baby succeeds —
+        //       single profile event we will publish AFTER the baby succeeds,
         //       there is deliberately no earlier "empty" profile publish. ──
         let baseProfileTags: string[][];
         let profileContent = '';
@@ -320,7 +320,7 @@ export function useFirstEggAdoption() {
             authorData?.metadata?.name ||
             authorData?.metadata?.display_name ||
             'Blobbonaut';
-          // NOTE: no `coins` tag. A fresh profile never carries a balance —
+          // NOTE: no `coins` tag. A fresh profile never carries a balance,
           // the canonical Coin balance lives in kind:31633 and the initial
           // allocation belongs to economy entry, not to adoption.
           baseProfileTags = [
@@ -350,7 +350,7 @@ export function useFirstEggAdoption() {
           tags: babyTags,
         });
 
-        // ── d. Baby is live — publish EXACTLY ONE final profile event. If this
+        // ── d. Baby is live, publish EXACTLY ONE final profile event. If this
         //       step fails, run() rejects and the guard is cleared, so the
         //       ceremony stays in retry mode (no onComplete) and a retry will
         //       re-query + re-publish the same baby coordinate + final profile. ──

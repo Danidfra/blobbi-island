@@ -76,7 +76,7 @@ export interface MediaRef {
   id: string;
 }
 
-/** The shared half of playback state — what a canonical event would carry. */
+/** The shared half of playback state, what a canonical event would carry. */
 export interface PlaybackState {
   media: MediaRef | null;
   status: 'playing' | 'paused';
@@ -108,7 +108,7 @@ export interface TheaterPlaybackSnapshot extends PlaybackState {
    * What the PLAYER is doing, as opposed to what {@link PlaybackState.status}
    * intends.
    *
-   * They disagree more often than one would like — autoplay refusals, a guest
+   * They disagree more often than one would like, autoplay refusals, a guest
    * pressing pause on the embed's own controls, a video that ended. Shared
    * playback has to reconcile against the truth rather than against the wish,
    * so the truth is reported separately instead of being inferred from `phase`
@@ -128,7 +128,7 @@ export function clampPosition(position: number, duration: number): number {
 /**
  * Resolve a relative skip into the absolute position it lands on.
  *
- * Returns `null` when the skip is a no-op — already at 0 and skipping back, or
+ * Returns `null` when the skip is a no-op, already at 0 and skipping back, or
  * already at the end and skipping forward. A no-op must not produce a command:
  * publishing a state identical to the current one would burn a revision and,
  * for guests, cause a pointless corrective seek.
@@ -152,7 +152,7 @@ export function normalizeRate(rate: number, available: number[]): number {
   );
 }
 
-/** Apply a command to a shared state. Pure — the same function a guest will use. */
+/** Apply a command to a shared state. Pure, the same function a guest will use. */
 export function applyCommand(state: PlaybackState, command: PlaybackCommand): PlaybackState {
   switch (command.type) {
     case 'play':
@@ -174,7 +174,7 @@ export function applyCommand(state: PlaybackState, command: PlaybackCommand): Pl
  * The only playback surface the theater UI is allowed to use.
  *
  * Global controls change what *everybody* sees and are host-only once shared
- * playback exists. Local controls are per-device and are never synchronized —
+ * playback exists. Local controls are per-device and are never synchronized,
  * see the protocol's control-surface split.
  */
 export interface TheaterPlaybackController {
@@ -393,7 +393,7 @@ export class LocalTheaterPlaybackController implements TheaterPlaybackController
   skip(deltaSeconds: number): void {
     if (!this.state.media) return;
     const command = this.dispatch({ kind: 'skip', deltaSeconds });
-    if (!command) return; // Already at an end — a no-op publishes nothing.
+    if (!command) return; // Already at an end, a no-op publishes nothing.
     this.local.currentTime = command.position;
     this.adapter.seek(command.position);
     this.emit();
@@ -482,7 +482,7 @@ export class LocalTheaterPlaybackController implements TheaterPlaybackController
   handlePlayingChange(isPlaying: boolean): void {
     this.local.playerPlaying = isPlaying;
     // A player that refuses to start while the shared state says "playing" is
-    // the autoplay-blocked case — surfaced, never fought.
+    // the autoplay-blocked case, surfaced, never fought.
     this.local.autoplayBlocked = !isPlaying && this.state.status === 'playing' && this.local.phase === 'ready';
     if (isPlaying) this.local.autoplayBlocked = false;
     this.emit();

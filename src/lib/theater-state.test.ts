@@ -2,8 +2,8 @@
  * The theater state machine.
  *
  * These are the rules the room's appearance is derived from, tested where they
- * are cheapest to test. The behavioural half — that the components actually obey
- * them — lives in `TheaterStage.test.tsx`.
+ * are cheapest to test. The behavioural half; that the components actually obey
+ * them: lives in `TheaterStage.test.tsx`.
  */
 import { describe, it, expect } from 'vitest';
 import {

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 type HudSize = "default" | "compact";
 
-/** Location pill — e.g. "📍 Town Square". */
+/** Location pill: e.g. "📍 Town Square". */
 export function LocationPill({
   label,
   size = "default",
@@ -39,7 +39,7 @@ export function LocationPill({
   );
 }
 
-/** Online players count chip — e.g. "🟢 6 online". */
+/** Online players count chip, e.g. "🟢 6 online". */
 export function OnlineCountChip({
   count,
   size = "default",
@@ -68,7 +68,7 @@ export function OnlineCountChip({
 }
 
 /**
- * A quiet status line next to the online count — used only when presence is
+ * A quiet status line next to the online count, used only when presence is
  * paused because the player declined to sign it. Muted, not alarming: the
  * game is fully playable, they are just not visible to others.
  */
@@ -130,7 +130,7 @@ export function HudIconButton({
 }
 
 /**
- * Active-Blobbi chip — a circular game-style avatar button.
+ * Active-Blobbi chip: a circular game-style avatar button.
  *
  * The actual Blobbi art is passed as children (e.g. CurrentBlobbiDisplay) so
  * this primitive stays decoupled from data hooks. Rendered as a perfect circle

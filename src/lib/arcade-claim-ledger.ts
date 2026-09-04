@@ -1,5 +1,5 @@
 /**
- * The arcade's claim ledger and claim lock — the durable half of "one reward per
+ * The arcade's claim ledger and claim lock, the durable half of "one reward per
  * run, ever".
  *
  * ## The defect this file was rebuilt around
@@ -27,7 +27,7 @@
  * | same component | one publish per run | React state + the reducer |
  * | same document (all mounts, all hook instances) | one publish per run, even in one tick | {@link acquireClaimLock}, a synchronous module-level `Set` |
  * | same browser profile, after the first ledger write | no second grant for a claim that is claimed / publishing / verifying / ambiguous | the `localStorage` ledger, checked before every attempt |
- * | across tabs, for the whole check → persist → publish → verify window | one owner | {@link withClaimLock} — Web Locks where available, a verified `localStorage` lease otherwise |
+ * | across tabs, for the whole check → persist → publish → verify window | one owner | {@link withClaimLock}: Web Locks where available, a verified `localStorage` lease otherwise |
  * | after a refresh | an ambiguous or claimed run stays blocked | the ledger is durable |
  * | across devices | **nothing** | see below |
  * | protocol level | **nothing** | see below |
@@ -35,9 +35,9 @@
  * ## What is NOT guaranteed, stated plainly
  *
  * **Cross-device: nothing.** A different browser or device starts with an empty
- * ledger. The practical exposure is bounded — a `runId` is minted per run and
+ * ledger. The practical exposure is bounded, a `runId` is minted per run and
  * never leaves the device that minted it, so another device has no run id to
- * re-claim — but that is an obstacle, not a guarantee.
+ * re-claim: but that is an obstacle, not a guarantee.
  *
  * **Protocol level: nothing.** There is nowhere in a kind:31633 event to record
  * "run X has been paid" without inventing tags the canonical parser drops and
@@ -47,7 +47,7 @@
  * {@link withClaimLock}. Where the Web Locks API exists that exclusion is real
  * and atomic. Where it does not, the `localStorage` lease is a
  * write-then-read-back protocol, which is strong in practice but is **not** an
- * atomic compare-and-swap — two tabs writing in the same millisecond could both
+ * atomic compare-and-swap: two tabs writing in the same millisecond could both
  * believe they own it. That residual window is a limitation, not a guarantee,
  * and no copy anywhere may describe it as one.
  */
@@ -183,7 +183,7 @@ export function persistClaim(pubkey: string | undefined, claim: ArcadeRewardClai
   const existing = owner[claim.runId];
 
   // `claimed` is a one-way door in storage too. A late `failed` or `ambiguous`
-  // arriving after a confirmed success — a retry that raced, a stale callback —
+  // arriving after a confirmed success, a retry that raced, a stale callback,
   // must not reopen a paid claim. Reported as success: the durable state is
   // already at least as strong as what the caller asked for.
   if (existing?.status === 'claimed' && claim.status !== 'claimed') return true;
@@ -191,12 +191,12 @@ export function persistClaim(pubkey: string | undefined, claim: ArcadeRewardClai
   /*
    * An `ambiguous` record may only ever become `claimed` (through read-only
    * reconciliation) or stay `ambiguous`. Anything else would let a
-   * possibly-published claim be re-expressed as a fresh, publishable one — the
+   * possibly-published claim be re-expressed as a fresh, publishable one, the
    * exact shape of the duplicate-grant defect, one refactor away.
    *
    * Likewise, an in-flight `publishing`/`verifying` record may not be replaced
    * by a brand-new `pending` claim. (It MAY become `failed`: the writer's own
-   * pre-publish guards — a refusing signer — throw after the record has already
+   * pre-publish guards: a refusing signer, throw after the record has already
    * moved to `publishing`, and that is a legitimate, provably-unsent outcome.)
    *
    * `advanceClaim` already refuses these transitions. This makes the refusal
@@ -312,7 +312,7 @@ function readLease(key: string): ClaimLease | null {
  * Take the fallback lease, or report that someone else holds it.
  *
  * Write-then-read-back: whoever's token survives the read owns it. This is
- * strong in practice and is **not** an atomic compare-and-swap — two tabs
+ * strong in practice and is **not** an atomic compare-and-swap, two tabs
  * writing within the same millisecond could interleave. That residual window is
  * documented in this module's header and must never be described as a guarantee.
  */
@@ -326,7 +326,7 @@ type LeaseOutcome =
    *
    * Distinct from `held`, and the distinction matters: "another tab is claiming
    * this" and "this browser has no storage" call for different copy and
-   * different next steps. It is NOT a refusal — the caller proceeds with no
+   * different next steps. It is NOT a refusal, the caller proceeds with no
    * cross-tab protection, and the durable-ledger requirement (which needs the
    * same storage) then refuses the publish for a reason that is actually true.
    */
@@ -357,7 +357,7 @@ function acquireLease(key: string, now: number): LeaseOutcome {
   // Ownership is whatever is actually in storage after the write.
   const stored = readLease(key);
   if (stored?.owner === owner) return { kind: 'acquired', owner };
-  // A DIFFERENT owner means a real race — another tab won. NOTHING stored means
+  // A DIFFERENT owner means a real race, another tab won. NOTHING stored means
   // the write silently vanished (quota eviction, private mode, an extension),
   // which is a broken-storage problem and not a contended one. Reporting it as
   // contention would tell the player to "finish it in the other tab" when there
@@ -399,8 +399,8 @@ export interface ClaimLockResult<T> {
 /**
  * Run `fn` while holding the cross-tab claim lock, or refuse.
  *
- * The lock spans the WHOLE operation — ledger check, durable record, publish and
- * verification — because any narrower window lets a second tab read "no claim
+ * The lock spans the WHOLE operation, ledger check, durable record, publish and
+ * verification: because any narrower window lets a second tab read "no claim
  * yet" while the first is mid-publish.
  *
  * `ifAvailable: true` rather than queueing: a second tab that waited would run
@@ -422,7 +422,7 @@ export async function withClaimLock<T>(
     await locks.request(`${WEB_LOCK_PREFIX}${pubkey}:${runId}`, { ifAvailable: true }, async (
       lock,
     ) => {
-      // A null lock means it was already held — by another tab, or by another
+      // A null lock means it was already held, by another tab, or by another
       // call in this one.
       if (!lock) return;
       ran = true;
@@ -436,8 +436,8 @@ export async function withClaimLock<T>(
   if (lease.kind === 'held') return { acquired: false, kind: 'lease' };
   if (lease.kind === 'unavailable') {
     // No cross-tab protection is possible here. The same-document lock still
-    // holds, and the caller's durable-ledger requirement — which needs the very
-    // storage that just failed — will refuse the publish for the honest reason.
+    // holds, and the caller's durable-ledger requirement, which needs the very
+    // storage that just failed, will refuse the publish for the honest reason.
     return { acquired: true, kind: 'none', value: await fn() };
   }
   try {

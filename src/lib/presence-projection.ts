@@ -1,5 +1,5 @@
 /**
- * What presence is allowed to say — the one place `detailedPresence` is decided.
+ * What presence is allowed to say, the one place `detailedPresence` is decided.
  *
  * Presence is the island's most continuous disclosure: a kind 31950 event every
  * move and every twenty-five seconds, public, on a relay, for as long as a
@@ -13,14 +13,14 @@
  * them, seat them and play alongside them; what it drops is detail that no
  * consumer uses and that a stock client cannot show anyway.
  *
- * That test — *does any consumer need this to render or synchronise?* — is what
+ * That test, *does any consumer need this to render or synchronise?*, is what
  * kept almost every field. The audit in `docs/presence-data-minimization.md`
  * records the answer for each one; the short version is that only ONE field
  * failed it.
  *
  * ## Hiding, which is the reason this capability exists
  *
- * A player hides in a bush. Every stock client draws nothing — `visualHidden`.
+ * A player hides in a bush. Every stock client draws nothing, `visualHidden`.
  * And the event says `hiddenIn: "town-bush-3"`, which is a machine-readable
  * statement of the one thing the player just asked the game to conceal.
  *
@@ -31,8 +31,8 @@
  * inside it. So the fact is load-bearing and the identifier is not.
  *
  * Coarse presence therefore keeps the fact and withholds the identifier:
- * {@link WITHHELD_HIDING_SPOT}. Every existing client — this one, an older
- * build, another implementation — hides the Blobbi exactly as before, because
+ * {@link WITHHELD_HIDING_SPOT}. Every existing client; this one, an older
+ * build, another implementation, hides the Blobbi exactly as before, because
  * all of them only ask whether the field is there.
  *
  * **Omitting it entirely would be worse than publishing it.** A remote client
@@ -62,7 +62,7 @@ import type { PresenceContent } from '@/lib/multiplayer';
  * The value coarse presence publishes in place of a real hiding-spot id.
  *
  * A reserved, non-identifying member of an existing optional field's
- * vocabulary — not a new field, tag, kind or schema. It has to be a non-empty
+ * vocabulary: not a new field, tag, kind or schema. It has to be a non-empty
  * string because every consumer of `hiddenIn`, in this client and in any other,
  * decides by truthiness; an empty string would read as "not hidden" and undo
  * the concealment it exists to protect.
@@ -75,7 +75,7 @@ export const WITHHELD_HIDING_SPOT = 'hidden';
 /**
  * Project the local runtime presence onto what this policy permits.
  *
- * Pure and total. The input is never mutated — the caller keeps its full local
+ * Pure and total. The input is never mutated, the caller keeps its full local
  * state, because this phase changes DISCLOSURE and not simulation: the game
  * still knows exactly which bush its player is in, and still needs to.
  *

@@ -2,7 +2,7 @@
 
 **Status:** implemented. `openMediaEntry` is enforced at every path that can put
 media on the theater screen, not only at the input. **No new Nostr kind, tag or
-event was created** — the approved-media catalog is bundled, not published.
+event was created**: the approved-media catalog is bundled, not published.
 
 - Rationale: [`family-safety-audit.md`](./family-safety-audit.md) (finding C-3)
 - Capability model: [`family-safety-policy.md`](./family-safety-policy.md)
@@ -43,7 +43,7 @@ was never a problem.
 | File | Role |
 |---|---|
 | `src/theater-media/catalog.ts` | the approved list, bundled; identity + **trusted title** |
-| `src/theater-media/admission.ts` | `admitTheaterMedia` — pure, the one decision |
+| `src/theater-media/admission.ts` | `admitTheaterMedia`: pure, the one decision |
 | `TheaterStage.admitAndRequestMedia` | the funnel every path goes through |
 | `useSharedPlayback` | the publication seam's own check (host side) |
 | `TheaterMediaShelf` | the curated chooser |
@@ -60,28 +60,28 @@ primitive was checked against the current specs first.
 
 | NIP / kind | Purpose | Status | Semantic fit | Publisher / addressing | Privacy | Decision |
 |---|---|---|---|---|---|---|
-| **NIP-71 kind 21 / 22** — video events | A dedicated post of externally hosted video, for video-first clients | `draft` `optional`, regular | **Poor.** Its primary data is an `imeta` tag with a **direct playable URL** (`.mp4`, `.m3u8`). A YouTube video has no such URL — it is embedded, not fetched — so the required field would be a fiction | anyone; not addressable | public | **Rejected** — the required media reference does not exist for an embed |
-| **NIP-71 kind 34235 / 34236** — addressable video | Same, updatable via a `d` tag; has an `origin` tag for imported content: `["origin","<platform>","<external-id>","<url>"]` | `draft` `optional`, addressable | **Closest of the standards.** `origin youtube <id>` expresses exactly the identity we need — but it is an *optional* tag on an event whose *required* data is still a playable URL. Publishing a video event for a video we do not host, cannot serve and did not make is a category error | issuer via `d`; `a`-addressable | public | **Rejected** — right tag on the wrong event |
-| **NIP-51 kind 30005** — video curation sets | "groups of videos picked by users", expected tag items `"e"` (kind 21 videos) | `draft` `optional`, addressable set | **Structurally exactly a curated list** — and it references NIP-71 events by `e`, so adopting it means adopting NIP-71 first, with the mismatch above. Two protocol layers for "six approved ids" | issuer via `d` | public | **Rejected** — inherits NIP-71's problem |
-| **NIP-51 kind 10000** — mute list | Things not to see | `draft` `optional` | Inverted, and personal rather than editorial | per-user | public/private | **Not applicable** |
-| **NIP-78 kind 30078** — app-specific data | Addressable store for apps that explicitly do not want interoperability; `content` and tags "can be anything" | `draft` `optional`, addressable | **Would work, and is honest about what it is.** It is the standard's own answer to "this does not fit anywhere else" — but it is a container, not a schema: adopting it still means inventing the tag layout inside it | issuer via `d` | public | **Viable if publication is ever wanted**; not needed yet |
-| **NIP-92 / NIP-94** — `imeta` / file metadata | Media attachment metadata | `optional` | Field vocabulary only, no catalog semantics | n/a | n/a | **Not applicable** as a catalog |
-| **NIP-32 kinds 1985 / `l`,`L`** — labelling | Attach labels to things | `optional` | Could mark a video "approved", but a label is an assertion *about* an event that must already exist | anyone | public | **Rejected** — needs the video event first |
-| Blobbi **kind 31632** — item definitions | The official item catalog | in use | **Deliberately not reused.** It fits *architecturally* — trusted issuer, allow-listed `d`, strict parser — and not at all *semantically*: it carries stack sizes, categories, stat effects and gameplay actions, and its consumers are the inventory and the shop. A video is not an item, and making it one would put films in a system that will try to let you eat them | official issuer | public | **Rejected** — convenience is not fit |
+| **NIP-71 kind 21 / 22**: video events | A dedicated post of externally hosted video, for video-first clients | `draft` `optional`, regular | **Poor.** Its primary data is an `imeta` tag with a **direct playable URL** (`.mp4`, `.m3u8`). A YouTube video has no such URL, it is embedded, not fetched, so the required field would be a fiction | anyone; not addressable | public | **Rejected**, the required media reference does not exist for an embed |
+| **NIP-71 kind 34235 / 34236**: addressable video | Same, updatable via a `d` tag; has an `origin` tag for imported content: `["origin","<platform>","<external-id>","<url>"]` | `draft` `optional`, addressable | **Closest of the standards.** `origin youtube <id>` expresses exactly the identity we need, but it is an *optional* tag on an event whose *required* data is still a playable URL. Publishing a video event for a video we do not host, cannot serve and did not make is a category error | issuer via `d`; `a`-addressable | public | **Rejected**, right tag on the wrong event |
+| **NIP-51 kind 30005**: video curation sets | "groups of videos picked by users", expected tag items `"e"` (kind 21 videos) | `draft` `optional`, addressable set | **Structurally exactly a curated list**, and it references NIP-71 events by `e`, so adopting it means adopting NIP-71 first, with the mismatch above. Two protocol layers for "six approved ids" | issuer via `d` | public | **Rejected**, inherits NIP-71's problem |
+| **NIP-51 kind 10000**: mute list | Things not to see | `draft` `optional` | Inverted, and personal rather than editorial | per-user | public/private | **Not applicable** |
+| **NIP-78 kind 30078**: app-specific data | Addressable store for apps that explicitly do not want interoperability; `content` and tags "can be anything" | `draft` `optional`, addressable | **Would work, and is honest about what it is.** It is the standard's own answer to "this does not fit anywhere else", but it is a container, not a schema: adopting it still means inventing the tag layout inside it | issuer via `d` | public | **Viable if publication is ever wanted**; not needed yet |
+| **NIP-92 / NIP-94**: `imeta` / file metadata | Media attachment metadata | `optional` | Field vocabulary only, no catalog semantics | n/a | n/a | **Not applicable** as a catalog |
+| **NIP-32 kinds 1985 / `l`,`L`**: labelling | Attach labels to things | `optional` | Could mark a video "approved", but a label is an assertion *about* an event that must already exist | anyone | public | **Rejected**, needs the video event first |
+| Blobbi **kind 31632**: item definitions | The official item catalog | in use | **Deliberately not reused.** It fits *architecturally*, trusted issuer, allow-listed `d`, strict parser, and not at all *semantically*: it carries stack sizes, categories, stat effects and gameplay actions, and its consumers are the inventory and the shop. A video is not an item, and making it one would put films in a system that will try to let you eat them | official issuer | public | **Rejected**, convenience is not fit |
 
-**Conclusion: no primitive fits cleanly, and no new kind was created** — because
+**Conclusion: no primitive fits cleanly, and no new kind was created**: because
 the catalog does not need to be published at all (§4). If it ever should be,
 NIP-78 kind 30078 under the official issuer is the recommendation, and that
 decision would come back for approval before implementation.
 
-The **trust pattern** from `useItemCatalog` — trusted issuer, allow-listed
-identifiers, strict parser, fail-closed — is reused *conceptually* in §5 without
+The **trust pattern** from `useItemCatalog`: trusted issuer, allow-listed
+identifiers, strict parser, fail-closed, is reused *conceptually* in §5 without
 reusing its kind.
 
 ## 4. The catalog is bundled
 
 A fetched catalog has a state nobody wants: **unknown**. A relay times out, a
-query returns partial results, the app boots offline — and a curated experience
+query returns partial results, the app boots offline, and a curated experience
 holds an empty list it cannot distinguish from "nothing is approved". Failing
 closed on that is correct and makes the theater unusable on a bad connection;
 failing open is unthinkable.
@@ -90,7 +90,7 @@ A list compiled into the build has no unknown state. It is present at the first
 frame, identical on every device, cannot be influenced by a relay, and cannot be
 poisoned by a newer event from an unexpected author. For a set that changes on a
 release cadence rather than a live one, that is strictly better than any
-protocol — and it is why the "relay UNKNOWN" hazard the brief asks about simply
+protocol: and it is why the "relay UNKNOWN" hazard the brief asks about simply
 does not arise here.
 
 ```ts
@@ -98,7 +98,7 @@ interface ApprovedMedia {
   id: string;               // stable catalog id, provider-independent
   provider: 'youtube';
   providerMediaId: string;  // the 11-character video id
-  title: string;            // TRUSTED — written here, never received
+  title: string;            // TRUSTED, written here, never received
   category?: string;
 }
 ```
@@ -107,7 +107,7 @@ interface ApprovedMedia {
 
 Deciding which videos are appropriate for children is editorial work with real
 consequences, and it needs a person who can watch them and sign off. It is not
-something to invent alongside the code that will show them — entries chosen here
+something to invent alongside the code that will show them, entries chosen here
 would be a list this project asserts is safe for a nine-year-old on no evidence.
 
 So the array ships empty, the enforcement around it is complete and tested, and
@@ -125,20 +125,20 @@ is not approved" with no error anywhere.
 
 | Concern | Behaviour |
 |---|---|
-| Untrusted authors | Not possible — the catalog is not fetched |
-| A newer event overriding official entries | Not possible — same reason |
+| Untrusted authors | Not possible, the catalog is not fetched |
+| A newer event overriding official entries | Not possible, same reason |
 | Malformed entries | Excluded by `isWellFormedApprovedMedia`; never candidates |
 | Duplicates / conflicts | First well-formed entry wins, deterministically |
 | Relay UNKNOWN | Does not arise |
 | Catalog empty or unloadable | **Fails closed**: curated experiences play nothing. Asserted directly, and live today since the list is empty |
-| Standard depending on catalog availability | It does not — open entry never consults the catalog to decide, only to find a title |
+| Standard depending on catalog availability | It does not, open entry never consults the catalog to decide, only to find a title |
 
 ## 6. `openMediaEntry`
 
 | | Standard | Family |
 |---|---|---|
 | `openMediaEntry` | `true` | `false` |
-| Arbitrary URL / id | ✅ | ❌ — no input exists |
+| Arbitrary URL / id | ✅ | ❌; no input exists |
 | Approved catalog media | ✅ | ✅ |
 | Hosting a session | ✅ | ✅ |
 | Joining a session | ✅ | ✅ |
@@ -153,19 +153,19 @@ is the set of things that may appear on the screen.
 
 ### The gate
 
-`admitTheaterMedia(policy, media, catalog)` — pure, exhaustive, three outcomes:
+`admitTheaterMedia(policy, media, catalog)`: pure, exhaustive, three outcomes:
 
-- **`unsupported-media`** — not something this client can play at all (wrong
+- **`unsupported-media`**: not something this client can play at all (wrong
   provider, malformed id). Checked first, in every experience, so a curated
   client says "can't be played" rather than "not approved" for something that is
   not media.
-- **`not-approved`** — playable, but this experience shows only approved media.
-- **admitted** — with the catalog entry attached when one exists, so a curated
+- **`not-approved`**: playable, but this experience shows only approved media.
+- **admitted**: with the catalog entry attached when one exists, so a curated
   title is used wherever there is one.
 
 ### The set boundary
 
-Every local path — the shelf, the URL input, the retry — goes through
+Every local path: the shelf, the URL input, the retry, goes through
 `admitAndRequestMedia` in `TheaterStage`. Refusal happens **before** `dispatch`,
 so unapproved media never becomes a `request`, and a `request` is what causes a
 player to be constructed. A caller holding the setter directly cannot inject
@@ -179,14 +179,14 @@ approved.
 
 `useSharedPlayback.onLocalCommand` refuses to publish a `set-media` the policy
 would not play, and `createSession` refuses to open a session around one. Both
-use the **same catalog** the stage admits against — a defence-in-depth check
+use the **same catalog** the stage admits against, a defence-in-depth check
 judging by a different list would refuse media the theater had already accepted.
 
 ### The receive boundary
 
-`onRequestMedia` — the callback the session hook uses for *every* media change,
+`onRequestMedia`: the callback the session hook uses for *every* media change,
 from a `set-media` command, from a canonical `31951` update, from a join, and
-from the re-seat fallback — funnels into the same gate.
+from the re-seat fallback, funnels into the same gate.
 
 **There is no frame in which refused media is on screen.** It is not loaded and
 then removed; the player for it is never constructed. The integration test
@@ -216,7 +216,7 @@ one-frame leak. The join is then abandoned.
 
 ### Catalog changes while in session
 
-The catalog is a **bundled snapshot**, so within a session it cannot change —
+The catalog is a **bundled snapshot**, so within a session it cannot change,
 it changes when the app is reloaded on a new build. Membership is therefore
 re-checked at every admission (each media change, each join, each retry) against
 whatever the current build holds, and never cached per session.
@@ -232,7 +232,7 @@ would need a fetched catalog, which §4 explains is a worse trade.
 
 Three things are withheld together, because any one alone is insufficient:
 
-- `fs: 0` removes YouTube's own fullscreen button — but only the button;
+- `fs: 0` removes YouTube's own fullscreen button, but only the button;
 - `allowfullscreen` is not set;
 - the `fullscreen` **and `picture-in-picture`** Permissions-Policy tokens are
   omitted from `allow`. Picture-in-picture is the other way a video leaves the
@@ -247,7 +247,7 @@ have left all of that.
 `IslandSafetyPolicy` gained no field. It is derived from `openMediaEntry` in one
 named function, `allowsTheaterFullscreen`, for two reasons: the policy's own
 guidance is not to grow the matrix for a single call site, and this has exactly
-one — the iframe's permissions.
+one: the iframe's permissions.
 
 They also express the same stance rather than two independent preferences. An
 experience that curates what plays is one where the theater is a *room in the
@@ -256,23 +256,23 @@ Fullscreen removes the island and leaves a child alone with a video player,
 which is the shape curation exists to avoid.
 
 If fullscreen ever needs to vary independently, that is when it becomes a
-capability — with a second call site to justify it. Deriving it once, and
+capability: with a second call site to justify it. Deriving it once, and
 naming it, is what keeps that reversible instead of scattered.
 
 ## 10. YouTube privacy
 
 **`youtube-nocookie.com` is adopted, for both experiences.** This is a privacy
-improvement, not a Family restriction — the theater embeds a video on behalf of
+improvement, not a Family restriction, the theater embeds a video on behalf of
 a player who did not ask to be measured.
 
 It is a supported option of the IFrame Player API (`host`), not a URL rewrite:
 the API script still loads from `www.youtube.com`, `postMessage` origin handling
 is the API's own, `enablejsapi` and `origin` are unchanged, and every player
-method behaves identically. Session synchronisation is unaffected — the
+method behaves identically. Session synchronisation is unaffected, the
 integration tests drive a full join, seek and swap against it. The CSP already
 named the host in `frame-src`, so nothing there changed either.
 
-### What it does not do — stated because overclaiming here would be worse than silence
+### What it does not do, stated because overclaiming here would be worse than silence
 
 - The embed is still a **cross-origin iframe**. YouTube receives the player's IP
   and User-Agent on load, and may set storage of its own once a video plays.
@@ -295,8 +295,8 @@ honest limit of an embedded third-party player.
 ## 11. Titles
 
 Under a curated policy the displayed title is always the catalog's. There is no
-host-supplied title to be tempted by — the session protocol carries
-`{provider, id}` and no words at all — but `theaterMediaTitle` exists so that
+host-supplied title to be tempted by, the session protocol carries
+`{provider, id}` and no words at all, but `theaterMediaTitle` exists so that
 stays true if the protocol ever carries more. An approved id with a hostile title
 attached is not a content bypass this design can develop.
 

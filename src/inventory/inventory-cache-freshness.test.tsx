@@ -1,6 +1,6 @@
 /**
  * After a confirmed kind:31633 write, every reader for that pubkey must show
- * the new state — without a reload.
+ * the new state, without a reload.
  *
  * ## The defect these reproduce
  *
@@ -9,7 +9,7 @@
  * again, and a relay does not serve a replaceable event the instant it accepts
  * it. The refetch therefore raced propagation and usually won: it returned the
  * event we had just replaced, React Query stored that as fresh, and
- * `staleTime` then suppressed further refetches — so the old quantity sat on
+ * `staleTime` then suppressed further refetches, so the old quantity sat on
  * screen until something remounted or the page was reloaded.
  *
  * The transaction knew the answer all along: it built and signed the very
@@ -29,7 +29,7 @@ import { clearSpendIntents } from '@/lib/coin-spend-intent';
 const PUBKEY = 'b'.repeat(64);
 
 /**
- * A relay that accepts writes instantly but SERVES them late — the ordinary
+ * A relay that accepts writes instantly but SERVES them late, the ordinary
  * behaviour that the old invalidate-and-refetch approach lost a race with.
  */
 function makeLaggingRelay(initial: NostrEvent) {
@@ -103,7 +103,7 @@ import { runInventoryTransaction } from './inventory-transaction';
 import { applyMutation } from './useInventoryMutation';
 import { inventoryQueryKey } from './useIslandInventory';
 
-/** The real catalogued apple — 10 Coins — so the shop path prices it. */
+/** The real catalogued apple: 10 Coins, so the shop path prices it. */
 const APPLE = itemIdToAddress('food_apple')!;
 
 /** The same signer the mocked session exposes, for direct transaction writes. */
@@ -484,8 +484,8 @@ describe('the query-key contract is pinned', () => {
  * One boundary, structurally.
  *
  * The alternative to a shared reconciliation is every feature patching
- * quantities itself — Food Shop patching Coins, the Mine patching Coins,
- * `useUseItem` patching an item count — which is how the numbers drift apart
+ * quantities itself: Food Shop patching Coins, the Mine patching Coins,
+ * `useUseItem` patching an item count, which is how the numbers drift apart
  * in the first place. This pins that no production module does that.
  */
 describe('only one module writes the inventory cache', () => {

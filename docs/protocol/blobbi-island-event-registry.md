@@ -1,13 +1,13 @@
-# Blobbi Island — Official Event & Item Registry
+# Blobbi Island: Official Event & Item Registry
 
-> **Generated file — do not edit by hand.** Every value below is derived from `src/protocol/event-registry.ts`.
+> **Generated file: do not edit by hand.** Every value below is derived from `src/protocol/event-registry.ts`.
 > Regenerate with `npm run docs:registry`. A test fails if this file and the registry disagree.
 
 This is the canonical description of every Nostr event kind Blobbi Island reads or writes, and of every official item definition it recognises. `NIP.md` explains the protocol in prose; this document is the machine-checked inventory.
 
 ## 1. Application event kinds
 
-Two independent status axes. **This client** says what the code in this repository does with the kind. **Protocol** says what the wider Blobbi protocol says about it, and may only read *Superseded* when a document here names the replacement — the citation is shown in §4. A kind can be "not implemented by this client" while its protocol status is *Undetermined*: absence of code here is not evidence that another Blobbi client stopped using it.
+Two independent status axes. **This client** says what the code in this repository does with the kind. **Protocol** says what the wider Blobbi protocol says about it, and may only read *Superseded* when a document here names the replacement, the citation is shown in §4. A kind can be "not implemented by this client" while its protocol status is *Undetermined*: absence of code here is not evidence that another Blobbi client stopped using it.
 
 | Kind | Name | Class | Defined by | This client | Protocol |
 | --- | --- | --- | --- | --- | --- |
@@ -19,11 +19,11 @@ Two independent status axes. **This client** says what the code in this reposito
 | `31950` | Island Presence | Addressable | Blobbi Island | Implemented (read + write) | Current |
 | `31951` | Shared Playback Session | Addressable | Blobbi Island | Implemented (read + write) | Current |
 | `21951` | Shared Playback Command | Ephemeral | Blobbi Island | Implemented (read + write) | Current |
-| `31632` | Game Item Definition | Addressable | External — `@nostr-games/inventory` | Implemented (read only) | Current |
-| `31633` | Game Inventory | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
-| `1416` | Game Inventory Spend | Regular | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
-| `1417` | Game Inventory Fold Manifest | Regular | External — `@nostr-games/inventory` | Implemented (read only) | Current |
-| `31634` | Game Item Placement | Addressable | External — `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `31632` | Game Item Definition | Addressable | External: `@nostr-games/inventory` | Implemented (read only) | Current |
+| `31633` | Game Inventory | Addressable | External: `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `1416` | Game Inventory Spend | Regular | External: `@nostr-games/inventory` | Implemented (read + write) | Current |
+| `1417` | Game Inventory Fold Manifest | Regular | External: `@nostr-games/inventory` | Implemented (read only) | Current |
+| `31634` | Game Item Placement | Addressable | External: `@nostr-games/inventory` | Implemented (read + write) | Current |
 | `14919` | Blobbi Interaction (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Superseded |
 | `14920` | Blobbi Breeding Event (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Undetermined by this repository |
 | `14921` | Blobbi Record (NIP-BB draft) | Regular | Blobbi Island | Not implemented by this client | Undetermined by this repository |
@@ -76,7 +76,7 @@ Authority in Nostr derives from authorship: an event is authoritative for a thin
 
 ## 4. Lifecycle and implementation status
 
-### Kind 1124 — Blobbi Social Interaction
+### Kind 1124: Blobbi Social Interaction
 
 Append-only log of a care/social action performed on a Blobbi (feed, play, clean, medicate, boost).
 
@@ -92,7 +92,7 @@ Append-only log of a care/social action performed on a Blobbi (feed, play, clean
 - **Documented in:** `NIP.md`
 - **Notes:** Kind number and event builder come from @blobbi-kit/core (blobbi-interaction).
 
-### Kind 11125 — Blobbonaut Owner Profile
+### Kind 11125: Blobbonaut Owner Profile
 
 The player's account: owned Blobbis, achievements, current companion. (Historic `coins` tag deprecated by the Coin cutover.)
 
@@ -106,9 +106,9 @@ The player's account: owned Blobbis, achievements, current companion. (Historic 
 - **Defined by:** Blobbi Island
 - **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbiEvents.ts`, `src/hooks/useBlobbonautProfile.ts`, `src/hooks/useOptimizedStatus.ts`, `src/hooks/useFirstEggAdoption.ts`
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`, `docs/blobbi-coin-cutover.md`
-- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data — never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.
+- **Notes:** Consumable inventory is NOT stored here; it lives in kind 31633. Coins do NOT live here since the economy reset: the canonical balance is the official Blobbi Coin quantity in kind 31633, and a pre-existing `coins` tag is obsolete historical data; never migrated, never read for economic decisions, never displayed, never updated; it rides the unknown-tag passthrough verbatim on every republish. No production writer emits it.
 
-### Kind 31125 — Blobbonaut Owner Profile (legacy)
+### Kind 31125: Blobbonaut Owner Profile (legacy)
 
 Superseded owner-profile kind, still read for backward compatibility.
 
@@ -118,14 +118,14 @@ Superseded owner-profile kind, still read for backward compatibility.
 - **Lifecycle:** Queried alongside 11125; never written by this client.
 - **Expiration:** none
 - **This client:** Read for legacy compatibility
-- **Protocol status:** Superseded — NIP.md, 'Legacy / superseded kinds': superseded by kind 11125. @blobbi-kit/core also marks KIND_BLOBBONAUT_PROFILE_LEGACY @deprecated.
+- **Protocol status:** Superseded: NIP.md, 'Legacy / superseded kinds': superseded by kind 11125. @blobbi-kit/core also marks KIND_BLOBBONAUT_PROFILE_LEGACY @deprecated.
 - **Defined by:** Blobbi Island
 - **Superseded by:** kind `11125`
 - **Implemented in:** `src/lib/blobbi-kinds.ts`, `src/hooks/useOptimizedStatus.ts`
 - **Documented in:** `NIP.md`
 - **Notes:** Included in BLOBBONAUT_PROFILE_KINDS, so profile queries still return it.
 
-### Kind 31124 — Blobbi Pet State
+### Kind 31124: Blobbi Pet State
 
 Full state of one Blobbi creature: stats, stage, appearance, personality, care timestamps.
 
@@ -140,7 +140,7 @@ Full state of one Blobbi creature: stats, stage, appearance, personality, care t
 - **Implemented in:** `src/lib/blobbi-parsers.ts`, `src/hooks/useBlobbis.ts`, `src/hooks/useBlobbiEvents.ts`, `src/inventory/useUseItem.ts`
 - **Documented in:** `NIP.md`
 
-### Kind 21201 — Island Chat
+### Kind 21201: Island Chat
 
 In-world speech-bubble chat message shown above a player Blobbi.
 
@@ -155,7 +155,7 @@ In-world speech-bubble chat message shown above a player Blobbi.
 - **Implemented in:** `src/lib/chat-config.ts`, `src/hooks/useChatBubbles.ts`
 - **Documented in:** `NIP.md`
 
-### Kind 31950 — Island Presence
+### Kind 31950: Island Presence
 
 Real-time multiplayer presence: location, position, movement goal, seat, hiding spot and shared activity.
 
@@ -171,7 +171,7 @@ Real-time multiplayer presence: location, position, movement goal, seat, hiding 
 - **Documented in:** `NIP.md`
 - **Notes:** The kind number is a literal in multiplayer.ts / useIslandPresence.ts; there is no exported constant to import.
 
-### Kind 31951 — Shared Playback Session
+### Kind 31951: Shared Playback Session
 
 Canonical, host-authoritative state of a synchronized watch session in the theater.
 
@@ -187,7 +187,7 @@ Canonical, host-authoritative state of a synchronized watch session in the theat
 - **Documented in:** `NIP.md`, `docs/protocol/shared-playback-session.md`, `docs/theater-shared-watch-implementation.md`
 - **Notes:** Experimental and application-private by convention only; consumers MUST validate structurally rather than trusting the kind number.
 
-### Kind 21951 — Shared Playback Command
+### Kind 21951: Shared Playback Command
 
 Low-latency playback command (play/pause/seek/set-media/set-rate/end-session) for a watch session.
 
@@ -203,7 +203,7 @@ Low-latency playback command (play/pause/seek/set-media/set-rate/end-session) fo
 - **Documented in:** `NIP.md`, `docs/protocol/shared-playback-session.md`
 - **Notes:** Absolute positions only, so a command is idempotent under duplicate delivery.
 
-### Kind 31632 — Game Item Definition
+### Kind 31632: Game Item Definition
 
 Canonical definition of an item. Blobbi Island trusts only definitions signed by the official issuer.
 
@@ -219,7 +219,7 @@ Canonical definition of an item. Blobbi Island trusts only definitions signed by
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Schema, parsing and validation are owned by @nostr-games/inventory. Blobbi Island is a consumer and adds only issuer enforcement plus an offline fallback.
 
-### Kind 31633 — Game Inventory
+### Kind 31633: Game Inventory
 
 The player's item inventory: kind:31632 addresses with integer quantities.
 
@@ -235,9 +235,9 @@ The player's item inventory: kind:31632 addresses with integer quantities.
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Replaceable semantics mean concurrent writes from two clients resolve newest-wins; there is no relay-side locking. Every write is lossless for foreign data (content, contexts, grant refs, unknown tags). The economy-entry service publishes the exactly-once initial 200-Coin allocation with its durable allocation marker tag in the same replacement event (see src/inventory/economy-entry.ts for the canonical marker).
 
-### Kind 1416 — Game Inventory Spend
+### Kind 1416: Game Inventory Spend
 
-A player-signed debit of one item quantity from one kind:31633 inventory — how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.
+A player-signed debit of one item quantity from one kind:31633 inventory, how Island consumes an item owned in an inventory another game writes (first: Farm produce), without ever replacing that snapshot.
 
 - **Class:** Regular
 - **Address format:** not addressable
@@ -251,7 +251,7 @@ A player-signed debit of one item quantity from one kind:31633 inventory — how
 - **Documented in:** `NIP.md`, `docs/INVENTORY_ARCHITECTURE.md`
 - **Notes:** Author MUST be the inventory owner (the package parser rejects anything else). Exactly one full inventory address, one full item address and one quantity; purpose/client/nonce/alt are informational and never affect accounting. Island signs at most one per player action and applies the Blobbi effect at most once per spend id (kind:31124 `blobbi_op` marker).
 
-### Kind 1417 — Game Inventory Fold Manifest
+### Kind 1417: Game Inventory Fold Manifest
 
 The owning game's record of exactly which kind:1416 spends a kind:31633 snapshot has incorporated (spend) or permanently closed (void).
 
@@ -265,11 +265,11 @@ The owning game's record of exactly which kind:1416 spends a kind:31633 snapshot
 - **Defined by:** `@nostr-games/inventory` (Blobbi Island is a consumer)
 - **Implemented in:** `src/inventory/external-inventory-state.ts`, `src/inventory/external-inventory-events.ts`, `src/inventory/useExternalInventoryEvents.ts`
 - **Documented in:** `docs/INVENTORY_ARCHITECTURE.md`
-- **Notes:** Island NEVER publishes one: folding is the owning game's act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance — the row is shown as unavailable and never spent against.
+- **Notes:** Island NEVER publishes one: folding is the owning game's act, and Island owns no external inventory. The builder is not re-exported from src/inventory/package.ts and a contract test asserts no production module reaches it. An unresolvable chain means no balance, the row is shown as unavailable and never spent against.
 
-### Kind 31634 — Game Item Placement
+### Kind 31634: Game Item Placement
 
-Where a player's owned items are equipped or placed — Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.
+Where a player's owned items are equipped or placed: Island uses one equipment document per Blobbi for wearable cosmetics and visual effects.
 
 - **Class:** Addressable
 - **Address format:** `31634:<owner>:<d>`
@@ -283,7 +283,7 @@ Where a player's owned items are equipped or placed — Island uses one equipmen
 - **Documented in:** `docs/blobbi-placement-activation-audit.md`, `docs/blobbi-effect-activation.md`
 - **Notes:** Placement is never possession: equipping requires kind:31633 quantity > 0 and never consumes it. Authorization (author, ownership, issuer, slot, form) is Island policy in src/placement/policy.ts; the package owns parsing/building only.
 
-### Kind 14919 — Blobbi Interaction (NIP-BB draft)
+### Kind 14919: Blobbi Interaction (NIP-BB draft)
 
 Interaction log defined by the original NIP-BB draft; this client uses kind 1124 instead.
 
@@ -293,14 +293,14 @@ Interaction log defined by the original NIP-BB draft; this client uses kind 1124
 - **Lifecycle:** Not produced or consumed by this client. Recorded so the number is neither reused nor mistaken for available.
 - **Expiration:** none
 - **This client:** Not implemented by this client
-- **Protocol status:** Superseded — NIP.md, 'Legacy / superseded kinds': "14919 → superseded by 1124 — Old interaction kind from the original NIP-BB draft".
+- **Protocol status:** Superseded: NIP.md, 'Legacy / superseded kinds': "14919 → superseded by 1124: Old interaction kind from the original NIP-BB draft".
 - **Defined by:** Blobbi Island
 - **Superseded by:** kind `1124`
-- **Implemented in:** —
+- **Implemented in:** -
 - **Documented in:** `MD/old-NIP.md`, `NIP.md`
-- **Notes:** No code in src/ queries, parses or publishes this kind. NIP.md heads its legacy table "queried for backward compatibility"; that is accurate for kind 31125 but NOT for 14919, which nothing reads. Other Blobbi clients may still write it — this repository only evidences that Island replaced it with 1124.
+- **Notes:** No code in src/ queries, parses or publishes this kind. NIP.md heads its legacy table "queried for backward compatibility"; that is accurate for kind 31125 but NOT for 14919, which nothing reads. Other Blobbi clients may still write it; this repository only evidences that Island replaced it with 1124.
 
-### Kind 14920 — Blobbi Breeding Event (NIP-BB draft)
+### Kind 14920: Blobbi Breeding Event (NIP-BB draft)
 
 Cross-breeding event between two adult Blobbis, defined by the original NIP-BB draft.
 
@@ -312,11 +312,11 @@ Cross-breeding event between two adult Blobbis, defined by the original NIP-BB d
 - **This client:** Not implemented by this client
 - **Protocol status:** Undetermined by this repository
 - **Defined by:** Blobbi Island
-- **Implemented in:** —
+- **Implemented in:** -
 - **Documented in:** `MD/old-NIP.md`
 - **Notes:** Blobbi Island has no breeding feature, so nothing here reads or writes it. NO document in this repository deprecates or replaces it, so its ecosystem status is undetermined: it may be live in another Blobbi client.
 
-### Kind 14921 — Blobbi Record (NIP-BB draft)
+### Kind 14921: Blobbi Record (NIP-BB draft)
 
 Permanent milestone/lineage record (birth, hatching, evolution) defined by the original NIP-BB draft.
 
@@ -328,9 +328,9 @@ Permanent milestone/lineage record (birth, hatching, evolution) defined by the o
 - **This client:** Not implemented by this client
 - **Protocol status:** Undetermined by this repository
 - **Defined by:** Blobbi Island
-- **Implemented in:** —
+- **Implemented in:** -
 - **Documented in:** `MD/old-NIP.md`
-- **Notes:** Blobbi Island publishes no hatch/milestone event: adoption publishes only the final kind 31124 baby state (src/hooks/useFirstEggAdoption.ts). NO document in this repository deprecates or replaces 14921, and NIP.md does not mention it at all, so its ecosystem status is undetermined — it may be live in another Blobbi client.
+- **Notes:** Blobbi Island publishes no hatch/milestone event: adoption publishes only the final kind 31124 baby state (src/hooks/useFirstEggAdoption.ts). NO document in this repository deprecates or replaces 14921, and NIP.md does not mention it at all, so its ecosystem status is undetermined; it may be live in another Blobbi client.
 
 ## 5. Official item issuer and relays
 
@@ -341,9 +341,9 @@ Permanent milestone/lineage record (birth, hatching, evolution) defined by the o
 
 ## 6. Official item definitions
 
-Status meanings: **Active** — the issuer-signed kind:31632 event is published. **Reserved** — the identity is claimed and the client already resolves it from the bundled fallback, but the official event is not published yet. **Deprecated** — no longer offered, still resolvable so existing inventories render.
+Status meanings: **Active**: the issuer-signed kind:31632 event is published. **Reserved**, the identity is claimed and the client already resolves it from the bundled fallback, but the official event is not published yet. **Deprecated**, no longer offered, still resolvable so existing inventories render.
 
-> **Prices are not listed here, by design.** A coin price is Island-local economy configuration, not a kind:31632 definition fact: it is never published to a relay, it changes on its own schedule, and a second currency (arcade tickets) will have its own prices. The coin price table lives in `src/inventory/shop-catalog.ts` and is validated against this registry at module load — an item that is not an official registered consumable cannot be priced.
+> **Prices are not listed here, by design.** A coin price is Island-local economy configuration, not a kind:31632 definition fact: it is never published to a relay, it changes on its own schedule, and a second currency (arcade tickets) will have its own prices. The coin price table lives in `src/inventory/shop-catalog.ts` and is validated against this registry at module load, an item that is not an official registered consumable cannot be priced.
 
 | `d` | Name | Category | Action | Status |
 | --- | --- | --- | --- | --- |
@@ -366,9 +366,9 @@ Status meanings: **Active** — the issuer-signed kind:31632 event is published.
 | `blobbi:hygiene:bubble-bath` | Bubble Bath | hygiene | `clean` | Active |
 | `blobbi:hygiene:soft-towel` | Soft Towel | hygiene | `clean` | Active |
 | `blobbi:energy:drink` | Energy Drink | energy | `boost` | Active |
-| `blobbi:currency:arcade-ticket` | Arcade Ticket | currency | — | Active |
-| `blobbi:currency:arcade-token` | Arcade Token | currency | — | Active |
-| `blobbi:currency:coin` | Blobbi Coin | currency | — | Active |
+| `blobbi:currency:arcade-ticket` | Arcade Ticket | currency | - | Active |
+| `blobbi:currency:arcade-token` | Arcade Token | currency | - | Active |
+| `blobbi:currency:coin` | Blobbi Coin | currency | - | Active |
 
 ## 7. Canonical kind:31632 addresses
 
@@ -401,7 +401,7 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 
 ## 8. Item detail
 
-### Apple — `blobbi:food:apple`
+### Apple: `blobbi:food:apple`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:food:apple`
 - **Status:** Active
@@ -410,11 +410,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** hunger +25, hygiene -2, energy +5
 - **Emoji fallback:** 🍎
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `edible`, `food`
 - **Stackable:** yes
 
-### Burger — `blobbi:food:burger`
+### Burger: `blobbi:food:burger`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:food:burger`
 - **Status:** Active
@@ -423,11 +423,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** hunger +45, happiness +10, hygiene -8, energy +8
 - **Emoji fallback:** 🍔
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `edible`, `food`
 - **Stackable:** yes
 
-### Cake — `blobbi:food:cake`
+### Cake: `blobbi:food:cake`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:food:cake`
 - **Status:** Active
@@ -436,11 +436,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** hunger +25, happiness +30, hygiene -10, energy +10
 - **Emoji fallback:** 🎂
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `edible`, `food`
 - **Stackable:** yes
 
-### Pizza — `blobbi:food:pizza`
+### Pizza: `blobbi:food:pizza`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:food:pizza`
 - **Status:** Active
@@ -449,11 +449,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** hunger +40, happiness +15, hygiene -9, energy +10
 - **Emoji fallback:** 🍕
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `edible`, `food`
 - **Stackable:** yes
 
-### Sushi — `blobbi:food:sushi`
+### Sushi: `blobbi:food:sushi`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:food:sushi`
 - **Status:** Active
@@ -462,11 +462,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** hunger +35, health +10, hygiene -5, energy +7
 - **Emoji fallback:** 🍣
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `edible`, `food`
 - **Stackable:** yes
 
-### Ball — `blobbi:toy:ball`
+### Ball: `blobbi:toy:ball`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:toy:ball`
 - **Status:** Active
@@ -475,11 +475,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** happiness +25, energy -10, hygiene -5
 - **Emoji fallback:** ⚽
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `toy`, `playable`
 - **Stackable:** yes
 
-### Teddy Bear — `blobbi:toy:teddy`
+### Teddy Bear: `blobbi:toy:teddy`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:toy:teddy`
 - **Status:** Active
@@ -488,11 +488,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** happiness +45, energy -5
 - **Emoji fallback:** 🧸
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `toy`, `playable`
 - **Stackable:** yes
 
-### Building Blocks — `blobbi:toy:blocks`
+### Building Blocks: `blobbi:toy:blocks`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:toy:blocks`
 - **Status:** Active
@@ -501,11 +501,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** happiness +30, energy -10
 - **Emoji fallback:** 🧱
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `toy`, `playable`
 - **Stackable:** yes
 
-### Vitamins — `blobbi:medicine:vitamins`
+### Vitamins: `blobbi:medicine:vitamins`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:vitamins`
 - **Status:** Active
@@ -514,11 +514,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** health +25, energy +5
 - **Emoji fallback:** 💊
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`
 - **Stackable:** yes
 
-### Super Medicine — `blobbi:medicine:super`
+### Super Medicine: `blobbi:medicine:super`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:super`
 - **Status:** Active
@@ -527,11 +527,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** health +50, energy +20, happiness -10
 - **Emoji fallback:** 💉
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`
 - **Stackable:** yes
 
-### Bandage — `blobbi:medicine:bandage`
+### Bandage: `blobbi:medicine:bandage`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:bandage`
 - **Status:** Active
@@ -540,11 +540,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** health +25
 - **Emoji fallback:** 🩹
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`
 - **Stackable:** yes
 
-### Health Elixir — `blobbi:medicine:health-elixir`
+### Health Elixir: `blobbi:medicine:health-elixir`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:health-elixir`
 - **Status:** Active
@@ -553,11 +553,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** health +75, happiness +20, energy +10
 - **Emoji fallback:** 🧪
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`
 - **Stackable:** yes
 
-### Shell Repair Kit — `blobbi:medicine:shell-repair-kit`
+### Shell Repair Kit: `blobbi:medicine:shell-repair-kit`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:shell-repair-kit`
 - **Status:** Active
@@ -566,11 +566,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`
 - **Effects:** health +30
 - **Emoji fallback:** 🥚
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`, `egg`
 - **Stackable:** yes
 
-### Calcium Supplement — `blobbi:medicine:calcium`
+### Calcium Supplement: `blobbi:medicine:calcium`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:medicine:calcium`
 - **Status:** Active
@@ -579,11 +579,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** health +35
 - **Emoji fallback:** 🦴
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `medicine`, `healing`
 - **Stackable:** yes
 
-### Soap — `blobbi:hygiene:soap`
+### Soap: `blobbi:hygiene:soap`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:soap`
 - **Status:** Active
@@ -592,11 +592,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** hygiene +25
 - **Emoji fallback:** 🧼
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `hygiene`, `cleaning`
 - **Stackable:** yes
 
-### Shampoo — `blobbi:hygiene:shampoo`
+### Shampoo: `blobbi:hygiene:shampoo`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:shampoo`
 - **Status:** Active
@@ -605,11 +605,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** hygiene +50, happiness +10
 - **Emoji fallback:** 🧴
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `hygiene`, `cleaning`
 - **Stackable:** yes
 
-### Bubble Bath — `blobbi:hygiene:bubble-bath`
+### Bubble Bath: `blobbi:hygiene:bubble-bath`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:bubble-bath`
 - **Status:** Active
@@ -618,11 +618,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** hygiene +70, happiness +25
 - **Emoji fallback:** 🛁
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `hygiene`, `cleaning`
 - **Stackable:** yes
 
-### Soft Towel — `blobbi:hygiene:soft-towel`
+### Soft Towel: `blobbi:hygiene:soft-towel`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:hygiene:soft-towel`
 - **Status:** Active
@@ -631,11 +631,11 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** hygiene +25, happiness +5
 - **Emoji fallback:** 🏖️
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `hygiene`, `cleaning`
 - **Stackable:** yes
 
-### Energy Drink — `blobbi:energy:drink`
+### Energy Drink: `blobbi:energy:drink`
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:energy:drink`
 - **Status:** Active
@@ -644,18 +644,18 @@ Derived from the issuer public key and the `d` tag; never hardcoded.
 - **Stages:** `baby`, `adult`
 - **Effects:** energy +35, happiness +5
 - **Emoji fallback:** 🧃
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `energy`, `boost`
 - **Stackable:** yes
 
-### Arcade Ticket — `blobbi:currency:arcade-ticket`
+### Arcade Ticket: `blobbi:currency:arcade-ticket`
 
 Earned by playing games at the Blobbi Island Arcade. Exchange it for exclusive prizes.
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-ticket`
 - **Status:** Active
 - **Category:** `currency` · **Type:** `currency`
-- **Action:** none — cannot be used on a Blobbi
+- **Action:** none, cannot be used on a Blobbi
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** none
 - **Emoji fallback:** 🎟️
@@ -664,30 +664,30 @@ Earned by playing games at the Blobbi Island Arcade. Exchange it for exclusive p
 - **Stackable:** yes
 - **Referenced by:** `src/components/blobbi/ArcadeTicketBalance.tsx`, `src/components/blobbi/inventory/InventoryBrowser.tsx`
 
-### Arcade Token — `blobbi:currency:arcade-token`
+### Arcade Token: `blobbi:currency:arcade-token`
 
 Buy them with Blobbi Coins and spend them to play games at the Blobbi Island Arcade.
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:arcade-token`
 - **Status:** Active
 - **Category:** `currency` · **Type:** `currency`
-- **Action:** none — cannot be used on a Blobbi
+- **Action:** none, cannot be used on a Blobbi
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** none
 - **Emoji fallback:** 🕹️
-- **Image:** — (none published; the emoji fallback is used)
+- **Image:** none published (the emoji fallback is used)
 - **Topics:** `currency`, `arcade`
 - **Stackable:** yes
 - **Referenced by:** `src/arcade/tokens/arcade-token.ts`, `src/arcade/tokens/token-store.ts`
 
-### Blobbi Coin — `blobbi:currency:coin`
+### Blobbi Coin: `blobbi:currency:coin`
 
 The official currency of Blobbi Island, minted for Blobbis who explore, play, discover treasures, and help the island thrive.
 
 - **Address:** `31632:9efb8d3045ba753f3664d503308b49783356b26a6d5f4b944bfac4239afe63a9:blobbi:currency:coin`
 - **Status:** Active
 - **Category:** `currency` · **Type:** `currency`
-- **Action:** none — cannot be used on a Blobbi
+- **Action:** none, cannot be used on a Blobbi
 - **Stages:** `egg`, `baby`, `adult`
 - **Effects:** none
 - **Emoji fallback:** 🪙

@@ -1,5 +1,5 @@
 /**
- * The editor for a repeatable single-value tag — `context` and `t` today.
+ * The editor for a repeatable single-value tag, `context` and `t` today.
  *
  * Small, but it carries three behaviors that are easy to get wrong and
  * annoying to live without:

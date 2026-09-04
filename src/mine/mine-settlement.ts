@@ -1,5 +1,5 @@
 /**
- * Mine session settlement — the service the Mine consumes.
+ * Mine session settlement, the service the Mine consumes.
  *
  * ## Why the ordering is Coin first
  *
@@ -46,14 +46,14 @@
  * Liveness comes from the playing tab's heartbeat on `updatedAt`, not from a
  * held lock: gameplay holds nothing, so a crashed tab frees the Mine by
  * falling silent rather than by being cleaned up. That is also why recovery
- * does not abandon every `open` record it finds — it runs whenever the cave
+ * does not abandon every `open` record it finds; it runs whenever the cave
  * is opened, including in a second tab, and doing so voided the run being
  * played in the first.
  *
  * ## Why the lock spans both entry points
  *
- * `startSession` and `finalizeSession` both mutate `open` records — the first
- * sweeps debris and creates, the second freezes — so they share ONE queued
+ * `startSession` and `finalizeSession` both mutate `open` records, the first
+ * sweeps debris and creates, the second freezes, so they share ONE queued
  * cross-tab critical section. Without it a finalize could read its record as
  * `open`, a concurrent start could sweep that same record as stale, and the
  * finalize would then write over the sweep's decision. Neither order loses
@@ -103,7 +103,7 @@ export type StartSessionResult =
 export type FinalizeSessionResult =
   | {
       readonly ok: true;
-      /** The reward frozen into the session — the run's full gem value. */
+      /** The reward frozen into the session, the run's full gem value. */
       readonly coinReward: number;
     }
   | { readonly ok: false; readonly reason: 'unknown-session' | 'storage-unavailable' };
@@ -132,7 +132,7 @@ export interface MineSettlement {
    * Open a rewarded run, if one may be opened.
    *
    * Async because the whole check-and-create runs in the shared queued
-   * cross-tab critical section — see the module note. The lock is released as
+   * cross-tab critical section; see the module note. The lock is released as
    * soon as the durable record exists; gameplay itself holds nothing.
    */
   startSession(input: {
@@ -150,7 +150,7 @@ export interface MineSettlement {
    * Freeze the run's numbers.
    *
    * Async because it runs in the same queued cross-tab critical section as
-   * `startSession` — see the module note on why both must serialize. Must
+   * `startSession`: see the module note on why both must serialize. Must
    * succeed before any value-bearing write.
    */
   finalizeSession(
@@ -362,7 +362,7 @@ export function createMineSettlement(deps: MineSettlementDeps): MineSettlement {
       const staleIds = new Set(stale.map((record) => record.sessionId));
       for (const record of unresolvedMineSessions(pubkey)) {
         if (record.status === 'open') {
-          // Debris is abandoned — nothing was ever owed, so the player loses
+          // Debris is abandoned; nothing was ever owed, so the player loses
           // nothing and no reward is fabricated. A session still being
           // heartbeaten is LEFT ALONE: recovery runs whenever the cave is
           // opened, including in a second tab, and abandoning a live run there

@@ -14,7 +14,7 @@ import { HockeySoundToggle } from './HockeySoundToggle';
  * Three jobs, in order of importance:
  *
  *  1. **Say what to do, in a picture.** Air hockey explains itself in one
- *     diagram — a table with your end at the bottom — far better than in a
+ *     diagram: a table with your end at the bottom, far better than in a
  *     paragraph. The controls are shown per input device, before the countdown
  *     rather than during it.
  *  2. **Say when it ends.** "First to seven" is the whole rule, and knowing it
@@ -79,7 +79,7 @@ export function AirHockeyPreview({
       </div>
 
       {/* Difficulty. A radio group, because these are alternatives rather than
-          switches — and because that is what a keyboard user expects to arrow
+          switches: and because that is what a keyboard user expects to arrow
           between. */}
       <fieldset className="rounded-2xl border-2 border-island-wood/25 bg-island-cream/60 p-3">
         <legend className="px-1 text-xs font-bold uppercase tracking-widest text-island-ink-soft">

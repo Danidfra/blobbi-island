@@ -2,7 +2,7 @@
  * What the Care Store is allowed to sell, and what it is allowed to call it.
  *
  * The shelf is derived rather than declared, so the risk this file guards is not
- * "did someone typo a price" — it is that the derivation drifts from the
+ * "did someone typo a price": it is that the derivation drifts from the
  * canonical registry, or that something reaches the shelf that has no business
  * being bought with Coins. In particular: the Arcade currencies.
  */
@@ -51,7 +51,7 @@ describe('every product is a canonical kind:31632 item', () => {
     }
   });
 
-  it('never uses an event id — or a name — as identity', () => {
+  it('never uses an event id, or a name, as identity', () => {
     for (const product of CARE_STORE_PRODUCTS) {
       // A 64-hex event id would parse as neither of these.
       expect(product.address.startsWith('31632:')).toBe(true);
@@ -98,7 +98,7 @@ describe('the shelf holds exactly the official care items', () => {
   });
 
   it('prices the toys at their established Island prices, not new ones', () => {
-    // The Care Store is a second shop front onto ONE price table — a toy must
+    // The Care Store is a second shop front onto ONE price table, a toy must
     // not cost one thing at the mall kiosk and another here.
     expect(
       Object.fromEntries(careStoreProductsFor('toy').map((p) => [p.d, p.price])),
@@ -120,7 +120,7 @@ describe('the shelf holds exactly the official care items', () => {
     }
   });
 
-  it('is every official item in a Care Store category that has a coin price — no more, no fewer', () => {
+  it('is every official item in a Care Store category that has a coin price; no more, no fewer', () => {
     const expected = ADDRESSED_OFFICIAL_ITEMS.filter(
       (item) =>
         (CARE_STORE_CATEGORIES as readonly string[]).includes(item.category) &&
@@ -180,7 +180,7 @@ describe('the Arcade currencies can never be mistaken for a Care Store product',
     const ticket = officialItemByD(ARCADE_TICKET_D)!;
     expect(isCareStoreProduct(ticket.address)).toBe(false);
     expect(CARE_STORE_PRODUCTS.some((p) => p.d === ARCADE_TICKET_D)).toBe(false);
-    // And it has no coin price at all — the rule the shop derivation relies on.
+    // And it has no coin price at all, the rule the shop derivation relies on.
     expect(priceForAddress(ticket.address)).toBeNull();
   });
 
@@ -216,7 +216,7 @@ describe('prices come from the one shared price table', () => {
 });
 
 describe('the stack policy is read, never guessed', () => {
-  it('a stackable item with no published max_stack has NO cap — toys included', () => {
+  it('a stackable item with no published max_stack has NO cap, toys included', () => {
     for (const product of CARE_STORE_PRODUCTS) {
       expect(officialItemByAddress(product.address)!.stackable).toBe(true);
       expect(product.stackLimit).toBeNull();

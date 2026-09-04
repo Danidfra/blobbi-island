@@ -6,7 +6,7 @@
  * **A code is not a secret and not access control.** It is an indexed tag on a
  * public relay, enumerable by anyone. It buys exactly one thing: not having to
  * read a 64-character pubkey and a UUID out loud. Knowing a code grants no write
- * capability — authority is signature-based (§6.1) — which is why the resolution
+ * capability: authority is signature-based (§6.1), which is why the resolution
  * algorithm below is allowed to be a plain public query.
  */
 
@@ -57,7 +57,7 @@ export function generateInviteCode(randomBytes: RandomBytes = defaultRandomBytes
 /**
  * Normalize typed input into a canonical code, or `null` if it cannot be one.
  *
- * Accepts the shapes people actually type — lowercase, with spaces or dashes —
+ * Accepts the shapes people actually type, lowercase, with spaces or dashes,
  * and rejects everything else BEFORE a relay is queried (§13.2 (1)). A code that
  * cannot exist should cost zero network round trips and produce an immediate,
  * specific message.

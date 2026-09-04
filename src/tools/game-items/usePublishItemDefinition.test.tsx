@@ -1,7 +1,7 @@
 /**
  * The publish flow, against a MOCKED signer and a MOCKED relay writer.
  *
- * No test in this file — or anywhere in this feature — is capable of reaching a
+ * No test in this file, or anywhere in this feature, is capable of reaching a
  * real relay: `publishToRelays` is replaced wholesale, so a regression that
  * made publishing fire unexpectedly would fail loudly here rather than emit an
  * event onto the network.

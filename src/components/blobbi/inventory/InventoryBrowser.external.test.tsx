@@ -4,7 +4,7 @@
  * The end of the interoperability chain: a player's kind:31633 in another
  * game's context, resolved through that game's kind:31632, its balance derived
  * through kind:1416 spends and the kind:1417 fold chain, rendered in the same
- * grid as everything else — and USABLE when, and only when, Island's
+ * grid as everything else, and USABLE when, and only when, Island's
  * compatibility policy has an interpretation for it AND the balance is
  * current. Using it never goes through Island's own inventory debit; it goes
  * through the kind:1416 spend path.
@@ -298,7 +298,7 @@ describe('a compatible partner item is USABLE through the spend path', () => {
     expect(screen.getByRole('dialog').textContent).toContain('+75 hunger');
   });
 
-  it('selecting 3 asks for ONE consumption of quantity 3 — never three calls', async () => {
+  it('selecting 3 asks for ONE consumption of quantity 3; never three calls', async () => {
     render(browser());
     fireEvent.click(await tile('Strawberry'));
     await screen.findByRole('dialog');

@@ -4,8 +4,8 @@
  * This phase grants nothing. There is no `useInventoryMutation` call, no
  * publish, no ticket quantity and no fabricated success anywhere in
  * `src/arcade/`. What this module contains is the *contract* Phase 3 must
- * implement, expressed as pure data and pure transitions so the hard parts —
- * idempotency, retryability, and the refusal to trust a resolved publish — are
+ * implement, expressed as pure data and pure transitions so the hard parts,
+ * idempotency, retryability, and the refusal to trust a resolved publish, are
  * settled and tested before any code can write to a relay.
  *
  * ## The lifecycle, in full
@@ -13,7 +13,7 @@
  * ```
  *   finished immutable result
  *        │
- *        ▼  calculateTicketAward()          (pure — reward-policy.ts)
+ *        ▼  calculateTicketAward()          (pure, reward-policy.ts)
  *   award with breakdown
  *        │
  *        ▼  createPendingClaim()            persisted BEFORE any write
@@ -59,12 +59,12 @@
  *    read as success"; the read-back removes "accepted by a relay that then
  *    dropped it". Only the two together let the UI claim the tickets are real.
  *  - **Idempotency makes strictness cheap.** ~~The expensive failure mode of a
- *    strict publish is retrying something that actually succeeded — and with a
+ *    strict publish is retrying something that actually succeeded, and with a
  *    `runId`-keyed claimed set, that retry costs nothing.~~ **This was wrong and
  *    it produced a duplicate grant.** A claimed set written only on confirmed
  *    success says nothing about an attempt whose outcome is unknown, and the
  *    grant is ADDITIVE, so retrying one that actually landed pays it twice. An
- *    unknown outcome is now `ambiguous` and is never republished — see the
+ *    unknown outcome is now `ambiguous` and is never republished; see the
  *    status documentation below and `docs/blobbi-dance.md` §8.
  *
  * Rejected: changing `useNostrPublish` globally now; adding a `strict: true`
@@ -101,7 +101,7 @@ export type ArcadeClaimStatus =
    *
    * This status exists because of a real, reproduced defect: it used to be
    * folded into `failed`, the UI offered "Try again", and the retry issued a
-   * SECOND additive `+N` — turning a 3-ticket reward into 6. See
+   * SECOND additive `+N`: turning a 3-ticket reward into 6. See
    * `docs/arcade-reward-publication-boundary.md` §6.
    *
    * An `ambiguous` claim is **never republishable**. The only thing that may
@@ -117,7 +117,7 @@ export type ArcadeClaimStatus =
  * retryable; only the copy differs.
  */
 export type ArcadeClaimFailure =
-  /** Strict publish timed out — NOT treated as success, and NOT retryable. */
+  /** Strict publish timed out: NOT treated as success, and NOT retryable. */
   | 'publish-timeout'
   /** Every relay definitively rejected the event. Nothing was stored. */
   | 'publish-rejected'
@@ -170,7 +170,7 @@ export function isPrePublishFailure(failure: ArcadeClaimFailure): boolean {
  *
  * Written to storage **before** the first publish attempt, so a refresh in the
  * middle of a claim leaves a recoverable `pending`/`publishing` record instead
- * of silently losing the tickets. Plain JSON — no controllers, no promises.
+ * of silently losing the tickets. Plain JSON; no controllers, no promises.
  */
 export interface ArcadeRewardClaim {
   /** Idempotency key. Identical across every retry of the same run. */
@@ -191,7 +191,7 @@ export interface ArcadeRewardClaim {
    * The ticket quantity read immediately BEFORE the publish attempt.
    *
    * This is the only durable evidence reconciliation has. Without it, "did the
-   * grant land?" has no answer at all — which is why a claim whose baseline read
+   * grant land?" has no answer at all, which is why a claim whose baseline read
    * failed never publishes (see `baseline-unavailable`).
    */
   readonly quantityBefore: number | null;
@@ -213,7 +213,7 @@ export type ArcadeClaimOutcome =
  */
 export interface ArcadeRewardWriter {
   /**
-   * Publish the ticket grant STRICTLY — a timeout or abort MUST reject. Resolving
+   * Publish the ticket grant STRICTLY, a timeout or abort MUST reject. Resolving
    * on timeout is the exact defect this interface exists to forbid.
    */
   publishTicketGrant(claim: ArcadeRewardClaim): Promise<void>;
@@ -226,7 +226,7 @@ export interface ArcadeRewardWriter {
 }
 
 /**
- * Not implemented in this phase — on purpose.
+ * Not implemented in this phase, on purpose.
  *
  * Exported so a future caller wiring up the reward hook fails loudly and
  * immediately rather than silently doing nothing, and so a test can assert that
@@ -253,7 +253,7 @@ export const ARCADE_REWARD_WRITER_UNIMPLEMENTED: ArcadeRewardWriter = {
  *  - the result is not serialisable, so the record could not survive a refresh;
  *  - the award belongs to a different run or game;
  *  - the award was itself rejected, or is zero (nothing to grant);
- *  - a durable record for this `runId` already BLOCKS a new grant — claimed,
+ *  - a durable record for this `runId` already BLOCKS a new grant, claimed,
  *    in flight, or ambiguous. This is the idempotency guarantee, and it is
  *    deliberately wider than "already claimed": a claim that may have been
  *    published is exactly as dangerous to repeat as one that certainly was.
@@ -358,7 +358,7 @@ export type ArcadeClaimEvent =
   | { readonly type: 'begin-verify'; readonly now: number }
   /**
    * The read-back confirmed the quantity moved by exactly the awarded amount.
-   * The caller passes the observed quantity; the boundary — not the caller —
+   * The caller passes the observed quantity; the boundary; not the caller,
    * decides whether "confirmed" is true, against the baseline it recorded.
    */
   | { readonly type: 'confirm'; readonly now: number; readonly quantityAfter: number }
@@ -367,7 +367,7 @@ export type ArcadeClaimEvent =
    *
    * The boundary refuses to accept a post-publication failure through this
    * event: passing one produces `ambiguous`, not `failed`. That refusal is the
-   * fix for the duplicate-grant defect — a caller can no longer mislabel
+   * fix for the duplicate-grant defect, a caller can no longer mislabel
    * "we don't know" as "it definitely didn't happen".
    */
   | { readonly type: 'fail'; readonly now: number; readonly failure: ArcadeClaimFailure }
@@ -380,7 +380,7 @@ export type ArcadeClaimEvent =
    * A READ-ONLY reconciliation observed the current quantity.
    *
    * Confirms only when the evidence is sufficient. Otherwise the claim stays
-   * `ambiguous` with one more attempt recorded — it never becomes retryable, and
+   * `ambiguous` with one more attempt recorded; it never becomes retryable, and
    * it never publishes.
    */
   | { readonly type: 'reconcile'; readonly now: number; readonly quantityNow: number | null };
@@ -391,8 +391,8 @@ export type ArcadeClaimEvent =
  * up.
  */
 export function advanceClaim(claim: ArcadeRewardClaim, event: ArcadeClaimEvent): ArcadeRewardClaim {
-  // `claimed` is a one-way door. Late events — a duplicate confirm, a retry that
-  // raced a success, a stale timer — cannot reopen it.
+  // `claimed` is a one-way door. Late events, a duplicate confirm, a retry that
+  // raced a success, a stale timer, cannot reopen it.
   if (claim.status === 'claimed') return claim;
 
   switch (event.type) {
@@ -426,7 +426,7 @@ export function advanceClaim(claim: ArcadeRewardClaim, event: ArcadeClaimEvent):
       }
       // The read-back must show EXACTLY the awarded delta. Anything else means
       // we are looking at a different write, or at a relay that has not caught
-      // up — and a claim that cannot prove itself is AMBIGUOUS, not failed.
+      // up: and a claim that cannot prove itself is AMBIGUOUS, not failed.
       if (event.quantityAfter - baseline !== claim.tickets) {
         return { ...claim, status: 'ambiguous', failure: 'verify-mismatch', updatedAt: event.now };
       }
@@ -460,7 +460,7 @@ export function advanceClaim(claim: ArcadeRewardClaim, event: ArcadeClaimEvent):
       // Sufficient evidence is "the balance is at least the baseline plus the
       // award". `>=` rather than `===` on purpose: an unrelated grant landing in
       // between can only push the number UP, and erring toward confirming can
-      // only ever cost the player a payment they were owed — never pay one
+      // only ever cost the player a payment they were owed; never pay one
       // twice. Paying twice is the failure mode this whole file exists to stop.
       if (event.quantityNow >= baseline + claim.tickets) {
         return { ...next, status: 'claimed', failure: null };

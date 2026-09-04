@@ -2,7 +2,7 @@
  * Chart contract tests.
  *
  * Two jobs: prove the shipped chart is what it claims to be, and prove the
- * validator refuses every shape of broken chart. The second matters more — the
+ * validator refuses every shape of broken chart. The second matters more, the
  * shipped chart is generated from committed data and is unlikely to rot, but the
  * validator is the only thing standing between a bad chart and a run that
  * starts, misbehaves, and produces a result anyway.
@@ -34,7 +34,7 @@ describe('the shipped chart', () => {
     expect(validateDanceChart(NEON_HOP_CHART, track)).toEqual({ ok: true });
   });
 
-  it('is built deterministically — same source, same notes, every time', () => {
+  it('is built deterministically: same source, same notes, every time', () => {
     const a = buildChartFromBars({
       id: NEON_HOP_CHART.id,
       track,
@@ -200,7 +200,7 @@ describe('validation refuses a chart that cannot be played fairly', () => {
     ).toContain('duplicate-note');
   });
 
-  it('allows two DIFFERENT lanes at the same instant — that is a jump, not a bug', () => {
+  it('allows two DIFFERENT lanes at the same instant; that is a jump, not a bug', () => {
     expect(
       codes(
         base({

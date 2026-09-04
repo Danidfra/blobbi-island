@@ -1,12 +1,12 @@
 /**
- * First-session UI preferences — what a player has already seen, per device.
+ * First-session UI preferences, what a player has already seen, per device.
  *
  * Every value here is a LOCAL UI preference: whether the welcome card was
  * dismissed, whether the arrival moment already played this visit, whether
  * the initial Coin grant was celebrated, whether the player folded the action
  * dock away. None of it is game state, none of it is economy state, and none
  * of it is ever published to Nostr. Losing it (a new device, cleared storage)
- * costs a repeated welcome at most — never a repeated grant, because the
+ * costs a repeated welcome at most; never a repeated grant, because the
  * grant itself is decided by its durable marker (`economy-entry.ts`), and the
  * celebration only ever reacts to that decision.
  *

@@ -1,5 +1,5 @@
 /**
- * Policy validation — the configuration gate.
+ * Policy validation: the configuration gate.
  *
  * The policy is the single home of every balance number, so a bad policy must
  * be refused loudly at the door rather than clamped into something the author

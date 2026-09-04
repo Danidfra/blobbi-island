@@ -11,15 +11,15 @@ interface BlobbiFrameProps {
   /** Bottom action dock overlay. */
   dock?: ReactNode;
   /**
-   * "desktop" — cozy wood frame, centered with breathing room, aspect-locked.
-   * "immersive" — near-fullscreen (mobile landscape / embed): thin frame, fills screen.
+   * "desktop": cozy wood frame, centered with breathing room, aspect-locked.
+   * "immersive": near-fullscreen (mobile landscape / embed): thin frame, fills screen.
    */
   variant?: "desktop" | "immersive";
   className?: string;
 }
 
 /**
- * BlobbiFrame — the cozy game window.
+ * BlobbiFrame: the cozy game window.
  *
  * Desktop: a soft cartoon-wood frame with cream edges, rounded corners and a
  * gentle drop shadow, sized to fit the viewport while preserving the world's
@@ -46,12 +46,12 @@ export function BlobbiFrame({
   // into this element and must re-render once it exists.
   const [overlayHost, setOverlayHost] = useState<HTMLDivElement | null>(null);
 
-  // ⚠️ ONE TREE, TWO PRESENTATIONS — never two trees.
+  // ⚠️ ONE TREE, TWO PRESENTATIONS; never two trees.
   //
   // This component used to `return` a completely different element chain per
   // variant: immersive nested the world two levels deep, desktop four. React
   // identifies state by POSITION, so switching variant unmounted everything
-  // below and mounted it again — destroying the world's React state (seat,
+  // below and mounted it again, destroying the world's React state (seat,
   // position, watch session) and the YouTube player with it. Toggling
   // fullscreen changes `variant`, so a fullscreen click reset the game.
   //
@@ -61,10 +61,10 @@ export function BlobbiFrame({
   // in the tree, which is what keeps it mounted.
   //
   // Desktop: aspect-locked frame that fits within the available box (the band
-  // between the shell header and footer — NOT the full viewport). The whole unit
+  // between the shell header and footer: NOT the full viewport). The whole unit
   // (wood frame + cream bezel + world) is ONE aspect-locked box.
   //
-  // The frame targets an intentional, comfortable size — a classic browser-game
+  // The frame targets an intentional, comfortable size, a classic browser-game
   // window that stays centered rather than stretching across huge monitors. We
   // cap the width at an ideal max (≈ the world art's native 1046px) so it never
   // grows endlessly; with a fixed `aspect-ratio`, the browser also honors
@@ -80,12 +80,12 @@ export function BlobbiFrame({
         immersive
           ? "relative h-full w-full overflow-hidden bg-island-ink"
           : // The padding is the window's MINIMUM external gutter: on desktop
-            // the whole decorated frame — wood border, rounded corners, shadow
-            // — always keeps at least 16px (24px from `sm`) of page visible at
+            // the whole decorated frame, wood border, rounded corners, shadow,
+            // always keeps at least 16px (24px from `sm`) of page visible at
             // the left and right, however narrow the browser gets before the
             // immersive mode takes over. A previous pass replaced this with a
             // deliberate horizontal bleed past the viewport, which clipped the
-            // wood border's flanks; that misread the feedback — the offending
+            // wood border's flanks; that misread the feedback, the offending
             // gap was INSIDE the frame (see the bezel padding below), and the
             // external margin is wanted. Height-bound frames get naturally
             // larger side margins; this is only the floor.
@@ -115,7 +115,7 @@ export function BlobbiFrame({
               // Side padding = WORLD_ASPECT × vertical padding (12/8 and 18/12
               // ≈ 1046/697), NOT uniform. The aspect lock above includes this
               // border, so a uniform border left the bezel interior slightly
-              // WIDER than the world's ratio — and VirtualWorld contain-scales
+              // WIDER than the world's ratio, and VirtualWorld contain-scales
               // the fixed 1046×697 world into it, which letterboxed a ~4–6px
               // strip of blurred backdrop between the bezel and the wallpaper
               // on the left and right. Matching the padding to the ratio makes
@@ -150,7 +150,7 @@ export function BlobbiFrame({
             {dock && <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">{dock}</div>}
 
             {/*
-              In-world overlay host — where the arcade's surfaces are portaled.
+              In-world overlay host: where the arcade's surfaces are portaled.
 
               Position matters three ways:
                 • INSIDE the cream bezel, so on desktop the overlay covers the
@@ -161,7 +161,7 @@ export function BlobbiFrame({
                 • ABOVE the HUD and dock (z-30), because a machine's screen
                   should not leave the action dock pokable behind it.
                 • OUTSIDE the world's own subtree, so a portaled surface never
-                  inherits the world's scale transform — the mistake that made
+                  inherits the world's scale transform, the mistake that made
                   `GameModal` shrink its own text on a narrow viewport, and the
                   reason the arcade shell moved to a Radix portal in Phase 2.
 

@@ -1,11 +1,11 @@
 /**
- * The Coin operation ledger — the durable half of "one Coin mutation per
+ * The Coin operation ledger, the durable half of "one Coin mutation per
  * operation, ever".
  *
  * A direct generalization of the arcade claim ledger
  * (`src/lib/arcade-claim-ledger.ts`), built around the same discovered
  * defect: a fresh read before a write prevents stale clobbering but does NOT
- * make an ADDITIVE mutation idempotent — `+4` applied to a balance that
+ * make an ADDITIVE mutation idempotent, `+4` applied to a balance that
  * already includes the first `+4` is `+8`, and kind:31633 carries quantities
  * and nothing else, so the relay cannot know an operation was already paid.
  * The only place that knowledge can live is a durable local record keyed by
@@ -28,12 +28,12 @@
  *   throw). It is the only retryable state.
  * - `ambiguous` means the publish MAY have landed (timeout, unclassifiable
  *   error). It can only ever become `applied` through read-only
- *   reconciliation — never re-expressed as a fresh publishable operation.
+ *   reconciliation: never re-expressed as a fresh publishable operation.
  * - `applied` is a one-way door: a late failure callback cannot reopen it.
  *
  * ## Honest limits (same as the arcade ledger)
  *
- * Durable per browser profile only. A different device has an empty ledger —
+ * Durable per browser profile only. A different device has an empty ledger,
  * but also has no opId to replay, since ids are minted where the operation
  * runs. Storage that silently drops writes is detected by read-back, and a
  * failed read-back REFUSES the publish rather than proceeding unrecorded.
@@ -58,7 +58,7 @@ export interface CoinOpRecord {
    * Id of the signed replacement event this operation attempted to publish
    * (recorded after signing, BEFORE the publish is sent). Reconciliation
    * evidence: when the authoritative newest kind:31633 event IS this event,
-   * the operation definitively applied — a proof that survives cases where
+   * the operation definitively applied, a proof that survives cases where
    * the balance alone would be inconclusive. `null`/absent on records from
    * before this field existed, or when the attempt never reached signing.
    */
@@ -156,7 +156,7 @@ export function coinOpBlocksPublish(record: CoinOpRecord | null): boolean {
  * Record (or advance) an operation, and prove the write landed.
  *
  * Returns `true` only when the record was read back with the expected
- * status. A caller getting `false` MUST NOT publish — without a durable
+ * status. A caller getting `false` MUST NOT publish, without a durable
  * record, the operation would be offered again after a refresh, which is
  * exactly how one additive grant becomes two.
  *
@@ -196,16 +196,16 @@ export function persistCoinOp(pubkey: string | undefined, record: CoinOpRecord):
  * Resolve an operation using AUTHORITATIVE external proof.
  *
  * The one-way doors in `persistCoinOp` exist because for ordinary operations
- * the ledger record is the ONLY evidence — once a publish is possibly out,
+ * the ledger record is the ONLY evidence, once a publish is possibly out,
  * nothing can prove it did not land, so `ambiguous`/`applied` must never
  * regress. The economy-entry allocation is different by construction: its
  * marker tag travels in the SAME replaceable event as the quantity change, so
- * a fresh authoritative read of the newest kind:31633 IS the proof —
+ * a fresh authoritative read of the newest kind:31633 IS the proof,
  * marker present ⇒ the operation is the current state; marker absent ⇒ it is
  * not, and re-publishing cannot double-apply (the marker rides along again).
  *
  * `'applied'` advances the record through the normal door. `'not-published'`
- * downgrades a possibly-published (or even `applied`) record to `failed` —
+ * downgrades a possibly-published (or even `applied`) record to `failed`,
  * deliberately bypassing the doors. Callers MUST hold marker-grade proof
  * (an atomically-verifiable effect on the authoritative event, confirmed by a
  * fresh read that RESOLVED, not one that timed out). Nothing else qualifies.
@@ -241,7 +241,7 @@ export function deleteCoinOp(pubkey: string | undefined, opId: string): boolean 
   const ledger = readLedger();
   const owner = { ...(ledger[pubkey] ?? {}) };
   const existing = owner[opId];
-  // Possibly-published operations are never deletable — deleting the record
+  // Possibly-published operations are never deletable, deleting the record
   // is what would allow a second publish.
   if (existing && coinOpBlocksPublish(existing)) return false;
   delete owner[opId];

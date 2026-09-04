@@ -1,5 +1,5 @@
 /**
- * BlobbiRendererView — the PURE Blobbi renderer.
+ * BlobbiRendererView: the PURE Blobbi renderer.
  *
  * Renders exclusively from explicit props: no Nostr hooks, no profile hooks,
  * no equipment subscriptions, no location/world knowledge. Remote players,
@@ -66,7 +66,7 @@ export interface BlobbiRendererViewProps {
   /** Pre-normalized accessory placements (already sorted; see accessory-normalize). */
   accessories?: readonly NormalizedAccessoryPlacement[];
   /**
-   * Visual effects to draw around this Blobbi — plain, serializable
+   * Visual effects to draw around this Blobbi, plain, serializable
    * `{ id, intensity? }` data and nothing else. No component, class name, CSS
    * or animation expression is accepted here, and an id this package does not
    * implement is ignored rather than rendered as something arbitrary.
@@ -84,7 +84,7 @@ export interface BlobbiRendererViewProps {
   interactive?: boolean;
   /**
    * false adds the legacy circular gradient frame around the same geometry.
-   * The box and body fill are identical in both modes — only decoration
+   * The box and body fill are identical in both modes; only decoration
    * differs.
    */
   transparent?: boolean;
@@ -184,13 +184,13 @@ export function BlobbiRendererView({
   transparent = true,
 }: BlobbiRendererViewProps) {
   // ALL defaulting, validation and clamping happens in one pure function
-  // (lib/blobbi-render-model.ts). Below this line there are no domain rules —
+  // (lib/blobbi-render-model.ts). Below this line there are no domain rules,
   // only geometry and markup.
   //
   // Not memoized on purpose: it is plain object construction, and its inputs
   // (`visual`, `accessories`, `eyeOffset`) are freshly built by callers on most
   // renders, so a `useMemo` here would cost a dependency comparison and never
-  // hit. The EXPENSIVE work — building the SVG string — is memoized below on
+  // hit. The EXPENSIVE work, building the SVG string, is memoized below on
   // the resolved scalars instead.
   const model = normalizeBlobbiRenderModel({
     visual,
@@ -204,13 +204,13 @@ export function BlobbiRendererView({
 
   // Effect resolution: pure, total and cheap (at most four survivors from a
   // handful of candidates), and it returns a shared frozen empty array when
-  // there is nothing to draw — so the common case, a Blobbi with no effects,
+  // there is nothing to draw, so the common case, a Blobbi with no effects,
   // allocates nothing and renders exactly the DOM it did before Phase 8.
   const resolvedEffects = normalizeBlobbiVisualEffects(effects);
 
   // Whether gaze markup must be injected. A BOOLEAN, deliberately: gaze
   // direction changes every animation frame while a Blobbi walks or watches,
-  // and the SVG string must not be regenerated for a direction change — only
+  // and the SVG string must not be regenerated for a direction change; only
   // the CSS variables below move.
   const gazeEnabled = model.gaze !== null;
 
@@ -261,7 +261,7 @@ export function BlobbiRendererView({
     <div
       className={cn(
         'relative',
-        // Decoration only — geometry is identical in both modes.
+        // Decoration only: geometry is identical in both modes.
         !transparent && 'rounded-full blobbi-gradient-frame shadow-lg theme-transition',
         interactive &&
           (transparent

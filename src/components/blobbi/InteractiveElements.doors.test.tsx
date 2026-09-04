@@ -3,7 +3,7 @@
  * and reaching it fires the door's location change.
  *
  * jsdom has no layout, so each door's rendered box is reproduced from its
- * Tailwind classes and the intrinsic size of its artwork — exactly the numbers
+ * Tailwind classes and the intrinsic size of its artwork, exactly the numbers
  * the runtime rect would carry. The Town Stage, the Plaza building and the
  * Nostr Station exterior all shipped with a door base ABOVE the room's walk
  * floor (the buildings stand in the upper half of their scenes), which the

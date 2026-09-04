@@ -13,7 +13,7 @@
  * after a game's daily scaled runs are used up, so Ticket income has no ceiling
  * in TIME; a Pass that waives unlimited plays has no ceiling in VALUE either.
  * The floor below which a Pass funded its own replacement worked out at roughly
- * a day of grinding — above the permanent headline prize — so there was no
+ * a day of grinding, above the permanent headline prize, so there was no
  * number left to choose.
  *
  * Bounding the plays collapses both ceilings to one finite number:
@@ -24,7 +24,7 @@
  *                                =  120 Tickets
  * ```
  *
- * `maxTicketsPerRun` is 8 for all three games — the same cap whatever the
+ * `maxTicketsPerRun` is 8 for all three games, the same cap whatever the
  * difficulty, and already inclusive of every first-clear, first-play and
  * personal-best bonus, because the cap is applied last. So 120 is not a
  * pessimistic guess: it is the arithmetic maximum, and it is reachable by a
@@ -39,7 +39,7 @@
  *
  * 180 sits between them with real margin on both sides: a perfect player
  * recovers at most two thirds of the price, and the Pass is still the cheapest
- * thing on the counter — which is right for the only item there that expires.
+ * thing on the counter, which is right for the only item there that expires.
  *
  * ## What is deliberately NOT claimed
  *
@@ -65,7 +65,7 @@ export const ARCADE_PASS_DURATION_HOURS = ARCADE_PASS_DURATION_MS / (60 * 60 * 1
  * The highest per-run reward any game can pay.
  *
  * Read from the live policies rather than written down, and asserted equal
- * across them — an economy where one game paid more per run would need this
+ * across them: an economy where one game paid more per run would need this
  * whole analysis redone against that game.
  */
 export function maxTicketsPerRun(
@@ -93,7 +93,7 @@ export function maxTicketsFromPassAllowance(
  * A realistic haul from the allowance, for describing the offer honestly.
  *
  * Uses the participation floor as the low end and the per-run cap as the high
- * end. Not used by the invariant — the invariant uses the maximum, because a
+ * end. Not used by the invariant, the invariant uses the maximum, because a
  * bound that only holds for average players is not a bound.
  */
 export function expectedTicketsFromPassAllowance(

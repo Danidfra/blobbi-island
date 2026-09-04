@@ -38,8 +38,8 @@ const featureFiles = sourceFiles(SRC).filter((file) => !isTest(file));
 
 describe('media enters the theater through one gate', () => {
   it('dispatches a media submission from exactly one place', () => {
-    // Four paths can put media on screen — the input, a session `set-media`,
-    // joining, and the re-seat fallback — and all four funnel here. A fifth that
+    // Four paths can put media on screen, the input, a session `set-media`,
+    // joining, and the re-seat fallback, and all four funnel here. A fifth that
     // dispatched directly would bypass admission entirely.
     const stage = code(join(SRC, 'components/blobbi/theater/TheaterStage.tsx'));
     const dispatches = stage.match(/dispatch\(\{\s*type:\s*'submit'/g) ?? [];

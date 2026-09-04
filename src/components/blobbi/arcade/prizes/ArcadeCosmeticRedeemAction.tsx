@@ -1,5 +1,5 @@
 /**
- * The redeem control for one cosmetic Prize Counter reward — the second LIVE
+ * The redeem control for one cosmetic Prize Counter reward, the second LIVE
  * redemption, and the only place on the shelf that can spend a ticket.
  *
  * ## Why it is a separate module
@@ -56,14 +56,14 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
   const inventory = useIslandInventory();
   const { prize, name, owned, equipped } = resolved;
 
-  // Arcade TICKETS — never Tokens, never Coins. A Prize Counter cosmetic is
+  // Arcade TICKETS: never Tokens, never Coins. A Prize Counter cosmetic is
   // paid for in exactly one currency.
   const balance = inventory.data
     ? getInventoryItemQuantity(inventory.data, TICKET_ADDRESS)
     : null;
 
   // The prize record the ledger and the machine speak. Derived from the
-  // catalog entry — the canonical address, the frozen price and the catalog
+  // catalog entry: the canonical address, the frozen price and the catalog
   // version all come from there, never from this component.
   const redeemable = useMemo(
     () => officialArcadePrizeAsRedeemable(prize, name),
@@ -76,7 +76,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
     `useNostr()` and `useCurrentUser()` are free to hand back a fresh object
     each render, and a redeemer rebuilt on every render means a fresh
     `ownership` identity, which the redemption hook watches to refresh what the
-    player owns — a render loop with a relay read in it. Stable proxies read
+    player owns: a render loop with a relay read in it. Stable proxies read
     the live values at CALL time, so the redeemer stays identity-stable while
     still using the current pool and signer.
   */
@@ -93,7 +93,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
         /*
           A GETTER, not a wrapper function. The shared read layer decides
           whether it can distinguish "the relay finished" from "the read was
-          truncated" by testing whether `req` EXISTS — so a proxy that always
+          truncated" by testing whether `req` EXISTS, so a proxy that always
           defines it would claim an EOSE-aware read a bare fake cannot deliver.
           This mirrors the real pool's shape instead of asserting it.
         */
@@ -177,7 +177,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
     ── One "you have it" state, however you got here ──
 
     Owning it is the fact; having just bought it is only the occasion. Both
-    mean the same thing to the counter — do not sell this again — so they
+    mean the same thing to the counter, do not sell this again, so they
     render as one element with different copy, rather than two branches that
     can drift. The freshly-confirmed wording is dropped once the prize is
     actually worn, where "it's yours!" would be stale news.
@@ -192,7 +192,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
         className="rounded-xl border-2 border-island-grass/40 bg-island-grass/10 px-3 py-2 text-center text-xs font-bold text-island-grass-dark"
       >
         {justBought ? `${name} is yours!` : 'Owned'}
-        {equipped ? ' · equipped' : ' — wear it from your wardrobe'}
+        {equipped ? ' · equipped' : ' · wear it from your wardrobe'}
       </p>
     );
   }
@@ -201,7 +201,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
     <div data-prize-redeem={prize.d} className="space-y-1.5">
       {phase === 'spend-unresolved' ? (
         // Reconcile-only. The spend may have landed, so the ONE safe action is
-        // a read — which for an atomic redemption asks whether the PRIZE is
+        // a read: which for an atomic redemption asks whether the PRIZE is
         // there, the single fact only this redemption's event could produce.
         <Button
           variant="soft"
@@ -231,7 +231,7 @@ export function ArcadeCosmeticRedeemAction({ resolved }: ArcadeCosmeticRedeemAct
           onClick={onRedeem}
           data-prize-redeem-action="redeem"
         >
-          {busy ? 'Redeeming…' : `Redeem — ${prize.tickets} Tickets`}
+          {busy ? 'Redeeming…' : `Redeem for ${prize.tickets} Tickets`}
         </Button>
       )}
 
@@ -267,8 +267,8 @@ const REASON_COPY: Readonly<Record<string, string>> = {
  *
  * The hook requires an `ownership` and this is the honest one to give it
  * before there is a signed-in user to deliver to. It cannot be reached by a
- * redemption — the button is disabled and `redeem` refuses a signed-out user
- * first — and if it ever were, it refuses rather than inventing a grant.
+ * redemption: the button is disabled and `redeem` refuses a signed-out user
+ * first: and if it ever were, it refuses rather than inventing a grant.
  */
 const LOGGED_OUT_WRITER = {
   async spendTickets(): Promise<void> {

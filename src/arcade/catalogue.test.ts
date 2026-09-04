@@ -3,9 +3,9 @@
  *
  * Two kinds of assertion live here, and the second kind is the important one:
  *
- *  - **Data shape** — unique ids, real categories, honest copy. Cheap, and it
+ *  - **Data shape**: unique ids, real categories, honest copy. Cheap, and it
  *    catches the ordinary mistakes of adding a row.
- *  - **Trust** — that a Guest Game cannot become launchable by having the right
+ *  - **Trust**: that a Guest Game cannot become launchable by having the right
  *    fields, that a coming-soon entry cannot start, that `grantsTickets` is only
  *    set where a reward policy actually exists, and that this module has not
  *    quietly grown a relay query or a package URL. Those are the properties the
@@ -100,7 +100,7 @@ describe('identity', () => {
 describe('Blobbi Dance', () => {
   const dance = getCatalogueEntry(BLOBBI_DANCE_GAME_ID)!;
 
-  it('uses the canonical game id — no alias', () => {
+  it('uses the canonical game id; no alias', () => {
     expect(BLOBBI_DANCE_GAME_ID).toBe('blobbi-dance');
     expect(dance.id).toBe(BLOBBI_DANCE_GAME_ID);
     // The reward policy, the claim ledger and the result all key off this one
@@ -233,8 +233,8 @@ describe('launch refusals', () => {
 
   it('refuses a guest game even when every other field says go', () => {
     // The exact shape the brief calls out: a guest entry that claims to be a
-    // playable native game must STILL fail, and it must fail on category — the
-    // first check — so a later field cannot rescue it.
+    // playable native game must STILL fail, and it must fail on category, the
+    // first check: so a later field cannot rescue it.
     expect(
       isNativeLaunchable({
         ...base,
@@ -299,7 +299,7 @@ describe('hosts', () => {
 
 describe('the shared cabinet catalogue', () => {
   it('is empty, because every game today belongs to a dedicated machine', () => {
-    // Not a defect — the honest product state. The screen is designed for it,
+    // Not a defect, the honest product state. The screen is designed for it,
     // and padding it with the dance machine's game is the thing this function
     // exists to make impossible.
     expect(sharedCabinetCatalogue()).toEqual([]);
@@ -356,7 +356,7 @@ describe('dedicated games and what they say about themselves', () => {
   it('has no coming-soon entry left, now that Pool is built', () => {
     // Every dedicated machine now has a real game behind it. The rule the
     // `coming-soon` state exists for is unchanged and still enforced below for
-    // whatever entry next needs it — there simply is not one today.
+    // whatever entry next needs it; there simply is not one today.
     const comingSoon = ARCADE_CATALOGUE.filter((e) => e.availability === 'coming-soon');
     expect(comingSoon).toEqual([]);
   });
@@ -409,7 +409,7 @@ describe('dedicated games and what they say about themselves', () => {
   it('keeps "playable" and "pays tickets" independent', () => {
     // Finishing a game does not approve a reward policy for it: the ticket flag
     // must track the POLICY REGISTRY, not the availability column. All three
-    // dedicated games now carry an active policy, so all three grant — and the
+    // dedicated games now carry an active policy, so all three grant, and the
     // cross-check in "ticket eligibility is a fact, not a policy" is what stops
     // this from ever being flipped without one.
     for (const id of ['blobbi-dance', 'blobbi-pool', 'blobbi-air-hockey']) {
@@ -455,7 +455,7 @@ describe('the registry stays pure', () => {
     }
   });
 
-  it('carries no remote asset — every thumbnail is a local path', () => {
+  it('carries no remote asset; every thumbnail is a local path', () => {
     for (const entry of ARCADE_CATALOGUE) {
       if (!entry.thumbnail) continue;
       expect(entry.thumbnail, entry.id).toMatch(/^\/assets\//);

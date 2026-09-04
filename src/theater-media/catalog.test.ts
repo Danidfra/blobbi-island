@@ -2,7 +2,7 @@
  * The catalog itself.
  *
  * The first block is the one that earns its keep: a malformed entry is
- * indistinguishable from an absent one at runtime — it simply never matches —
+ * indistinguishable from an absent one at runtime; it simply never matches,
  * so a typo in a video id would silently mean "this film is not approved" with
  * no error anywhere. Checking the shipped list structurally turns that into a
  * failing test instead of a mystery.
@@ -34,7 +34,7 @@ describe('the shipped catalog', () => {
 
   it('is well-formed, entry by entry', () => {
     // Passes vacuously while the list is empty, and starts doing real work the
-    // moment an entry is added — which is exactly when a typo would matter.
+    // moment an entry is added, which is exactly when a typo would matter.
     for (const entry of APPROVED_THEATER_MEDIA) {
       expect(isWellFormedApprovedMedia(entry), `${entry.id} is malformed`).toBe(true);
     }
@@ -55,7 +55,7 @@ describe('the shipped catalog', () => {
     // Not an oversight and not a placeholder to be quietly filled: choosing
     // videos that are appropriate for children needs someone to watch them and
     // sign off. If this ever fails, the change should have come with that
-    // sign-off — see the module note.
+    // sign-off: see the module note.
     expect(APPROVED_THEATER_MEDIA).toHaveLength(0);
   });
 });

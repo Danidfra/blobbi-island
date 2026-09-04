@@ -3,7 +3,7 @@
  *
  * `resolveActorRender` is the ONE pure resolver both the local wrapper
  * (MovableBlobbi) and the remote layer (MultiplayerLayer) render through.
- * These tests pin what each pose means visually — and that the resolver is
+ * These tests pin what each pose means visually, and that the resolver is
  * caller-agnostic, which is the local/remote parity guarantee.
  */
 import { describe, it, expect } from 'vitest';
@@ -62,7 +62,7 @@ describe('standing', () => {
 describe('seated', () => {
   const SEAT_ID = 'theater-seat-a1';
 
-  it('is drawn at the seat POSE ANCHOR — never the stored ground position', () => {
+  it('is drawn at the seat POSE ANCHOR; never the stored ground position', () => {
     const render = resolveActorRender(
       { kind: 'seated', seatId: SEAT_ID },
       { groundPosition: GROUND, ...THEATER },
@@ -133,7 +133,7 @@ describe('hidden', () => {
 describe('local/remote parity', () => {
   it('the resolver is pure and caller-agnostic: identical inputs, identical presentation', () => {
     // The local wrapper and the remote layer build the same (pose, context)
-    // for a player seated in a1 at the same room point — the resolver cannot
+    // for a player seated in a1 at the same room point, the resolver cannot
     // tell them apart, so their presentation cannot diverge.
     const localView = resolveActorRender(
       { kind: 'seated', seatId: 'theater-seat-a1' },

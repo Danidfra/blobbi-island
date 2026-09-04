@@ -4,7 +4,7 @@
  * ## The problem this exists for
  *
  * Mute, Block and Report were stored under one browser-wide key. Two people
- * sharing a laptop — a parent and a child, two siblings, a family tablet — got
+ * sharing a laptop, a parent and a child, two siblings, a family tablet, got
  * one shared list: the child's blocks silently applied to the parent's account,
  * and the parent could read every report the child had filed. Neither ever
  * asked for that, and neither could see it had happened.
@@ -16,7 +16,7 @@
  *
  * A signed-out bucket is worse than no bucket: whatever accumulated there would
  * belong to nobody, and the obvious implementation hands it to the first
- * account that signs in — which is precisely the leak this module closes. So a
+ * account that signs in, which is precisely the leak this module closes. So a
  * signed-out session gets an in-memory store that is never persisted and never
  * inherited. Nothing is lost by that: the island requires an account, so a
  * signed-out player has nobody to block.
@@ -25,7 +25,7 @@
  *
  * Scoping by pubkey changes where a decision is written, not whether it leaves
  * the device. Nothing here publishes, and the key is a pubkey the browser
- * already holds — see `docs/player-safety-controls.md`.
+ * already holds: see `docs/player-safety-controls.md`.
  */
 
 /** Lowercase 64-hex, the only shape a Nostr pubkey has. */
@@ -61,7 +61,7 @@ export function safetyAccount(): string | null {
 
 /**
  * The storage key for one store under the current account, or `null` when
- * there is no account — which the stores read as "keep this in memory only".
+ * there is no account, which the stores read as "keep this in memory only".
  */
 export function scopedSafetyKey(base: string): string | null {
   return activeAccount ? `${base}:${activeAccount}` : null;
@@ -77,7 +77,7 @@ export function subscribeSafetyAccount(listener: () => void): () => void {
  * Is this the player themselves?
  *
  * Muting or blocking your own account is not a safety decision, it is a way to
- * make your own Blobbi vanish from your own island — and reporting yourself
+ * make your own Blobbi vanish from your own island, and reporting yourself
  * fills the local report store with noise. Rejected at the DATA boundary rather
  * than by hiding a button, because the buttons are not the only caller.
  */
@@ -91,7 +91,7 @@ export function isSelf(pubkey: string): boolean {
  * Deliberately does NOT drop the listeners: the stores subscribe at module load
  * and their subscriptions are part of the architecture, not per-test state.
  * Clearing them would leave every later test running against caches that never
- * hear about an account change — which is the one behaviour worth proving.
+ * hear about an account change, which is the one behaviour worth proving.
  */
 export function resetSafetyAccount(): void {
   setSafetyAccount(null);

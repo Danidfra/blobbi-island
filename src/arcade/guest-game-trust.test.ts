@@ -1,11 +1,11 @@
 /**
- * The Guest Game trust decision — recorded, and provably not wired up.
+ * The Guest Game trust decision, recorded, and provably not wired up.
  *
  * A future-facing constant is only worth adding if it cannot quietly become
  * load-bearing before the thing it describes exists. Three assertions make that
  * checkable: the key must BE the official issuer's (not a second copy of it), it
  * must encode to the npub the decision was taken against, and **no other module
- * in `src/` may reference it** — which is what "documented in Phase 4,
+ * in `src/` may reference it**: which is what "documented in Phase 4,
  * implemented in Phase 5" means in practice.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';

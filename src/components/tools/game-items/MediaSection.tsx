@@ -1,7 +1,7 @@
 /**
  * The non-image media tags: `model_3d` and `audio`.
  *
- * URL inputs only. There is no upload button here on purpose — the app's
+ * URL inputs only. There is no upload button here on purpose, the app's
  * Blossom helper is a generic file uploader, but a 3D model and a sound file
  * are not artwork that this tool can preview, validate, or size-check, and an
  * upload control that can produce a broken reference nobody can inspect is

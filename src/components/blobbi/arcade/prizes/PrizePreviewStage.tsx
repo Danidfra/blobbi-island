@@ -1,5 +1,5 @@
 /**
- * PrizePreviewStage — "how would this look on my Blobbi?", with no writes.
+ * PrizePreviewStage, "how would this look on my Blobbi?", with no writes.
  *
  * Renders the CURRENT companion through the real renderer path
  * (`CurrentBlobbiDisplay` with explicit overrides), wearing everything it
@@ -15,7 +15,7 @@
  * PUBLISHES NOTHING, MUTATES NOTHING: no kind:31633, no kind:31634, no signer.
  * The overrides are plain arrays composed here and discarded on unmount. When
  * no companion exists (logged out, no Blobbi yet), a neutral sample Blobbi
- * models the prize instead — labelled as such.
+ * models the prize instead, labelled as such.
  */
 
 import { useMemo, useState } from 'react';

@@ -3,7 +3,7 @@
  * of the feature rather than against its behavior.
  *
  * Behavioral tests prove that today's code does the right thing. These prove
- * that the wrong thing is not reachable from here at all — that no module in
+ * that the wrong thing is not reachable from here at all; that no module in
  * the game item tools imports an inventory mutation, that nothing implements
  * Grant or Placement, that no private key is touched, and that `@blobbi/react`
  * still knows nothing about Nostr. Those are properties a future edit could
@@ -23,7 +23,7 @@ const RENDERER = join(ROOT, 'packages/blobbi-react/src');
  * Strip comments so these assertions are about CODE, not about prose.
  *
  * Every module in this feature documents the boundary it respects, and several
- * of them name the very symbols asserted against below — "this deliberately
+ * of them name the very symbols asserted against below, "this deliberately
  * does NOT use `parseOfficialItemDefinition`" must not read as a violation.
  * Block comments and whole-line `//` comments are removed; a trailing comment
  * after code survives, which is fine because the point is to catch imports and
@@ -131,7 +131,7 @@ describe('no Grant and no Placement implementation', () => {
       expect(text, file).not.toMatch(/EquipmentConfig/);
       expect(text, file).not.toMatch(/useAccessoryManagement/);
     }
-    // The lab EQUIPS (that is its job) — through the canonical kind:31634
+    // The lab EQUIPS (that is its job): through the canonical kind:31634
     // writer only, still never through the deleted legacy vocabulary.
     for (const { file, text } of labSources) {
       expect(text, file).not.toMatch(/EquipTag/);
@@ -219,8 +219,8 @@ describe('@blobbi/react stays protocol-agnostic', () => {
     // put React in the middle of event building.
     // TYPE-ONLY imports are the whole exemption: `import type` is erased at
     // compile time, so nothing about the renderer reaches the emitted domain
-    // layer. Two modules hold the exemption — the preview model and the lab's
-    // pure half (slot/effect-id types) — and both are asserted to use the
+    // layer. Two modules hold the exemption, the preview model and the lab's
+    // pure half (slot/effect-id types): and both are asserted to use the
     // `import type` form only.
     const TYPE_ONLY_EXEMPT = ['preview-model.ts', 'inventory-equipment-lab.ts'];
     for (const file of sourceFiles(TOOLS_LOGIC).filter((f) => !/\.test\.tsx?$/.test(f))) {
@@ -239,8 +239,8 @@ describe('@blobbi/react stays protocol-agnostic', () => {
     // The rule above is written against import TEXT, so it would miss a domain
     // module that imported a UI module which imports the renderer. The effect
     // vocabulary (`components/tools/game-items/effect-vocabulary.ts`) is exactly
-    // such a module — it exists in the UI layer BECAUSE the domain layer may not
-    // have it — so the arrow it depends on is asserted here rather than assumed.
+    // such a module; it exists in the UI layer BECAUSE the domain layer may not
+    // have it: so the arrow it depends on is asserted here rather than assumed.
     for (const file of sourceFiles(TOOLS_LOGIC).filter((f) => !/\.test\.tsx?$/.test(f))) {
       const text = stripComments(readFileSync(file, 'utf8'));
       expect(text, file).not.toMatch(/from '@\/components\//);

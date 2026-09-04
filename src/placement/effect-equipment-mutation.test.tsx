@@ -142,7 +142,7 @@ describe('equipping an effect item', () => {
     const equipped = getLastEquippedPlacementBySlot(doc, 'aura');
     expect(equipped?.item).toBe(AURA.address);
     expect(equipped?.mode).toBe('equip');
-    // EVERY signed event is a placement — no inventory event was written.
+    // EVERY signed event is a placement; no inventory event was written.
     expect(
       signEvent.mock.calls.every(([t]) => (t as { kind: number }).kind === 31634),
     ).toBe(true);
@@ -207,7 +207,7 @@ describe('the same-slot race: equip Celestial Aura, then immediately Solar Radia
           entry: buildEquipEntry({ itemAddress: AURA.address, slot: 'aura' }),
         },
       });
-      // Fired before the first settles — the per-document serializer must
+      // Fired before the first settles, the per-document serializer must
       // queue it, not interleave it.
       const second = result.current.mutateAsync({
         characterId: CHARACTER,
@@ -232,7 +232,7 @@ describe('the same-slot race: equip Celestial Aura, then immediately Solar Radia
     expect(firstDoc.revision).toBe(1);
     expect(finalDoc.revision).toBe(2);
 
-    // Exactly one aura in the final document — Solar Radiance, and Celestial
+    // Exactly one aura in the final document: Solar Radiance, and Celestial
     // Aura is gone rather than lingering as a duplicate entry.
     const auraEntries = finalDoc.placements.filter((p) => p.slot === 'aura');
     expect(auraEntries).toHaveLength(1);

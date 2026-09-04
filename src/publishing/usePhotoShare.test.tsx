@@ -7,7 +7,7 @@
  *
  * The independence cases matter more than they look. `mediaUploads` and
  * `publicNotePublishing` are separate capabilities, and a future policy could
- * set them apart — so the behaviour is pinned for all four combinations rather
+ * set them apart, so the behaviour is pinned for all four combinations rather
  * than only the two the shipped profiles use.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -114,7 +114,7 @@ describe('Family', () => {
   });
 
   it('reports denial as denial, never as a failure', async () => {
-    // "Upload failed" would be a lie — nothing was attempted — and it would
+    // "Upload failed" would be a lie, nothing was attempted, and it would
     // invite a retry of something that can never work.
     const { outcome } = await share('family');
     expect(outcome.status).toBe('denied');

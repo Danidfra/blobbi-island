@@ -2,7 +2,7 @@
  * The Furniture Store: its storefront on the mall's top level, and the geometry
  * of the showroom behind it.
  *
- * One file for both halves because they are two ends of the same door — the
+ * One file for both halves because they are two ends of the same door, the
  * facade's stand point and the interior's spawn have to agree about where the
  * player is when they cross. `care-store-config.ts` records why that is stated
  * together rather than split across a component and a boundary table.
@@ -23,8 +23,8 @@
  *
  * World percent of the fixed 1046×697 design box, like every other room.
  *
- * `furniture-store-inside.webp` is 1600×1067 — aspect 1.4996 against the
- * world's 1.5007 — so it fills the world under `object-cover` with sub-pixel
+ * `furniture-store-inside.webp` is 1600×1067, aspect 1.4996 against the
+ * world's 1.5007: so it fills the world under `object-cover` with sub-pixel
  * crop and image percentages ARE world percentages, exactly as the Care Store's
  * plate does.
  *
@@ -57,7 +57,7 @@ export interface FurnitureStoreBlocker {
  * ## The facade IS the entrance
  *
  * It used to be `furniture-store.png` plus a `doors/furniture-store-door.png`
- * overlay that carried NO click handler at all — a door-shaped affordance that
+ * overlay that carried NO click handler at all, a door-shaped affordance that
  * hovered, invited a tap and did nothing, so the shop had no way in. The new
  * artwork is an open-front storefront with no door painted in it, so the
  * overlay is deleted rather than finally wired up, and the whole storefront is
@@ -67,8 +67,8 @@ export interface FurnitureStoreBlocker {
  * ## Placement
  *
  * `furniture-store.webp` is 1536×1024 (a 1.5 box, the world's own ratio) with
- * ink margins l/r 1.89 %, t 0.20 %, b 1.76 %. The old `.png` was 689×392 — a
- * much wider, shorter sprite — so matching its painted WIDTH would have made
+ * ink margins l/r 1.89 %, t 0.20 %, b 1.76 %. The old `.png` was 689×392, a
+ * much wider, shorter sprite, so matching its painted WIDTH would have made
  * the new facade 30.9 % of the world tall and pushed its roof to y = 2.7,
  * through the top level's ceiling trim.
  *
@@ -80,7 +80,7 @@ export interface FurnitureStoreBlocker {
  *   box left     = 50 − W/2 = 36.49 %  → paints x 37.0 → 63.0
  *   box bottom   = 33.02 + 0.0176 · 27.03 = 33.50 %  → painted base on y = 33.02
  *
- * Painted extent: x 37.0 → 63.0 %, y 6.5 → 33.02 % — the same vertical slot the
+ * Painted extent: x 37.0 → 63.0 %, y 6.5 → 33.02 %, the same vertical slot the
  * old storefront filled (7.4 → 33.0), so nothing else on the level moves.
  *
  * Note the box bottom moves WITH the width: widening the facade thickens the
@@ -99,8 +99,8 @@ export interface FurnitureStoreBlocker {
  * ```
  *
  * The three middle-level storefronts sit at z-15 and their glass is at z-20, so
- * the barrier reads in front of them. The top level's glass is at z-10 — half
- * the depth — because `shopping-mall-inside.png`'s own Blobbi band gives an
+ * the barrier reads in front of them. The top level's glass is at z-10, half
+ * the depth: because `shopping-mall-inside.png`'s own Blobbi band gives an
  * actor on the top walkway z-9. Putting this facade at the neighbours' z-15
  * would have hung the storefront in front of BOTH its glass and any Blobbi
  * standing at its door.
@@ -112,21 +112,21 @@ export interface FurnitureStoreBlocker {
 export const FURNITURE_STORE_FACADE = {
   src: '/assets/locations/shop/furniture-store.webp',
   /** Names the action, not the picture: this is a way in. */
-  alt: 'Furniture Store — go inside',
+  alt: 'Furniture Store: go inside',
   containerClassName: 'absolute bottom-[66.5%] left-[36.49%] z-[8] w-[27.02%]',
   /**
    * Where the Blobbi stands to go in.
    *
    * The facade's painted horizontal centre (x = 50 %), on the TOP level's
-   * walkable strip `y ∈ [32.5, 33.5]` of `shopping-mall-inside.png` — the level
+   * walkable strip `y ∈ [32.5, 33.5]` of `shopping-mall-inside.png`: the level
    * the right-hand stair column climbs to.
    *
    * Stated rather than derived, for the reason `care-store-config.ts` records:
    * `InteractiveElement` would otherwise take the sprite's own base, and a
    * storefront set back against the wall does not stand on floor.
    *
-   * Reaching it from the ground floor is a TWO-stair route — left column up to
-   * the middle walkway, along it, right column up to the top — which is exactly
+   * Reaching it from the ground floor is a TWO-stair route, left column up to
+   * the middle walkway, along it, right column up to the top, which is exactly
    * the cross-floor routing `mall-routing.test.ts` guards.
    */
   walkTarget: { x: 50, y: 33 } as Position,
@@ -150,7 +150,7 @@ export const FURNITURE_STORE_FACADE = {
  *   ══════════════ open floor, wall to wall ══════════════
  * ```
  *
- * The sofa, the bed, the wardrobe and the rest do not stand on walkable floor —
+ * The sofa, the bed, the wardrobe and the rest do not stand on walkable floor,
  * they stand on the platforms, which are raised, roped off and signed "do not
  * touch". The walk boundary's funnel shape excludes those platforms outright,
  * so blockers over them would only restate the boundary while making the room
@@ -164,7 +164,7 @@ export const furnitureStoreBlockers: readonly FurnitureStoreBlocker[] = [
      *
      * Measured: the wooden top paints x 42.3–60.1 % from y ≈ 43.6 %, the green
      * body runs down to a wooden plinth, and that plinth meets the floor at
-     * y ≈ 55.3 %. There is no floor behind it — the wall is — so the rectangle
+     * y ≈ 55.3 %. There is no floor behind it, the wall is, so the rectangle
      * reaches back past the wall line to say so.
      *
      * Like the Badges Store's counter, this footprint sits at the walk
@@ -185,7 +185,7 @@ export const furnitureStoreBlockers: readonly FurnitureStoreBlocker[] = [
  * The checkout.
  *
  * A hotspot rather than a sprite, because the desk is painted INTO the
- * background — there is no image to hang an `InteractiveElement` on and
+ * background: there is no image to hang an `InteractiveElement` on and
  * inventing a transparent one would be a prop that exists only to carry a
  * click. The room renders a real labelled `<button>` over the artwork instead:
  * keyboard reachable, named for what it opens, and already move-blocking via
@@ -195,7 +195,7 @@ export const furnitureStoreBlockers: readonly FurnitureStoreBlocker[] = [
 export const FURNITURE_STORE_CHECKOUT = {
   id: 'furniture-store-checkout',
   /** Accessible name. Names the action's outcome, not the furniture. */
-  label: 'Checkout desk — browse furniture',
+  label: 'Checkout desk: browse furniture',
   /** Over the desk's painted body: x 42.3–60.1 %, y 43.6 → 55.3 %. */
   className: 'absolute left-[42.3%] top-[43.6%] h-[11.7%] w-[17.8%] z-[12]',
   /**
@@ -204,7 +204,7 @@ export const FURNITURE_STORE_CHECKOUT = {
    * desk's base at y = 55.5.
    *
    * y = 58 is inside the boundary's deepest band and 17 world px from the
-   * desk — comfortably inside the 40 px arrival threshold once the walk lands,
+   * desk: comfortably inside the 40 px arrival threshold once the walk lands,
    * and on the CUSTOMER's side of a desk the Blobbi never gets behind.
    */
   standPoint: { x: 51, y: 58 } as Position,
@@ -218,7 +218,7 @@ export const FURNITURE_STORE_CHECKOUT = {
  * clickable should still be able to browse, and a player who has should not
  * have to walk the length of the aisle every time.
  *
- * It opens the SAME modal from the SAME state — the room owns one
+ * It opens the SAME modal from the SAME state, the room owns one
  * `isShopOpen` flag and both controls set it. There is deliberately no second
  * shop surface, no second controller and no second copy of the wiring.
  *

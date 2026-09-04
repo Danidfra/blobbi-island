@@ -23,7 +23,7 @@ import { isEquippableSlot } from '@/placement/policy';
 /**
  * The Clothing Store's shop window.
  *
- * Architecturally the Care Store's twin — one card, one Buy button, one line
+ * Architecturally the Care Store's twin; one card, one Buy button, one line
  * handed to the shared {@link useBatchPurchase}, so the Coin debit and the item
  * grant land in ONE kind:31633 event. What differs is the merchandise, and the
  * merchandise changes two things:
@@ -34,7 +34,7 @@ import { isEquippableSlot } from '@/placement/policy';
  *     PRECONDITION evaluated against the fresh authoritative inventory inside
  *     the lock, so a stale card cannot spend a second time.
  *  2. **Buying is not wearing.** Ownership is kind:31633; equipping is
- *     kind:31634. This modal writes only the first, and says so — the player
+ *     kind:31634. This modal writes only the first, and says so, the player
  *     dresses their Blobbi from the wardrobe afterwards, through exactly the
  *     path an Arcade prize already uses.
  *
@@ -42,8 +42,8 @@ import { isEquippableSlot } from '@/placement/policy';
  *
  * No official wearable has a Coin price yet: three are Arcade Prize Counter
  * items priced in Tickets and the fourth is reserved by its own definition. So
- * the shop shows what the store is FOR — the real wearables, resolved from the
- * canonical registry — and states plainly that they are not on sale here. That
+ * the shop shows what the store is FOR, the real wearables, resolved from the
+ * canonical registry: and states plainly that they are not on sale here. That
  * is the shape the Prize Counter used while its own redemption was being
  * prepared, and it is better than a blank room or an invented price.
  */
@@ -91,7 +91,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
    * The synchronous double-submit gate (the Care Store / Food Shop pattern).
    * `purchasingAddress` is state and only lands after a re-render, so two
    * clicks in one tick would both pass it; this ref flips before the first
-   * `await`. It is first-line protection only — one debit per logical purchase
+   * `await`. It is first-line protection only; one debit per logical purchase
    * is the spend intent's job, and never buying a unique item twice is the
    * wallet precondition's.
    */
@@ -107,7 +107,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
    * Never from this file: `content.visual.slot` is the issuer's statement about
    * where a wearable belongs, and `placement/policy.ts` is what validates it
    * against the slots this renderer can actually draw. An item whose issuer
-   * declared no usable slot is simply unsorted — it still sells, it just has no
+   * declared no usable slot is simply unsorted; it still sells, it just has no
    * category chip, which is honest about what the definition does and does not
    * say.
    */
@@ -171,10 +171,10 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
       if (result.outcome === 'stock-limit') {
         // The wallet refused on the fresh inventory: it is already owned, and
         // nothing was charged. Say the true thing rather than "failed".
-        setError(`You already own ${product.name} — nothing was charged.`);
+        setError(`You already own ${product.name}; nothing was charged.`);
       } else if (result.outcome === 'blocked') {
         setError(
-          `An earlier ${product.name} purchase is still being verified — nothing new was charged. Try again in a moment.`,
+          `An earlier ${product.name} purchase is still being verified; nothing new was charged. Try again in a moment.`,
         );
       } else if (result.outcome === 'ambiguous') {
         setError(
@@ -272,7 +272,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
           /*
             Nothing is priced in Coins yet. Rather than an empty box, show the
             real wearables this store is about and be explicit about why they
-            are not on the shelf — the same honesty the Prize Counter showed
+            are not on the shelf, the same honesty the Prize Counter showed
             while its redemption was being prepared.
           */
           <div data-clothing-store-empty className="space-y-3">
@@ -280,7 +280,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
               role="status"
               className="rounded-2xl border-2 border-dashed border-island-wood/30 p-4 text-center text-sm text-island-ink-soft"
             >
-              The rails are still being stocked — no clothing is on sale here
+              The rails are still being stocked; no clothing is on sale here
               yet. These are the wearables your Blobbi can own today.
             </p>
             <ul className="grid list-none grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -360,7 +360,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
                             ? 'Unavailable'
                             : state === 'logged-out'
                               ? 'Sign in to buy'
-                              : `Buy — ${product.price}`}
+                              : `Buy for ${product.price}`}
                   </Button>
                 </ItemTile>
               );

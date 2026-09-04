@@ -22,7 +22,7 @@ interface Leaf {
 const LEAF_COLORS = ['#4caf50', '#66bb6a', '#81c784', '#43a047', '#a5d6a7'];
 
 function makeLeaves(seed: number): Leaf[] {
-  // A small, fixed-size burst — kept intentionally light (6 spans).
+  // A small, fixed-size burst, kept intentionally light (6 spans).
   const count = 6;
   return Array.from({ length: count }, (_, i) => {
     // Deterministic-ish spread using index; randomness only for organic feel.
@@ -58,15 +58,15 @@ interface TownBushProps {
 }
 
 /**
- * TownBush — one interactive Town bush.
+ * TownBush: one interactive Town bush.
  *
  * Behavior (all reusing existing systems):
  *  - Click/tap: computes the configured aim point (default: the bush's visual
  *    center, clamped to walkable ground) and calls the shared
- *    `requestInteraction` — the existing walk-to-interact / movement system.
+ *    `requestInteraction`: the existing walk-to-interact / movement system.
  *  - On confirmed ARRIVAL (not on click): plays the rustle SFX, shakes, emits a
  *    small leaf burst, and reports the hide via `onHide`. The Blobbi visual is
- *    then not rendered at all by MovableBlobbi — the bush's z-index NEVER
+ *    then not rendered at all by MovableBlobbi, the bush's z-index NEVER
  *    changes, so hiding can't reorder bushes and nothing of the Blobbi survives
  *    underneath the sprite.
  *  - Leaving: PlayingView clears the hidden state the moment movement starts,
@@ -109,13 +109,13 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
     if (shakeTimerRef.current !== null) window.clearTimeout(shakeTimerRef.current);
     shakeTimerRef.current = window.setTimeout(() => setIsShaking(false), 650);
 
-    // Leaf burst — a few temporary elements, auto-removed after they finish.
+    // Leaf burst: a few temporary elements, auto-removed after they finish.
     burstSeedRef.current += 1;
     setLeaves(makeLeaves(burstSeedRef.current));
     if (leafTimerRef.current !== null) window.clearTimeout(leafTimerRef.current);
     leafTimerRef.current = window.setTimeout(() => setLeaves([]), 1100);
 
-    // Explicit hiding state — the Blobbi visual stops being rendered and the
+    // Explicit hiding state, the Blobbi visual stops being rendered and the
     // spot id is published to multiplayer presence by the layers above.
     onHide(config.id);
   }, [playRustle, onHide, config.id]);
@@ -128,8 +128,8 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
       // rustle/shake/leaves, no re-published presence.
       if (isHiddenHereRef.current) return;
 
-      // Unlike doors/kiosks — which aim at the *base* of the element so the
-      // Blobbi stands in front of them — a bush is a hiding spot: the Blobbi
+      // Unlike doors/kiosks: which aim at the *base* of the element so the
+      // Blobbi stands in front of them, a bush is a hiding spot: the Blobbi
       // walks INTO it, so the aim point comes from the bush's configured
       // fraction (default: the sprite's visual body), clamped into the Town
       // walk boundary so a corner bush still resolves to reachable ground.
@@ -145,7 +145,7 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
         touch: isTouch,
         action: onArrive,
         onCancel: () => {
-          // Walk abandoned before arrival — nothing was triggered, nothing to undo.
+          // Walk abandoned before arrival; nothing was triggered, nothing to undo.
         },
       });
     },
@@ -179,7 +179,7 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
         )}
       />
 
-      {/* Leaf particle burst — lightweight CSS-animated spans, no canvas/gif. */}
+      {/* Leaf particle burst, lightweight CSS-animated spans, no canvas/gif. */}
       {leaves.length > 0 && (
         <div className="pointer-events-none absolute inset-0 overflow-visible">
           {leaves.map((leaf) => (

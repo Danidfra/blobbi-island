@@ -1,12 +1,12 @@
 /**
- * What it costs to start an arcade game — the ONE place that decides.
+ * What it costs to start an arcade game, the ONE place that decides.
  *
  * Costs live here rather than in each machine for the same reason the Mine's
  * gem values were pulled out of its component: three games with three private
  * numbers is three economies, and the third one drifts.
  *
  * A play currently costs one Token everywhere. That is deliberate rather than
- * lazy — the three games pay out on the same Ticket scale (max 8 per run), so
+ * lazy: the three games pay out on the same Ticket scale (max 8 per run), so
  * charging them differently would price identical rewards differently. When a
  * game's payout changes, its entry cost is the lever, and it is right here.
  */

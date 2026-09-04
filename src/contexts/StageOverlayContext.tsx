@@ -1,14 +1,14 @@
 import { createContext, useContext } from 'react';
 
 /**
- * StageOverlayContext — the element in-world overlays portal INTO.
+ * StageOverlayContext: the element in-world overlays portal INTO.
  *
  * ## Why this is not `FullscreenPortalContext`
  *
  * Both hand a Radix `Portal` a container, and that is where the similarity ends.
  *
  * `FullscreenPortalContext` points at the **shell root**, which is
- * `fixed inset-0` — the whole browser viewport. That is correct for what it was
+ * `fixed inset-0`: the whole browser viewport. That is correct for what it was
  * built for: the account menu and the auth dialogs are APP chrome, they should
  * float over everything, and the container exists mainly so the browser
  * Fullscreen API does not hide them (anything left in `document.body` renders
@@ -25,7 +25,7 @@ import { createContext, useContext } from 'react';
  *
  * The host is `absolute inset-0` and therefore covers the whole stage at all
  * times, including when nothing is portaled into it. So it is
- * `pointer-events-none`, and its DIRECT CHILDREN re-enable pointer events —
+ * `pointer-events-none`, and its DIRECT CHILDREN re-enable pointer events,
  * which is exactly the set Radix portals in (an overlay and a content element).
  * Without that split, an empty host would silently swallow every click-to-move
  * in the world.

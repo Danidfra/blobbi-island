@@ -1,5 +1,5 @@
 /**
- * Field transform — the pointer→field conversion boundary, pinned as pure math.
+ * Field transform: the pointer→field conversion boundary, pinned as pure math.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -54,7 +54,7 @@ describe('fitFieldLayout', () => {
   });
 });
 
-describe('containerPointToField (strict — the shovel rule)', () => {
+describe('containerPointToField (strict: the shovel rule)', () => {
   const mapping = mappingFor(600, 400); // image fills the container exactly
 
   it('maps the sand center to the field center', () => {
@@ -118,7 +118,7 @@ describe('containerPointToFieldClamped (the detector rule)', () => {
     expect(beyondRight?.x).toBeCloseTo(FIELD_W, 10);
   });
 
-  it('still rejects non-finite input — garbage is not clamped', () => {
+  it('still rejects non-finite input, garbage is not clamped', () => {
     expect(containerPointToFieldClamped(Number.NaN, 240, mapping)).toBeNull();
     expect(containerPointToFieldClamped(300, 240, mappingFor(0, 0))).toBeNull();
   });

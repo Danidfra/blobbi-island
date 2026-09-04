@@ -2,7 +2,7 @@
  * ACCESSORY OWNERSHIP POLICY for `CurrentBlobbiDisplay` (Phase 5).
  *
  * The rule under test is one sentence: *accessories belong to the Blobbi being
- * drawn, not to the component drawing it.* Concretely —
+ * drawn, not to the component drawing it.* Concretely,
  *
  *   no `visualOverride`                      → local companion + local equipment
  *   `visualOverride`, no `accessoryOverride` → that visual, wearing nothing
@@ -16,7 +16,7 @@
  * Local equipment is mocked at the CONTEXT boundary, so these tests need no
  * relay, no signer, no inventory event and no placement event. Since the
  * kind:31634 migration the context already carries policy-approved, renderer-
- * ready accessories — whether an item is owned, official and slot-compatible is
+ * ready accessories: whether an item is owned, official and slot-compatible is
  * decided in `src/placement/policy.ts` and tested there, not here.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -128,7 +128,7 @@ describe('accessories follow the visual, not the component', () => {
     const { container } = render(
       <CurrentBlobbiDisplay idSuffix="policy-override" visualOverride={REMOTE_VISUAL} />,
     );
-    // The body still renders — only the borrowed hats are gone.
+    // The body still renders; only the borrowed hats are gone.
     expect(container.querySelector('[data-blobbi-renderer]')).toBeTruthy();
     expect(wornCodes(container)).toEqual([]);
   });
@@ -173,7 +173,7 @@ describe('accessories follow the visual, not the component', () => {
   });
 
   it('rear view drops face-only accessories from supplied data too', () => {
-    // `eyewear` is face-only, so a Blobbi seen from behind is not wearing it —
+    // `eyewear` is face-only, so a Blobbi seen from behind is not wearing it,
     // the same rule the local path has always used, applied to supplied data.
     const { container } = render(
       <CurrentBlobbiDisplay
@@ -191,7 +191,7 @@ describe('the read-only remote preview cannot leak local equipment', () => {
   it('renders a remote Blobbi with no accessories at all', () => {
     // This is exactly how BlobbiInfoModal drives the preview in `readOnly`
     // mode: an external visual, `showAccessories` true (the inventory tab is
-    // not selected), and no accessory data — because the modal never fetched
+    // not selected), and no accessory data, because the modal never fetched
     // the other player's equipment.
     const { container } = render(
       <CurrentBlobbiDisplay

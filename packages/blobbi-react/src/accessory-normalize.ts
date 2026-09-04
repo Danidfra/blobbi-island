@@ -4,12 +4,12 @@
  *
  * This is the boundary between "how equipment is stored/parsed" and "what the
  * renderer paints". The DOM renderer (`BlobbiRendererView` /
- * `AccessoryLayerView`) consumes ONLY `NormalizedAccessoryPlacement` — it does
+ * `AccessoryLayerView`) consumes ONLY `NormalizedAccessoryPlacement`: it does
  * not know about tags, parsing defaults, refw/refh, or which hook supplied the
  * data.
  *
  * Coordinates: `xPercent`/`yPercent` are percentages (0-100) of the canonical
- * renderer box, measured to the accessory's center — the same box the body SVG
+ * renderer box, measured to the accessory's center, the same box the body SVG
  * fills (see `blobbi-render-size.ts`).
  *
  * Reference dimensions: consumers whose storage format carries a "reference
@@ -30,7 +30,7 @@ import { DEFAULT_ACCESSORY_SOURCES, REAR_VIEW_HIDDEN_SLOTS } from './accessory-t
 export type AccessoryLayer = 'behind' | 'front';
 
 /**
- * Deterministic paint order per slot — lower ranks paint first (further back).
+ * Deterministic paint order per slot, lower ranks paint first (further back).
  * The body sits at rank 0: negative ranks paint BEHIND the body, positive in
  * front of it.
  *
@@ -62,7 +62,7 @@ const UNKNOWN_SLOT_RANK = ACCESSORY_SLOT_RANK.unknown;
 
 /** Render-ready accessory placement in renderer-box coordinates. */
 export interface NormalizedAccessoryPlacement {
-  /** Stable identity (the accessory code — unique per equipped item). */
+  /** Stable identity (the accessory code, unique per equipped item). */
   id: string;
   code: string;
   slot: AccessorySlot;
@@ -95,7 +95,7 @@ function slotRank(slot: AccessorySlot): number {
  * Guards for numbers that reach CSS. Stored equipment is external data (relay
  * tags, and a drag editor that does its own arithmetic), so a missing, NaN or
  * Infinite value must resolve to something renderable rather than emit
- * `left: NaN%` / `scale(Infinity)` — which browsers drop, silently teleporting
+ * `left: NaN%` / `scale(Infinity)`: which browsers drop, silently teleporting
  * or erasing an accessory.
  */
 function finiteOr(value: number, fallback: number): number {
@@ -111,7 +111,7 @@ export interface NormalizeAccessoryOptions {
   facing?: 'front' | 'back';
   /**
    * How an accessory maps to image URLs. Defaults to
-   * {@link DEFAULT_ACCESSORY_SOURCES} — "use the URL you gave me" — because a
+   * {@link DEFAULT_ACCESSORY_SOURCES}, "use the URL you gave me", because a
    * package that guessed a directory layout would force every consumer to
    * mirror somebody else's `public/` tree.
    */

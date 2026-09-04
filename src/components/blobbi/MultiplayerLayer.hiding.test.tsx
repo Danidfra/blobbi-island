@@ -1,8 +1,8 @@
 /**
  * Coverage for REMOTE players hidden inside a hiding spot (e.g. a Town bush).
  *
- * Remote hiding must come from explicit presence state — the optional `hiddenIn`
- * field of the existing kind 31950 content — never from "is the player standing
+ * Remote hiding must come from explicit presence state, the optional `hiddenIn`
+ * field of the existing kind 31950 content; never from "is the player standing
  * roughly where a bush is". These tests push real presence events through the
  * subscription and assert what MultiplayerLayer paints:
  *   - hidden  → no sprite, no ground shadow, no name label (only the empty chat
@@ -34,13 +34,13 @@ vi.mock('@/hooks/useNostrPublish', () => ({
     mutate: () => {},
   }),
 }));
-// Presence has its own publisher (sign, then send — see
+// Presence has its own publisher (sign, then send; see
 // `src/lib/presence-publish.ts`). Route it through the same capture so these
 // tests keep reading what THIS client advertises.
 vi.mock('@/lib/presence-publish', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/presence-publish')>();
-  // Delegate to this file's `useNostrPublish` mock so its capture — and any
-  // failure injection it performs — applies to presence exactly as before.
+  // Delegate to this file's `useNostrPublish` mock so its capture, and any
+  // failure injection it performs, applies to presence exactly as before.
   const { useNostrPublish } = await import('@/hooks/useNostrPublish');
   return {
     ...actual,
@@ -276,7 +276,7 @@ describe('remote players hidden in a hiding spot', () => {
 
     // The real sequence this protects: arrive + hide, then immediately click
     // elsewhere. Both publishes land in the same `created_at` second, and the
-    // relay delivers them in the wrong order — the move first, the hide second.
+    // relay delivers them in the wrong order, the move first, the hide second.
     // Only the monotonic `seq` can order them.
     const hide = presenceEvent({
       ts: TS, seq: 7, state: 'idle', at: { x: 8, y: 91 }, hiddenIn: 'town-bush-3',
@@ -311,7 +311,7 @@ describe('remote players hidden in a hiding spot', () => {
 
     // Documented limitation, unchanged from before: without `seq` a same-second
     // pair cannot be ordered, so the last delivered wins. Legacy publishers keep
-    // working exactly as they did — they simply do not gain the guarantee.
+    // working exactly as they did; they simply do not gain the guarantee.
     await h.push(presenceEvent({ ts: TS, state: 'moving', at: { x: 8, y: 91 } }));
     await h.push(
       presenceEvent({ ts: TS, state: 'idle', at: { x: 8, y: 91 }, hiddenIn: 'town-bush-3' }),
@@ -334,7 +334,7 @@ describe('remote players hidden in a hiding spot', () => {
     const content = JSON.parse(hides[0].content);
     expect(content.hiddenIn).toBe('town-bush-2');
     expect(content.location).toBe('town');
-    // Reuses the presence kind and its tag shape — no new event kind.
+    // Reuses the presence kind and its tag shape; no new event kind.
     expect(hides[0].kind).toBe(31950);
     expect(hides[0].tags).toEqual(
       expect.arrayContaining([['t', 'blobbi:presence'], ['t', 'loc:town']]),

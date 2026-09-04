@@ -1,5 +1,5 @@
 /**
- * Inventory & Equipment Lab — behavioral tests against stateful relay mocks
+ * Inventory & Equipment Lab, behavioral tests against stateful relay mocks
  * (Phase 9.5a semantics: every write confirmed, max_stack respected).
  *
  * What must hold:
@@ -14,7 +14,7 @@
  *    rejects values above max_stack; bulk add ensures ownership and reports
  *    over-max anomalies instead of incrementing or repairing them;
  *  - the normalize action repairs over-max quantities in one canonical event;
- *  - removing an equipped item's inventory leaves the placement untouched —
+ *  - removing an equipped item's inventory leaves the placement untouched,
  *    the row goes STALE and only an explicit confirmed action clears it;
  *  - a failed publish keeps the dialog open and fabricates no success.
  */
@@ -208,7 +208,7 @@ describe('signer gating and identity', () => {
   it('shows the issuer, the owner and the target Blobbi as distinct roles', () => {
     renderLab();
     expect(screen.getByTestId('lab-issuer')).toHaveTextContent(/trust root/);
-    expect(screen.getByTestId('lab-owner')).toHaveTextContent(/you — the signer/);
+    expect(screen.getByTestId('lab-owner')).toHaveTextContent(/you: the signer/);
     expect(screen.getByTestId('lab-target-blobbi')).toHaveTextContent('Lumi');
   });
 });
@@ -236,7 +236,7 @@ describe('every single-item write is confirmed', () => {
 
     fireEvent.click(screen.getByTestId('lab-confirm-cancel'));
     expect(signEvent).not.toHaveBeenCalled();
-    // Only the seeded base event exists — nothing new was published.
+    // Only the seeded base event exists; nothing new was published.
     expect(relayInventory.map((e) => e.id)).toEqual(['inv-base']);
   });
 
@@ -278,7 +278,7 @@ describe('every single-item write is confirmed', () => {
     failNextSign = true;
     confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
-    // Still open — the described write did not land, so the dialog stays true.
+    // Still open: the described write did not land, so the dialog stays true.
     expect(screen.getByTestId('lab-confirm-publish')).toBeInTheDocument();
     expect(relayInventory.map((e) => e.id)).toEqual(['inv-base']);
   });
@@ -345,14 +345,14 @@ describe('bulk inventory writes', () => {
     expect(diff).not.toHaveTextContent('Celestial Aura');
     // …it is reported separately, with the repair pointer.
     expect(screen.getByTestId('lab-confirm-anomalies')).toHaveTextContent(
-      /Celestial Aura ×2 — quantity exceeds published max_stack:1/,
+      /Celestial Aura ×2: quantity exceeds published max_stack:1/,
     );
     expect(signEvent).not.toHaveBeenCalled();
 
     confirmDialog();
     await waitFor(() => expect(signEvent).toHaveBeenCalledTimes(1));
     const published = parseInventoryEvent(relayInventory[0])!;
-    // The anomaly is unchanged — neither 3 nor silently 1.
+    // The anomaly is unchanged; neither 3 nor silently 1.
     expect(getInventoryItemQuantity(published, AURA.address)).toBe(2);
     expect(
       getInventoryItemQuantity(
@@ -379,7 +379,7 @@ describe('bulk inventory writes', () => {
 });
 
 describe('equipment writes are confirmed', () => {
-  it('equip states the kind, Blobbi, slot and replacement — nothing signs before confirm', async () => {
+  it('equip states the kind, Blobbi, slot and replacement; nothing signs before confirm', async () => {
     seedInventory([
       { address: AURA.address, quantity: 1 },
       { address: RADIANCE.address, quantity: 1 },
@@ -439,7 +439,7 @@ describe('stale placements', () => {
     // The equipped-but-unowned aura shows as a stale placement…
     await waitFor(() =>
       expect(screen.getByTestId('lab-placement-aura')).toHaveTextContent(
-        'stale — not owned',
+        'stale: not owned',
       ),
     );
     // …and NOTHING has been published to "clean it up".

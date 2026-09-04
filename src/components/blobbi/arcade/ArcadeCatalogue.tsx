@@ -12,7 +12,7 @@ import {
 import { ArcadeGameShell } from './ArcadeGameShell';
 
 /**
- * The shared catalogue — what a GENERIC arcade cabinet offers.
+ * The shared catalogue, what a GENERIC arcade cabinet offers.
  *
  * ## Six cabinets, not nine machines
  *
@@ -32,7 +32,7 @@ import { ArcadeGameShell } from './ArcadeGameShell';
  * and two short notes about what will eventually appear. No empty grids, no
  * placeholder cards, no "0 results".
  *
- * The first version of this screen filled the space by listing Blobbi Dance —
+ * The first version of this screen filled the space by listing Blobbi Dance,
  * a game that lives on a machine two floors down and cannot be played here. A
  * catalogue that lies to look busy is worse than one that is honestly quiet.
  *
@@ -52,7 +52,7 @@ interface ArcadeCatalogueProps {
   readonly machineImage?: string;
   /**
    * Overridable for the DEV harness and tests. Defaults to the games generic
-   * cabinets offer — which is a SUBSET of the registry, not all of it.
+   * cabinets offer: which is a SUBSET of the registry, not all of it.
    */
   readonly entries?: readonly ArcadeCatalogueEntry[];
   /** Called with a game id when a playable card is chosen. */
@@ -95,7 +95,7 @@ export function ArcadeCatalogue({
 
       {/*
         The marquee. The cabinet the player is actually standing at is the
-        illustration — it costs no new artwork, it is different at every cabinet,
+        illustration: it costs no new artwork, it is different at every cabinet,
         and it makes the screen feel like it belongs to the thing they walked up
         to rather than to a menu system.
       */}
@@ -126,7 +126,7 @@ export function ArcadeCatalogue({
               New games are being prepared for these cabinets.
             </p>
             <p className="mt-1 text-xs blobbi-text-muted">
-              Come back another day — the {machineName} will be ready for you.
+              Come back another day, the {machineName} will be ready for you.
             </p>
           </>
         ) : (
@@ -148,8 +148,8 @@ export function ArcadeCatalogue({
 
         These were headings over empty grids, which turned a child's game menu
         into an administrative form with nothing in it. The categories are still
-        real and still mean different things — one can pay tickets and one never
-        will — so they are still said, in a sentence each.
+        real and still mean different things; one can pay tickets and one never
+        will: so they are still said, in a sentence each.
       */}
       <ul className="space-y-2 rounded-2xl border-2 border-island-wood/20 px-4 py-3 text-xs blobbi-text-muted sm:text-sm">
         <li data-catalogue-note="island">
@@ -178,7 +178,7 @@ interface ArcadeCatalogueCardProps {
 /**
  * One game on a generic cabinet.
  *
- * Nothing renders this today — no game is offered by the shared cabinets yet —
+ * Nothing renders this today; no game is offered by the shared cabinets yet,
  * and it is here so the screen above has somewhere to grow without being
  * redesigned. It shows only what is useful: a title, what you do, whether
  * tickets are possible, and (when the game is playable) how it is controlled and
@@ -285,7 +285,7 @@ interface ArcadeCatalogueShellProps extends ArcadeCatalogueProps {
 /**
  * The catalogue inside the shared arcade dialog.
  *
- * One component so the room and the DEV harness open the SAME thing — a harness
+ * One component so the room and the DEV harness open the SAME thing, a harness
  * that reassembles the dialog itself proves nothing about the dialog the player
  * gets.
  *

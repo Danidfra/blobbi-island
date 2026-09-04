@@ -1,5 +1,5 @@
 /**
- * useBlobbiCoreProbe — first local integration probe for the shared
+ * useBlobbiCoreProbe: first local integration probe for the shared
  * `@blobbi-kit/core` package (consumed from the published npm package).
  *
  * READ-ONLY. This hook only *reads* the current user's Kind 31124 Blobbi
@@ -31,7 +31,7 @@ import {
   getBlobbiStatDisplayState,
   type StatDisplayState,
 } from '@blobbi-kit/core/blobbi-segments';
-// First read-only @blobbi-kit/react import — projection hook only (no mutations,
+// First read-only @blobbi-kit/react import, projection hook only (no mutations,
 // no catalog resolver; defaults to core's generic effects).
 import {
   useProjectedBlobbiState,
@@ -124,7 +124,7 @@ export function useBlobbiCoreProbe() {
  * Read-only wrapper around `@blobbi-kit/react`'s `useProjectedBlobbiState`.
  *
  * Demonstrates that the shared React hook layer resolves and runs against
- * Island's React/Query/Nostrify instances. Read-only projection only — it
+ * Island's React/Query/Nostrify instances. Read-only projection only; it
  * applies decay (and optional social interactions, if ever passed) without
  * publishing. No care-item resolver is provided, so core's generic effects
  * apply (no shop/catalog dependency).

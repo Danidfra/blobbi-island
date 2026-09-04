@@ -3,7 +3,7 @@
  *
  * Everything here is about what must NOT happen: no claim without a valid
  * result, no `claimed` without a verified read-back, no second grant for a run
- * that already paid, and — this phase's headline — no write path at all.
+ * that already paid, and, this phase's headline, no write path at all.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -82,7 +82,7 @@ describe('creating a pending claim', () => {
     expect(outcome).toEqual({ ok: false, reason: 'award does not belong to this result' });
   });
 
-  it('refuses a rejected or empty award — there is nothing to grant', () => {
+  it('refuses a rejected or empty award; there is nothing to grant', () => {
     const zero = calculateTicketAward({ ...policy, base: () => 0 }, result({ cleared: false }));
     expect(zero.total).toBeGreaterThan(0); // participation floor still pays
 
@@ -121,7 +121,7 @@ describe('creating a pending claim', () => {
   );
 });
 
-describe('the ambiguous status — the fix for the duplicate-grant defect', () => {
+describe('the ambiguous status: the fix for the duplicate-grant defect', () => {
   const published = () =>
     advanceClaim(pending(), { type: 'begin-publish', now: NOW, quantityBefore: 10 });
 
@@ -210,7 +210,7 @@ describe('reconciliation is read-only and conservative', () => {
     expect(settled.failure).toBeNull();
   });
 
-  it('confirms when the balance is HIGHER — erring toward not paying twice', () => {
+  it('confirms when the balance is HIGHER, erring toward not paying twice', () => {
     // Another grant landed in between. `>=` can only ever cost a payment that
     // was owed; `===` could pay one twice, which is the failure being fixed.
     const settled = advanceClaim(ambiguous(), { type: 'reconcile', now: NOW, quantityNow: 25 });
@@ -265,13 +265,13 @@ describe('claim lifecycle', () => {
     expect(isRetryable(claim)).toBe(false);
   });
 
-  it('refuses to settle — and refuses to RETRY — when the delta is wrong', () => {
+  it('refuses to settle: and refuses to RETRY, when the delta is wrong', () => {
     let claim = advanceClaim(pending(), { type: 'begin-publish', now: NOW, quantityBefore: 0 });
     claim = advanceClaim(claim, { type: 'begin-verify', now: NOW });
 
     // Nothing moved. This is the exact state the manual test hit: the publish
     // resolved and the read-back had not caught up. It used to be `failed`, and
-    // `failed` was retryable — which is how a 3-ticket reward became 6.
+    // `failed` was retryable, which is how a 3-ticket reward became 6.
     const stuck = advanceClaim(claim, { type: 'confirm', now: NOW, quantityAfter: 0 });
     expect(stuck.status).toBe('ambiguous');
     expect(stuck.failure).toBe('verify-mismatch');
@@ -298,8 +298,8 @@ describe('claim lifecycle', () => {
     const retried = advanceClaim(failed, { type: 'begin-publish', now: NOW + 2, quantityBefore: 0 });
     expect(retried.status).toBe('publishing');
     expect(retried.runId).toBe('run-1');
-    // The retry is the same claim, so the attempt counter — not the ticket count
-    // — is what grows.
+    // The retry is the same claim, so the attempt counter; not the ticket count,
+    // is what grows.
     expect(retried.attempts).toBe(2);
     expect(retried.tickets).toBe(8);
     expect(retried.failure).toBeNull();

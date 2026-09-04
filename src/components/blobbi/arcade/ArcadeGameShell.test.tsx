@@ -83,7 +83,7 @@ describe('rendering position', () => {
     });
 
     // A pointer event anywhere in the shell cannot bubble to the world, because
-    // the shell is not inside it — the portal IS the isolation.
+    // the shell is not inside it, the portal IS the isolation.
     fireEvent.pointerDown(screen.getByRole('dialog'), { bubbles: true });
     fireEvent.pointerDown(screen.getByRole('button', { name: /leave/i }), { bubbles: true });
     expect(worldMoves).toBe(0);
@@ -313,7 +313,7 @@ describe('reduced motion', () => {
   /**
    * The in-frame dialog base carries `motion-reduce:` variants of the same
    * neutralising classes, so a substring match on "zoom-in-100" is always true.
-   * These assert the UNPREFIXED tokens — the ones this component adds — which is
+   * These assert the UNPREFIXED tokens, the ones this component adds, which is
    * what actually differs between the two cases.
    */
   const unprefixed = (className: string) =>

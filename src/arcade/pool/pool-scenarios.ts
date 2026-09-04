@@ -1,5 +1,5 @@
 /**
- * Pool — the manual physics review scenarios.
+ * Pool: the manual physics review scenarios.
  *
  * Fifteen repeatable table layouts, each one a thing the physics has to get
  * right and a thing that is quicker to judge with your eyes than to assert. They
@@ -32,7 +32,7 @@ export interface PoolScenario {
   /**
    * A suggested shot, so a scenario can be replayed identically.
    *
-   * `null` means "aim it yourself" — used by the two scenarios that are about a
+   * `null` means "aim it yourself": used by the two scenarios that are about a
    * table at rest rather than about a shot.
    */
   readonly shot: { readonly angle: number; readonly power: number } | null;
@@ -84,7 +84,7 @@ const SIDE_APPROACH = offsetFrom(SIDE.mouthMid, { x: SIDE.mouthMid.x, y: 60 }, 4
  * A point on the cushion just short of a mouth.
  *
  * `mouthB` of the bottom-right corner is the nose of the bottom-right cushion,
- * so a few units back along the rail from it is solid cushion — the jaw. The
+ * so a few units back along the rail from it is solid cushion, the jaw. The
  * approach angle matters as much as the point: a ball ROLLING ALONG the rail
  * would carry on past and drop in the corner, so these are struck steeply so a
  * graze is a graze.
@@ -187,7 +187,7 @@ export const POOL_SCENARIOS: readonly PoolScenario[] = Object.freeze([
     id: 'rail-past-side',
     label: '11 · Rail run past a side pocket',
     expected:
-      'The ball runs along the cushion, passes the side pocket WITHOUT dropping, and carries on to the far corner (where it may well drop — that part is correct).',
+      'The ball runs along the cushion, passes the side pocket WITHOUT dropping, and carries on to the far corner (where it may well drop; that part is correct).',
     balls: [ball(CUE_BALL, 30, BALL_RADIUS)],
     shot: { angle: 0, power: 0.55 },
   },

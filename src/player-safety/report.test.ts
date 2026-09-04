@@ -124,7 +124,7 @@ describe('what a report captures', () => {
   });
 
   it('keeps the locally rendered meaning alongside it', () => {
-    // The signed event for a structured message is only ids — meaningless to a
+    // The signed event for a structured message is only ids, meaningless to a
     // reviewer. The rendered text is what those ids meant here.
     const built = buildPlayerReport(input({ evidence: evidence() }));
     expect(built.ok && built.report.evidence?.renderedText).toBe('Hi!');

@@ -1,5 +1,5 @@
 /**
- * Air Hockey — the physics, as pure functions over plain numbers.
+ * Air Hockey: the physics, as pure functions over plain numbers.
  *
  * Every function here takes a state and returns a new one. No `Date.now()`, no
  * `Math.random()`, no DOM, no React, no mutation of an argument. That is not
@@ -11,11 +11,11 @@
  *
  * A single step resolves them in exactly this sequence, and the order matters:
  *
- *  1. **Integrate** — position advances by velocity × dt.
- *  2. **Drag** — velocity decays exponentially, framerate-independently.
- *  3. **Walls** — reflect off the four rails, except through a goal mouth.
- *  4. **Mallets** — separate, then transfer momentum.
- *  5. **Clamp** — speed to {@link PUCK_MAX_SPEED}, position into the table.
+ *  1. **Integrate**: position advances by velocity × dt.
+ *  2. **Drag**: velocity decays exponentially, framerate-independently.
+ *  3. **Walls**: reflect off the four rails, except through a goal mouth.
+ *  4. **Mallets**: separate, then transfer momentum.
+ *  5. **Clamp**: speed to {@link PUCK_MAX_SPEED}, position into the table.
  *
  * Walls before mallets, because a puck squeezed between a mallet and a rail must
  * end up outside the mallet and inside the table, not the other way round. The
@@ -29,11 +29,11 @@
  * pins that arithmetic so a future speed increase fails a test rather than
  * producing a puck that occasionally passes through a rail.
  *
- * A MALLET can, because the player's is no longer speed-limited — it is
+ * A MALLET can, because the player's is no longer speed-limited; it is
  * wherever the pointer is, which is the only way direct manipulation feels
  * direct. {@link resolveMalletSwept} covers that by testing the path the mallet
  * travelled rather than only the point it stopped at, and it collapses to the
- * plain discrete test whenever the mallet moved less than the puck's radius —
+ * plain discrete test whenever the mallet moved less than the puck's radius,
  * which is every step of ordinary play, for both sides.
  */
 
@@ -68,8 +68,8 @@ export interface PuckState {
 }
 
 /**
- * A mallet. `vx`/`vy` are DERIVED — the velocity it actually achieved last step
- * — never a thing the caller sets. A strike reads them, so a mallet that was
+ * A mallet. `vx`/`vy` are DERIVED, the velocity it actually achieved last step,
+ * never a thing the caller sets. A strike reads them, so a mallet that was
  * rate-limited hits with the speed it really had rather than the speed the
  * pointer asked for.
  */
@@ -97,7 +97,7 @@ export function clamp(value: number, min: number, max: number): number {
 
 /**
  * Scale a velocity down to `max` if it exceeds it. Direction is preserved
- * exactly, which is why this is a scale and not a per-axis clamp — clamping
+ * exactly, which is why this is a scale and not a per-axis clamp, clamping
  * `vx` and `vy` separately turns a fast diagonal into a different angle.
  */
 export function clampSpeed(vx: number, vy: number, max: number): { vx: number; vy: number } {
@@ -122,7 +122,7 @@ export function floorSpeed(vx: number, vy: number, min: number): { vx: number; v
  * not.
  *
  * Returns `null` for a non-finite coordinate or a position well outside the
- * table — the two shapes an invalid physics state actually takes. The caller
+ * table: the two shapes an invalid physics state actually takes. The caller
  * (the match step) turns a `null` into a fresh serve, so a state that should be
  * impossible costs a point-restart rather than a frozen or exploding game.
  *
@@ -190,7 +190,7 @@ export function isWithinGoalMouth(x: number): boolean {
  *
  * The end rails have a hole in them. Inside {@link isWithinGoalMouth} the puck
  * passes straight through, which is what makes {@link detectGoal} the ONLY
- * thing that decides a goal — there is no second, disagreeing notion of "the
+ * thing that decides a goal; there is no second, disagreeing notion of "the
  * puck reached the end" hidden in here.
  */
 export function resolveWalls(puck: PuckState): WallResolution {
@@ -229,20 +229,20 @@ export interface MalletResolution {
   readonly puck: PuckState;
   /** True when contact happened this step. */
   readonly hit: boolean;
-  /** Closing speed along the contact normal — how hard it was. `0` when no hit. */
+  /** Closing speed along the contact normal, how hard it was. `0` when no hit. */
   readonly impactSpeed: number;
 }
 
 /**
  * Resolve one mallet against the puck: separate first, then transfer momentum.
  *
- * The mallet is treated as INFINITELY heavy — it is attached to a hand, or to an
- * AI that does not care about recoil — so all of the impulse lands on the puck.
+ * The mallet is treated as INFINITELY heavy; it is attached to a hand, or to an
+ * AI that does not care about recoil, so all of the impulse lands on the puck.
  * The strike therefore accounts for all four things a player can feel:
  *
  *  - **contact direction**, through the normal `n`;
  *  - **puck velocity**, because the impulse is computed on the RELATIVE speed;
- *  - **mallet velocity**, for the same reason — driving into a puck adds the
+ *  - **mallet velocity**, for the same reason, driving into a puck adds the
  *    mallet's closing speed twice over at `e = 0.9`, which is what makes a
  *    committed swing feel different from a block;
  *  - **mallet direction**, through {@link MALLET_TANGENT_FRICTION}, so a
@@ -332,13 +332,13 @@ export function resolveMallet(
 const SWEEP_SAMPLE_SPACING = PUCK_RADIUS / 2;
 /**
  * Hard cap on sweep samples. The player's zone is 100 × 80, so its longest
- * possible single-step displacement is about 128 units — 64 samples at 2 units
+ * possible single-step displacement is about 128 units: 64 samples at 2 units
  * apart covers it exactly, and the cap only ever binds on a teleport.
  */
 const MAX_SWEEP_SAMPLES = 64;
 /**
  * Below this displacement the sweep collapses to a single test at the mallet's
- * final position — which is the plain discrete test, unchanged.
+ * final position: which is the plain discrete test, unchanged.
  *
  * Not an optimisation. A mallet that moved less than the puck's radius cannot
  * pass through it, so there is nothing for a sweep to catch; and sampling it
@@ -346,7 +346,7 @@ const MAX_SWEEP_SAMPLES = 64;
  * at the midpoint of the step instead of the end, which both weakened the
  * impulse and left the remaining motion to be applied as a position-only nudge.
  * Because the opponent's mallet is slower it stayed on one sample and the player
- * did not, so the two sides silently stopped playing the same game — the
+ * did not, so the two sides silently stopped playing the same game, the
  * opponent went from losing 6 matches in 6 to winning all of them.
  */
 const SWEEP_DIRECT_LIMIT = PUCK_RADIUS;
@@ -357,7 +357,7 @@ const SWEEP_DIRECT_LIMIT = PUCK_RADIUS;
  *
  * This is what replaced the player mallet's speed limit, and it is a strictly
  * better guarantee. The old rule was "the mallet may not move further than the
- * puck's radius in one step, therefore it cannot pass through it" — true, and it
+ * puck's radius in one step, therefore it cannot pass through it": true, and it
  * cost 117 ms of input lag. This rule is "wherever the mallet went, we check
  * every point it passed through", which permits an instantaneous mallet and
  * still cannot skip a contact.
@@ -365,7 +365,7 @@ const SWEEP_DIRECT_LIMIT = PUCK_RADIUS;
  * Sampling rather than solving a quadratic, deliberately: the samples are two
  * units apart against a four-unit radius, so the discrete test at each sample is
  * exact for the same reason it was exact before, and it reuses
- * {@link resolveMallet} — one tested impulse, not two implementations of one.
+ * {@link resolveMallet}: one tested impulse, not two implementations of one.
  * A mallet that barely moved produces ONE sample at its final position, so a
  * slow mallet and the opponent behave exactly as they did.
  *
@@ -419,7 +419,7 @@ export function resolveMalletSwept(
  * Push the puck clear of a mallet WITHOUT hitting it.
  *
  * Position only: no impulse, no restitution, no velocity change at all. It
- * exists for exactly one moment — the serve — and the distinction matters.
+ * exists for exactly one moment, the serve, and the distinction matters.
  *
  * The puck is served from the centre spot, and the centre spot is a legal place
  * for either mallet's centre to be (the zones meet on the line). A player
@@ -479,7 +479,7 @@ export function clampPuck(puck: PuckState, live: boolean): PuckState {
  * goal is the moment it looks like a goal.
  *
  * Detecting it is all this does. Scoring exactly once is the match state
- * machine's job — it moves to a phase in which the puck is frozen, so this is
+ * machine's job: it moves to a phase in which the puck is frozen, so this is
  * never asked twice about the same event.
  */
 export function detectGoal(puck: PuckState): HockeySide | null {
@@ -495,7 +495,7 @@ export function detectGoal(puck: PuckState): HockeySide | null {
  * Keep a mallet centre inside its own half. The player's cannot cross the line.
  *
  * A non-finite coordinate falls back to the middle of the zone rather than
- * propagating. `clamp` alone would not do it — every comparison against `NaN`
+ * propagating. `clamp` alone would not do it; every comparison against `NaN`
  * is false, so a plain clamp returns the `NaN` untouched and one bad pointer
  * sample poisons a mallet permanently. This is the boundary; it is where that
  * stops.
@@ -516,7 +516,7 @@ export interface MoveMalletOptions {
    * Distance within which the mallet eases in rather than arriving at full
    * speed. Zero disables it.
    *
-   * The player's mallet uses zero — a hand does not decelerate politely, and
+   * The player's mallet uses zero, a hand does not decelerate politely, and
    * pretending it does reads as input lag. The AI uses a non-zero value, which
    * is what stops it vibrating around a target it can never sit exactly on.
    */
@@ -564,7 +564,7 @@ export function moveMalletToward(
 
 /**
  * Put the player's mallet exactly where they asked, and report the velocity
- * that implies — bounded.
+ * that implies: bounded.
  *
  * The counterpart to {@link moveMalletToward}, and deliberately a different
  * function rather than an option on it, because the two answer different

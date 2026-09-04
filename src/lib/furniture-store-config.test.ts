@@ -4,7 +4,7 @@
  * Three kinds of claim, and none of them is a coordinate snapshot:
  *
  *  1. the store POINTS AT its new assets, and the two-sprite storefront it
- *     replaced — facade plus a door overlay that never had a click handler —
+ *     replaced: facade plus a door overlay that never had a click handler,
  *     is gone from the repository and from every config;
  *  2. the walkable floor matches the picture: the aisle is a funnel between two
  *     raised display platforms, the platforms are not floor, and the room is
@@ -59,7 +59,7 @@ function isBlocked(point: Position): boolean {
   );
 }
 
-/** A point the walk boundary does not have to move — i.e. real floor. */
+/** A point the walk boundary does not have to move; i.e. real floor. */
 function onFloor(point: Position, b: Boundary = boundary): boolean {
   const clamped = constrainPosition(point, b);
   return Math.abs(clamped.x - point.x) < 1e-6 && Math.abs(clamped.y - point.y) < 1e-6;
@@ -74,7 +74,7 @@ function standable(point: Position): boolean {
  *
  * Mirrors the movement loop: no pathfinding, one straight line, each step
  * clamped into the boundary and halted the moment it lands in a blocker.
- * `room-routing.test.ts` asks the harder question — whether the shared planner
+ * `room-routing.test.ts` asks the harder question, whether the shared planner
  * finds a way round when this fails.
  */
 function walkable(from: Position, to: Position, steps = 400): boolean {

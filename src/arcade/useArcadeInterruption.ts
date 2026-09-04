@@ -10,7 +10,7 @@
  *  - **`window` blur.** Focus went to another window, a devtools panel, or an OS
  *    dialog. The tab is still "visible", so `visibilitychange` says nothing.
  *
- * ## The two are NOT equally severe — Phase 3 split them
+ * ## The two are NOT equally severe: Phase 3 split them
  *
  * Phase 2 treated both as a pause. Building a real rhythm game on top of this
  * showed they are different events with different consequences, so the hook now
@@ -62,7 +62,7 @@ export function useArcadeInterruption({
   onInterrupt,
 }: UseArcadeInterruptionOptions): void {
   // Read through a ref so a new inline callback each render cannot re-bind the
-  // listeners — re-binding is how duplicate listeners appear.
+  // listeners: re-binding is how duplicate listeners appear.
   const onInterruptRef = useRef(onInterrupt);
   onInterruptRef.current = onInterrupt;
 

@@ -41,7 +41,7 @@ describe('key → action mapping', () => {
     });
   });
 
-  it('ignores modified keys — Cmd+R is a reload, not a lane hit', () => {
+  it('ignores modified keys: Cmd+R is a reload, not a lane hit', () => {
     expect(resolveKeyAction({ key: 'ArrowLeft', metaKey: true }, 'down')).toBeNull();
     expect(resolveKeyAction({ key: 'a', ctrlKey: true }, 'down')).toBeNull();
     expect(resolveKeyAction({ key: 'p', altKey: true }, 'down')).toBeNull();
@@ -72,7 +72,7 @@ describe('default browser behaviour', () => {
     }
   });
 
-  it('never suppresses Escape or Tab — closing and focus must keep working', () => {
+  it('never suppresses Escape or Tab, closing and focus must keep working', () => {
     expect(shouldPreventDefault('Escape')).toBe(false);
     expect(shouldPreventDefault('Tab')).toBe(false);
   });

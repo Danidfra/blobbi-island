@@ -1,5 +1,5 @@
 /**
- * `useArcadeRewardController` — the ONE claim wiring every dedicated machine
+ * `useArcadeRewardController`: the ONE claim wiring every dedicated machine
  * shares.
  *
  * `DanceMachine` originally carried this wiring inline; when Air Hockey and
@@ -11,25 +11,25 @@
  *
  * What it owns, per machine instance:
  *
- *  - **hydration** — on every run-id change, adopt whatever durable claim state
+ *  - **hydration**: on every run-id change, adopt whatever durable claim state
  *    the ledger holds, so an unresolved or confirmed claim survives closing the
  *    shell, remounting, and a refresh;
- *  - **calculation** — resolve the game's PRODUCTION policy and price the
+ *  - **calculation**: resolve the game's PRODUCTION policy and price the
  *    finished result against the canonical Arcade Ticket address. A game with
  *    no active policy calculates to `null` and the results screen offers no
- *    claim — the shared panel renders its unavailable/no-claim state;
- *  - **claim** — the reducer's `claim` event is dispatched BEFORE the awaited
+ *    claim: the shared panel renders its unavailable/no-claim state;
+ *  - **claim**: the reducer's `claim` event is dispatched BEFORE the awaited
  *    publish so the lifecycle's own one-reward-per-run guard engages inside the
  *    same tick as the click, then `claim-succeeded`/`claim-failed` follows the
  *    verified outcome;
- *  - **status check** — read-only reconciliation for an unresolved claim; it
+ *  - **status check**: read-only reconciliation for an unresolved claim; it
  *    can confirm the reward (and then advances the lifecycle exactly as a
  *    successful claim does) but can never publish.
  *
  * What it deliberately does NOT own: the run id (the machine mints it), the
  * result (the game builds it, the reducer keeps it), and the write itself
  * (`useArcadeReward` → `ArcadeRewardWriter`, unchanged). This hook is wiring,
- * not a second boundary — every exactly-once guarantee still lives in
+ * not a second boundary; every exactly-once guarantee still lives in
  * `useArcadeReward` and the claim ledger beneath it.
  */
 
@@ -90,11 +90,11 @@ export function useArcadeRewardController({
     if (!result || !calculation || !calculation.eligible) return;
     if (!canClaimReward(lifecycle)) return;
     // An unresolved claim must never reach `claimReward`, even if some future
-    // control wires itself to this handler. The hook refuses it too — this is
+    // control wires itself to this handler. The hook refuses it too; this is
     // the outer half of the same rule.
     if (rewardPhase === 'unresolved' || rewardPhase === 'checking') return;
     // Into `claiming` FIRST, so the reducer's own one-reward-per-run guard is
-    // engaged before any await — the disabled button is a courtesy, this is the
+    // engaged before any await, the disabled button is a courtesy, this is the
     // guarantee (together with the hook's synchronous lock).
     dispatch({ type: 'claim' });
     const attempt = await claimReward(result, calculation);
@@ -119,7 +119,7 @@ export function useArcadeRewardController({
   }, [result, calculation, reconcileClaim, dispatch, lifecycle.status]);
 
   return {
-    /** The reward hook's rendered state — phase, message, quantity. */
+    /** The reward hook's rendered state, phase, message, quantity. */
     rewardState: reward.state,
     /** Null when the game has no production policy or no result exists yet. */
     calculation,

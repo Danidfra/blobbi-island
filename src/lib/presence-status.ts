@@ -1,10 +1,10 @@
 /**
- * What the player should be told about multiplayer presence — ONE small
+ * What the player should be told about multiplayer presence: ONE small
  * store, written by the presence lifecycle and read by the HUD.
  *
  * Presence is best-effort chrome around the game: the Island is fully
  * playable without it. The only state worth a word to the player is the one
- * they caused and can change — declining to sign presence — and even that is
+ * they caused and can change, declining to sign presence, and even that is
  * said once, quietly, without a kind number, a signer name or a relay in
  * sight.
  */

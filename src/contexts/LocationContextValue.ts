@@ -10,8 +10,8 @@ interface LocationContextType {
    * The resumed actor position for this session's opening location, in internal
    * ground coordinates, or `null` for the scene's canonical spawn.
    *
-   * Non-null ONLY between the bootstrap adoption and the first navigation —
-   * `setCurrentLocation` clears it — so it can place the actor on the first
+   * Non-null ONLY between the bootstrap adoption and the first navigation,
+   * `setCurrentLocation` clears it, so it can place the actor on the first
    * frame without ever competing with normal spawn rules afterwards.
    *
    * Optional so the hand-built context doubles in component tests, which model

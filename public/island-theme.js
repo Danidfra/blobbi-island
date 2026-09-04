@@ -1,5 +1,5 @@
 /*
- * Blobbi Island — pre-paint theme application.
+ * Blobbi Island: pre-paint theme application.
  *
  * Runs as a BLOCKING <script> in <head>, before the stylesheet has painted
  * anything and long before React mounts, so a player on a non-default theme
@@ -9,7 +9,7 @@
  *
  * This file cannot import from `src/lib/island-themes.ts`: it must run before
  * the module graph loads, which is the entire point of it. The duplication is
- * therefore deliberate and it is GUARDED — `src/lib/island-theme.boot.test.ts`
+ * therefore deliberate and it is GUARDED, `src/lib/island-theme.boot.test.ts`
  * parses this file and asserts every palette here matches the registry value
  * for value. A theme added to the registry and not to this file fails the test
  * rather than silently flashing.
@@ -19,7 +19,7 @@
  * Everything this script does is re-done authoritatively by
  * `useApplyIslandTheme` in AppProvider once React mounts. If the script is
  * blocked, throws, or is out of date, the result is a brief flash of the
- * stylesheet's default palette — never a broken or unstyled island. So it is
+ * stylesheet's default palette; never a broken or unstyled island. So it is
  * written to fail silently and never to throw into the page.
  */
 (function () {
@@ -76,7 +76,7 @@
   ];
 
   /*
-   * A theme discovered on a relay cannot be in this table — it did not exist
+   * A theme discovered on a relay cannot be in this table; it did not exist
    * when this file was written. Its palette is cached under
    * `nostr:island-theme-cache` by `island-theme-cache.ts` at the moment the
    * player selects it, precisely so this script can paint it before any
@@ -84,15 +84,15 @@
    *
    * Everything is re-validated here rather than trusted: the entry must name
    * the selected theme, and every one of the sixteen values must be a plain
-   * `h s% l%` triplet. Anything else is ignored and the default paints instead
-   * — this script writes straight into custom properties and has nowhere to
+   * `h s% l%` triplet. Anything else is ignored and the default paints instead,
+   * this script writes straight into custom properties and has nowhere to
    * report a problem to.
    */
   function cachedPalette(id) {
     var entry;
     try {
       // Its OWN try, not the outer one. A corrupt cache entry must cost a
-      // fallback to the default palette, not skip the palette write entirely —
+      // fallback to the default palette, not skip the palette write entirely,
       // which is what happened when this parse threw past the write below.
       var raw = localStorage.getItem('nostr:island-theme-cache');
       if (!raw) return null;
@@ -120,7 +120,7 @@
       if (cfg && typeof cfg.theme === 'string') {
         selectedId = cfg.theme;
         // An id this build does not know (a removed theme, or one of the legacy
-        // "light"/"dark"/"system" values) falls through to the default — the same
+        // "light"/"dark"/"system" values) falls through to the default, the same
         // resolution `resolveIslandThemeOffline` performs at runtime.
         if (THEMES[cfg.theme]) id = cfg.theme;
       }

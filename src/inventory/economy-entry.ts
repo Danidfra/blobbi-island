@@ -1,5 +1,5 @@
 /**
- * Economy entry — the exactly-once initial Coin allocation for Blobbi Island
+ * Economy entry: the exactly-once initial Coin allocation for Blobbi Island
  * economy version 1.
  *
  * ## Product contract (economy reset)
@@ -9,7 +9,7 @@
  * the Island's new economy. Eligibility is independent of: profile existence,
  * Blobbi ownership, adoption, the legacy kind:11125 `coins` value, the current
  * Coin balance, unrelated inventory items, localStorage, and the device.
- * Legacy profile Coins are NEVER read here — or anywhere — for economic
+ * Legacy profile Coins are NEVER read here, or anywhere, for economic
  * decisions.
  *
  * ## The durable marker is the proof
@@ -23,7 +23,7 @@
  * on an authoritative read ⇒ not processed. The current balance is never
  * proof (it legitimately returns to zero after spending); the local Coin-op
  * ledger is an operational journal only (it does not survive a second device
- * or cleared storage — the marker does, because it lives on the relay-hosted
+ * or cleared storage, the marker does, because it lives on the relay-hosted
  * event).
  *
  * Because marker and quantity travel in one replaceable event, a retry after
@@ -34,13 +34,13 @@
  * ## Cross-tab / cross-device convergence (honest limits)
  *
  * Two tabs are serialized by the wallet's queued Web Lock (where Web Locks
- * exist — without them there is NO cross-tab lock, see
+ * exist: without them there is NO cross-tab lock, see
  * `src/lib/cross-tab-op-lock.ts`) and the in-lock `precondition` re-checks the
  * marker on the exact base the event is built from. Two DEVICES are not
  * serialized at all: convergence relies on kind:31633 being addressable
  * (newest event wins), on each device building `own fresh base + 200 + marker`,
  * and on marker reconciliation afterwards. A tested two-device race settles on
- * ONE event carrying one marker and one +200 — never a stable 400 — but a
+ * ONE event carrying one marker and one +200, never a stable 400, but a
  * concurrent UNRELATED mutation from the other device inside the race window
  * can be lost to newest-wins, the same pre-existing lost-update class every
  * inventory write has. Nothing here is server-authoritative exactly-once.
@@ -48,9 +48,9 @@
  * ## Authoritative reads
  *
  * A RESOLVED inventory query is as authoritative as Nostr allows (the relay
- * answered the REQ — see `fetchInventoryWithMeta`). A read that rejects
+ * answered the REQ; see `fetchInventoryWithMeta`). A read that rejects
  * (timeout/abort/error) proves nothing: the service then stays in a
- * checking/failed state and PUBLISHES NOTHING — it never fabricates an empty
+ * checking/failed state and PUBLISHES NOTHING; it never fabricates an empty
  * base from an unanswered read. Residual limitation, stated honestly: Nostr
  * cannot distinguish "the relay holds no event" from "the relay lost the
  * event"; if the relay lost it, a re-grant republishes marker + 200 as the
@@ -93,8 +93,8 @@ export const ISLAND_ALLOCATION_MARKER: readonly [string, string] = [
 ];
 
 /**
- * The ONE stable logical operation identity for this allocation (per pubkey —
- * the ledger namespaces by pubkey; per economy version — the id embeds it).
+ * The ONE stable logical operation identity for this allocation (per pubkey,
+ * the ledger namespaces by pubkey; per economy version, the id embeds it).
  * Never minted randomly: every retry is the SAME logical operation.
  */
 export const ISLAND_ALLOCATION_OP_ID = `initial-allocation:${ISLAND_ECONOMY_ALLOCATION_ID}`;
@@ -107,7 +107,7 @@ export const ISLAND_ALLOCATION_LABEL = 'island-allocation';
 /**
  * Is this tag EXACTLY the v1 allocation marker? Exact matching only: correct
  * name, correct id, arity 2. A tag with extra elements, a different version,
- * or different casing is NOT proof — it is somebody else's (or malformed)
+ * or different casing is NOT proof; it is somebody else's (or malformed)
  * data, preserved opaquely by the lossless builder but never acted on.
  */
 export function isIslandAllocationMarker(tag: readonly string[]): boolean {
@@ -130,7 +130,7 @@ export type EconomyEntryResult =
    * The allocation is the current authoritative state (marker present).
    * `alreadyApplied` distinguishes "found done" from "applied just now";
    * `verified` reports whether a post-publish read confirmed the marker
-   * (balance verification is the wallet's separate read-back concern — a
+   * (balance verification is the wallet's separate read-back concern, a
    * mismatched balance because another legitimate mutation landed later never
    * strands the operation).
    */
@@ -154,7 +154,7 @@ export interface EconomyEntry {
   /**
    * Ensure this account's initial allocation for economy v1: check the marker
    * authoritatively, reconcile any journal leftovers, and apply the atomic
-   * grant if — and only if — the marker is absent. Safe to call repeatedly;
+   * grant if: and only if, the marker is absent. Safe to call repeatedly;
    * `onPhase` reports the transition from checking to actually publishing.
    */
   checkAndApply(onPhase?: (phase: 'checking' | 'applying') => void): Promise<EconomyEntryResult>;
@@ -173,7 +173,7 @@ export function createEconomyEntry(deps: CoinWalletDeps): EconomyEntry {
   };
 
   const appliedResult = (pubkey: string): EconomyEntryResult => {
-    // Journal tidy-up only — the marker is already the proof.
+    // Journal tidy-up only, the marker is already the proof.
     const existing = readCoinOp(pubkey, ISLAND_ALLOCATION_OP_ID);
     if (existing && existing.status !== 'applied') {
       resolveCoinOpByAuthoritativeProof(
@@ -201,7 +201,7 @@ export function createEconomyEntry(deps: CoinWalletDeps): EconomyEntry {
       if (hasIslandAllocationMarker(first.inventory)) return appliedResult(pubkey);
 
       // 2. Journal leftovers. A possibly-published (or even `applied`) record
-      //    with an authoritatively-absent marker is superseded BY THE MARKER —
+      //    with an authoritatively-absent marker is superseded BY THE MARKER,
       //    the journal never determines eligibility. Require a second
       //    confirming read before overriding a record that claims the publish
       //    may have landed.
@@ -214,7 +214,7 @@ export function createEconomyEntry(deps: CoinWalletDeps): EconomyEntry {
       ) {
         const confirm = await readAuthoritative();
         if (!confirm) {
-          // Cannot confirm either way — surface the uncertainty, publish
+          // Cannot confirm either way, surface the uncertainty, publish
           // nothing, never blind-retry.
           return { status: 'ambiguous' };
         }

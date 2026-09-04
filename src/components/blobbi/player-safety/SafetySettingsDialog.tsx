@@ -1,5 +1,5 @@
 /**
- * Settings › Safety — the list of people you have muted or blocked, and the way
+ * Settings › Safety, the list of people you have muted or blocked, and the way
  * to undo it.
  *
  * ## Why this is the whole surface
@@ -7,13 +7,13 @@
  * Block has to be reversible somewhere that is not "find them again in the
  * world", because the entire point is that you can no longer find them in the
  * world. That is the only requirement this screen has, and it is deliberately
- * not the beginning of a Family Settings experience — no profile selector, no
+ * not the beginning of a Family Settings experience; no profile selector, no
  * PIN, no age gate. Those are their own phase.
  *
  * ## Players are named by their key, not by their Blobbi
  *
  * A Blobbi name is free text its owner chose. Rendering it here would mean a
- * list built to stop showing you someone's words shows you their words — and
+ * list built to stop showing you someone's words shows you their words, and
  * a blocked player who renames themselves could write a message into this
  * screen. So each row is an abbreviated npub: stable, unchosen, and incapable of
  * saying anything. See `player-label.ts`.
@@ -87,7 +87,7 @@ export function SafetySettingsDialog({ open, onOpenChange }: SafetySettingsDialo
   const blocked = entries.filter((entry) => entry.blocked);
   // Blocked players are listed once, under Blocked. A player who is both would
   // otherwise appear twice with two buttons, and unmuting them would look like
-  // it had done nothing — because blocking already silences them.
+  // it had done nothing, because blocking already silences them.
   const muted = entries.filter((entry) => entry.muted && !entry.blocked);
 
   return (

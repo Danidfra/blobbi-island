@@ -1,8 +1,8 @@
 /**
  * The My Blobbi window's SIZE contract after the containment pass.
  *
- * The window used to be `size="full"` alone — `calc(100% - 1.5rem)` of the
- * stage host in both axes — so it grew with the game frame and, on a large
+ * The window used to be `size="full"` alone, `calc(100% - 1.5rem)` of the
+ * stage host in both axes, so it grew with the game frame and, on a large
  * desktop, swallowed almost the whole game window. These tests pin the new
  * deal:
  *
@@ -10,11 +10,11 @@
  *      from the Blobbi tab's content, and stops growing there;
  *   2. below the ideal it still shrinks responsively (`min()` against the
  *      host), and the mobile sheet keeps its own sizing (`md:` scoping);
- *   3. all three tabs share the ONE outer contract — nothing sizes per tab;
+ *   3. all three tabs share the ONE outer contract; nothing sizes per tab;
  *   4. the stage has its own stop (`max-h-[25rem]`) so a taller frame no
  *      longer stretches the 2:3 portrait down indefinitely.
  *
- * jsdom has no layout, so — like the rest of this window's shape tests —
+ * jsdom has no layout, so, like the rest of this window's shape tests,
  * these are source contracts.
  */
 
@@ -46,14 +46,14 @@ describe('the window has an ideal size, and stops there', () => {
     // bottom sheet whose 92dvh sizing must stay untouched.
     expect(read('src/hooks/useIsMobile.tsx')).toMatch(/MOBILE_BREAKPOINT = 768/);
     expect(blobbiModal).toMatch(/92dvh/);
-    // The caps carry the md: prefix — never a bare w-/h- that would leak
+    // The caps carry the md: prefix; never a bare w-/h- that would leak
     // into the sheet.
     expect(modal).not.toMatch(/className="w-\[min\(calc\(100%-1\.5rem\)/);
   });
 
   it('shares the one outer contract across Blobbi / Wardrobe / Items', () => {
     // The sizing className is a STATIC literal on the single BlobbiModal that
-    // hosts the tabs — no template, no conditional, nothing keyed on the
+    // hosts the tabs; no template, no conditional, nothing keyed on the
     // selected tab. Switching tabs cannot move or resize the window.
     const sized = modal.match(/className="md:w-\[min[^"]*"/g) ?? [];
     expect(sized).toHaveLength(1);
@@ -64,7 +64,7 @@ describe('the window has an ideal size, and stops there', () => {
 describe('the stage has its own stop', () => {
   it('caps the stage height at 25rem while keeping it height-driven', () => {
     // Still `h-full` (grows with the modal, ratio intact) but never past
-    // 400px — 1.5 × the width the stable `lg:w-[30%]` column gives it at the
+    // 400px: 1.5 × the width the stable `lg:w-[30%]` column gives it at the
     // window's 58rem ideal, so at full size the 2:3 portrait is exactly as
     // wide as its column.
     expect(modal).toMatch(

@@ -92,7 +92,7 @@ function asEvent(kind: number, tags: string[][], content = ''): NostrEvent {
 
 // ─── Kind 31124: mergePetStateTags ────────────────────────────────────────────
 
-describe('mergePetStateTags — canonical alignment', () => {
+describe('mergePetStateTags: canonical alignment', () => {
   it('emits canonical b, state, and last_interaction when the source lacks them', () => {
     const pet = makePet([]); // no b / state / last_interaction in source
     const tags = mergePetStateTags(pet);
@@ -188,7 +188,7 @@ describe('mergePetStateTags — canonical alignment', () => {
 
 // ─── Kind 11125: mergeOwnerProfileTags ─────────────────────────────────────────
 
-describe('mergeOwnerProfileTags — canonical alignment', () => {
+describe('mergeOwnerProfileTags: canonical alignment', () => {
   it('emits canonical b when the source lacks it', () => {
     const profile = makeProfile([]);
     const tags = mergeOwnerProfileTags(profile);
@@ -205,7 +205,7 @@ describe('mergeOwnerProfileTags — canonical alignment', () => {
 
   it('carries a legacy inv tag through verbatim, without standardizing it', () => {
     // Same reasoning as `equip` above: accessory ownership moved to kind:31633,
-    // and this client no longer manages `inv` — but a player's existing tags
+    // and this client no longer manages `inv`: but a player's existing tags
     // are their data and survive a republish untouched, exactly like `storage`.
     const invTag = ['inv', 'hat_01', '3'];
     const profile = makeProfile([invTag]);

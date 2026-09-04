@@ -4,7 +4,7 @@ _Established 2026-07-31. The audit that authorised this design, including the
 alternatives that were rejected and why, is
 [`blobbi-visual-effects-audit.md`](./blobbi-visual-effects-audit.md)._
 
-Twelve renderer-local visual effects — auras, particles, fog, body overlays —
+Twelve renderer-local visual effects, auras, particles, fog, body overlays,
 that a Blobbi can be drawn with, implemented entirely inside `@blobbi/react`
 and addressed by a plain effect id.
 
@@ -14,7 +14,7 @@ and addressed by a plain effect id.
 
 A visual effect will be earned by owning a normal **kind:31632 Game Item
 Definition**. Nothing about that is special: it is an item like any other, and
-its definition may describe the effect in metadata —
+its definition may describe the effect in metadata,
 
 ```json
 {
@@ -22,9 +22,9 @@ its definition may describe the effect in metadata —
   "metadata": { "stackable": false, "effectId": "mystic-fog" },
   "visual":   { "kind": "blobbi-effect", "effect": "mystic-fog" }
 }
-```
+```,
 
-— but **none of that is what makes the effect run.** The event contributes
+but **none of that is what makes the effect run.** The event contributes
 identity and nothing else.
 
 ## 2. Why the effect code is local, not in the event
@@ -39,7 +39,7 @@ remote CSS, event-provided HTML, event-provided SVG markup, arbitrary component
 names, arbitrary class names, arbitrary animation expressions.
 
 The animation, particle geometry, timing, palettes and CSS all live in this
-repository. What crosses the boundary is a string from a closed set of twelve —
+repository. What crosses the boundary is a string from a closed set of twelve,
 and even that string is not read from the event (§3).
 
 ## 3. Trusted item mapping
@@ -65,7 +65,7 @@ already documents the same rule.
 
 **Entitlement is not activation.** Resolving an address to an effect id says
 only which effect that item grants. Ownership (kind:31633) and equipped state
-(kind:31634) are separate questions — see §14.
+(kind:31634) are separate questions; see §14.
 
 ## 4. The renderer API
 
@@ -93,11 +93,11 @@ Guarantees, each asserted by a test:
 | Serializable | Plain JSON in, plain JSON out. No component, class name, CSS or callback is accepted. |
 | Unknown ids | Ignored silently. Never rendered as "something". |
 | Duplicates | First occurrence of an id wins, including its intensity. |
-| Intensity | Clamped to 0…1.5; `NaN`/`Infinity`/absent → 1. Scales **opacity only** — never count, size or speed. |
+| Intensity | Clamped to 0…1.5; `NaN`/`Infinity`/absent → 1. Scales **opacity only**: never count, size or speed. |
 | Slot conflicts | One effect per slot; the first competitor in the supplied order wins (§5). |
 | Order | The result is always in canonical slot order, never input order. |
 | Determinism | No `Math.random()`, no `Date.now()`. Same props → same markup, forever. |
-| Malformed input | A non-array, a hole, a string, an object with no `id` — nothing throws, nothing renders. |
+| Malformed input | A non-array, a hole, a string, an object with no `id`: nothing throws, nothing renders. |
 | Empty | `undefined` / `[]` / all-unknown produces **byte-identical markup to the pre-Phase-8 renderer**. |
 
 Normalization happens *inside* the renderer (unlike accessories, which arrive
@@ -122,7 +122,7 @@ Four slots, one occupant each:
 | `body-overlay` | Pixel Glitch, Electric Charge |
 
 **Winner rule: first of its slot in the supplied order.** Chosen over a rarity
-or priority table because it is a rule the caller can see and control — "why is
+or priority table because it is a rule the caller can see and control, "why is
 my aura not showing" has an answer the caller can act on. Frost Breath is
 `ground-local` rather than ambient so that it composes with sparkles and bubbles
 instead of competing with them.
@@ -135,7 +135,7 @@ Asking for all twelve draws four. It never draws twelve heavy effects at once.
   fx: behind          ← auras, rear fog, rear particles
   accessories: behind
   ── BLOBBI BODY ──
-  fx: mid             ← body overlays (glitch, arcs) — over the body, under hats
+  fx: mid             ← body overlays (glitch, arcs): over the body, under hats
   accessories: front
   fx: front           ← foreground particles, foreground fog
 ```
@@ -145,7 +145,7 @@ veil, which is what gives it depth.
 
 **The canonical renderer box is unchanged.** Effects may overflow it visually
 (an aura is up to 1.7× the body), and the renderer has always clipped nothing.
-What they may never do — all asserted:
+What they may never do; all asserted:
 
 - change any layout measurement (every element is `position: absolute`);
 - move the ground anchor, shadow, depth scale or actor position (all owned by
@@ -156,7 +156,7 @@ What they may never do — all asserted:
 
 ## 7. Deterministic particles
 
-Every varying number comes from `unitFor(seed, index, field)` — a pure FNV-1a
+Every varying number comes from `unitFor(seed, index, field)`: a pure FNV-1a
 hash, in `effects/deterministic.ts`. The seed is `` `${instanceId}:${effectId}` ``.
 
 Consequences:
@@ -169,28 +169,28 @@ Consequences:
 Each particle is **two elements**: a box-sized `.blobbi-fx-track` that carries
 travel, containing a small `.blobbi-fx-piece` that animates in place. The
 wrapper exists because CSS percentage translations resolve against the
-element's own size — a 3 %-wide mote asked to `translateY(-45%)` would move by
+element's own size: a 3 %-wide mote asked to `translateY(-45%)` would move by
 45 % of 3 %. On a box-sized track, `-45%` means 45 % of the box.
 
 The particle system uses no SVG element and therefore mints no id. The one
 exception is the lightning renderer, which needs SVG paint servers (a gradient,
-a glow filter) — and those follow the body SVG's own rule: every id is
+a glow filter): and those follow the body SVG's own rule: every id is
 namespaced by the renderer's `instanceId`, so two instances on one page share
 nothing. Asserted by test in both directions.
 
 ## 8. Reduced motion
 
 Implemented as a `@media (prefers-reduced-motion: reduce)` block inside the
-package's own stylesheet — **no hook, no JavaScript, no consumer wiring**. It
+package's own stylesheet, **no hook, no JavaScript, no consumer wiring**. It
 switches every animation off, and only animation: a *static* transform is
-placement, not motion (a lightning segment's fixed tilt), so it survives — the
+placement, not motion (a lightning segment's fixed tilt), so it survives, the
 resting composition keeps the shape it was designed to be. Animated transforms
 need no separate kill switch; with `animation: none` they cease to exist.
 
 That works only because of the opacity protocol: a piece's resting `opacity` is
 `var(--fx-o)` (its authored opacity × the caller's intensity), and every piece
 keyframe expresses opacity as `var(--fx-o)` or a fraction of it. With animations
-off, each piece falls back to its authored opacity at its authored position — a
+off, each piece falls back to its authored opacity at its authored position, a
 **still, legible version of the effect, not an invisible one.** Every preset is
 authored so that its unanimated state is a composition worth looking at.
 
@@ -202,11 +202,11 @@ Markup is identical in both modes, so the determinism guarantees still hold.
 | --- | --- |
 | Pieces per effect | ≤ 18 (heaviest: Pixel Glitch, 14; Electric Charge adds 9 SVG strike elements) |
 | Pieces across all four slots | ≤ 48 (worst case: 42) |
-| Minimum animation cycle | 1.2 s — no decoration may read as flicker |
+| Minimum animation cycle | 1.2 s; no decoration may read as flicker |
 | Animated properties | `transform`, `opacity`, and (lightning only) `stroke-dashoffset` |
 | Blur radius | ≤ 4 px CSS (fog uses 3 px); the lightning glow is a bounded two-pass SVG `feGaussianBlur` (σ 1.2/4 box units) |
-| Timers / frame loops | **none** — no `setInterval`, `setTimeout`, `requestAnimationFrame` |
-| React state / effects / refs | **none** — the walker is a pure function of props |
+| Timers / frame loops | **none**: no `setInterval`, `setTimeout`, `requestAnimationFrame` |
+| React state / effects / refs | **none**: the walker is a pure function of props |
 | DOM measurement | **none** |
 | Canvas | not used; CSS + `clip-path` + one SVG stroke renderer proved sufficient |
 
@@ -237,38 +237,38 @@ emitted.
 | Void Whispers | `void-whispers` | aura | legendary | `blobbi:effect:void-whispers` |
 | Rainbow Dream | `rainbow-dream` | aura | mythic | `blobbi:effect:rainbow-dream` |
 
-Rarity and `d` live on the **Island** side (`official-visual-effect-items.ts`) —
+Rarity and `d` live on the **Island** side (`official-visual-effect-items.ts`),
 they are economy and protocol facts. The package knows only id, slot, display
 name and description.
 
-**Golden Sparkles** — golden four-point sparkles, rear ones larger than front,
+**Golden Sparkles**: golden four-point sparkles, rear ones larger than front,
 slow upward drift with a lateral sway, staggered twinkle. Elegant, not noisy.
 
-**Bubble Bliss** — translucent bubbles with a rim and an off-centre highlight,
+**Bubble Bliss**: translucent bubbles with a rim and an off-centre highlight,
 several fixed sizes, vertical rise with sway, fading out at the top. No liquid
 simulation.
 
-**Love Burst** — small gradient hearts, front-weighted (6 front, 2 rear). The
+**Love Burst**: small gradient hearts, front-weighted (6 front, 2 rear). The
 "intermittent bursts" impression comes from a wide deterministic delay spread,
 not from a timer, and never becomes a dense cloud.
 
-**Firefly Friends** — warm yellow-green glow dots with a hot white core, carried
+**Firefly Friends**: warm yellow-green glow dots with a hot white core, carried
 on two counter-rotating orbits, blinking independently. The dim phase is a fifth
 of full rather than off, so they stay readable on bright backgrounds.
 
-**Mystic Fog** — violet mist in two coordinated layers: a rear bank around the
+**Mystic Fog**: violet mist in two coordinated layers: a rear bank around the
 lower body and a thinner, fainter foreground veil crossing the feet. Slow
-lateral drift, 3 px blur — never a large blur that bleeds into nearby UI.
+lateral drift, 3 px blur; never a large blur that bleeds into nearby UI.
 
-**Frost Breath** — pale cyan vapour pooling at the feet plus six-point crystals
+**Frost Breath**: pale cyan vapour pooling at the feet plus six-point crystals
 that **settle downward**. Falling rather than rising is what keeps it from
 reading as room weather.
 
-**Pixel Glitch** — flat cyan/magenta/yellow squares on the `mid` layer, stepped
+**Pixel Glitch**: flat cyan/magenta/yellow squares on the `mid` layer, stepped
 (`steps(1, end)`) displacement so fragments jump rather than slide. The body is
 never transformed or filtered: silhouette, face and hat stay readable.
 
-**Electric Charge** — two real lightning bolts flanking the body, drawn as SVG
+**Electric Charge**: two real lightning bolts flanking the body, drawn as SVG
 strokes (`LightningEffect.tsx`): a blue→gold→white gradient outer channel with
 a pure-white core down the same path, round joins, thin electric-blue branches
 forking outward, a radial impact glow pooling at each origin, and a two-pass
@@ -277,28 +277,28 @@ feet and DRAWS itself upward via `stroke-dashoffset` (`pathLength="100"`) in
 ~180 ms, flickers like a real strike (1 → 0.3 → 1 → out over ~320 ms), and
 extinguishes; the two bolts alternate half a cycle apart on one shared 2.8 s
 cycle, with origin and tip sparks (ordinary catalog pieces) popping on the same
-clock. Exact hand-authored geometry — structure, not scatter — with only a
+clock. Exact hand-authored geometry, structure, not scatter, with only a
 small seeded per-instance jitter on branch timing. Local; no full-screen
 flash.
 
-**Celestial Aura** — a slow-pulsing blue-violet halo behind the body with tiny
+**Celestial Aura**: a slow-pulsing blue-violet halo behind the body with tiny
 stars on two counter-rotating orbits. Premium but readable.
 
-**Solar Radiance** — a slowly rotating masked conic ray disc plus a warm halo
+**Solar Radiance**: a slowly rotating masked conic ray disc plus a warm halo
 and rising motes. Distinct from Golden Sparkles: a structured light source
 rather than discrete twinkles.
 
-**Void Whispers** — a dark violet halo with pale-rimmed rings and motes drawn
+**Void Whispers**: a dark violet halo with pale-rimmed rings and motes drawn
 inward and extinguished. The rings carry the *light* colour deliberately, so it
 stays legible in the mine and under the night grade.
 
-**Rainbow Dream** — a masked pastel conic ribbon rotating slowly in place, a
+**Rainbow Dream**: a masked pastel conic ribbon rotating slowly in place, a
 soft halo, and pastel sparkles. Colour shifts by **rotation**, never by
 `hue-rotate`: no strobe.
 
 ## 11. Representative item images
 
-Each effect item will carry a normal kind:31632 primary image — an object that
+Each effect item will carry a normal kind:31632 primary image, an object that
 *represents* the effect, not a still of it:
 
 golden star token · bubble vial · heart charm · lantern jar · violet mist bottle
@@ -312,12 +312,12 @@ phase.
 
 ## 12. Development preview
 
-`/dev/blobbi-effects` — dev-only, excluded from production builds exactly like
+`/dev/blobbi-effects`: dev-only, excluded from production builds exactly like
 `/dev/arcade`, `/dev/theater`, `/dev/rooms` and `/dev/equipment`.
 
 It drives `BlobbiRendererView` **directly**: no login, no signer, no relay, no
 query client, no inventory, no equip state. If drawing an effect ever needed any
-of those, the page would stop rendering — which is the point of building it that
+of those, the page would stop rendering, which is the point of building it that
 way.
 
 Provides: all twelve as cards (name, id, rarity, slot, description, planned `d`
@@ -331,7 +331,7 @@ different orders.
 It publishes nothing, mutates nothing, grants nothing, and never touches the
 player's Blobbi.
 
-## 13. Non-goals — explicitly NOT in this phase
+## 13. Non-goals: explicitly NOT in this phase
 
 Inventory ownership · kind:31634 publication · persistent activation · prize
 granting · Arcade Ticket spending · remote effect synchronisation · effect item
@@ -342,14 +342,14 @@ bodies.
 
 `CurrentBlobbiDisplay` was deliberately **not** given an effect override in
 this phase. (Phase 9 later added `effectsOverride` alongside the activation
-path — see `blobbi-effect-activation.md` — with the same ownership semantics
+path: see `blobbi-effect-activation.md`, with the same ownership semantics
 as `accessoryOverride`.)
 
 ## 14. The activation path (implemented in Phase 9)
 
 This section was written when activation was future work. It is now
-implemented — `docs/blobbi-effect-activation.md` is the authoritative
-description — and landed in almost exactly this shape:
+implemented, `docs/blobbi-effect-activation.md` is the authoritative
+description: and landed in almost exactly this shape:
 
 ```
 kind:31634 placement (equipped)  →  entry.item is an ITEM ADDRESS
@@ -362,12 +362,12 @@ visualEffectForItemAddress(address)  →  BlobbiVisualEffectId | null
 BlobbiRendererView effects={[{ id }]}
 ```
 
-Every gate an effect needs — is the author allowed to dress this Blobbi, does
-the player own the item, is the issuer trusted, does it fit this form — is a
+Every gate an effect needs, is the author allowed to dress this Blobbi, does
+the player own the item, is the issuer trusted, does it fit this form, is a
 gate `decidePlacementEntry` already answers for cosmetics. Phase 9 gave
 placement a slot vocabulary that includes the effect slots and put the effect
 gates in a PURE resolver (`src/effects/active-effects.ts`) beside the wearable
-policy, keyed on `resolveOfficialVisualEffectItem` — the same full-address
+policy, keyed on `resolveOfficialVisualEffectItem`: the same full-address
 trust rule this section described.
 
 ---

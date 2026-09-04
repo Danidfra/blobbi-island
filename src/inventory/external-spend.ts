@@ -1,11 +1,11 @@
 /**
- * Blobbi Island — building, signing and ESTABLISHING a kind:1416 Game
+ * Blobbi Island: building, signing and ESTABLISHING a kind:1416 Game
  * Inventory Spend against an inventory another game owns.
  *
  * A spend is the one thing Island writes about a foreign inventory. It is
  * player-signed, immutable, names the FULL inventory and item addresses, and
  * debits exactly one item. Island never replaces the snapshot and never
- * publishes the kind:1417 manifest that settles the spend — the owner does,
+ * publishes the kind:1417 manifest that settles the spend, the owner does,
  * on its next write. Spec: `docs/1416-1417-game-inventory-spend.md` in
  * `@nostr-games/inventory`.
  *
@@ -100,7 +100,7 @@ export function mintSpendNonce(): string {
  *
  * The signer IS the authority: a spend is valid only when `event.pubkey`
  * equals the owner inside the inventory address, and the package parser
- * rejects anything else. The check here is defence in depth — a caller that
+ * rejects anything else. The check here is defence in depth, a caller that
  * hands a stranger's inventory to the player's signer gets an error before
  * the player is asked to sign a debit that could never apply.
  */

@@ -15,7 +15,7 @@
 
     /* No `paths`, no `baseUrl`: package sources resolve by relative path only.
        An `@/`-style alias here would be a silent coupling to whatever host
-       happens to define it — `package-purity.test.ts` fails the build if one
+       happens to define it, `package-purity.test.ts` fails the build if one
        ever appears in this tree. */
     "types": []
   },

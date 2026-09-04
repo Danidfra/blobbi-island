@@ -1,5 +1,5 @@
 /**
- * Development/test accessory fixtures — THREE tiny local SVGs and the plain
+ * Development/test accessory fixtures: THREE tiny local SVGs and the plain
  * data that places them.
  *
  * These exist because verifying the renderer's accessory pipeline should not
@@ -13,8 +13,8 @@
  *
  * They are real IMAGE files rather than emoji or text on purpose: the renderer
  * paints accessories through `<img src>`, so an image fixture exercises the
- * production path — the candidate-source list, the `onError` fallback walk, the
- * transform stack — where a text glyph would exercise none of it.
+ * production path: the candidate-source list, the `onError` fallback walk, the
+ * transform stack: where a text glyph would exercise none of it.
  *
  * Between them the three cover every rendering behavior worth checking:
  *
@@ -80,7 +80,7 @@ export const FIXTURE_ACCESSORIES: readonly AccessoryPlacementInput[] = [
 
 /**
  * A fixture whose primary URL is guaranteed to fail, followed by one that
- * works — for exercising the renderer's candidate-source fallback walk.
+ * works: for exercising the renderer's candidate-source fallback walk.
  */
 export const FIXTURE_BROKEN_PRIMARY: AccessoryPlacementInput = {
   ...FIXTURE_STAR_BADGE,

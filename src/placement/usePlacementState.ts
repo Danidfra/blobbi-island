@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — kind:31634 equipment state: read model + hook.
+ * Blobbi Island: kind:31634 equipment state: read model + hook.
  *
  * Mirrors the kind:31633 read path (`useIslandInventory`) deliberately: same
  * newest-valid-event selection, same "empty state when nothing exists", same
@@ -33,7 +33,7 @@ import { ISLAND_PLACEMENT_REFERENCE } from './render-model';
 
 /** A parsed placement document plus the parse warnings that produced it. */
 export interface PlacementState {
-  /** The parsed document. Never `null` — an absent event yields an empty one. */
+  /** The parsed document. Never `null`: an absent event yields an empty one. */
   placement: GameItemPlacement;
   /**
    * Non-fatal parse warnings (stale item tags, duplicate slots, unknown modes…).
@@ -102,7 +102,7 @@ export function buildEmptyPlacement(
  *
  * Newest-valid-by-`created_at`, exactly like the inventory read: relays may
  * return events out of order, and an older event that happens to arrive last
- * must not win. `revision` is NOT used to pick a winner here — it is advisory
+ * must not win. `revision` is NOT used to pick a winner here; it is advisory
  * and a hostile or buggy publisher controls it; addressable resolution is the
  * protocol's answer and `compareGameItemPlacementRevisions` is only used to
  * detect lost updates during a write.

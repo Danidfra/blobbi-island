@@ -7,14 +7,14 @@ interface FullscreenExitButtonProps {
 }
 
 /**
- * FullscreenExitButton — a small cozy control overlaid inside the canvas while
+ * FullscreenExitButton: a small cozy control overlaid inside the canvas while
  * desktop fullscreen is active.
  *
  * In fullscreen the shell header is hidden, so this gives an obvious clickable
  * way out (Esc still works natively). Intentionally subtle: top-LEFT, small,
  * semi-translucent until hover. Placed on the left so it never collides with the
  * account/menu control, which lives top-right inside the HUD. Only rendered for
- * desktop fullscreen — normal mobile-landscape immersive mode does not show it.
+ * desktop fullscreen: normal mobile-landscape immersive mode does not show it.
  *
  * Carries `data-block-move` so tapping it never triggers world click-to-move.
  */

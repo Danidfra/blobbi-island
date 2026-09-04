@@ -6,8 +6,8 @@
  *   RESULT   the signed id and a per-relay verdict that stays on screen
  *
  * The step that matters is the first one. An addressable update does not edit
- * an event — it publishes a new one that supersedes the old one at the same
- * address — and the difference between "creates a new item" and "replaces the
+ * an event: it publishes a new one that supersedes the old one at the same
+ * address: and the difference between "creates a new item" and "replaces the
  * item you already published" is one character in a `d` tag. This dialog says
  * which of the two is about to happen, in words, before anything is signed.
  *
@@ -173,7 +173,7 @@ export function PublishReviewDialog({
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     <p className="mb-1 font-medium">
-                      {warningCount} warning(s) — none of them block publishing.
+                      {warningCount} warning(s): none of them block publishing.
                     </p>
                     <ul className="list-inside list-disc space-y-0.5">
                       {[...validation.protocol, ...validation.image, ...validation.authoring]
@@ -243,7 +243,7 @@ function PublishOutcome({ result }: { result: PublishItemDefinitionResult }) {
         <p className="text-xs">
           {result.reachedAnyRelay
             ? `Accepted by ${result.acceptedRelays.length} of ${result.outcomes.length} relay(s).`
-            : 'The event was signed but no relay accepted it. It exists locally only — try again.'}
+            : 'The event was signed but no relay accepted it. It exists locally only; try again.'}
         </p>
       </div>
 

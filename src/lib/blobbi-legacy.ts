@@ -3,7 +3,7 @@
  *
  * Legacy Blobbis predate the current data format. They frequently lack proper
  * names (falling back to raw IDs/codes) and don't carry the identity metadata
- * the modern game relies on. We never delete or mutate these events — we simply
+ * the modern game relies on. We never delete or mutate these events; we simply
  * exclude them from the collection UI so players only see Blobbis the modern
  * island can render correctly.
  *
@@ -12,8 +12,8 @@
  *      (e.g. "blobbi-feb88e80a63d-f249499cc5"); and
  *   2. it carries a `seed` tag (core identity metadata of modern Blobbis).
  *
- * Anything else — a non-conforming `d` tag, a missing `seed`, or the old
- * `client=blobbi`-only legacy events without a seed — is treated as legacy.
+ * Anything else: a non-conforming `d` tag, a missing `seed`, or the old
+ * `client=blobbi`-only legacy events without a seed, is treated as legacy.
  *
  * Note: the modern app's own publisher also adds `["client", "blobbi"]`, so a
  * bare `client=blobbi` value is NOT a reliable legacy signal on its own. The
@@ -57,7 +57,7 @@ export function isLegacyBlobbi(blobbi: Pick<Blobbi, "id" | "rawTags">): boolean 
  *
  * The authoritative source is the modern `["name", "..."]` event tag, read
  * straight from `rawTags`. We read it directly here because the parser builds
- * `blobbi.name` as `nameFromDTag(d) || name-tag || id` — the d-tag-derived value
+ * `blobbi.name` as `nameFromDTag(d) || name-tag || id`: the d-tag-derived value
  * comes FIRST, so for modern Blobbis (whose `d` is always `blobbi-<seg>-<seg>`)
  * the real `name` tag is shadowed by an id-like string. This helper restores the
  * intended priority for display without changing the parser/data model.
@@ -75,7 +75,7 @@ export function getBlobbiDisplayName(
   const nameTag = getTagValue(blobbi.rawTags, "name")?.trim();
   if (nameTag) return nameTag;
 
-  // 2. Parsed `blobbi.name`, but only if it's a genuine name — not the raw id
+  // 2. Parsed `blobbi.name`, but only if it's a genuine name; not the raw id
   //    and not the d-tag-derived placeholder the parser prepends.
   const dDerived = nameFromDTag(blobbi.id) ?? displayNameFromId(blobbi.id);
   const parsed = blobbi.name?.trim();

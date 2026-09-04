@@ -1,5 +1,5 @@
 /**
- * Blobbi Island — TRUSTED visual-effect item registry (typed projection).
+ * Blobbi Island: TRUSTED visual-effect item registry (typed projection).
  *
  * `@blobbi/react` knows how to draw twelve effects, named by id. This module is
  * the only place that says which ITEM entitles a Blobbi to one of them, and it
@@ -13,14 +13,14 @@
  * or if anything read `visual.effect` off a fetched event, that copy would
  * light up a legendary aura for free. It is keyed by address, and the address
  * is BUILT from {@link OFFICIAL_ITEM_ISSUER_PUBKEY} rather than accepted from
- * anywhere — so there is no input by which a lookup can be made to succeed for
+ * anywhere: so there is no input by which a lookup can be made to succeed for
  * a stranger's item.
  *
  * ## Where the data lives
  *
  * Since Phase 9 the raw table is part of the canonical protocol registry
  * (`OFFICIAL_EFFECT_ITEM_DEFINITIONS` in `src/protocol/event-registry.ts`),
- * next to every other official kind:31632 identity, as plain strings — that
+ * next to every other official kind:31632 identity, as plain strings; that
  * module must not depend on the renderer package. THIS module is the typed
  * view the activation path consumes: it narrows `effectId` to
  * {@link BlobbiVisualEffectId} and `effectSlot` to {@link BlobbiEffectSlot},
@@ -28,7 +28,7 @@
  * implements ({@link validateOfficialVisualEffectRegistry}). A typo in the
  * canonical table is a build/test failure, never a silently dead item.
  *
- * ## What identity is — and is not
+ * ## What identity is, and is not
  *
  * The registry stores no event ids and no signatures. A kind:31632 definition
  * is addressable: the issuer will republish it (new event id, same address)
@@ -75,7 +75,7 @@ export interface OfficialVisualEffectItem {
   effectId: BlobbiVisualEffectId;
   /**
    * The ONLY placement slot this item may be equipped into. Always equal to
-   * the renderer's own slot for the effect — enforced at load and in tests.
+   * the renderer's own slot for the effect, enforced at load and in tests.
    */
   effectSlot: BlobbiEffectSlot;
   /** Blobbi forms the effect may be active on. Never empty. */
@@ -86,7 +86,7 @@ export interface OfficialVisualEffectItem {
   /** Emoji fallback; a fetched definition always wins. */
   symbol: string;
   /**
-   * Whether the published definition carries the `arcade-prize` topic —
+   * Whether the published definition carries the `arcade-prize` topic,
    * acquisition metadata only, never an activation input.
    */
   arcadePrize: boolean;
@@ -94,7 +94,7 @@ export interface OfficialVisualEffectItem {
 
 /** An effect item with its canonical address derived from issuer + `d`. */
 export interface AddressedVisualEffectItem extends OfficialVisualEffectItem {
-  /** `31632:<official issuer>:<d>`, derived — never hardcoded, never supplied. */
+  /** `31632:<official issuer>:<d>`, derived; never hardcoded, never supplied. */
   address: string;
 }
 
@@ -221,13 +221,13 @@ const byAddress = new Map(
 /**
  * Resolve an ITEM ADDRESS to its official effect registration, or `null`.
  *
- * `null` for every address this repository has not declared official —
+ * `null` for every address this repository has not declared official,
  * including `31632:<stranger>:blobbi:effect:celestial-aura`, which differs from
  * the official item only in its author and is therefore a different item.
  *
  * Entitlement is not activation: a caller that has a registration still has to
  * establish ownership (kind:31633), an equipped placement (kind:31634) and a
- * compatible form before drawing anything — that is
+ * compatible form before drawing anything; that is
  * `resolveActiveBlobbiEffects` in `active-effects.ts`.
  */
 export function resolveOfficialVisualEffectItem(
