@@ -1,51 +1,28 @@
-const CACHE_NAME = 'blobbi-island-v2'; // bump version when changing cache strategy
-const urlsToCache = [
-  '/',
-  '/assets/world/map/blobbi-island.png',
-  '/manifest.webmanifest'
-];
-
-// Install event - cache critical resources
-self.addEventListener('install', event => {
-  self.skipWaiting(); // activate this service worker immediately
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+// Self-destroying service worker.
+//
+// Between August and October 2025 this site registered a cache-first service
+// worker from this same path. Its registration script was dropped later, but a
+// browser that installed it keeps running it until a NEWER script at /sw.js
+// replaces it, and the old worker served the cached index.html first, so those
+// players could stay on a stale build indefinitely.
+//
+// This file is that replacement. It installs, takes over immediately, deletes
+// every cache the old worker created, unregisters itself, and reloads the open
+// pages so they fetch the live build. A browser that never installed the old
+// worker never requests this file. Nothing registers a worker any more; do not
+// add one here. Keep this file until the old registrations can be assumed gone.
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// Fetch event - only intercept GET requests from the same origin
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  const url = new URL(req.url);
-
-  // Allow non-GET requests (e.g., POST uploads) and cross-origin requests
-  if (req.method !== 'GET' || url.origin !== self.location.origin) {
-    return; // do not intercept, let the browser handle it
-  }
-
-  // Cache-first strategy for same-origin GET requests
-  event.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-    try {
-      const res = await fetch(req);
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(req, res.clone()); // cache the fetched response
-      return res;
-    } catch (err) {
-      // Optional: offline fallback
-      return caches.match('/');
-    }
-  })());
-});
-
-// Activate event - clean up old caches
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const names = await caches.keys();
-    await Promise.all(
-      names.map(n => (n !== CACHE_NAME ? caches.delete(n) : undefined))
-    );
-    await self.clients.claim(); // take control of existing pages immediately
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+    await self.registration.unregister();
+    const clients = await self.clients.matchAll({ type: 'window' });
+    for (const client of clients) {
+      client.navigate(client.url);
+    }
   })());
 });

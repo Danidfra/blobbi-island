@@ -188,7 +188,6 @@ When moving assets, these are easy to miss; check all of them:
 | Location | What it references |
 | --- | --- |
 | `tailwind.config.ts` → `theme.extend.cursor` | `ui/cursors/*` via CSS `url()` |
-| `public/sw.js` → `urlsToCache` | service-worker precache list |
 | `index.html` | favicon, apple-touch-icon, `<link rel="preload">` |
 | `public/manifest.webmanifest` | PWA icons |
 | `src/lib/location-backgrounds.ts` | background *filenames* (not full paths) |
@@ -312,5 +311,6 @@ survives anywhere.
   broken image today. Dropping the art at that path fixes it with no code change.
 - `characters/blobbi/accessories/eyewear/` starts at `eyewear-2.png`; there is no
   `eyewear-1.png`.
-- `public/sw-register.js` is never loaded by `index.html`, so the service worker in
-  `public/sw.js` is currently dead code.
+- `public/sw.js` is a self-destroying service worker, kept only so browsers that
+  installed the cache-first worker an older deployment registered replace it,
+  clear its caches and unregister. Nothing registers a worker any more.
