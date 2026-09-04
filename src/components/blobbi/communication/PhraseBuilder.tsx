@@ -140,7 +140,7 @@ export function PhraseBuilder({ onSend }: PhraseBuilderProps) {
           aria-label={preview ? `Send: ${preview}` : 'Send phrase'}
           className={cn(
             'inline-flex size-11 shrink-0 items-center justify-center rounded-full',
-            'bg-island-ocean text-island-cream transition-transform duration-150 ease-cozy',
+            'bg-island-wood-dark text-island-cream transition-transform duration-150 ease-cozy',
             'hover:brightness-105 active:scale-95',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'disabled:pointer-events-none disabled:opacity-40',

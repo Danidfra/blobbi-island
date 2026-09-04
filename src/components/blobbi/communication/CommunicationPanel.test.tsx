@@ -22,6 +22,7 @@ import {
   TIME_VALUES,
 } from '@/communication';
 import { IslandSafetyProvider, type ExperienceProfile } from '@/safety';
+import { islandThemes } from '@/lib/island-themes';
 
 import { CommunicationPanel } from './CommunicationPanel';
 
@@ -260,3 +261,65 @@ describe('accessibility and interaction', () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+/**
+ * The tab strip must be legible in EVERY built-in theme. The class assertion
+ * pins the token the tabs use; the contrast assertion computes WCAG contrast
+ * from the palettes themselves, so a theme edit that pushes ink towards the
+ * panel colour fails here rather than on a player's screen.
+ */
+describe('the Talk tabs are legible in every theme', () => {
+  it('draws inactive tabs in ink and the selected tab in cream on wood', () => {
+    mount('standard');
+    const tabs = within(screen.getByRole('tablist')).getAllByRole('tab');
+    const selected = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'true');
+    const inactive = tabs.filter((tab) => tab.getAttribute('aria-selected') !== 'true');
+    expect(selected).toHaveLength(1);
+    expect(inactive.length).toBeGreaterThan(0);
+    expect(selected[0].className).toContain('bg-island-wood-dark');
+    expect(selected[0].className).toContain('text-island-cream');
+    expect(selected[0].className).not.toContain('bg-island-ocean');
+    for (const tab of inactive) {
+      expect(tab.className).toContain('text-island-ink');
+      expect(tab.className).not.toContain('text-island-wood-dark');
+    }
+  });
+
+  it.each(islandThemes.map((theme) => [theme.name, theme] as const))(
+    'both tab states clear WCAG AA in %s',
+    (_name, theme) => {
+      expect(contrastRatio(theme.palette.ink, theme.palette['cream-2'])).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.palette.cream, theme.palette['wood-dark'])).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+});
+
+/** `"h s% l%"` (the palette's CSS-variable form) → WCAG relative luminance. */
+function luminance(hsl: string): number {
+  const [h, s, l] = hsl.split(/\s+/).map((part) => parseFloat(part));
+  const sat = s / 100;
+  const light = l / 100;
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = light - c / 2;
+  const sector = Math.floor(h / 60) % 6;
+  const [r1, g1, b1] = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][sector];
+  const channel = (v: number) => {
+    const srgb = v + m;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r1) + 0.7152 * channel(g1) + 0.0722 * channel(b1);
+}
+
+function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { ItemTile } from '@/components/ui/item-tile';
 import { cn } from '@/lib/utils';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CoinAmount } from '../CoinAmount';
 import {
@@ -160,7 +161,7 @@ export function CareStoreModal({ isOpen, onClose }: CareStoreModalProps) {
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(playerFacingMessage(err, "We couldn't complete that purchase right now. Try again in a moment."));
     } finally {
       // Released on EVERY outcome, so a deliberate retry is always possible —
       // that retry is how an unresolved operation reconciles without a second

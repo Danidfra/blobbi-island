@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { FoodItem, FoodPosition } from './FoodItem';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { useToast } from '@/hooks/useToast';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import {
@@ -162,7 +163,7 @@ export function RefrigeratorModal({ isOpen, onClose }: RefrigeratorModalProps) {
         onError: (error) => {
           toast({
             title: 'Feeding Failed',
-            description: error.message,
+            description: playerFacingMessage(error, "We couldn't feed your Blobbi right now. Nothing was used — try again in a moment."),
             variant: 'destructive',
           });
         },

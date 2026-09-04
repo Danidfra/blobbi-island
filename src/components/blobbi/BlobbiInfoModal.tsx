@@ -14,6 +14,7 @@ import { MoodHero, NeedMeters, ProgressionStrip, TraitChips } from './PetCard';
 import { PlacementOverlay } from './PlacementOverlay';
 import { useEquipmentMutation, type PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { buildEquipEntry } from '@/placement/render-model';
 import { isEffectPlacementSlot, type PlacementSlot } from '@/placement/policy';
 import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/react';
@@ -186,7 +187,7 @@ export function BlobbiInfoModal({
     } catch (error) {
       // Kept in `pendingUpdates` so the player does not lose their edits, and
       // surfaced in the panel rather than only in a toast that scrolls away.
-      const message = error instanceof Error ? error.message : 'Publish failed.';
+      const message = playerFacingMessage(error, "We couldn't save that right now. Your edits are kept — try again in a moment.");
       setPublishError(message);
       toast({ title: 'Save failed', description: message, variant: 'destructive' });
     }
@@ -211,7 +212,7 @@ export function BlobbiInfoModal({
       // Transform editing applies to wearable accessory slots only.
       if (!isEffectPlacementSlot(slot)) setSelectedSlot(slot);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Publish failed.';
+      const message = playerFacingMessage(error, "We couldn't equip that right now. Try again in a moment.");
       setPublishError(message);
       toast({ title: 'Could not equip', description: message, variant: 'destructive' });
     }
@@ -241,7 +242,7 @@ export function BlobbiInfoModal({
       });
       setSelectedSlot((current) => (current === slot ? null : current));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Publish failed.';
+      const message = playerFacingMessage(error, "We couldn't remove that right now. Try again in a moment.");
       setPublishError(message);
       toast({ title: 'Could not remove', description: message, variant: 'destructive' });
     }

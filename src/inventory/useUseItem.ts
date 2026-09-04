@@ -98,7 +98,7 @@ export function useUseItem() {
       // Confirm the current Blobbi exists.
       const pet = status.allPets.find((p) => p.id === petId);
       if (!pet) {
-        throw new Error(`Blobbi ${petId} not found`);
+        throw new Error('That Blobbi could not be found.');
       }
 
       // Confirm the Blobbi stage is allowed for this item.
@@ -189,8 +189,8 @@ export function useUseItem() {
         warning = isAmbiguousInventoryPublish(err)
           ? 'Effect applied; the inventory update was not confirmed and may or may not have landed.'
           : err instanceof Error
-            ? `Effect applied but inventory was not decremented: ${err.message}`
-            : 'Effect applied but inventory was not decremented.';
+            ? 'Effect applied, but the item count was not decremented. It will be checked again shortly.'
+            : 'Effect applied, but the item count was not decremented.';
       }
 
       return {

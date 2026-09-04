@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Paintbrush } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { playerFacingMessage } from "@/lib/player-facing-error";
 import { BlobbiModal } from "@/components/ui/blobbi-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -225,7 +226,7 @@ export function ThemeCreateDialog({
     } catch (error) {
       toast({
         title: 'Could not publish',
-        description: error instanceof Error ? error.message : 'The relay would not take it.',
+        description: playerFacingMessage(error, "We couldn't publish your theme right now. Try again in a moment."),
         variant: 'destructive',
       });
     }

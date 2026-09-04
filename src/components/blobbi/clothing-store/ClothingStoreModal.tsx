@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { ItemTile } from '@/components/ui/item-tile';
 import { cn } from '@/lib/utils';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { CoinAmount } from '../CoinAmount';
 import {
@@ -181,7 +182,7 @@ export function ClothingStoreModal({ isOpen, onClose }: ClothingStoreModalProps)
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(playerFacingMessage(err, "We couldn't complete that purchase right now. Try again in a moment."));
     } finally {
       inFlightRef.current = false;
       setPurchasingAddress(null);

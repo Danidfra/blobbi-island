@@ -245,7 +245,7 @@ export async function runExternalConsumption(
   }
 
   const pet = deps.pets.find((p) => p.id === input.petId);
-  if (!pet) throw new Error(`Blobbi ${input.petId} not found`);
+  if (!pet) throw new Error('That Blobbi could not be found.');
 
   // Spend authority is the player key inside the inventory address. A row
   // from somebody else's inventory can never be spent by this signer, and it
@@ -288,7 +288,7 @@ export async function runExternalConsumption(
           // stale-click overspend; does not (cannot) serialize other devices.
           const state = await deps.fetchState(input.inventory);
           if (state.status === 'error') {
-            throw new Error(`Could not read the ${input.inventory.id} inventory: ${state.error}`);
+            throw new Error('Could not read that inventory right now; nothing was spent.');
           }
           if (state.status === 'unresolved') {
             throw new Error(
@@ -297,11 +297,11 @@ export async function runExternalConsumption(
           }
           const have = effectiveQuantity(state, input.itemAddress);
           if (have < 1) {
-            throw new Error(`No ${input.definition.name} left in ${input.inventory.id}`);
+            throw new Error(`No ${input.definition.name} left in that inventory.`);
           }
           if (have < quantity) {
             throw new Error(
-              `Only ${have} ${input.definition.name} left in ${input.inventory.id} (asked for ${quantity})`,
+              `Only ${have} ${input.definition.name} left in that inventory (asked for ${quantity}).`,
             );
           }
 
@@ -357,7 +357,7 @@ export async function runExternalConsumption(
           } else {
             record = advance(record, 'failed', now(), outcome.error);
             persistExternalSpendOp(pubkey, record);
-            throw new Error(`The spend was refused by every relay: ${outcome.error}`);
+            throw new Error('The spend was refused; nothing was used. Try again in a moment.');
           }
         }
 

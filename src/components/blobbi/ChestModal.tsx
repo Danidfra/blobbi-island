@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { useDrag } from '@use-gesture/react';
 import { cn } from '@/lib/utils';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { ConsumeItemModal } from './ConsumeItemModal';
 import { useOptimizedStatus } from '@/hooks/useOptimizedStatus';
 import { useToast } from '@/hooks/useToast';
@@ -285,7 +286,7 @@ export function ChestModal({ isOpen, onClose }: ChestModalProps) {
         onError: (error) => {
           toast({
             title: 'Playing Failed',
-            description: error.message,
+            description: playerFacingMessage(error, "We couldn't start playing right now. Try again in a moment."),
             variant: 'destructive',
           });
         },

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { StateCard } from '@/components/ui/state-card';
 import { cn } from '@/lib/utils';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { explainUnavailable } from '@/placement/useEquippableCosmetics';
 import type { PlacementTransformPatch } from '@/placement/useEquipmentMutation';
 
@@ -316,7 +317,10 @@ export function InventoryBrowser({
         onError: (error) => {
           toast({
             title: 'Could Not Use Item',
-            description: error.message,
+            description: playerFacingMessage(
+              error,
+              "We couldn't use that item right now. Nothing was changed — try again in a moment.",
+            ),
             variant: 'destructive',
           });
         },
@@ -359,7 +363,7 @@ export function InventoryBrowser({
           if (result.status === 'applied') {
             toast({
               title: result.resumed ? 'Finished an Earlier Feed' : 'Item Used',
-              description: `Fed ${quantity} ${entry.definition.name}${quantity === 1 ? '' : 's'} from ${entry.sourceLabel ?? entry.sourceInventoryId} to ${petName}.${
+              description: `Fed ${quantity} ${entry.definition.name}${quantity === 1 ? '' : 's'} from ${entry.sourceLabel ?? 'another game'} to ${petName}.${
                 result.warning ? ` (${result.warning})` : ''
               }`,
             });
@@ -368,7 +372,7 @@ export function InventoryBrowser({
           if (result.status === 'spend-unconfirmed') {
             toast({
               title: 'Not Confirmed Yet',
-              description: `The relays did not confirm the ${entry.definition.name}. Nothing was applied; tap it again to retry the same spend.`,
+              description: `We couldn't confirm the ${entry.definition.name} just now. Nothing was applied — tap it again to retry; it will not be spent twice.`,
               variant: 'destructive',
             });
             return;
@@ -382,7 +386,10 @@ export function InventoryBrowser({
         onError: (error) => {
           toast({
             title: 'Could Not Use Item',
-            description: error.message,
+            description: playerFacingMessage(
+              error,
+              "We couldn't use that item right now. Nothing was spent — try again in a moment.",
+            ),
             variant: 'destructive',
           });
         },

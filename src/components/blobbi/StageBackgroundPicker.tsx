@@ -1,6 +1,7 @@
 import { Check, ImageIcon, Lock } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { STAGE_ASPECT_RATIO, type StageBackground } from '@/lib/blobbi-stage-backgrounds';
 import { useStageBackground } from '@/hooks/useStageBackground';
@@ -68,7 +69,7 @@ export function StageBackgroundPicker({
           role="alert"
           className="mb-3 rounded-xl border border-island-danger/30 bg-island-danger/10 p-2.5 text-xs text-island-danger"
         >
-          Could not save your background — {error.message}
+          Could not save your background. {playerFacingMessage(error, 'Try again in a moment.')}
         </div>
       )}
 

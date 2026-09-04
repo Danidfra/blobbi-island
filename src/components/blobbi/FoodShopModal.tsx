@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { CoinAmount } from './CoinAmount';
 import { useToast } from '@/hooks/useToast';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { ItemTile, PriceTag } from '@/components/ui/item-tile';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -242,7 +243,7 @@ export function FoodShopModal({ isOpen, onClose }: FoodShopModalProps) {
     } catch (err) {
       toast({
         title: 'Purchase Failed',
-        description: err instanceof Error ? err.message : 'Something went wrong.',
+        description: playerFacingMessage(err, "We couldn't complete that purchase right now. Try again in a moment."),
         variant: 'destructive',
       });
       return;

@@ -155,9 +155,13 @@ export function CommunicationPanel({ open, onClose, onSend, className }: Communi
                 'min-h-[2.25rem] flex-1 rounded-full px-2 text-xs font-semibold',
                 'transition-transform duration-150 ease-cozy active:scale-95',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                // Both states use pairs the theme contract guarantees
+                // (`contrastReport`): cream on wood-dark for the selected tab
+                // — cream on ocean was 1.9:1 in Cozy Day — and ink on the
+                // cream panel for the rest.
                 active === tab.id
-                  ? 'bg-island-ocean text-island-cream'
-                  : 'text-island-wood-dark hover:bg-island-cream',
+                  ? 'bg-island-wood-dark text-island-cream'
+                  : 'text-island-ink hover:bg-island-cream',
               )}
             >
               {tab.label}
@@ -170,7 +174,7 @@ export function CommunicationPanel({ open, onClose, onSend, className }: Communi
           aria-label="Close communication"
           className={cn(
             'inline-flex size-9 shrink-0 items-center justify-center rounded-full',
-            'text-island-wood-dark transition-transform duration-150 ease-cozy',
+            'text-island-ink transition-transform duration-150 ease-cozy',
             'hover:bg-island-cream active:scale-95',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           )}
@@ -267,7 +271,7 @@ export function CommunicationPanel({ open, onClose, onSend, className }: Communi
               aria-label="Send message"
               className={cn(
                 'inline-flex size-11 shrink-0 items-center justify-center rounded-full',
-                'bg-island-ocean text-island-cream transition-transform duration-150 ease-cozy',
+                'bg-island-wood-dark text-island-cream transition-transform duration-150 ease-cozy',
                 'hover:brightness-105 active:scale-95',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'disabled:pointer-events-none disabled:opacity-40',

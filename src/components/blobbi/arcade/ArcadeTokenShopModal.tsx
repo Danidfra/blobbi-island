@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { PriceTag } from '@/components/ui/item-tile';
 import { CoinAmount } from '@/components/blobbi/CoinAmount';
 import { useToast } from '@/hooks/useToast';
+import { playerFacingMessage } from '@/lib/player-facing-error';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
 import { useArcadeTokenBalance, useBuyArcadeTokens } from '@/hooks/useArcadeTokens';
 import { formatFreePlays, formatPassRemaining, useArcadePass } from '@/hooks/useArcadePass';
@@ -68,7 +69,7 @@ export function ArcadeTokenShopModal({ isOpen, onClose }: ArcadeTokenShopModalPr
       setError(message);
       toast({ title: 'Purchase not confirmed', description: message, variant: 'destructive' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong.';
+      const message = playerFacingMessage(err, "We couldn't complete that purchase right now. Try again in a moment.");
       setError(message);
       toast({ title: 'Purchase failed', description: message, variant: 'destructive' });
     } finally {
