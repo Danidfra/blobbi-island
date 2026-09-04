@@ -418,6 +418,9 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             className
           )}
         >
+          {/* `seatedAccessory`: the seat's prop (the Station VR headset), a
+              pose consequence rendered over the face inside the scale rig by
+              the display; never equipment. */}
           <CurrentBlobbiDisplay
             size={size}
             showFallback={true}
@@ -427,6 +430,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             eyeOffset={eyeOffset}
             visualOverride={visualOverride}
             companionId={blobbiId}
+            seatedAccessory={render.seatedAccessory}
             className={cn(isMoving && "scale-105")}
           />
         </BlobbiActor>

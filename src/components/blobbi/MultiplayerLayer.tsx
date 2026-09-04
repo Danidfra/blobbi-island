@@ -41,6 +41,8 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
+import type { SeatedAccessory } from '@/lib/room-seats-config';
+import { SeatedAccessoryLayer } from './SeatedAccessoryLayer';
 import { resolveRemoteSeatOccupancy, occupiedSeatIds, type RemoteSeatClaim } from '@/lib/theater-occupancy';
 import { createWalkableApi } from '@/lib/multiplayer';
 import { locationBoundaries } from '@/lib/location-boundaries';
@@ -127,6 +129,7 @@ function RemoteBlobbiSprite({
   size,
   scale = 1,
   scaleAt = () => 1,
+  seatedAccessory = null,
 }: {
   visual?: BlobbiVisual;
   isMoving: boolean;
@@ -162,6 +165,13 @@ function RemoteBlobbiSprite({
   scale?: number;
   /** Depth scale at an arbitrary ground point (for the gaze target's focus). */
   scaleAt?: (pos: Position) => number;
+  /**
+   * The prop this seat makes its sitter wear (`resolveActorRender(...)
+   * .seatedAccessory`), identical to the local path. Room-chair seating is
+   * not yet carried by presence, so today this is always null for remotes;
+   * the day it is, the headset needs no further wiring.
+   */
+  seatedAccessory?: SeatedAccessory | null;
 }) {
   // Idle gaze is active whenever the Blobbi is standing still. While idle it
   // drives ~60fps re-renders of *this* sprite only, and each render re-reads
@@ -220,16 +230,18 @@ function RemoteBlobbiSprite({
   if (!remoteVisual.baseColor && !remoteVisual.secondaryColor) return null;
 
   return (
-    <BlobbiRendererView
-      visual={remoteVisual}
-      instanceId={idSuffix}
-      size={size}
-      transparent
-      className={cn(isMoving && "scale-105")}
-      eyeOffset={eyeOffset}
-      facing={facing}
-      title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
-    />
+    <SeatedAccessoryLayer accessory={seatedAccessory} facing={facing} visual={remoteVisual}>
+      <BlobbiRendererView
+        visual={remoteVisual}
+        instanceId={idSuffix}
+        size={size}
+        transparent
+        className={cn(isMoving && "scale-105")}
+        eyeOffset={eyeOffset}
+        facing={facing}
+        title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
+      />
+    </SeatedAccessoryLayer>
   );
 }
 
@@ -1871,6 +1883,7 @@ export function MultiplayerLayer({
                 size={blobbiSize}
                 scale={dynamicScale}
                 scaleAt={getDynamicScale}
+                seatedAccessory={render.seatedAccessory}
               />
             </div>
           </BlobbiActor>

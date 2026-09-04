@@ -183,7 +183,9 @@ the arcade basement, the Nostr Station lounge) is three different points:
 | --- | --- | --- |
 | `footprint` | the floor band under the legs, a `MovementBlocker` | the route planner (walks round it) |
 | `approach` | a fraction of the sprite box, normally just below its base | `requestInteraction` (the walk ends there) |
-| `seatContact` | a fraction of the sprite box, on the cushion | `snapTo` on confirmed arrival (the seated pose) |
+| `seatContact` | a fraction of the sprite box, where the BOTTOM OF THE RENDERER BOX goes; the visible body ends ~12 % of the box above it (`BLOBBI_BODY_BOTTOM_PERCENT`, `src/lib/blobbi-actor-anchors.ts`) | `snapTo` on confirmed arrival (the seated pose) |
+| `foregroundFrom` (optional) | a deep bucket seat: the chair from this fraction down is repainted in front of its sitter, only while occupied | `RoomSeat` (the Nostr Station chairs) |
+| `seatedAccessory` (optional) | a presentation-only prop the sitter wears (the Station's VR headset) | `resolveSeatedRender` → `ActorRender.seatedAccessory` → `SeatedAccessoryLayer` |
 
 Tables carry a footprint only. `RoomSeat` / `RoomTable`
 (`src/components/blobbi/RoomSeat.tsx`) render them; `resolveSeatedRender`
@@ -194,6 +196,14 @@ share one seated presentation (sitter in front of its chair at
 within its span is drawn behind the piece, feet below its base fall back to
 the room band, which puts it in front. Presence still publishes theater seats
 only; a room seat is local presentation.
+
+A seated prop is not equipment. `SeatedAccessoryLayer`
+(`src/components/blobbi/SeatedAccessoryLayer.tsx`) wraps the renderer box in
+both actor wrappers and positions the prop in renderer-box percent at the face
+anchor (`BLOBBI_FACE_ANCHOR`), inside the actor's scale rig, so it follows the
+body through depth scale, seat scale and the world transform. It exists only
+while the resolved pose says so: nothing is published, placed, owned or
+persisted, and standing up unmounts it in the same render.
 
 ### 7.2 The arcade elevator
 

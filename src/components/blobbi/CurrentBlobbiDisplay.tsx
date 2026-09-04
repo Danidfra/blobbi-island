@@ -43,6 +43,8 @@ import { useBlobbis } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
 import { cn } from "@/lib/utils";
+import type { SeatedAccessory } from "@/lib/room-seats-config";
+import { SeatedAccessoryLayer } from "./SeatedAccessoryLayer";
 import {
   BlobbiRendererView,
   BLOBBI_RENDER_SIZE_CLASSES,
@@ -144,6 +146,12 @@ export interface CurrentBlobbiDisplayProps {
    * selected", which is never true of a world that is showing an actor.
    */
   companionId?: string;
+  /**
+   * A prop the CURRENT SEAT makes this Blobbi wear (the Nostr Station's VR
+   * headset), resolved from the pose, never from equipment. Drawn over the
+   * face of whatever visual is resolved above, at that form's eye line.
+   */
+  seatedAccessory?: SeatedAccessory | null;
 }
 
 export function CurrentBlobbiDisplay({
@@ -164,6 +172,7 @@ export function CurrentBlobbiDisplay({
   eyeOffset,
   facing = "front",
   companionId,
+  seatedAccessory = null,
 }: CurrentBlobbiDisplayProps) {
   // SVG id namespace for this instance. A caller-supplied `idSuffix` always
   // wins: remote actors and tests depend on a stable, meaningful id.
@@ -263,23 +272,29 @@ export function CurrentBlobbiDisplay({
       : (effectsOverride ?? activeEffects);
     const effects = showAccessories ? (wornEffects ?? []) : [];
 
+    // The seat's prop goes over the face of THIS visual (its form sets the eye
+    // line). With no seated accessory the layer is transparent: the renderer
+    // is returned as is, so every other consumer of this component is
+    // unaffected.
     return (
-      <BlobbiRendererView
-        visual={visual}
-        instanceId={scopeId}
-        size={size}
-        isSleeping={isSleeping}
-        eyesClosed={eyesClosed}
-        facing={facing}
-        eyeOffset={eyeOffset}
-        accessories={accessories}
-        effects={effects}
-        transparent={transparent}
-        interactive={interactive}
-        onClick={onClick}
-        className={className}
-        title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
-      />
+      <SeatedAccessoryLayer accessory={seatedAccessory} facing={facing} visual={visual}>
+        <BlobbiRendererView
+          visual={visual}
+          instanceId={scopeId}
+          size={size}
+          isSleeping={isSleeping}
+          eyesClosed={eyesClosed}
+          facing={facing}
+          eyeOffset={eyeOffset}
+          accessories={accessories}
+          effects={effects}
+          transparent={transparent}
+          interactive={interactive}
+          onClick={onClick}
+          className={className}
+          title={`${displayName} - ${stage} stage${interactive ? ' (click to switch)' : ''}`}
+        />
+      </SeatedAccessoryLayer>
     );
   }
 
