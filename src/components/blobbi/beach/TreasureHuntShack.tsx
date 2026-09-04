@@ -29,9 +29,11 @@ import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { TREASURE_HUNT_ASSETS } from './treasure-hunt-config';
 import {
+  treasureShackFootprint,
   treasureShackPlacement,
   treasureShackStandPoint,
 } from '@/lib/beach-shack-config';
+import { MovementBlocker } from '../MovementBlocker';
 
 /** How long the arrival hop plays before the hunt opens. */
 const ACTIVATION_HOP_MS = 240;
@@ -75,6 +77,8 @@ export function TreasureHuntShack({ requestInteraction, onArrive }: TreasureHunt
   };
 
   return (
+    <>
+    <MovementBlocker {...treasureShackFootprint} />
     <button
       type="button"
       data-treasure-shack
@@ -106,5 +110,6 @@ export function TreasureHuntShack({ requestInteraction, onArrive }: TreasureHunt
         </span>
       </span>
     </button>
+    </>
   );
 }

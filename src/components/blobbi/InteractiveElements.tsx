@@ -775,15 +775,20 @@ if (backgroundFile === 'nostr-station-open.webp') {
   if (backgroundFile === 'beach-open.webp' || backgroundFile === 'beach.png') {
     return (
       <>
-        {/* Boat - Center */}
-        <div className="absolute left-1/4 top-[34%] sm:top-[39%] transform -translate-x-1/2 z-15">
+        {/*
+          The boat: scenery, out on the water. Smaller and higher than it was
+          (it used to sit on the shoreline at up to 144 px, competing with the
+          hut for attention); its waterline now rides just under the horizon
+          so it reads as a distant boat, and it stays inert.
+        */}
+        <div className="absolute left-1/4 top-[44%] transform -translate-x-1/2 z-15">
           <InteractiveElement
             src="/assets/locations/beach/boat.png"
             alt="Boat"
             animated={false}
             inert
             comingLater
-            className="relative size-24 sm:size-28 md:size-32 lg:size-36"
+            className="relative size-14 sm:size-16 md:size-20 lg:size-24"
           />
         </div>
 

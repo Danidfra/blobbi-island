@@ -19,11 +19,17 @@
  * ## Placement
  *
  * The right-side sand shelf is empty (the only other beach element is the
- * boat at x ≈ 18–32); the shack sits at x ≈ 70–86 with its base on the sand
- * at y ≈ 79. The art (1024² with transparent margins) is square, so the
+ * boat, out on the water); the shack sits at x ≈ 64–86 with its base on the
+ * sand at y ≈ 79. The art (1024² with transparent margins) is square, so the
  * rendered box is `width` wide and `width × (697-px aspect)` tall, the top
  * of the box reaches the horizon, which is the same deliberate overlap the
  * Town buildings use against their tree line.
+ *
+ * Sized as a destination: at 16 % of the world the hut was a Blobbi and a
+ * half wide and read as a prop; at 22 % it is the thing you cross the beach
+ * for. The aspect is the art's own (the box is width-driven), the base stays
+ * on the same sand line, and the visible hut body (the art has a transparent
+ * margin on each side) is what the footprint below covers.
  */
 
 import type { Position } from '@/lib/types';
@@ -32,7 +38,7 @@ export const treasureShackPlacement = {
   /** Tailwind-free absolute placement, percent of the world box. */
   rightPercent: 14,
   bottomPercent: 21,
-  widthPercent: 16,
+  widthPercent: 22,
   zIndex: 15,
   /**
    * Mirror the art horizontally so the shack's open counter faces the beach's
@@ -45,7 +51,22 @@ export const treasureShackPlacement = {
 } as const;
 
 /**
- * Where the Blobbi stands to use the shack. Ground-anchor (feet) semantics,
- * world percent. Covered by the spawn-validation suite's walkability rules.
+ * Where the Blobbi stands to use the shack: centred on the counter, on the
+ * sand just in front of it. Ground-anchor (feet) semantics, world percent.
+ * Covered by the spawn-validation suite's walkability rules.
  */
-export const treasureShackStandPoint: Position = { x: 74, y: 84 };
+export const treasureShackStandPoint: Position = { x: 76, y: 81.5 };
+
+/**
+ * The band of sand the hut stands on, as a movement blocker: the visible
+ * body of the art (x ≈ 69.5–84.5 once the transparent margins are taken
+ * off) from the walkable arch's top edge down to just below the hut's base.
+ * The stand point sits below it, so the walk still arrives.
+ */
+export const treasureShackFootprint = {
+  id: 'beach-treasure-shack',
+  x: 69.5,
+  y: 74.5,
+  width: 15,
+  height: 3.5,
+} as const;
