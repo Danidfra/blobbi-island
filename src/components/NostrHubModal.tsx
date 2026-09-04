@@ -1,12 +1,33 @@
+/**
+ * The Nostr Hub: the Nostr Station's one interface.
+ *
+ * A Tron-styled terminal over the room with four sections the player expands
+ * in place: Educational, Connected Experiences, Social and the Future Box.
+ * Connected Experiences is the live one: it holds Nostr Farm, the first
+ * independent Nostr app that works with Blobbi Island
+ * (`nostr-station/ConnectedExperiencesSection.tsx`). The other three keep
+ * their place as the Station's promise of what comes next.
+ *
+ * The VR chairs open the hub straight into a section (`initialSection`), so
+ * sitting down at a terminal lands the player on the thing the terminal is
+ * for. Everything about the frame, the section navigation, the close button,
+ * the backdrop and the Escape key lives here and only here; a section owns
+ * its content and nothing about the window.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
+import { ConnectedExperiencesSection } from '@/components/blobbi/nostr-station/ConnectedExperiencesSection';
+
+export type NostrHubSectionId = 'educational' | 'connected-experiences' | 'social' | 'futuristic';
 
 interface NostrHubModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** The section to open expanded, if any. Read each time the hub opens. */
+  initialSection?: NostrHubSectionId | null;
 }
 
 // Tron-inspired animation classes
@@ -16,16 +37,16 @@ const tronBorder = 'border border-cyan-400/30 hover:border-cyan-400/80 shadow-[0
 
 // Card data structure with Tron-inspired styling
 interface HubCard {
-  id: string;
+  id: NostrHubSectionId;
   title: string;
   description: string;
   icon: string;
   primaryColor: string;
   glowColor: string;
   borderColor: string;
+  /** The section's content when expanded; absent for a section not yet built. */
+  content?: React.ComponentType;
 }
-
-
 
 const hubCards: HubCard[] = [
   {
@@ -38,13 +59,16 @@ const hubCards: HubCard[] = [
     borderColor: 'border-purple-400/30 hover:border-purple-400/80',
   },
   {
-    id: 'interactive',
-    title: 'Interactive',
-    description: 'Games & Fun',
+    // The games section, now the Station's first real destination: independent
+    // Nostr games and apps that share the player's inventory with the island.
+    id: 'connected-experiences',
+    title: 'Connected Experiences',
+    description: 'Games & apps that work with Blobbi Island',
     icon: '/assets/ui/icons/nostr-hub/controller.png',
     primaryColor: 'text-cyan-300',
     glowColor: 'shadow-cyan-400/50',
     borderColor: 'border-cyan-400/30 hover:border-cyan-400/80',
+    content: ConnectedExperiencesSection,
   },
   {
     id: 'social',
@@ -66,11 +90,17 @@ const hubCards: HubCard[] = [
   },
 ];
 
-export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+export function NostrHubModal({ isOpen, onClose, initialSection = null }: NostrHubModalProps) {
+  const [expandedCard, setExpandedCard] = useState<NostrHubSectionId | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  const handleCardClick = (cardId: string) => {
+  // Each opening starts on the requested section (a chair lands on Connected
+  // Experiences); a plain open starts on the overview.
+  useEffect(() => {
+    if (isOpen) setExpandedCard(initialSection);
+  }, [isOpen, initialSection]);
+
+  const handleCardClick = (cardId: NostrHubSectionId) => {
     setExpandedCard(expandedCard === cardId ? null : cardId);
   };
 
@@ -89,7 +119,9 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      // A window opened over the hub (the egress confirmation) takes the key
+      // first and marks it handled; the hub must not close underneath it.
+      if (e.key === 'Escape' && isOpen && !e.defaultPrevented) {
         onClose();
       }
     };
@@ -97,8 +129,6 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
-
-
 
   if (!isOpen) return null;
 
@@ -118,6 +148,11 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
     >
       {/* Tron-style Modal Container */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nostr-hub-title"
+        data-testid="nostr-hub"
+        data-hub-section={expandedCard ?? undefined}
         className="w-[90%] h-full max-w-4xl rounded-xl shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, rgba(0,15,30,0.95) 0%, rgba(0,5,15,0.98) 100%)',
@@ -150,7 +185,7 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
         {/* Modal Header */}
         <div className="relative p-6 border-b border-cyan-400/20">
           <div className="text-center">
-            <h2 className="text-4xl font-bold mb-2 tracking-wider">
+            <h2 id="nostr-hub-title" className="text-4xl font-bold mb-2 tracking-wider">
               <span
                 className="bg-gradient-to-r from-cyan-300 via-blue-300 to-purple-300 bg-clip-text text-transparent"
                 style={{
@@ -172,7 +207,9 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
 
           {/* Tron-style Close Button */}
           <button
-            onClick={onClose}
+            type="button"
+            aria-label="Close"
+            onClick={handleClose}
             className={cn(
               "absolute top-4 right-4 w-10 h-10 rounded-lg",
               "bg-gray-900/50 border border-cyan-400/30 hover:border-cyan-400/80",
@@ -193,10 +230,13 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
             "grid gap-6 transition-all duration-700 ease-out h-full",
             expandedCard ? "grid-cols-1" : "grid-cols-2"
           )}>
-            {hubCards.map((card) => (
+            {hubCards.map((card) => {
+              const expanded = expandedCard === card.id;
+              const Content = card.content;
+              return (
               <div key={card.id} className={cn(
                 "relative group transition-all duration-700 ease-out",
-                expandedCard && expandedCard !== card.id ? "hidden opacity-0 scale-0" : "opacity-100 scale-100"
+                expandedCard && !expanded ? "hidden opacity-0 scale-0" : "opacity-100 scale-100"
               )}>
                 {/* Main Card - Tron Style */}
                 <div
@@ -204,10 +244,12 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
                     "relative overflow-hidden rounded-lg cursor-blobbi-neon transition-all duration-500 ease-out h-full",
                     "bg-gray-900/30 backdrop-blur-sm",
                     "hover:bg-gray-900/50",
-                    expandedCard === card.id ? "scale-100 z-10" : "hover:scale-105",
+                    expanded ? "scale-100 z-10" : "hover:scale-105",
                     card.borderColor || tronBorder,
                     tronGlow
                   )}
+                  data-testid={`hub-section-${card.id}`}
+                  data-expanded={expanded ? 'true' : undefined}
                   onClick={() => handleCardClick(card.id)}
                   style={{
                     boxShadow: `0 0 15px ${card.glowColor.includes('cyan') ? 'rgba(34,211,238,0.2)' :
@@ -232,20 +274,20 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
 
                   <CardContent className={cn(
                     "relative z-10 text-center flex flex-col items-center justify-center",
-                    expandedCard === card.id ? "p-12" : "p-6"
+                    expanded ? "p-8 sm:p-10" : "p-6"
                   )}>
                     {/* Icon with Tron Glow */}
                     <div className={cn(
                       "transition-all [transition-duration:2000ms]",
                       tronPulse,
-                      expandedCard === card.id ? "w-32 h-32" : "w-16 h-16"
+                      expanded ? "w-20 h-20" : "w-16 h-16"
                     )}
                     style={{
                       filter: 'drop-shadow(0 0 10px rgba(34,211,238,0.6))',
                     }}>
                       <img
                         src={card.icon}
-                        alt={card.title}
+                        alt=""
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -254,7 +296,7 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
                     <h3 className={cn(
                       "font-bold mb-2 tracking-wide font-mono uppercase transition-all duration-300",
                       card.primaryColor,
-                      expandedCard === card.id ? "text-3xl mt-6" : "text-xl"
+                      expanded ? "text-2xl mt-4" : "text-xl"
                     )}>
                       {card.title}
                     </h3>
@@ -263,10 +305,17 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
                     <p className={cn(
                       "opacity-80 font-mono tracking-wide transition-all duration-300",
                       card.primaryColor,
-                      expandedCard === card.id ? "text-lg" : "text-sm"
+                      expanded ? "text-base" : "text-sm"
                     )}>
                       {card.description}
                     </p>
+
+                    {/* The section's own content, once expanded. */}
+                    {expanded && Content && (
+                      <div className="mt-6 flex w-full justify-center" data-testid={`hub-section-${card.id}-content`}>
+                        <Content />
+                      </div>
+                    )}
 
                     {/* Expand/Collapse Indicator */}
                     <div className="mt-4">
@@ -274,17 +323,18 @@ export function NostrHubModal({ isOpen, onClose }: NostrHubModalProps) {
                         "text-xs opacity-60 font-mono tracking-wider uppercase",
                         card.primaryColor,
                         "flex items-center justify-center space-x-2 transition-all duration-300",
-                        expandedCard === card.id ? "text-sm" : "text-xs"
+                        expanded ? "text-sm" : "text-xs"
                       )}>
                         <div className="w-1 h-1 bg-current rounded-full animate-pulse" />
-                        <span>{expandedCard === card.id ? "▲ COLLAPSE" : "▼ EXPAND"}</span>
+                        <span>{expanded ? "▲ COLLAPSE" : "▼ EXPAND"}</span>
                         <div className="w-1 h-1 bg-current rounded-full animate-pulse" />
                       </div>
                     </div>
                   </CardContent>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

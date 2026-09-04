@@ -2,13 +2,13 @@
  * Chair flow (Phase 3): the shop and Nostr Station chairs route through the
  * canonical pending-interaction system.
  *
- * The legacy flow computed its own rect math and fired the Nostr Hub modal
+ * The legacy flow computed its own rect math and fired the Station modal
  * IMMEDIATELY on click, while the Blobbi was still walking (or standing on
  * the far side of the room). These tests pin the migrated contract:
  *
  *  - a chair click starts a WALK to the accepted `{50, 85}` pseudo-sit point
  *    (boundary-clamped, via the canonical resolver);
- *  - the action (Nostr Hub) fires only on confirmed arrival, immediately
+ *  - the action (the Nostr Hub, on Connected Experiences) fires only on confirmed arrival, immediately
  *    only when the Blobbi is already at the chair;
  *  - shop chairs walk with no action at all;
  *  - a world tap cancels the pending chair interaction.
@@ -102,16 +102,18 @@ describe('Nostr Station chairs', () => {
     expect(goTo.mock.calls[0][0].x).toBeCloseTo(target.x, 6);
     expect(goTo.mock.calls[0][0].y).toBeCloseTo(target.y, 6);
     // …and the modal has NOT opened yet (legacy opened it immediately).
-    expect(screen.queryByText(/NOSTR HUB/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /NOSTR HUB/ })).not.toBeInTheDocument();
   });
 
-  it('a click with the Blobbi already at the chair opens the Nostr Hub (confirmed arrival, underfoot)', async () => {
+  it('a click with the Blobbi already at the chair opens the Nostr Hub on Connected Experiences (confirmed arrival, underfoot)', async () => {
     const target = expectedChairTarget('nostr-station-inside', 'nostr-station-chair-1');
     const { chair } = await renderAt('nostr-station-inside', () => target);
 
     fireEvent.click(chair('Nostr Station Chair 2'));
 
-    expect(screen.getByText(/NOSTR HUB/)).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: /NOSTR HUB/ })).toBeInTheDocument();
+    expect(screen.getByTestId('nostr-hub').dataset.hubSection).toBe('connected-experiences');
+    expect(screen.getByText('Nostr Farm')).toBeInTheDocument();
   });
 
   it('a world tap after a chair click cancels the pending interaction, the modal never opens', async () => {
@@ -119,7 +121,7 @@ describe('Nostr Station chairs', () => {
     const { chair, surface } = await renderAt('nostr-station-inside', () => pos);
 
     fireEvent.click(chair('Nostr Station Chair 3'));
-    expect(screen.queryByText(/NOSTR HUB/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /NOSTR HUB/ })).not.toBeInTheDocument();
 
     // Player taps empty ground: the pending walk-to-interact is abandoned.
     fireEvent.pointerDown(surface);
@@ -131,7 +133,7 @@ describe('Nostr Station chairs', () => {
         requestAnimationFrame(() => resolve());
       });
     });
-    expect(screen.queryByText(/NOSTR HUB/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /NOSTR HUB/ })).not.toBeInTheDocument();
   });
 });
 

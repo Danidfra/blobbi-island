@@ -96,7 +96,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
   const [isPhotoBoothModalOpen, setIsPhotoBoothModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalData, setShareModalData] = useState<{ capturedPhoto: string; capturedPolaroidSrc: string | null }>({ capturedPhoto: '', capturedPolaroidSrc: null });
-  const [isNostrHubModalOpen, setIsNostrHubModalOpen] = useState(false);
+  const [isNostrHubOpen, setIsNostrHubOpen] = useState(false);
 
   // Walk-to-interact model for doors / navigation / modal-opening items.
   // Reuses the existing movement system (blobbiRef.goTo) and fires the action
@@ -115,7 +115,7 @@ export function InteractiveElements({ blobbiRef, selectedBlobbi, sittingIn = nul
    * walk-to-interact path as every door and kiosk: `InteractiveElement`
    * resolves the chair's configured seat-anchor fraction (the accepted
    * `{50, 85}` pseudo-sit) through `resolveElementApproachTarget`, walks the
-   * Blobbi there, and fires the chair's `onClick`: the Nostr Hub modal,
+   * Blobbi there, and fires the chair's `onClick`: the Station terminal,
    * only on CONFIRMED ARRIVAL. The shop chairs attach no action: walking to
    * the cushion is the whole interaction. The legacy inline flow (its own
    * rect math, action fired immediately on click while still far away) is
@@ -861,10 +861,12 @@ if (backgroundFile === 'nostr-station-inside.png') {
       <img src='/assets/locations/nostr-station/nostr-neon.png' alt="ticket counter" className="absolute top-[26%] left-1/2 transform -translate-x-1/2 w-[15%]" />
 
       {/*
-        The four gaming chairs: real seats now (`room-seats-config.ts`).
-        Arrival sits the Blobbi down AND opens the hub, as the old pseudo-sit
-        did; the walk boundary's corridors are what keep walkers out of the
-        chair bodies, so these register no footprint of their own.
+        The four VR chairs: real seats (`room-seats-config.ts`), and the
+        Station's terminals. Arrival sits the Blobbi down (headset on) AND
+        opens the Nostr Hub straight into Connected Experiences; a click on
+        the chair it is already in opens the hub again without standing up.
+        The walk boundary's corridors are what keep walkers out of the chair
+        bodies, so these register no footprint of their own.
       */}
       {roomSeatsFor(backgroundFile).map((seat) => (
         <RoomSeat
@@ -873,14 +875,17 @@ if (backgroundFile === 'nostr-station-inside.png') {
           requestInteraction={requestInteraction}
           sittingIn={sittingIn}
           onSit={onSitInSeat}
-          onArrive={() => setIsNostrHubModalOpen(true)}
+          onArrive={() => setIsNostrHubOpen(true)}
+          onSeatedClick={() => setIsNostrHubOpen(true)}
         />
       ))}
 
-      {/* Nostr Hub Modal */}
+      {/* The Station's one interface, over the room: closing it leaves the
+          Blobbi in its chair, goggles on. */}
       <NostrHubModal
-        isOpen={isNostrHubModalOpen}
-        onClose={() => setIsNostrHubModalOpen(false)}
+        isOpen={isNostrHubOpen}
+        onClose={() => setIsNostrHubOpen(false)}
+        initialSection="connected-experiences"
       />
     </>
   );

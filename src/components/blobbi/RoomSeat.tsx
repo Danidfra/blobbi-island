@@ -16,6 +16,12 @@ interface RoomSeatProps {
   onSit?: (seatId: string) => void;
   /** Also fired on confirmed arrival, after `onSit` (a chair that opens something). */
   onArrive?: () => void;
+  /**
+   * Fired on a click of the chair the local player is ALREADY sitting in: no
+   * walk, no re-fired arrival, just the chair's thing again (the Station
+   * terminal). Absent, a click while seated does nothing, as before.
+   */
+  onSeatedClick?: () => void;
 }
 
 /**
@@ -32,8 +38,8 @@ interface RoomSeatProps {
  *    round the chair instead of through it, while the approach and the seat
  *    anchor both stay reachable.
  *
- * A click while already seated here does nothing: no second walk, no re-fired
- * arrival.
+ * A click while already seated here starts no second walk and re-fires no
+ * arrival; it calls `onSeatedClick` if the chair has one, else nothing.
  *
  * A deep bucket seat (`foregroundFrom`) is painted twice while occupied: the
  * whole chair behind the sitter, and the part below the cushion's front seam
@@ -41,7 +47,7 @@ interface RoomSeatProps {
  * into the seat. The slice is only mounted while THIS seat is occupied; a
  * standing Blobbi at the chair's front edge stays in front of the pedestal.
  */
-export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArrive }: RoomSeatProps) {
+export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArrive, onSeatedClick }: RoomSeatProps) {
   const blockers = useMovementBlocker({ optional: true });
   const isSittingHere = sittingIn === config.id;
   const boundary = locationBoundaries[config.room];
@@ -49,7 +55,10 @@ export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArriv
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>, isTouch = false) => {
       event.stopPropagation();
-      if (isSittingHere) return;
+      if (isSittingHere) {
+        onSeatedClick?.();
+        return;
+      }
 
       const resolved = resolveElementApproachTarget({
         element: event.currentTarget,
@@ -70,7 +79,7 @@ export function RoomSeat({ config, requestInteraction, sittingIn, onSit, onArriv
         },
       });
     },
-    [isSittingHere, config, boundary, blockers, requestInteraction, onSit, onArrive],
+    [isSittingHere, config, boundary, blockers, requestInteraction, onSit, onArrive, onSeatedClick],
   );
 
   return (
