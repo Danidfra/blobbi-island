@@ -10,7 +10,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "npm i && vite",
+    "dev": "vite",
     "build": "npm i && vite build && cp dist/index.html dist/404.html",
     "test": "tsc -p tsconfig.app.json --noEmit && npm run typecheck --workspaces --if-present && eslint && vitest run --reporter=dot --silent && vite build -l error",
     "docs:registry": "UPDATE_REGISTRY_DOC=1 vitest run src/protocol/event-registry-doc.test.ts",

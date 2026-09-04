@@ -14,6 +14,12 @@ A Nostr client application built with React 18.x, TailwindCSS 3.x, Vite, and Nos
 
 ### Development
 
+Install dependencies once, and again whenever `package-lock.json` changes:
+
+```bash
+npm ci
+```
+
 Start the development server:
 
 ```bash
