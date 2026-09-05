@@ -41,6 +41,8 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
+import { facingFromHeading, resolveBodyFacing } from '@/lib/blobbi-facing';
+import { applyDevVisualGeneration, useDevVisualGenerationOverride } from '@/lib/blobbi-visual-dev';
 import type { SeatedAccessory } from '@/lib/room-seats-config';
 import { SeatedAccessoryLayer } from './SeatedAccessoryLayer';
 import { resolveRemoteSeatOccupancy, occupiedSeatIds, type RemoteSeatClaim } from '@/lib/theater-occupancy';
@@ -126,6 +128,7 @@ function RemoteBlobbiSprite({
   headingRef,
   idSuffix,
   facing = 'front',
+  standing = true,
   size,
   scale = 1,
   scaleAt = () => 1,
@@ -150,6 +153,8 @@ function RemoteBlobbiSprite({
    * suppressed here. Identical to the local seated path.
    */
   facing?: 'front' | 'back';
+  /** Whether this remote is standing (only a standing body follows its heading). */
+  standing?: boolean;
   /**
    * Sprite size for the CURRENT ROOM, the same `getBlobbiSizeForLocation`
    * value `MovableBlobbi` uses for the local player.
@@ -177,6 +182,9 @@ function RemoteBlobbiSprite({
   // drives ~60fps re-renders of *this* sprite only, and each render re-reads
   // the shared refs below, so a stationary Blobbi keeps reacting to passers.
   const idleGaze = useIdleGaze(!isMoving);
+  // DEV-only V2 override, the same switch the local actor reads, so every body
+  // on screen is on the same generation while the V2 actor is under review.
+  const devGeneration = useDevVisualGenerationOverride();
 
   // Resolve gaze priority on every render (self-intent first), identical to the
   // local Blobbi in MovableBlobbi:
@@ -216,13 +224,25 @@ function RemoteBlobbiSprite({
   // useAccessoryManagement) run for someone else's Blobbi. Accessories stay
   // off for remotes (`accessories` defaults to none), matching the previous
   // showAccessories={false} behavior.
-  const remoteVisual = visual || {
-    name: undefined,
-    baseColor: '#4F46E5',
-    secondaryColor: '#7C3AED',
-    eyeColor: '#1F2937',
-    stage: 'baby' as const,
-  };
+  const remoteVisual = applyDevVisualGeneration(
+    visual || {
+      name: undefined,
+      baseColor: '#4F46E5',
+      secondaryColor: '#7C3AED',
+      eyeColor: '#1F2937',
+      stage: 'baby' as const,
+    },
+    devGeneration,
+  );
+
+  // Movement → body facing, the same rule as the local actor: the last known
+  // heading turns a standing V2 body; V1 keeps the pose facing.
+  const heading = headingRef.current.get(playerKey);
+  const bodyFacing = resolveBodyFacing({
+    visual: remoteVisual,
+    poseFacing: facing,
+    movementFacing: standing && heading ? facingFromHeading(heading) : undefined,
+  });
 
   // Legacy behavior preserved: a known visual that has no colors yet (presence
   // arrived before the 31124 refinement) renders nothing rather than a
@@ -238,7 +258,7 @@ function RemoteBlobbiSprite({
         transparent
         className={cn(isMoving && "scale-105")}
         eyeOffset={eyeOffset}
-        facing={facing}
+        facing={bodyFacing}
         title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
       />
     </SeatedAccessoryLayer>
@@ -1880,6 +1900,7 @@ export function MultiplayerLayer({
                 headingRef={headingRef}
                 idSuffix={`${player.pubkey}-${player.sessionId}`}
                 facing={render.facing}
+                standing={remotePose.kind === 'standing'}
                 size={blobbiSize}
                 scale={dynamicScale}
                 scaleAt={getDynamicScale}

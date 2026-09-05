@@ -51,10 +51,13 @@ import {
   resolveBlobbiRenderSize,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
+  type BlobbiFacing,
   type BlobbiRendererSize,
   type BlobbiVisual,
   type BlobbiVisualEffect,
 } from "@blobbi/renderer";
+import { applyDevVisualGeneration, useDevVisualGenerationOverride } from "@/lib/blobbi-visual-dev";
+import { resolveBodyFacing } from "@/lib/blobbi-facing";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
 import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
 import type { ResolvedBlobbiItemDefinition } from "@/inventory/catalog-fallback";
@@ -88,6 +91,14 @@ export interface CurrentBlobbiDisplayProps {
    * (see `REAR_VIEW_HIDDEN_SLOTS`).
    */
   facing?: "front" | "back";
+  /**
+   * The facing the actor's MOVEMENT implies while standing (down → front,
+   * up → back, left/right → the profiles; see lib/blobbi-facing.ts). Only a
+   * body with profile artwork turns: V1 ignores this and keeps `facing`; a V2
+   * body follows it unless `facing` is `"back"` (a rear-facing seat wins).
+   * Accessory artwork and the seat prop keep following `facing`.
+   */
+  movementFacing?: BlobbiFacing;
   /** If provided, component renders THIS visual instead of the local companion. */
   visualOverride?: BlobbiVisual;
   /**
@@ -169,6 +180,7 @@ export function CurrentBlobbiDisplay({
   definitionsOverride,
   eyeOffset,
   facing = "front",
+  movementFacing,
   companionId,
   seatedAccessory = null,
 }: CurrentBlobbiDisplayProps) {
@@ -220,6 +232,12 @@ export function CurrentBlobbiDisplay({
     [definitionsByAddress, definitionsOverride, facing],
   );
 
+  // DEV-only: draw the Adult V2 body through this exact pipeline. `null` in
+  // every production build and in every dev session that did not ask for it
+  // (see lib/blobbi-visual-dev.ts); applied to the already-resolved visual
+  // below, after parsing, so nothing upstream of the renderer ever sees it.
+  const devGeneration = useDevVisualGenerationOverride();
+
   const resolvedCompanionId = companionId ?? profile?.currentCompanion;
   const currentBlobbi = visualOverride
     ? null
@@ -230,7 +248,7 @@ export function CurrentBlobbiDisplay({
   // A visualOverride without any colors renders nothing (legacy remote-preview
   // behavior: the caller refines the visual once relay data arrives).
   const overrideHasColors = !!(visualOverride?.baseColor || visualOverride?.secondaryColor);
-  const visual: BlobbiVisual | null = visualOverride
+  const resolvedVisual: BlobbiVisual | null = visualOverride
     ? (overrideHasColors ? visualOverride : null)
     : currentBlobbi
       ? {
@@ -242,6 +260,8 @@ export function CurrentBlobbiDisplay({
           name: getBlobbiDisplayName(currentBlobbi),
         }
       : null;
+  // Same object when there is no override: the production path is untouched.
+  const visual = resolvedVisual ? applyDevVisualGeneration(resolvedVisual, devGeneration) : null;
 
   if (visual) {
     const displayName = currentBlobbi
@@ -254,7 +274,13 @@ export function CurrentBlobbiDisplay({
     // explicitly handed over; the local player's equipment is reachable solely
     // on the local-companion path. See the ownership table in the module doc.
     const wornAccessories = visualOverride ? accessoryOverride : wornEquipment;
-    const accessories = showAccessories
+    // Under the DEV V2 override accessories are not drawn: their placements
+    // are authored against V1 anchors (head top / eye line) and there is no V2
+    // accessory anchoring yet, so a hat would float. A real V2 Blobbi (no
+    // override) is not affected by this line; V2 accessory anchoring is a
+    // separate, open item.
+    const accessoriesAllowed = showAccessories && !(devGeneration && visual.visualGeneration === 'v2');
+    const accessories = accessoriesAllowed
       ? normalizeAccessoryPlacements(wornAccessories ?? [], {
           facing,
           resolveSources: resolveAccessorySources,
@@ -270,6 +296,10 @@ export function CurrentBlobbiDisplay({
       : (effectsOverride ?? activeEffects);
     const effects = showAccessories ? (wornEffects ?? []) : [];
 
+    // Which way the BODY is drawn. The pose facing is the historical answer;
+    // a V2 body standing still or walking follows its movement facing.
+    const bodyFacing = resolveBodyFacing({ visual, poseFacing: facing, movementFacing });
+
     // The seat's prop goes over the face of THIS visual (its form sets the eye
     // line). With no seated accessory the layer is transparent: the renderer
     // is returned as is, so every other consumer of this component is
@@ -282,7 +312,7 @@ export function CurrentBlobbiDisplay({
           size={size}
           isSleeping={isSleeping}
           eyesClosed={eyesClosed}
-          facing={facing}
+          facing={bodyFacing}
           eyeOffset={eyeOffset}
           accessories={accessories}
           effects={effects}

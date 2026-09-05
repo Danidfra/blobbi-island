@@ -339,3 +339,4 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 - `docs/blobbi-ground-anchor-implementation.md`: ground-anchor derivation (Phase 2)
 - `docs/blobbi-actor-position-migration-notes.md`: center→ground migration
 - `docs/blobbi-actor-ui-audit.md`: the original audit that motivated Phases 0–3
+- `docs/blobbi-visual-v2-dev-override.md`: the DEV-only Adult V2 override and movement → facing

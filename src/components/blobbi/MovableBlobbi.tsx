@@ -38,6 +38,7 @@ import { clientPointToWorldPercent } from '@/lib/world-coordinates';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
+import { facingFromHeading } from '@/lib/blobbi-facing';
 import { BlobbiActor } from './BlobbiActor';
 import type { BlobbiVisual } from '@blobbi/renderer';
 
@@ -369,6 +370,12 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       }
     }
 
+    // Movement → body facing, standing only. `direction` is the controller's
+    // normalized heading and keeps its last value after a walk ends, so a
+    // Blobbi that walked left stays turned left until it walks elsewhere. The
+    // display decides whether the body can turn at all (V1 never does).
+    const movementFacing = pose.kind === 'standing' ? facingFromHeading(direction) : undefined;
+
     return (
       <>
         {showTrail && !render.visualHidden &&
@@ -427,6 +434,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             transparent={true}
             isSleeping={render.sleeping}
             facing={render.facing}
+            movementFacing={movementFacing}
             eyeOffset={eyeOffset}
             visualOverride={visualOverride}
             companionId={blobbiId}
