@@ -5,7 +5,6 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile } from "@/hooks/useBlobbonautProfile";
-import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiLoginScreen } from "@/components/blobbi/BlobbiLoginScreen";
 import { BlobbiSelectionScreen } from "@/components/blobbi/BlobbiSelectionScreen";
 import { BlobbiLoadingScreen } from "@/components/blobbi/BlobbiLoadingScreen";
@@ -101,8 +100,9 @@ export function BlobbiIsland() {
       if (manual) return manual;
     }
     if (currentCompanionId) {
-      const current = blobbis.find(b => b.id === currentCompanionId);
-      return current && isModernBlobbi(current) ? current : null;
+      // `blobbis` is modern by construction (core classification in the
+      // parser), so presence in the list is the whole check.
+      return blobbis.find(b => b.id === currentCompanionId) ?? null;
     }
     // No companion from the profile: either the player never picked one, or
     // the profile is momentarily unresolved. Only the second case is
@@ -110,7 +110,7 @@ export function BlobbiIsland() {
     const lastId = lastResolvedCompanionIdRef.current;
     if (lastId) {
       const last = blobbis.find(b => b.id === lastId);
-      if (last && isModernBlobbi(last)) return last;
+      if (last) return last;
     }
     return null;
   }, [manualSelectionId, currentCompanionId, blobbis]);

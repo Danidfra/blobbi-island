@@ -46,9 +46,10 @@ it is on.
 
 ## Production V2 flow (no override involved)
 
-`parsePetState` (`src/lib/blobbi-parsers.ts`) reads the tag with the kit's own
-`parseVisualGeneration`: absent, `v1` or any unknown value is `v1`; only `v2`
-is `v2`. The value travels as identity, never as a renderer switch:
+`parsePetState` (`src/lib/blobbi-parsers.ts`) is an adapter over the kit's
+`parseModernBlobbiEvent`, whose companion carries `visualGeneration` with the
+canonical reading: absent, `v1` or any unknown value is `v1`; only `v2` is
+`v2`. The value travels as identity, never as a renderer switch:
 
     kind 31124 tags → PetState.visualGeneration → Blobbi.visualGeneration
       → BlobbiVisual.visualGeneration → BlobbiRenderer / renderBlobbiSvg

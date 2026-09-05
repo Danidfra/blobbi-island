@@ -116,12 +116,23 @@ export function useBlobbis() {
         { signal: c.signal, timeoutMs: READ_TIMEOUT_MS },
       );
 
-      // Transform events to typed PetState objects, then convert to legacy format
+      // Modern events only: `validatePetStateEvent` / `parsePetState` delegate
+      // to @blobbi-kit/core's canonical classification, so historical Blobbis
+      // are dropped here without any migration. Island is a hatched-only world:
+      // eggs are excluded from this collection.
+      //
+      // Why this is not `useBlobbisCollection` from @blobbi-kit/react (0.5.2):
+      // the kit's confirmed-empty is ONE resolved read, while Island requires
+      // a completed empty answer confirmed by a SECOND completed read and a
+      // 2 s "unknown" deadline (`readRelayConfirmedOrThrow`), on which the
+      // empty-nest vs. hiding-nest screens depend. The `['blobbis', pubkey]`
+      // cache is also written by the adoption handoff. Parsing is shared;
+      // the read policy stays Island's.
       const petStates = events
         .filter(validatePetStateEvent)
         .map(parsePetState)
         .filter((pet): pet is PetState => pet !== null)
-        .filter(pet => pet.stage !== 'egg'); // Only include non-egg pets
+        .filter(pet => pet.stage !== 'egg');
 
       // Convert to legacy Blobbi format for backward compatibility
       const blobbis: Blobbi[] = petStates.map(petStateToLegacyBlobbi);

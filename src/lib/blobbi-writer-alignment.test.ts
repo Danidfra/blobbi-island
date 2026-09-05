@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import { mergePetStateTags, mergeOwnerProfileTags, parsePetState, parseOwnerProfile } from './blobbi-parsers';
+import type { PetState } from './blobbi-types';
 import { KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from './blobbi-kinds';
 import {
   BLOBBI_ECOSYSTEM_NAMESPACE,
@@ -29,11 +30,22 @@ function tagCount(tags: string[][], name: string): number {
   return tags.filter(([n]) => n === name).length;
 }
 
-/** Build a minimal-but-complete raw Kind 31124 event and parse it to PetState. */
+/**
+ * Build a MODERN raw Kind 31124 event and parse it to PetState. `rawTags`
+ * REPLACE base tags of the same name, so a test can state its own `state`,
+ * `b` or `last_interaction`. (Since parsing is core's canonical modern path,
+ * the base has to satisfy the contract: canonical d, b, name, seed, activity
+ * state, last_interaction.)
+ */
 function makePet(rawTags: string[][], content = 'Puck') {
   const baseTags: string[][] = [
-    ['d', 'blobbi-puck'],
+    ['d', 'blobbi-aaaaaaaaaaaa-0000000001'],
+    ['b', BLOBBI_ECOSYSTEM_NAMESPACE],
+    ['name', 'Puck'],
+    ['seed', 'c'.repeat(64)],
     ['stage', 'baby'],
+    ['state', 'active'],
+    ['last_interaction', '1700000000'],
     ['breeding_ready', 'false'],
     ['generation', '1'],
     ['hunger', '50'],
@@ -44,18 +56,29 @@ function makePet(rawTags: string[][], content = 'Puck') {
     ['experience', '0'],
     ['care_streak', '0'],
   ];
+  const overridden = new Set(rawTags.map(([n]) => n));
   const event: NostrEvent = {
     id: 'x',
     pubkey: 'p'.repeat(64),
     created_at: 1_700_000_000,
     kind: KIND_BLOBBI_STATE,
-    tags: [...baseTags, ...rawTags],
+    tags: [...baseTags.filter(([n]) => !overridden.has(n)), ...rawTags],
     content,
     sig: 's',
   };
   const pet = parsePetState(event);
   if (!pet) throw new Error('fixture failed to parse');
   return pet;
+}
+
+/**
+ * The same pet with some raw tags removed: models a source event whose
+ * republish must be REPAIRED by the writer. Such a source cannot come out of
+ * the parser any more (core rejects it), so it is built here directly.
+ */
+function withoutRawTags(pet: PetState, names: string[]) {
+  const drop = new Set(names);
+  return { ...pet, rawTags: pet.rawTags.filter(([n]) => !drop.has(n)) };
 }
 
 /** Build a raw Kind 11125 event and parse it to OwnerProfile. */
@@ -94,7 +117,7 @@ function asEvent(kind: number, tags: string[][], content = ''): NostrEvent {
 
 describe('mergePetStateTags: canonical alignment', () => {
   it('emits canonical b, state, and last_interaction when the source lacks them', () => {
-    const pet = makePet([]); // no b / state / last_interaction in source
+    const pet = withoutRawTags(makePet([]), ['b', 'state', 'last_interaction']);
     const tags = mergePetStateTags(pet);
 
     expect(tagValue(tags, 'b')).toBe(BLOBBI_ECOSYSTEM_NAMESPACE);
@@ -104,7 +127,7 @@ describe('mergePetStateTags: canonical alignment', () => {
   });
 
   it('derives state=sleeping from Island isSleeping when no source state exists', () => {
-    const pet = makePet([['is_sleeping', 'true']]);
+    const pet = withoutRawTags(makePet([['is_sleeping', 'true']]), ['state']);
     const tags = mergePetStateTags(pet);
     expect(tagValue(tags, 'state')).toBe('sleeping');
   });

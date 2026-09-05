@@ -20,7 +20,7 @@ import type { NostrEvent } from '@nostrify/nostrify';
 
 import { generateEggPreview, previewToBabyTags } from './blobbi-egg-preview';
 import { validatePetStateEvent, parsePetState } from './blobbi-parsers';
-import { isModernBlobbi } from './blobbi-legacy';
+import { classifyBlobbiEvent } from '@blobbi-kit/core/blobbi';
 import { KIND_BLOBBI_STATE } from './blobbi-kinds';
 
 const PUBKEY = 'feb88e80a63d1111222233334444555566667777888899990000aaaabbbbcccc';
@@ -67,9 +67,10 @@ describe('adoption preview → baby tags', () => {
   it('published baby is a MODERN blobbi (shown in collection, no empty-nest bounce)', () => {
     const preview = generateEggPreview(PUBKEY, 'Egg');
     const event = asBabyEvent(previewToBabyTags({ ...preview, name: 'Puck' }));
-    const parsed = parsePetState(event)!;
-
-    expect(isModernBlobbi({ id: parsed.id, rawTags: parsed.rawTags })).toBe(true);
+    // Modern by core's canonical classification: the same predicate the
+    // Island collection now parses with, so it is shown, never dropped.
+    expect(classifyBlobbiEvent(event)).toBe('modern');
+    expect(parsePetState(event)).not.toBeNull();
   });
 
   it('an egg event would be excluded by the collection filter', () => {

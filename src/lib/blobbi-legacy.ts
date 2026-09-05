@@ -1,66 +1,27 @@
 /**
- * Helpers to distinguish modern Blobbis from legacy ones in the UI.
+ * Display-name policy for Blobbi cards.
  *
- * Legacy Blobbis predate the current data format. They frequently lack proper
- * names (falling back to raw IDs/codes) and don't carry the identity metadata
- * the modern game relies on. We never delete or mutate these events; we simply
- * exclude them from the collection UI so players only see Blobbis the modern
- * island can render correctly.
- *
- * A Blobbi is considered MODERN only when BOTH hold:
- *   1. its `d`/`id` matches the modern format `blobbi-<segment>-<segment>`
- *      (e.g. "blobbi-feb88e80a63d-f249499cc5"); and
- *   2. it carries a `seed` tag (core identity metadata of modern Blobbis).
- *
- * Anything else: a non-conforming `d` tag, a missing `seed`, or the old
- * `client=blobbi`-only legacy events without a seed, is treated as legacy.
- *
- * Note: the modern app's own publisher also adds `["client", "blobbi"]`, so a
- * bare `client=blobbi` value is NOT a reliable legacy signal on its own. The
- * authoritative checks are the `d`-tag shape and the presence of `seed`, which
- * together capture the intent without hiding any valid modern Blobbi.
+ * Which Blobbis are modern is no longer decided here. `parsePetState`
+ * delegates to `@blobbi-kit/core`'s canonical classification, so every
+ * `Blobbi` the collection hands out is modern by construction and historical
+ * events never reach the UI (identified and ignored, never migrated). The
+ * former `isModernBlobbi` / `isLegacyBlobbi` helpers are gone with it.
  */
 
 import type { Blobbi } from "@/hooks/useBlobbis";
 import { displayNameFromId, nameFromDTag } from "@/lib/blobbi-name";
 
-/**
- * Modern `d`/id shape: `blobbi-<segment>-<segment>`, where each segment is one
- * or more alphanumeric characters (hex or random). Trailing extra segments are
- * tolerated so future-format ids aren't accidentally hidden.
- */
-const MODERN_D_TAG = /^blobbi-[a-z0-9]+-[a-z0-9]+/i;
-
 function getTagValue(rawTags: string[][] | undefined, name: string): string | undefined {
   return rawTags?.find(([tagName]) => tagName === name)?.[1];
-}
-
-/** True when the Blobbi conforms to the modern format and should appear in the UI. */
-export function isModernBlobbi(blobbi: Pick<Blobbi, "id" | "rawTags">): boolean {
-  // Rule: modern d-tag format required.
-  if (!MODERN_D_TAG.test(blobbi.id)) return false;
-
-  // Rule: a seed tag is required (core identity metadata of modern Blobbis).
-  const seed = getTagValue(blobbi.rawTags, "seed");
-  if (!seed) return false;
-
-  return true;
-}
-
-/** Convenience inverse of {@link isModernBlobbi}. */
-export function isLegacyBlobbi(blobbi: Pick<Blobbi, "id" | "rawTags">): boolean {
-  return !isModernBlobbi(blobbi);
 }
 
 /**
  * Resolve the user-facing display name for a Blobbi card.
  *
  * The authoritative source is the modern `["name", "..."]` event tag, read
- * straight from `rawTags`. We read it directly here because the parser builds
- * `blobbi.name` as `nameFromDTag(d) || name-tag || id`: the d-tag-derived value
- * comes FIRST, so for modern Blobbis (whose `d` is always `blobbi-<seg>-<seg>`)
- * the real `name` tag is shadowed by an id-like string. This helper restores the
- * intended priority for display without changing the parser/data model.
+ * straight from `rawTags`. The parser now resolves `blobbi.name` to that same
+ * tag through core; reading the tag here keeps the display rule independent of
+ * any parsed shape (dev fixtures build `Blobbi` objects by hand).
  *
  * Display priority:
  *   1. the real `name` tag value, if present and non-empty;

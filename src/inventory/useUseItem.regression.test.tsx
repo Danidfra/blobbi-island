@@ -132,11 +132,18 @@ function tagCount(tags: string[][], name: string): number {
   return tags.filter(([n]) => n === name).length;
 }
 
+/** A MODERN Blobbi under @blobbi-kit/core's contract: canonical d, 64-char seed. */
+const PET_ID = 'blobbi-ffffffffffff-0000000001';
+
 // A canonical adult pet with rich raw tags, STALE timestamps, and an unrelated
 // field + equipped accessory that must be preserved through the republish.
 function makeAdultPet(overrides: Record<string, unknown> = {}) {
   const rawTags: string[][] = [
-    ['d', 'blobbi-1'],
+    ['d', PET_ID],
+    ['b', 'blobbi:ecosystem:v1'],
+    ['name', 'Regress'],
+    ['seed', 'a'.repeat(64)],
+    ['state', 'active'],
     ['stage', 'adult'],
     ['breeding_ready', 'false'],
     ['generation', '1'],
@@ -157,7 +164,7 @@ function makeAdultPet(overrides: Record<string, unknown> = {}) {
     ['equip', 'hat:wizard'],
   ];
   return {
-    id: 'blobbi-1',
+    id: PET_ID,
     stage: 'adult',
     generation: 1,
     breedingReady: false,
@@ -203,7 +210,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     expect(tag(tags, 'last_meal')).toBe(String(NOW_UNIX));
@@ -216,7 +223,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(VITAMINS, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: VITAMINS, definition: vitaminsDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: VITAMINS, definition: vitaminsDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     expect(tag(tags, 'last_medicine')).toBe(String(NOW_UNIX));
@@ -227,7 +234,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(SOAP, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: SOAP, definition: soapDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: SOAP, definition: soapDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     expect(tag(tags, 'last_clean')).toBe(String(NOW_UNIX));
@@ -240,7 +247,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     const todayStr = getLocalDayString(NOW);
@@ -274,7 +281,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     // Streak unchanged on same day; metadata preserved (day unchanged, at
@@ -305,7 +312,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     expect(tag(tags, 'care_streak')).toBe('4'); // incremented 3 -> 4
@@ -323,7 +330,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(APPLE, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
     const { tags } = stateEvent();
     // Unrelated Ditto tag survives.
@@ -347,7 +354,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
 
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: APPLE, definition: appleDef, petId: PET_ID, quantity: 1 });
     });
 
     expect(order).toEqual(['publish:1124', 'publish:31124', 'inventory:remove']);
@@ -357,7 +364,7 @@ describe('useUseItem: Blobbi state timestamp & care-streak regression', () => {
     nostrQuery.mockResolvedValue([inventoryEvent(BALL, 2)]);
     const { result } = renderUse();
     await act(async () => {
-      await result.current.mutateAsync({ address: BALL, definition: ballDef, petId: 'blobbi-1', quantity: 1 });
+      await result.current.mutateAsync({ address: BALL, definition: ballDef, petId: PET_ID, quantity: 1 });
     });
     // No published event is kind 11125, and no `storage` tag is emitted anywhere.
     for (const call of publish.mock.calls) {

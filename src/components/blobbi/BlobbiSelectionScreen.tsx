@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useBlobbis, type Blobbi } from "@/hooks/useBlobbis";
 import { useBlobbonautProfile, useSetCurrentCompanion } from "@/hooks/useBlobbonautProfile";
-import { isModernBlobbi } from "@/lib/blobbi-legacy";
 import { BlobbiCard } from "./BlobbiCard";
 import { BlobbiLoadingScreen } from "./BlobbiLoadingScreen";
 import { MascotBlobbi } from "./MascotBlobbi";
@@ -33,16 +32,14 @@ export function BlobbiSelectionScreen({ onBlobbiSelected, onCancel, onHatchFirst
   const { mutate: setCurrentCompanion, isPending: isUpdatingCompanion } = useSetCurrentCompanion();
   const [selectedBlobbi, setSelectedBlobbi] = useState<Blobbi | null>(null);
 
-  // Only modern Blobbis appear in the collection UI. Legacy Blobbis (old format
-  // without a seed / proper d-tag) are excluded; never deleted or mutated.
-  const modernBlobbis = useMemo(
-    () => (blobbis ?? []).filter(isModernBlobbi),
-    [blobbis],
-  );
+  // The collection is modern by construction: `parsePetState` delegates to
+  // core's canonical classification, so historical Blobbis never reach this
+  // list (identified and ignored upstream; never deleted or mutated).
+  const modernBlobbis = useMemo(() => blobbis ?? [], [blobbis]);
 
-  // Whether the user's current/active companion is a legacy Blobbi (it exists
-  // in their data but won't show as a selectable card). When true we surface a
-  // friendly notice asking them to pick a newer Blobbi to continue.
+  // Whether the profile's current companion is a Blobbi that is not in the
+  // modern collection (a historical one, or one this owner no longer has).
+  // When true we surface a friendly notice asking them to pick another.
   const currentCompanionIsLegacy = useMemo(() => {
     if (!currentCompanionId) return false;
     return !modernBlobbis.some((b) => b.id === currentCompanionId);

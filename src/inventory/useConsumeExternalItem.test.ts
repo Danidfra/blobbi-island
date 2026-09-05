@@ -40,7 +40,9 @@ import {
 
 const PUBKEY = 'f'.repeat(64);
 const OTHER = 'e'.repeat(64);
-const PET_ID = 'blobbi-aa-bb';
+// A MODERN Blobbi under @blobbi-kit/core's contract: canonical d, 64-char seed.
+const PET_ID = 'blobbi-ffffffffffff-0000000001';
+const SEED = 'a'.repeat(64);
 const FARM_ISSUER = 'f47aaf2e3279fe6fcdde556336d1f740705126c9a37e6390e2ede21165199fb4';
 const STRAWBERRY = `31632:${FARM_ISSUER}:farm:produce:strawberry`;
 const FARM_MAIN = `31633:${PUBKEY}:farm:main`;
@@ -57,7 +59,11 @@ function petEvent(overrides: { hunger?: number; createdAt?: number; extraTags?: 
     content: '',
     tags: [
       ['d', PET_ID],
+      ['b', 'blobbi:ecosystem:v1'],
+      ['name', 'Grazer'],
       ['stage', 'adult'],
+      ['state', 'active'],
+      ['last_interaction', String(createdAt)],
       ['breeding_ready', 'false'],
       ['generation', '1'],
       ['hunger', String(hunger)],
@@ -67,7 +73,7 @@ function petEvent(overrides: { hunger?: number; createdAt?: number; extraTags?: 
       ['energy', '80'],
       ['experience', '0'],
       ['care_streak', '0'],
-      ['seed', 'abc'],
+      ['seed', SEED],
       ['adult_type', 'bloomi'],
       ['base_color', '#fff'],
       ['ditto_xp', '123'],

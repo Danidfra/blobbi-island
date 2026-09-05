@@ -20,7 +20,10 @@ import { readPetState, type PetStateNostr } from '@/lib/pet-state-transaction';
 import { clearPetEnergyOps, readPetEnergyOp } from '@/lib/pet-energy-ledger';
 
 const PUBKEY = 'f'.repeat(64);
-const PET_ID = 'blobbi-aa-bb';
+// Canonical d (blobbi-{12 hex}-{10 hex}) and a 64-char seed: the fixture is a
+// MODERN Blobbi under @blobbi-kit/core's contract, as every current one is.
+const PET_ID = 'blobbi-ffffffffffff-0000000001';
+const SEED = 'a'.repeat(64);
 
 type ReqMessage =
   | ['EVENT', string, NostrEvent]
@@ -49,7 +52,11 @@ function petEvent(
     content: '',
     tags: [
       ['d', PET_ID],
+      ['b', 'blobbi:ecosystem:v1'],
+      ['name', 'Miner'],
       ['stage', 'adult'],
+      ['state', 'active'],
+      ['last_interaction', String(createdAt)],
       ['breeding_ready', 'false'],
       ['generation', '1'],
       ['hunger', String(hunger)],
@@ -59,7 +66,7 @@ function petEvent(
       ['energy', String(energy)],
       ['experience', '0'],
       ['care_streak', '0'],
-      ['seed', 'abc'],
+      ['seed', SEED],
       ['adult_type', 'bloomi'],
       ['base_color', '#fff'],
       // An unknown tag from another client, must survive every write.

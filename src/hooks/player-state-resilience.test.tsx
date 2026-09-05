@@ -57,6 +57,10 @@ const { useBlobbis } = await import('./useBlobbis');
 const { useBlobbonautProfile } = await import('./useBlobbonautProfile');
 const { nextGameState } = await import('@/pages/blobbi-island-state');
 
+/** Canonical d and 64-char seed: MODERN under @blobbi-kit/core's contract. */
+const PET_A = 'blobbi-aaaaaaaaaaaa-0000000001';
+const SEED = 'b'.repeat(64);
+
 /** A valid, MODERN kind:31124 pet event. */
 function petEvent(id: string): NostrEvent {
   return {
@@ -67,7 +71,11 @@ function petEvent(id: string): NostrEvent {
     content: '',
     tags: [
       ['d', id],
+      ['b', 'blobbi:ecosystem:v1'],
+      ['name', 'Ada'],
       ['stage', 'adult'],
+      ['state', 'active'],
+      ['last_interaction', '1000'],
       ['breeding_ready', 'false'],
       ['generation', '1'],
       ['hunger', '80'],
@@ -77,7 +85,7 @@ function petEvent(id: string): NostrEvent {
       ['energy', '70'],
       ['experience', '0'],
       ['care_streak', '0'],
-      ['seed', 'abc'],
+      ['seed', SEED],
       ['adult_type', 'bloomi'],
       ['base_color', '#fff'],
     ],
@@ -128,7 +136,7 @@ beforeEach(() => {
 describe('useBlobbis keeps known Blobbis across an unusable read', () => {
   it('an UNKNOWN refetch does NOT erase the known list', async () => {
     const client = makeClient();
-    relayScript = () => answersWith(petEvent('blobbi-a'));
+    relayScript = () => answersWith(petEvent(PET_A));
     const { result } = renderHook(() => useBlobbis(), { wrapper: wrapperFor(client) });
     await waitFor(() =>
       expect((client.getQueryData(['blobbis', OWNER]) as unknown[])?.length).toBe(1),
@@ -147,7 +155,7 @@ describe('useBlobbis keeps known Blobbis across an unusable read', () => {
 
   it('a timeout does NOT erase the known list', async () => {
     const client = makeClient();
-    relayScript = () => answersWith(petEvent('blobbi-a'));
+    relayScript = () => answersWith(petEvent(PET_A));
     const { result } = renderHook(() => useBlobbis(), { wrapper: wrapperFor(client) });
     await waitFor(() =>
       expect((client.getQueryData(['blobbis', OWNER]) as unknown[])?.length).toBe(1),
@@ -177,7 +185,7 @@ describe('useBlobbis keeps known Blobbis across an unusable read', () => {
 describe('useBlobbonautProfile keeps the companion across an unusable read', () => {
   it('an UNKNOWN refetch does not drop current_companion', async () => {
     const client = makeClient();
-    relayScript = () => answersWith(profileEvent('blobbi-a'));
+    relayScript = () => answersWith(profileEvent(PET_A));
     const { result } = renderHook(() => useBlobbonautProfile(), {
       wrapper: wrapperFor(client),
     });
@@ -185,7 +193,7 @@ describe('useBlobbonautProfile keeps the companion across an unusable read', () 
       expect(
         (client.getQueryData(['blobbonaut-profile', OWNER]) as { currentCompanion?: string })
           ?.currentCompanion,
-      ).toBe('blobbi-a'),
+      ).toBe(PET_A),
     );
 
     relayScript = isUnreachable;
@@ -196,7 +204,7 @@ describe('useBlobbonautProfile keeps the companion across an unusable read', () 
     expect(
       (client.getQueryData(['blobbonaut-profile', OWNER]) as { currentCompanion?: string })
         ?.currentCompanion,
-    ).toBe('blobbi-a');
+    ).toBe(PET_A);
   });
 
   it('a CONFIRMED absent profile still yields null', async () => {
@@ -261,7 +269,7 @@ describe('BlobbiSelectionScreen distinguishes unknown from confirmed empty', () 
     vi.resetModules();
     vi.doMock('./useBlobbis', () => ({ useBlobbis: () => blobbisState }));
     vi.doMock('./useBlobbonautProfile', () => ({
-      useBlobbonautProfile: () => ({ data: { currentCompanion: 'blobbi-a' }, isLoading: false }),
+      useBlobbonautProfile: () => ({ data: { currentCompanion: PET_A }, isLoading: false }),
       useSetCurrentCompanion: () => ({ mutate: () => {}, isPending: false }),
     }));
     const { BlobbiSelectionScreen } = await import(

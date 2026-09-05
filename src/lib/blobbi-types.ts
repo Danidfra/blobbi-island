@@ -213,20 +213,6 @@ export interface PetStatePersonalityTags {
   skill?: string;
 }
 
-/** Optional egg-specific tags (for stage="egg") */
-export interface PetStateEggTags {
-  /** Incubation time required */
-  incubation_time?: string;
-  /** Current incubation progress */
-  incubation_progress?: string;
-  /** Egg temperature */
-  egg_temperature?: string;
-  /** Egg status */
-  egg_status?: string;
-  /** Shell integrity level */
-  shell_integrity?: string;
-}
-
 /** Optional behavior tags for kind 31124 Pet State events */
 export interface PetStateBehaviorTags {
   /** Whether pet is sleeping */
@@ -275,8 +261,6 @@ export interface PetStateSocialTags {
 
 /** Optional special tags for kind 31124 Pet State events */
 export interface PetStateSpecialTags {
-  /** Associated fees */
-  fees?: string;
   /** Penalty amount */
   penalty?: string;
   /** Pet value */
@@ -291,7 +275,6 @@ export interface PetStateSpecialTags {
 export type PetStateTags = PetStateRequiredTags &
   PetStateAppearanceTags &
   PetStatePersonalityTags &
-  PetStateEggTags &
   PetStateBehaviorTags &
   PetStateCareTags &
   PetStateSocialTags &
@@ -372,18 +355,6 @@ export interface PetState {
   /** Special skill */
   skill?: string;
 
-  // Egg-specific (for stage="egg")
-  /** Incubation time required */
-  incubationTime?: number;
-  /** Current incubation progress */
-  incubationProgress?: number;
-  /** Egg temperature */
-  eggTemperature?: number;
-  /** Egg status */
-  eggStatus?: string;
-  /** Shell integrity level */
-  shellIntegrity?: number;
-
   // Behavior
   /** Whether pet is sleeping */
   isSleeping: boolean;
@@ -425,8 +396,6 @@ export interface PetState {
   visibleToOthers: boolean;
 
   // Special
-  /** Associated fees */
-  fees?: number;
   /** Penalty amount */
   penalty?: number;
   /** Pet value */

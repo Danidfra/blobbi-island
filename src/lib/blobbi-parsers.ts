@@ -1,26 +1,38 @@
 /**
- * Utility functions for parsing Nostr events into typed Blobbi structures
+ * Utility functions for parsing Nostr events into typed Blobbi structures.
+ *
+ * Kind 31124 (pet state) validity and protocol-level parsing are DELEGATED to
+ * `@blobbi-kit/core` (`isModernBlobbiEvent` / `parseModernBlobbiEvent`): one
+ * canonical modern contract shared with Ditto and any standalone app. This
+ * module keeps only the Island-specific adapter (`companionToPetState`), the
+ * Island write side (`mergePetStateTags`) and the kind 11125 profile parser,
+ * whose semantics are Island's own.
+ *
+ * Legacy policy: a historical event (old-app schema markers, progression in
+ * `state`, non-canonical `d`, missing seed or name) is identified by core and
+ * ignored here. There is no migration and no compatibility conversion.
  */
-
 import type { NostrEvent } from '@nostrify/nostrify';
 import type {
   OwnerProfile,
   PetState,
-  PetStage,
-  BooleanString,
   CareStatus,
   CareUrgency,
   PetCondition,
   SleepState,
   CareNeed,
 } from './blobbi-types';
-import { nameFromDTag } from './blobbi-name';
 import {
   KIND_BLOBBONAUT_PROFILE,
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   KIND_BLOBBI_STATE,
 } from './blobbi-kinds';
-import { BLOBBI_ECOSYSTEM_NAMESPACE, parseVisualGeneration } from '@blobbi-kit/core/blobbi';
+import {
+  BLOBBI_ECOSYSTEM_NAMESPACE,
+  isModernBlobbiEvent,
+  parseModernBlobbiEvent,
+  type BlobbiCompanion,
+} from '@blobbi-kit/core/blobbi';
 
 /** Find a tag value within a raw tags array (first match). */
 function rawTagValue(rawTags: string[][], name: string): string | undefined {
@@ -109,115 +121,116 @@ export function parseOwnerProfile(event: NostrEvent): OwnerProfile | null {
 // Pet State Parser (Kind 31124)
 // ============================================================================
 
-/** Parse a kind 31124 event into a PetState */
+/**
+ * Parse a kind 31124 event into Island's `PetState`.
+ *
+ * Validity and the protocol-level fields come from core's canonical modern
+ * parser; `null` for anything core does not classify as modern (invalid OR
+ * legacy). Island-only extension tags are read from the companion's tags.
+ */
 export function parsePetState(event: NostrEvent): PetState | null {
-  if (event.kind !== KIND_BLOBBI_STATE) return null;
+  const companion = parseModernBlobbiEvent(event);
+  return companion ? companionToPetState(companion) : null;
+}
 
-  const id = getTag(event, 'd');
-  const stage = getTag(event, 'stage') as PetStage;
-  const breedingReadyStr = getTag(event, 'breeding_ready') as BooleanString;
-  const generation = getTag(event, 'generation');
-  const hunger = getTag(event, 'hunger');
-  const happiness = getTag(event, 'happiness');
-  const health = getTag(event, 'health');
-  const hygiene = getTag(event, 'hygiene');
-  const energy = getTag(event, 'energy');
-  const experience = getTag(event, 'experience');
-  const careStreak = getTag(event, 'care_streak');
+/** First value of an Island extension tag on the companion's event. */
+function extTag(companion: BlobbiCompanion, name: string): string | undefined {
+  return companion.allTags.find(([tagName]) => tagName === name)?.[1];
+}
 
-  // Validate required tags
-  if (!id || !stage || !breedingReadyStr || !generation ||
-      !hunger || !happiness || !health || !hygiene ||
-      !energy || !experience || !careStreak) {
-    return null;
-  }
-
-  // Validate stage enum
-  if (!['egg', 'baby', 'adult'].includes(stage)) {
-    return null;
-  }
-
-  const dTag = getTag(event, 'd');
+/**
+ * Island adapter: canonical `BlobbiCompanion` -> Island `PetState`.
+ *
+ * Protocol fields (identity, stage, stats, progression numbers, timing,
+ * visual generation) are taken from the companion, so this module never
+ * re-derives tag semantics core already owns. Island defaults apply where the
+ * modern contract leaves a field optional (stats 50, generation 1, xp 0).
+ *
+ * Visual trait tags and `adult_type` are read verbatim when present, with the
+ * companion's seed-derived value as the fallback: every current producer
+ * writes those tags as mirrors of the seed, so the two agree, and reading the
+ * tag first keeps Island's rendering byte-identical for existing Blobbis.
+ *
+ * Everything else (`is_sleeping`, care timestamps, social flags, ...) is an
+ * Island extension tag that the shared protocol does not model.
+ */
+export function companionToPetState(companion: BlobbiCompanion): PetState {
+  const tag = (name: string) => extTag(companion, name);
+  const traits = companion.visualTraits;
   return {
-    id,
-    name: nameFromDTag(dTag) || getTag(event, 'name') || id,
-    stage,
-    breedingReady: parseBooleanTag(breedingReadyStr),
-    generation: parseNumericTag(generation, 1),
+    id: companion.d,
+    // The real `name` tag, as core resolves it. (The previous parser put a
+    // d-tag-derived placeholder first; `getBlobbiDisplayName` still reads the
+    // tag directly, so display is unchanged.)
+    name: companion.name,
+    stage: companion.stage,
+    breedingReady: companion.breedingReady,
+    generation: companion.generation ?? 1,
 
     // Core stats
-    hunger: parseNumericTag(hunger, 50),
-    happiness: parseNumericTag(happiness, 50),
-    health: parseNumericTag(health, 50),
-    hygiene: parseNumericTag(hygiene, 50),
-    energy: parseNumericTag(energy, 50),
+    hunger: companion.stats.hunger ?? 50,
+    happiness: companion.stats.happiness ?? 50,
+    health: companion.stats.health ?? 50,
+    hygiene: companion.stats.hygiene ?? 50,
+    energy: companion.stats.energy ?? 50,
 
     // Progress
-    experience: parseNumericTag(experience, 0),
-    careStreak: parseNumericTag(careStreak, 0),
+    experience: companion.experience ?? 0,
+    careStreak: companion.careStreak ?? 0,
 
     // Appearance
-    baseColor: getTag(event, 'base_color'),
-    secondaryColor: getTag(event, 'secondary_color'),
-    pattern: getTag(event, 'pattern'),
-    eyeColor: getTag(event, 'eye_color'),
-    specialMark: getTag(event, 'special_mark'),
-    adultType: getTag(event, 'adult_type'),
-    // Identity, not a renderer switch: the canonical reading of the
-    // `visual_generation` tag (absent, `v1` or unknown -> `v1`; `v2` -> `v2`).
-    visualGeneration: parseVisualGeneration(event.tags),
-    manifestation: getTag(event, 'manifestation'),
-    visualEffect: getTag(event, 'visual_effect'),
-    blessing: getTag(event, 'blessing'),
+    baseColor: tag('base_color') ?? traits.baseColor,
+    secondaryColor: tag('secondary_color') ?? traits.secondaryColor,
+    pattern: tag('pattern') ?? traits.pattern,
+    eyeColor: tag('eye_color') ?? traits.eyeColor,
+    specialMark: tag('special_mark') ?? traits.specialMark,
+    adultType: tag('adult_type') ?? companion.adultType,
+    // Identity, not a renderer switch: absent, `v1` or unknown -> `v1`; `v2` -> `v2`.
+    visualGeneration: companion.visualGeneration,
+    manifestation: tag('manifestation'),
+    visualEffect: tag('visual_effect'),
+    blessing: tag('blessing'),
 
     // Personality
-    personality: getTag(event, 'personality'),
-    trait: getTag(event, 'trait'),
-    mood: getTag(event, 'mood'),
-    favoriteFood: getTag(event, 'favorite_food'),
-    voiceType: getTag(event, 'voice_type'),
-    size: getTag(event, 'size'),
-    title: getTag(event, 'title'),
-    skill: getTag(event, 'skill'),
+    personality: tag('personality'),
+    trait: tag('trait'),
+    mood: tag('mood'),
+    favoriteFood: tag('favorite_food'),
+    voiceType: tag('voice_type'),
+    size: tag('size') ?? traits.size,
+    title: tag('title'),
+    skill: tag('skill'),
 
-    // Egg-specific
-    incubationTime: parseNumericTag(getTag(event, 'incubation_time')),
-    incubationProgress: parseNumericTag(getTag(event, 'incubation_progress')),
-    eggTemperature: parseNumericTag(getTag(event, 'egg_temperature')),
-    eggStatus: getTag(event, 'egg_status'),
-    shellIntegrity: parseNumericTag(getTag(event, 'shell_integrity')),
+    // Behavior (Island extension tags)
+    isSleeping: parseBooleanTag(tag('is_sleeping')),
+    isDirty: parseBooleanTag(tag('is_dirty')),
+    hasBuff: parseBooleanTag(tag('has_buff')),
+    hasDebuff: parseBooleanTag(tag('has_debuff')),
+    lastInteraction: new Date(companion.lastInteraction * 1000),
 
-    // Behavior
-    isSleeping: parseBooleanTag(getTag(event, 'is_sleeping')),
-    isDirty: parseBooleanTag(getTag(event, 'is_dirty')),
-    hasBuff: parseBooleanTag(getTag(event, 'has_buff')),
-    hasDebuff: parseBooleanTag(getTag(event, 'has_debuff')),
-    lastInteraction: parseTimestampTag(getTag(event, 'last_interaction')),
+    // Care tracking (Island extension tags)
+    lastMeal: parseTimestampTag(tag('last_meal')),
+    lastClean: parseTimestampTag(tag('last_clean')),
+    lastWarm: parseTimestampTag(tag('last_warm')),
+    lastTalk: parseTimestampTag(tag('last_talk')),
+    lastCheck: parseTimestampTag(tag('last_check')),
+    lastSing: parseTimestampTag(tag('last_sing')),
+    lastMedicine: parseTimestampTag(tag('last_medicine')),
 
-    // Care tracking
-    lastMeal: parseTimestampTag(getTag(event, 'last_meal')),
-    lastClean: parseTimestampTag(getTag(event, 'last_clean')),
-    lastWarm: parseTimestampTag(getTag(event, 'last_warm')),
-    lastTalk: parseTimestampTag(getTag(event, 'last_talk')),
-    lastCheck: parseTimestampTag(getTag(event, 'last_check')),
-    lastSing: parseTimestampTag(getTag(event, 'last_sing')),
-    lastMedicine: parseTimestampTag(getTag(event, 'last_medicine')),
+    // Social (Island extension tags)
+    adoptedBy: tag('adopted_by'),
+    adoptedFrom: tag('adopted_from'),
+    currentLocation: tag('current_location'),
+    inParty: parseBooleanTag(tag('in_party')),
+    visibleToOthers: parseBooleanTag(tag('visible_to_others'), true),
 
-    // Social
-    adoptedBy: getTag(event, 'adopted_by'),
-    adoptedFrom: getTag(event, 'adopted_from'),
-    currentLocation: getTag(event, 'current_location'),
-    inParty: parseBooleanTag(getTag(event, 'in_party')),
-    visibleToOthers: parseBooleanTag(getTag(event, 'visible_to_others'), true),
-
-    // Special
-    fees: parseNumericTag(getTag(event, 'fees')),
-    penalty: parseNumericTag(getTag(event, 'penalty')),
-    value: parseNumericTag(getTag(event, 'value')),
-    carePointsDeducted: parseNumericTag(getTag(event, 'care_points_deducted')),
-    client: getTag(event, 'client'),
-    rawTags: event.tags,
-    rawContent: event.content,
+    // Special (Island extension tags)
+    penalty: parseNumericTag(tag('penalty')),
+    value: parseNumericTag(tag('value')),
+    carePointsDeducted: parseNumericTag(tag('care_points_deducted')),
+    client: tag('client'),
+    rawTags: companion.allTags,
+    rawContent: companion.event.content,
   };
 }
 
@@ -432,8 +445,9 @@ const MANAGED_PET_STATE_TAG_NAMES = new Set([
   'adult_type', 'manifestation', 'visual_effect', 'blessing',
   // Personality
   'personality', 'trait', 'mood', 'favorite_food', 'voice_type', 'size', 'title', 'skill',
-  // Egg-specific
-  'incubation_time', 'incubation_progress', 'egg_temperature', 'egg_status', 'shell_integrity',
+  // Historical egg / fee tags (`incubation_time`, `egg_temperature`, `fees`, ...)
+  // are deliberately NOT here and not modeled: an event carrying one is legacy
+  // and never parses, so this writer can never see or author them.
   // Behavior
   'is_sleeping', 'is_dirty', 'has_buff', 'has_debuff', 'last_interaction',
   // Care tracking
@@ -441,7 +455,7 @@ const MANAGED_PET_STATE_TAG_NAMES = new Set([
   // Social
   'adopted_by', 'adopted_from', 'current_location', 'in_party', 'visible_to_others',
   // Special
-  'fees', 'penalty', 'value', 'care_points_deducted',
+  'penalty', 'value', 'care_points_deducted',
 ]);
 
 // NOTE the deliberate absence of the legacy equipment tag.
@@ -550,15 +564,6 @@ export function mergePetStateTags(
   if (pet.title) tags.push(['title', pet.title]);
   if (pet.skill) tags.push(['skill', pet.skill]);
 
-  // Egg-specific
-  if (pet.stage === 'egg') {
-    if (pet.incubationTime) tags.push(['incubation_time', pet.incubationTime.toString()]);
-    if (pet.incubationProgress) tags.push(['incubation_progress', pet.incubationProgress.toString()]);
-    if (pet.eggTemperature) tags.push(['egg_temperature', pet.eggTemperature.toString()]);
-    if (pet.eggStatus) tags.push(['egg_status', pet.eggStatus]);
-    if (pet.shellIntegrity) tags.push(['shell_integrity', pet.shellIntegrity.toString()]);
-  }
-
   // Behavior
   tags.push(['is_sleeping', pet.isSleeping ? 'true' : 'false']);
   tags.push(['is_dirty', pet.isDirty ? 'true' : 'false']);
@@ -573,7 +578,6 @@ export function mergePetStateTags(
   tags.push(['visible_to_others', pet.visibleToOthers ? 'true' : 'false']);
 
   // Special
-  if (pet.fees) tags.push(['fees', pet.fees.toString()]);
   if (pet.penalty) tags.push(['penalty', pet.penalty.toString()]);
   if (pet.value) tags.push(['value', pet.value.toString()]);
   if (pet.carePointsDeducted) tags.push(['care_points_deducted', pet.carePointsDeducted.toString()]);
@@ -603,12 +607,9 @@ export function mergePetStateTags(
 // ============================================================================
 
 /**
- * Ecosystem gate: reject events explicitly tagged with a foreign ecosystem.
- *
- * Rules (backward-compatible):
- * - No `b` tag  → accept (legacy Blobbi events predate the ecosystem tag).
- * - `b === BLOBBI_ECOSYSTEM_NAMESPACE` → accept.
- * - `b` present but different (e.g. `pets:ecosystem:v1`) → reject.
+ * Profile ecosystem gate: reject kind 11125 events explicitly tagged with a
+ * foreign ecosystem. A missing `b` stays accepted on the PROFILE only; the pet
+ * state contract is core's and requires it.
  */
 function isForeignEcosystem(event: NostrEvent): boolean {
   const b = getTag(event, 'b');
@@ -628,16 +629,11 @@ export function validateOwnerProfileEvent(event: NostrEvent): boolean {
   return !!(d && name !== undefined);
 }
 
-/** Validate a kind 31124 event structure */
+/**
+ * Validate a kind 31124 event: the canonical modern contract from core
+ * (kind, `d`, `b`, `stage`, an activity `state`, `last_interaction`) AND not a
+ * historical event. Exactly the events `parsePetState` parses.
+ */
 export function validatePetStateEvent(event: NostrEvent): boolean {
-  if (event.kind !== KIND_BLOBBI_STATE) return false;
-
-  // Reject explicit non-Blobbi ecosystem events (missing `b` stays accepted).
-  if (isForeignEcosystem(event)) return false;
-
-  const requiredTags = ['d', 'stage', 'breeding_ready', 'generation',
-                       'hunger', 'happiness', 'health', 'hygiene',
-                       'energy', 'experience', 'care_streak'];
-
-  return requiredTags.every(tagName => getTag(event, tagName) !== undefined);
+  return event.kind === KIND_BLOBBI_STATE && isModernBlobbiEvent(event);
 }
