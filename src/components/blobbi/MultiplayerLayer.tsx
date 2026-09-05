@@ -16,6 +16,7 @@ import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { createPresencePublisher } from '@/lib/presence-publish';
+import { sanitizeBlobbiColor } from '@/lib/blobbi-visual-colors';
 import { useIslandPresence } from '@/hooks/useIslandPresence';
 import { useLocation } from '@/hooks/useLocation';
 // import type { LocationId } from '@/lib/location-types';
@@ -609,10 +610,13 @@ export function MultiplayerLayer({
       pubkey,
       authoredName,
     });
-    const baseColor      = get('base_color')      || get('baseColor');
-    const secondaryColor = get('secondary_color') || get('secondaryColor');
+    // THE stranger-colour boundary. These three strings are spliced into SVG
+    // attribute values by the renderer and mounted as HTML, unescaped; only a
+    // plain hex colour may pass. See `src/lib/blobbi-visual-colors.ts`.
+    const baseColor      = sanitizeBlobbiColor(get('base_color')      || get('baseColor'));
+    const secondaryColor = sanitizeBlobbiColor(get('secondary_color') || get('secondaryColor'));
     const pattern        = get('pattern');
-    const eyeColor       = get('eye_color')       || get('eyeColor');
+    const eyeColor       = sanitizeBlobbiColor(get('eye_color')       || get('eyeColor'));
     const specialMark    = get('special_mark')    || get('specialMark');
     const stageRaw       = get('stage') || get('blobbi_stage');
     const stage = stageRaw === 'egg' || stageRaw === 'baby' || stageRaw === 'adult'
