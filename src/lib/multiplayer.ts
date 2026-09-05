@@ -4,6 +4,7 @@
  */
 
 import type { LocationId } from '@/lib/location-types';
+import type { BlobbiVisualGeneration } from '@blobbi-kit/core';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import type { Position } from '@/lib/types';
@@ -360,6 +361,13 @@ export interface BlobbiVisual {
   specialMark?: string;
   stage?: 'egg' | 'baby' | 'adult';
   adultType?: string;
+  /**
+   * Artwork generation from the Blobbi's own kind 31124 `visual_generation`
+   * tag (canonical semantics: absent or unknown means V1). Filled from the
+   * stranger's state event, never sent over the presence wire. Absent means
+   * "not read yet" and renders as V1.
+   */
+  visualGeneration?: BlobbiVisualGeneration;
 }
 
 // ============================================================================

@@ -76,6 +76,27 @@ describe('without the override (the default, and production)', () => {
   });
 });
 
+describe('the override and the event generation are separate sources', () => {
+  it('a V2 identity from the event renders V2 with no override at all', () => {
+    const { container } = render(<CurrentBlobbiDisplay visualOverride={{ ...COMPANION, stage: 'adult' as const, visualGeneration: 'v2' as const }} />);
+    expect(box(container).dataset.blobbiGeneration).toBe('v2');
+  });
+
+  it('?blobbiVisualGeneration=v1 means "no override": a real V2 identity still renders V2', () => {
+    setQuery('?blobbiVisualGeneration=v1');
+    const { container } = render(<CurrentBlobbiDisplay visualOverride={{ ...COMPANION, stage: 'adult' as const, visualGeneration: 'v2' as const }} />);
+    expect(box(container).dataset.blobbiGeneration).toBe('v2');
+    expect(localStorage.getItem(BLOBBI_VISUAL_GENERATION_STORAGE_KEY)).toBeNull();
+  });
+
+  it('the override never reaches the resolved visual object it was applied to', () => {
+    setQuery('?blobbiVisualGeneration=v2');
+    const visual = { ...COMPANION, stage: 'adult' as const };
+    render(<CurrentBlobbiDisplay visualOverride={visual} />);
+    expect('visualGeneration' in visual).toBe(false);
+  });
+});
+
 describe('with ?blobbiVisualGeneration=v2 in a dev build', () => {
   it('draws the V2 body for the SAME resolved companion, with its trait colours', () => {
     setQuery('?blobbiVisualGeneration=v2');

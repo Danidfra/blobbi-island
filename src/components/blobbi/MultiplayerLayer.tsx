@@ -57,6 +57,7 @@ import { ChatBubblesLayer } from '@/components/ChatBubblesLayer';
 import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
+import { parseVisualGeneration } from '@blobbi-kit/core/blobbi';
 import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
 import { resolveRemoteBlobbiDisplayName } from '@/blobbi-names';
@@ -632,6 +633,9 @@ export function MultiplayerLayer({
       specialMark,
       stage,
       adultType,
+      // Identity from the stranger's own event, read canonically: a remote V2
+      // Blobbi is drawn as V2 on every screen, not only its owner's.
+      visualGeneration: parseVisualGeneration(event.tags),
     };
   }, [nostr]);
 

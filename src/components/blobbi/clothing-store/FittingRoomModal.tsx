@@ -125,6 +125,7 @@ export function FittingRoomModal({ isOpen, onClose }: FittingRoomModalProps) {
     ? {
         stage: companion.stage,
         adultType: companion.adultType,
+        visualGeneration: companion.visualGeneration,
         baseColor: companion.baseColor,
         secondaryColor: companion.secondaryColor,
         eyeColor: companion.eyeColor,

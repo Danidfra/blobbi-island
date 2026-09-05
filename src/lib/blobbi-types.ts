@@ -137,6 +137,8 @@ export interface CreateOwnerProfileInput {
 // Kind 31124 - Pet State Types
 // ============================================================================
 
+import type { BlobbiVisualGeneration } from '@blobbi-kit/core';
+
 /** Pet stage enum */
 export type PetStage = 'egg' | 'baby' | 'adult';
 
@@ -339,6 +341,12 @@ export interface PetState {
   specialMark?: string;
   /** Adult type (for adult stage) */
   adultType?: string;
+  /**
+   * Artwork generation, persistent Blobbi identity read from the
+   * `visual_generation` tag by `@blobbi-kit/core`: absent, `v1` or any
+   * unknown value is `'v1'`; only `'v2'` selects the canonical V2 anatomy.
+   */
+  visualGeneration: BlobbiVisualGeneration;
   /** Manifestation type */
   manifestation?: string;
   /** Visual effects */

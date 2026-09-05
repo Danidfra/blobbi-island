@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from './useCurrentUser';
 import type { PetState } from '@/lib/blobbi-types';
+import type { BlobbiVisualGeneration } from '@blobbi-kit/core';
 import { parsePetState, validatePetStateEvent } from '@/lib/blobbi-parsers';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { readRelayConfirmedOrThrow } from '@/lib/relay-read';
@@ -33,6 +34,12 @@ export interface Blobbi {
   skill?: string;
   name?: string;
   adultType?: string; // For adult stage Blobbis (bloomi, breezy, etc.)
+  /**
+   * Artwork generation from the event's `visual_generation` tag, as
+   * `@blobbi-kit/core` reads it (`'v1'` when absent or unknown). Carried so
+   * every renderer input built from this object draws the right anatomy.
+   */
+  visualGeneration?: BlobbiVisualGeneration;
   /**
    * Raw event tags from the original Nostr event. Preserved (read-only) so UI
    * code can inspect tags that aren't promoted to typed fields, e.g. `seed`
@@ -70,6 +77,7 @@ export function petStateToLegacyBlobbi(petState: PetState): Blobbi {
     skill: petState.skill,
     name: petState.name,
     adultType: petState.adultType,
+    visualGeneration: petState.visualGeneration,
     rawTags: petState.rawTags,
   };
 }

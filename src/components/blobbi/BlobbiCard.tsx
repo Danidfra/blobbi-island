@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { loadBlobbiSvg, normalizeBlobbiRenderModel } from "@blobbi-kit/renderer";
+import { renderBlobbiSvg, normalizeBlobbiRenderModel } from "@blobbi-kit/renderer";
 import { cn } from "@/lib/utils";
 import { Check, Sparkles } from "lucide-react";
 import { getBlobbiDisplayName } from "@/lib/blobbi-legacy";
@@ -36,16 +36,17 @@ export function BlobbiCard({
     // which drawing a Blobbi has.
     const model = normalizeBlobbiRenderModel({ visual: blobbi, instanceId: blobbi.id });
 
-    return loadBlobbiSvg(
-      model.stage,
-      model.adultType,
-      model.baseColor,
-      model.secondaryColor,
-      model.eyeColor,
-      model.eyesClosed,
-      model.instanceId,
-    );
-  }, [blobbi.stage, blobbi.adultType, blobbi.baseColor, blobbi.secondaryColor, blobbi.eyeColor, blobbi.id]);
+    return renderBlobbiSvg({
+      stage: model.stage,
+      visualGeneration: model.visualGeneration,
+      adultType: model.adultType,
+      baseColor: model.baseColor,
+      secondaryColor: model.secondaryColor,
+      eyeColor: model.eyeColor,
+      eyesClosed: model.eyesClosed,
+      instanceId: model.instanceId,
+    }).svg;
+  }, [blobbi.stage, blobbi.adultType, blobbi.visualGeneration, blobbi.baseColor, blobbi.secondaryColor, blobbi.eyeColor, blobbi.id]);
 
   // Resolve the friendliest display name. The modern `name` tag is the
   // authoritative source; see getBlobbiDisplayName for the full priority order

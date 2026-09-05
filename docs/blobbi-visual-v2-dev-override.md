@@ -5,7 +5,9 @@ Blobbi Island renders bodies through `@blobbi-kit/renderer`, which since kit
 Blobbi has) and Adult V2 (one canonical anatomy with front, side and back
 views and derived closed eyes). Which one a Blobbi gets is a property of its
 identity, carried in its kind 31124 event as `["visual_generation","v2"]`.
-No Blobbi carries that tag yet, and Island's own parser does not read it yet.
+Since the kit 0.5.1 upgrade Island reads that tag in production (see
+"Production V2 flow" below); the override exists for judging V2 in the real
+runtime before any Blobbi carries the tag.
 
 To judge V2 inside the real runtime (movement, depth scaling, z-bands, the
 ground anchor, seats, sleeping, remote players) before any event carries the
@@ -41,6 +43,30 @@ it is on.
 - **Change a V1 body.** With the override off, `resolveBodyFacing` returns the
   pose facing for V1 regardless of movement, accessories and effects resolve as
   before, and the renderer's 142 V1 fingerprints are unchanged in the kit.
+
+## Production V2 flow (no override involved)
+
+`parsePetState` (`src/lib/blobbi-parsers.ts`) reads the tag with the kit's own
+`parseVisualGeneration`: absent, `v1` or any unknown value is `v1`; only `v2`
+is `v2`. The value travels as identity, never as a renderer switch:
+
+    kind 31124 tags → PetState.visualGeneration → Blobbi.visualGeneration
+      → BlobbiVisual.visualGeneration → BlobbiRenderer / renderBlobbiSvg
+
+Every renderer input carries it: the local actor (`CurrentBlobbiDisplay`),
+cards (`BlobbiCard`), the arcade prize and fitting-room previews, the
+`refinedVisual` built in `PlayingView`, and remote players (`fetchBlobbi31124`
+in `MultiplayerLayer`, read from the stranger's own state event; it is not a
+presence wire field). `visual_generation` is not a managed tag, so a republish
+passes it through verbatim and Island never authors or rewrites it.
+
+The override and the event are separate sources: an event `v2` renders V2
+with the override off, `?blobbiVisualGeneration=v1` does not turn a real V2
+Blobbi into V1 (it only forgets the override), and the override never mutates
+the parsed visual. The accessory gate below is keyed on the override, so a
+real V2 Blobbi keeps its accessories (with V1 anchors, an open item).
+`visual-generation.integration.test.tsx` walks a realistic kind 31124 event
+through parser, legacy mapping and actor for missing / `v1` / `v2` / unknown.
 
 ## Movement → facing
 

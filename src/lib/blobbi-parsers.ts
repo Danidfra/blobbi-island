@@ -20,7 +20,7 @@ import {
   KIND_BLOBBONAUT_PROFILE_LEGACY,
   KIND_BLOBBI_STATE,
 } from './blobbi-kinds';
-import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
+import { BLOBBI_ECOSYSTEM_NAMESPACE, parseVisualGeneration } from '@blobbi-kit/core/blobbi';
 
 /** Find a tag value within a raw tags array (first match). */
 function rawTagValue(rawTags: string[][], name: string): string | undefined {
@@ -163,6 +163,9 @@ export function parsePetState(event: NostrEvent): PetState | null {
     eyeColor: getTag(event, 'eye_color'),
     specialMark: getTag(event, 'special_mark'),
     adultType: getTag(event, 'adult_type'),
+    // Identity, not a renderer switch: the canonical reading of the
+    // `visual_generation` tag (absent, `v1` or unknown -> `v1`; `v2` -> `v2`).
+    visualGeneration: parseVisualGeneration(event.tags),
     manifestation: getTag(event, 'manifestation'),
     visualEffect: getTag(event, 'visual_effect'),
     blessing: getTag(event, 'blessing'),

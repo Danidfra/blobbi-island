@@ -336,6 +336,7 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 
 - `docs/blobbi-renderer-contract.md`: renderer box + accessory space (Phase 1)
 - `docs/blobbi-package-readiness.md`: renderer extraction boundary + future package API (Phase 4)
+- `docs/blobbi-kit-adoption.md`: ownership matrix against the installed `@blobbi-kit/*` 0.5.1 / 0.1.0 packages
 - `docs/blobbi-ground-anchor-implementation.md`: ground-anchor derivation (Phase 2)
 - `docs/blobbi-actor-position-migration-notes.md`: center→ground migration
 - `docs/blobbi-actor-ui-audit.md`: the original audit that motivated Phases 0–3

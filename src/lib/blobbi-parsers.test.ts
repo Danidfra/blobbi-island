@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import type { NostrEvent } from '@nostrify/nostrify';
 
-import { validatePetStateEvent, validateOwnerProfileEvent } from './blobbi-parsers';
+import { validatePetStateEvent, validateOwnerProfileEvent, parsePetState, mergePetStateTags } from './blobbi-parsers';
 import { KIND_BLOBBI_STATE, KIND_BLOBBONAUT_PROFILE } from './blobbi-kinds';
 import { BLOBBI_ECOSYSTEM_NAMESPACE } from '@blobbi-kit/core/blobbi';
 
@@ -95,5 +95,36 @@ describe('validateOwnerProfileEvent ecosystem gate', () => {
       ...PROFILE_BASE_TAGS,
     ]);
     expect(validateOwnerProfileEvent(event)).toBe(false);
+  });
+});
+
+describe('parsePetState reads visual_generation with the canonical semantics', () => {
+  const pet = (extra: string[][]) => parsePetState(asEvent(KIND_BLOBBI_STATE, [...PET_BASE_TAGS, ...extra]))!;
+
+  it('a missing tag is V1 (every pre-existing Blobbi)', () => {
+    expect(pet([]).visualGeneration).toBe('v1');
+  });
+
+  it('an explicit v1 is V1', () => {
+    expect(pet([['visual_generation', 'v1']]).visualGeneration).toBe('v1');
+  });
+
+  it('an explicit v2 is V2', () => {
+    expect(pet([['visual_generation', 'v2']]).visualGeneration).toBe('v2');
+  });
+
+  it('an unknown value is V1, never a crash and never a guess', () => {
+    expect(pet([['visual_generation', 'future']]).visualGeneration).toBe('v1');
+    expect(pet([['visual_generation', 'V2']]).visualGeneration).toBe('v1');
+    expect(pet([['visual_generation', '']]).visualGeneration).toBe('v1');
+  });
+
+  it('a republish carries the tag through verbatim: Island never authors or drops it', () => {
+    const source = pet([['visual_generation', 'v2']]);
+    const tags = mergePetStateTags(source, { hunger: '77' });
+    expect(tags.filter(([n]) => n === 'visual_generation')).toEqual([['visual_generation', 'v2']]);
+    expect(tags.find(([n]) => n === 'hunger')?.[1]).toBe('77');
+    // And a V1 Blobbi (no tag) gains no tag on republish.
+    expect(mergePetStateTags(pet([])).some(([n]) => n === 'visual_generation')).toBe(false);
   });
 });
