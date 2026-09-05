@@ -33,15 +33,16 @@ The fix is `src/lib/blobbi-visual-colors.ts`: only `#rgb` / `#rrggbb` pass the
 parse boundary. The local player's own colours already go through
 `@blobbi-kit/core`, which validates hex, so no other path was affected.
 
-## Not fixed here: the renderer trusts its caller
+## Fixed upstream, pending a release: the renderer trusted its caller
 
-The sink lives in the shared library. `normalizeBlobbiRenderModel` sanitises
-the instance id but not the colours, and the V1 customizers accept any string.
-`@blobbi-kit/renderer` should refuse non-hex colours itself (the V2 customizer
-already does, via its `normalizeHex`), so that every host is safe by
-construction rather than by remembering this gate. Until that ships, any new
-call site that renders a Blobbi from relay data must go through
-`sanitizeBlobbiColor`.
+The sink lives in the shared library. In `@blobbi-kit/renderer` 0.1.0,
+`normalizeBlobbiRenderModel` sanitises the instance id but not the colours,
+and the V1 customizers accept any string. The blobbi-kit source now validates
+colours at the artwork boundary itself (hex only, every entry point), so a
+host is safe by construction once it consumes a renderer release that carries
+that change. Island's `sanitizeBlobbiColor` gate stays as defence in depth;
+until the upgraded renderer is installed here it is also the only gate, so
+any new call site that renders a Blobbi from relay data must go through it.
 
 ## Not fixed here: the secret key is stored in plaintext
 
