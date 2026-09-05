@@ -42,7 +42,7 @@ import {
   BLOBBI_VISUAL_EFFECT_IDS,
   EFFECT_SLOTS,
   isBlobbiVisualEffectId,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 
 const ARCADE_PRIZE_DS = [
   'blobbi:effect:golden-sparkles',

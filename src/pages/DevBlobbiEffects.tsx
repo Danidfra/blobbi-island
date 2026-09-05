@@ -30,7 +30,7 @@ import {
   type BlobbiRenderSize,
   type BlobbiVisual,
   type BlobbiVisualEffectId,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 import { ADDRESSED_VISUAL_EFFECT_ITEMS } from '@/effects/official-visual-effect-items';
 import {
   isEffectItemPlacement,

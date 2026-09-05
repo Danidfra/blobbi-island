@@ -34,7 +34,7 @@
  *
  * The renderer still receives nothing but plain strings; it never learns that
  * an item definition, an address or a view marker exists. That boundary is the
- * reason `@blobbi/renderer` can stay protocol-agnostic, and this panel does not
+ * reason `@blobbi-kit/renderer` can stay protocol-agnostic, and this panel does not
  * bend it.
  *
  * ## Why an accessory can legitimately vanish
@@ -53,7 +53,7 @@ import {
   REAR_VIEW_HIDDEN_SLOTS,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';

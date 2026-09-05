@@ -16,7 +16,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import type { BlobbiVisualEffect } from '@blobbi/renderer';
+import type { BlobbiVisualEffect } from '@blobbi-kit/renderer';
 
 import { CharacterEquipmentContext } from '@/contexts/CharacterEquipmentContext';
 import { NO_CHARACTER_EQUIPMENT } from '@/contexts/CharacterEquipmentContext';

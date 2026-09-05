@@ -1,7 +1,7 @@
 /**
  * Blobbi Island: turning kind:31634 placements into renderer input.
  *
- * THE BOUNDARY THIS FILE DEFENDS. `@blobbi/renderer` draws accessories from
+ * THE BOUNDARY THIS FILE DEFENDS. `@blobbi-kit/renderer` draws accessories from
  * `{ code, slot, x, y, scale, rot, flipX?, url? }` where x/y are percentages of
  * the renderer box. `@nostr-games/inventory` parses a coordinate-system-neutral
  * placement that may carry a 2D or 3D reference, an Euler or quaternion
@@ -21,7 +21,7 @@
  * harder to diagnose than a missing one.
  */
 
-import type { AccessoryPlacementInput, AccessorySlot } from '@blobbi/renderer';
+import type { AccessoryPlacementInput, AccessorySlot } from '@blobbi-kit/renderer';
 import type {
   GameItemPlacementEntry,
   GameItemPlacementReference,

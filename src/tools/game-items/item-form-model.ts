@@ -354,7 +354,7 @@ export const TOPIC_SUGGESTIONS: readonly string[] = [
 ];
 
 /**
- * `visual.slot` suggestions: the accessory slots `@blobbi/renderer` can draw.
+ * `visual.slot` suggestions: the accessory slots `@blobbi-kit/renderer` can draw.
  *
  * A slot describes where an accessory WOULD sit if worn. It is not a claim
  * that anyone has equipped it; that is inventory/equipment data and is out of
@@ -380,7 +380,7 @@ export const FORM_SUGGESTIONS: readonly string[] = ['egg', 'baby', 'adult'];
 // is `content.visual.kind === 'blobbi-effect'` plus an `effect` id, and that
 // id is a NAME, never an implementation. No animation, CSS or markup is ever
 // carried in an event or read out of one; the effect code lives in
-// `@blobbi/renderer` and Island resolves a TRUSTED item address to a local effect
+// `@blobbi-kit/renderer` and Island resolves a TRUSTED item address to a local effect
 // (`src/effects/official-visual-effect-items.ts`). Publishing an item with
 // `effect: "celestial-aura"` from another key therefore grants nothing.
 // See docs/blobbi-visual-effects.md §§1–3.
@@ -394,7 +394,7 @@ export const EFFECT_CATEGORY = 'effect';
 /**
  * The four slots an effect may occupy.
  *
- * WRITTEN OUT rather than imported from `@blobbi/renderer`, because this module is
+ * WRITTEN OUT rather than imported from `@blobbi-kit/renderer`, because this module is
  * the tools' pure domain layer and importing the renderer here would put React
  * in the middle of event building, a boundary `boundaries.test.ts` enforces.
  * Four short strings are a fair price for that; a twelve-entry EFFECT ID list

@@ -40,7 +40,7 @@ import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { facingFromHeading } from '@/lib/blobbi-facing';
 import { BlobbiActor } from './BlobbiActor';
-import type { BlobbiVisual } from '@blobbi/renderer';
+import type { BlobbiVisual } from '@blobbi-kit/renderer';
 
 export interface MovableBlobbiRef {
   /** Walk to a ground target through the movement system. */

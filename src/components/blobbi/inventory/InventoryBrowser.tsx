@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Coins, Cookie, HeartPulse, PackageOpen, Shirt, ToyBrick } from 'lucide-react';
-import type { AccessorySlot } from '@blobbi/renderer';
+import type { AccessorySlot } from '@blobbi-kit/renderer';
 
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';

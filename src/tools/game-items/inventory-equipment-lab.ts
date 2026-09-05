@@ -20,7 +20,7 @@
  * Phase-9 registries, never a hand-maintained copy.
  */
 
-import type { BlobbiEffectSlot, BlobbiVisualEffectId } from '@blobbi/renderer';
+import type { BlobbiEffectSlot, BlobbiVisualEffectId } from '@blobbi-kit/renderer';
 import {
   ADDRESSED_OFFICIAL_COSMETICS,
   ADDRESSED_OFFICIAL_EFFECT_ITEMS,

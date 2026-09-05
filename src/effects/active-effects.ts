@@ -48,8 +48,8 @@
  * invent a second order.
  */
 
-import type { BlobbiVisualEffect } from '@blobbi/renderer';
-import { EFFECT_SLOT_ORDER } from '@blobbi/renderer';
+import type { BlobbiVisualEffect } from '@blobbi-kit/renderer';
+import { EFFECT_SLOT_ORDER } from '@blobbi-kit/renderer';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import {
   resolveOfficialVisualEffectItem,

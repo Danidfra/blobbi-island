@@ -23,7 +23,7 @@ import { useItemCatalog } from '@/inventory/useItemCatalog';
 import { getInventoryItems } from '@/inventory/package';
 import type { GameItemPlacementEntry, ParseWarning } from '@/inventory/package';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
-import type { AccessoryPlacementInput, BlobbiVisualEffect } from '@blobbi/renderer';
+import type { AccessoryPlacementInput, BlobbiVisualEffect } from '@blobbi-kit/renderer';
 import {
   isEffectItemPlacement,
   resolveActiveBlobbiEffects,

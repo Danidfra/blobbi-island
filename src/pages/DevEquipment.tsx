@@ -39,7 +39,7 @@ import {
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
   type BlobbiVisual,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

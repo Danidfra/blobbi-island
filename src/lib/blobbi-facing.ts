@@ -20,7 +20,7 @@
  * entirely and keeps the pose facing it always had. V2 turns while standing.
  * A pose facing of `'back'` (a rear-facing seat) always wins.
  */
-import type { BlobbiFacing, BlobbiVisual } from '@blobbi/renderer';
+import type { BlobbiFacing, BlobbiVisual } from '@blobbi-kit/renderer';
 
 export interface MovementHeading {
   x: number;

@@ -24,7 +24,7 @@ import {
   isOfficialVisualEffectAddress,
   everyMappingResolvesToAKnownEffect,
 } from './official-visual-effect-items';
-import { BLOBBI_VISUAL_EFFECT_IDS } from '@blobbi/renderer';
+import { BLOBBI_VISUAL_EFFECT_IDS } from '@blobbi-kit/renderer';
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from '@/inventory/constants';
 
 const ROOT = process.cwd();
@@ -211,7 +211,7 @@ describe('the registry stays inside its Phase-9 activation boundary', () => {
     expect(imports.sort()).toEqual([
       '@/inventory/constants',
       '@/protocol/event-registry',
-      '@blobbi/renderer',
+      '@blobbi-kit/renderer',
     ]);
     // Constants and a pure address builder; no hook, no query, no mutation.
     for (const banned of [/use[A-Z]/, /useNostrPublish/, /mutate/, /31633/, /31634/]) {

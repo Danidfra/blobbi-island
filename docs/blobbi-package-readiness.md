@@ -1,9 +1,8 @@
 # Blobbi renderer: package extraction
 
-**Status: Phase 10. The renderer is now `@blobbi/renderer`, a package of the
-blobbi-kit repository (`packages/blobbi-renderer` there), consumed by Island
-through an npm `file:` dependency on the sibling checkout until it is
-published. The local workspace package `@blobbi/react` and its consumer fixture
+**Status: Phase 10. The renderer is now `@blobbi-kit/renderer`, a package of the
+blobbi-kit repository (`packages/blobbi-renderer` there), published to npm and
+installed by Island as an ordinary registry dependency. The local workspace package `@blobbi/react` and its consumer fixture
 were removed from this repository; their history was imported into blobbi-kit
 with `git subtree`. Everything below describes the Phase-5 extraction that the
 canonical package grew out of; paths under `packages/blobbi-react/` now live in

@@ -21,7 +21,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import type { AccessoryPlacementInput } from '@blobbi/renderer';
+import type { AccessoryPlacementInput } from '@blobbi-kit/renderer';
 
 /**
  * The local player wears exactly one, unmistakable accessory.

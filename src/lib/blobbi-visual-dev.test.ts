@@ -107,7 +107,7 @@ describe('the override is presentation only, by import graph', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '');
     const specifiers = [...source.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1]);
-    expect(specifiers.sort()).toEqual(['@blobbi/renderer', 'react']);
+    expect(specifiers.sort()).toEqual(['@blobbi-kit/renderer', 'react']);
     expect(source).not.toMatch(/useNostrPublish|mutateAsync|signEvent|NostrEvent|31124|visual_generation|useBlobbis|parseBlobbi/);
   });
 });

@@ -299,7 +299,7 @@ img {
     padding: 1.5rem;
   }
 
-  /* `@blobbi/renderer` emits this modifier for `interactive` renderers and
+  /* `@blobbi-kit/renderer` emits this modifier for `interactive` renderers and
      applies no decoration itself; this is the hover lift the renderer used to
      express with Tailwind utilities (hover:scale-105 transition-all duration-200). */
   .blobbi-renderer--interactive {

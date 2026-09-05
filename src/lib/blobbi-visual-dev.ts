@@ -30,7 +30,7 @@
  * because a flagged surface ships in production when enabled and this must not.
  */
 import { useState } from 'react';
-import type { BlobbiVisual } from '@blobbi/renderer';
+import type { BlobbiVisual } from '@blobbi-kit/renderer';
 
 /** True only in dev/local builds. Statically `false` in a production build. */
 export const isBlobbiVisualDevMode: boolean = import.meta.env.DEV;

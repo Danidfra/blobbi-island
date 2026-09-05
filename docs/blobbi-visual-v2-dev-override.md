@@ -1,6 +1,6 @@
 # Adult V2 in the real actor: the DEV-only visual generation override
 
-Blobbi Island renders bodies through `@blobbi/renderer`, which since kit
+Blobbi Island renders bodies through `@blobbi-kit/renderer`, which since kit
 `7697266` draws two artwork generations: V1 (the sixteen forms every existing
 Blobbi has) and Adult V2 (one canonical anatomy with front, side and back
 views and derived closed eyes). Which one a Blobbi gets is a property of its
@@ -108,9 +108,7 @@ was not entered: it requires a Nostr sign-in and publishes presence.
 
 ## Manual verification
 
-    # in blobbi-kit (the renderer Island links via file:)
-    npm run build --workspace @blobbi/renderer
-    # in blobbi-island
+    # in blobbi-island (the renderer is the published @blobbi-kit/renderer package)
     npm run dev
     # open, then walk around, sit, sleep, switch rooms:
     http://localhost:5173/?blobbiVisualGeneration=v2

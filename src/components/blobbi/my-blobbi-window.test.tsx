@@ -24,7 +24,7 @@ import { render, screen } from '@testing-library/react';
 
 import { TestApp } from '@/test/TestApp';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
-import { ACCESSORY_BASE_RATIO, BLOBBI_RENDER_SIZE_PX } from '@blobbi/renderer';
+import { ACCESSORY_BASE_RATIO, BLOBBI_RENDER_SIZE_PX } from '@blobbi-kit/renderer';
 
 const ROOT = resolve(__dirname, '../../..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -172,7 +172,7 @@ describe('the Blobbi owns its stage', () => {
 
     // The canonical renderer is an installed package now; its built output
     // keeps the identifier, so the contract is still readable from here.
-    const renderer = read('node_modules/@blobbi/renderer/dist/BlobbiRenderer.js');
+    const renderer = read('node_modules/@blobbi-kit/renderer/dist/BlobbiRenderer.js');
     expect(renderer).toMatch(/width: ACCESSORY_BASE_PERCENT/);
     expect(renderer).toMatch(/height: ACCESSORY_BASE_PERCENT/);
 

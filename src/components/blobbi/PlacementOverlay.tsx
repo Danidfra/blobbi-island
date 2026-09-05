@@ -21,8 +21,8 @@
  * event rather than three.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ACCESSORY_BASE_PERCENT, normalizeAccessoryPlacements } from '@blobbi/renderer';
-import type { AccessoryPlacementInput, AccessorySlot } from '@blobbi/renderer';
+import { ACCESSORY_BASE_PERCENT, normalizeAccessoryPlacements } from '@blobbi-kit/renderer';
+import type { AccessoryPlacementInput, AccessorySlot } from '@blobbi-kit/renderer';
 
 import { cn } from '@/lib/utils';
 import { createPlacementAccessorySourceResolver } from '@/placement/accessory-sources';

@@ -5,7 +5,7 @@
  * Behavioral tests prove that today's code does the right thing. These prove
  * that the wrong thing is not reachable from here at all; that no module in
  * the game item tools imports an inventory mutation, that nothing implements
- * Grant or Placement, that no private key is touched, and that `@blobbi/renderer`
+ * Grant or Placement, that no private key is touched, and that `@blobbi-kit/renderer`
  * still knows nothing about Nostr. Those are properties a future edit could
  * quietly break while every behavioral test kept passing.
  */
@@ -17,8 +17,8 @@ import { join } from 'node:path';
 const ROOT = process.cwd();
 const TOOLS_LOGIC = join(ROOT, 'src/tools/game-items');
 const TOOLS_UI = join(ROOT, 'src/components/tools/game-items');
-/** The installed canonical renderer (an npm `file:` link to blobbi-kit); scanned as built output. */
-const RENDERER = join(ROOT, 'node_modules/@blobbi/renderer/dist');
+/** The installed canonical renderer (the published npm package); scanned as built output. */
+const RENDERER = join(ROOT, 'node_modules/@blobbi-kit/renderer/dist');
 
 /**
  * Strip comments so these assertions are about CODE, not about prose.
@@ -197,7 +197,7 @@ describe('no page reload is ever forced', () => {
   });
 });
 
-describe('@blobbi/renderer stays protocol-agnostic', () => {
+describe('@blobbi-kit/renderer stays protocol-agnostic', () => {
   // Built output: `.js` for what runs, `.d.ts` for what a consumer types against.
   const builtFiles = (dir: string): string[] =>
     readdirSync(dir).flatMap((entry) => {
@@ -233,12 +233,12 @@ describe('@blobbi/renderer stays protocol-agnostic', () => {
     for (const file of sourceFiles(TOOLS_LOGIC).filter((f) => !/\.test\.tsx?$/.test(f))) {
       const text = stripComments(readFileSync(file, 'utf8'));
       if (TYPE_ONLY_EXEMPT.some((name) => file.endsWith(name))) continue;
-      expect(text, file).not.toMatch(/from '@blobbi\/renderer'/);
+      expect(text, file).not.toMatch(/from '@blobbi-kit\/renderer'/);
     }
     for (const name of TYPE_ONLY_EXEMPT) {
       const text = stripComments(readFileSync(join(TOOLS_LOGIC, name), 'utf8'));
-      expect(text, name).toMatch(/import type \{[^}]*\} from '@blobbi\/renderer'/);
-      expect(text, name).not.toMatch(/^import \{[^}]*\} from '@blobbi\/renderer'/m);
+      expect(text, name).toMatch(/import type \{[^}]*\} from '@blobbi-kit\/renderer'/);
+      expect(text, name).not.toMatch(/^import \{[^}]*\} from '@blobbi-kit\/renderer'/m);
     }
   });
 
@@ -262,14 +262,14 @@ describe('@blobbi/renderer stays protocol-agnostic', () => {
     const vocabulary = stripComments(
       readFileSync(join(TOOLS_UI, 'effect-vocabulary.ts'), 'utf8'),
     );
-    expect(vocabulary).toMatch(/from '@blobbi\/renderer'/);
+    expect(vocabulary).toMatch(/from '@blobbi-kit\/renderer'/);
 
     const formModel = stripComments(readFileSync(join(TOOLS_LOGIC, 'item-form-model.ts'), 'utf8'));
-    expect(formModel).not.toMatch(/from '@blobbi\/renderer'/);
+    expect(formModel).not.toMatch(/from '@blobbi-kit\/renderer'/);
     expect(formModel).toMatch(/EFFECT_SLOT_SUGGESTIONS/);
 
     const validation = stripComments(readFileSync(join(TOOLS_LOGIC, 'validation.ts'), 'utf8'));
-    expect(validation).not.toMatch(/from '@blobbi\/renderer'/);
+    expect(validation).not.toMatch(/from '@blobbi-kit\/renderer'/);
   });
 });
 

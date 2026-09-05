@@ -13,12 +13,6 @@ stages:
 
 # The full check, run on every branch.
 #
-# The Blobbi renderer is consumed as `@blobbi/renderer`, an npm `file:`
-# dependency on the sibling blobbi-kit checkout (`../blobbi-kit`) until the
-# package is published. That checkout must be present and built (`npm run
-# build` there) before `npm ci` here can link a working package; the
-# `renderer-boundary` test names that requirement explicitly when it is unmet.
-#
 # Steps are spelled out rather than deferred to `npm test` so a red pipeline
 # names the failing check in the job list. They are the same steps in the same
 # order as `npm test`. Nothing here publishes.
@@ -28,10 +22,6 @@ validate:
   # across the app, the package and the consumer fixture) on a cold install.
   timeout: 15 minutes
   script:
-    # The renderer is a `file:` dependency on the sibling repository. Build it
-    # first so the symlinked package has its dist/ when the app is checked.
-    - git clone --depth 1 https://github.com/Danidfra/blobbi-kit.git ../blobbi-kit
-    - (cd ../blobbi-kit && npm ci && npm run build)
     # Clean, lockfile-exact install of the app.
     - npm ci
     # 1. App TypeScript.

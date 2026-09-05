@@ -21,7 +21,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 import { TestApp } from '@/test/TestApp';
 import { officialCosmeticByD } from '@/protocol/event-registry';
-import type { AccessoryPlacementInput } from '@blobbi/renderer';
+import type { AccessoryPlacementInput } from '@blobbi-kit/renderer';
 
 const OWNER = 'f'.repeat(64);
 

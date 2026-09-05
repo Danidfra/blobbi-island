@@ -109,7 +109,7 @@ describe('the local Blobbi', () => {
     // The renderer is an installed package; its built output keeps both facts
     // (compiled JSX spells an element as `jsx("img", ...)`).
     const rendererView = readFileSync(
-      join(process.cwd(), 'node_modules/@blobbi/renderer/dist/BlobbiRenderer.js'),
+      join(process.cwd(), 'node_modules/@blobbi-kit/renderer/dist/BlobbiRenderer.js'),
       'utf8',
     );
     expect(rendererView).toContain('dangerouslySetInnerHTML');

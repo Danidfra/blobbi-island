@@ -21,7 +21,7 @@
  *
  * ## An unimplemented id gets a labelled stand-in, never a blank box
  *
- * `@blobbi/renderer` draws twelve effects. An id outside that set is a valid thing
+ * `@blobbi-kit/renderer` draws twelve effects. An id outside that set is a valid thing
  * to publish: another client may know it, but this client cannot draw it, and
  * an empty preview reads as a broken item rather than an unimplemented one.
  *
@@ -39,7 +39,7 @@ import {
   getBlobbiVisualEffectInfo,
   type BlobbiRenderSize,
   type BlobbiVisualEffectId,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 import { Badge } from '@/components/ui/badge';
 
 import { PREVIEW_VISUALS } from '@/tools/game-items/preview-model';

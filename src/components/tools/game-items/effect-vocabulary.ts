@@ -3,7 +3,7 @@
  *
  * WHY THIS LIVES IN THE COMPONENT LAYER. `src/tools/game-items/` is the
  * studio's pure domain layer: form model, event conversion, validation. It must
- * not import `@blobbi/renderer`, because that would put React, and 230 kB of
+ * not import `@blobbi-kit/renderer`, because that would put React, and 230 kB of
  * artwork: in the middle of event building, a boundary
  * `src/tools/game-items/boundaries.test.ts` enforces. Suggestions and
  * autofill are UI, so they belong here, where the renderer is already a
@@ -22,9 +22,9 @@ import {
   BLOBBI_VISUAL_EFFECT_IDS,
   EFFECT_SLOTS,
   isBlobbiVisualEffectId,
-} from '@blobbi/renderer';
+} from '@blobbi-kit/renderer';
 
-/** Effect ids `@blobbi/renderer` currently implements. Suggestions, not a gate. */
+/** Effect ids `@blobbi-kit/renderer` currently implements. Suggestions, not a gate. */
 export const EFFECT_ID_SUGGESTIONS: readonly string[] = [
   ...BLOBBI_VISUAL_EFFECT_IDS,
 ];

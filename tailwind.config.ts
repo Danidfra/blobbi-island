@@ -5,7 +5,7 @@ export default {
 	darkMode: ["class"],
 	content: [
 		"./src/**/*.{ts,tsx}",
-		// `@blobbi/renderer` applies its geometry inline and emits only its own
+		// `@blobbi-kit/renderer` applies its geometry inline and emits only its own
 		// namespaced class names, so the package needs no Tailwind scanning.
 	],
 	prefix: "",

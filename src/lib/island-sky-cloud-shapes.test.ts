@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { loadBlobbiSvg } from '@blobbi/renderer';
+import { loadBlobbiSvg } from '@blobbi-kit/renderer';
 import { join } from 'node:path';
 
 import {
@@ -205,7 +205,7 @@ describe('the Blobbi contours come from the production artwork', () => {
     // `data-blobbi-body="true"` in BABY_BASE_SVG. Read from the source so a change
     // to the artwork shows up here rather than drifting silently.
     const source = readFileSync(
-      join(process.cwd(), 'node_modules/@blobbi/renderer/dist/artwork/baby-blobbi/lib/baby-svg-data.js'),
+      join(process.cwd(), 'node_modules/@blobbi-kit/renderer/dist/artwork/baby/v1/lib/baby-svg-data.js'),
       'utf8',
     );
     const body = pathOf('blobbi-baby').replace(/ Z$/, '');
@@ -217,14 +217,14 @@ describe('the Blobbi contours come from the production artwork', () => {
     // `ellipse cx=100 cy=120 rx=45 ry=60`. Read from the source so an artwork change
     // surfaces here instead of drifting.
     const types = readFileSync(
-      join(process.cwd(), 'node_modules/@blobbi/renderer/dist/artwork/adult-blobbi/types/adult.types.js'),
+      join(process.cwd(), 'node_modules/@blobbi-kit/renderer/dist/artwork/adult/v1/types/adult.types.js'),
       'utf8',
     );
     // Built output uses double quotes; accept either.
     expect(types).toMatch(/getDefaultAdultForm[\s\S]{0,80}return ['"]catti['"]/);
 
     const source = readFileSync(
-      join(process.cwd(), 'node_modules/@blobbi/renderer/dist/artwork/adult-blobbi/lib/adult-svg-data.js'),
+      join(process.cwd(), 'node_modules/@blobbi-kit/renderer/dist/artwork/adult/v1/lib/adult-svg-data.js'),
       'utf8',
     );
     const part = ISLAND_CLOUD_SHAPE_GEOMETRY['blobbi-adult'].parts[0];

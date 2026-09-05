@@ -2,7 +2,7 @@
  * CurrentBlobbiPreview: preview-context wrapper over CurrentBlobbiDisplay.
  *
  * Sizing goes through the ONE canonical renderer-size contract of
- * `@blobbi/renderer`: every token, including the preview-only `2xl` and
+ * `@blobbi-kit/renderer`: every token, including the preview-only `2xl` and
  * `3xl`, is a real renderer box, so there are no preview-specific overrides,
  * no separate accessory multiplier table, and no viewport breakpoints. The
  * accessory editor mounts its overlay on the same box (see BlobbiInfoModal),
@@ -27,7 +27,7 @@
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
 import { cn } from "@/lib/utils";
-import type { BlobbiRendererSize } from "@blobbi/renderer";
+import type { BlobbiRendererSize } from "@blobbi-kit/renderer";
 
 interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "size"> {
   /** A size token, a pixel number, or a CSS length such as `"100%"`. */

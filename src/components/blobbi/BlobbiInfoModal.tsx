@@ -19,7 +19,7 @@ import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentConte
 import { playerFacingMessage } from '@/lib/player-facing-error';
 import { buildEquipEntry } from '@/placement/render-model';
 import { isEffectPlacementSlot, type PlacementSlot } from '@/placement/policy';
-import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/renderer';
+import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi-kit/renderer';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useCoinBalance } from '@/inventory/useCoinWallet';

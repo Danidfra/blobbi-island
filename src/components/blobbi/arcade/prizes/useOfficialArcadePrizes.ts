@@ -24,7 +24,7 @@
 
 import { useMemo } from 'react';
 
-import type { BlobbiVisualEffectId } from '@blobbi/renderer';
+import type { BlobbiVisualEffectId } from '@blobbi-kit/renderer';
 import {
   OFFICIAL_ARCADE_PRIZE_CATALOG,
   orderedOfficialArcadePrizes,

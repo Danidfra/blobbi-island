@@ -9,7 +9,7 @@
  *
  * This module is PURE: no React, no Nostr, no asset paths, no fetching. It takes
  * already-parsed images and returns plain URLs. That is what lets the accessory
- * adapter stay synchronous and lets `@blobbi/renderer` stay protocol-agnostic, the
+ * adapter stay synchronous and lets `@blobbi-kit/renderer` stay protocol-agnostic, the
  * renderer receives strings and never learns that a marker existed.
  *
  * TWO DISTINCT CONSUMERS, TWO DISTINCT POLICIES:

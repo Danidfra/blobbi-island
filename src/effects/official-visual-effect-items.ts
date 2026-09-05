@@ -1,7 +1,7 @@
 /**
  * Blobbi Island: TRUSTED visual-effect item registry (typed projection).
  *
- * `@blobbi/renderer` knows how to draw twelve effects, named by id. This module is
+ * `@blobbi-kit/renderer` knows how to draw twelve effects, named by id. This module is
  * the only place that says which ITEM entitles a Blobbi to one of them, and it
  * answers the same way `isOfficialCosmeticAddress` answers its own question:
  *
@@ -42,8 +42,8 @@
  * its identity, matched against the table below.
  */
 
-import type { BlobbiEffectSlot, BlobbiVisualEffectId } from '@blobbi/renderer';
-import { EFFECT_SLOTS, isBlobbiVisualEffectId } from '@blobbi/renderer';
+import type { BlobbiEffectSlot, BlobbiVisualEffectId } from '@blobbi-kit/renderer';
+import { EFFECT_SLOTS, isBlobbiVisualEffectId } from '@blobbi-kit/renderer';
 import { OFFICIAL_ITEM_ISSUER_PUBKEY } from '@/inventory/constants';
 import {
   ADDRESSED_OFFICIAL_EFFECT_ITEMS,
@@ -54,7 +54,7 @@ import {
 /**
  * Rarity, as the game economy will price it.
  *
- * Island's vocabulary, not the renderer's: `@blobbi/renderer` has no idea an
+ * Island's vocabulary, not the renderer's: `@blobbi-kit/renderer` has no idea an
  * effect can be rare, and adding rarity to a preset would put an economy
  * decision inside a drawing package.
  */
@@ -145,7 +145,7 @@ export function validateOfficialVisualEffectRegistry(
 
     if (!isBlobbiVisualEffectId(entry.effectId)) {
       issues.push(
-        `${label}: effect id "${entry.effectId}" is not implemented by @blobbi/renderer`,
+        `${label}: effect id "${entry.effectId}" is not implemented by @blobbi-kit/renderer`,
       );
       continue; // the slot check below needs a valid id
     }

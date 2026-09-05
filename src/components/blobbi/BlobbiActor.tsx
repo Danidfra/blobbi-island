@@ -28,7 +28,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import type { GroundPosition } from '@/lib/blobbi-ground';
-import type { BlobbiRenderSize } from '@blobbi/renderer';
+import type { BlobbiRenderSize } from '@blobbi-kit/renderer';
 
 /** Fixed shadow widths per size (previous desktop `md:` values; no breakpoints). */
 const SHADOW_WIDTH_CLASSES: Record<BlobbiRenderSize, string> = {

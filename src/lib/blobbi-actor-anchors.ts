@@ -2,7 +2,7 @@
  * Named anchors INSIDE the Blobbi renderer box.
  *
  * The renderer box is a square (`BLOBBI_RENDER_SIZE_PX`, see
- * `@blobbi/renderer`'s `blobbi-render-size.ts`) that the body SVG fills exactly,
+ * `@blobbi-kit/renderer`'s `blobbi-render-size.ts`) that the body SVG fills exactly,
  * so a point in the body is best expressed the way saved accessory placements
  * already are: as a percentage of that box, measured from its top-left. A
  * value here is therefore valid at every size token, every depth scale and

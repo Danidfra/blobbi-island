@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
-import type { AccessoryPlacementInput } from '@blobbi/renderer';
+import type { AccessoryPlacementInput } from '@blobbi-kit/renderer';
 import { CharacterEquipmentContext } from '@/contexts/CharacterEquipmentContext';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory';
 import { FIXTURE_IMAGE_URLS as U } from '@/inventory/item-image-fixtures';

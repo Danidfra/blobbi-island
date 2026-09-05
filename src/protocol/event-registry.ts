@@ -1432,7 +1432,7 @@ export function officialCosmeticByAddress(
 // diagnostics only.
 //
 // `effectId`/`effectSlot` are plain strings HERE because this module must not
-// import `@blobbi/renderer`. The typed projection with renderer-consistency checks
+// import `@blobbi-kit/renderer`. The typed projection with renderer-consistency checks
 // is `src/effects/official-visual-effect-items.ts`, whose tests fail if any
 // entry names an effect or slot the renderer does not implement.
 // ---------------------------------------------------------------------------

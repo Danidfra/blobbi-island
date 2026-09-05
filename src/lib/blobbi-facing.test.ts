@@ -2,7 +2,7 @@
  * Movement heading → body facing, and which bodies are allowed to turn.
  */
 import { describe, it, expect } from 'vitest';
-import type { BlobbiVisual } from '@blobbi/renderer';
+import type { BlobbiVisual } from '@blobbi-kit/renderer';
 import { facingFromHeading, resolveBodyFacing } from './blobbi-facing';
 
 describe('facingFromHeading', () => {

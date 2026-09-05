@@ -55,7 +55,7 @@ import {
   type BlobbiRendererSize,
   type BlobbiVisual,
   type BlobbiVisualEffect,
-} from "@blobbi/renderer";
+} from "@blobbi-kit/renderer";
 import { applyDevVisualGeneration, useDevVisualGenerationOverride } from "@/lib/blobbi-visual-dev";
 import { resolveBodyFacing } from "@/lib/blobbi-facing";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";

@@ -1,10 +1,9 @@
 /**
  * ISLAND-SIDE package boundary.
  *
- * The renderer lives in `@blobbi/renderer`, a package of the blobbi-kit
- * repository consumed here through an npm `file:` dependency until it is
- * published. That package proves its own purity in its own test suite (it
- * cannot reach a relay, a user, a world, an asset path, the domain kit or a
+ * The renderer lives in `@blobbi-kit/renderer`, a package published from the
+ * blobbi-kit repository and installed from npm. That package proves its own
+ * purity in its own test suite (it cannot reach a relay, a user, a world, an asset path, the domain kit or a
  * consumer's CSS build). What THIS file proves is the half that lives on the
  * Island side of the line, and that no amount of package hygiene can
  * guarantee:
@@ -27,14 +26,14 @@
  * not trip the check.
  */
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
 const ISLAND = join(ROOT, 'src');
-const RENDERER = '@blobbi/renderer';
+const RENDERER = '@blobbi-kit/renderer';
 /** The installed package, through the same symlink the app resolves. */
-const INSTALLED = join(ROOT, 'node_modules', '@blobbi', 'renderer');
+const INSTALLED = join(ROOT, 'node_modules', '@blobbi-kit', 'renderer');
 
 /** Every module specifier actually imported (static, dynamic, or re-exported). */
 function importsOf(file: string): string[] {
@@ -102,7 +101,7 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
   });
 
   it('imports the renderer only through the package public entry point', () => {
-    // Deep imports (`@blobbi/renderer/dist/...`) would couple Island to the
+    // Deep imports (`@blobbi-kit/renderer/dist/...`) would couple Island to the
     // package's file layout, which is exactly what the entry point exists to
     // hide. The retired `@blobbi/react` name must not come back either.
     const deep = ISLAND_FILES.flatMap((file) =>
@@ -132,14 +131,27 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
 });
 
 describe('the installed renderer is the canonical package', () => {
-  it('resolves to @blobbi/renderer with a real built artifact', () => {
+  it('is declared as the published registry package, not a development link', () => {
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+    expect(pkg.dependencies[RENDERER]).toBe('^0.1.0');
+    const declared = { ...pkg.dependencies, ...pkg.devDependencies };
+    for (const [name, spec] of Object.entries(declared)) {
+      if (name.startsWith('@blobbi')) expect(String(spec), name).not.toMatch(/^file:/);
+    }
+    expect(declared['@blobbi/renderer']).toBeUndefined();
+    const lockfile = readFileSync(join(ROOT, 'package-lock.json'), 'utf8');
+    expect(lockfile).not.toContain('../blobbi-kit');
+    expect(lockfile).not.toContain('@blobbi/renderer');
+  });
+
+  it('resolves to @blobbi-kit/renderer with a real built artifact', () => {
     const manifest = JSON.parse(readFileSync(join(INSTALLED, 'package.json'), 'utf8'));
     expect(manifest.name).toBe(RENDERER);
+    expect(manifest.version).toBe('0.1.0');
     expect(manifest.exports['.'].import).toBe('./dist/index.js');
-    // The `file:` dependency points at a checkout, so the artifact has to be
-    // built there; a missing dist would fail the app build with a far less
-    // helpful message than this one.
-    expect(existsSync(join(INSTALLED, 'dist/index.js')), 'run `npm run build` in blobbi-kit').toBe(true);
+    // Installed under this project from the registry, not linked from elsewhere.
+    expect(realpathSync(INSTALLED)).toBe(INSTALLED);
+    expect(existsSync(join(INSTALLED, 'dist/index.js'))).toBe(true);
     expect(existsSync(join(INSTALLED, 'dist/index.d.ts'))).toBe(true);
   });
 

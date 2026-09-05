@@ -18,11 +18,11 @@ BlobbiActor            (shared ground-anchor actor primitive)
         ▼
 ─────────────── package boundary ───────────────
         ▼
-BlobbiRenderer         (@blobbi/renderer: pure visual renderer, from blobbi-kit)
+BlobbiRenderer         (@blobbi-kit/renderer: pure visual renderer, from blobbi-kit)
 ```
 
 Everything above the line is Blobbi Island: it knows where it is, whose it is,
-and what it is doing. Everything below is `@blobbi/renderer`, the canonical
+and what it is doing. Everything below is `@blobbi-kit/renderer`, the canonical
 renderer package from the blobbi-kit repository, which knows only what it was
 handed. The line
 is enforced from both sides, blobbi-kit's `packages/blobbi-renderer/src/package-purity.test.ts`
@@ -105,7 +105,7 @@ moved into one pure `normalizeBlobbiRenderModel`, and accessory image sources
 became an injectable adapter instead of an Island asset path baked into the
 renderer. **Phase 5 turned that boundary into a package boundary**: the
 renderer, the render model, the accessory normalizer, the canonical size table,
-the SVG transforms and all Blobbi artwork now live in `@blobbi/renderer`, and
+the SVG transforms and all Blobbi artwork now live in `@blobbi-kit/renderer`, and
 Island imports them by package name.
 
 Island consumes it, and the package cannot see Island:

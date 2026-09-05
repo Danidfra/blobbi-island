@@ -23,7 +23,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import type { AccessoryPlacementInput } from '@blobbi/renderer';
+import type { AccessoryPlacementInput } from '@blobbi-kit/renderer';
 
 import { CharacterEquipmentContext } from '@/contexts/CharacterEquipmentContext';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory';

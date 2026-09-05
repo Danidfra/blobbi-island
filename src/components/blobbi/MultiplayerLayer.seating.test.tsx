@@ -105,12 +105,12 @@ vi.mock('./CurrentBlobbiDisplay', () => ({
     <div data-testid="blobbi-display" data-facing={facing ?? 'front'}>Blobbi</div>
   ),
 }));
-/* Only the COMPONENT is stubbed. The rest of `@blobbi/renderer` is pure data
+/* Only the COMPONENT is stubbed. The rest of `@blobbi-kit/renderer` is pure data
  * (`DEFAULT_STAGE`, the size table, the accessory normalizer) that the layer
  * under test genuinely uses, so the real module is spread back in, mocking the
  * whole package would replace working code with `undefined`. */
-vi.mock('@blobbi/renderer', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@blobbi/renderer')>()),
+vi.mock('@blobbi-kit/renderer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@blobbi-kit/renderer')>()),
   BlobbiRenderer: ({ facing }: { facing?: string }) => (
     <div data-testid="blobbi-display" data-facing={facing ?? 'front'}>Blobbi</div>
   ),

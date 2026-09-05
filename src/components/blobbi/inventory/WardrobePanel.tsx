@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Shirt, Sparkles } from 'lucide-react';
-import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/renderer';
+import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi-kit/renderer';
 
 import { cn } from '@/lib/utils';
 import type { PlacementSlot } from '@/placement/policy';

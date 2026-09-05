@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { EFFECT_SLOT_ORDER, EFFECT_SLOTS } from '@blobbi/renderer';
+import { EFFECT_SLOT_ORDER, EFFECT_SLOTS } from '@blobbi-kit/renderer';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import { buildGameItemAddress } from '@/inventory/package';
 
@@ -300,7 +300,7 @@ describe('purity: the resolver imports no I/O', () => {
     ];
     expect(imports.sort()).toEqual([
       '@/inventory/package',
-      '@blobbi/renderer',
+      '@blobbi-kit/renderer',
       './official-visual-effect-items',
     ].sort());
     const stripped = source
