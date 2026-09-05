@@ -26,6 +26,7 @@ import { useLoginActions } from '@/hooks/useLoginActions';
 import { useFullscreenPortalContainer } from '@/contexts/FullscreenPortalContext';
 import { cn, islandCtaButtonClass } from '@/lib/utils';
 import { generateSecretKey, nip19 } from 'nostr-tools';
+import { NSEC_BACKUP_MIME, nsecBackupFilename } from '@/lib/nsec-backup';
 
 interface SignupDialogProps {
   isOpen: boolean;
@@ -65,13 +66,13 @@ const SignupDialog: React.FC<SignupDialogProps> = ({ isOpen, onClose }) => {
 
   const downloadKey = () => {
     // Create a blob with the key text
-    const blob = new Blob([nsec], { type: 'text/plain' });
+    const blob = new Blob([nsec], { type: NSEC_BACKUP_MIME });
     const url = globalThis.URL.createObjectURL(blob);
 
     // Create a temporary link element and trigger download
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nsec.txt';
+    a.download = nsecBackupFilename(nsec);
     document.body.appendChild(a);
     a.click();
 
