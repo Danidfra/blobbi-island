@@ -395,7 +395,7 @@ const COSMETIC_TYPES = new Set(['cosmetic']);
  * All suggestions, never blocking, and all decidable from the ITEM FORMAT
  * alone. Whether an effect id is one this client can actually draw is a
  * question about the renderer, and this module is the studio's pure domain
- * layer: it cannot import `@blobbi/react` without putting React in the middle
+ * layer: it cannot import `@blobbi/renderer` without putting React in the middle
  * of event building. That check lives in the preview panel
  * (`BlobbiEffectPreview`), which is also where an author naturally looks to see
  * whether anything is drawn.

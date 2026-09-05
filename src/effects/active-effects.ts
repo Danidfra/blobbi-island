@@ -48,8 +48,8 @@
  * invent a second order.
  */
 
-import type { BlobbiVisualEffect } from '@blobbi/react';
-import { EFFECT_SLOT_ORDER } from '@blobbi/react';
+import type { BlobbiVisualEffect } from '@blobbi/renderer';
+import { EFFECT_SLOT_ORDER } from '@blobbi/renderer';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import {
   resolveOfficialVisualEffectItem,
@@ -81,7 +81,7 @@ export interface RejectedEffectPlacement {
 export interface ActiveBlobbiEffectResolution {
   /**
    * Renderer input, canonical slot order, at most one entry per effect slot.
-   * Plain serializable data, exactly what `BlobbiRendererView.effects` takes.
+   * Plain serializable data, exactly what `BlobbiRenderer.effects` takes.
    */
   effects: readonly BlobbiVisualEffect[];
   /** The winning placements, same order as {@link effects}. */

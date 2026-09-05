@@ -3,7 +3,7 @@
  *
  * The pure resolver's tests prove which effects become active; this file
  * proves the WIRING; that the resolved effects arrive from the shared
- * equipment context, reach `BlobbiRendererView.effects`, and obey the
+ * equipment context, reach `BlobbiRenderer.effects`, and obey the
  * ownership table:
  *
  *   local companion              → context effects
@@ -16,7 +16,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import type { BlobbiVisualEffect } from '@blobbi/react';
+import type { BlobbiVisualEffect } from '@blobbi/renderer';
 
 import { CharacterEquipmentContext } from '@/contexts/CharacterEquipmentContext';
 import { NO_CHARACTER_EQUIPMENT } from '@/contexts/CharacterEquipmentContext';

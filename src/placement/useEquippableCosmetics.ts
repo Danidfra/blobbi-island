@@ -26,7 +26,7 @@ import { useItemCatalog } from '@/inventory/useItemCatalog';
 import { getInventoryItems } from '@/inventory/package';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
 import { ADDRESSED_OFFICIAL_COSMETICS } from '@/protocol/event-registry';
-import type { AccessorySlot } from '@blobbi/react';
+import type { AccessorySlot } from '@blobbi/renderer';
 
 import { definitionSlot, formCompatibility } from './policy';
 

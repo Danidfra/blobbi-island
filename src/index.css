@@ -299,6 +299,21 @@ img {
     padding: 1.5rem;
   }
 
+  /* `@blobbi/renderer` emits this modifier for `interactive` renderers and
+     applies no decoration itself; this is the hover lift the renderer used to
+     express with Tailwind utilities (hover:scale-105 transition-all duration-200). */
+  .blobbi-renderer--interactive {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .blobbi-renderer--interactive:hover {
+    transform: scale(1.05);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blobbi-renderer--interactive {
+      transition: none;
+    }
+  }
+
   .blobbi-hover {
     transition: transform var(--dur) var(--ease-cozy), box-shadow var(--dur) var(--ease-cozy);
   }

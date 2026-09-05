@@ -18,13 +18,14 @@ BlobbiActor            (shared ground-anchor actor primitive)
         ▼
 ─────────────── package boundary ───────────────
         ▼
-BlobbiRendererView     (@blobbi/react: pure visual renderer)
+BlobbiRenderer         (@blobbi/renderer: pure visual renderer, from blobbi-kit)
 ```
 
 Everything above the line is Blobbi Island: it knows where it is, whose it is,
-and what it is doing. Everything below is `@blobbi/react`, a local workspace
-package (`packages/blobbi-react/`) that knows only what it was handed. The line
-is enforced from both sides, `packages/blobbi-react/src/package-purity.test.ts`
+and what it is doing. Everything below is `@blobbi/renderer`, the canonical
+renderer package from the blobbi-kit repository, which knows only what it was
+handed. The line
+is enforced from both sides, blobbi-kit's `packages/blobbi-renderer/src/package-purity.test.ts`
 proves the package cannot reach a relay, a user, a world or an asset path;
 `src/components/blobbi/renderer-boundary.test.ts` proves Island holds no second
 copy of the renderer and imports it only through the package entry point.
@@ -95,7 +96,7 @@ Same props in → same geometry out, whoever mounts it.
 
 ## 5. BlobbiRendererView: the package boundary
 
-`packages/blobbi-react/src/BlobbiRendererView.tsx`: the pure visual renderer
+blobbi-kit's `packages/blobbi-renderer/src/BlobbiRenderer.tsx`: the pure visual renderer
 (body SVG + accessory overlays inside the canonical square renderer box, see
 `docs/blobbi-renderer-contract.md`). Unchanged by Phase 3.
 
@@ -104,7 +105,7 @@ moved into one pure `normalizeBlobbiRenderModel`, and accessory image sources
 became an injectable adapter instead of an Island asset path baked into the
 renderer. **Phase 5 turned that boundary into a package boundary**: the
 renderer, the render model, the accessory normalizer, the canonical size table,
-the SVG transforms and all Blobbi artwork now live in `@blobbi/react`, and
+the SVG transforms and all Blobbi artwork now live in `@blobbi/renderer`, and
 Island imports them by package name.
 
 Island consumes it, and the package cannot see Island:
@@ -121,7 +122,7 @@ Island consumes it, and the package cannot see Island:
 | `BlobbiCard`, `MascotBlobbi` | reduced/decorative renderings built on `loadBlobbiSvg` |
 
 The package's public API, asset strategy, CSS contract and publication blockers
-are documented in `packages/blobbi-react/README.md`; the extraction record is in
+are documented in blobbi-kit's `packages/blobbi-renderer/README.md`; the extraction record is in
 `docs/blobbi-package-readiness.md`.
 
 ## 6. Approach targets

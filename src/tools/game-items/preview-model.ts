@@ -2,16 +2,16 @@
  * The tiny bit of translation the Blobbi accessory preview needs, kept pure.
  *
  * `content.visual.slot` is free text on the wire, an issuer may write anything
- * there, including a slot this renderer has never heard of. `@blobbi/react`
+ * there, including a slot this renderer has never heard of. `@blobbi/renderer`
  * already has a documented answer for that case (`'unknown'`, which draws in
  * front rather than disappearing), so the mapping here is narrow on purpose: it
  * recognizes the slots the renderer draws and hands everything else to that
  * fallback rather than inventing a third behavior.
  */
 
-import type { AccessorySlot, BlobbiRenderVisual } from '@blobbi/react';
+import type { AccessorySlot, BlobbiVisual } from '@blobbi/renderer';
 
-/** The slots `@blobbi/react` knows how to place. */
+/** The slots `@blobbi/renderer` knows how to place. */
 export const RENDERABLE_ACCESSORY_SLOTS: readonly AccessorySlot[] = [
   'headwear',
   'eyewear',
@@ -45,10 +45,10 @@ export function toAccessorySlot(slot: string): AccessorySlot {
  *
  * Lives here rather than beside the components because a component file that
  * also exports a constant loses fast refresh, and because this is plain data:
- * `BlobbiRenderVisual` is a TYPE, so this module's `@blobbi/react` import stays
+ * `BlobbiVisual` is a TYPE, so this module's `@blobbi/renderer` import stays
  * type-only and the tools' domain layer stays free of the renderer.
  */
-export const PREVIEW_VISUALS: Record<'baby' | 'adult', BlobbiRenderVisual> = {
+export const PREVIEW_VISUALS: Record<'baby' | 'adult', BlobbiVisual> = {
   baby: {
     stage: 'baby',
     baseColor: '#8E6BE8',

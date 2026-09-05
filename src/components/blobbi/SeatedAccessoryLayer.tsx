@@ -9,7 +9,7 @@
  * says `seated` in a chair that carries a `seatedAccessory`, and the pose
  * flipping back to standing unmounts it in the same render.
  *
- * Geometry: the layer wraps the renderer box (`BlobbiRendererView`, a fixed
+ * Geometry: the layer wraps the renderer box (`BlobbiRenderer`, a fixed
  * square) and positions the prop in box percent at the face anchor from
  * `blobbi-actor-anchors.ts`. Because it sits INSIDE the actor's scale rig,
  * the prop follows the body through the room's depth ramp, the seat scale and

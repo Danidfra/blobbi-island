@@ -19,7 +19,7 @@
  *   itemImageSourcesForView()      front: front→primary→first valid
  *                                  back:  back→primary→front→first valid
  *   normalizeAccessoryPlacements() REAR_VIEW_HIDDEN_SLOTS filtering
- *   BlobbiRendererView             the actual renderer
+ *   BlobbiRenderer             the actual renderer
  *
  * ONE STEP IS DELIBERATELY OMITTED. Island's full resolver
  * (`createIslandAccessorySourceResolver`) appends a legacy tail after the
@@ -34,7 +34,7 @@
  *
  * The renderer still receives nothing but plain strings; it never learns that
  * an item definition, an address or a view marker exists. That boundary is the
- * reason `@blobbi/react` can stay protocol-agnostic, and this panel does not
+ * reason `@blobbi/renderer` can stay protocol-agnostic, and this panel does not
  * bend it.
  *
  * ## Why an accessory can legitimately vanish
@@ -49,11 +49,11 @@ import { useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 
 import {
-  BlobbiRendererView,
+  BlobbiRenderer,
   REAR_VIEW_HIDDEN_SLOTS,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
-} from '@blobbi/react';
+} from '@blobbi/renderer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -135,7 +135,7 @@ export function BlobbiAccessoryPreview({
       </div>
 
       <div className="flex justify-center rounded-xl border bg-gradient-to-b from-sky-50 to-emerald-50 py-4 dark:from-slate-900 dark:to-slate-800">
-        <BlobbiRendererView
+        <BlobbiRenderer
           visual={PREVIEW_VISUALS[stage]}
           instanceId="game-item-studio-preview"
           size="xl"

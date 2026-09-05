@@ -23,7 +23,7 @@ import { useItemCatalog } from '@/inventory/useItemCatalog';
 import { getInventoryItems } from '@/inventory/package';
 import type { GameItemPlacementEntry, ParseWarning } from '@/inventory/package';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
-import type { AccessoryPlacementInput, BlobbiVisualEffect } from '@blobbi/react';
+import type { AccessoryPlacementInput, BlobbiVisualEffect } from '@blobbi/renderer';
 import {
   isEffectItemPlacement,
   resolveActiveBlobbiEffects,
@@ -55,7 +55,7 @@ export interface CharacterEquipment {
   accessories: AccessoryPlacementInput[];
   /**
    * Renderer input for the ACTIVE visual effects, in the renderer's canonical
-   * slot order. Plain `{ id }` data, exactly what `BlobbiRendererView.effects`
+   * slot order. Plain `{ id }` data, exactly what `BlobbiRenderer.effects`
    * takes. Empty (the same frozen array) whenever nothing is active, so the
    * no-effect render path stays byte-identical to the Phase-8 baseline.
    */

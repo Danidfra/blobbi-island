@@ -289,11 +289,10 @@ function AccountMenuBody({
           icon={
             <span className="flex size-9 items-center justify-center overflow-hidden rounded-full">
               <CurrentBlobbiDisplay
-                size="sm"
+                size="100%"
                 showFallback
                 transparent
                 showAccessories={false}
-                className="size-full"
               />
             </span>
           }

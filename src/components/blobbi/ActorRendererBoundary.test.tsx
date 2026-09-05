@@ -19,7 +19,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { BlobbiActor } from './BlobbiActor';
-import { BlobbiRendererView } from '@blobbi/react';
+import { BlobbiRenderer } from '@blobbi/renderer';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
 
 const VISUAL = {
@@ -34,7 +34,7 @@ const rendererHtml = (container: HTMLElement) =>
 
 describe('the renderer renders identically inside and outside a world actor', () => {
   it('produces byte-identical markup bare and wrapped in BlobbiActor', () => {
-    const bare = render(<BlobbiRendererView visual={VISUAL} instanceId="parity" size="xl" />);
+    const bare = render(<BlobbiRenderer visual={VISUAL} instanceId="parity" size="xl" />);
 
     const wrapped = render(
       <BlobbiActor
@@ -44,7 +44,7 @@ describe('the renderer renders identically inside and outside a world actor', ()
         zIndex={41}
         seatedIn="theater-seat-r2-3"
       >
-        <BlobbiRendererView visual={VISUAL} instanceId="parity" size="xl" />
+        <BlobbiRenderer visual={VISUAL} instanceId="parity" size="xl" />
       </BlobbiActor>,
     );
 
@@ -56,7 +56,7 @@ describe('the renderer renders identically inside and outside a world actor', ()
   it('keeps world transforms strictly outside the renderer box', () => {
     const { container } = render(
       <BlobbiActor position={{ x: 20, y: 90 }} size="lg" scale={0.5} zIndex={12}>
-        <BlobbiRendererView visual={VISUAL} instanceId="outside" size="lg" />
+        <BlobbiRenderer visual={VISUAL} instanceId="outside" size="lg" />
       </BlobbiActor>,
     );
 
@@ -83,7 +83,7 @@ describe('the renderer renders identically inside and outside a world actor', ()
         position={{ x: 50, y: 50 }} size="lg" scale={1} zIndex={1}
         hiddenIn="town-bush-1" visualHidden
       >
-        <BlobbiRendererView visual={VISUAL} instanceId="hidden" size="lg" />
+        <BlobbiRenderer visual={VISUAL} instanceId="hidden" size="lg" />
       </BlobbiActor>,
     );
 

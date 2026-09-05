@@ -20,7 +20,7 @@
  * a fetch to decide what to paint.
  */
 
-import type { AccessorySourceResolver } from '@blobbi/react';
+import type { AccessorySourceResolver } from '@blobbi/renderer';
 import {
   dedupeImageSources,
   itemImageSourcesForView,
@@ -28,7 +28,7 @@ import {
 } from '@/inventory/item-image-resolution';
 import type { ResolvedBlobbiItemDefinition } from '@/inventory/catalog-fallback';
 
-export type { AccessorySourceRequest, AccessorySourceResolver } from '@blobbi/react';
+export type { AccessorySourceRequest, AccessorySourceResolver } from '@blobbi/renderer';
 
 export interface PlacementAccessorySourceOptions {
   /**

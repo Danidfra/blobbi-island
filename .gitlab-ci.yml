@@ -13,44 +13,34 @@ stages:
 
 # The full check, run on every branch.
 #
-# This repository is an npm workspace root: the app in `src/` plus the local,
-# UNPUBLISHED `@blobbi/react` renderer package and its test-only consumer
-# fixture under `packages/`. `npm ci` installs and links all three from the
-# lockfile, so the package is validated the way a consumer would get it rather
-# than the way a developer's stale `node_modules` happens to look.
+# The Blobbi renderer is consumed as `@blobbi/renderer`, an npm `file:`
+# dependency on the sibling blobbi-kit checkout (`../blobbi-kit`) until the
+# package is published. That checkout must be present and built (`npm run
+# build` there) before `npm ci` here can link a working package; the
+# `renderer-boundary` test names that requirement explicitly when it is unmet.
 #
 # Steps are spelled out rather than deferred to `npm test` so a red pipeline
 # names the failing check in the job list. They are the same steps in the same
-# order as `npm test`, plus the package build, which `npm test` does not run,
-# because the app consumes the package from TypeScript source and never needs
-# `dist/`. CI builds it anyway: the publishable artifact is the one thing local
-# development never exercises, so it is exactly the thing that rots unnoticed.
-#
-# Nothing here publishes. `@blobbi/react` is `private: true`, `npm ci` does not
-# run lifecycle publishing, and there is no `npm publish` in this pipeline.
+# order as `npm test`. Nothing here publishes.
 validate:
   stage: validate
   # The default 1-minute budget covers a build, not a full suite (~3.5k tests
   # across the app, the package and the consumer fixture) on a cold install.
   timeout: 15 minutes
   script:
-    # Clean, lockfile-exact install of the root app and both workspaces.
+    # The renderer is a `file:` dependency on the sibling repository. Build it
+    # first so the symlinked package has its dist/ when the app is checked.
+    - git clone --depth 1 https://github.com/Danidfra/blobbi-kit.git ../blobbi-kit
+    - (cd ../blobbi-kit && npm ci && npm run build)
+    # Clean, lockfile-exact install of the app.
     - npm ci
     # 1. App TypeScript.
     - npx tsc -p tsconfig.app.json --noEmit
-    # 2. Workspace typechecks, @blobbi/react and the consumer fixture. Each
-    #    package typechecks standalone against its OWN tsconfig, which is what
-    #    proves the package has no `@/` alias or host-config dependency.
-    - npm run typecheck --workspaces --if-present
-    # 3. ESLint (repo + packages; `packages/*/dist` is ignored).
+    # 2. ESLint.
     - npx eslint
-    # 4. Every Vitest suite: app, package (purity / public API / CSS contract),
-    #    and the external consumer fixture.
+    # 3. Every Vitest suite, including the Island-side renderer boundary tests.
     - npx vitest run
-    # 5. The @blobbi/react publishable build: ESM + declarations into dist/.
-    #    Build only; never published.
-    - npm run build:package
-    # 6. App production build.
+    # 4. App production build.
     - npx vite build
 
 pages:

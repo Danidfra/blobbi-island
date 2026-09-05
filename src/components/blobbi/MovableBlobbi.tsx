@@ -39,7 +39,7 @@ import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { BlobbiActor } from './BlobbiActor';
-import type { BlobbiRenderVisual } from '@blobbi/react';
+import type { BlobbiVisual } from '@blobbi/renderer';
 
 export interface MovableBlobbiRef {
   /** Walk to a ground target through the movement system. */
@@ -89,7 +89,7 @@ export interface MovableBlobbiProps {
    * Explicit visual for the body renderer instead of the local companion.
    * Used by dev harnesses; production mounts leave it undefined.
    */
-  visualOverride?: BlobbiRenderVisual;
+  visualOverride?: BlobbiVisual;
   /**
    * Which owned Blobbi this actor IS, by `d`. The room orchestrator passes the
    * router's selection so the actor never disagrees with it (a profile cache

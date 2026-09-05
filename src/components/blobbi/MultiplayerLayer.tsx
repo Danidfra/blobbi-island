@@ -31,7 +31,7 @@ import {
 } from '@/lib/gaze';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
-import { BlobbiRendererView, DEFAULT_STAGE } from '@blobbi/react';
+import { BlobbiRenderer, DEFAULT_STAGE } from '@blobbi/renderer';
 import { BlobbiActor } from './BlobbiActor';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { useIdleGaze } from '@/hooks/useIdleGaze';
@@ -231,7 +231,7 @@ function RemoteBlobbiSprite({
 
   return (
     <SeatedAccessoryLayer accessory={seatedAccessory} facing={facing} visual={remoteVisual}>
-      <BlobbiRendererView
+      <BlobbiRenderer
         visual={remoteVisual}
         instanceId={idSuffix}
         size={size}

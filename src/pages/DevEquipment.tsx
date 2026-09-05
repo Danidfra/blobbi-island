@@ -11,9 +11,9 @@
  *
  *   simulated placements → `selectRenderablePlacements` →
  *     `toAccessoryPlacementInput` → accessory source resolution →
- *     `BlobbiRendererView`
+ *     `BlobbiRenderer`
  *   simulated inventory + placements → `resolveActiveBlobbiEffects` →
- *     `BlobbiRendererView.effects`
+ *     `BlobbiRenderer.effects`
  *
  * so ownership gates, slot policy, form rejection (egg!), stale placements
  * and deterministic effect order here are the SAME code production runs, not
@@ -35,11 +35,11 @@ import { useMemo, useReducer, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import {
-  BlobbiRendererView,
+  BlobbiRenderer,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
-  type BlobbiRenderVisual,
-} from '@blobbi/react';
+  type BlobbiVisual,
+} from '@blobbi/renderer';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -160,7 +160,7 @@ export function DevEquipment() {
     [pipeline.accessories, facing, resolveSources],
   );
 
-  const visual: BlobbiRenderVisual = {
+  const visual: BlobbiVisual = {
     ...BASE_VISUAL,
     stage: sim.stage,
     adultType: sim.stage === 'adult' ? BASE_VISUAL.adultType : undefined,
@@ -471,7 +471,7 @@ Then open: Tools → Game Items → Equipment Lab
                 className="flex h-80 items-center justify-center rounded-lg"
                 style={{ background: 'linear-gradient(180deg,#FFF4D8,#FBEAC2)' }}
               >
-                <BlobbiRendererView
+                <BlobbiRenderer
                   visual={visual}
                   instanceId="dev-equipment-sim"
                   size="2xl"

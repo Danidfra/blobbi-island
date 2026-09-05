@@ -1,23 +1,22 @@
 /**
  * CurrentBlobbiPreview: preview-context wrapper over CurrentBlobbiDisplay.
  *
- * Sizing goes through the ONE canonical renderer-size table
- * (`blobbi-render-size.ts`): every token, including the preview-only `2xl`
- * and `3xl`: is a real renderer box now, so there are no preview-specific
- * class overrides, no separate accessory multiplier table, and no viewport
- * breakpoints. The accessory editor mounts its overlay on the same box (see
- * BlobbiInfoModal), so editor placement and world placement agree by
- * construction.
+ * Sizing goes through the ONE canonical renderer-size contract of
+ * `@blobbi/renderer`: every token, including the preview-only `2xl` and
+ * `3xl`, is a real renderer box, so there are no preview-specific overrides,
+ * no separate accessory multiplier table, and no viewport breakpoints. The
+ * accessory editor mounts its overlay on the same box (see BlobbiInfoModal),
+ * so editor placement and world placement agree by construction.
  *
  * ## Sizing a preview to its CONTAINER
  *
- * `boxClassName` reaches the renderer box itself, which is the sanctioned
- * override the size table documents (`className` wins over
- * `BLOBBI_RENDER_SIZE_CLASSES` through tailwind-merge, the shell's account
- * chip already passes `size-full`). The My Blobbi stage uses it to make the
- * Blobbi a fixed FRACTION of its scene rather than a fixed pixel count, so the
- * protagonist is the same size relative to its backdrop on a phone and on a
- * desktop, with no viewport breakpoint anywhere.
+ * The renderer draws its box as an INLINE width/height, so a utility class can
+ * no longer override it. Instead `size` accepts a CSS length: pass
+ * `size="100%"` inside a sized, square parent and the box fills it. The My
+ * Blobbi stage uses that to make the Blobbi a fixed FRACTION of its scene
+ * rather than a fixed pixel count, so the protagonist is the same size
+ * relative to its backdrop on a phone and on a desktop, with no viewport
+ * breakpoint anywhere.
  *
  * This is safe because everything the renderer paints is already expressed in
  * percentages OF the box: accessory x/y, accessory base size
@@ -28,20 +27,14 @@
 import { forwardRef } from "react";
 import { CurrentBlobbiDisplay, type CurrentBlobbiDisplayProps } from "./CurrentBlobbiDisplay";
 import { cn } from "@/lib/utils";
-import type { BlobbiRenderSize } from "@blobbi/react";
+import type { BlobbiRendererSize } from "@blobbi/renderer";
 
 interface CurrentBlobbiPreviewProps extends Omit<CurrentBlobbiDisplayProps, "size"> {
-  size?: BlobbiRenderSize;
+  /** A size token, a pixel number, or a CSS length such as `"100%"`. */
+  size?: BlobbiRendererSize;
   isStaticPreview?: boolean;
   children?: React.ReactNode;
   showAccessories?: boolean;
-  /**
-   * Classes for the RENDERER BOX itself, not the wrapper.
-   *
-   * Use it to size the box against its container (`h-full w-full` inside a
-   * sized, square parent). `className` still styles the shrink-wrap wrapper.
-   */
-  boxClassName?: string;
 }
 
 export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPreviewProps>(({
@@ -54,7 +47,6 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
   isSleeping = false,
   eyesClosed = false,
   showAccessories = true,
-  boxClassName,
   children,
   ...props
 }, ref) => {
@@ -77,11 +69,6 @@ export const CurrentBlobbiPreview = forwardRef<HTMLDivElement, CurrentBlobbiPrev
         isSleeping={isSleeping}
         eyesClosed={eyesClosed}
         showAccessories={showAccessories}
-        className={cn(
-          // For static preview, remove any hover/click effects
-          isStaticPreview && "!cursor-default !hover:scale-100 !transition-none",
-          boxClassName,
-        )}
       />
 
       {/* Overlay slot for accessories - future-ready */}

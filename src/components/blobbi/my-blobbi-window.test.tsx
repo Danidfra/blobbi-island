@@ -24,7 +24,7 @@ import { render, screen } from '@testing-library/react';
 
 import { TestApp } from '@/test/TestApp';
 import { BlobbiInfoModal } from './BlobbiInfoModal';
-import { ACCESSORY_BASE_RATIO } from '@blobbi/react';
+import { ACCESSORY_BASE_RATIO, BLOBBI_RENDER_SIZE_PX } from '@blobbi/renderer';
 
 const ROOT = resolve(__dirname, '../../..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
@@ -144,7 +144,7 @@ describe('the Blobbi owns its stage', () => {
       form-specific override.
     */
     expect(modal).toMatch(/ref=\{stageRef\}\s+className="relative aspect-square h-\[68%\]"/);
-    expect(modal).toMatch(/boxClassName="h-full w-full"/);
+    expect(modal).toMatch(/size="100%"/);
 
     // Preview-only, and shared by both forms: nothing in the modal branches
     // the box or a scale on the Blobbi's stage/form.
@@ -157,7 +157,7 @@ describe('the Blobbi owns its stage', () => {
     // overlay's percentage space is the box by construction.
     expect(modal).toMatch(/containerRef=\{stageRef\}/);
     const preview = read('src/components/blobbi/CurrentBlobbiPreview.tsx');
-    expect(preview).toMatch(/boxClassName/);
+    expect(preview).toMatch(/BlobbiRendererSize/);
   });
 
   it('scales accessories and effects with the Blobbi, as one unit', () => {
@@ -170,7 +170,9 @@ describe('the Blobbi owns its stage', () => {
     expect(ACCESSORY_BASE_RATIO).toBeGreaterThan(0);
     expect(ACCESSORY_BASE_RATIO).toBeLessThan(1);
 
-    const renderer = read('packages/blobbi-react/src/BlobbiRendererView.tsx');
+    // The canonical renderer is an installed package now; its built output
+    // keeps the identifier, so the contract is still readable from here.
+    const renderer = read('node_modules/@blobbi/renderer/dist/BlobbiRenderer.js');
     expect(renderer).toMatch(/width: ACCESSORY_BASE_PERCENT/);
     expect(renderer).toMatch(/height: ACCESSORY_BASE_PERCENT/);
 
@@ -203,10 +205,10 @@ describe('the Blobbi owns its stage', () => {
 
   it('does not touch the world renderer', () => {
     // The size table is the world's contract. Nothing here changed it.
-    const table = read('packages/blobbi-react/src/blobbi-render-size.ts');
-    expect(table).toMatch(/xl: 128/);
-    expect(table).toMatch(/lg: 96/);
-    // And the modal still declares the canonical token; only the BOX is sized.
-    expect(modal).toMatch(/size="xl"/);
+    expect(BLOBBI_RENDER_SIZE_PX.xl).toBe(128);
+    expect(BLOBBI_RENDER_SIZE_PX.lg).toBe(96);
+    // The modal sizes the box to its square stage; every saved placement is a
+    // percentage of that box, so no token is needed and none is restated.
+    expect(modal).toMatch(/size="100%"/);
   });
 });

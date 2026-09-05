@@ -20,7 +20,7 @@
  * definition is only equippable when the issuer declared `content.visual.slot`
  * as one of them. A stage background is drawn BEHIND the Blobbi by the window,
  * not on it by the renderer; giving it a placement slot would mean teaching
- * `@blobbi/react` about a slot it does not paint and widening `isPlacementSlot`
+ * `@blobbi/renderer` about a slot it does not paint and widening `isPlacementSlot`
  * to a value no renderer honours. That is a bigger, worse change than the one
  * this feature needs.
  *

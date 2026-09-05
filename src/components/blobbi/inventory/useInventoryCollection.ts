@@ -39,7 +39,7 @@
  */
 
 import { useMemo } from 'react';
-import type { AccessorySlot } from '@blobbi/react';
+import type { AccessorySlot } from '@blobbi/renderer';
 
 import {
   ISLAND_INVENTORY_D,

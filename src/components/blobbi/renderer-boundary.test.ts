@@ -1,11 +1,13 @@
 /**
- * ISLAND-SIDE package boundary (Phase 5).
+ * ISLAND-SIDE package boundary.
  *
- * The renderer now lives in `@blobbi/react`. That package proves its own purity
- * (`packages/blobbi-react/src/package-purity.test.ts`: it cannot reach a relay,
- * a user, a world or an asset path). What THIS file proves is the half that
- * lives on the Island side of the line, and that no amount of package hygiene
- * can guarantee:
+ * The renderer lives in `@blobbi/renderer`, a package of the blobbi-kit
+ * repository consumed here through an npm `file:` dependency until it is
+ * published. That package proves its own purity in its own test suite (it
+ * cannot reach a relay, a user, a world, an asset path, the domain kit or a
+ * consumer's CSS build). What THIS file proves is the half that lives on the
+ * Island side of the line, and that no amount of package hygiene can
+ * guarantee:
  *
  *  1. There is exactly ONE renderer implementation, and it is the package's.
  *     A local re-implementation would compile, pass every behavioral test, and
@@ -17,18 +19,22 @@
  *     local wrapper is the only place local-companion data enters.
  *  5. The editor overlay shares the package's coordinate space instead of
  *     restating it.
+ *  6. The installed package is the canonical one, and its artifact imports
+ *     only React.
  *
  * Import statements are matched, not free text, so the prose in these modules,
  * which discusses `useAccessoryManagement` and `BlobbiActor` at length, does
  * not trip the check.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
 const ISLAND = join(ROOT, 'src');
-const PACKAGE = 'packages/blobbi-react';
+const RENDERER = '@blobbi/renderer';
+/** The installed package, through the same symlink the app resolves. */
+const INSTALLED = join(ROOT, 'node_modules', '@blobbi', 'renderer');
 
 /** Every module specifier actually imported (static, dynamic, or re-exported). */
 function importsOf(file: string): string[] {
@@ -47,11 +53,11 @@ function importsOf(file: string): string[] {
   return [...specifiers];
 }
 
-function sourceFiles(dir: string): string[] {
+function sourceFiles(dir: string, ext = /\.tsx?$/): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    return /\.tsx?$/.test(entry.name) ? [full] : [];
+    if (entry.isDirectory()) return sourceFiles(full, ext);
+    return ext.test(entry.name) ? [full] : [];
   });
 }
 
@@ -59,26 +65,31 @@ const ISLAND_FILES = sourceFiles(ISLAND);
 const rel = (file: string) => file.replace(`${ROOT}/`, '');
 
 describe('exactly one renderer implementation exists, and Island consumes it', () => {
-  it('keeps no second copy of the renderer, the model, or the artwork in src/', () => {
+  it('keeps no second copy of the renderer, the model, or the artwork in the repository', () => {
     // The failure mode this guards against is not "somebody deletes the
     // package"; it is "somebody copies a file back into src/ to avoid an
     // import, and the two drift". Names, not contents, because a fork always
     // starts as an exact copy.
     const forbiddenBasenames = [
+      'BlobbiRenderer.tsx',
       'BlobbiRendererView.tsx',
       'blobbi-render-model.ts',
       'blobbi-render-size.ts',
       'accessory-normalize.ts',
       'loadBlobbiSvg.ts',
       'load-blobbi-svg.ts',
+      'adult-svg-data.ts',
+      'adult-svg-customizer.ts',
     ];
     const strays = ISLAND_FILES.filter((file) =>
       forbiddenBasenames.some((name) => file.endsWith(`/${name}`)),
     ).map(rel);
-    expect(strays, 'these belong to @blobbi/react').toEqual([]);
+    expect(strays, `these belong to ${RENDERER}`).toEqual([]);
+    // The old local workspace package is gone for good.
+    expect(existsSync(join(ROOT, 'packages'))).toBe(false);
   });
 
-  it('draws no Blobbi body of its own: the SVG pipeline is the package\'s alone', () => {
+  it("draws no Blobbi body of its own: the SVG pipeline is the package's alone", () => {
     // `loadBlobbiSvg`, `customizeAdultSvg`, `customizeBabySvg` and the artwork
     // data modules are all package-internal. Any Island file referencing them
     // by import is building a second pipeline.
@@ -91,13 +102,12 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
   });
 
   it('imports the renderer only through the package public entry point', () => {
-    // Deep imports (`@blobbi/react/src/...`) would couple Island to the
+    // Deep imports (`@blobbi/renderer/dist/...`) would couple Island to the
     // package's file layout, which is exactly what the entry point exists to
-    // hide.
+    // hide. The retired `@blobbi/react` name must not come back either.
     const deep = ISLAND_FILES.flatMap((file) =>
       importsOf(file)
-        .filter((s) => s.startsWith('@blobbi/react/') || s.includes(PACKAGE))
-        .filter((s) => !s.endsWith('.tsx') && !s.endsWith('.ts'))
+        .filter((s) => s.startsWith(`${RENDERER}/`) || s.startsWith('@blobbi/react'))
         .map((s) => `${rel(file)} -> ${s}`),
     );
     expect(deep).toEqual([]);
@@ -105,7 +115,7 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
 
   it('actually uses the package in production code, not only in tests', () => {
     const productionImporters = ISLAND_FILES.filter(
-      (file) => !/\.test\.tsx?$/.test(file) && importsOf(file).includes('@blobbi/react'),
+      (file) => !/\.test\.tsx?$/.test(file) && importsOf(file).includes(RENDERER),
     ).map(rel);
     expect(productionImporters.length).toBeGreaterThan(5);
     // The three paths that matter: the local wrapper, the remote layer, and a
@@ -117,6 +127,58 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
       'src/components/blobbi/BlobbiCard.tsx',
     ]) {
       expect(productionImporters).toContain(required);
+    }
+  });
+});
+
+describe('the installed renderer is the canonical package', () => {
+  it('resolves to @blobbi/renderer with a real built artifact', () => {
+    const manifest = JSON.parse(readFileSync(join(INSTALLED, 'package.json'), 'utf8'));
+    expect(manifest.name).toBe(RENDERER);
+    expect(manifest.exports['.'].import).toBe('./dist/index.js');
+    // The `file:` dependency points at a checkout, so the artifact has to be
+    // built there; a missing dist would fail the app build with a far less
+    // helpful message than this one.
+    expect(existsSync(join(INSTALLED, 'dist/index.js')), 'run `npm run build` in blobbi-kit').toBe(true);
+    expect(existsSync(join(INSTALLED, 'dist/index.d.ts'))).toBe(true);
+  });
+
+  it('declares React as its only peer and has no runtime dependencies', () => {
+    const manifest = JSON.parse(readFileSync(join(INSTALLED, 'package.json'), 'utf8'));
+    expect(Object.keys(manifest.peerDependencies)).toEqual(['react']);
+    expect(manifest.dependencies).toBeUndefined();
+  });
+
+  it('its artifact imports nothing but React: no kit, no Nostr, no inventory, no host', () => {
+    const built = sourceFiles(join(INSTALLED, 'dist'), /\.js$/);
+    const externals = new Set(
+      built.flatMap(importsOf).filter((s) => !s.startsWith('.') && !s.startsWith('/')),
+    );
+    expect([...externals].sort()).toEqual(['react', 'react/jsx-runtime']);
+  });
+
+  it('speaks no kind, tag, view-marker or inventory vocabulary', () => {
+    // The package's own tests prove its import graph; this proves the shipped
+    // TEXT, which is where a re-implementation of Island policy would hide.
+    const built = sourceFiles(join(INSTALLED, 'dist'), /\.(js|d\.ts)$/);
+    const forbidden = [
+      /\b3163[234]\b/,
+      /GameItemDefinition/,
+      /GameItemImage/,
+      /diagonal-front-(right|left)/,
+      /side-(right|left)/,
+      /@blobbi-kit\//,
+      /nostrify|nostr-tools/,
+    ];
+    for (const file of built) {
+      // Comments stripped: a docblock that names the kit in prose (the color
+      // helpers say where their twin lives) is not a module reference.
+      const source = readFileSync(file, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      for (const pattern of forbidden) {
+        expect(pattern.test(source), `${rel(file)} must not mention ${pattern}`).toBe(false);
+      }
     }
   });
 });
@@ -133,15 +195,10 @@ describe('the renderer/actor arrow points one way', () => {
   });
 
   it('the package has no idea BlobbiActor exists', () => {
-    const packageFiles = sourceFiles(join(ROOT, PACKAGE, 'src')).filter(
-      (f) => !/\.test\.tsx?$/.test(f),
-    );
-    const offenders = packageFiles.flatMap((file) =>
-      importsOf(file)
-        .filter((s) => /BlobbiActor|MovableBlobbi/.test(s))
-        .map((s) => `${rel(file)} -> ${s}`),
-    );
-    expect(offenders).toEqual([]);
+    const built = sourceFiles(join(INSTALLED, 'dist'), /\.js$/);
+    for (const file of built) {
+      expect(readFileSync(file, 'utf8')).not.toMatch(/BlobbiActor|MovableBlobbi|data-blobbi-shadow|scale-rig/);
+    }
   });
 });
 
@@ -164,34 +221,33 @@ describe('the accessory EDITOR shares the package contract instead of restating 
     // Editor placements are authored in this coordinate space and replayed in
     // the world. If the two ever used different size bases or different layer
     // ordering, every saved accessory would shift on save, so both read the
-    // constants from one module, which is now the package.
+    // constants from one module, which is the package.
     const specifiers = importsOf(OVERLAY);
-    expect(specifiers).toContain('@blobbi/react');
+    expect(specifiers).toContain(RENDERER);
 
     const overlay = readFileSync(OVERLAY, 'utf8');
-    const renderer = readFileSync(join(ROOT, PACKAGE, 'src/BlobbiRendererView.tsx'), 'utf8');
-    for (const shared of [
-      'ACCESSORY_BASE_PERCENT',                 // one size base
-      "transformOrigin: 'center'",              // one transform origin
-    ]) {
-      expect(overlay, `editor must share ${shared}`).toContain(shared);
-      expect(renderer, `renderer must share ${shared}`).toContain(shared);
-    }
+    const renderer = readFileSync(join(INSTALLED, 'dist/BlobbiRenderer.js'), 'utf8');
+    // One size base, imported by the editor and applied by the renderer.
+    expect(overlay).toContain('ACCESSORY_BASE_PERCENT');
+    expect(renderer).toContain('ACCESSORY_BASE_PERCENT');
+    // One transform origin.
+    expect(overlay).toContain("transformOrigin: 'center'");
+    expect(renderer).toMatch(/transformOrigin:\s*["']center["']/);
 
     // Ordering comes from the same module on both paths, but only the editor
     // CALLS it. The renderer consumes placements that are already normalized,
     // which is exactly why it stays free of equipment parsing.
     expect(overlay).toContain('normalizeAccessoryPlacements');
-    expect(renderer).toContain('NormalizedAccessoryPlacement');
     expect(renderer).not.toContain('normalizeAccessoryPlacements(');
   });
 
-  it('mounts the editor on the canonical renderer box, at the canonical size', () => {
-    // `stageRef` wraps the preview whose only child is the renderer box, and
-    // the preview is `xl`: the size every saved placement was authored in.
+  it('mounts the editor on the canonical renderer box, filling the square stage', () => {
+    // `stageRef` is the square stage; the preview fills it (`size="100%"`) so
+    // the drag math measures the box and nothing more. Every saved placement
+    // is a percentage of that box, so its pixel size is irrelevant.
     const modal = readFileSync(join(ROOT, 'src/components/blobbi/BlobbiInfoModal.tsx'), 'utf8');
     expect(modal).toMatch(/containerRef=\{stageRef\}/);
-    expect(modal).toMatch(/size="xl"/);
+    expect(modal).toMatch(/size="100%"/);
 
     // The preview shrink-wraps that box, so the drag math measures the box and
     // nothing more: no padding, no centering slack.
@@ -199,12 +255,15 @@ describe('the accessory EDITOR shares the package contract instead of restating 
     expect(preview).toContain('h-fit w-fit');
   });
 
-  it('keeps preview sizing on the one canonical size table', () => {
+  it('keeps preview sizing on the one canonical size contract', () => {
     // No preview-only multiplier table and no responsive override may come
-    // back: `2xl`/`3xl` are real renderer boxes, not scaled-up `lg`s.
-    const preview = readFileSync(join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx'), 'utf8');
-    expect(importsOf(join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx'))).toContain('@blobbi/react');
+    // back: `2xl`/`3xl` are real renderer boxes, not scaled-up `lg`s, and a
+    // container-sized preview is a CSS-length `size`, not a class override.
+    const previewPath = join(ROOT, 'src/components/blobbi/CurrentBlobbiPreview.tsx');
+    const preview = readFileSync(previewPath, 'utf8');
+    expect(importsOf(previewPath)).toContain(RENDERER);
     expect(preview).not.toMatch(/\b(sm|md|lg|xl):[a-z-]/);
+    expect(preview).not.toContain('boxClassName');
   });
 });
 
@@ -213,7 +272,7 @@ describe('remote rendering never subscribes to local-player data', () => {
 
   it('the multiplayer layer renders remotes through the package, not the local wrapper', () => {
     const specifiers = importsOf(MULTIPLAYER);
-    expect(specifiers).toContain('@blobbi/react');
+    expect(specifiers).toContain(RENDERER);
     for (const localOnly of [
       /CurrentBlobbiDisplay/,
       /CurrentBlobbiPreview/,
@@ -237,17 +296,14 @@ describe('remote rendering never subscribes to local-player data', () => {
     // Equipment arrives through a CONTEXT, not a query. Resolving kind:31634
     // needs three queries (placement, inventory, catalog) and this component
     // renders once per Blobbi on screen, so the queries live at the app root
-    // and this wrapper consumes their result. Asserting the context, rather
-    // than a hook, is what stops the queries from creeping back in here.
+    // and this wrapper consumes their result.
     expect(wrapper.some((s) => /useCharacterEquipmentContext/.test(s))).toBe(true);
     expect(wrapper.some((s) => /usePlacementState|useIslandInventory|useItemCatalog/.test(s))).toBe(false);
   });
 });
 
-describe('Island keeps the asset adapter the package refuses to have', () => {
+describe('Island keeps the adapters the package refuses to have', () => {
   it('confines Island asset-path knowledge to the accessory adapter and tag utils', () => {
-    // Production modules only: a test that asserts what the adapter builds has
-    // to name the same paths the adapter does, and is not a second consumer.
     const importers = ISLAND_FILES.filter(
       (file) =>
         /components\/blobbi\/lib\//.test(file) &&
@@ -255,65 +311,32 @@ describe('Island keeps the asset adapter the package refuses to have', () => {
         importsOf(file).some((s) => /asset-paths/.test(s)),
     ).map(rel).sort();
     // NOTHING under components/blobbi/lib builds an asset path any more. The
-    // equipment path resolves artwork from published definitions, and the last
-    // filename-convention module went with the legacy accessory system.
+    // equipment path resolves artwork from published definitions.
     expect(importers).toEqual([]);
   });
 
-  it('passes that adapter explicitly, the package has no Island default', () => {
+  it('passes the accessory source adapter explicitly, the package has no Island default', () => {
     const displayPath = join(ROOT, 'src/components/blobbi/CurrentBlobbiDisplay.tsx');
     const display = readFileSync(displayPath, 'utf8');
-    // The resolver is now BUILT per render (it closes over `facing` and the item
+    // The resolver is BUILT per render (it closes over `facing` and the item
     // definitions), so what is asserted is that the wrapper still supplies an
     // Island-made resolver rather than letting the package choose one.
     expect(display).toContain('resolveSources: resolveAccessorySources');
     // Since the kind:31634 migration the adapter is keyed by ITEM ADDRESS, not
-    // by a legacy accessory code, and has no filename-convention fallback, an
-    // item either has a published definition or it is not drawn.
+    // by a legacy accessory code, and has no filename-convention fallback.
     expect(display).toContain('createPlacementAccessorySourceResolver');
     expect(importsOf(displayPath)).toContain('@/placement/accessory-sources');
-
-    const normalizer = readFileSync(join(ROOT, PACKAGE, 'src/accessory-normalize.ts'), 'utf8');
-    expect(normalizer).toContain('DEFAULT_ACCESSORY_SOURCES');
-    expect(normalizer).not.toContain('island');
-  });
-});
-
-describe('item-definition knowledge stops at the Island adapter', () => {
-  /**
-   * The renderer package must stay protocol-agnostic. It is not enough that it
-   * avoids importing the inventory library; it must not have grown its own
-   * copy of the vocabulary either, because a hand-rolled `marker === 'front'`
-   * inside the package would fork the policy this phase just centralized.
-   */
-  const PACKAGE_FILES = sourceFiles(join(ROOT, PACKAGE, 'src'));
-
-  it('the renderer package imports no inventory library', () => {
-    for (const file of PACKAGE_FILES) {
-      expect(
-        importsOf(file).filter((s) => /@nostr-games\/inventory|@\/inventory/.test(s)),
-        `${rel(file)} must not import inventory code`,
-      ).toEqual([]);
-    }
   });
 
-  it('the renderer package speaks no kind, tag or view-marker vocabulary', () => {
-    // `package-purity.test.ts` proves the import graph; this proves the source
-    // text, which is where a re-implementation would hide.
-    const forbidden = [
-      /\b31632\b/,
-      /\b31633\b/,
-      /GameItemDefinition/,
-      /GameItemImage/,
-      /diagonal-front-(right|left)/,
-      /side-(right|left)/,
-    ];
-    for (const file of PACKAGE_FILES) {
-      const source = readFileSync(file, 'utf8');
-      for (const pattern of forbidden) {
-        expect(pattern.test(source), `${rel(file)} must not mention ${pattern}`).toBe(false);
-      }
-    }
+  it('kind:31634 becomes renderer placements in Island, and only in Island', () => {
+    // The protocol -> placement adapter is Island's. The package never sees a
+    // kind number (asserted above); Island's adapter is the only module that
+    // imports both the inventory package and the renderer's placement type.
+    const renderModel = join(ROOT, 'src/placement/render-model.ts');
+    const specifiers = importsOf(renderModel);
+    expect(specifiers).toContain(RENDERER);
+    expect(specifiers.some((s) => /@\/inventory\/package/.test(s))).toBe(true);
+    expect(readFileSync(renderModel, 'utf8')).toContain('AccessoryPlacementInput');
   });
 
   it('only the accessory adapter turns item definitions into renderer sources', () => {
@@ -341,10 +364,6 @@ describe('item-definition knowledge stops at the Island adapter', () => {
         /createPlacementAccessorySourceResolver/.test(readFileSync(file, 'utf8')) &&
         !/placement\/accessory-sources\.ts$/.test(file),
     ).map(rel).sort();
-    // Only the render surfaces may CALL the builder; nobody else may
-    // reimplement one. The dev simulation harness is on the list for exactly
-    // that reason: it must run the REAL source resolution rather than build
-    // its own candidate lists.
     expect(resolverBuilders).toEqual([
       'src/components/blobbi/CurrentBlobbiDisplay.tsx',
       'src/components/blobbi/PlacementOverlay.tsx',

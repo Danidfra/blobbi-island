@@ -22,7 +22,7 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, within } from '@testing-library/react';
 
-import { BLOBBI_VISUAL_EFFECT_IDS, EFFECT_SLOTS } from '@blobbi/react';
+import { BLOBBI_VISUAL_EFFECT_IDS, EFFECT_SLOTS } from '@blobbi/renderer';
 import {
   eventToForm,
   formToUnsignedEvent,

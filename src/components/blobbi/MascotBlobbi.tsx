@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { loadBlobbiSvg } from "@blobbi/react";
+import { loadBlobbiSvg } from "@blobbi/renderer";
 import { cn } from "@/lib/utils";
 
 /**

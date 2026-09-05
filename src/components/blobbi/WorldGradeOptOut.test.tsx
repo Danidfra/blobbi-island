@@ -99,19 +99,21 @@ describe('the local Blobbi', () => {
 
       This fixture has no logged-in Blobbi to render, so the body cannot be asserted
       from the DOM here, but the *mechanism* is what matters and it is unambiguous:
-      the pure renderer (`BlobbiRendererView`, which every path, local wrapper,
+      the pure renderer (`BlobbiRenderer`, which every path, local wrapper,
       remote sprite, previews: now ends in) injects the body with
       `dangerouslySetInnerHTML`, and renders accessories as `<img>`. Together they
       are the reason the exclusion protects accessories rather than the Blobbi
       itself, and the reason extending the grade rule to `svg` would be a mistake,
       it would reach the body.
     */
+    // The renderer is an installed package; its built output keeps both facts
+    // (compiled JSX spells an element as `jsx("img", ...)`).
     const rendererView = readFileSync(
-      join(process.cwd(), 'packages/blobbi-react/src/BlobbiRendererView.tsx'),
+      join(process.cwd(), 'node_modules/@blobbi/renderer/dist/BlobbiRenderer.js'),
       'utf8',
     );
     expect(rendererView).toContain('dangerouslySetInnerHTML');
-    expect(rendererView).toContain('<img');
+    expect(rendererView).toMatch(/<img|jsxs?\(\s*["']img["']/);
 
     // The interactive placement editor also paints real <img> elements.
     const overlay = readFileSync(

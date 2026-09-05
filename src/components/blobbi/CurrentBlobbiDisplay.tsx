@@ -4,8 +4,8 @@
  * This component owns the data side: it resolves the current companion via
  * Nostr-backed hooks (`useBlobbis`, `useBlobbonautProfile`), fetches the local
  * player's equipped accessories, normalizes them, and hands everything to the
- * pure `BlobbiRendererView` as explicit props. Remote players do NOT go
- * through here, `RemoteBlobbiSprite` uses `BlobbiRendererView` directly, so
+ * pure `BlobbiRenderer` as explicit props. Remote players do NOT go
+ * through here, `RemoteBlobbiSprite` uses `BlobbiRenderer` directly, so
  * rendering someone else's Blobbi never subscribes to the local player's data.
  *
  * `visualOverride` remains supported for the info modal's read-only remote
@@ -46,22 +46,23 @@ import { cn } from "@/lib/utils";
 import type { SeatedAccessory } from "@/lib/room-seats-config";
 import { SeatedAccessoryLayer } from "./SeatedAccessoryLayer";
 import {
-  BlobbiRendererView,
-  BLOBBI_RENDER_SIZE_CLASSES,
+  BlobbiRenderer,
   DEFAULT_STAGE,
+  resolveBlobbiRenderSize,
   normalizeAccessoryPlacements,
   type AccessoryPlacementInput,
-  type BlobbiRenderSize,
-  type BlobbiRenderVisual,
+  type BlobbiRendererSize,
+  type BlobbiVisual,
   type BlobbiVisualEffect,
-} from "@blobbi/react";
+} from "@blobbi/renderer";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
 import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
 import type { ResolvedBlobbiItemDefinition } from "@/inventory/catalog-fallback";
 
 export interface CurrentBlobbiDisplayProps {
   className?: string;
-  size?: BlobbiRenderSize;
+  /** A size token, a pixel number, or a CSS length such as `"100%"`. */
+  size?: BlobbiRendererSize;
   showFallback?: boolean;
   onClick?: () => void;
   interactive?: boolean;
@@ -88,10 +89,7 @@ export interface CurrentBlobbiDisplayProps {
    */
   facing?: "front" | "back";
   /** If provided, component renders THIS visual instead of the local companion. */
-  visualOverride?: BlobbiRenderVisual & {
-    pattern?: string;
-    specialMark?: string;
-  };
+  visualOverride?: BlobbiVisual;
   /**
    * Accessories to draw on a {@link visualOverride}. Plain, serializable data,
    * the caller states what that Blobbi is wearing.
@@ -232,7 +230,7 @@ export function CurrentBlobbiDisplay({
   // A visualOverride without any colors renders nothing (legacy remote-preview
   // behavior: the caller refines the visual once relay data arrives).
   const overrideHasColors = !!(visualOverride?.baseColor || visualOverride?.secondaryColor);
-  const visual: BlobbiRenderVisual | null = visualOverride
+  const visual: BlobbiVisual | null = visualOverride
     ? (overrideHasColors ? visualOverride : null)
     : currentBlobbi
       ? {
@@ -278,7 +276,7 @@ export function CurrentBlobbiDisplay({
     // unaffected.
     return (
       <SeatedAccessoryLayer accessory={seatedAccessory} facing={facing} visual={visual}>
-        <BlobbiRendererView
+        <BlobbiRenderer
           visual={visual}
           instanceId={scopeId}
           size={size}
@@ -317,9 +315,11 @@ export function CurrentBlobbiDisplay({
                 "rounded-full blobbi-card border-2 border-dashed border-purple-300 dark:border-purple-600 theme-transition",
                 interactive && "cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200",
               ),
-          BLOBBI_RENDER_SIZE_CLASSES[size],
           className
         )}
+        // The placeholder occupies the same inline box the renderer would, so a
+        // layout never jumps when the Blobbi arrives.
+        style={{ width: resolveBlobbiRenderSize(size).css, height: resolveBlobbiRenderSize(size).css }}
         title={`${titleText}${clickText}`}
         onClick={onClick}
       >

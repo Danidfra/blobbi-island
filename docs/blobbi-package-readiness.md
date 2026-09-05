@@ -1,7 +1,18 @@
 # Blobbi renderer: package extraction
 
-**Status: Phase 5 complete. The renderer was extracted into the local workspace
-package `@blobbi/react` (`packages/blobbi-react/`). It was NOT published.**
+**Status: Phase 10. The renderer is now `@blobbi/renderer`, a package of the
+blobbi-kit repository (`packages/blobbi-renderer` there), consumed by Island
+through an npm `file:` dependency on the sibling checkout until it is
+published. The local workspace package `@blobbi/react` and its consumer fixture
+were removed from this repository; their history was imported into blobbi-kit
+with `git subtree`. Everything below describes the Phase-5 extraction that the
+canonical package grew out of; paths under `packages/blobbi-react/` now live in
+blobbi-kit, and `BlobbiRendererView` / `BlobbiRenderVisual` are now
+`BlobbiRenderer` / `BlobbiVisual`.**
+
+**Historical status (Phase 5): the renderer was extracted into the local
+workspace package `@blobbi/react` (`packages/blobbi-react/`). It was NOT
+published.**
 
 This document was the Phase-4 *readiness* analysis; it is now the record of the
 extraction that analysis called for. Sections 1–13 describe the boundary and are

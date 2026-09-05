@@ -23,7 +23,7 @@ import { useMemo, useState } from 'react';
 import type {
   AccessoryPlacementInput,
   BlobbiVisualEffect,
-} from '@blobbi/react';
+} from '@blobbi/renderer';
 import { useBlobbis } from '@/hooks/useBlobbis';
 import { useBlobbonautProfile } from '@/hooks/useBlobbonautProfile';
 import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentContext';

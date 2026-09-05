@@ -5,19 +5,8 @@ export default {
 	darkMode: ["class"],
 	content: [
 		"./src/**/*.{ts,tsx}",
-		// The @blobbi/react renderer implements its canonical square box with
-		// literal Tailwind classes (BLOBBI_RENDER_SIZE_CLASSES) so callers can
-		// still override it through `className` via tailwind-merge. Those classes
-		// live in the workspace package, so the JIT scanner must see it or every
-		// Blobbi renders in a zero-sized box.
-		//
-		// Named explicitly rather than globbed as `packages/*`: only packages the
-		// production bundle actually renders belong in the production CSS scan.
-		// `packages/blobbi-react-consumer` is a test-only fixture, and letting its
-		// class names reach the shipped stylesheet would be dead weight nobody
-		// notices. A new renderer package is a deliberate line here.
-		// Asserted by packages/blobbi-react/src/package-css.test.ts.
-		"./packages/blobbi-react/src/**/*.{ts,tsx}",
+		// `@blobbi/renderer` applies its geometry inline and emits only its own
+		// namespaced class names, so the package needs no Tailwind scanning.
 	],
 	prefix: "",
 	theme: {

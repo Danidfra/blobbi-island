@@ -26,7 +26,7 @@
  * every client and every test computes the same anchors.
  */
 
-import type { BlobbiRenderSize } from '@blobbi/react';
+import type { BlobbiRenderSize } from '@blobbi/renderer';
 import type { Boundary } from '@/lib/boundaries';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';

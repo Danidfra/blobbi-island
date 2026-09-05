@@ -35,8 +35,8 @@
  * and flow through `useInventoryMutation`; a placement never moves a quantity.
  */
 
-import type { AccessorySlot, BlobbiEffectSlot } from '@blobbi/react';
-import { EFFECT_SLOT_ORDER, REAR_VIEW_HIDDEN_SLOTS } from '@blobbi/react';
+import type { AccessorySlot, BlobbiEffectSlot } from '@blobbi/renderer';
+import { EFFECT_SLOT_ORDER, REAR_VIEW_HIDDEN_SLOTS } from '@blobbi/renderer';
 import type { GameItemPlacementEntry } from '@/inventory/package';
 import { officialCosmeticByAddress } from '@/protocol/event-registry';
 import { isOfficialEffectItemAddress } from '@/inventory/registry';
@@ -63,7 +63,7 @@ export function isEquippableSlot(slot: string | undefined): slot is AccessorySlo
 
 /**
  * The placement slots occupied by VISUAL EFFECTS, in the renderer's canonical
- * order. Derived from `@blobbi/react` rather than restated, so the placement
+ * order. Derived from `@blobbi/renderer` rather than restated, so the placement
  * vocabulary and the painter can never disagree about what an effect slot is.
  *
  * `aura` appears in BOTH vocabularies on purpose: an image-drawn aura

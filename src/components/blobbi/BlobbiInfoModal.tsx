@@ -19,7 +19,7 @@ import { useCharacterEquipmentContext } from '@/hooks/useCharacterEquipmentConte
 import { playerFacingMessage } from '@/lib/player-facing-error';
 import { buildEquipEntry } from '@/placement/render-model';
 import { isEffectPlacementSlot, type PlacementSlot } from '@/placement/policy';
-import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/react';
+import type { AccessorySlot, BlobbiVisualEffect } from '@blobbi/renderer';
 import { useToast } from '@/hooks/useToast';
 import { useCurrentPet } from '@/hooks/useOptimizedStatus';
 import { useCoinBalance } from '@/inventory/useCoinWallet';
@@ -494,15 +494,15 @@ export function BlobbiInfoModal({
                 <div ref={stageRef} className="relative aspect-square h-[68%]">
                   <CurrentBlobbiPreview
                     key={`preview:${previewKey}`}
-                    size="xl"
-                    /* The bounce lives on the preview's own wrapper, so the
-                       renderer box under `stageRef` is untouched and the
-                       placement overlay's coordinate space stays exact. */
+                    /* The box fills the square stage (`size="100%"`), so the
+                       placement overlay's percentage space IS the stage. The
+                       bounce lives on the preview's own wrapper, so the
+                       renderer box under `stageRef` is untouched. */
+                    size="100%"
                     className={cn(
                       'h-full w-full transform-gpu',
                       careActorClass(careReaction.feedback !== null, reducedMotion),
                     )}
-                    boxClassName="h-full w-full"
                     showFallback={true}
                     isSleeping={blobbiData.isSleeping}
                     isStaticPreview={true}

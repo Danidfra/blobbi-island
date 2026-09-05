@@ -33,7 +33,7 @@ import {
 // A TEST may import the renderer freely; the domain layer under test may not
 // (`boundaries.test.ts`). That asymmetry is what lets the four slot names be
 // written out in `item-form-model.ts` without risking drift; see below.
-import { EFFECT_SLOT_ORDER } from '@blobbi/react';
+import { EFFECT_SLOT_ORDER } from '@blobbi/renderer';
 import {
   EFFECT_ID_SUGGESTIONS,
   slotForEffectId,
@@ -251,7 +251,7 @@ describe('the effect vocabulary agrees with the renderer', () => {
   it('has not drifted from the slots the renderer actually implements', () => {
     // The domain layer writes these four names out rather than importing them,
     // to keep React out of event building. This is the guard that makes that
-    // safe: add or remove an effect slot in `@blobbi/react` and this fails.
+    // safe: add or remove an effect slot in `@blobbi/renderer` and this fails.
     expect([...EFFECT_SLOT_SUGGESTIONS].sort()).toEqual([...EFFECT_SLOT_ORDER].sort());
   });
 

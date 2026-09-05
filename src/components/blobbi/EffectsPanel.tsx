@@ -31,8 +31,8 @@ import {
   Lock,
   Sparkles,
 } from 'lucide-react';
-import type { BlobbiVisualEffect } from '@blobbi/react';
-import type { BlobbiEffectSlot } from '@blobbi/react';
+import type { BlobbiVisualEffect } from '@blobbi/renderer';
+import type { BlobbiEffectSlot } from '@blobbi/renderer';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 
-import type { AccessoryPlacementInput } from '@blobbi/react';
+import type { AccessoryPlacementInput } from '@blobbi/renderer';
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
 import { Button } from '@/components/ui/button';
 import { ItemTile } from '@/components/ui/item-tile';

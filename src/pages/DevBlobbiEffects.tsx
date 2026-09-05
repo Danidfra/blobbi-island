@@ -3,7 +3,7 @@
  * `/dev/blobbi-effects`; excluded from production builds like the other
  * `/dev/*` pages).
  *
- * WHAT IT DRIVES. `BlobbiRendererView` directly, with a hand-written visual and
+ * WHAT IT DRIVES. `BlobbiRenderer` directly, with a hand-written visual and
  * a literal `effects` array. There is no login, no signer, no relay, no query
  * client, no inventory, no equip state and no `CurrentBlobbiDisplay`: which is
  * the point: if drawing an effect ever needed any of those, this page would
@@ -22,15 +22,15 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  BlobbiRendererView,
+  BlobbiRenderer,
   BLOBBI_VISUAL_EFFECT_IDS,
   EFFECT_SLOT_ORDER,
   getBlobbiVisualEffectInfo,
   type BlobbiEffectSlot,
   type BlobbiRenderSize,
-  type BlobbiRenderVisual,
+  type BlobbiVisual,
   type BlobbiVisualEffectId,
-} from '@blobbi/react';
+} from '@blobbi/renderer';
 import { ADDRESSED_VISUAL_EFFECT_ITEMS } from '@/effects/official-visual-effect-items';
 import {
   isEffectItemPlacement,
@@ -109,7 +109,7 @@ function ReducedMotionOverride() {
 
 interface StageProps {
   effects?: BlobbiVisualEffectId[];
-  visual: BlobbiRenderVisual;
+  visual: BlobbiVisual;
   instanceId: string;
   size: BlobbiRenderSize;
   facing: 'front' | 'back';
@@ -140,7 +140,7 @@ function Stage({
       data-fx-reduced={reduced ? 'true' : 'false'}
       data-fx-stage={instanceId}
     >
-      <BlobbiRendererView
+      <BlobbiRenderer
         visual={visual}
         instanceId={instanceId}
         size={size}
@@ -169,7 +169,7 @@ export function DevBlobbiEffects() {
   const [selected, setSelected] = useState<BlobbiVisualEffectId>('golden-sparkles');
   const [focusSize, setFocusSize] = useState<BlobbiRenderSize>('3xl');
 
-  const visual: BlobbiRenderVisual = useMemo(
+  const visual: BlobbiVisual = useMemo(
     () => ({ ...BASE_VISUAL, stage, adultType: stage === 'adult' ? adultType : undefined }),
     [stage, adultType],
   );
@@ -186,7 +186,7 @@ export function DevBlobbiEffects() {
       <header className="mb-4">
         <h1 className="text-xl font-semibold">Blobbi visual effects, dev harness</h1>
         <p className="text-xs text-neutral-400">
-          Renders <code>BlobbiRendererView</code> directly from plain data. No login, no relay,
+          Renders <code>BlobbiRenderer</code> directly from plain data. No login, no relay,
           no inventory, no publishing. Nothing here activates or grants anything.
         </p>
       </header>
@@ -464,7 +464,7 @@ function ActivationDiagnostics({
   background,
   reduced,
 }: {
-  visual: BlobbiRenderVisual;
+  visual: BlobbiVisual;
   facing: 'front' | 'back';
   background: BackgroundId;
   reduced: boolean;

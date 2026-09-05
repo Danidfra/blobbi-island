@@ -40,7 +40,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { loadBlobbiSvg } from '@blobbi/react';
+import { loadBlobbiSvg } from '@blobbi/renderer';
 import { useTypewriter } from '@/hooks/useTypewriter';
 import { buildRevealGradient } from '@/lib/ceremony-colors';
 import { AdoptionPublishError, useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
