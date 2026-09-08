@@ -1,6 +1,3 @@
-nsec para teste: nsec1r2e7qve8x4wxfyl6xvdtet0emwpvpjldyelaxrw89vf55j8n7qdqks8tw5
-
-
 # NIP-BB: Blobbi Virtual Pet Lifecycle Events
 
 `draft` `optional`
