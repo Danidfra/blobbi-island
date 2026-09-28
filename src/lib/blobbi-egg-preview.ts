@@ -21,6 +21,7 @@ import {
   generatePetId10,
   getCanonicalBlobbiD,
   getLocalDayString,
+  visualGenerationTags,
   type BlobbiVisualTraits,
   type BlobbiStats,
 } from '@blobbi-kit/core';
@@ -119,5 +120,9 @@ export function previewToBabyTags(preview: BlobbiEggPreview): string[][] {
     ['pattern', visualTraits.pattern],
     ['special_mark', visualTraits.specialMark],
     ['size', visualTraits.size],
+    // Born into the ecosystem's current artwork generation (core's rule,
+    // `NEW_BLOBBI_VISUAL_GENERATION`): identity from the first event, never
+    // changed by a transition. Existing Blobbis without the tag stay V1.
+    ...visualGenerationTags(),
   ];
 }

@@ -317,12 +317,15 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     // The complete visual consequence of the current pose, from the SAME pure
     // resolver the remote layer uses (src/lib/blobbi-pose.ts).
+    // While the actor walks, the renderer animates the body (its gait), so the
+    // Island float is suppressed for the local actor exactly as it is for a
+    // moving remote one: one body animation at a time.
     const render = resolveActorRender(pose, {
       groundPosition: position,
       backgroundFile,
       boundary,
       scaleByYPosition,
-      suppressFloat: disableFloating,
+      suppressFloat: disableFloating || isMoving,
     });
 
     // Depth scale at an arbitrary point (gaze endpoints convert ground → body
@@ -435,6 +438,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             isSleeping={render.sleeping}
             facing={render.facing}
             movementFacing={movementFacing}
+            motion={isMoving ? 'walking' : 'still'}
             eyeOffset={eyeOffset}
             visualOverride={visualOverride}
             companionId={blobbiId}

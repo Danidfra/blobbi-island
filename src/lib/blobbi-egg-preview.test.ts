@@ -80,3 +80,22 @@ describe('adoption preview → baby tags', () => {
     expect(parsed.stage).not.toBe('egg');
   });
 });
+
+describe('the artwork generation of a new Blobbi', () => {
+  it('is born V2 by the kit\'s creation rule: the baby carries visual_generation=v2 and parses as V2', () => {
+    const preview = generateEggPreview(PUBKEY, 'Egg');
+    const tags = previewToBabyTags({ ...preview, name: 'Puck' });
+    expect(tags.filter(([n]) => n === 'visual_generation')).toEqual([['visual_generation', 'v2']]);
+    const parsed = parsePetState(asBabyEvent(tags))!;
+    expect(parsed.visualGeneration).toBe('v2');
+    expect(classifyBlobbiEvent(asBabyEvent(tags))).toBe('modern');
+  });
+
+  it('an existing Blobbi without the tag stays V1: nothing is migrated on read', () => {
+    const preview = generateEggPreview(PUBKEY, 'Egg');
+    const legacy = previewToBabyTags({ ...preview, name: 'Puck' }).filter(([n]) => n !== 'visual_generation');
+    const parsed = parsePetState(asBabyEvent(legacy))!;
+    expect(parsed.visualGeneration).toBe('v1');
+    expect(classifyBlobbiEvent(asBabyEvent(legacy))).toBe('modern');
+  });
+});

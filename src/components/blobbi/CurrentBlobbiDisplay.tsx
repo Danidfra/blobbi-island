@@ -56,6 +56,7 @@ import {
   type BlobbiVisual,
   type BlobbiVisualEffect,
 } from "@blobbi-kit/renderer";
+import type { BlobbiMotion } from "@blobbi-kit/renderer";
 import { applyDevVisualGeneration, useDevVisualGenerationOverride } from "@/lib/blobbi-visual-dev";
 import { resolveBodyFacing } from "@/lib/blobbi-facing";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
@@ -99,6 +100,13 @@ export interface CurrentBlobbiDisplayProps {
    * Accessory artwork and the seat prop keep following `facing`.
    */
   movementFacing?: BlobbiFacing;
+  /**
+   * Body motion state for the renderer (`'still'` when absent): the world says
+   * "walking" while it moves the actor; the renderer draws whatever gait the
+   * artwork has (V1 and the baby bob, the V2 adult walks on its legs). No
+   * Island transform ever animates the body while this is `'walking'`.
+   */
+  motion?: BlobbiMotion;
   /** If provided, component renders THIS visual instead of the local companion. */
   visualOverride?: BlobbiVisual;
   /**
@@ -181,6 +189,7 @@ export function CurrentBlobbiDisplay({
   eyeOffset,
   facing = "front",
   movementFacing,
+  motion,
   companionId,
   seatedAccessory = null,
 }: CurrentBlobbiDisplayProps) {
@@ -314,6 +323,7 @@ export function CurrentBlobbiDisplay({
           isSleeping={isSleeping}
           eyesClosed={eyesClosed}
           facing={bodyFacing}
+          motion={motion}
           eyeOffset={eyeOffset}
           accessories={accessories}
           effects={effects}

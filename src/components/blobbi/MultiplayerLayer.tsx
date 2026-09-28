@@ -261,6 +261,7 @@ function RemoteBlobbiSprite({
         className={cn(isMoving && "scale-105")}
         eyeOffset={eyeOffset}
         facing={bodyFacing}
+        motion={isMoving ? 'walking' : 'still'}
         title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
       />
     </SeatedAccessoryLayer>
