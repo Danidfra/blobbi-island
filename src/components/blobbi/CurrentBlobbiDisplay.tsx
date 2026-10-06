@@ -264,6 +264,7 @@ export function CurrentBlobbiDisplay({
           stage: currentBlobbi.stage,
           adultType: currentBlobbi.adultType,
           visualGeneration: currentBlobbi.visualGeneration,
+          v3: currentBlobbi.v3,
           baseColor: currentBlobbi.baseColor,
           secondaryColor: currentBlobbi.secondaryColor,
           eyeColor: currentBlobbi.eyeColor,

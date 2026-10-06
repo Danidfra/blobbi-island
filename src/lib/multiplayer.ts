@@ -5,6 +5,7 @@
 
 import type { LocationId } from '@/lib/location-types';
 import type { BlobbiVisualGeneration } from '@blobbi-kit/core';
+import type { BlobbiV3Visual } from '@blobbi-kit/renderer';
 import { constrainPosition } from '@/lib/boundaries';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import type { Position } from '@/lib/types';
@@ -368,6 +369,12 @@ export interface BlobbiVisual {
    * "not read yet" and renders as V1.
    */
   visualGeneration?: BlobbiVisualGeneration;
+  /**
+   * A V3 Blobbi's identity as its own kind 31124 states it (the renderer's
+   * input, read by core: see `lib/blobbi-v3-visual.ts`). Filled with the
+   * state event, never sent over the presence wire. Absent for V1 and V2.
+   */
+  v3?: BlobbiV3Visual;
 }
 
 // ============================================================================

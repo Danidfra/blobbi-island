@@ -17,8 +17,9 @@
  *
  * Which body turns: V1 has no profile artwork and its rear view is a pose
  * consequence (seats), never a walking one; so V1 IGNORES the movement facing
- * entirely and keeps the pose facing it always had. V2 turns while standing.
- * A pose facing of `'back'` (a rear-facing seat) always wins.
+ * entirely and keeps the pose facing it always had. V2 and V3 (which has a
+ * profile and a back of its own, generated) turn while standing. A pose
+ * facing of `'back'` (a rear-facing seat) always wins.
  */
 import type { BlobbiFacing, BlobbiVisual } from '@blobbi-kit/renderer';
 
@@ -50,6 +51,6 @@ export interface BodyFacingInput {
 /** The facing the body renderer receives. */
 export function resolveBodyFacing({ visual, poseFacing, movementFacing }: BodyFacingInput): BlobbiFacing {
   if (poseFacing === 'back') return 'back';
-  if (visual.visualGeneration !== 'v2') return poseFacing;
+  if (visual.visualGeneration !== 'v2' && visual.visualGeneration !== 'v3') return poseFacing;
   return movementFacing ?? poseFacing;
 }

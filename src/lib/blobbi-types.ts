@@ -137,7 +137,7 @@ export interface CreateOwnerProfileInput {
 // Kind 31124 - Pet State Types
 // ============================================================================
 
-import type { BlobbiVisualGeneration } from '@blobbi-kit/core';
+import type { BlobbiVisualGeneration, BlobbiVisualIdentity } from '@blobbi-kit/core';
 
 /** Pet stage enum */
 export type PetStage = 'egg' | 'baby' | 'adult';
@@ -330,6 +330,14 @@ export interface PetState {
    * unknown value is `'v1'`; only `'v2'` selects the canonical V2 anatomy.
    */
   visualGeneration: BlobbiVisualGeneration;
+  /**
+   * A procedural (`v3`) Blobbi's identity, exactly as its event states it:
+   * the seed, the algorithm version, the four colours and the kind of each
+   * trait, as `@blobbi-kit/core` reads them (`getBlobbiVisualIdentity`).
+   * The renderer generates the individual from this; Island carries it and
+   * never derives, defaults or rewrites any of it. Absent for V1 and V2.
+   */
+  v3?: BlobbiVisualIdentity['v3'];
   /** Manifestation type */
   manifestation?: string;
   /** Visual effects */

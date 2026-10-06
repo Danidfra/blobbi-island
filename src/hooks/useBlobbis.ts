@@ -40,6 +40,8 @@ export interface Blobbi {
    * every renderer input built from this object draws the right anatomy.
    */
   visualGeneration?: BlobbiVisualGeneration;
+  /** A V3 Blobbi's identity as its event states it (see `PetState.v3`); absent for V1 and V2. */
+  v3?: PetState['v3'];
   /**
    * Raw event tags from the original Nostr event. Preserved (read-only) so UI
    * code can inspect tags that aren't promoted to typed fields, e.g. `seed`
@@ -78,6 +80,7 @@ export function petStateToLegacyBlobbi(petState: PetState): Blobbi {
     name: petState.name,
     adultType: petState.adultType,
     visualGeneration: petState.visualGeneration,
+    v3: petState.v3,
     rawTags: petState.rawTags,
   };
 }

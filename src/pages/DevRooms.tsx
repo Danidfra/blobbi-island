@@ -39,6 +39,7 @@ import {
 } from '@/lib/theater-seats-config';
 import { DOCK_EVENTS, type PresenceMoveDetail } from '@/components/shell/dock-events';
 import { ExternalEgressProvider } from '@/external-egress';
+import { devV3Visual } from '@/lib/dev-v3-fixture';
 
 const DEV_VISUAL = {
   stage: 'baby' as const,
@@ -60,6 +61,9 @@ const DEV_VISUALS = {
   rosey: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'rosey' },
   mushie: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'mushie' },
   pandi: { ...DEV_VISUAL, stage: 'adult' as const, adultType: 'pandi' },
+  // The procedural generation: a generated body with a profile and a back of its own.
+  'v3 adult': devV3Visual('adult'),
+  'v3 baby': devV3Visual('baby'),
 } as const;
 type DevVisualKey = keyof typeof DEV_VISUALS;
 

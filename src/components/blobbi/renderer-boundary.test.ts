@@ -133,7 +133,7 @@ describe('exactly one renderer implementation exists, and Island consumes it', (
 describe('the installed renderer is the canonical package', () => {
   it('is declared as the published registry package, not a development link', () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
-    expect(pkg.dependencies[RENDERER]).toBe('^0.5.0');
+    expect(pkg.dependencies[RENDERER]).toBe('^0.6.0');
     const declared = { ...pkg.dependencies, ...pkg.devDependencies };
     for (const [name, spec] of Object.entries(declared)) {
       if (name.startsWith('@blobbi')) expect(String(spec), name).not.toMatch(/^file:/);
@@ -147,7 +147,7 @@ describe('the installed renderer is the canonical package', () => {
   it('resolves to @blobbi-kit/renderer with a real built artifact', () => {
     const manifest = JSON.parse(readFileSync(join(INSTALLED, 'package.json'), 'utf8'));
     expect(manifest.name).toBe(RENDERER);
-    expect(manifest.version).toBe('0.5.0');
+    expect(manifest.version).toBe('0.6.0');
     expect(manifest.exports['.'].import).toBe('./dist/index.js');
     // Installed under this project from the registry, not linked from elsewhere.
     expect(realpathSync(INSTALLED)).toBe(INSTALLED);

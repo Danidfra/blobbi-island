@@ -39,6 +39,7 @@ export function BlobbiCard({
     return renderBlobbiSvg({
       stage: model.stage,
       visualGeneration: model.visualGeneration,
+      v3: model.v3 ?? undefined,
       adultType: model.adultType,
       baseColor: model.baseColor,
       secondaryColor: model.secondaryColor,
@@ -46,7 +47,7 @@ export function BlobbiCard({
       eyesClosed: model.eyesClosed,
       instanceId: model.instanceId,
     }).svg;
-  }, [blobbi.stage, blobbi.adultType, blobbi.visualGeneration, blobbi.baseColor, blobbi.secondaryColor, blobbi.eyeColor, blobbi.id]);
+  }, [blobbi.stage, blobbi.adultType, blobbi.visualGeneration, blobbi.v3, blobbi.baseColor, blobbi.secondaryColor, blobbi.eyeColor, blobbi.id]);
 
   // Resolve the friendliest display name. The modern `name` tag is the
   // authoritative source; see getBlobbiDisplayName for the full priority order

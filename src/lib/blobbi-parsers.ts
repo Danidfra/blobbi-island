@@ -33,6 +33,7 @@ import {
   parseModernBlobbiEvent,
   type BlobbiCompanion,
 } from '@blobbi-kit/core/blobbi';
+import { getBlobbiVisualIdentity } from '@blobbi-kit/core/blobbi-visual-identity';
 
 /** Find a tag value within a raw tags array (first match). */
 function rawTagValue(rawTags: string[][], name: string): string | undefined {
@@ -151,12 +152,23 @@ function extTag(companion: BlobbiCompanion, name: string): string | undefined {
  * writes those tags as mirrors of the seed, so the two agree, and reading the
  * tag first keeps Island's rendering byte-identical for existing Blobbis.
  *
+ * A V3 (procedural) Blobbi is different in two ways, both the kit's rule.
+ * Its identity is EXPLICIT: the colours, pattern and mark its event states
+ * are the Blobbi, decided once at creation and never a mirror of the seed,
+ * and the rest of it (algorithm, accent, anatomy, belly, freckles) rides in
+ * `v3` for the renderer, straight from core's reading of the event. And it
+ * has no `size` and no `adult_type`: a V3 body is one body of its own, so
+ * neither is read here nor, through `mergePetStateTags`, ever written; a
+ * stray one on an older event is dropped on the next republish, exactly as
+ * the kit's own republish does (`BLOBBI_V3_ABSENT_TAG_NAMES`).
+ *
  * Everything else (`is_sleeping`, care timestamps, social flags, ...) is an
  * Island extension tag that the shared protocol does not model.
  */
 export function companionToPetState(companion: BlobbiCompanion): PetState {
   const tag = (name: string) => extTag(companion, name);
   const traits = companion.visualTraits;
+  const procedural = companion.visualGeneration === 'v3';
   return {
     id: companion.d,
     // The real `name` tag, as core resolves it. (The previous parser put a
@@ -184,9 +196,10 @@ export function companionToPetState(companion: BlobbiCompanion): PetState {
     pattern: tag('pattern') ?? traits.pattern,
     eyeColor: tag('eye_color') ?? traits.eyeColor,
     specialMark: tag('special_mark') ?? traits.specialMark,
-    adultType: tag('adult_type') ?? companion.adultType,
-    // Identity, not a renderer switch: absent, `v1` or unknown -> `v1`; `v2` -> `v2`.
+    adultType: procedural ? undefined : tag('adult_type') ?? companion.adultType,
+    // Identity, not a renderer switch: absent, `v1` or unknown -> `v1`; `v2` -> `v2`; `v3` -> `v3`.
     visualGeneration: companion.visualGeneration,
+    ...(procedural ? { v3: getBlobbiVisualIdentity(companion).v3 } : {}),
     manifestation: tag('manifestation'),
     visualEffect: tag('visual_effect'),
     blessing: tag('blessing'),
@@ -197,7 +210,7 @@ export function companionToPetState(companion: BlobbiCompanion): PetState {
     mood: tag('mood'),
     favoriteFood: tag('favorite_food'),
     voiceType: tag('voice_type'),
-    size: tag('size') ?? traits.size,
+    size: procedural ? undefined : tag('size') ?? traits.size,
     title: tag('title'),
     skill: tag('skill'),
 

@@ -57,6 +57,7 @@ export function PrizePreviewStage({ resolved }: { resolved: ResolvedArcadePrize 
         stage: companion.stage,
         adultType: companion.adultType,
         visualGeneration: companion.visualGeneration,
+        v3: companion.v3,
         baseColor: companion.baseColor,
         secondaryColor: companion.secondaryColor,
         eyeColor: companion.eyeColor,
