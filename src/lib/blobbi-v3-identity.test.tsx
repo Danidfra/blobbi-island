@@ -205,18 +205,31 @@ describe('every Island republish preserves the V3 identity exactly', () => {
     expect(renderBlobbiSvg({ ...visualOf(pet), instanceId: 'u' }).svg).toBe(renderBlobbiSvg({ ...visualOf(parsed(unusualAdult())), instanceId: 'u' }).svg);
   });
 
-  it('a value that is not a V3 seed never becomes another individual: the renderer draws the stand-in, not a guess', () => {
-    const bad = unusualAdult().tags.map((t) => (t[0] === 'seed' ? ['seed', 'x'.repeat(64)] : t));
-    const pet = parsed(eventWith(bad));
-    expect(pet.v3?.seed).toBeUndefined();
-    const drawn = renderBlobbiSvg({ ...visualOf(pet), instanceId: 'bad' }).svg;
-    const real = renderBlobbiSvg({ ...visualOf(parsed(unusualAdult())), instanceId: 'bad' }).svg;
-    expect(drawn).not.toBe(real);
+  it('a V3 seed is exactly 64 hexadecimal digits: lower case is canonical, upper case is the same seed, anything else is no V3 Blobbi', () => {
+    const withSeed = (seed: string) => eventWith(unusualAdult().tags.map((t) => (t[0] === 'seed' ? ['seed', seed] : t)));
+    expect(parsed(withSeed(SEED)).v3?.seed).toBe(SEED);
+    expect(parsed(withSeed(SEED.toUpperCase())).v3?.seed).toBe(SEED);
+    const malformed = {
+      'non-hex, right length': 'x'.repeat(64),
+      'one digit short': SEED.slice(0, 63),
+      'one digit long': `${SEED}0`,
+      'arbitrary text': 'not a seed',
+    };
+    for (const [label, seed] of Object.entries(malformed)) {
+      // Core classifies it legacy, so Island neither collects it nor republishes it: nothing is repaired into a seed.
+      expect(validatePetStateEvent(withSeed(seed)), label).toBe(false);
+      expect(parsePetState(withSeed(seed)), label).toBeNull();
+    }
+  });
+
+  it('a stranger\'s event without a V3 seed, read for drawing only, never becomes another individual: the renderer draws the stand-in, not a guess', () => {
+    const tagsWithSeed = (seed: string) => unusualAdult().tags.map((t) => (t[0] === 'seed' ? ['seed', seed] : t));
+    const drawOf = (seed: string) => renderBlobbiSvg({ stage: 'adult', visualGeneration: 'v3', v3: v3VisualFromTags(tagsWithSeed(seed)), instanceId: 'bad' }).svg;
+    expect(v3VisualFromTags(tagsWithSeed('x'.repeat(64)))?.seed).toBeUndefined();
+    const drawn = drawOf('x'.repeat(64));
+    expect(drawn).not.toBe(drawOf(SEED));
     // The same drawing for any such value: nothing was derived from it.
-    const other = parsed(eventWith(unusualAdult().tags.map((t) => (t[0] === 'seed' ? ['seed', 'y'.repeat(64)] : t))));
-    expect(renderBlobbiSvg({ ...visualOf(other), instanceId: 'bad' }).svg).toBe(drawn);
-    // And the republish carries the tag as it is: Island repairs nothing into a seed.
-    expect(tagValue(mergePetStateTags(pet), 'seed')).toBe('x'.repeat(64));
+    for (const seed of ['y'.repeat(64), SEED.slice(0, 63), 'not a seed']) expect(drawOf(seed)).toBe(drawn);
   });
 
   it('a V2 Blobbi gains no V3 tag from a republish, and keeps its seed mirrors, adult form and size as before', () => {
