@@ -40,11 +40,11 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { loadBlobbiSvg } from '@blobbi-kit/renderer';
+import { renderBlobbiSvg } from '@blobbi-kit/renderer';
 import { useTypewriter } from '@/hooks/useTypewriter';
 import { buildRevealGradient } from '@/lib/ceremony-colors';
 import { AdoptionPublishError, useFirstEggAdoption } from '@/hooks/useFirstEggAdoption';
-import type { BlobbiEggPreview } from '@/lib/blobbi-egg-preview';
+import { previewVisual, type BlobbiEggPreview } from '@/lib/blobbi-egg-preview';
 import type { AdoptionHandoff } from '@/lib/adoption-handoff';
 import { CURATED_ADJECTIVES, CURATED_NOUNS, composeCuratedName } from '@/blobbi-names';
 import { CuratedNameComposer } from './CuratedNameComposer';
@@ -111,22 +111,16 @@ export function BlobbiHatchingCeremony({ onComplete }: BlobbiHatchingCeremonyPro
   const generatePreviewRef = useRef(generatePreview);
   generatePreviewRef.current = generatePreview;
 
-  const eggColor = preview?.visualTraits.baseColor ?? '#f59e0b';
-  const eggSecondary = preview?.visualTraits.secondaryColor ?? '#fcd34d';
+  // The backdrop takes the Blobbi's own colours (Algorithm 1's, for its address); nothing here is written anywhere.
+  const eggColor = preview?.colors.base ?? '#f59e0b';
+  const eggSecondary = preview?.colors.secondary ?? '#fcd34d';
   const revealBg = useMemo(() => buildRevealGradient(eggColor), [eggColor]);
 
-  // Baby SVG for the reveal (Island renders eggs as baby; see task decision).
+  // Baby SVG for the reveal (Island renders eggs as baby; see task decision):
+  // the V3 Blobbi of this address, exactly as the published baby will draw.
   const babySvg = useMemo(() => {
     if (!preview) return '';
-    return loadBlobbiSvg(
-      'baby',
-      undefined,
-      preview.visualTraits.baseColor,
-      preview.visualTraits.secondaryColor,
-      preview.visualTraits.eyeColor,
-      false,
-      preview.d,
-    );
+    return renderBlobbiSvg({ stage: 'baby', visualGeneration: 'v3', v3: previewVisual(preview), instanceId: preview.d }).svg;
   }, [preview]);
 
   const currentDialogText = phase === 'dialog' ? (BIRTH_DIALOG[dialogLineIndex] ?? '') : '';

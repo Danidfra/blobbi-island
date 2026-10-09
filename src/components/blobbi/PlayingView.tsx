@@ -29,7 +29,7 @@ import { useNostr } from '@/hooks/useNostr';
 import type { BlobbiVisual } from '@/lib/multiplayer';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { parseVisualGeneration } from '@blobbi-kit/core/blobbi';
-import { v3VisualFromTags } from '@/lib/blobbi-v3-visual';
+import { v3VisualFromEvent } from '@/lib/blobbi-v3-visual';
 import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { dbg } from '@/lib/debug';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
@@ -393,7 +393,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         stage: normalizeStage(get('stage') ?? blobbiVisual.stage ?? 'baby'),
         adultType: get('adult_type') ?? get('adultType') ?? blobbiVisual.adultType,
         visualGeneration: parseVisualGeneration(event.tags),
-        v3: v3VisualFromTags(event.tags),
+        v3: v3VisualFromEvent(event),
         // The SECOND place a stranger's authored name becomes display text: the
         // modal refreshes the visual from the full event after opening. Resolved
         // through the same boundary, so the refresh cannot undo what the

@@ -59,7 +59,7 @@ import { useChatBubbles } from '@/hooks/useChatBubbles';
 import { CHAT_KIND, CHAT_EVICT_MS } from '@/lib/chat-config';
 import { KIND_BLOBBI_STATE } from '@/lib/blobbi-kinds';
 import { parseVisualGeneration } from '@blobbi-kit/core/blobbi';
-import { v3VisualFromTags } from '@/lib/blobbi-v3-visual';
+import { v3VisualFromEvent } from '@/lib/blobbi-v3-visual';
 import { DEFAULT_ISLAND_ID } from '@/lib/multiplayer';
 import { admitChatMessage, useIslandSafetyPolicy } from '@/safety';
 import { resolveRemoteBlobbiDisplayName } from '@/blobbi-names';
@@ -626,7 +626,10 @@ export function MultiplayerLayer({
       : undefined;
     const adultType      = get('adult_type') || get('adultType') || get('blobbi_adult_type');
 
-    if (!baseColor && !secondaryColor && !eyeColor) {
+    // A remote V3 Blobbi is the individual its address derives, on every screen:
+    // the renderer resolves it from the seed, and its event states no colour.
+    const v3 = v3VisualFromEvent(event);
+    if (!v3 && !baseColor && !secondaryColor && !eyeColor) {
       console.warn('[blobbi][mp][visual] 31124 sem cores', { pubkey, d, tags: event.tags });
     }
 
@@ -642,8 +645,7 @@ export function MultiplayerLayer({
       // Identity from the stranger's own event, read canonically: a remote V2
       // Blobbi is drawn as V2 on every screen, not only its owner's.
       visualGeneration: parseVisualGeneration(event.tags),
-      // A remote V3 Blobbi is the individual its event states, on every screen.
-      v3: v3VisualFromTags(event.tags),
+      v3,
     };
   }, [nostr]);
 

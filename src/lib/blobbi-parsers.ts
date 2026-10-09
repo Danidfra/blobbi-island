@@ -34,6 +34,7 @@ import {
   type BlobbiCompanion,
 } from '@blobbi-kit/core/blobbi';
 import { getBlobbiVisualIdentity } from '@blobbi-kit/core/blobbi-visual-identity';
+import { BLOBBI_V3_ABSENT_TAG_NAMES } from '@blobbi-kit/core/blobbi-v3-identity';
 
 /** Find a tag value within a raw tags array (first match). */
 function rawTagValue(rawTags: string[][], name: string): string | undefined {
@@ -152,15 +153,15 @@ function extTag(companion: BlobbiCompanion, name: string): string | undefined {
  * writes those tags as mirrors of the seed, so the two agree, and reading the
  * tag first keeps Island's rendering byte-identical for existing Blobbis.
  *
- * A V3 (procedural) Blobbi is different in two ways, both the kit's rule.
- * Its identity is EXPLICIT: the colours, pattern and mark its event states
- * are the Blobbi, decided once at creation and never a mirror of the seed,
- * and the rest of it (algorithm, accent, anatomy, belly, freckles) rides in
- * `v3` for the renderer, straight from core's reading of the event. And it
- * has no `size` and no `adult_type`: a V3 body is one body of its own, so
- * neither is read here nor, through `mergePetStateTags`, ever written; a
- * stray one on an older event is dropped on the next republish, exactly as
- * the kit's own republish does (`BLOBBI_V3_ABSENT_TAG_NAMES`).
+ * A V3 (procedural) Blobbi is different, by the kit's rule: it IS its
+ * address. Core derives its seed from the event's author and `d`, and the
+ * renderer derives everything it looks like from that seed under Algorithm 1
+ * (`v3`, straight from core). Its event states no colour, pattern, mark,
+ * seed, algorithm, size or adult form, so none is read here and none is ever
+ * written by `mergePetStateTags`; a stray one on an older event is dropped
+ * on the next republish, exactly as the kit's own republish does
+ * (`BLOBBI_V3_ABSENT_TAG_NAMES`). Its plain colour fields are left empty:
+ * Island carries no colour for a V3 Blobbi, the renderer resolves them.
  *
  * Everything else (`is_sleeping`, care timestamps, social flags, ...) is an
  * Island extension tag that the shared protocol does not model.
@@ -190,12 +191,12 @@ export function companionToPetState(companion: BlobbiCompanion): PetState {
     experience: companion.experience ?? 0,
     careStreak: companion.careStreak ?? 0,
 
-    // Appearance
-    baseColor: tag('base_color') ?? traits.baseColor,
-    secondaryColor: tag('secondary_color') ?? traits.secondaryColor,
-    pattern: tag('pattern') ?? traits.pattern,
-    eyeColor: tag('eye_color') ?? traits.eyeColor,
-    specialMark: tag('special_mark') ?? traits.specialMark,
+    // Appearance (V1 and V2: the tag, then the seed's mirror; V3: none, see above)
+    baseColor: procedural ? undefined : tag('base_color') ?? traits.baseColor,
+    secondaryColor: procedural ? undefined : tag('secondary_color') ?? traits.secondaryColor,
+    pattern: procedural ? undefined : tag('pattern') ?? traits.pattern,
+    eyeColor: procedural ? undefined : tag('eye_color') ?? traits.eyeColor,
+    specialMark: procedural ? undefined : tag('special_mark') ?? traits.specialMark,
     adultType: procedural ? undefined : tag('adult_type') ?? companion.adultType,
     // Identity, not a renderer switch: absent, `v1` or unknown -> `v1`; `v2` -> `v2`; `v3` -> `v3`.
     visualGeneration: companion.visualGeneration,
@@ -556,13 +557,15 @@ export function mergePetStateTags(
   if (pet.lastSing) tags.push(['last_sing', dateToTimestamp(pet.lastSing)]);
   if (pet.lastMedicine) tags.push(['last_medicine', dateToTimestamp(pet.lastMedicine)]);
 
-  // Appearance
-  if (pet.baseColor) tags.push(['base_color', pet.baseColor]);
-  if (pet.secondaryColor) tags.push(['secondary_color', pet.secondaryColor]);
-  if (pet.pattern) tags.push(['pattern', pet.pattern]);
-  if (pet.eyeColor) tags.push(['eye_color', pet.eyeColor]);
-  if (pet.specialMark) tags.push(['special_mark', pet.specialMark]);
-  if (pet.adultType) tags.push(['adult_type', pet.adultType]);
+  // Appearance. A V3 Blobbi's looks are its address's (Algorithm 1), never a
+  // tag: nothing of them is written, whatever a caller put on the pet.
+  const procedural = pet.visualGeneration === 'v3';
+  if (!procedural && pet.baseColor) tags.push(['base_color', pet.baseColor]);
+  if (!procedural && pet.secondaryColor) tags.push(['secondary_color', pet.secondaryColor]);
+  if (!procedural && pet.pattern) tags.push(['pattern', pet.pattern]);
+  if (!procedural && pet.eyeColor) tags.push(['eye_color', pet.eyeColor]);
+  if (!procedural && pet.specialMark) tags.push(['special_mark', pet.specialMark]);
+  if (!procedural && pet.adultType) tags.push(['adult_type', pet.adultType]);
   if (pet.manifestation) tags.push(['manifestation', pet.manifestation]);
   if (pet.visualEffect) tags.push(['visual_effect', pet.visualEffect]);
   if (pet.blessing) tags.push(['blessing', pet.blessing]);
@@ -573,7 +576,7 @@ export function mergePetStateTags(
   if (pet.mood) tags.push(['mood', pet.mood]);
   if (pet.favoriteFood) tags.push(['favorite_food', pet.favoriteFood]);
   if (pet.voiceType) tags.push(['voice_type', pet.voiceType]);
-  if (pet.size) tags.push(['size', pet.size]);
+  if (!procedural && pet.size) tags.push(['size', pet.size]);
   if (pet.title) tags.push(['title', pet.title]);
   if (pet.skill) tags.push(['skill', pet.skill]);
 
@@ -595,21 +598,26 @@ export function mergePetStateTags(
   if (pet.value) tags.push(['value', pet.value.toString()]);
   if (pet.carePointsDeducted) tags.push(['care_points_deducted', pet.carePointsDeducted.toString()]);
 
+  // Preserve unknown tags from the original event. On a V3 Blobbi the tags
+  // it does not carry (a seed, an algorithm version, the pre-release trait
+  // tags) are dropped rather than carried: none of them is identity, and a
+  // replacement event must not be able to state one.
+  const unknownTags = pet.rawTags.filter(
+    tag => !MANAGED_PET_STATE_TAG_NAMES.has(tag[0]) && !(procedural && BLOBBI_V3_ABSENT_TAG_NAMES.includes(tag[0])),
+  );
+
   // Apply overrides (replace matching managed tags)
   if (overrides) {
     const overrideKeys = new Set(Object.keys(overrides));
     const filteredTags = tags.filter(tag => !overrideKeys.has(tag[0]));
     for (const [name, value] of Object.entries(overrides)) {
+      if (procedural && BLOBBI_V3_ABSENT_TAG_NAMES.includes(name)) continue;
       filteredTags.push([name, value]);
     }
-    // Preserve unknown tags from the original event
-    const unknownTags = pet.rawTags.filter(tag => !MANAGED_PET_STATE_TAG_NAMES.has(tag[0]));
     filteredTags.push(...unknownTags);
     return filteredTags;
   }
 
-  // Preserve unknown tags from the original event
-  const unknownTags = pet.rawTags.filter(tag => !MANAGED_PET_STATE_TAG_NAMES.has(tag[0]));
   tags.push(...unknownTags);
 
   return tags;
