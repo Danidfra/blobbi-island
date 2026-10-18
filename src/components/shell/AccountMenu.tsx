@@ -43,6 +43,7 @@ import { ThemePicker } from "@/components/shell/ThemePicker";
 import { SafetySettingsDialog } from "@/components/blobbi/player-safety/SafetySettingsDialog";
 import { usePlayerSafetyEntries } from "@/player-safety";
 import { SettingsRow, SettingsSection } from "@/components/ui/settings-row";
+import { SourceCodeLink } from "@/components/shell/SourceCodeLink";
 import { useTheme } from "@/hooks/useTheme";
 import { genUserName } from "@/lib/genUserName";
 
@@ -368,6 +369,8 @@ function AccountMenuBody({
           onClick={() => onRemoveLogin(currentUser.id)}
         />
       </SettingsSection>
+
+      <SourceCodeLink className="px-3 py-1 text-center text-island-ink-soft" />
 
       {/* Developer tools: dev/local builds only; never rendered in production. */}
       {/* `import.meta.env.DEV` is a literal `false` in a build, so the whole

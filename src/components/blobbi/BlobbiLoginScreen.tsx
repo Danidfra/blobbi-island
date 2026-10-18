@@ -2,6 +2,7 @@ import { useState } from "react";
 import LoginDialog from "@/components/auth/LoginDialog";
 import SignupDialog from "@/components/auth/SignupDialog";
 import { Button } from "@/components/ui/button";
+import { SourceCodeLink } from "@/components/shell/SourceCodeLink";
 
 interface BlobbiLoginScreenProps {
   className?: string;
@@ -123,6 +124,9 @@ export function BlobbiLoginScreen({ className }: BlobbiLoginScreenProps) {
           </div>
         </div>
       </div>
+
+      {/* The offer of the source the AGPL asks for, small, below the sign. */}
+      <SourceCodeLink className="absolute inset-x-0 bottom-2 z-10 text-center text-island-cream [text-shadow:0_1px_3px_rgba(58,42,26,0.85)]" />
 
       {/* Stable auth dialogs (logic unchanged) */}
       <LoginDialog
