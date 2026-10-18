@@ -41,7 +41,14 @@ makes no claim about them:
 
 - `public/assets/items/toys/ball.png`, `public/assets/items/toys/bear.png`
   (exported from a Canva team workspace)
-- `public/assets/audio/sfx/bush-rustle.mp3`
+
+## Sound
+
+The game ships no audio files. The bush rustle is generated in the browser by
+original code (`src/lib/audio/bush-rustle.ts`): filtered noise and short leaf
+ticks shaped by an envelope. It is not sampled from or derived from any
+recording, and it is covered by the repository's license like the rest of the
+code. The Blobbi Dance music is generated the same way.
 
 ## Other artwork
 

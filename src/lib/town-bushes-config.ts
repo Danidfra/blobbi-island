@@ -112,8 +112,5 @@ export const townBushes: TownBushConfig[] = [
   },
 ];
 
-/** Shared bush-rustle sound effect path (played on arrival, not on click). */
-export const BUSH_RUSTLE_SFX = '/assets/audio/sfx/bush-rustle.mp3';
-
 /** Background file whose walk boundary the bush targets are clamped into. */
 export const TOWN_BACKGROUND_FILE = 'town-open.webp';

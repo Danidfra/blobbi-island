@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 import type { TownBushConfig } from '@/lib/town-bushes-config';
-import { BUSH_RUSTLE_SFX, TOWN_BACKGROUND_FILE } from '@/lib/town-bushes-config';
-import { useSfx } from '@/hooks/useSfx';
+import { TOWN_BACKGROUND_FILE } from '@/lib/town-bushes-config';
+import { useBushRustle } from '@/hooks/useBushRustle';
 import { locationBoundaries } from '@/lib/location-boundaries';
 import { resolveElementApproachTarget } from '@/lib/approach-target';
 
@@ -80,7 +80,7 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
   const shakeTimerRef = useRef<number | null>(null);
   const leafTimerRef = useRef<number | null>(null);
 
-  const { play: playRustle } = useSfx(BUSH_RUSTLE_SFX, { cooldownMs: 500, volume: 0.8 });
+  const { prime: primeRustle, play: playRustle } = useBushRustle({ cooldownMs: 500, volume: 0.8 });
 
   /** Is the local player hidden inside THIS bush right now? */
   const isHiddenHere = hiddenIn === config.id;
@@ -128,6 +128,10 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
       // rustle/shake/leaves, no re-published presence.
       if (isHiddenHereRef.current) return;
 
+      // The click is the user gesture: ready the audio now so the rustle can
+      // play on arrival, which comes later and outside any gesture.
+      primeRustle();
+
       // Unlike doors/kiosks: which aim at the *base* of the element so the
       // Blobbi stands in front of them, a bush is a hiding spot: the Blobbi
       // walks INTO it, so the aim point comes from the bush's configured
@@ -149,7 +153,7 @@ export function TownBush({ config, requestInteraction, hiddenIn, onHide }: TownB
         },
       });
     },
-    [requestInteraction, onArrive, config.interactionTarget],
+    [requestInteraction, onArrive, primeRustle, config.interactionTarget],
   );
 
   return (

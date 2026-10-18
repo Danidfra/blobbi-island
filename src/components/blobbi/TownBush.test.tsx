@@ -21,21 +21,20 @@ import { locationBoundaries } from '@/lib/location-boundaries';
 import type { RequestInteractionOptions } from '@/hooks/usePendingInteraction';
 
 // ---------------------------------------------------------------------------
-// Audio stub: jsdom has no media playback, and we want to count rustles.
+// Audio stub: the rustle is generated with Web Audio, which jsdom lacks; count
+// the plays (on arrival) and the primes (in the click's user gesture).
 // ---------------------------------------------------------------------------
-let audioPlays: string[];
+const rustle = vi.hoisted(() => ({ plays: 0, primes: 0 }));
 
-class FakeAudio {
-  currentTime = 0;
-  volume = 1;
-  preload = '';
-  constructor(public src: string) {}
-  play() {
-    audioPlays.push(this.src);
-    return Promise.resolve();
-  }
-  pause() {}
-}
+vi.mock('@/lib/audio/bush-rustle', () => ({
+  primeBushRustle: () => {
+    rustle.primes += 1;
+  },
+  playBushRustle: () => {
+    rustle.plays += 1;
+    return true;
+  },
+}));
 
 const SURFACE_RECT = {
   width: 1000,
@@ -113,8 +112,8 @@ function expectedTarget(config: TownBushConfig) {
 }
 
 beforeEach(() => {
-  audioPlays = [];
-  vi.stubGlobal('Audio', FakeAudio);
+  rustle.plays = 0;
+  rustle.primes = 0;
 });
 
 afterEach(() => {
@@ -177,16 +176,17 @@ describe('Town bush hiding', () => {
 
     fireEvent.click(h.bush);
 
-    // Clicking only requests the walk: nothing has happened yet.
+    // Clicking only requests the walk (and readies audio in the gesture): nothing has happened yet.
+    expect(rustle.primes).toBe(1);
     expect(h.hides).toEqual([]);
-    expect(audioPlays).toEqual([]);
+    expect(rustle.plays).toBe(0);
     expect(h.leafCount()).toBe(0);
 
     // The movement system reports arrival.
     act(() => h.requests[0].action());
 
     expect(h.hides).toEqual([bush1.id]);
-    expect(audioPlays).toHaveLength(1);
+    expect(rustle.plays).toBe(1);
     expect(h.leafCount()).toBeGreaterThan(0);
   });
 
@@ -197,7 +197,7 @@ describe('Town bush hiding', () => {
     act(() => h.requests[0].onCancel?.());
 
     expect(h.hides).toEqual([]);
-    expect(audioPlays).toEqual([]);
+    expect(rustle.plays).toBe(0);
     expect(h.leafCount()).toBe(0);
   });
 
@@ -232,7 +232,7 @@ describe('Town bush hiding', () => {
 
     // No second walk, no extra rustle, no extra leaf burst.
     expect(h.requests).toHaveLength(1);
-    expect(audioPlays).toHaveLength(1);
+    expect(rustle.plays).toBe(1);
     expect(h.leafCount()).toBe(leavesAfterArrival);
     expect(h.hides).toEqual([bush1.id]);
   });

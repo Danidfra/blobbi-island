@@ -18,9 +18,9 @@
  * | `synth` | generated in the browser from `AudioContext`. No asset, no licence, ships safely. |
  * | `asset` | a real audio file the repository owns and may ship. |
  *
- * **The only track that exists today is `synth`.** The repository contains
- * exactly one audio asset (`public/assets/audio/sfx/bush-rustle.mp3`, a one-shot
- * UI effect) and no music of any kind, so option 1 of the phase brief (reuse an
+ * **The only track that exists today is `synth`.** The repository contains no
+ * music of any kind (its one-shot bush rustle is generated in code too,
+ * `src/lib/audio/bush-rustle.ts`), so option 1 of the phase brief (reuse an
  * existing repository-owned asset) has nothing to reuse and option 2 (add an
  * original recorded asset) is not something a code change can honestly produce.
  * Option 3: a synthesised development track scheduled against the audio clock,

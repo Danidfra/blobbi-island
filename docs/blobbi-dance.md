@@ -168,8 +168,9 @@ The phase brief's preferred order was (1) reuse a repository-owned asset,
 (2) add an original placeholder asset, (3) generate one through the Web Audio
 API.
 
-Option 1 has nothing to reuse: the repository contains exactly one audio file,
-`public/assets/audio/sfx/bush-rustle.mp3`, a one-shot UI effect. Option 2 is not
+Option 1 has nothing to reuse: the repository has no music, and its one audio
+file at the time, a one-shot bush rustle, has since been replaced by a rustle
+generated in code (`src/lib/audio/bush-rustle.ts`). Option 2 is not
 something a code change can honestly produce, "add an original recording" means
 somebody records something. So option 3 ships: a kick, an offbeat hat, a backbeat
 clap and a four-bar bass progression, all computed from code in this repository
