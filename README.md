@@ -306,3 +306,15 @@ canonical deployment.
 Pre-alpha, actively developed. The shared-playback kinds are experimental and
 may change. The economy is client-trusted by design at this stage; see the
 limitations above before building anything on top of balances.
+
+## License
+
+GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
+
+Parts of the hatching ceremony and the theme support are derived from
+[Ditto](https://gitlab.com/soapbox-pub/ditto) (AGPL-3.0-or-later). [NOTICE.md](NOTICE.md)
+lists them with their authors and the other components. Artwork origins are described in
+[ASSETS.md](ASSETS.md).
+
+If you run a modified version of this game for other people, the AGPL asks you to offer
+them its source code.
