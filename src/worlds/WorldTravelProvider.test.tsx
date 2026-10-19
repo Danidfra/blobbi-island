@@ -16,6 +16,7 @@ import type { Blobbi } from '@/hooks/useBlobbis';
 import { IslandSafetyProvider, type ExperienceProfile } from '@/safety';
 import { TestApp } from '@/test/TestApp';
 
+import { ENTRY_BEAT_MS } from './entry-arrival';
 import { PRESENCE } from './useBlobbiPresence';
 import { DEPARTURE } from './useWorldDeparture';
 import { WorldTravelProvider } from './WorldTravelProvider';
@@ -52,8 +53,11 @@ function World({ blobbi }: { blobbi: Blobbi | null }) {
   );
 }
 
-/** The test app mounts its children once its login provider has read storage (an effect): let that run. */
-async function mount(profile: ExperienceProfile = 'standard', blobbi: Blobbi | null = BLOBBI) {
+/**
+ * The test app mounts its children once its login provider has read storage (an effect): let that run. By default
+ * the entry's arrival is then left to finish too (the Blobbi stands in the room, as every scene below expects).
+ */
+async function mount(profile: ExperienceProfile = 'standard', blobbi: Blobbi | null = BLOBBI, { settle = true } = {}) {
   const r = render(
     <TestApp>
       <IslandSafetyProvider profile={profile}>
@@ -66,6 +70,7 @@ async function mount(profile: ExperienceProfile = 'standard', blobbi: Blobbi | n
     </TestApp>,
   );
   await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+  if (settle) await act(async () => void (await vi.advanceTimersByTimeAsync(ENTRY_BEAT_MS + PRESENCE.arriveMs + 50)));
   return r;
 }
 
@@ -91,6 +96,35 @@ const world = () => screen.getByTestId('world');
 const GOODBYE = DEPARTURE.noticeMs + DEPARTURE.waveMs;
 
 describe('travelling to another world from the Island', () => {
+  it('entering: the Blobbi is not there yet, arrives once through the teleport, and the room may speak for it only once it has formed', async () => {
+    const r = await mount('standard', BLOBBI, { settle: false });
+    // Not drawn, and not here for the room's presence, until it has formed
+    expect(world().dataset.presence).toBe('absent');
+    expect(world().dataset.here).toBe('false');
+    expect(screen.queryByTestId('world-travel-notices')).toBeNull();
+    await tick(ENTRY_BEAT_MS + 10);
+    expect(world().dataset.presence).toBe('arriving');
+    expect(world().dataset.here).toBe('false');
+    await tick(PRESENCE.arriveMs + 50);
+    expect(world().dataset.presence).toBe('present');
+    expect(world().dataset.here).toBe('true');
+    // Ordinary re-renders replay nothing
+    r.rerender(
+      <TestApp>
+        <IslandSafetyProvider profile="standard">
+          <ExternalEgressProvider>
+            <WorldTravelProvider blobbi={{ ...BLOBBI }} pubkey={undefined} busy>
+              <World blobbi={BLOBBI} />
+            </WorldTravelProvider>
+          </ExternalEgressProvider>
+        </IslandSafetyProvider>
+      </TestApp>,
+    );
+    await tick(ENTRY_BEAT_MS + PRESENCE.arriveMs + 50);
+    expect(world().dataset.presence).toBe('present');
+    expect(world().dataset.here).toBe('true');
+  });
+
   it('the dock opens the Worlds sheet, with every open world a door and the rest closed', async () => {
     await mount();
     expect(screen.queryByTestId('worlds-list')).toBeNull();

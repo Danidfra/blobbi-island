@@ -59,6 +59,7 @@ import {
   type FollowState,
   type NostrEvent,
   type ShownBlobbi,
+  type TravelResolution,
   type TravelViewKind,
   type WorldTravelOptions,
   type WorldTravelSession,
@@ -77,6 +78,15 @@ import { WORLD_FARM, WORLD_ISLAND, WORLD_RUMBLE } from './worlds';
 registerWorld({ id: WORLD_ISLAND, name: 'Blobbi Island' });
 registerWorld({ id: WORLD_FARM, name: 'Nostr Farm' });
 registerWorld({ id: WORLD_RUMBLE, name: 'Blobbi Rumble' });
+
+/**
+ * How many meaningful interactions with the Island bring an away Blobbi over by themselves (the kit's `followAfter`;
+ * its default is 3). Two: a player who opened the Island directly and plays a moment is followed without a button,
+ * while one stray press still pulls nothing out of the World the Blobbi was just moved to (the kit's gap of 1 s
+ * between counted inputs and its rolling window stay as they are). The owner's product decision of 2026-10-19,
+ * meant for Blobbi Home and Pixel too; each app sets it through the same option.
+ */
+export const ISLAND_FOLLOW_AFTER = 2;
 
 /** The page's storage for the kit's session, every access guarded (a refusing browser keeps nothing). */
 const pageStore: WorldTravelStore = {
@@ -147,6 +157,11 @@ export interface IslandWorldTravel {
   view: TravelViewKind;
   /** Nostr: no relay answered the first look (the kept place, or here by default, is shown); off: false. */
   unreachable: boolean;
+  /**
+   * How sure the place is (the kit's resolution), or `none` when no session runs for this Blobbi (off, signed out,
+   * another account's Blobbi, no relays): the entry's arrival waits on it (`entry-arrival.ts`).
+   */
+  resolution: TravelResolution | 'none';
   /** Nostr: read the relays again now. */
   refresh(): void;
   /** Nostr: the interactions counted toward following the player here (null: none, off). */
@@ -172,6 +187,7 @@ const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry'> 
   known: true,
   view: 'here',
   unreachable: false,
+  resolution: 'none',
   follow: null,
   nameOf: nameOfWorld,
   snapshot: null,
@@ -219,6 +235,8 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
       // The arrival's motes gather before the body forms: started that much earlier, the body forms at the
       // session's `formAt` (the departure window's end, and no sooner than MIN_TRAVEL_MS after the act)
       arrivalLeadMs: PRESENCE.arriveLeadMs,
+      // Two meaningful interactions bring an away Blobbi over (the kit's count, gap and window otherwise unchanged)
+      followAfter: ISLAND_FOLLOW_AFTER,
       // The Island's room presence (31950) is its own fact; Active Presence stays off here
       presenceEnabled: false,
     };
@@ -330,6 +348,7 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     known: view !== 'looking',
     view,
     unreachable: resolution === 'unreachable',
+    resolution,
     refresh,
     follow: snapshot?.follow ?? null,
     nameOf: nameOfWorld,

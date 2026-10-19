@@ -277,12 +277,17 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     // Latest pose for the input handler without re-binding listeners.
     const poseRef = useRef(pose);
     poseRef.current = pose;
+    // Latest journey, the same way: a Blobbi still forming or dissolving is not walked (its controls return
+    // once it stands, `present`); a tap meanwhile is nothing to it.
+    const journeyRef = useRef(journey);
+    journeyRef.current = journey;
 
     useEffect(() => {
       const container = containerRef.current;
       if (!container || !isVisible) return;
 
       const handlePointer = (event: MouseEvent | TouchEvent) => {
+        if ((journeyRef.current?.presence ?? 'present') !== 'present') return;
         if (blobbiRef.current?.contains(event.target as Node)) {
           onWakeUp?.();
           onBlobbiClick?.();

@@ -1,12 +1,24 @@
 /**
  * World Travel, wired once around the playing view: the Island's own Blobbi
- * presence (`useBlobbiPresence`), the goodbye scene that leads to another
- * world (`useWorldDeparture`), the Nostr session that says where the Blobbi
- * is (`useIslandWorldTravel`), and the surfaces for all three: the Worlds
- * sheet (opened from the dock), the departure card, the away card.
+ * presence (`useBlobbiPresence`), the arrival on entry (`entry-arrival.ts`),
+ * the goodbye scene that leads to another world (`useWorldDeparture`), the
+ * Nostr session that says where the Blobbi is (`useIslandWorldTravel`), and
+ * the surfaces for all of them: the Worlds sheet (opened from the dock), the
+ * departure card, the away card.
  *
  * The world below reads one small view (`WorldTravelContext`): how to draw
  * its Blobbi, and whether the room may publish its presence for it.
+ *
+ * ENTERING. The Blobbi is not standing in the room when the world opens: it
+ * starts absent and arrives through the teleport, once per mount, after the
+ * entry gate has decided (`entryDecision`): at once (after a beat) with World
+ * Travel off or no session; on Nostr, only once the first look at the relays
+ * has answered (or failed within the kit's timeout), never on a location this
+ * device merely kept, and never later than `ENTRY_HOLD_MAX_MS`. A Blobbi that
+ * turns out to be in another world stays absent, with the away card. While
+ * the entry waits, the kit's sync stands aside (`paused`), so nothing settles
+ * the Blobbi here before the gate, and the room's presence (31950) waits
+ * until it has formed (`blobbiHere`).
  *
  * The page's one way out of the Island runs through the egress boundary
  * (`requestEgress({ class: 'world-travel' })`), called only when the Blobbi
@@ -26,6 +38,7 @@ import type { Blobbi } from '@/hooks/useBlobbis';
 import { DepartureNotice } from './DepartureNotice';
 import { WorldAwayNotice } from './WorldAwayNotice';
 import { WorldsModal } from './WorldsModal';
+import { ENTRY_BEAT_MS, ENTRY_HOLD_MAX_MS, entryArrivalEnabled, entryDecision } from './entry-arrival';
 import { useBlobbiPresence } from './useBlobbiPresence';
 import { useIslandWorldTravel } from './useIslandWorldTravel';
 import { useWorldDeparture } from './useWorldDeparture';
@@ -42,6 +55,9 @@ export interface WorldTravelProviderProps {
   children: ReactNode;
 }
 
+/** The entry: waiting for the gate, played (or skipped) once, or none (no Blobbi when the world opened). */
+type Entry = 'waiting' | 'done' | 'none';
+
 export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: WorldTravelProviderProps) {
   const reducedMotion = useReducedMotion();
   const policy = useIslandSafetyPolicy();
@@ -49,7 +65,10 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
   const canLeave = isEgressAllowed(policy, 'world-travel');
   const name = blobbi?.name || 'Your Blobbi';
 
-  const presence = useBlobbiPresence({ reducedMotion });
+  // Decided once, when the world opens (never by a re-render): with a Blobbi, it arrives; it starts absent meanwhile
+  const [entry, setEntry] = useState<Entry>(() => (blobbi && entryArrivalEnabled() ? 'waiting' : 'none'));
+  const heldSince = useRef(Date.now());
+  const presence = useBlobbiPresence({ initial: entry === 'waiting' ? 'absent' : 'present', reducedMotion });
   const navigate = useCallback(
     (world: World & { url: string }) => requestEgress({ class: 'world-travel', url: world.url, label: world.name }),
     [requestEgress],
@@ -61,7 +80,8 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
     blobbi: blobbi && pubkey ? { pubkey, d: blobbi.id } : null,
     presence: presence.controller,
     busy,
-    paused: departure.phase !== 'idle',
+    // The entry and a trip of the Island's own drive the teleport alone while they last
+    paused: entry === 'waiting' || departure.phase !== 'idle',
     onJourney: (kind, place) => {
       showGameNotice(
         kind === 'leave'
@@ -70,6 +90,26 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
       );
     },
   });
+
+  // The entry gate: asked again whenever what is known changes, and at the latest when the hold runs out. The
+  // decision is carried out after a beat (so the arrival lands in a drawn room), and only once: `entry` is then done
+  const [, retime] = useState(0);
+  const controller = presence.controller;
+  const { resolution, here } = travel;
+  useEffect(() => {
+    if (entry !== 'waiting') return;
+    const heldFor = Date.now() - heldSince.current;
+    const decision = entryDecision({ resolution, here, heldFor });
+    if (decision === 'wait') {
+      const timer = setTimeout(() => retime((n) => n + 1), Math.max(ENTRY_HOLD_MAX_MS - heldFor, 0) + 1);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      if (decision === 'enter' && controller.getState() === 'absent') controller.enter();
+      setEntry('done');
+    }, ENTRY_BEAT_MS);
+    return () => clearTimeout(timer);
+  }, [entry, resolution, here, controller]);
 
   const [worldsOpen, setWorldsOpen] = useState(false);
   const openWorlds = useCallback(() => setWorldsOpen(true), []);
@@ -87,15 +127,16 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
     [departure],
   );
 
-  // The room publishes its presence for a Blobbi that is here and standing; never for one away, leaving or coming
-  const blobbiHere = presence.state === 'present' && travel.here && departure.phase === 'idle';
+  // The room publishes its presence for a Blobbi that is here and standing; never for one away, leaving, coming, or
+  // still to arrive (an arriving Blobbi is `arriving`, not `present`, until it has formed)
+  const blobbiHere = presence.state === 'present' && travel.here && departure.phase === 'idle' && entry !== 'waiting';
   const view = useMemo<WorldTravelView>(
     () => ({ presence: presence.state, journey: presence.journey, departure: departure.phase, blobbiHere, openWorlds }),
     [presence.state, presence.journey, departure.phase, blobbiHere, openWorlds],
   );
 
-  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene
-  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && (travel.view !== 'here' || travel.unreachable);
+  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene or the entry's wait
+  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && entry !== 'waiting' && (travel.view !== 'here' || travel.unreachable);
   const departureRef = useRef(departure);
   departureRef.current = departure;
 
@@ -121,6 +162,8 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
               playedThere={travel.snapshot?.presence.there ? true : undefined}
               onRetry={travel.retry}
               noticed={travel.follow?.count ?? 0}
+              needed={travel.follow?.needed}
+              suspended={travel.follow?.suspended}
               unreachable={travel.unreachable}
               onRefresh={travel.refresh}
             />
