@@ -43,6 +43,9 @@ import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { facingFromHeading, resolveBodyFacing } from '@/lib/blobbi-facing';
+import { resolveGroundShadow } from '@/lib/blobbi-ground-shadow';
+import { resolveBodyMotion, stageFloats } from '@/lib/blobbi-stage-motion';
+import { useReportActorArtwork } from './actor-artwork-context';
 import { applyDevVisualGeneration, useDevVisualGenerationOverride } from '@/lib/blobbi-visual-dev';
 import type { SeatedAccessory } from '@/lib/room-seats-config';
 import { SeatedAccessoryLayer } from './SeatedAccessoryLayer';
@@ -227,9 +230,9 @@ function RemoteBlobbiSprite({
   // useAccessoryManagement) run for someone else's Blobbi. Accessories stay
   // off for remotes (`accessories` defaults to none), matching the previous
   // showAccessories={false} behavior.
-  const remoteVisual = applyDevVisualGeneration(
+  const remoteVisual: BlobbiVisual = applyDevVisualGeneration(
     visual || {
-      name: undefined,
+      name: '',
       baseColor: '#4F46E5',
       secondaryColor: '#7C3AED',
       eyeColor: '#1F2937',
@@ -246,6 +249,15 @@ function RemoteBlobbiSprite({
     poseFacing: facing,
     movementFacing: standing && heading ? facingFromHeading(heading) : undefined,
   });
+  // Where this body stands, for the actor's ground shadow: the same measure
+  // the local display reports, so a remote Blobbi's shadow is placed exactly
+  // as its owner sees it.
+  const { stage: remoteStage, visualGeneration: remoteGeneration, adultType: remoteAdultType, v3: remoteV3 } = remoteVisual;
+  const artwork = useMemo(() => {
+    const identity = { stage: remoteStage, visualGeneration: remoteGeneration, adultType: remoteAdultType, v3: remoteV3 };
+    return { shadow: resolveGroundShadow(identity, bodyFacing), floats: stageFloats(identity) };
+  }, [remoteStage, remoteGeneration, remoteAdultType, remoteV3, bodyFacing]);
+  useReportActorArtwork(artwork);
 
   // Legacy behavior preserved: a known visual that has no colors yet (presence
   // arrived before the 31124 refinement) renders nothing rather than a
@@ -259,10 +271,10 @@ function RemoteBlobbiSprite({
         instanceId={idSuffix}
         size={size}
         transparent
-        className={cn(isMoving && "scale-105")}
+        className={cn(isMoving && "scale-105 origin-bottom")}
         eyeOffset={eyeOffset}
         facing={bodyFacing}
-        motion={isMoving ? 'walking' : 'still'}
+        motion={resolveBodyMotion(remoteVisual, isMoving ? 'walking' : 'still')}
         title={`${remoteVisual.name || 'Remote Blobbi'} - ${remoteVisual.stage || DEFAULT_STAGE} stage`}
       />
     </SeatedAccessoryLayer>

@@ -6,8 +6,9 @@
  *     `translate(-50%, -100%)`, so the box's bottom-center sits on left/top;
  *   - the visual rig grows upward and scales around `bottom center`: depth
  *     scale never moves the feet off the stored point;
- *   - the ground shadow is CENTERED on the stored point and never inherits
- *     the float bob;
+ *   - the ground shadow sits on the drawing's ground line inside the scale
+ *     rig (the box's bottom edge until the body reports where it stands),
+ *     behind the body, and never inherits the float bob;
  *   - movement targets, `goTo`, and callbacks all use ground points.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -134,18 +135,25 @@ describe('ground-anchor actor semantics', () => {
     expect(anchor().style.top).toBe('66%');
   });
 
-  it('the ground shadow is centered ON the anchor point and scales only its own width', () => {
-    const { anchor, shadow } = setup();
+  it('the ground shadow sits on the ground line inside the scale rig, behind the body, and never bobs', () => {
+    const { rig, shadow } = setup();
 
     const el = shadow();
     expect(el).not.toBeNull();
-    expect(el!.parentElement).toBe(anchor());
-    // top-full of a translate(-50%,-100%) box is the ground line; the
-    // translate(-50%,-50%) centers the ellipse exactly on the stored point.
-    expect(el!.classList.contains('top-full')).toBe(true);
-    const expectedScale = resolveBlobbiScale(INITIAL, BACKGROUND, BOUNDARY);
-    expect(el!.style.transform).toBe(`translate(-50%, -50%) scale(${expectedScale})`);
-    // The shadow is OUTSIDE the float wrapper (sibling of the rig): the bob
+    // Inside the rig: depth scaling carries the shadow with the body, and the
+    // rig scales around bottom center, so the ground line stays on the stored
+    // point. The shadow itself carries no scale of its own any more.
+    expect(el!.parentElement).toBe(rig());
+    expect(el!.style.transform).toBe('translate(-50%, -50%)');
+    // With the body mocked (no report), it stands on the box's bottom edge:
+    // the historical placement, centred on the stored point.
+    expect(el!.style.top).toBe('100%');
+    expect(el!.style.left).toBe('50%');
+    // First in paint order: the body always paints over it.
+    const body = rig()!.querySelector('[data-blobbi-body]');
+    expect(body).not.toBeNull();
+    expect(el!.compareDocumentPosition(body!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The shadow is OUTSIDE the float wrapper (sibling of it): the bob
     // animation can never move it.
     expect(el!.closest('.animate-float')).toBeNull();
   });

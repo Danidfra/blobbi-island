@@ -443,7 +443,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             visualOverride={visualOverride}
             companionId={blobbiId}
             seatedAccessory={render.seatedAccessory}
-            className={cn(isMoving && "scale-105")}
+            className={cn(isMoving && "scale-105 origin-bottom")}
           />
         </BlobbiActor>
       </>

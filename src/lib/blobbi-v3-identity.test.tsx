@@ -279,7 +279,8 @@ describe('Island draws a V3 Blobbi through the kit', () => {
     current = petStateToLegacyBlobbi(parsed(adult()));
     for (const facing of ['front', 'right', 'back'] as const) {
       // A side view comes from movement (the display's pose facing is front or back only), as in the world.
-      const { container, unmount } = render(<CurrentBlobbiDisplay size="md" facing={facing === 'back' ? 'back' : 'front'} movementFacing={facing === 'right' ? 'right' : undefined} />);
+      // One instance id for both drawings: the renderer's idle motion phase is derived from it.
+      const { container, unmount } = render(<CurrentBlobbiDisplay idSuffix="v3-probe" size="md" facing={facing === 'back' ? 'back' : 'front'} movementFacing={facing === 'right' ? 'right' : undefined} />);
       const svg = container.querySelector('[data-blobbi-renderer] svg') as SVGSVGElement;
       expect(svg.getAttribute('data-blobbi-generation')).toBe('v3');
       expect(svg.getAttribute('data-blobbi-stage')).toBe('adult');
@@ -292,7 +293,8 @@ describe('Island draws a V3 Blobbi through the kit', () => {
       }
       // The kit's own picture for the same visual: no Island step between the event and the drawing changes it.
       const asDom = (text: string) => { const host = document.createElement('div'); host.innerHTML = text.replace(/<style[\s\S]*?<\/style>/, ''); return host.innerHTML; };
-      const direct = renderBlobbiSvg({ ...visualOf(parsed(adult())), instanceId: svg.closest('[data-blobbi-renderer]')?.getAttribute('data-blobbi-instance-id') ?? '', facing, motion: 'still' }).svg;
+      // An adult at rest breathes where it stands (`blobbi-stage-motion.ts`): the display hands the renderer `idle`.
+      const direct = renderBlobbiSvg({ ...visualOf(parsed(adult())), instanceId: 'v3-probe', facing, motion: 'idle' }).svg;
       if (direct.includes('data-blobbi-generation="v3"') && !direct.includes('id="-')) expect(asDom(markup).replace(/id="[^"]*"|url\(#[^)]*\)/g, '')).toBe(asDom(direct).replace(/id="[^"]*"|url\(#[^)]*\)/g, ''));
       unmount();
     }

@@ -59,8 +59,11 @@ Unchanged from Phase 2 (`src/lib/blobbi-ground.ts`):
 - A stored actor `Position` is the **ground-contact point** (where the feet
   touch the floor), in world percent.
 - The visual rig grows upward from it (`translate(-50%, -100%)`, scaling
-  around `bottom center`); the shadow is centered on it; boundaries constrain
-  it; interaction targets are ground points.
+  around `bottom center`); boundaries constrain it; interaction targets are
+  ground points. The ground shadow sits on the DRAWING's ground line inside
+  the rig (§10), which for a V1 adult is a sixth of the box above its bottom
+  edge: the stored point is where the box stands, the shadow is where the
+  feet are.
 - The kind 31950 presence **wire** still carries legacy CENTER points;
   conversion happens only in `src/lib/presence-ground.ts`
   (`groundToWireCenter` / `wireCenterToGround`).
@@ -341,3 +344,32 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 - `docs/blobbi-actor-position-migration-notes.md`: center→ground migration
 - `docs/blobbi-actor-ui-audit.md`: the original audit that motivated Phases 0–3
 - `docs/blobbi-visual-v2-dev-override.md`: the DEV-only Adult V2 override and movement → facing
+
+## 10. The ground shadow and the float (2026-10-19)
+
+Two rules the body decides and the actor applies, so local and remote
+bodies cannot drift (`src/components/blobbi/actor-artwork-context.ts`):
+
+- **Where the shadow goes** (`src/lib/blobbi-ground-shadow.ts`). The body
+  asks the renderer where its drawing stands (`describeBlobbiArtwork`:
+  `boxAnchors.groundY`, and for V3 the individual's own `footprint`) and
+  reports it up; `BlobbiActor` places the shadow there, as a fraction of the
+  box (the same proportion at every size), INSIDE the scale rig (depth scales
+  it with the body), FIRST in paint order (always behind the body), outside
+  the float wrapper (the bob never lifts it; it breathes in step instead,
+  `animate-shadow-float`). One soft pool in the Island's ink for every form.
+  The body's own drop shadow moved from the anchor onto the body wrapper, so
+  it no longer shades the ellipse or a remote's name label. While walking,
+  the `scale-105` grows the body about its feet (`origin-bottom`), not its
+  centre. Before: a fixed-pixel ellipse at the box's bottom edge, painted
+  over the sprite, with a second drop shadow of itself; a V1 Blobbi floated
+  above it, a V2 one stood on it.
+- **Who floats** (`src/lib/blobbi-stage-motion.ts`). A baby floats (the
+  Island's `animate-float`, as before); an adult never does, whatever its
+  generation: it stands, breathes where it stands (the renderer's grounded
+  `idle` motion) and walks when it moves (the renderer's gait); an egg rests.
+  Before, every body floated.
+
+The pose resolver (§8) is unchanged: `hideShadow` and `disableFloat` still
+come from the pose; the body's report only says where the shadow goes and
+whether a float is the body's at all.

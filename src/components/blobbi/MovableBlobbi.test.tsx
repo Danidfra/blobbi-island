@@ -175,10 +175,14 @@ describe('MovableBlobbi', () => {
       return el;
     });
 
-    // Shadow should be centered (translateX) and scaled with the Blobbi
+    // Shadow centered on its ground line; it scales with the Blobbi by living
+    // inside the scale rig (no scale of its own)
     const shadowStyle = shadowElement?.getAttribute('style');
-    expect(shadowStyle).toContain('translate(-50%, -50%)'); // centered ON the ground point (Phase 2)
-    expect(shadowStyle).toMatch(/scale\([\d.]+\)/);
+    expect(shadowStyle).toContain('translate(-50%, -50%)');
+    expect(shadowStyle).not.toMatch(/scale\(/);
+    const rig = container.querySelector('[data-blobbi-scale-rig]');
+    expect(rig?.contains(shadowElement!)).toBe(true);
+    expect(rig?.getAttribute('style')).toMatch(/scale\([\d.]+\)/);
 
     // Shadow should have transform-origin set to center
     expect(shadowStyle).toContain('transform-origin: center center');

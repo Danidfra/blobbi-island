@@ -422,6 +422,31 @@ img {
     animation: float 3s ease-in-out infinite;
   }
 
+  /* The ground shadow's answer to the float: as the body rises 4px, the
+     shadow draws in and lightens a touch, in step (same duration, same
+     easing, same start), so the Blobbi reads as hovering over its own
+     shadow rather than beside it. Transform and opacity only. */
+  @keyframes shadow-float {
+    0%, 100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(0.9);
+      opacity: 0.82;
+    }
+  }
+
+  .animate-shadow-float {
+    animation: shadow-float 3s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-shadow-float {
+      animation: none;
+    }
+  }
+
   /* Custom tap animation for interactive elements */
   @keyframes tap {
     0% {

@@ -36,9 +36,14 @@ describe('the V2 gait and the one ground shadow', () => {
     expect(container.querySelector('style[data-blobbi-motion-styles]')?.textContent).toContain('[data-part="near-leg"]');
   });
 
-  it('without motion the body box has no motion attribute; a V1 adult walking keeps its bob and names no leg', () => {
+  it('at rest an adult breathes where it stands (the grounded idle), a baby is still; a V1 adult walking keeps its bob and names no leg', () => {
+    // An adult at rest is never `still`: it stands and breathes in place
+    // (`blobbi-stage-motion.ts`), the renderer's idle, whose origin is the feet.
     const still = renderDisplay({ visualOverride: V2 });
-    expect(body(still.container).hasAttribute('data-blobbi-motion')).toBe(false);
+    expect(body(still.container).dataset.blobbiMotion).toBe('idle');
+    // A baby at rest is still: the Island floats it (the actor's bob) instead.
+    const baby = renderDisplay({ visualOverride: { ...V2, stage: 'baby' as const } });
+    expect(body(baby.container).hasAttribute('data-blobbi-motion')).toBe(false);
     const v1 = renderDisplay({ visualOverride: V1, motion: 'walking' });
     expect(box(v1.container).dataset.blobbiGeneration).toBe('v1');
     expect(body(v1.container).dataset.blobbiMotion).toBe('walking');

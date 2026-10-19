@@ -59,6 +59,9 @@ import {
 import type { BlobbiMotion } from "@blobbi-kit/renderer";
 import { applyDevVisualGeneration, useDevVisualGenerationOverride } from "@/lib/blobbi-visual-dev";
 import { resolveBodyFacing } from "@/lib/blobbi-facing";
+import { resolveGroundShadow } from "@/lib/blobbi-ground-shadow";
+import { resolveBodyMotion, stageFloats } from "@/lib/blobbi-stage-motion";
+import { useReportActorArtwork } from "./actor-artwork-context";
 import { useCharacterEquipmentContext } from "@/hooks/useCharacterEquipmentContext";
 import { createPlacementAccessorySourceResolver } from "@/placement/accessory-sources";
 import type { ResolvedBlobbiItemDefinition } from "@/inventory/catalog-fallback";
@@ -274,6 +277,27 @@ export function CurrentBlobbiDisplay({
   // Same object when there is no override: the production path is untouched.
   const visual = resolvedVisual ? applyDevVisualGeneration(resolvedVisual, devGeneration) : null;
 
+  // Which way the BODY is drawn. The pose facing is the historical answer;
+  // a V2 body standing still or walking follows its movement facing.
+  const bodyFacing = visual ? resolveBodyFacing({ visual, poseFacing: facing, movementFacing }) : facing;
+  // Where this body stands and whether it floats, for the actor's ground
+  // shadow and float (a no-op outside an actor). Memoised on what decides it,
+  // so an unchanged body reports nothing new.
+  const hasVisual = visual !== null;
+  const stage = visual?.stage;
+  const generation = visual?.visualGeneration;
+  const adultType = visual?.adultType;
+  const v3 = visual?.v3;
+  const artwork = useMemo(() => {
+    if (!hasVisual) return null;
+    const identity = { stage, visualGeneration: generation, adultType, v3 };
+    return { shadow: resolveGroundShadow(identity, bodyFacing), floats: stageFloats(identity) };
+  }, [hasVisual, stage, generation, adultType, v3, bodyFacing]);
+  useReportActorArtwork(artwork);
+  // At rest an adult breathes where it stands (the renderer's grounded idle);
+  // a baby is still, and floats (the actor's bob). Walking is walking.
+  const bodyMotion = resolveBodyMotion(visual, motion);
+
   if (visual) {
     const displayName = currentBlobbi
       ? getBlobbiDisplayName(currentBlobbi)
@@ -307,10 +331,6 @@ export function CurrentBlobbiDisplay({
       : (effectsOverride ?? activeEffects);
     const effects = showAccessories ? (wornEffects ?? []) : [];
 
-    // Which way the BODY is drawn. The pose facing is the historical answer;
-    // a V2 body standing still or walking follows its movement facing.
-    const bodyFacing = resolveBodyFacing({ visual, poseFacing: facing, movementFacing });
-
     // The seat's prop goes over the face of THIS visual (its form sets the eye
     // line). With no seated accessory the layer is transparent: the renderer
     // is returned as is, so every other consumer of this component is
@@ -324,7 +344,7 @@ export function CurrentBlobbiDisplay({
           isSleeping={isSleeping}
           eyesClosed={eyesClosed}
           facing={bodyFacing}
-          motion={motion}
+          motion={bodyMotion}
           eyeOffset={eyeOffset}
           accessories={accessories}
           effects={effects}

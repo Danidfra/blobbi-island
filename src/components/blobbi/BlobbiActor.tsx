@@ -14,31 +14,41 @@
  *   │                 chat-bubble portal host and label anchor.
  *   ├── SCALE RIG   transform: scale(depth × seat); origin: bottom center
  *   │   │           → scaling never moves the feet off the stored point.
- *   │   └── FLOAT   animate-float (suppressed when sleeping/seated/moving-config)
+ *   │   ├── SHADOW  on the DRAWING'S ground line, under its footprint (the
+ *   │   │           body reports both, `actor-artwork-context.ts`); first in
+ *   │   │           paint order, so it is always behind the body; inside the
+ *   │   │           rig, so depth scales it with the body; outside the float
+ *   │   │           wrapper, so the bob never lifts it (it breathes in step
+ *   │   │           instead, `animate-shadow-float`); hidden while seated.
+ *   │   └── FLOAT   animate-float for a body that floats (a baby; an adult
+ *   │       │       stands, `blobbi-stage-motion.ts`), suppressed when
+ *   │       │       sleeping/seated/moving-config; and the body's soft drop
+ *   │       │       shadow (never the ground shadow's, never the label's)
  *   │       └── children (the pure renderer / local wrapper)
- *   ├── SHADOW      centered ON the ground point; width scales with depth;
- *   │               never inherits the float bob; hidden while seated/hidden.
  *   ├── labelSlot   (remote name labels)
  *   └── debug markers (dev-only, via DebugOverlaysContext)
  *
  * This component owns NO input capture, movement state, presence logic,
  * boundary selection, or Nostr publishing; those stay in its two wrappers.
  */
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import type { GroundPosition } from '@/lib/blobbi-ground';
+import { DEFAULT_GROUND_SHADOW, GROUND_SHADOW_ASPECT, sameGroundShadow, type GroundShadowGeometry } from '@/lib/blobbi-ground-shadow';
 import type { BlobbiRenderSize } from '@blobbi-kit/renderer';
+import { ActorArtworkContext, type ActorArtworkReport, type ReportActorArtwork } from './actor-artwork-context';
 
-/** Fixed shadow widths per size (previous desktop `md:` values; no breakpoints). */
-const SHADOW_WIDTH_CLASSES: Record<BlobbiRenderSize, string> = {
-  sm: 'w-4',
-  md: 'w-6',
-  lg: 'w-8',
-  xl: 'w-10',
-  '2xl': 'w-16',
-  '3xl': 'w-20',
-};
+/**
+ * The ground shadow: a soft pool in the Island's ink, darkest under the
+ * middle of the contact and gone well before its edge. One gradient for every
+ * size, form and distance, so the look is one look.
+ */
+const GROUND_SHADOW_BACKGROUND =
+  'radial-gradient(ellipse at center, hsl(var(--island-ink) / 0.26) 0%, hsl(var(--island-ink) / 0.14) 40%, hsl(var(--island-ink) / 0) 72%)';
+
+/** The body's own soft drop shadow: inside the rig, so it scales with depth like everything about the body. */
+const BODY_DROP_SHADOW = 'drop-shadow(0 6px 12px hsl(var(--island-ink) / 0.16))';
 
 export interface BlobbiActorProps {
   /** World-percent GROUND point the actor stands on. */
@@ -99,6 +109,28 @@ export const BlobbiActor = React.forwardRef<HTMLDivElement, BlobbiActorProps>(
   ) => {
     const { showDebugOverlays } = useDebugOverlays();
 
+    // What the body is, as the body reports it (see actor-artwork-context):
+    // standing on the box's bottom edge, and floating, until it has said
+    // otherwise. The float is the baby's (`stageFloats`); an adult stands.
+    const [reported, setReported] = useState<ActorArtworkReport | null>(null);
+    const report = useCallback<ReportActorArtwork>((next) => {
+      setReported((current) => (current === next || (current && next && current.floats === next.floats && sameGroundShadow(current.shadow, next.shadow)) ? current : next));
+    }, []);
+    const shadow: GroundShadowGeometry = reported?.shadow ?? DEFAULT_GROUND_SHADOW;
+    const floats = !disableFloat && (reported?.floats ?? true);
+    const shadowStyle = useMemo<React.CSSProperties>(
+      () => ({
+        left: `${shadow.centerX * 100}%`,
+        top: `${shadow.groundY * 100}%`,
+        width: `${shadow.width * 100}%`,
+        height: `${shadow.width * GROUND_SHADOW_ASPECT * 100}%`,
+        background: GROUND_SHADOW_BACKGROUND,
+        transform: 'translate(-50%, -50%)',
+        transformOrigin: 'center center',
+      }),
+      [shadow],
+    );
+
     return (
       <div
         ref={ref}
@@ -124,50 +156,49 @@ export const BlobbiActor = React.forwardRef<HTMLDivElement, BlobbiActorProps>(
           // Ground anchor: the box's bottom-center sits on the stored point.
           // The anchor itself is NEVER scaled (bubble portal + label host).
           transform: 'translate(-50%, -100%)',
-          filter: visualHidden ? undefined : 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))',
           zIndex,
         }}
       >
         {!visualHidden && (
-          <>
+          <ActorArtworkContext.Provider value={report}>
             {/* Scale rig: depth × seat scaling around BOTTOM CENTER, so the
                 feet stay planted on the stored ground point at every scale. */}
             <div
               className="relative"
               data-blobbi-scale-rig=""
+              data-blobbi-size={size}
               style={{
                 transform: `scale(${scale})`,
                 transformOrigin: 'bottom center',
               }}
             >
+              {/* Ground shadow: on the drawing's ground line, under its
+                  footprint; first, so the body paints over it; sized as a
+                  fraction of the box, so every size and form gets the same
+                  proportion; inside the rig, so depth scales it with the
+                  body; outside the float wrapper, so the bob never lifts it. */}
+              {!hideShadow && (
+                <div
+                  data-blobbi-shadow=""
+                  aria-hidden
+                  className={cn('pointer-events-none absolute rounded-[50%]', floats && 'animate-shadow-float')}
+                  style={shadowStyle}
+                />
+              )}
               <div
                 className={cn(
-                  !disableFloat && 'animate-float',
+                  'relative',
+                  floats && 'animate-float',
                   'transition-transform duration-1000 ease-in-out',
                 )}
+                data-blobbi-body=""
+                data-blobbi-floats={floats ? 'true' : 'false'}
+                style={{ filter: BODY_DROP_SHADOW }}
               >
                 {children}
               </div>
             </div>
-            {/* Ground shadow: CENTERED on the ground point (anchor bottom-
-                center), outside the scale rig so it never inherits the float
-                bob; its own width scales with depth. */}
-            {!hideShadow && (
-              <div
-                data-blobbi-shadow=""
-                className={cn(
-                  'absolute top-full left-1/2 h-1.5 rounded-full',
-                  SHADOW_WIDTH_CLASSES[size],
-                )}
-                style={{
-                  background:
-                    'radial-gradient(ellipse, rgba(0, 0, 0, 0.2) 0%, transparent 70%)',
-                  transform: `translate(-50%, -50%) scale(${scale})`,
-                  transformOrigin: 'center center',
-                }}
-              />
-            )}
-          </>
+          </ActorArtworkContext.Provider>
         )}
         {labelSlot}
         {showDebugOverlays && (
