@@ -42,7 +42,8 @@ import { getBlobbiSizeForLocation } from '@/lib/location-blobbi-sizes';
 import { getBackgroundForLocation } from '@/lib/location-backgrounds';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { resolveActorRender, type BlobbiActorPose } from '@/lib/blobbi-pose';
-import { facingFromHeading, resolveBodyFacing } from '@/lib/blobbi-facing';
+import { resolveBodyFacing } from '@/lib/blobbi-facing';
+import { useMovementFacing } from '@/hooks/useMovementFacing';
 import { resolveGroundShadow } from '@/lib/blobbi-ground-shadow';
 import { resolveBodyMotion, stageFloats } from '@/lib/blobbi-stage-motion';
 import { useReportActorArtwork } from './actor-artwork-context';
@@ -241,13 +242,15 @@ function RemoteBlobbiSprite({
     devGeneration,
   );
 
-  // Movement → body facing, the same rule as the local actor: the last known
-  // heading turns a standing V2 body; V1 keeps the pose facing.
+  // Movement → body facing, the same rule as the local actor: the heading
+  // turns a standing V2/V3 body while it walks, and it faces the front again
+  // once it has settled (`useMovementFacing`); V1 keeps the pose facing.
   const heading = headingRef.current.get(playerKey);
+  const movementFacing = useMovementFacing(isMoving, heading);
   const bodyFacing = resolveBodyFacing({
     visual: remoteVisual,
     poseFacing: facing,
-    movementFacing: standing && heading ? facingFromHeading(heading) : undefined,
+    movementFacing: standing ? movementFacing : undefined,
   });
   // Where this body stands, for the actor's ground shadow: the same measure
   // the local display reports, so a remote Blobbi's shadow is placed exactly

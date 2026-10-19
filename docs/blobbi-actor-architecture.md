@@ -345,9 +345,9 @@ policy (it encodes this app's DOM conventions), and the dev harnesses.
 - `docs/blobbi-actor-ui-audit.md`: the original audit that motivated Phases 0–3
 - `docs/blobbi-visual-v2-dev-override.md`: the DEV-only Adult V2 override and movement → facing
 
-## 10. The ground shadow and the float (2026-10-19)
+## 10. The ground shadow, the float and the facing (2026-10-19)
 
-Two rules the body decides and the actor applies, so local and remote
+Three rules the body decides and the actor applies, so local and remote
 bodies cannot drift (`src/components/blobbi/actor-artwork-context.ts`):
 
 - **Where the shadow goes** (`src/lib/blobbi-ground-shadow.ts`). The body
@@ -369,6 +369,12 @@ bodies cannot drift (`src/components/blobbi/actor-artwork-context.ts`):
   generation: it stands, breathes where it stands (the renderer's grounded
   `idle` motion) and walks when it moves (the renderer's gait); an egg rests.
   Before, every body floated.
+- **Which way it faces** (`src/hooks/useMovementFacing.ts`). A body with
+  profile artwork (V2, V3) turns toward its heading while it walks and turns
+  back to the front once the walk has actually finished: a short grace
+  (`SETTLE_MS`) after `isMoving` turns false, so a route's waypoints (which
+  never set it false) and a destination changed by a fresh tap never flick
+  it. Before, the last heading stayed for good.
 
 The pose resolver (§8) is unchanged: `hideShadow` and `disableFloat` still
 come from the pose; the body's report only says where the shadow goes and

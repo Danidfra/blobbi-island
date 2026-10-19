@@ -38,9 +38,9 @@ import { clientPointToWorldPercent } from '@/lib/world-coordinates';
 import { resolveBlobbiScale } from '@/lib/blobbi-world-render';
 import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
-import { facingFromHeading } from '@/lib/blobbi-facing';
 import { BlobbiActor } from './BlobbiActor';
 import type { BlobbiVisual } from '@blobbi-kit/renderer';
+import { useMovementFacing } from '@/hooks/useMovementFacing';
 
 export interface MovableBlobbiRef {
   /** Walk to a ground target through the movement system. */
@@ -164,6 +164,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
 
     // Subtle idle eye micro-movements (only active while standing still).
     const idleGaze = useIdleGaze(!isMoving);
+    // The body's facing from its movement: the heading while walking, the front once settled
+    const settledFacing = useMovementFacing(isMoving, direction);
 
     // ---------------------------------------------------------------------
     // Per-frame attention tick.
@@ -373,11 +375,11 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       }
     }
 
-    // Movement → body facing, standing only. `direction` is the controller's
-    // normalized heading and keeps its last value after a walk ends, so a
-    // Blobbi that walked left stays turned left until it walks elsewhere. The
+    // Movement → body facing, standing only: the heading while it walks, the
+    // front once it has arrived (`useMovementFacing`: a short grace after the
+    // walk, so waypoints and a changed destination never flick it). The
     // display decides whether the body can turn at all (V1 never does).
-    const movementFacing = pose.kind === 'standing' ? facingFromHeading(direction) : undefined;
+    const movementFacing = pose.kind === 'standing' ? settledFacing : undefined;
 
     return (
       <>
