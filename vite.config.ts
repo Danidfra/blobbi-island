@@ -1,7 +1,26 @@
 import path from "node:path";
 
 import react from "@vitejs/plugin-react-swc";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+import { checkTravelBuild } from "./src/worlds/travel-build";
+
+/**
+ * World Travel (`src/worlds`): a setting this build cannot honour stops it, and
+ * a build that carries World Travel on Nostr says so. The same guard as Blobbi
+ * Home's and Blobbi Pixel's, so no Blobbi app compiles the switch off quietly.
+ */
+function worldTravelGuard(): Plugin {
+  return {
+    name: "blobbi-world-travel-guard",
+    configResolved(config) {
+      const check = checkTravelBuild({ travel: config.env.VITE_BLOBBI_WORLD_TRAVEL, command: config.command });
+      if (!check.ok) throw new Error(check.message);
+      if (check.message) config.logger.warn(check.message);
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -16,6 +35,7 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
+    worldTravelGuard(),
   ],
   build: {
     rollupOptions: {

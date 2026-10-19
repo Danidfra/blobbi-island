@@ -13,6 +13,7 @@ import { EconomyEntryNotice } from "@/components/blobbi/EconomyEntryNotice";
 import { FirstSessionOverlays } from "@/components/onboarding/FirstSessionOverlays";
 
 import { BlobbiPortraitGate } from "@/components/shell/BlobbiPortraitGate";
+import { WorldTravelProvider } from "@/worlds/WorldTravelProvider";
 import { BlobbiAppShell } from "@/components/shell/BlobbiAppShell";
 import { LocationProvider } from "@/contexts/LocationContext";
 import { useIslandLocationResume } from "@/hooks/useIslandLocationResume";
@@ -280,9 +281,14 @@ export function BlobbiIsland() {
 
         return (
           <Suspense fallback={<GameComponentLoading />}>
-            <PlayingView
-              selectedBlobbi={selectedBlobbi}
-            />
+            {/* World Travel around the world: the Blobbi's journeys to and
+                from the other Blobbi worlds, the Worlds sheet, and where the
+                Blobbi is (`src/worlds`). */}
+            <WorldTravelProvider blobbi={selectedBlobbi} pubkey={user?.pubkey}>
+              <PlayingView
+                selectedBlobbi={selectedBlobbi}
+              />
+            </WorldTravelProvider>
             {/* Switch-Blobbi overlay: the world stays mounted underneath so
                 position and remote players are preserved; only the Blobbi
                 identity swaps in place once a new one is chosen. */}

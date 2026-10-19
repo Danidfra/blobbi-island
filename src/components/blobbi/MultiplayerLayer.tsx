@@ -298,6 +298,15 @@ interface MultiplayerLayerProps {
   onMyPositionChange?: (position: Position) => void;
   disabled?: boolean;
   /**
+   * The local Blobbi is in another world, on its way, or leaving (`src/worlds`):
+   * the room publishes NO presence (kind 31950) for it meanwhile. A Blobbi in
+   * another world is not standing in an Island room, and its World Location
+   * (kind 31126) and its room presence must never say two different things.
+   * Its last presence expires on its own (NIP-40); when it is here again, its
+   * presence is announced at once at the spot it stands.
+   */
+  blobbiAway?: boolean;
+  /**
    * Filled with the send entry point for every message class, so the
    * composition surface can publish without owning a relay connection.
    */
@@ -396,6 +405,7 @@ export function MultiplayerLayer({
   className,
   onMyPositionChange,
   disabled = false,
+  blobbiAway = false,
   sendMessageRef,
   myAnchorId,
   onOtherBlobbiClick,
@@ -415,15 +425,23 @@ export function MultiplayerLayer({
   // so a signer refusal is recognisable (and stops the lifecycle) while a slow
   // relay stays best-effort. Stable identity, the presence hook keys effects
   // on it. See `src/lib/presence-publish.ts`.
-  const presencePublish = useMemo(
-    () =>
-      user
-        ? createPresencePublisher({ user, nostr })
-        : async () => {
-            /* signed out: nothing to publish */
-          },
-    [user, nostr],
-  );
+  // Read at publish time, so a heartbeat already scheduled while the Blobbi
+  // left publishes nothing either.
+  const blobbiAwayRef = useRef(blobbiAway);
+  blobbiAwayRef.current = blobbiAway;
+  const presencePublish = useMemo(() => {
+    if (!user) {
+      return async () => {
+        /* signed out: nothing to publish */
+      };
+    }
+    const publisher = createPresencePublisher({ user, nostr });
+    return async (event: Record<string, unknown>) => {
+      // Away in another world: the room has nothing true to say about it
+      if (blobbiAwayRef.current) return;
+      await publisher(event);
+    };
+  }, [user, nostr]);
   // Capability set for the current experience. A frozen singleton, so it is
   // referentially stable and safe to use directly as a hook dependency.
   const safetyPolicy = useIslandSafetyPolicy();
@@ -832,6 +850,15 @@ export function MultiplayerLayer({
     // without waiting for a React re-render.
     livePositionsRef,
   });
+
+  // Back from another world: say so at once, at the spot it stands, rather
+  // than waiting for the next heartbeat (a move to where it already is).
+  const wasAwayRef = useRef(blobbiAway);
+  useEffect(() => {
+    const wasAway = wasAwayRef.current;
+    wasAwayRef.current = blobbiAway;
+    if (wasAway && !blobbiAway && user && !disabled) void moveTo(myPosRef.current);
+  }, [blobbiAway, user, disabled, moveTo, myPosRef]);
 
   // ============================================================================
   // Sending

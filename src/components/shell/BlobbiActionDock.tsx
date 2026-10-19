@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { MessageCircle, Map as MapIcon, Home, PawPrint, ChevronUp, type LucideIcon } from "lucide-react";
+import { MessageCircle, Map as MapIcon, Home, PawPrint, Globe2, ChevronUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation } from "@/hooks/useLocation";
 import { readDockCollapsed, writeDockCollapsed } from "@/lib/first-session";
@@ -34,6 +34,8 @@ interface BlobbiActionDockProps {
  *   - Map   → opens the existing MapModal
  *   - Home  → navigates to the Home location (existing location system)
  *   - Blobbi→ opens the existing BlobbiInfoModal (custom event)
+ *   - Worlds→ opens the Worlds sheet (custom event): the other Blobbi worlds
+ *             the player can take their Blobbi to
  * No new gameplay is invented. Carries `data-block-move`.
  *
  * The dock is a LAUNCHER, not a composer. It used to transform in place into a
@@ -90,6 +92,13 @@ export function BlobbiActionDock({ compact = false, inWorld = true, className }:
       label: "My Blobbi",
       icon: PawPrint,
       onClick: () => emit(DOCK_EVENTS.openMyBlobbi),
+      disabled: !inWorld,
+    },
+    {
+      key: "worlds",
+      label: "Worlds",
+      icon: Globe2,
+      onClick: () => emit(DOCK_EVENTS.openWorlds),
       disabled: !inWorld,
     },
   ];

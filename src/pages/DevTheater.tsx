@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { LocationId } from '@/lib/location-types';
 import { devV3Visual } from '@/lib/dev-v3-fixture';
+import { WorldTravelProvider } from '@/worlds/WorldTravelProvider';
 import { PlayingView } from '@/components/blobbi/PlayingView';
 import { BlobbiAppShell } from '@/components/shell/BlobbiAppShell';
 import { LocationProvider } from '@/contexts/LocationContext';
@@ -112,7 +113,12 @@ export function DevTheater() {
           the world needs, exactly as it does on the real route. */}
       <BlobbiAppShell screen="playing" showGameChrome inWorld>
         <ForceStage room={room} />
-        <PlayingView selectedBlobbi={blobbi} />
+        {/* World Navigation around the world, as on the real route: the dock's
+            Worlds sheet and the departure play here too (no account: nothing
+            about where the Blobbi is is read or written). */}
+        <WorldTravelProvider blobbi={blobbi} pubkey={undefined}>
+          <PlayingView selectedBlobbi={blobbi} />
+        </WorldTravelProvider>
       </BlobbiAppShell>
     </LocationProvider>
   );

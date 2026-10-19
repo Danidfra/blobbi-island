@@ -44,6 +44,13 @@ export type EgressRequest =
       readonly payload: SharePayload;
     }
   | {
+      /** This tab goes to another Blobbi world (see `classes.ts`). */
+      readonly class: 'world-travel';
+      readonly url: string;
+      /** The world's name, for the record; never the destination authority. */
+      readonly label: string;
+    }
+  | {
       readonly class: 'native-share';
       readonly data: ShareData;
     };
@@ -115,6 +122,7 @@ export function decideEgress(
     }
 
     case 'external-link':
+    case 'world-travel':
       return resolve(request.class, request.url, request.label, origin);
   }
 }
@@ -164,7 +172,8 @@ export function canNativeShare(data: ShareData): boolean {
 }
 
 /**
- * Actually leave. **The only place the application opens a window or shares.**
+ * Actually leave. **The only place the application opens a window, shares, or
+ * navigates this tab elsewhere.**
  *
  * Takes a request that has already been decided; it does not re-check the
  * policy, because a second check here would suggest the first one was optional.
@@ -196,6 +205,20 @@ export async function performEgress(request: EgressRequest, url?: string): Promi
   }
 
   if (!url) return false;
+
+  if (request.class === 'world-travel') {
+    // The one same-tab navigation in the application: the Blobbi has already
+    // left (its departure played before this was called), and the player
+    // takes it to the next world. Nothing of this page is carried along: no
+    // key, no session, no query string, no fragment, only the checked
+    // address. The structural test holds `location.assign` to this file.
+    try {
+      window.location.assign(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   const features =
     request.class === 'social-share'

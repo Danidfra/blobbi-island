@@ -41,6 +41,15 @@ export type EgressClass =
   | 'external-link'
   /** A share intent handed to a named social platform. */
   | 'social-share'
+  /**
+   * Travelling to another Blobbi world (Blobbi Home, Blobbi Pixel, Nostr
+   * Farm): THIS tab goes there, after the Blobbi's departure has played. The
+   * only class that navigates the current page rather than opening a new
+   * one: a world is where the player takes their Blobbi next, not a link to
+   * read beside the Island. Destinations come from the world registry
+   * (`src/worlds/worlds.ts`), checked addresses only.
+   */
+  | 'world-travel'
   /** The operating system's share sheet, whose destination set is unknowable. */
   | 'native-share'
   /** Pointing the client at a different relay. */
@@ -58,6 +67,10 @@ export type EgressClass =
 export const EGRESS_CAPABILITY = Object.freeze({
   'external-link': 'externalLinks',
   'social-share': 'socialPlatformSharing',
+  // Leaving the Island for another Blobbi world IS leaving the Island: the
+  // same capability as any other way out, so a profile that keeps players
+  // inside keeps them inside.
+  'world-travel': 'externalLinks',
   'native-share': 'nativeShareSheet',
   'relay-management': 'relaySelection',
   'authoring-tool': 'authoringTools',
@@ -84,6 +97,9 @@ export function isEgressAllowed(policy: IslandSafetyPolicy, egressClass: EgressC
  *  - **`external-link`** and **`social-share`** confirm. Both hand the player to
  *    somewhere that is not Blobbi Island, and the audit's finding was precisely
  *    that they did so with no warning at all.
+ *  - **`world-travel`** does not. The player chose the world by name on its
+ *    card, and the Blobbi's goodbye (with Stay) is the moment to change their
+ *    mind; the page goes only once that has played.
  *  - **`native-share`** does not. The OS share sheet IS a confirmation, and a
  *    dialog in front of a dialog teaches players to dismiss both.
  *  - **`relay-management`** and **`authoring-tool`** do not, because they are not
@@ -93,6 +109,10 @@ export function isEgressAllowed(policy: IslandSafetyPolicy, egressClass: EgressC
 export const EGRESS_REQUIRES_CONFIRMATION: Readonly<Record<EgressClass, boolean>> = Object.freeze({
   'external-link': true,
   'social-share': true,
+  // The Worlds sheet names the destination on its card, and the departure
+  // itself offers Stay until the page goes: a second dialog in front of that
+  // would be a dialog in front of a dialog.
+  'world-travel': false,
   'native-share': false,
   'relay-management': false,
   'authoring-tool': false,

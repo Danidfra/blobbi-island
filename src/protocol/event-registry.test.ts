@@ -35,7 +35,7 @@ describe('application event kinds', () => {
   it('covers every kind the audit, NIP.md and the NIP-BB draft document', () => {
     const kinds = APPLICATION_EVENT_KINDS.map((k) => k.kind).sort((a, b) => a - b);
     expect(kinds).toEqual([
-      1124, 1416, 1417, 11125, 14919, 14920, 14921, 21201, 21951, 31124, 31125,
+      1124, 1416, 1417, 11125, 14919, 14920, 14921, 21124, 21201, 21951, 31124, 31125, 31126,
       31632, 31633, 31634, 31950, 31951,
     ]);
   });

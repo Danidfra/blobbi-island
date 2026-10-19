@@ -16,6 +16,8 @@ Two independent status axes. **This client** says what the code in this reposito
 | `31125` | Blobbonaut Owner Profile (legacy) | Addressable | Blobbi Island | Read for legacy compatibility | Superseded |
 | `31124` | Blobbi Pet State | Addressable | Blobbi Island | Implemented (read + write) | Current |
 | `21201` | Island Chat | Ephemeral | Blobbi Island | Implemented (read + write) | Current |
+| `31126` | Blobbi World Location | Addressable | External: `@blobbi-kit/core` | Implemented (read + write) | Current |
+| `21124` | Blobbi Active Presence | Ephemeral | External: `@blobbi-kit/core` | Implemented (read only) | Current |
 | `31950` | Island Presence | Addressable | Blobbi Island | Implemented (read + write) | Current |
 | `31951` | Shared Playback Session | Addressable | Blobbi Island | Implemented (read + write) | Current |
 | `21951` | Shared Playback Command | Ephemeral | Blobbi Island | Implemented (read + write) | Current |
@@ -39,6 +41,8 @@ Addressable and replaceable kinds are referenced by coordinate. Non-addressable 
 | `31125` | `31125:<pubkey>:<d>` |
 | `31124` | `31124:<pubkey>:<blobbiD>` |
 | `21201` | not addressable |
+| `31126` | `31126:<owner>:<blobbi d>` |
+| `21124` | not addressable |
 | `31950` | `31950:<pubkey>:session:<uuid>` |
 | `31951` | `31951:<host-pubkey>:<uuid>` |
 | `21951` | not addressable |
@@ -62,6 +66,8 @@ Authority in Nostr derives from authorship: an event is authoritative for a thin
 | `31125` | Blobbi Island | The player or Ditto (co-authored) |
 | `31124` | Blobbi Island | The player or Ditto (co-authored) |
 | `21201` | Blobbi Island | The player |
+| `31126` | `@blobbi-kit/core` | The player |
+| `21124` | `@blobbi-kit/core` | The player |
 | `31950` | Blobbi Island | The player |
 | `31951` | Blobbi Island | Session host |
 | `21951` | Blobbi Island | Session host |
@@ -154,6 +160,38 @@ In-world speech-bubble chat message shown above a player Blobbi.
 - **Defined by:** Blobbi Island
 - **Implemented in:** `src/lib/chat-config.ts`, `src/hooks/useChatBubbles.ts`
 - **Documented in:** `NIP.md`
+
+### Kind 31126: Blobbi World Location
+
+Where a Blobbi last is, across the Blobbi apps and devices: one event per move, the newest (NIP-01 order) wins.
+
+- **Class:** Addressable
+- **Address format:** `31126:<owner>:<blobbi d>`
+- **Signed by:** The player
+- **Lifecycle:** Written only by the player's act, by the World the Blobbi moves TO (an explicit "Call here", or the third interaction with that World while the Blobbi is elsewhere). Never expires; nothing renews it. Read on every Blobbi world's load and stream. Off unless the build says VITE_BLOBBI_WORLD_TRAVEL=nostr.
+- **Expiration:** none
+- **This client:** Implemented (read + write)
+- **Protocol status:** Current
+- **Defined by:** `@blobbi-kit/core` (Blobbi Island is a consumer)
+- **Implemented in:** `src/worlds/useIslandWorldTravel.ts`, `src/worlds/WorldTravelProvider.tsx`
+- **Documented in:** `docs/world-travel.md`
+- **Notes:** Experimental kind, not a NIP (the kit's WORLD-TRAVEL.md). The Island is World "blobbi-island". It is read and written on the shared travel relays (BLOBBI_WORLD_TRAVEL_RELAYS), not on the selected relay. Leaving the Island for another world writes nothing: the destination moves the Blobbi to itself. Distinct from kind 31950, a position inside an Island room, which is not published while the Blobbi is away.
+
+### Kind 21124: Blobbi Active Presence
+
+Optional, ephemeral: a Blobbi was recently played in a World. A hint for presentation; never moves the Blobbi.
+
+- **Class:** Ephemeral
+- **Address format:** not addressable
+- **Signed by:** The player
+- **Lifecycle:** Read by the World Travel session (another World showing recent play). Never written by the Island: Active Presence stays off here.
+- **Expiration:** NIP-40, 120 seconds
+- **This client:** Implemented (read only)
+- **Protocol status:** Current
+- **Defined by:** `@blobbi-kit/core` (Blobbi Island is a consumer)
+- **Implemented in:** `src/worlds/useIslandWorldTravel.ts`
+- **Documented in:** `docs/world-travel.md`
+- **Notes:** Experimental kind, not a NIP. The Island's own room presence (31950) is a different fact and the two never stand in for each other.
 
 ### Kind 31950: Island Presence
 

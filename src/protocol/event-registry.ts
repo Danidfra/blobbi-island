@@ -192,6 +192,14 @@ export interface ApplicationEventKind {
 const KIND_ISLAND_PRESENCE = 31950;
 
 /**
+ * World Travel (`@blobbi-kit/core` world-travel, `src/worlds`): where a
+ * Blobbi is across the Blobbi apps, and whether it is being played there.
+ * Both experimental (`WORLD_TRAVEL_KINDS_STATUS`), owned by the kit.
+ */
+const KIND_WORLD_LOCATION = 31126;
+const KIND_ACTIVE_PRESENCE = 21124;
+
+/**
  * Kinds defined by the original NIP-BB draft (`MD/old-NIP.md`), which specifies
  * `31124`, `14919`, `14920` and `14921`. None of the three below is queried,
  * parsed or published by any code in `src/`.
@@ -312,6 +320,45 @@ export const APPLICATION_EVENT_KINDS: readonly ApplicationEventKind[] = [
     ownership: 'blobbi-island',
     sourceFiles: ['src/lib/chat-config.ts', 'src/hooks/useChatBubbles.ts'],
     docs: ['NIP.md'],
+  },
+  {
+    kind: KIND_WORLD_LOCATION, // 31126
+    name: 'Blobbi World Location',
+    purpose:
+      'Where a Blobbi last is, across the Blobbi apps and devices: one event per move, the newest (NIP-01 order) wins.',
+    eventClass: 'addressable',
+    addressFormat: '31126:<owner>:<blobbi d>',
+    authority: 'player',
+    lifecycle:
+      "Written only by the player's act, by the World the Blobbi moves TO (an explicit \"Call here\", or the third interaction with that World while the Blobbi is elsewhere). Never expires; nothing renews it. Read on every Blobbi world's load and stream. Off unless the build says VITE_BLOBBI_WORLD_TRAVEL=nostr.",
+    expiration: null,
+    clientStatus: 'implemented',
+    protocolStatus: 'current',
+    protocolStatusEvidence: null,
+    ownership: 'external-package',
+    owningPackage: '@blobbi-kit/core',
+    sourceFiles: ['src/worlds/useIslandWorldTravel.ts', 'src/worlds/WorldTravelProvider.tsx'],
+    docs: ['docs/world-travel.md'],
+    notes:
+      'Experimental kind, not a NIP (the kit\'s WORLD-TRAVEL.md). The Island is World "blobbi-island". It is read and written on the shared travel relays (BLOBBI_WORLD_TRAVEL_RELAYS), not on the selected relay. Leaving the Island for another world writes nothing: the destination moves the Blobbi to itself. Distinct from kind 31950, a position inside an Island room, which is not published while the Blobbi is away.',
+  },
+  {
+    kind: KIND_ACTIVE_PRESENCE, // 21124
+    name: 'Blobbi Active Presence',
+    purpose: 'Optional, ephemeral: a Blobbi was recently played in a World. A hint for presentation; never moves the Blobbi.',
+    eventClass: 'ephemeral',
+    addressFormat: null,
+    authority: 'player',
+    lifecycle: 'Read by the World Travel session (another World showing recent play). Never written by the Island: Active Presence stays off here.',
+    expiration: 'NIP-40, 120 seconds',
+    clientStatus: 'read-only',
+    protocolStatus: 'current',
+    protocolStatusEvidence: null,
+    ownership: 'external-package',
+    owningPackage: '@blobbi-kit/core',
+    sourceFiles: ['src/worlds/useIslandWorldTravel.ts'],
+    docs: ['docs/world-travel.md'],
+    notes: 'Experimental kind, not a NIP. The Island\'s own room presence (31950) is a different fact and the two never stand in for each other.',
   },
   {
     kind: KIND_ISLAND_PRESENCE, // 31950

@@ -4,6 +4,7 @@ import { LocationContext } from '@/contexts/LocationContextValue';
 import type { LocationId } from '@/lib/location-types';
 import { clearFirstSessionPreferences } from '@/lib/first-session';
 import { BlobbiActionDock } from './BlobbiActionDock';
+import { DOCK_EVENTS } from './dock-events';
 
 function Dock({ location }: { location: LocationId }) {
   return (
@@ -55,5 +56,24 @@ describe('the action dock', () => {
     // And opening it again is remembered too.
     fireEvent.click(collapsedControl()!);
     expect(expandedControl()).not.toBeNull();
+  });
+
+  it('offers Worlds, which asks the world to open the Worlds sheet; not before the player is in the world', () => {
+    const { unmount } = render(<Dock location="town" />);
+    const opened = vi.fn();
+    document.addEventListener(DOCK_EVENTS.openWorlds, opened);
+    fireEvent.click(screen.getByRole('button', { name: 'Worlds' }));
+    expect(opened).toHaveBeenCalledTimes(1);
+    document.removeEventListener(DOCK_EVENTS.openWorlds, opened);
+    unmount();
+
+    render(
+      <LocationContext.Provider
+        value={{ currentLocation: 'town', setCurrentLocation: vi.fn(), previousLocation: null, isMapModalOpen: false, setIsMapModalOpen: vi.fn(), isTransitioning: false }}
+      >
+        <BlobbiActionDock inWorld={false} />
+      </LocationContext.Provider>,
+    );
+    expect(screen.getByRole('button', { name: 'Worlds' })).toBeDisabled();
   });
 });

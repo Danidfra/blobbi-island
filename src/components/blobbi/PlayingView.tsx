@@ -34,6 +34,7 @@ import { getBlobbiDisplayName } from '@/lib/blobbi-legacy';
 import { dbg } from '@/lib/debug';
 import { useDebugOverlays } from '@/contexts/DebugOverlaysContext';
 import { DOCK_EVENTS } from '@/components/shell/dock-events';
+import { useWorldTravelView } from '@/worlds/world-travel-context';
 import { CommunicationPanel } from './communication/CommunicationPanel';
 import type { IslandMessage } from '@/communication';
 import { PlayerSafetyActions } from './player-safety/PlayerSafetyActions';
@@ -172,6 +173,10 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
   useEffect(() => {
     setActorSuppressed(false);
   }, [currentLocation]);
+
+  // The Blobbi's travels between worlds (`src/worlds`): how the actor is drawn
+  // while it comes or goes, and whether it is here for the room's presence.
+  const worldTravel = useWorldTravelView();
 
   const background = getBackgroundForLocation(currentLocation);
   const blobbiSize = getBlobbiSizeForLocation(currentLocation);
@@ -619,6 +624,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
         containerRef={containerRef}
         boundary={boundary}
         isVisible={!!selectedBlobbi && !actorSuppressed}
+        journey={{ presence: worldTravel.presence, journey: worldTravel.journey, waving: worldTravel.departure === 'waving' }}
         blobbiId={selectedBlobbi?.id}
         // One coherent presentation description (standing / sleeping / seated /
         // hidden), owned by the pose controller and resolved through the same
@@ -650,6 +656,7 @@ export function PlayingView({ selectedBlobbi }: PlayingViewProps) {
           onOtherBlobbiClick={handleOtherBlobbiClick}
           hiddenIn={hiddenIn}
           sittingIn={sittingIn}
+          blobbiAway={!worldTravel.blobbiHere}
           onOccupiedSeatsChange={setOccupiedSeats}
           activitySession={activitySession}
           onSessionParticipantsChange={setSessionParticipants}

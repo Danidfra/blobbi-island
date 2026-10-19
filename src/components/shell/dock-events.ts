@@ -12,6 +12,12 @@ export const DOCK_EVENTS = {
   openCommunication: "blobbi:open-communication",
   openMyBlobbi: "blobbi:open-my-blobbi",
   /**
+   * Open the Worlds sheet: the other Blobbi worlds the player can take their
+   * Blobbi to (`src/worlds`). Handled by `WorldTravelProvider`, which owns the
+   * departure and the page's one way out.
+   */
+  openWorlds: "blobbi:open-worlds",
+  /**
    * Broadcast that the local Blobbi has started walking toward a target (e.g.
    * walking to a door before a location change). MultiplayerLayer forwards this
    * to the presence `moveTo` so REMOTE clients animate the walk-to-door instead

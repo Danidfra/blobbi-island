@@ -56,6 +56,10 @@ describe('the browser escape hatches have one owner', () => {
     ['window.open', /\bwindow\s*\.\s*open\s*\(/],
     ['navigator.share', /\bnavigator\s*\.\s*share\s*\(/],
     ['target="_blank"', /target\s*=\s*["'{]\s*["']?_blank/],
+    // World travel (this tab going to another Blobbi world) is the one
+    // same-tab navigation, and it too has exactly one owner.
+    ['location.assign', /\blocation\s*\.\s*assign\s*\(/],
+    ['location.replace', /\blocation\s*\.\s*replace\s*\(/],
   ])('no feature file calls %s', (label, pattern) => {
     const offenders = featureFiles.filter((file) => pattern.test(code(file))).map(relative);
 
@@ -63,6 +67,12 @@ describe('the browser escape hatches have one owner', () => {
       offenders,
       `${label} belongs to src/external-egress/ alone, a feature should request egress by class, so the capability check, the confirmation and the opener isolation all happen once. Found in: ${offenders.join(', ')}`,
     ).toEqual([]);
+  });
+
+  it('world travel goes in this tab, from the boundary alone', () => {
+    const source = code(join(EGRESS, 'egress.ts'));
+    expect(source).toContain("request.class === 'world-travel'");
+    expect(source).toContain('window.location.assign(url)');
   });
 
   it('opens windows with opener isolation, wherever it does open them', () => {
