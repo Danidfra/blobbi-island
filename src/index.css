@@ -441,8 +441,41 @@ img {
     animation: shadow-float 3s ease-in-out infinite;
   }
 
+  /* ── World Travel: the Blobbi leaving for, or arriving from, another world
+     (src/worlds/teleport, the Home's own teleport). The body is drawn by
+     `TeleportFrame2D`: a CSS mask over the kit's drawing and a canvas of
+     motes that reaches high above the box. These three rules are the
+     Home's `.teleport-2d*`, verbatim. The goodbye's wiggle before a
+     departure is the Island's own. ── */
+  .teleport-2d {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  .teleport-2d__body {
+    width: 100%;
+    height: 100%;
+  }
+  .teleport-2d__motes {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  .blobbi-journey {
+    transform-origin: 50% 100%;
+  }
+  .blobbi-journey--wave {
+    animation: cozy-wiggle 0.35s ease-in-out 2;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-shadow-float {
+      animation: none;
+    }
+    .blobbi-journey--wave {
       animation: none;
     }
   }

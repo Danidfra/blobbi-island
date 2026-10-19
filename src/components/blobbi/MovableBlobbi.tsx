@@ -40,7 +40,24 @@ import { actorVisualFocusPoint } from '@/lib/blobbi-ground';
 import { resolveActorRender, STANDING_POSE, type BlobbiActorPose } from '@/lib/blobbi-pose';
 import { BlobbiActor } from './BlobbiActor';
 import type { BlobbiVisual } from '@blobbi-kit/renderer';
+import type { BlobbiPresenceState, Journey } from '@/worlds/useBlobbiPresence';
+import { TeleportFrame2D } from '@/worlds/teleport/react/TeleportFrame2D';
+import type { JourneyFace } from '@/worlds/teleport/timeline';
 import { useMovementFacing } from '@/hooks/useMovementFacing';
+
+/**
+ * How the actor is drawn while it comes or goes between worlds (`src/worlds`):
+ * `present` as always; `departing` and `arriving` are drawn by the Home's own
+ * teleport (`TeleportFrame2D` around the body: the dissolve mask, the squash
+ * and glow, the motes), following `journey`; the actor stays where it stood,
+ * so the anchor, the shadow's place and the chat-bubble portal never move;
+ * `absent` draws nothing. `waving` is the goodbye before a departure.
+ */
+export interface ActorJourney {
+  presence: BlobbiPresenceState;
+  journey: Journey | null;
+  waving?: boolean;
+}
 
 export interface MovableBlobbiRef {
   /** Walk to a ground target through the movement system. */
@@ -119,6 +136,8 @@ export interface MovableBlobbiProps {
    * look at it while it walks (or, later, emotes/acts) nearby.
    */
   localActiveRef?: React.MutableRefObject<LocalActiveState | null>;
+  /** The actor's journey between worlds, when one is under way (see {@link ActorJourney}). */
+  journey?: ActorJourney;
 }
 
 export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
@@ -146,6 +165,7 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
       localAttentionRef,
       livePositionsRef,
       localActiveRef,
+      journey,
     },
     ref
   ) => {
@@ -166,6 +186,8 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     const idleGaze = useIdleGaze(!isMoving);
     // The body's facing from its movement: the heading while walking, the front once settled
     const settledFacing = useMovementFacing(isMoving, direction);
+    // The face a journey asks for (eyes shut tight while it gathers and forms)
+    const [journeyFace, setJourneyFace] = useState<JourneyFace>(null);
 
     // ---------------------------------------------------------------------
     // Per-frame attention tick.
@@ -316,6 +338,9 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
     ]);
 
     if (!isVisible) return null;
+    // In another world (or its place not known yet): nothing of it is drawn
+    const presence = journey?.presence ?? 'present';
+    if (presence === 'absent') return null;
 
     // The complete visual consequence of the current pose, from the SAME pure
     // resolver the remote layer uses (src/lib/blobbi-pose.ts).
@@ -430,23 +455,35 @@ export const MovableBlobbi = forwardRef<MovableBlobbiRef, MovableBlobbiProps>(
             className
           )}
         >
-          {/* `seatedAccessory`: the seat's prop (the Station VR headset), a
-              pose consequence rendered over the face inside the scale rig by
-              the display; never equipment. */}
-          <CurrentBlobbiDisplay
-            size={size}
-            showFallback={true}
-            transparent={true}
-            isSleeping={render.sleeping}
-            facing={render.facing}
-            movementFacing={movementFacing}
-            motion={isMoving ? 'walking' : 'still'}
-            eyeOffset={eyeOffset}
-            visualOverride={visualOverride}
-            companionId={blobbiId}
-            seatedAccessory={render.seatedAccessory}
-            className={cn(isMoving && "scale-105 origin-bottom")}
-          />
+          {/* The journey: the Home's teleport drawn around the kit's drawing,
+              never in it; still while the actor is simply here. The goodbye's
+              wiggle before a departure is on the same wrapper. Inside the scale
+              rig, so the journey scales with depth and leaves the anchor alone. */}
+          <div
+            className={cn('relative blobbi-journey', presence === 'present' && journey?.waving && 'blobbi-journey--wave')}
+            data-blobbi-journey={presence}
+          >
+            <TeleportFrame2D journey={journey?.journey ?? null} absent={false} onFace={setJourneyFace}>
+              {/* `seatedAccessory`: the seat's prop (the Station VR headset), a
+                  pose consequence rendered over the face inside the scale rig by
+                  the display; never equipment. */}
+              <CurrentBlobbiDisplay
+                size={size}
+                showFallback={true}
+                transparent={true}
+                isSleeping={render.sleeping}
+                eyesClosed={journeyFace === 'concentrate'}
+                facing={render.facing}
+                movementFacing={movementFacing}
+                motion={isMoving ? 'walking' : 'still'}
+                eyeOffset={eyeOffset}
+                visualOverride={visualOverride}
+                companionId={blobbiId}
+                seatedAccessory={render.seatedAccessory}
+                className={cn(isMoving && "scale-105 origin-bottom")}
+              />
+            </TeleportFrame2D>
+          </div>
         </BlobbiActor>
       </>
     );

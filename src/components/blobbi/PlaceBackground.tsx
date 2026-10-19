@@ -151,6 +151,8 @@ export const PlaceBackground = forwardRef<HTMLDivElement, PlaceBackgroundProps>(
           */}
           <div
           ref={ref}
+            // The sky the World Travel motes rise through and come in from (src/worlds/teleport): this room's top edge
+            data-teleport-sky=""
             className="relative z-10 w-full h-full"
             data-world-surface
             data-island-world-graded={artworkGrade.filter ? '' : undefined}

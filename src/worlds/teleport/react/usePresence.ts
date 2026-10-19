@@ -1,0 +1,69 @@
+/*
+ * COPIED FROM BLOBBI HOME (nostr-pet, src/features/teleport/react/usePresence.ts, commit a3836e4, 2026-10-19), unchanged.
+ * The World Travel departure and arrival every Blobbi app plays: the same timeline, motes, presence machine and 2D
+ * painter as the Home, so a Blobbi leaving the Island looks exactly as it does leaving the Home. The folder is the
+ * Home's proposed `@blobbi-kit/teleport` (its KIT_EXTRACTION.md); until that package exists, keep this copy in step
+ * with the Home's and change nothing here that is not a bug in both.
+ */
+/**
+ * The presence controller as React state: one controller for the life of
+ * the component (a fresh one if React's development double effect disposed
+ * the first), its snapshot re-rendered on each change, disposed (every timer
+ * cleared) on unmount. The callbacks are read fresh each time, so a
+ * parent re-rendering never rebuilds the controller or loses a journey.
+ */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPresenceController, type PresenceController, type PresenceSnapshot, type PresenceState } from '../presence';
+import type { JourneyCue, JourneyKind } from '../timeline';
+
+export interface UsePresenceOptions {
+  initial?: 'present' | 'absent';
+  reducedMotion?: () => boolean;
+  onCue?: (cue: JourneyCue, kind: JourneyKind) => void;
+  onComplete?: (state: 'present' | 'absent') => void;
+}
+
+export interface Presence extends PresenceSnapshot {
+  leave: () => boolean;
+  enter: () => boolean;
+  cancel: () => void;
+  settle: (state: 'present' | 'absent') => void;
+  getState: () => PresenceState;
+  /** The controller itself, for a coordinator that drives it from outside React. */
+  controller: PresenceController;
+}
+
+export function usePresence({ initial = 'present', reducedMotion, onCue, onComplete }: UsePresenceOptions = {}): Presence {
+  const latest = useRef({ reducedMotion, onCue, onComplete });
+  latest.current = { reducedMotion, onCue, onComplete };
+  const [make] = useState(() => () =>
+    createPresenceController({
+      initial,
+      reducedMotion: () => latest.current.reducedMotion?.() ?? false,
+      onCue: (cue, kind) => latest.current.onCue?.(cue, kind),
+      onComplete: (state) => latest.current.onComplete?.(state),
+    }),
+  );
+  const [controller, setController] = useState<PresenceController>(make);
+  const [snapshot, setSnapshot] = useState<PresenceSnapshot>(() => controller.snapshot());
+  useEffect(() => {
+    // A controller disposed by an earlier cleanup (React's development double effect) is replaced, never reused
+    if (controller.isDisposed()) {
+      setController(make());
+      return;
+    }
+    setSnapshot(controller.snapshot());
+    const unsubscribe = controller.subscribe(setSnapshot);
+    return () => {
+      unsubscribe();
+      controller.dispose();
+    };
+  }, [controller, make]);
+
+  const leave = useCallback(() => controller.leave(), [controller]);
+  const enter = useCallback(() => controller.enter(), [controller]);
+  const cancel = useCallback(() => controller.cancel(), [controller]);
+  const settle = useCallback((s: 'present' | 'absent') => controller.settle(s), [controller]);
+  const getState = useCallback(() => controller.getState(), [controller]);
+  return { ...snapshot, leave, enter, cancel, settle, getState, controller };
+}
