@@ -45,17 +45,22 @@ export interface World {
   url: string | null;
   /** The card's look: two colours of its sky. */
   colors: readonly [string, string];
-  /** The card's emblem. */
+  /** The card's emblem, shown when the icon cannot be (and beside a closed door). */
   emoji: string;
+  /** The card's picture: that app's own icon, shipped with this app (public/icons/worlds/<travelId>.png). */
+  icon: string;
 }
+
+/** Where a world's icon is kept in this app (each app's own 192 px icon, copied as it is). */
+export const worldIconPath = (travelId: string) => `/icons/worlds/${travelId}.png`;
 
 export const WORLDS_CHECKED_ON = '2026-10-19';
 
 const DEFINED: readonly World[] = [
-  { id: 'home', travelId: WORLD_HOME, name: 'Blobbi Home', tagline: 'Care for your Blobbi in its own home.', url: 'https://blobbi.pet/', colors: ['#fde68a', '#fdba74'], emoji: '🏠' },
-  { id: 'pixel', travelId: WORLD_PIXEL, name: 'Blobbi Pixel', tagline: 'A pixel adventure with your Blobbi.', url: 'https://pixel.blobbi.pet/', colors: ['#c4b5fd', '#f9a8d4'], emoji: '🕹️' },
-  { id: 'farm', travelId: WORLD_FARM, name: 'Nostr Farm', tagline: 'Grow crops and bring the harvest back.', url: NOSTR_FARM_URL, colors: ['#86efac', '#bef264'], emoji: '🌾' },
-  { id: 'rumble', travelId: WORLD_RUMBLE, name: 'Blobbi Rumble', tagline: 'A playful arena for friendly matches.', url: null, colors: ['#fca5a5', '#fdba74'], emoji: '🥊' },
+  { id: 'home', travelId: WORLD_HOME, name: 'Blobbi Home', tagline: 'Care for your Blobbi in its own home.', url: 'https://blobbi.pet/', colors: ['#fde68a', '#fdba74'], emoji: '🏠', icon: worldIconPath(WORLD_HOME) },
+  { id: 'pixel', travelId: WORLD_PIXEL, name: 'Blobbi Pixel', tagline: 'A pixel adventure with your Blobbi.', url: 'https://pixel.blobbi.pet/', colors: ['#c4b5fd', '#f9a8d4'], emoji: '🕹️', icon: worldIconPath(WORLD_PIXEL) },
+  { id: 'farm', travelId: WORLD_FARM, name: 'Nostr Farm', tagline: 'Grow crops and bring the harvest back.', url: NOSTR_FARM_URL, colors: ['#86efac', '#bef264'], emoji: '🌾', icon: worldIconPath(WORLD_FARM) },
+  { id: 'rumble', travelId: WORLD_RUMBLE, name: 'Blobbi Rumble', tagline: 'A playful arena for friendly matches.', url: null, colors: ['#fca5a5', '#fdba74'], emoji: '🥊', icon: worldIconPath(WORLD_RUMBLE) },
 ];
 
 /** An address a world may be opened at: absolute https, no credentials. */

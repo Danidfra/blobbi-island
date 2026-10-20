@@ -8,6 +8,7 @@
  * every door is shown closed: the egress boundary would refuse the trip, and
  * a door that cannot open is said so here rather than found out later.
  */
+import { useState } from 'react';
 import { Globe2, Lock } from 'lucide-react';
 
 import { BlobbiModal } from '@/components/ui/blobbi-modal';
@@ -28,6 +29,25 @@ export interface WorldsModalProps {
   onTravel: (world: OpenWorld) => void;
 }
 
+/**
+ * The card's picture: the other app's own icon over the world's colours. An icon that cannot load (an old build, a
+ * blocked image) leaves the emoji on the colours, as the cards looked before; a closed door shows the lock.
+ */
+export function WorldCardIcon({ world, open }: { world: OpenWorld; open: boolean }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span
+      className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl text-2xl shadow-[inset_0_-5px_0_hsl(0_0%_0%/0.06)]"
+      style={{ background: `linear-gradient(135deg, ${world.colors[0]}, ${world.colors[1]})` }}
+      aria-hidden
+      data-testid={`world-icon-${world.id}`}
+      data-fallback={failed || !open ? 'true' : undefined}
+    >
+      {!open ? <Lock className="size-5 text-island-ink/70" /> : failed ? world.emoji : <img src={world.icon} alt="" width={48} height={48} loading="lazy" decoding="async" className="size-full object-cover" onError={() => setFailed(true)} />}
+    </span>
+  );
+}
+
 export function WorldsModal({ open, onClose, name, worlds, canLeave, departing, onTravel }: WorldsModalProps) {
   return (
     <BlobbiModal
@@ -45,13 +65,7 @@ export function WorldsModal({ open, onClose, name, worlds, canLeave, departing, 
           const badge = openDoor ? 'Visit' : w.open ? 'Not available' : 'Coming soon';
           const body = (
             <>
-              <span
-                className="grid size-12 shrink-0 place-items-center rounded-2xl text-2xl shadow-[inset_0_-5px_0_hsl(0_0%_0%/0.06)]"
-                style={{ background: `linear-gradient(135deg, ${w.colors[0]}, ${w.colors[1]})` }}
-                aria-hidden
-              >
-                {openDoor ? w.emoji : <Lock className="size-5 text-island-ink/70" />}
-              </span>
+              <WorldCardIcon world={w} open={openDoor} />
               <span className="flex min-w-0 flex-1 flex-col text-left">
                 <span className="font-bold text-island-ink">{w.name}</span>
                 <span className="text-xs text-island-ink-soft">{w.tagline}</span>

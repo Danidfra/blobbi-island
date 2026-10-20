@@ -60,7 +60,7 @@ export function BlobbiShellHeader({
       {/* Wordmark: real app icon (favicon) + title */}
       <div className="flex items-center gap-2.5 min-w-0">
         <img
-          src="/icons/blobbi-island-icon-rounded-192.png"
+          src="/icons/icon-192.png"
           alt=""
           aria-hidden
           width={32}
