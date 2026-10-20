@@ -129,6 +129,19 @@ Off by default. On (`VITE_BLOBBI_WORLD_TRAVEL=nostr`, or on a dev server
   departs when its stream brings that event, after its own moment is over
   (a departure waits while the Island is `busy`). Returning to the Island
   works the same way, the other way round.
+- **An explicit trip arrives by itself (the hand-off,
+  `docs/world-travel-handoff.md`).** Going to another world through the
+  Worlds sheet signs the move the destination will publish, here, on the
+  door press (an extension asks here), and carries it in the address's
+  fragment; the destination checks it (signature, account, Blobbi,
+  destination, origin, freshness, the canonical previous location) and
+  publishes it as signed, then its teleport plays the arrival. The
+  destination never signs because of a URL. A refusal or a slow signer
+  leaves without it, and the ordinary rule stands over there. Arriving here
+  the same way from Home: `useIslandWorldTravel` holds the hand-off until
+  the first look confirmed the place, publishes it once, and the live
+  change brings the arrival; the away card says "on the way" meanwhile, and
+  "Try again" resends the same event if no relay accepted it.
 - **Active Presence (kind 21124) stays off.** The Island's room presence
   (31950) is a different fact (a position inside a room, for this World's
   players); the two never stand in for each other. Turning Active Presence
@@ -156,8 +169,14 @@ same attributes as Blobbi Home's (`data-travel-place`, `data-travel-here`,
   entry (once, the room silent until it has formed), the dock, the sheet, the
   doors, the identity carried, repeated clicks, Stay, a family experience,
   the same-tab navigation through the boundary.
+- `world-travel-handoff.test.ts`: the hand-off's payload, address, signing,
+  every check, the ids honoured, the arrival controller.
 - `world-travel.nostr.test.tsx`: end to end over an in-memory relay with real
-  signatures: away at load with nothing written; a stale kept "here" never
+  signatures: the hand-off from Home (one publication, nothing signed here,
+  one arrival; again after a reload; wrong World, account, Blobbi,
+  tampered, expired, stale; relays refusing then Try again) and to Pixel
+  (signed once at the door, carried, nothing published; refused and silent
+  signers); away at load with nothing written; a stale kept "here" never
   drawn before the relays answer; confirmed here arriving exactly once;
   unreachable relays (nothing kept: the default World; kept here: it
   stands); Bring here publishing exactly one 31126 and the arrival; two taps
@@ -193,11 +212,9 @@ same attributes as Blobbi Home's (`data-travel-place`, `data-travel-here`,
 
 ## Limitations
 
-- After an explicit trip through the Worlds sheet, the destination still
-  cannot tell the arrival from a plain page opening: the Blobbi comes over
-  on the second interaction or with Bring here. Automatic arrival needs a
-  hand-off every app understands; the design is in
-  `docs/world-travel-handoff.md` (a proposal, not implemented).
+- A trip from Pixel has no hand-off yet (Pixel has no doors to other
+  worlds): the Blobbi comes over on the second interaction or with Bring
+  here.
 - Rumble is not open today (502); it opens by changing its address in
   `worlds.ts` once a check finds it answering.
 - World Travel with Nostr Farm and Blobbi Rumble needs those apps to join the

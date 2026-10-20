@@ -26,6 +26,7 @@
  * address) brings it back at once.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { NostrEvent, TravelPhase } from '@blobbi-kit/core';
 
 import { DOCK_EVENTS } from '@/components/shell/dock-events';
 import { useExternalEgress } from '@/external-egress';
@@ -40,9 +41,10 @@ import { WorldAwayNotice } from './WorldAwayNotice';
 import { WorldsModal } from './WorldsModal';
 import { ENTRY_BEAT_MS, ENTRY_HOLD_MAX_MS, entryArrivalEnabled, entryDecision } from './entry-arrival';
 import { useBlobbiPresence } from './useBlobbiPresence';
-import { useIslandWorldTravel } from './useIslandWorldTravel';
+import { useIslandWorldTravel, type IslandWorldTravel } from './useIslandWorldTravel';
 import { useWorldDeparture } from './useWorldDeparture';
 import { WorldTravelContext, type WorldTravelView } from './world-travel-context';
+import { handoffFragment } from './world-travel-handoff';
 import { worlds, type OpenWorld, type World } from './worlds';
 
 export interface WorldTravelProviderProps {
@@ -69,8 +71,26 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
   const [entry, setEntry] = useState<Entry>(() => (blobbi && entryArrivalEnabled() ? 'waiting' : 'none'));
   const heldSince = useRef(Date.now());
   const presence = useBlobbiPresence({ initial: entry === 'waiting' ? 'absent' : 'present', reducedMotion });
+  // The hand-off for the trip under way: the move the destination will publish, signed here on the door press
+  // (`travel.handoffFor`), awaited only when the page is about to go. Stay before then discards it unpublished
+  const travelRef = useRef<IslandWorldTravel | null>(null);
+  const handoffRef = useRef<Promise<NostrEvent | null> | null>(null);
+  const [signing, setSigning] = useState(false);
   const navigate = useCallback(
-    (world: World & { url: string }) => requestEgress({ class: 'world-travel', url: world.url, label: world.name }),
+    async (world: World & { url: string }) => {
+      const pending = handoffRef.current;
+      handoffRef.current = null;
+      let event: NostrEvent | null = null;
+      if (pending) {
+        setSigning(!!travelRef.current?.signerPrompts);
+        try {
+          event = await pending;
+        } finally {
+          setSigning(false);
+        }
+      }
+      return requestEgress({ class: 'world-travel', url: world.url, label: world.name, fragment: event ? handoffFragment(event) : undefined });
+    },
     [requestEgress],
   );
   const departure = useWorldDeparture({ presence, canAct: !!blobbi, reducedMotion, navigate });
@@ -119,10 +139,14 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
     return () => document.removeEventListener(DOCK_EVENTS.openWorlds, open);
   }, []);
 
+  travelRef.current = travel;
   const list = useMemo(() => worlds(), []);
   const onTravel = useCallback(
     (world: OpenWorld) => {
-      if (departure.go(world)) setWorldsOpen(false);
+      if (!departure.go(world)) return;
+      setWorldsOpen(false);
+      // Signed now, on the choice (an extension asks here, where the choice was made); carried once the Blobbi has left
+      handoffRef.current = travelRef.current?.handoffFor(world.travelId) ?? null;
     },
     [departure],
   );
@@ -135,8 +159,13 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
     [presence.state, presence.journey, departure.phase, blobbiHere, openWorlds],
   );
 
-  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene or the entry's wait
-  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && entry !== 'waiting' && (travel.view !== 'here' || travel.unreachable);
+  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene or the entry's wait.
+  // A hand-off under way is the Blobbi on its way; one no relay accepted is said as such, with Try again
+  const handoffComing = travel.handoff?.status === 'holding' || travel.handoff?.status === 'publishing';
+  const handoffFailed = travel.handoff?.status === 'failed';
+  const cardView = handoffComing && travel.view !== 'here' ? 'coming' : travel.view;
+  const cardTravel: TravelPhase | undefined = handoffFailed ? { phase: 'failed', reason: 'unreachable' } : travel.snapshot?.travel;
+  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && entry !== 'waiting' && (cardView !== 'here' || travel.unreachable);
   const departureRef = useRef(departure);
   departureRef.current = departure;
 
@@ -150,15 +179,15 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
       {(departure.phase !== 'idle' && departure.world) || awayCard ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-20 z-30 flex justify-center px-3 sm:bottom-24" data-testid="world-travel-notices">
           {departure.phase !== 'idle' && departure.world ? (
-            <DepartureNotice phase={departure.phase} world={departure.world} name={name} onStay={departure.cancel} onRetry={() => void departureRef.current.retry()} />
+            <DepartureNotice phase={departure.phase} world={departure.world} name={name} onStay={departure.cancel} onRetry={() => void departureRef.current.retry()} signing={signing} />
           ) : (
             <WorldAwayNotice
               name={name}
               place={travel.place}
-              view={travel.view}
+              view={cardView}
               nameOf={travel.nameOf}
               onCallHere={travel.callHere}
-              travel={travel.snapshot?.travel}
+              travel={cardTravel}
               playedThere={travel.snapshot?.presence.there ? true : undefined}
               onRetry={travel.retry}
               noticed={travel.follow?.count ?? 0}

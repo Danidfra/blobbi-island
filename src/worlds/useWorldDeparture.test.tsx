@@ -16,9 +16,9 @@ const pixel = worldById('pixel', {})!;
 const home = worldById('home', {})!;
 const closed: OpenWorld = { ...pixel, url: null, open: false };
 
-function setup({ canAct = true, reducedMotion = false, went = true, hang = false } = {}) {
+function setup({ canAct = true, reducedMotion = false, went = true, delayMs = 0 } = {}) {
   const navigate = vi.fn<(world: World & { url: string }) => Promise<boolean>>(async () => {
-    if (hang) return new Promise<boolean>(() => {});
+    if (delayMs) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
     return went;
   });
   const hook = renderHook(() => {
@@ -126,7 +126,7 @@ describe('leaving for another world', () => {
   });
 
   it('a navigation that never happened (the page still here after the wait) brings the Blobbi back', async () => {
-    const { hook, navigate } = setup({ hang: true });
+    const { hook, navigate } = setup();
     act(() => void hook.result.current.departure.go(pixel));
     await tick(DEPARTURE.noticeMs + DEPARTURE.waveMs + PRESENCE.departMs);
     expect(hook.result.current.departure.phase).toBe('gone');
@@ -143,8 +143,24 @@ describe('leaving for another world', () => {
     expect(hook.result.current.presence.state).toBe('present');
   });
 
+  it('the boundary may take a moment before asking (the signer\'s word on the hand-off): the wait for a navigation starts once it has', async () => {
+    const { hook, navigate } = setup({ delayMs: 3_000 });
+    act(() => void hook.result.current.departure.go(pixel));
+    await tick(DEPARTURE.noticeMs + DEPARTURE.waveMs + PRESENCE.departMs);
+    expect(hook.result.current.departure.phase).toBe('gone');
+    expect(navigate).toHaveBeenCalledTimes(1);
+    // Longer than the usual wait, but the boundary has not asked yet: still going
+    await tick(DEPARTURE.failMs + 100);
+    expect(hook.result.current.departure.phase).toBe('gone');
+    // Asked at 3 s; the usual wait from then
+    await tick(3_000 - (DEPARTURE.failMs + 100) + DEPARTURE.failMs - 50);
+    expect(hook.result.current.departure.phase).toBe('gone');
+    await tick(100);
+    expect(hook.result.current.departure.phase).toBe('failed');
+  });
+
   it('coming back from the other world with Back (a cached page) restores the Blobbi here', async () => {
-    const { hook } = setup({ hang: true });
+    const { hook } = setup({ delayMs: 60_000 });
     act(() => void hook.result.current.departure.go(pixel));
     await tick(DEPARTURE.noticeMs + DEPARTURE.waveMs + PRESENCE.departMs);
     expect(hook.result.current.presence.state).toBe('absent');

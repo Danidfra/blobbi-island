@@ -70,8 +70,10 @@ import { poolWorldTravelRelays, useWorldTravel, useWorldTravelSync, type TravelP
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
+import { dropHandoff, peekHandoff } from './handoff-capture';
 import { isTrustedInput, travelMode, type TravelMode } from './travel-mode';
 import { PRESENCE, type BlobbiPresenceController } from './useBlobbiPresence';
+import { createHandoffArrival, signHandoff, usedHandoffs, type HandoffArrival, type HandoffState } from './world-travel-handoff';
 import { WORLD_FARM, WORLD_ISLAND, WORLD_RUMBLE } from './worlds';
 
 // This World, and the ones the kit does not know by name, for the words around a journey
@@ -174,13 +176,26 @@ export interface IslandWorldTravel {
   retry(): void;
   /** Nostr only: the session's snapshot (null when off or without a session). */
   snapshot: WorldTravelSnapshot | null;
+  /**
+   * Nostr only: the World Travel hand-off this page opened with (`world-travel-handoff.ts`), while it is held,
+   * published, failed (Try again) or until it was honoured or dropped; null without one.
+   */
+  handoff: HandoffState | null;
+  /**
+   * Leaving for `destination` (a World id): the World Location the destination will publish, signed by the account
+   * now (an extension may ask), or null when there is none to carry (off, no session, the place not confirmed,
+   * refused, too slow). Never publishes.
+   */
+  handoffFor(destination: string): Promise<NostrEvent | null>;
+  /** The account's signer may ask the player (an extension, a remote signer), so a wait for it is worth a word. */
+  signerPrompts: boolean;
   /** Nostr only: a hidden element stating place, phase and presence for tests and diagnostics. */
   status: ReactNode;
 }
 
 const nameOfWorld = (place: string) => (place === WORLD_ISLAND ? 'the Island' : (knownWorld(place)?.name ?? 'another Blobbi world'));
 
-const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry'> = {
+const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry' | 'handoffFor'> = {
   mode: 'off',
   place: WORLD_ISLAND,
   here: true,
@@ -191,13 +206,15 @@ const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry'> 
   follow: null,
   nameOf: nameOfWorld,
   snapshot: null,
+  handoff: null,
+  signerPrompts: false,
 };
 
 export function useIslandWorldTravel(o: IslandWorldTravelOptions): IslandWorldTravel {
   const [mode] = useState(travelMode);
   // Off: the same hook with no options, so no session, no sync, no listener and nothing signed; the Blobbi is here
   const travel = useNostrTravel(mode === 'nostr' ? o : null);
-  return mode === 'nostr' ? travel : { ...OFF, refresh: travel.refresh, callHere: travel.callHere, retry: travel.retry, status: null };
+  return mode === 'nostr' ? travel : { ...OFF, refresh: travel.refresh, callHere: travel.callHere, retry: travel.retry, handoffFor: travel.handoffFor, status: null };
 }
 
 function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
@@ -307,8 +324,52 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     };
   }, [session]);
 
+  // THE HAND-OFF this page opened with (an explicit trip from another world): held until this session has confirmed
+  // the place, then checked and published as signed (`createHandoffArrival`); the session's look then brings the
+  // arrival. One controller per session; the captured event is dropped once honoured or rejected
+  const relaysRef = useRef(relays);
+  relaysRef.current = relays;
+  const [handoff, setHandoff] = useState<HandoffState | null>(null);
+  const arrivalRef = useRef<HandoffArrival | null>(null);
+  const sessionKey = options ? `${options.owner}|${options.d}` : null;
+  useEffect(() => {
+    const event = peekHandoff();
+    if (!event || !sessionKey) return;
+    const arrival = createHandoffArrival({
+      event,
+      world: WORLD_ISLAND,
+      session: () => sessionRef.current,
+      relays: () => relaysRef.current,
+      verify: safeVerify,
+      lock: webLock(),
+      used: usedHandoffs(pageStore),
+      stillAccount: (owner) => latest.current.user?.pubkey === owner && latest.current.owner === owner,
+      onChange: (s) => {
+        setHandoff(s);
+        if (s.status === 'done' || s.status === 'dropped') dropHandoff();
+      },
+    });
+    arrivalRef.current = arrival;
+    setHandoff(arrival.state());
+    return () => {
+      arrival.dispose();
+      if (arrivalRef.current === arrival) arrivalRef.current = null;
+      setHandoff(null);
+    };
+  }, [sessionKey]);
+  // The session's snapshot changed (its first look answered, a refresh): the hand-off looks at it
+  useEffect(() => {
+    arrivalRef.current?.update();
+  }, [snapshot, session]);
+
   const callHere = useCallback(() => void sessionRef.current?.travel({ explicit: true }), []);
   const retry = useCallback(() => {
+    // A hand-off no relay accepted: the same signed event again, before anything the session itself tried
+    const arrival = arrivalRef.current;
+    if (arrival && arrival.state().status === 'failed') {
+      void arrival.retry();
+      return;
+    }
     const s = sessionRef.current;
     if (!s) return;
     const phase = s.snapshot().travel;
@@ -319,6 +380,17 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     } else void s.travel({ explicit: true });
   }, []);
   const refresh = useCallback(() => void sessionRef.current?.refresh(), []);
+  // Leaving for another world: the move the destination will publish, signed here on the player's choice
+  const handoffFor = useCallback(async (destination: string): Promise<NostrEvent | null> => {
+    const s = sessionRef.current;
+    const { user: u, login: l, owner: own } = latest.current;
+    if (!s || !u || !l || !own) return null;
+    const snap = s.snapshot();
+    // Only a place the relays confirmed is worth signing over: a kept or unknown place may be stale
+    if (snap.owner !== own || snap.resolution !== 'confirmed') return null;
+    return signHandoff({ owner: own, d: snap.d, destination, canonical: snap.location, sign: (t) => u.signer.signEvent(t) as Promise<NostrEvent>, verify: safeVerify });
+  }, []);
+  const signerPrompts = !!login && login.type !== 'nsec';
 
   const status = createElement('span', {
     hidden: true,
@@ -338,6 +410,8 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     'data-follow-suspended': snapshot?.follow.suspended ? 'true' : undefined,
     'data-presence-status': snapshot?.presence.status ?? 'off',
     'data-presence-there': snapshot?.presence.there?.world,
+    'data-handoff': handoff?.status,
+    'data-handoff-reason': handoff?.reason,
   });
 
   return {
@@ -355,6 +429,9 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     callHere,
     retry,
     snapshot,
+    handoff,
+    handoffFor,
+    signerPrompts,
     status,
   };
 }

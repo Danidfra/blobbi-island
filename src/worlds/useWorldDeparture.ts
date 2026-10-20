@@ -99,15 +99,20 @@ export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, f
       }
       void asked.then(
         (went) => {
-          if (!went) fail();
+          if (!went) {
+            fail();
+            return;
+          }
+          // Asked (after whatever the boundary waited for, such as the signer's word on the hand-off): still here a
+          // while later, the navigation did not happen (blocked, offline, refused)
+          if (phaseRef.current !== 'gone') return;
+          after(live.current.failMs, () => {
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+            fail();
+          });
         },
         () => fail(),
       );
-      // Still here a while later: the navigation did not happen (blocked, offline, refused)
-      after(live.current.failMs, () => {
-        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-        fail();
-      });
     },
     [set, fail],
   );

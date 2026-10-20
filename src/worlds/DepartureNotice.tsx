@@ -13,13 +13,21 @@ interface DepartureNoticeProps {
   name: string;
   onStay: () => void;
   onRetry: () => void;
+  /** The player's signer is being asked to let the Blobbi travel along (the page goes once it answers). */
+  signing?: boolean;
 }
 
 const BUTTON = 'min-h-9 rounded-full px-3.5 py-1.5 text-xs font-bold transition-transform duration-150 ease-cozy active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-export function DepartureNotice({ phase, world, name, onStay, onRetry }: DepartureNoticeProps) {
+export function DepartureNotice({ phase, world, name, onStay, onRetry, signing = false }: DepartureNoticeProps) {
   const failed = phase === 'failed';
-  const text = failed ? `${world.name} did not open. ${name} is back.` : phase === 'gone' ? `Opening ${world.name}…` : `${name} is off to ${world.name}…`;
+  const text = failed
+    ? `${world.name} did not open. ${name} is back.`
+    : phase === 'gone'
+      ? signing
+        ? `Approve the trip in your signer so ${name} comes along…`
+        : `Opening ${world.name}…`
+      : `${name} is off to ${world.name}…`;
   return (
     <div
       className={cn(
@@ -31,6 +39,7 @@ export function DepartureNotice({ phase, world, name, onStay, onRetry }: Departu
       aria-live="polite"
       data-testid="departure-notice"
       data-phase={phase}
+      data-signing={signing ? 'true' : undefined}
       data-world-travel="ignore"
     >
       <span className="size-8 shrink-0 rounded-full" style={{ background: `linear-gradient(135deg, ${world.colors[0]}, ${world.colors[1]})` }} aria-hidden />

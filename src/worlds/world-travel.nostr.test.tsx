@@ -16,17 +16,23 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NostrContext } from '@nostrify/react';
 import { NLogin, NostrLoginProvider, useNostrLogin } from '@nostrify/react/login';
-import { finalizeEvent, generateSecretKey, getPublicKey, type EventTemplate } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getPublicKey, verifyEvent, type EventTemplate } from 'nostr-tools/pure';
 import { nip19 } from 'nostr-tools';
-import { AUTO_RESEND_MS, BLOBBI_WORLD_TRAVEL_RELAYS, KIND_WORLD_LOCATION, WORLD_HOME, WORLD_PIXEL, buildWorldLocationTemplate, worldLocationStoreKey, type NostrEvent } from '@blobbi-kit/core';
+import { AUTO_RESEND_MS, BLOBBI_WORLD_TRAVEL_RELAYS, KIND_WORLD_LOCATION, WORLD_HOME, WORLD_PIXEL, buildWorldLocationTemplate, parseWorldLocation, worldLocationStoreKey, type NostrEvent } from '@blobbi-kit/core';
 
 import { ExternalEgressProvider } from '@/external-egress';
 import type { Blobbi } from '@/hooks/useBlobbis';
 import { IslandSafetyProvider } from '@/safety';
 import { useEffect } from 'react';
 
+import { DOCK_EVENTS } from '@/components/shell/dock-events';
+
 import { ENTRY_BEAT_MS } from './entry-arrival';
+import { setCapturedHandoff } from './handoff-capture';
 import { PRESENCE } from './useBlobbiPresence';
+import { DEPARTURE } from './useWorldDeparture';
+import { HANDOFF_PARAM, HANDOFF_SIGN_TIMEOUT_MS, decodeHandoff } from './world-travel-handoff';
+import { worldById } from './worlds';
 import { ISLAND_FOLLOW_AFTER } from './useIslandWorldTravel';
 import { WorldTravelProvider } from './WorldTravelProvider';
 import { setTravelMode, setTrustedInputCheck } from './travel-mode';
@@ -134,15 +140,19 @@ class FakePool {
 
 const sk = generateSecretKey();
 const PUBKEY = getPublicKey(sk);
+const otherSk = generateSecretKey();
+const OTHER = getPublicKey(otherSk);
 const NSEC = nip19.nsecEncode(sk);
 const D = `blobbi-${PUBKEY.slice(0, 12)}-0123456789`;
 const BLOBBI: Blobbi = { id: D, stage: 'baby', generation: 1, hunger: 80, happiness: 80, health: 100, hygiene: 80, energy: 80, experience: 0, careStreak: 0, baseColor: '#f7b267', secondaryColor: '#f4845f', eyeColor: '#2b2d42', name: 'Brook' };
 
 /** A World Location signed by the owner, dated `nowMs` (the kit's template takes milliseconds). */
-function locationIn(world: string, latest: NostrEvent | null = null, nowMs = Date.now() - 120_000): NostrEvent {
-  const template = buildWorldLocationTemplate({ owner: PUBKEY, d: D, world, latest: latest ? { id: latest.id, createdAt: latest.created_at, world: latest.tags.find((t) => t[0] === 'world')![1] } as never : null, now: nowMs });
-  return finalizeEvent({ kind: template.kind, content: template.content, tags: template.tags, created_at: template.created_at }, sk) as NostrEvent;
+function locationIn(world: string, latest: NostrEvent | null = null, nowMs = Date.now() - 120_000, key = sk, o: { owner?: string; d?: string } = {}): NostrEvent {
+  const template = buildWorldLocationTemplate({ owner: o.owner ?? PUBKEY, d: o.d ?? D, world, latest: latest ? { id: latest.id, createdAt: latest.created_at, world: latest.tags.find((t) => t[0] === 'world')![1] } as never : null, now: nowMs });
+  return finalizeEvent({ kind: template.kind, content: template.content, tags: template.tags, created_at: template.created_at }, key) as NostrEvent;
 }
+/** As it comes out of a fragment: JSON only (no library's cached "verified" mark travels with it). */
+const plain = <T,>(e: T): T => JSON.parse(JSON.stringify(e)) as T;
 
 /** What this device kept from an earlier session (the kit's own cache of the relays' last answer). */
 function keep(event: NostrEvent): void {
@@ -231,11 +241,17 @@ const journey = async () => {
 /** The gap after which the kit counts the next press as a new interaction. */
 const GAP = 1_100;
 
+const originalLocation = window.location;
+let assign: ReturnType<typeof vi.fn>;
+
 beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
   sessionStorage.clear();
   seen.length = 0;
+  setCapturedHandoff(null);
+  assign = vi.fn();
+  Object.defineProperty(window, 'location', { value: { ...originalLocation, assign }, writable: true, configurable: true });
   setTravelMode('nostr');
   // jsdom's events are never trusted: in this suite every press is the player's
   setTrustedInputCheck(() => true);
@@ -246,6 +262,8 @@ beforeEach(() => {
 afterEach(() => {
   setTravelMode(null);
   setTrustedInputCheck(null);
+  setCapturedHandoff(null);
+  Object.defineProperty(window, 'location', { value: originalLocation, writable: true, configurable: true });
   vi.useRealTimers();
   localStorage.clear();
   delete (window as { nostr?: unknown }).nostr;
@@ -564,5 +582,222 @@ describe('World Travel on Nostr, from the Island', () => {
     expect(status().dataset.travelHere).toBe('false');
     expect(world().dataset.presence).toBe('absent');
     expect(screen.getByTestId('world-travel-away')).toHaveTextContent('Brook is in Blobbi Home');
+  });
+});
+
+// ─── The hand-off: an explicit trip arrives by itself ───────────────────────
+
+describe('the World Travel hand-off, arriving at the Island', () => {
+  const handoffStatus = () => status().dataset.handoff;
+
+  it('from Blobbi Home with a signed move: nothing is signed here, the move is published once, and the Blobbi arrives once', async () => {
+    const pool = new FakePool();
+    const home = locationIn(WORLD_HOME);
+    pool.seed(home);
+    const signedAtHome = plain(locationIn(WORLD_ISLAND, home, Date.now()));
+    setCapturedHandoff(signedAtHome);
+    mount(pool, 'extension');
+    await settle();
+    expect(handoffStatus()).toBe('done');
+    expect(status().dataset.travelPlace).toBe(WORLD_ISLAND);
+    expect(status().dataset.travelChange).toMatch(/^live:/);
+    expect(locations(pool).map((e) => e.id)).toEqual([signedAtHome.id]);
+    for (const url of BLOBBI_WORLD_TRAVEL_RELAYS) expect(pool.relay(url).published.map((e) => e.id)).toEqual([signedAtHome.id]);
+    // The destination signed nothing: the move is the one the origin signed
+    expect(extension.signEvent).not.toHaveBeenCalled();
+    // On its way, then the teleport's arrival, once
+    await tick(50);
+    expect(world().dataset.presence === 'arriving' || world().dataset.presence === 'present').toBe(true);
+    await tick(ARRIVAL);
+    expect(world().dataset.presence).toBe('present');
+    expect(world().dataset.here).toBe('true');
+    expect(arrivals()).toBe(1);
+    expect(screen.queryByTestId('world-travel-away')).toBeNull();
+    // Play afterwards writes nothing more
+    fireEvent.pointerDown(world());
+    await tick(GAP);
+    fireEvent.pointerDown(world());
+    await tick(3_000);
+    expect(locations(pool)).toHaveLength(1);
+  });
+
+  it('the same hand-off again (a reload mid-arrival, a second tab): already the place, nothing more is published', async () => {
+    const pool = new FakePool();
+    const home = locationIn(WORLD_HOME);
+    pool.seed(home);
+    const signedAtHome = plain(locationIn(WORLD_ISLAND, home, Date.now()));
+    setCapturedHandoff(signedAtHome);
+    const first = mount(pool);
+    await settle();
+    expect(handoffStatus()).toBe('done');
+    expect(locations(pool)).toHaveLength(1);
+    // The page reloads before the arrival has played; the address carried the hand-off again
+    first.unmount();
+    seen.length = 0;
+    setCapturedHandoff(signedAtHome);
+    mount(pool);
+    await settle();
+    expect(handoffStatus()).toBe('done');
+    expect(status().dataset.travelPlace).toBe(WORLD_ISLAND);
+    await tick(ARRIVAL);
+    expect(world().dataset.presence).toBe('present');
+    expect(arrivals()).toBe(1);
+    await tick(5_000);
+    expect(locations(pool)).toHaveLength(1);
+  });
+
+  it('opened directly, with nothing in the address: nothing is published, the ordinary rule stands', async () => {
+    const pool = new FakePool();
+    pool.seed(locationIn(WORLD_HOME));
+    mount(pool);
+    await settle();
+    expect(handoffStatus()).toBeUndefined();
+    expect(locations(pool)).toHaveLength(0);
+    expect(screen.getByTestId('world-travel-away')).toHaveTextContent('Brook is in Blobbi Home');
+  });
+
+  it.each([
+    ['another World', (home: NostrEvent) => plain(locationIn(WORLD_PIXEL, home, Date.now())), 'wrong-world'],
+    ['another account', (home: NostrEvent) => plain(locationIn(WORLD_ISLAND, home, Date.now(), otherSk, { owner: OTHER, d: `blobbi-${OTHER.slice(0, 12)}-0123456789` })), 'wrong-account'],
+    ['another Blobbi', (home: NostrEvent) => plain(locationIn(WORLD_ISLAND, home, Date.now(), sk, { d: `blobbi-${PUBKEY.slice(0, 12)}-9999999999` })), 'wrong-blobbi'],
+    ['a tampered event', (home: NostrEvent) => ({ ...plain(locationIn(WORLD_ISLAND, home, Date.now())), content: 'x' }), 'invalid'],
+    ['an expired one', (home: NostrEvent) => plain(locationIn(WORLD_ISLAND, home, Date.now() - 200_000)), 'expired'],
+  ])('a hand-off for %s is dropped: nothing published, the Blobbi away with Bring here', async (_what, make, reason) => {
+    const pool = new FakePool();
+    const home = locationIn(WORLD_HOME, null, Date.now() - 400_000);
+    pool.seed(home);
+    setCapturedHandoff(make(home));
+    mount(pool);
+    await settle();
+    expect(handoffStatus()).toBe('dropped');
+    expect(status().dataset.handoffReason).toBe(reason);
+    expect(locations(pool)).toHaveLength(0);
+    expect(world().dataset.presence).toBe('absent');
+    expect(screen.getByTestId('world-travel-away')).toHaveTextContent('Brook is in Blobbi Home');
+    expect(screen.getByTestId('world-travel-call-here')).toBeInTheDocument();
+  });
+
+  it('a stale hand-off (the Blobbi moved again meanwhile) is dropped, and the newer place shown', async () => {
+    const pool = new FakePool();
+    const home = locationIn(WORLD_HOME, null, Date.now() - 400_000);
+    const signedAtHome = plain(locationIn(WORLD_ISLAND, home, Date.now() - 30_000));
+    // Another device took it to Pixel after the trip began
+    pool.seed(locationIn(WORLD_PIXEL, home, Date.now() - 10_000));
+    setCapturedHandoff(signedAtHome);
+    mount(pool);
+    await settle();
+    expect(handoffStatus()).toBe('dropped');
+    expect(status().dataset.handoffReason).toBe('stale');
+    expect(locations(pool)).toHaveLength(0);
+    expect(screen.getByTestId('world-travel-away')).toHaveTextContent('Brook is in Blobbi Pixel');
+  });
+
+  it('no relay accepting the hand-off: not here, said so with Try again; Try again sends the same event, once accepted it arrives', async () => {
+    const pool = new FakePool();
+    const home = locationIn(WORLD_HOME);
+    pool.seed(home);
+    const signedAtHome = plain(locationIn(WORLD_ISLAND, home, Date.now()));
+    setCapturedHandoff(signedAtHome);
+    pool.failWrites = true;
+    mount(pool, 'extension');
+    await settle();
+    expect(handoffStatus()).toBe('failed');
+    expect(locations(pool)).toHaveLength(0);
+    expect(world().dataset.presence).toBe('absent');
+    expect(status().dataset.travelHere).toBe('false');
+    const card = screen.getByTestId('world-travel-away');
+    expect(card).toHaveTextContent("Couldn't reach the Blobbi network");
+    pool.failWrites = false;
+    fireEvent.click(screen.getByTestId('world-travel-retry'));
+    await tick(100);
+    expect(handoffStatus()).toBe('done');
+    expect(locations(pool).map((e) => e.id)).toEqual([signedAtHome.id]);
+    expect(extension.signEvent).not.toHaveBeenCalled();
+    await tick(50);
+    await tick(ARRIVAL);
+    expect(world().dataset.presence).toBe('present');
+    expect(arrivals()).toBe(1);
+  });
+});
+
+describe('the World Travel hand-off, leaving the Island', () => {
+  const GOODBYE = DEPARTURE.noticeMs + DEPARTURE.waveMs;
+  const PIXEL_URL = worldById('pixel', {})!.url!;
+  async function leaveForPixel() {
+    act(() => void document.dispatchEvent(new CustomEvent(DOCK_EVENTS.openWorlds)));
+    fireEvent.click(screen.getByTestId('world-pixel'));
+    await tick(GOODBYE);
+    await tick(PRESENCE.departMs);
+    await tick(50);
+  }
+
+  it('the move to Pixel is signed here, once, on the choice (an extension asks); the page goes with it in the fragment; nothing is published', async () => {
+    const pool = new FakePool();
+    const here = locationIn(WORLD_ISLAND);
+    pool.seed(here);
+    mount(pool, 'extension');
+    await settle();
+    await tick(ARRIVAL);
+    expect(world().dataset.presence).toBe('present');
+    await leaveForPixel();
+    expect(extension.signEvent).toHaveBeenCalledTimes(1);
+    expect(extension.signEvent.mock.calls[0][0].kind).toBe(KIND_WORLD_LOCATION);
+    expect(assign).toHaveBeenCalledTimes(1);
+    const url = new URL(assign.mock.calls[0][0] as string);
+    expect(`${url.origin}${url.pathname}`).toBe(PIXEL_URL);
+    expect(url.search).toBe('');
+    const carried = decodeHandoff(new URLSearchParams(url.hash.slice(1)).get(HANDOFF_PARAM));
+    const loc = parseWorldLocation(carried!, { verify: (e) => verifyEvent(e as never) });
+    expect(loc).toMatchObject({ owner: PUBKEY, d: D, world: WORLD_PIXEL, from: WORLD_ISLAND, prev: here.id });
+    expect(loc!.createdAt).toBeGreaterThan(here.created_at);
+    // Signed, not published: the destination publishes
+    expect(locations(pool)).toHaveLength(0);
+  });
+
+  it('refused at the door: the page still goes, with nothing attached, and nothing is published', async () => {
+    const pool = new FakePool();
+    pool.seed(locationIn(WORLD_ISLAND));
+    extension.signEvent.mockRejectedValueOnce(new Error('User rejected'));
+    mount(pool, 'extension');
+    await settle();
+    await tick(ARRIVAL);
+    await leaveForPixel();
+    expect(extension.signEvent).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign.mock.calls[0][0]).toBe(PIXEL_URL);
+    expect(locations(pool)).toHaveLength(0);
+  });
+
+  it('a signer that never answers: the card says what it waits for; after the wait the page goes with nothing attached', async () => {
+    const pool = new FakePool();
+    pool.seed(locationIn(WORLD_ISLAND));
+    extension.signEvent.mockImplementationOnce(() => new Promise(() => {}));
+    mount(pool, 'extension');
+    await settle();
+    await tick(ARRIVAL);
+    await leaveForPixel();
+    expect(assign).not.toHaveBeenCalled();
+    expect(screen.getByTestId('departure-notice')).toHaveTextContent('Approve the trip in your signer');
+    await tick(HANDOFF_SIGN_TIMEOUT_MS + 100);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign.mock.calls[0][0]).toBe(PIXEL_URL);
+    // Still here afterwards (a navigation that never happened): the Blobbi comes back after the usual wait
+    await tick(DEPARTURE.failMs + 100);
+    expect(screen.getByTestId('departure-notice')).toHaveTextContent('did not open');
+  });
+
+  it('an nsec login signs silently: the page goes at once with the move attached', async () => {
+    const pool = new FakePool();
+    const here = locationIn(WORLD_ISLAND);
+    pool.seed(here);
+    mount(pool);
+    await settle();
+    await tick(ARRIVAL);
+    await leaveForPixel();
+    expect(assign).toHaveBeenCalledTimes(1);
+    const url = new URL(assign.mock.calls[0][0] as string);
+    const carried = decodeHandoff(new URLSearchParams(url.hash.slice(1)).get(HANDOFF_PARAM));
+    expect(parseWorldLocation(carried!, { verify: (e) => verifyEvent(e as never) })).toMatchObject({ world: WORLD_PIXEL, from: WORLD_ISLAND, prev: here.id });
+    expect(locations(pool)).toHaveLength(0);
   });
 });

@@ -49,6 +49,12 @@ export type EgressRequest =
       readonly url: string;
       /** The world's name, for the record; never the destination authority. */
       readonly label: string;
+      /**
+       * The World Travel hand-off (`src/worlds/world-travel-handoff.ts`), carried in the address's fragment and
+       * nowhere else: a World Location the player just signed, public data, which only the destination reads. It
+       * is the one thing that ever travels with this navigation, and it plays no part in the egress decision.
+       */
+      readonly fragment?: string;
     }
   | {
       readonly class: 'native-share';
@@ -210,8 +216,11 @@ export async function performEgress(request: EgressRequest, url?: string): Promi
     // The one same-tab navigation in the application: the Blobbi has already
     // left (its departure played before this was called), and the player
     // takes it to the next world. Nothing of this page is carried along: no
-    // key, no session, no query string, no fragment, only the checked
-    // address. The structural test holds `location.assign` to this file.
+    // key, no session, no query string, only the checked address and, when
+    // the player signed one, the World Travel hand-off in the fragment (a
+    // signed World Location, public data, never sent to any server). The
+    // structural test holds `location.assign` to this file.
+    if (request.fragment) url = `${url}#${request.fragment}`;
     try {
       window.location.assign(url);
       return true;
