@@ -14,7 +14,8 @@
  *   gone       navigation was asked for; if the page is still here after
  *              `failMs` (a blocked, refused or failed navigation), it comes
  *              back (arrives) and says so
- *   failed     the navigation did not happen: the Blobbi is back
+ *   failed     the navigation did not happen: the Blobbi is back, unless it
+ *              has already `left` (see below), in which case it stays gone
  *
  * Stay (`cancel`) ends it at any moment before navigation: the Blobbi is
  * simply here again. Reduced motion: no wave, the short fade. A Blobbi that
@@ -23,7 +24,13 @@
  *
  * `navigate` is the egress boundary's answer: it resolves `true` only when
  * the page was really asked to go. `false` (denied by the policy, a bad
- * address) is a failed navigation at once, with no wait.
+ * address) is a failed navigation at once, with no wait. Whatever the
+ * boundary does before asking (the move to the destination, signed and
+ * published) happens inside `navigate`, in the `gone` phase: after the last
+ * moment Stay could be pressed. When that move was published, `left` says
+ * so, and a navigation that then fails does not bring the Blobbi back (it is
+ * in the other world now; the notice says so and offers Try again, which
+ * asks the page to go once more, and Dismiss).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BlobbiPresenceState, BlobbiPresenceController } from './useBlobbiPresence';
@@ -41,6 +48,11 @@ export interface UseWorldDepartureOptions {
   reducedMotion: boolean;
   /** Ask the page to go (the egress boundary). Resolves whether it was asked. */
   navigate: (world: World & { url: string }) => Promise<boolean>;
+  /**
+   * The Blobbi has already left for the world (its move was published by the boundary): a navigation that fails
+   * leaves it gone instead of bringing it back, and so does a cached page shown again. Default: it has not.
+   */
+  left?: () => boolean;
   failMs?: number;
 }
 
@@ -51,18 +63,18 @@ export interface WorldDeparture {
   go: (world: OpenWorld) => boolean;
   /** Stay: ends the departure before the page goes. */
   cancel: () => void;
-  /** Try the same world again after a failed navigation. */
+  /** Try the same world again after a failed navigation (the page is asked again; a Blobbi that `left` stays gone). */
   retry: () => boolean;
 }
 
-export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, failMs = DEPARTURE.failMs }: UseWorldDepartureOptions): WorldDeparture {
+export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, left, failMs = DEPARTURE.failMs }: UseWorldDepartureOptions): WorldDeparture {
   const [phase, setPhase] = useState<DeparturePhase>('idle');
   const [world, setWorld] = useState<World | null>(null);
   const phaseRef = useRef<DeparturePhase>('idle');
   const worldRef = useRef<World | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const live = useRef({ presence, navigate, reducedMotion, failMs, canAct });
-  live.current = { presence, navigate, reducedMotion, failMs, canAct };
+  const live = useRef({ presence, navigate, reducedMotion, failMs, canAct, left });
+  live.current = { presence, navigate, reducedMotion, failMs, canAct, left };
 
   const set = useCallback((next: DeparturePhase) => {
     phaseRef.current = next;
@@ -79,6 +91,8 @@ export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, f
   const fail = useCallback(() => {
     if (phaseRef.current !== 'gone') return;
     set('failed');
+    // Already moved to the other world: it stays gone (the world's own sync shows it away; nothing undoes a trip)
+    if (live.current.left?.()) return;
     const c = live.current.presence.controller;
     if (c.getState() === 'absent' || c.getState() === 'departing') c.enter();
   }, [set]);
@@ -103,8 +117,8 @@ export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, f
             fail();
             return;
           }
-          // Asked (after whatever the boundary waited for, such as the signer's word on the hand-off): still here a
-          // while later, the navigation did not happen (blocked, offline, refused)
+          // Asked (after whatever the boundary waited for, such as the move to the destination being signed and
+          // published): still here a while later, the navigation did not happen (blocked, offline, refused)
           if (phaseRef.current !== 'gone') return;
           after(live.current.failMs, () => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
@@ -176,11 +190,14 @@ export function useWorldDeparture({ presence, canAct, reducedMotion, navigate, f
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => {
       if (!e.persisted) return;
-      const left = phaseRef.current === 'gone';
+      const gone = phaseRef.current === 'gone';
       clearTimers();
       const c = live.current.presence.controller;
-      // It had dissolved before the page went: it comes back (cancel only ends a journey still under way)
-      if (left && c.getState() === 'absent') c.enter();
+      // It had dissolved before the page went: it comes back (cancel only ends a journey still under way), unless its
+      // move was published, in which case where it is now is the world's own sync's to say
+      if (live.current.left?.()) {
+        /* stays as it is */
+      } else if (gone && c.getState() === 'absent') c.enter();
       else c.cancel();
       worldRef.current = null;
       setWorld(null);

@@ -20,14 +20,26 @@
  * the Blobbi here before the gate, and the room's presence (31950) waits
  * until it has formed (`blobbiHere`).
  *
- * The page's one way out of the Island runs through the egress boundary
- * (`requestEgress({ class: 'world-travel' })`), called only when the Blobbi
- * has finished leaving; the answer `false` (the policy refused, a bad
- * address) brings it back at once.
+ * LEAVING. A door in the Worlds sheet is the player's intention to take the
+ * Blobbi to that world, and Stay, offered while the goodbye scene plays, is
+ * the moment to change one's mind: so NOTHING is signed or published before
+ * that moment has passed. Only when the scene is over (the Blobbi has
+ * dissolved; `useWorldDeparture` calls `navigate`, where Stay is no longer
+ * offered) is the move made (`travel.departTo`: one World Location naming
+ * the destination, signed by the account and published from here,
+ * `world-travel-departure.ts`), and then, whatever it came to (moved,
+ * already there, declined, unreachable: the page goes either way), the
+ * page's one way out of the Island, the egress boundary
+ * (`requestEgress({ class: 'world-travel' })`, the plain address and nothing
+ * else), is asked. One event per trip. The answer `false` (the policy
+ * refused, a bad address), or a page still here afterwards, is a navigation
+ * that did not happen: when nothing was published the Blobbi comes back;
+ * when its move was published it has LEFT (`left`): nothing offers to undo
+ * the trip, the card says it has left but the world did not open, Try again
+ * asks the page to go once more (no new move), and Dismiss hides the card
+ * and leaves the kit's sync to show it away.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { NostrEvent, TravelPhase } from '@blobbi-kit/core';
-
 import { DOCK_EVENTS } from '@/components/shell/dock-events';
 import { useExternalEgress } from '@/external-egress';
 import { useIslandSafetyPolicy } from '@/safety';
@@ -44,7 +56,7 @@ import { useBlobbiPresence } from './useBlobbiPresence';
 import { useIslandWorldTravel, type IslandWorldTravel } from './useIslandWorldTravel';
 import { useWorldDeparture } from './useWorldDeparture';
 import { WorldTravelContext, type WorldTravelView } from './world-travel-context';
-import { handoffFragment } from './world-travel-handoff';
+import type { DepartureOutcome } from './world-travel-departure';
 import { worlds, type OpenWorld, type World } from './worlds';
 
 export interface WorldTravelProviderProps {
@@ -71,29 +83,40 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
   const [entry, setEntry] = useState<Entry>(() => (blobbi && entryArrivalEnabled() ? 'waiting' : 'none'));
   const heldSince = useRef(Date.now());
   const presence = useBlobbiPresence({ initial: entry === 'waiting' ? 'absent' : 'present', reducedMotion });
-  // The hand-off for the trip under way: the move the destination will publish, signed here on the door press
-  // (`travel.handoffFor`), awaited only when the page is about to go. Stay before then discards it unpublished
+  // The move of the trip under way (`travel.departTo`) is made inside `navigate`: when the goodbye scene is over and
+  // Stay is no longer offered, and before the page is asked to go. Once published, the Blobbi has `left`: a Try again
+  // after a navigation that did not happen asks the page to go once more and moves nothing again
   const travelRef = useRef<IslandWorldTravel | null>(null);
-  const handoffRef = useRef<Promise<NostrEvent | null> | null>(null);
+  const leftRef = useRef(false);
+  const [left, setLeft] = useState(false);
   const [signing, setSigning] = useState(false);
   const navigate = useCallback(
     async (world: World & { url: string }) => {
-      const pending = handoffRef.current;
-      handoffRef.current = null;
-      let event: NostrEvent | null = null;
-      if (pending) {
-        setSigning(!!travelRef.current?.signerPrompts);
+      if (!leftRef.current) {
+        const travel = travelRef.current;
+        setSigning(!!travel?.signerPrompts);
         try {
-          event = await pending;
+          const outcome: DepartureOutcome = (await travel?.departTo(world.travelId)) ?? 'read-only';
+          if (outcome === 'moved' || outcome === 'already-there') {
+            leftRef.current = true;
+            setLeft(true);
+          }
         } finally {
           setSigning(false);
         }
       }
-      return requestEgress({ class: 'world-travel', url: world.url, label: world.name, fragment: event ? handoffFragment(event) : undefined });
+      return requestEgress({ class: 'world-travel', url: world.url, label: world.name });
     },
     [requestEgress],
   );
-  const departure = useWorldDeparture({ presence, canAct: !!blobbi, reducedMotion, navigate });
+  const hasLeft = useCallback(() => leftRef.current, []);
+  const departure = useWorldDeparture({ presence, canAct: !!blobbi, reducedMotion, navigate, left: hasLeft });
+  // A trip over (dismissed, or a cached page shown again): the next one starts with nothing published
+  useEffect(() => {
+    if (departure.phase !== 'idle') return;
+    leftRef.current = false;
+    setLeft(false);
+  }, [departure.phase]);
   const departing = departure.phase !== 'idle' && departure.phase !== 'failed';
 
   const travel = useIslandWorldTravel({
@@ -143,10 +166,16 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
   const list = useMemo(() => worlds(), []);
   const onTravel = useCallback(
     (world: OpenWorld) => {
-      if (!departure.go(world)) return;
+      // A new trip (possibly from a failed one's card, to another world) makes its own move when its scene is over:
+      // cleared before `go`, which may ask to navigate at once (a Blobbi that is already gone performs no goodbye)
+      const wasLeft = leftRef.current;
+      leftRef.current = false;
+      if (!departure.go(world)) {
+        leftRef.current = wasLeft;
+        return;
+      }
       setWorldsOpen(false);
-      // Signed now, on the choice (an extension asks here, where the choice was made); carried once the Blobbi has left
-      handoffRef.current = travelRef.current?.handoffFor(world.travelId) ?? null;
+      setLeft(false);
     },
     [departure],
   );
@@ -159,13 +188,8 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
     [presence.state, presence.journey, departure.phase, blobbiHere, openWorlds],
   );
 
-  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene or the entry's wait.
-  // A hand-off under way is the Blobbi on its way; one no relay accepted is said as such, with Try again
-  const handoffComing = travel.handoff?.status === 'holding' || travel.handoff?.status === 'publishing';
-  const handoffFailed = travel.handoff?.status === 'failed';
-  const cardView = handoffComing && travel.view !== 'here' ? 'coming' : travel.view;
-  const cardTravel: TravelPhase | undefined = handoffFailed ? { phase: 'failed', reason: 'unreachable' } : travel.snapshot?.travel;
-  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && entry !== 'waiting' && (cardView !== 'here' || travel.unreachable);
+  // The away card speaks only for a Blobbi the session follows, and never over the goodbye scene or the entry's wait
+  const awayCard = travel.mode === 'nostr' && blobbi && departure.phase === 'idle' && entry !== 'waiting' && (travel.view !== 'here' || travel.unreachable);
   const departureRef = useRef(departure);
   departureRef.current = departure;
 
@@ -179,20 +203,17 @@ export function WorldTravelProvider({ blobbi, pubkey, busy = false, children }: 
       {(departure.phase !== 'idle' && departure.world) || awayCard ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-20 z-30 flex justify-center px-3 sm:bottom-24" data-testid="world-travel-notices">
           {departure.phase !== 'idle' && departure.world ? (
-            <DepartureNotice phase={departure.phase} world={departure.world} name={name} onStay={departure.cancel} onRetry={() => void departureRef.current.retry()} signing={signing} />
+            <DepartureNotice phase={departure.phase} world={departure.world} name={name} onStay={departure.cancel} onRetry={() => void departureRef.current.retry()} signing={signing} left={left} />
           ) : (
             <WorldAwayNotice
               name={name}
               place={travel.place}
-              view={cardView}
+              view={travel.view}
               nameOf={travel.nameOf}
               onCallHere={travel.callHere}
-              travel={cardTravel}
+              travel={travel.snapshot?.travel}
               playedThere={travel.snapshot?.presence.there ? true : undefined}
               onRetry={travel.retry}
-              noticed={travel.follow?.count ?? 0}
-              needed={travel.follow?.needed}
-              suspended={travel.follow?.suspended}
               unreachable={travel.unreachable}
               onRefresh={travel.refresh}
             />

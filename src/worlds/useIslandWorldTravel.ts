@@ -13,17 +13,32 @@
  *          `useWorldTravel`); this hook only wires the Island to it:
  *            - only a signed-in account has a session (the Island has no
  *              guests);
- *            - the player's act moves the Blobbi HERE: playing here while it
- *              is away, the THIRD meaningful interaction within a rolling
- *              20 s (`session.interact`: a trusted press or key in a visible,
- *              focused page, never one inside a dialog or a sheet, never a
- *              held key's auto-repeat), or the away card's "Call here"
- *              (explicit, at once). Never a load, a focus, a timer, a
- *              visibility change or a re-render;
- *            - LEAVING for another world writes nothing: the destination
- *              moves the Blobbi to itself when the player plays there (one
- *              move, one event, by the World the Blobbi goes to). This World
- *              departs when its stream brings that event;
+ *            - OPENING THE ISLAND IS THE PLAYER'S INTENTION TO BRING THE
+ *              BLOBBI HERE (revised 2026-10-19, `world-travel-departure.ts`):
+ *              once the account is signed in and the place is confirmed with
+ *              the relays, an away Blobbi is moved here at once with the
+ *              kit's own explicit move (`session.travel({ explicit: true })`:
+ *              one signature, one event), and the sync plays its arrival.
+ *              ONCE PER PAGE LOAD per Blobbi (`ArrivalIntent`, per document):
+ *              never again on a re-render, a remount, a reconnect, a relay
+ *              update or a focus or visibility change; a reload is a new page
+ *              and may move again; a tab that already decided never reclaims
+ *              the Blobbi by itself. And only while the page is FRESH: within
+ *              `ARRIVAL_INTENT_TTL_MS` of its navigation start and visible
+ *              (`pageIsFresh`); an old background tab shown later, or a page
+ *              left signing in longer, moves nothing by itself. Already here:
+ *              nothing is published. A signer that is missing, refuses or
+ *              does not answer within `SIGN_PROMPT_TIMEOUT_MS`
+ *              (`boundedSigner`: a late approval is dropped, never published)
+ *              moves nothing; the away card's "Bring here" (an explicit
+ *              `travel()`) is the retry;
+ *            - LEAVING for another world through the Worlds sheet moves the
+ *              Blobbi from here (`departTo`): one World Location naming the
+ *              destination, signed and published by this page before it goes.
+ *              The destination finds itself named and plays its arrival. This
+ *              World also departs when its stream brings a move made elsewhere;
+ *            - no input moves the Blobbi: a trusted press or key is activity
+ *              only (`session.noteActivity`, for the optional Active Presence);
  *            - while its place is not known yet (`resolution: 'pending'`: a
  *              fresh device, the first look under way) it is neither here nor
  *              away: the actor starts absent and the Island shows "looking
@@ -39,9 +54,10 @@
  *
  * Nothing else says where a Blobbi is: no cookie, no page storage of its own
  * (the kit keeps the last SIGNED location on this device, a cache of the
- * relays' answer, never a source of moves). The companion choice (11125
- * `current_companion`) is untouched: which Blobbi it is stays that tag's
- * business; this hook follows whatever Blobbi the Island has selected.
+ * relays' answer, never a source of moves), nothing in a URL. The companion
+ * choice (11125 `current_companion`) is untouched: which Blobbi it is stays
+ * that tag's business; this hook follows whatever Blobbi the Island has
+ * selected.
  */
 import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNostr } from '@nostrify/react';
@@ -56,7 +72,6 @@ import {
   registerWorld,
   storedWorldLocation,
   travelView,
-  type FollowState,
   type NostrEvent,
   type ShownBlobbi,
   type TravelResolution,
@@ -70,10 +85,9 @@ import { poolWorldTravelRelays, useWorldTravel, useWorldTravelSync, type TravelP
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-import { dropHandoff, peekHandoff } from './handoff-capture';
 import { isTrustedInput, travelMode, type TravelMode } from './travel-mode';
 import { PRESENCE, type BlobbiPresenceController } from './useBlobbiPresence';
-import { createHandoffArrival, signHandoff, usedHandoffs, type HandoffArrival, type HandoffState } from './world-travel-handoff';
+import { ArrivalIntent, autoArrivalDecision, boundedSigner, departTo as departFromHere, pageAgeMs, pageIsFresh, type DepartureOutcome } from './world-travel-departure';
 import { WORLD_FARM, WORLD_ISLAND, WORLD_RUMBLE } from './worlds';
 
 // This World, and the ones the kit does not know by name, for the words around a journey
@@ -82,13 +96,15 @@ registerWorld({ id: WORLD_FARM, name: 'Nostr Farm' });
 registerWorld({ id: WORLD_RUMBLE, name: 'Blobbi Rumble' });
 
 /**
- * How many meaningful interactions with the Island bring an away Blobbi over by themselves (the kit's `followAfter`;
- * its default is 3). Two: a player who opened the Island directly and plays a moment is followed without a button,
- * while one stray press still pulls nothing out of the World the Blobbi was just moved to (the kit's gap of 1 s
- * between counted inputs and its rolling window stay as they are). The owner's product decision of 2026-10-19,
- * meant for Blobbi Home and Pixel too; each app sets it through the same option.
+ * This page's one decision per Blobbi: opening the Island brings it here once. Per document, not per mount, so a
+ * remount of the provider (another route, a re-created tree) never asks again; a reload is a new page.
  */
-export const ISLAND_FOLLOW_AFTER = 2;
+let pageIntent = new ArrivalIntent();
+
+/** Test seam: as if a new page had loaded (its one decision per Blobbi not made yet). Never called by the app. */
+export function resetPageIntent(): void {
+  pageIntent = new ArrivalIntent();
+}
 
 /** The page's storage for the kit's session, every access guarded (a refusing browser keeps nothing). */
 const pageStore: WorldTravelStore = {
@@ -135,6 +151,8 @@ function canAskRelays(nostr: unknown): nostr is TravelPoolLike {
   return !!nostr && typeof (nostr as { relay?: unknown }).relay === 'function';
 }
 
+const pageVisible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
+
 export interface IslandWorldTravelOptions {
   /** The Blobbi on screen: its owner and its `d`. Null: none (signed out, none selected). */
   blobbi: { pubkey: string; d: string } | null;
@@ -166,8 +184,6 @@ export interface IslandWorldTravel {
   resolution: TravelResolution | 'none';
   /** Nostr: read the relays again now. */
   refresh(): void;
-  /** Nostr: the interactions counted toward following the player here (null: none, off). */
-  follow: FollowState | null;
   /** A place, for the words around a journey ("Blobbi Pixel", "another Blobbi world"). */
   nameOf(place: string): string;
   /** The away card's button: the player's explicit act. */
@@ -177,16 +193,11 @@ export interface IslandWorldTravel {
   /** Nostr only: the session's snapshot (null when off or without a session). */
   snapshot: WorldTravelSnapshot | null;
   /**
-   * Nostr only: the World Travel hand-off this page opened with (`world-travel-handoff.ts`), while it is held,
-   * published, failed (Try again) or until it was honoured or dropped; null without one.
+   * Leaving for `destination` (a World id): move the Blobbi there from here, now (`world-travel-departure.ts`): a
+   * fresh read, one World Location signed by the account (an extension may ask) and published to the travel relays.
+   * Resolves with what came of it, never throws; `read-only` when nothing can move (off, no session, signed out).
    */
-  handoff: HandoffState | null;
-  /**
-   * Leaving for `destination` (a World id): the World Location the destination will publish, signed by the account
-   * now (an extension may ask), or null when there is none to carry (off, no session, the place not confirmed,
-   * refused, too slow). Never publishes.
-   */
-  handoffFor(destination: string): Promise<NostrEvent | null>;
+  departTo(destination: string): Promise<DepartureOutcome>;
   /** The account's signer may ask the player (an extension, a remote signer), so a wait for it is worth a word. */
   signerPrompts: boolean;
   /** Nostr only: a hidden element stating place, phase and presence for tests and diagnostics. */
@@ -195,7 +206,7 @@ export interface IslandWorldTravel {
 
 const nameOfWorld = (place: string) => (place === WORLD_ISLAND ? 'the Island' : (knownWorld(place)?.name ?? 'another Blobbi world'));
 
-const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry' | 'handoffFor'> = {
+const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry' | 'departTo'> = {
   mode: 'off',
   place: WORLD_ISLAND,
   here: true,
@@ -203,10 +214,8 @@ const OFF: Omit<IslandWorldTravel, 'status' | 'refresh' | 'callHere' | 'retry' |
   view: 'here',
   unreachable: false,
   resolution: 'none',
-  follow: null,
   nameOf: nameOfWorld,
   snapshot: null,
-  handoff: null,
   signerPrompts: false,
 };
 
@@ -214,7 +223,7 @@ export function useIslandWorldTravel(o: IslandWorldTravelOptions): IslandWorldTr
   const [mode] = useState(travelMode);
   // Off: the same hook with no options, so no session, no sync, no listener and nothing signed; the Blobbi is here
   const travel = useNostrTravel(mode === 'nostr' ? o : null);
-  return mode === 'nostr' ? travel : { ...OFF, refresh: travel.refresh, callHere: travel.callHere, retry: travel.retry, handoffFor: travel.handoffFor, status: null };
+  return mode === 'nostr' ? travel : { ...OFF, refresh: travel.refresh, callHere: travel.callHere, retry: travel.retry, departTo: travel.departTo, status: null };
 }
 
 function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
@@ -228,10 +237,12 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
 
   const sessionRef = useRef<WorldTravelSession | null>(null);
   const lastInputAt = useRef<number | null>(null);
-  const latest = useRef({ user, login, owner });
-  latest.current = { user, login, owner };
+  const latest = useRef({ user, login, owner, d });
+  latest.current = { user, login, owner, d };
 
   const relays = useMemo(() => (canAskRelays(nostr) ? poolWorldTravelRelays(nostr, BLOBBI_WORLD_TRAVEL_RELAYS, { onReconnect: () => void sessionRef.current?.refresh() }) : null), [nostr]);
+  const relaysRef = useRef(relays);
+  relaysRef.current = relays;
   const options = useMemo<WorldTravelOptions | null>(() => {
     if (!owner || !d || !relays) return null;
     return {
@@ -242,18 +253,19 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
       verify: safeVerify,
       store: pageStore,
       lock: webLock(),
+      // The kit's own move (the opening's, Bring here) waits for the signer with a limit (`SIGN_PROMPT_TIMEOUT_MS`):
+      // a prompt left open longer ends it as declined (the away card offers its retry), and a late approval is
+      // dropped by the wrapper, so it never reaches the kit and is never published
       signer: () => {
         const { user: u, login: l, owner: own } = latest.current;
         if (!u || !l || u.pubkey !== own) return null;
-        return { mode: l.type === 'nsec' ? 'silent' : 'prompt', sign: (t) => u.signer.signEvent(t) as Promise<NostrEvent> };
+        return boundedSigner({ mode: l.type === 'nsec' ? 'silent' : 'prompt', sign: (t) => u.signer.signEvent(t) as Promise<NostrEvent> });
       },
       stillAccount: () => latest.current.user?.pubkey === owner && latest.current.owner === owner,
-      isActive: () => isPlayedNow({ visible: typeof document === 'undefined' || document.visibilityState !== 'hidden', lastInputAt: lastInputAt.current, now: Date.now() }),
+      isActive: () => isPlayedNow({ visible: pageVisible(), lastInputAt: lastInputAt.current, now: Date.now() }),
       // The arrival's motes gather before the body forms: started that much earlier, the body forms at the
       // session's `formAt` (the departure window's end, and no sooner than MIN_TRAVEL_MS after the act)
       arrivalLeadMs: PRESENCE.arriveLeadMs,
-      // Two meaningful interactions bring an away Blobbi over (the kit's count, gap and window otherwise unchanged)
-      followAfter: ISLAND_FOLLOW_AFTER,
       // The Island's room presence (31950) is its own fact; Active Presence stays off here
       presenceEnabled: false,
     };
@@ -288,18 +300,12 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     onJourney: o?.onJourney,
   });
 
-  // The player's act: a trusted press or key here is activity, and while the Blobbi is away an interaction toward
-  // bringing it over (the kit counts: the third within its window starts the move; a held key's repeat never counts)
-  const travelsRef = useRef(travels);
-  travelsRef.current = travels;
+  // A trusted press or key in a visible, focused page is activity (for the optional Active Presence); it never moves
+  // the Blobbi
   useEffect(() => {
     if (!session) return;
     const onInput = (e: Event) => {
-      const target = e.target as Element | null;
-      const inside = (sel: string) => !!(target && typeof target.closest === 'function' && target.closest(sel));
-      // A press inside a dialog, a sheet or a menu is not play in the world
-      if (inside('[data-world-travel="ignore"], [role="dialog"], [role="menu"], [data-overlay="true"]')) return;
-      const visible = document.visibilityState !== 'hidden';
+      const visible = pageVisible();
       let focused = visible;
       try {
         focused = document.hasFocus() || visible;
@@ -308,13 +314,7 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
       }
       if (!isMeaningfulInput({ trusted: isTrustedInput(e), visible, focused })) return;
       lastInputAt.current = Date.now();
-      // The away card's own button asks explicitly (its click); a press on it is not also a casual interaction
-      if (inside('[data-world-travel="explicit"]') || !travelsRef.current) {
-        session.noteActivity();
-        return;
-      }
-      // The kit ignores it while the place is not known, while it is here or on its way, after a refusal, read-only
-      void session.interact({ repeat: e.type === 'keydown' && !!(e as KeyboardEvent).repeat });
+      session.noteActivity();
     };
     window.addEventListener('pointerdown', onInput, { capture: true, passive: true });
     window.addEventListener('keydown', onInput, { capture: true, passive: true });
@@ -324,52 +324,39 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     };
   }, [session]);
 
-  // THE HAND-OFF this page opened with (an explicit trip from another world): held until this session has confirmed
-  // the place, then checked and published as signed (`createHandoffArrival`); the session's look then brings the
-  // arrival. One controller per session; the captured event is dropped once honoured or rejected
-  const relaysRef = useRef(relays);
-  relaysRef.current = relays;
-  const [handoff, setHandoff] = useState<HandoffState | null>(null);
-  const arrivalRef = useRef<HandoffArrival | null>(null);
-  const sessionKey = options ? `${options.owner}|${options.d}` : null;
+  // OPENING THE ISLAND brings an away Blobbi here, once per page and Blobbi: asked again whenever what is known
+  // changes (the first look answered, a refresh) or the page is shown; decided once (`pageIntent`), before acting
+  const [shown, reshow] = useState(0);
   useEffect(() => {
-    const event = peekHandoff();
-    if (!event || !sessionKey) return;
-    const arrival = createHandoffArrival({
-      event,
-      world: WORLD_ISLAND,
-      session: () => sessionRef.current,
-      relays: () => relaysRef.current,
-      verify: safeVerify,
-      lock: webLock(),
-      used: usedHandoffs(pageStore),
-      stillAccount: (owner) => latest.current.user?.pubkey === owner && latest.current.owner === owner,
-      onChange: (s) => {
-        setHandoff(s);
-        if (s.status === 'done' || s.status === 'dropped') dropHandoff();
-      },
+    if (typeof document === 'undefined') return;
+    const onVisibility = () => reshow((n) => n + 1);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+  const snapshotResolution = snapshot?.resolution ?? null;
+  const snapshotHere = snapshot?.here ?? null;
+  useEffect(() => {
+    if (!options || !session || !travels || snapshotResolution === null || snapshotHere === null) return;
+    const { owner: own, d: id } = options;
+    // The decision counts as OPENING the world only within `ARRIVAL_INTENT_TTL_MS` of the page's navigation start
+    // (`performance.now`) and while the page is visible: a background tab shown later than that, or a page left
+    // signing in for longer, moves nothing by itself (Bring here remains). A reload is a new document, fresh again; a
+    // back/forward-cache restore keeps the page's state, so its earlier decision stands
+    const decision = autoArrivalDecision({
+      consumed: pageIntent.consumed(own, id),
+      fresh: pageIsFresh(pageAgeMs()),
+      resolution: snapshotResolution,
+      here: snapshotHere,
+      visible: pageVisible(),
+      signer: !!options.signer?.(),
     });
-    arrivalRef.current = arrival;
-    setHandoff(arrival.state());
-    return () => {
-      arrival.dispose();
-      if (arrivalRef.current === arrival) arrivalRef.current = null;
-      setHandoff(null);
-    };
-  }, [sessionKey]);
-  // The session's snapshot changed (its first look answered, a refresh): the hand-off looks at it
-  useEffect(() => {
-    arrivalRef.current?.update();
-  }, [snapshot, session]);
+    if (decision === 'wait') return;
+    pageIntent.consume(own, id);
+    if (decision === 'arrive') void session.travel({ explicit: true });
+  }, [options, session, travels, snapshotResolution, snapshotHere, shown]);
 
   const callHere = useCallback(() => void sessionRef.current?.travel({ explicit: true }), []);
   const retry = useCallback(() => {
-    // A hand-off no relay accepted: the same signed event again, before anything the session itself tried
-    const arrival = arrivalRef.current;
-    if (arrival && arrival.state().status === 'failed') {
-      void arrival.retry();
-      return;
-    }
     const s = sessionRef.current;
     if (!s) return;
     const phase = s.snapshot().travel;
@@ -380,15 +367,24 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     } else void s.travel({ explicit: true });
   }, []);
   const refresh = useCallback(() => void sessionRef.current?.refresh(), []);
-  // Leaving for another world: the move the destination will publish, signed here on the player's choice
-  const handoffFor = useCallback(async (destination: string): Promise<NostrEvent | null> => {
+  // Leaving for another world: the move from here to it, signed and published by this page (the origin)
+  const departTo = useCallback(async (destination: string): Promise<DepartureOutcome> => {
     const s = sessionRef.current;
-    const { user: u, login: l, owner: own } = latest.current;
-    if (!s || !u || !l || !own) return null;
-    const snap = s.snapshot();
-    // Only a place the relays confirmed is worth signing over: a kept or unknown place may be stale
-    if (snap.owner !== own || snap.resolution !== 'confirmed') return null;
-    return signHandoff({ owner: own, d: snap.d, destination, canonical: snap.location, sign: (t) => u.signer.signEvent(t) as Promise<NostrEvent>, verify: safeVerify });
+    const r = relaysRef.current;
+    const { user: u, login: l, owner: own, d: id } = latest.current;
+    if (!s || !r || !u || !l || !own || !id) return 'read-only';
+    const result = await departFromHere({
+      owner: own,
+      d: id,
+      destination,
+      session: s,
+      relays: r,
+      signer: { mode: l.type === 'nsec' ? 'silent' : 'prompt', sign: (t) => u.signer.signEvent(t) as Promise<NostrEvent> },
+      verify: safeVerify,
+      lock: webLock(),
+      stillAccount: () => latest.current.user?.pubkey === own && latest.current.owner === own,
+    });
+    return result.outcome;
   }, []);
   const signerPrompts = !!login && login.type !== 'nsec';
 
@@ -406,12 +402,8 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     'data-travel-location': snapshot?.location?.id,
     'data-travel-resolution': resolution,
     'data-travel-view': view,
-    'data-follow-count': snapshot ? String(snapshot.follow.count) : '0',
-    'data-follow-suspended': snapshot?.follow.suspended ? 'true' : undefined,
     'data-presence-status': snapshot?.presence.status ?? 'off',
     'data-presence-there': snapshot?.presence.there?.world,
-    'data-handoff': handoff?.status,
-    'data-handoff-reason': handoff?.reason,
   });
 
   return {
@@ -424,13 +416,11 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
     unreachable: resolution === 'unreachable',
     resolution,
     refresh,
-    follow: snapshot?.follow ?? null,
     nameOf: nameOfWorld,
     callHere,
     retry,
     snapshot,
-    handoff,
-    handoffFor,
+    departTo,
     signerPrompts,
     status,
   };

@@ -10,7 +10,7 @@ and how the Island knows where it is. Code: `src/worlds/`.
 | What | The player takes their Blobbi to another Blobbi app. | Where the Blobbi IS, as a fact every Blobbi app and device agrees on. |
 | How | The Blobbi says goodbye and dissolves (the Home's teleport), then THIS tab goes to the world's checked address. | The kit's World Travel protocol: the Blobbi's World Location (kind 31126) on the shared travel relays. |
 | Always on? | Yes. | No: `VITE_BLOBBI_WORLD_TRAVEL=nostr` (the owner's release decision; the kinds are experimental). |
-| Writes | Nothing. | One event per move, by the world the Blobbi moves TO, on the player's act. |
+| Writes | Nothing. | One event per move: opening a world is the player's act. A door moves the Blobbi to the world it opens (the origin writes); opening a world directly moves it there (the destination writes). |
 
 The same split, the same registry shape, the same departure and the same
 switch as Blobbi Home (`nostr-pet/src/features/worlds`, `src/features/presence`)
@@ -33,8 +33,10 @@ and Blobbi Pixel, so the three apps feel like one connected experience.
    another world, starts nothing more. **Stay** ends it at any moment before
    the page goes: the Blobbi is simply here again. Reduced motion: no wave, a
    450 ms fade.
-3. Only once the Blobbi is gone does the page go: `requestEgress({ class:
-   'world-travel', url })`, the egress boundary's one same-tab navigation
+3. Only once the Blobbi is gone is the move to that world made (World
+   Travel on: `departTo`, below; nothing is signed or published while Stay is
+   still offered), and once it has come to an end does the page go:
+   `requestEgress({ class: 'world-travel', url })`, the egress boundary's one same-tab navigation
    (`window.location.assign`, held to `src/external-egress/egress.ts` by a
    structural test). Nothing travels with it: no key, no session, no query
    string, no fragment. The other app signs the player in its own way.
@@ -43,8 +45,12 @@ and Blobbi Pixel, so the three apps feel like one connected experience.
    the card names the world and Stay is the moment to change one's mind.
 4. If the page is still here 5 s later (blocked, offline), or the boundary
    refused, the Blobbi comes back (arrives) and the card says so, with Try
-   again. Back from the other world with the browser's Back (a cached page)
-   brings it back too.
+   again; when its move WAS published it has left for that world already, so
+   nothing offers to undo the trip: the card says it has left but the world
+   did not open, Try again asks the page to go once more (no new move), and
+   Dismiss hides the card and leaves the kit's sync to show it away. Back
+   from the other world with the browser's Back (a cached page) brings it
+   back too (unless it had left).
 
 While the Blobbi is leaving, on its way, or away, the room publishes **no
 presence** (kind 31950) for it (`MultiplayerLayer`'s `blobbiAway`): a Blobbi
@@ -86,7 +92,7 @@ Off by default. On (`VITE_BLOBBI_WORLD_TRAVEL=nostr`, or on a dev server
   is at the default World, its Home. A newer signed event always wins over
   the device's kept copy.
 - **Here, away, looking, coming.** Away: the Blobbi is not drawn and a card
-  says where it is ("Brook is in Blobbi Pixel"), with **Call here**. Looking
+  says where it is ("Brook is in Blobbi Pixel"), with **Bring here**. Looking
   (a fresh device, the first look under way): "Looking for Brook…", the
   Blobbi neither here nor away. Coming (a move here under way): "Brook is on
   the way…", then the teleport's arrival. The first answer is settled, never
@@ -108,40 +114,54 @@ Off by default. On (`VITE_BLOBBI_WORLD_TRAVEL=nostr`, or on a dev server
   is true only for a Blobbi that has formed. Ordinary re-renders replay
   nothing (the gate is decided once); a Blobbi still forming or dissolving
   is not walked (`MovableBlobbi`).
-- **The player's act moves it HERE**, and nothing else does: **Bring here**
-  (explicit, at once), or the **second** trusted press or key in the world
-  within a rolling 20 s (`session.interact` with `followAfter:
-  ISLAND_FOLLOW_AFTER` = 2; the kit's gap of 1 s between counted inputs, its
-  window and its suspension after a refusal are unchanged; presses inside a
-  dialog, a sheet or the away card itself never count; a held key's repeat
-  never counts). One signed World Location naming `blobbi-island`, from the
-  Blobbi's previous World, with `prev`, to every travel relay. An nsec login
-  signs silently; an extension or a remote signer may ask ("Approve the
-  request…"). A refusal, unreachable relays and a stale move are said in the
-  card, with Try again; after a refusal only the button moves it.
-- **The away card** says where the Blobbi is ("Brook is in Blobbi Pixel"),
-  offers **Bring Brook here** as the one obvious action, and shows the taps
-  counted so far toward it coming over by itself (dots, `needed` from the
-  session's `follow`), in plain words and with no protocol in them.
-- **Leaving writes nothing.** Going to Pixel through the Worlds sheet does
-  not move the Blobbi's location: Pixel moves it to itself when the player
-  plays there (its own third interaction or explicit call), and the Island
-  departs when its stream brings that event, after its own moment is over
-  (a departure waits while the Island is `busy`). Returning to the Island
-  works the same way, the other way round.
-- **An explicit trip arrives by itself (the hand-off,
-  `docs/world-travel-handoff.md`).** Going to another world through the
-  Worlds sheet signs the move the destination will publish, here, on the
-  door press (an extension asks here), and carries it in the address's
-  fragment; the destination checks it (signature, account, Blobbi,
-  destination, origin, freshness, the canonical previous location) and
-  publishes it as signed, then its teleport plays the arrival. The
-  destination never signs because of a URL. A refusal or a slow signer
-  leaves without it, and the ordinary rule stands over there. Arriving here
-  the same way from Home: `useIslandWorldTravel` holds the hand-off until
-  the first look confirmed the place, publishes it once, and the live
-  change brings the arrival; the away card says "on the way" meanwhile, and
-  "Try again" resends the same event if no relay accepted it.
+- **Opening the Island IS the player's intention to bring the Blobbi here**
+  (revised 2026-10-19, `docs/world-travel-handoff.md`,
+  `world-travel-departure.ts`). Once the account is signed in and the first
+  look has **confirmed** the place with the relays, an away Blobbi is moved
+  here at once with the kit's own explicit move (`session.travel({ explicit:
+  true })`): one signed World Location naming `blobbi-island`, from the
+  Blobbi's previous World, with `prev`, to every travel relay; then the
+  teleport's arrival. Already here: nothing is published. **Once per page
+  load** per Blobbi (`autoArrivalDecision` over a per-document
+  `ArrivalIntent`): never again on a re-render, a remount, a reconnect, a
+  relay update or a focus or visibility change; a reload is a new page and
+  may move again; a tab that already decided never reclaims the Blobbi by
+  itself (two open tabs never ping-pong). And only while the page is FRESH:
+  within `ARRIVAL_INTENT_TTL_MS` (5 min) of its navigation start
+  (`performance.now`) and visible; an old background tab shown later, or a
+  page left signing in for longer, moves nothing by itself (Bring here
+  remains; a back/forward-cache restore keeps the page's state, so its
+  earlier decision stands). An nsec login signs silently; an extension or a
+  remote signer may ask ("Approve the request…") and gets
+  `SIGN_PROMPT_TIMEOUT_MS` (60 s, `boundedSigner`): a prompt left open
+  longer ends the move as declined, and a late approval is dropped, never
+  published. A signer that is missing or refuses moves nothing; unreachable
+  relays move nothing. No input moves the Blobbi: a trusted press or key is
+  activity only (`session.noteActivity`).
+- **The away card** says where the Blobbi is ("Brook is in Blobbi Pixel")
+  and offers **Bring Brook here** as the one obvious action and the retry
+  (an explicit `travel()`); a refusal, unreachable relays and a stale move
+  are said in the card, with Try again. In plain words and with no protocol
+  in them.
+- **Leaving moves the Blobbi to the world it opens.** A door in the Worlds
+  sheet plays the goodbye, with Stay offered throughout; only when the Blobbi
+  is gone (`useWorldDeparture` calls `navigate`) does the Island make the move,
+  `travel.departTo(destination)`, so nothing is signed or published before
+  the last moment Stay can be pressed: the Island reads the authoritative location again
+  (`session.refresh`), publishes nothing if the Blobbi is already there,
+  else signs ONE World Location naming the destination (the kit's
+  `buildWorldLocationTemplate`, `departureWindowS: 0`) and publishes it to
+  the travel relays, waiting for one acceptance or a bounded timeout; a
+  signature slower than 2 s re-reads first and never overwrites a newer
+  location (`stale`). The page goes once the move has come to an end,
+  whatever it came to (moved, already there, declined, unreachable: the page
+  goes either way, to the plain address); one event per trip, and a Try
+  again after a navigation that did not happen never makes a second one.
+  The destination reads the latest event, finds itself named, publishes
+  nothing and plays its arrival. A move made elsewhere (another device,
+  another world) departs the Blobbi here when the stream brings it, after
+  the Island's own moment is over (a departure waits while the Island is
+  `busy`).
 - **Active Presence (kind 21124) stays off.** The Island's room presence
   (31950) is a different fact (a position inside a room, for this World's
   players); the two never stand in for each other. Turning Active Presence
@@ -153,7 +173,7 @@ Off by default. On (`VITE_BLOBBI_WORLD_TRAVEL=nostr`, or on a dev server
 
 For browser tests, a hidden `[data-testid="world-travel-status"]` carries the
 same attributes as Blobbi Home's (`data-travel-place`, `data-travel-here`,
-`data-travel-resolution`, `data-travel-view`, `data-follow-count`, …).
+`data-travel-resolution`, `data-travel-view`, `data-travel-phase`, …).
 
 ## Tests
 
@@ -169,23 +189,37 @@ same attributes as Blobbi Home's (`data-travel-place`, `data-travel-here`,
   entry (once, the room silent until it has formed), the dock, the sheet, the
   doors, the identity carried, repeated clicks, Stay, a family experience,
   the same-tab navigation through the boundary.
-- `world-travel-handoff.test.ts`: the hand-off's payload, address, signing,
-  every check, the ids honoured, the arrival controller.
+- `world-travel-departure.test.ts`: the shared departure rules over a
+  pretend session (`departTo`: a fresh read, one event naming the
+  destination with `from` and `prev`, already there, the place not
+  confirmed, a refusal, a slow signer, read-only, another key, stale after a
+  slow signature, no relay accepting, one move at a time, the kit's lock
+  name), the one decision per page load (`autoArrivalDecision`,
+  `ArrivalIntent`), and the leftovers of older builds dropped.
 - `world-travel.nostr.test.tsx`: end to end over an in-memory relay with real
-  signatures: the hand-off from Home (one publication, nothing signed here,
-  one arrival; again after a reload; wrong World, account, Blobbi,
-  tampered, expired, stale; relays refusing then Try again) and to Pixel
-  (signed once at the door, carried, nothing published; refused and silent
-  signers); away at load with nothing written; a stale kept "here" never
-  drawn before the relays answer; confirmed here arriving exactly once;
-  unreachable relays (nothing kept: the default World; kept here: it
-  stands); Bring here publishing exactly one 31126 and the arrival; two taps
-  at once making one move; two meaningful interactions publishing one move
-  (the card counting the first, a press on the card not counting); an
-  extension's refusal (nothing written, following suspended, Try again); a
-  relay failure (the same signed event resent once they are back); a reload
-  mid-arrival (one event, one arrival); a live move elsewhere departing it;
-  the default World.
+  signatures: opening the Island with the Blobbi in Pixel, in Home or with
+  no location at all publishes one 31126 naming the Island after the first
+  confirmed look, and the arrival plays once; already here publishes nothing;
+  re-renders, remounts, the minute's look, play and visibility toggles never
+  publish a second event; a stale kept "here" is never drawn before the
+  relays answer; two relays that disagree resolve to the newest, named as
+  `prev`; a hidden tab acts on first show; unreachable relays publish
+  nothing, and Bring here works once they answer; an extension's refusal
+  (nothing written, nothing asked again by play, re-renders or a remount,
+  Bring here asking once more, two taps one move); a signer that never
+  answers (nothing published); every relay refusing (the same signed event
+  resent once they are back); a reload mid-arrival (one event, one arrival);
+  a live move elsewhere departing it, never reclaimed by itself; a signer
+  that never answers is declined after `SIGN_PROMPT_TIMEOUT_MS` and its late
+  approval dropped, Bring here moving it once; an old page (older than
+  `ARRIVAL_INTENT_TTL_MS`) signs and publishes nothing by itself. Leaving:
+  Island → Pixel signs and publishes nothing while Stay is offered, then one
+  31126 naming Pixel from the Island BEFORE the page goes to the plain
+  address (an extension asked once; an nsec login silent); Stay during the
+  goodbye publishes nothing; a published move whose navigation did not
+  happen is not undone (has left, Try again, Dismiss); a refusal, a signer
+  that never answers (the bounded wait) and relays refusing still let the
+  page go, with nothing published.
 - `src/external-egress/egress.world-travel.test.ts` and `boundaries.test.ts`:
   the class, the capability, the one owner of `location.assign`.
 
@@ -200,21 +234,19 @@ same attributes as Blobbi Home's (`data-travel-place`, `data-travel-here`,
    browser's Back: the Blobbi is here again.
 3. World Travel on (a dev server: set `localStorage['blobbi:world-travel:v1']
    = 'nostr'` and reload, or build with `VITE_BLOBBI_WORLD_TRAVEL=nostr`),
-   with Blobbi Home or Pixel built the same way: play the Blobbi in Pixel
-   (its interactions, or its call), come to the Island: nothing is drawn
-   until the relays answer, then it is away and the card says "in Blobbi
-   Pixel" with Bring here; press it (an extension asks): the arrival plays;
-   the Pixel tab, still open, departs it. Or tap twice in the world, a
-   second apart: the card counts the first, the second brings it. Then the
-   other way. Reload while it is here: the arrival plays once on entry.
-   `world-travel-status` shows place, resolution and view.
+   with Blobbi Home or Pixel built the same way: open Pixel (the Blobbi is
+   moved there), then open the Island directly (the address bar): nothing is
+   drawn until the relays answer, then the Island moves the Blobbi here (an
+   extension asks once) and the arrival plays; the Pixel tab, still open,
+   departs it. Then the Worlds sheet, Visit Blobbi Pixel: the goodbye, one
+   event naming Pixel published from the Island, the page goes, Pixel plays
+   the arrival. Reload while it is here: the arrival plays once on entry,
+   nothing is published. `world-travel-status` shows place, resolution,
+   phase and view.
 4. A family experience (`src/safety`): every door closed, "Not available".
 
 ## Limitations
 
-- A trip from Pixel has no hand-off yet (Pixel has no doors to other
-  worlds): the Blobbi comes over on the second interaction or with Bring
-  here.
 - Rumble is not open today (502); it opens by changing its address in
   `worlds.ts` once a check finds it answering.
 - World Travel with Nostr Farm and Blobbi Rumble needs those apps to join the

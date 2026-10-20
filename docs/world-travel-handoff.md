@@ -1,155 +1,106 @@
-# World Travel hand-off: an explicit trip arrives by itself
+# World Travel: the departure and the arrival (revised)
 
-**Status: IMPLEMENTED 2026-10-19 (option C of the design review), in Blobbi
-Island, Blobbi Home and Blobbi Pixel.** No change to `@blobbi-kit`, no new
-event kind, no change to the World Location (kind 31126) or to who writes
-it. The code is one file kept identical in the three apps:
+**Status: IMPLEMENTED 2026-10-19, in Blobbi Island, Blobbi Home and Blobbi
+Pixel.** This file keeps its old name because the other apps' docs point to
+it; the URL-fragment hand-off it used to describe is **gone**. No change to
+`@blobbi-kit`, no new event kind, no change to the World Location (kind
+31126). The code is one file kept identical in the three apps:
 
-| App | Shared module | Origin (signs) | Destination (publishes) |
+| App | Shared module | Origin (a door) | Destination (direct opening) |
 |---|---|---|---|
-| Island | `src/worlds/world-travel-handoff.ts` | `WorldTravelProvider` + `useIslandWorldTravel.handoffFor` | `useIslandWorldTravel` |
-| Home | `src/features/presence/world-travel-handoff.ts` | `BlobbiOverview`, `RoomPreviewPage` + `useHomeTravel.handoffFor` | `useHomeTravel` |
-| Pixel | `src/game/travel-handoff.ts` | none (Pixel has no doors to other worlds yet) | `playground/main.ts` |
+| Island | `src/worlds/world-travel-departure.ts` | `WorldTravelProvider` + `useIslandWorldTravel.departTo` | `useIslandWorldTravel` (the auto arrival) |
+| Home | `src/features/presence/world-travel-departure.ts` | its Worlds surfaces + `useHomeTravel` | `useHomeTravel` |
+| Pixel | `src/game/world-travel-departure.ts` | its travel menu | `travel-host.ts` (`autoArrive`) |
 
-## 1. The problem it solves
+## 1. The rule
 
-When the player chooses another world in the Worlds sheet, the origin plays
-its departure and the page goes to the destination. Before the hand-off the
-destination could not tell that arrival from the player simply opening it,
-so it treated the Blobbi as away until the player acted again (two
-interactions, or "Bring here"). The protocol forbids anything else on load
-(kit `WORLD-TRAVEL.md` §2, §4, §6): a World Location is signed only on the
-player's act, and nothing signs on load.
+**Opening a world is itself the player's intention to bring their Blobbi
+there.** No extra interaction is asked for, and nothing rides in a URL.
 
-## 2. How it works
+1. **An explicit trip** from the Worlds sheet (Island → Pixel, Island →
+   Home, …): the **origin** moves the Blobbi. It reads the authoritative
+   World Location again (`session.refresh`, every relay merged by NIP-01);
+   if the Blobbi is already in the destination it signs and publishes
+   nothing; else it signs ONE kind 31126 naming the destination (the kit's
+   `buildWorldLocationTemplate`: `prev`, `from`, the ordering rules, the
+   same schema and World ids as every other move, `departureWindowS: 0`),
+   publishes it to the travel relays from the origin, waits for one
+   acceptance or a bounded timeout (`departTo`), THEN navigates to the
+   destination's plain address through the egress boundary
+   (`requestEgress({ class: 'world-travel', url, label })`, no fragment).
+   The destination reads the latest event on load, finds itself named,
+   publishes nothing and plays its arrival. One event per trip.
+2. **A direct opening** (the address bar, a bookmark, a reload, a new tab)
+   with the Blobbi elsewhere: the **destination** moves the Blobbi to
+   itself. Once the account is signed in and the kit session's resolution is
+   `confirmed`, it starts the kit's own explicit move (`session.travel({
+   explicit: true })`): one signature, one event, then the existing arrival
+   through the existing sync. Already here: nothing is published. **Once per
+   page load** per (owner, d) (`autoArrivalDecision` over a per-document
+   `ArrivalIntent`): never again on React re-renders, remounts, reconnects,
+   relay updates or focus/visibility changes; a tab opened hidden acts the
+   first time it becomes visible; a reload is a new page and may move again;
+   a tab that already decided never reclaims the Blobbi by itself (two open
+   tabs never ping-pong). If the signer is unavailable, refuses or never
+   answers, nothing moves; the away card's **Bring here** is the retry (an
+   explicit `travel()`).
 
-1. **The door press is the act.** The origin prepares the World Location the
-   destination would write, with the kit's own template builder for the
-   destination World (`world = <destination>`, `from` = the canonical World,
-   `prev` = the canonical event's id, `created_at` after it), from the
-   canonical location it has **confirmed** with the relays (a kept or
-   unknown place is never signed over). It asks the account's signer for
-   it (`signHandoff`): an nsec login and Pixel's vault sign silently; an
-   extension or a remote signer prompts here, where the choice was made.
-   The signing starts on the press, while the goodbye plays; the page
-   waits for the answer at most `HANDOFF_SIGN_TIMEOUT_MS` (20 s), with the
-   departure card saying "Approve the trip in your signer".
-2. **The origin publishes nothing.** A refusal, a timeout, Stay, or a
-   navigation that fails leaves no event anywhere: the signed event is
-   discarded, and an unsent one expires (§3).
-3. **The event rides in the fragment** of the one same-tab navigation:
-   `https://pixel.blobbi.pet/#blobbi-travel=v1.<base64url JSON>`. A
-   fragment is never sent to a server or a log. Island's egress boundary
-   carries it for the `world-travel` class only (`egress.ts`, its one
-   exception to "nothing carried"); Home's departure appends it to its
-   `location.assign`.
-4. **The destination removes it from the address before anything else
-   runs** (`handoff-capture.ts`, imported first in `main.tsx`; Pixel reads
-   it next to its own hash parameters). A reload, Back or a copied address
-   never presents it again. It is kept in memory only.
-5. **The destination holds it until its own session has confirmed the
-   canonical location** with the relays (`resolution: 'confirmed'`; while
-   relays are unreachable it keeps holding, and the kit keeps looking). It
-   then takes the Web Lock the kit's own moves take, asks the session to
-   look once more, and checks everything (§3). Only then does it publish
-   the event **as signed** to the travel relays, mark the id used, and ask
-   the session to look again. The kit learns its new canonical location as
-   a **live** change, so the World's teleport plays the arrival: Island's
-   and Home's presence sync `enter()`, Pixel's held entry or its sync.
-6. **The destination signs nothing**, ever, because of a URL. If any check
-   fails it says nothing and the ordinary rule stands: the Blobbi follows
-   the player's play (two interactions) or "Bring here".
+## 2. Invariants kept from the kit's own moves
 
-## 3. What the destination checks (every one, else dropped)
+- A fresh read before deciding; a place not confirmed by any relay
+  (`pending`, `cached`, `unreachable`) is never signed over.
+- Never over a newer location: a signature slower than 2 s (a person
+  answered a prompt) re-reads first, and a newer location met meanwhile is
+  `stale` (nothing is sent), or `already-there`.
+- One move per Blobbi at a time, in the page (`inFlight`) and across tabs
+  (the kit's Web Lock name `blobbi-world-travel:<owner>:<d>`).
+- The account is still the signed-in one before signing and before sending;
+  an event signed for another key is `wrong-account`.
+- Events are trusted for their signature, never for their relay. `moved` on
+  the first relay acceptance; the kit's sessions heal lagging relays.
+- The signer wait is bounded (`DEPART_SIGN_TIMEOUT_MS`, 20 s) and so is each
+  relay's acceptance (`DEPART_PUBLISH_TIMEOUT_MS`, 4 s): the page always
+  goes, with the Blobbi moved or not.
 
-| Check | Protects against |
-|---|---|
-| The signature verifies and the event is a valid World Location (`parseWorldLocation` with `verify`) | Forged or tampered events, malformed payloads |
-| The author is the signed-in account | Someone else's hand-off, a shared or captured link opened by another player |
-| `d` and `a` name the Blobbi this World shows | Another Blobbi of the same account |
-| `world` is this World | A hand-off meant for another destination |
-| `from` names another World | A move "here from here" |
-| `created_at` at most 120 s old (`HANDOFF_MAX_AGE_S`) | Old links, replays after the fact |
-| `created_at` at most 60 s ahead (`HANDOFF_MAX_AHEAD_S`) | A far-future event that would pin relays (kit §7b) |
-| `prev` is the id of the canonical location just read, `from` is that location's World, and the event replaces it by NIP-01 | A stale intention: the Blobbi moved meanwhile (another device, another tab), or the relays know something newer |
-| The id is not already the canonical location (then nothing to do) | A reload or a second tab publishing twice |
-| The id was not honoured before on this device (`usedHandoffs`, localStorage, 10 min) | Replay within the freshness window |
-| The account is still the signed-in one, right before sending | An account switch during the wait |
+## 3. What a door does, in the Island
 
-Publishing holds the kit's lock name `blobbi-world-travel:<owner>:<d>`, so
-it never overlaps `session.travel()` in this page or another tab. It
-publishes to every travel relay with a 4 s timeout each; one acceptance is
-a move (as for the kit); none is `failed`, said with "Try again", which
-sends the same signed event again (never a second signature). Island and
-Home show the failure in the away card; Pixel says it once and tries once
-more by itself after 5 s. "Bring here" stays available throughout and goes
-through the kit's own `travel()`, which looks first and finds
-`already-here` if the hand-off did land.
+`WorldTravelProvider.onTravel` only starts the goodbye scene; Stay is offered
+throughout it and publishes nothing. When the scene is over (phase `gone`,
+where Stay is no longer offered), `useWorldDeparture` calls the provider's
+`navigate`, which makes the move there and then,
+`await travel.departTo(world.travelId)` (an extension asks at this moment),
+and whatever its outcome (`moved`, `already-there`, `declined`,
+`unreachable`, `stale`, `read-only`, `wrong-account`, `busy`) calls
+`requestEgress` with the plain address: one event per trip. The departure
+card says "Approve the trip in your signer…" while a prompting signer is
+waited for. A `moved` or `already-there` outcome marks the Blobbi as having
+LEFT: should the navigation then not happen, the card says it has left but
+the world did not open, Try again asks the page to go once more without a
+new move, and Dismiss hides the card without bringing the Blobbi back (the
+kit's sync shows it away). With World Travel off, `departTo` resolves
+`read-only` and the page simply goes.
 
-## 4. Security assumptions, plainly
+The destination's one automatic arrival is also bounded in time: the page
+must be fresh (`pageIsFresh(pageAgeMs())`, within `ARRIVAL_INTENT_TTL_MS` of
+its navigation start) and visible, so an old background tab shown later
+moves nothing by itself; and the kit's own move waits for the signer through
+`boundedSigner` (`SIGN_PROMPT_TIMEOUT_MS`, 60 s): a prompt left open longer
+is declined and a late approval is dropped, never published.
 
-- **A link proves nothing; the owner's signature does.** Any link can
-  carry a payload. Only the owner's key can produce an event that passes
-  the checks, and that key is asked only on the door press.
-- **What a captured link can do:** publish the owner's own decision, once,
-  while fresh and still the newest. That is the move the owner chose. It
-  cannot move anyone else's Blobbi, cannot move it anywhere else, cannot
-  make the destination sign anything, and cannot undo a later move.
-- **The public key is in the fragment**, inside the signed event. It is the
-  owner's public identity, already on the relays, and the fragment stays in
-  the browser (history of the destination's address entry until
-  `replaceState`, never a server). No private key, no signer credential, no
-  session travels.
-- **The kit's invariants hold** although the destination publishes outside
-  `session.travel()`: one move in flight per Blobbi (the lock), a fresh look
-  before writing and never over a newer location (the `prev`/NIP-01
-  checks), only to move the Blobbi to this World, the same signed event on
-  a retry, the owner still signed in when sending. The kit then heals
-  lagging relays with the canonical event on its own looks, as for any
-  move.
-- **Nothing signs on load.** The destination's signer is never called by
-  the hand-off. An extension user is prompted exactly once per trip, at the
-  origin, in context.
-- **Refusal is honoured silently.** A player who refuses the prompt still
-  travels (the page goes); the Blobbi stays where it was, and the
-  destination offers "Bring here".
+## 4. Older builds' leftovers
+
+An address that still carries the old fragment (`#blobbi-travel=…`, a link
+made by an earlier build) has it removed **unread** before the app runs
+(`dropLegacyHandoff` in `src/main.tsx`); the ids older builds kept in
+`localStorage` (`blobbi:world-travel:handoff-used:v1`) are deleted
+(`dropLegacyHandoffStore`). Nothing in a URL moves a Blobbi any more, and the
+egress request has no field to attach anything to.
 
 ## 5. Tests
 
-- Island: `world-travel-handoff.test.ts` (payload, address, signing,
-  every check, used ids, the arrival controller over a pretend session) and
-  `world-travel.nostr.test.tsx` (Home → Island over the in-memory relays
-  with real signatures: one publication, nothing signed at the destination,
-  one arrival; the same hand-off again; direct opening; wrong World,
-  account, Blobbi, tampered, expired, stale; relays refusing then Try
-  again; Island → Pixel: signed once at the door, carried in the fragment,
-  nothing published; refusal and a silent signer: the page goes without it).
-- Home: `world-travel-handoff.test.ts` (the same unit suite) and
-  `WorldTravel.test.tsx` (Island → Home over the real router: arrival
-  without a signature; departure to Island carrying the fragment; refusal).
-- Pixel: `tests/travel-handoff.test.ts` (the unit suite plus the controller
-  over the kit's real session: a live change and no signature at the
-  destination; relays refusing then retry).
-
-## 6. Deployment order
-
-Readers before writers, so no deploy ever sends a fragment a destination
-does not understand: every app's reader is inert until an origin sends
-one, and an unknown fragment is ignored by the older builds anyway.
-1. Pixel (reader only).
-2. Island (reader, then its writer is in the same build; it only matters
-   once Home and Pixel read).
-3. Home (reader and writer).
-Any order works without harm; this one means no trip is ever "half" done.
-
-## 7. Limitations
-
-- Pixel has no departure UI, so a trip from Pixel still ends with two
-  interactions or "Bring here" at the destination.
-- A hand-off is honoured only once the destination's relays answered; with
-  all relays down it is held until they do or it expires, then the ordinary
-  rule applies.
-- The two alternatives considered (an unsigned fragment with a referrer
-  check; the origin publishing the move itself) were rejected: the first
-  would let the destination sign on load, the second changes who writes a
-  move in the protocol.
+- Island: `src/worlds/world-travel-departure.test.ts` (the shared rules over
+  a pretend session; the same file as Pixel's `tests/world-travel-departure.test.ts`)
+  and `src/worlds/world-travel.nostr.test.tsx` (end to end over in-memory
+  relays with real signatures; see `docs/world-travel.md`).
+- Home and Pixel: their copies of the departure test and their end-to-end
+  suites.

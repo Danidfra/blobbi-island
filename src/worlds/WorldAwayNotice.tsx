@@ -1,12 +1,13 @@
 /**
  * The words around World Travel, in a child's words and with no protocol in
- * them: while the Blobbi is in another Blobbi world, a card says where it is,
- * offers to bring it here (the one obvious action), and shows how close it is
- * to coming over by itself (the taps counted toward the follow threshold);
- * while its place is being looked up, it says so; when no relay answered, an
- * honest line with a way to look again. The card also says what a call is
- * doing: waiting for the player's approval, on the way, or what went wrong,
- * with Try again. With World Travel off it never shows.
+ * them: while the Blobbi is in another Blobbi world (opening the Island
+ * brings it here by itself; the card shows when that could not happen: a
+ * request not approved, no relay reached, no signer), a card says where it is
+ * and offers to bring it here (the one obvious action, and the retry); while
+ * its place is being looked up, it says so; when no relay answered, an honest
+ * line with a way to look again. The card also says what a call is doing:
+ * waiting for the player's approval, on the way, or what went wrong, with Try
+ * again. With World Travel off it never shows.
  */
 import { Globe2, RotateCcw } from 'lucide-react';
 import type { TravelPhase } from '@blobbi-kit/core';
@@ -27,12 +28,6 @@ export interface WorldAwayNoticeProps {
   /** Whether its World shows recent play ("playing there right now", or else "last there"). */
   playedThere?: boolean;
   onRetry?: () => void;
-  /** Interactions counted toward it following the player here (0 or unset: none). */
-  noticed?: number;
-  /** How many bring it over by themselves. */
-  needed?: number;
-  /** Following by playing is off for now (the last request was not approved): only the button brings it. */
-  suspended?: boolean;
   /** No relay answered the first look; the place shown is the kept one, or here by default. */
   unreachable?: boolean;
   onRefresh?: () => void;
@@ -54,18 +49,7 @@ const PILL = 'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.
 const PRIMARY = cn(PILL, 'min-h-10 justify-center bg-island-ocean px-5 text-sm text-white shadow-[0_6px_14px_-8px_hsl(var(--island-ink)/0.7)]');
 const QUIET = cn(PILL, 'self-start bg-island-ink/10');
 
-/** The taps counted so far, as dots: filled for each one, empty for the rest. */
-function Noticed({ count, needed }: { count: number; needed: number }) {
-  return (
-    <span className="inline-flex items-center gap-1" aria-hidden data-testid="world-travel-noticed" data-count={count} data-needed={needed}>
-      {Array.from({ length: needed }, (_, i) => (
-        <span key={i} className={cn('size-2 rounded-full', i < count ? 'bg-island-ocean' : 'bg-island-ink/20')} />
-      ))}
-    </span>
-  );
-}
-
-export function WorldAwayNotice({ name, place, view, nameOf, onCallHere, travel, playedThere, onRetry, noticed = 0, needed = 2, suspended = false, unreachable = false, onRefresh }: WorldAwayNoticeProps) {
+export function WorldAwayNotice({ name, place, view, nameOf, onCallHere, travel, playedThere, onRetry, unreachable = false, onRefresh }: WorldAwayNoticeProps) {
   const phase = travel?.phase ?? 'idle';
   if (view === 'looking') {
     return (
@@ -85,7 +69,6 @@ export function WorldAwayNotice({ name, place, view, nameOf, onCallHere, travel,
     const where = nameOf(place);
     const working = phase === 'checking' || phase === 'signing' || phase === 'publishing';
     const failed = travel?.phase === 'failed' ? travel.reason : null;
-    const left = Math.max(needed - noticed, 0);
     const detail =
       phase === 'signing'
         ? `Approve the request to bring ${name} here.`
@@ -95,11 +78,7 @@ export function WorldAwayNotice({ name, place, view, nameOf, onCallHere, travel,
             ? (FAILED[failed] ?? FAILED.failed)(name, where)
             : unreachable
               ? `Couldn't reach the Blobbi network: this is where ${name} was last seen.`
-              : suspended
-                ? `Tap the button when you want ${name} here.`
-                : noticed > 0
-                  ? `${name} noticed you! ${left === 1 ? 'One more tap' : `${left} more taps`} and it comes over.`
-                  : `Keep playing and ${name} comes over by itself, or bring it now.`;
+              : `Tap the button when you want ${name} here.`;
     return (
       <div className={CARD} role="status" data-testid="world-travel-away" data-place={place} data-travel-phase={phase} data-world-travel="explicit">
         <p className="flex items-center gap-1.5 text-sm font-bold">
@@ -107,7 +86,6 @@ export function WorldAwayNotice({ name, place, view, nameOf, onCallHere, travel,
           {playedThere === false ? `${name} was last in ${where}` : `${name} is in ${where}${playedThere ? ' right now' : ''}`}
         </p>
         <p className="flex items-center gap-2 text-xs text-island-ink-soft" data-testid="world-travel-detail">
-          {!failed && !working && !unreachable && !suspended && <Noticed count={noticed} needed={needed} />}
           <span>{detail}</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">

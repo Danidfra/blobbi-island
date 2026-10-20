@@ -3,7 +3,8 @@
  * out, the same address rules, no confirmation dialog (the departure's Stay
  * is the moment to change one's mind), and the one same-tab navigation in
  * the application: this tab goes, and the request carries nothing but the
- * checked address.
+ * checked address (no query string, no fragment: where the Blobbi is travels
+ * on Nostr, never in the URL).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -65,8 +66,11 @@ describe('performing a world trip', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('carries nothing of this page along: the address it was given, exactly', async () => {
-    await performEgress(TRIP, 'https://pixel.blobbi.pet/');
+  it('carries nothing of this page along: the address it was given, exactly, and nothing a request could add to it', async () => {
+    // A request has no field for a fragment or anything else to attach (the hand-off of older builds is gone)
+    const request = { ...TRIP, fragment: 'blobbi-travel=v1.abc' } as EgressRequest;
+    await performEgress(request, 'https://pixel.blobbi.pet/');
+    expect(assign).toHaveBeenCalledWith('https://pixel.blobbi.pet/');
     const url = new URL(assign.mock.calls[0][0] as string);
     expect(url.search).toBe('');
     expect(url.hash).toBe('');

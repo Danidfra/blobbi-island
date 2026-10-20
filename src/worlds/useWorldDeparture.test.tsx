@@ -3,7 +3,8 @@
  * once and only after the Blobbi has gone, repeated taps ignored, Stay at
  * any moment before, reduced motion without the wiggle, an immediate go when
  * no Blobbi can act, a refused navigation brought back at once, and a
- * navigation that never happened brought back after the wait.
+ * navigation that never happened brought back after the wait; a Blobbi
+ * that has already left (its move published) never brought back by one.
  */
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,14 +17,14 @@ const pixel = worldById('pixel', {})!;
 const home = worldById('home', {})!;
 const closed: OpenWorld = { ...pixel, url: null, open: false };
 
-function setup({ canAct = true, reducedMotion = false, went = true, delayMs = 0 } = {}) {
+function setup({ canAct = true, reducedMotion = false, went = true, delayMs = 0, left = undefined as (() => boolean) | undefined } = {}) {
   const navigate = vi.fn<(world: World & { url: string }) => Promise<boolean>>(async () => {
     if (delayMs) await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
     return went;
   });
   const hook = renderHook(() => {
     const presence = useBlobbiPresence({ reducedMotion });
-    const departure = useWorldDeparture({ presence, canAct, reducedMotion, navigate });
+    const departure = useWorldDeparture({ presence, canAct, reducedMotion, navigate, left });
     return { presence, departure };
   });
   return { hook, navigate };
@@ -143,7 +144,7 @@ describe('leaving for another world', () => {
     expect(hook.result.current.presence.state).toBe('present');
   });
 
-  it('the boundary may take a moment before asking (the signer\'s word on the hand-off): the wait for a navigation starts once it has', async () => {
+  it('the boundary may take a moment before asking (the move to the destination, signed and published first): the wait for a navigation starts once it has', async () => {
     const { hook, navigate } = setup({ delayMs: 3_000 });
     act(() => void hook.result.current.departure.go(pixel));
     await tick(DEPARTURE.noticeMs + DEPARTURE.waveMs + PRESENCE.departMs);
@@ -157,6 +158,34 @@ describe('leaving for another world', () => {
     expect(hook.result.current.departure.phase).toBe('gone');
     await tick(100);
     expect(hook.result.current.departure.phase).toBe('failed');
+  });
+
+  it('a Blobbi that has already left (its move published by the boundary) is not brought back by a navigation that never happened: Try again asks the page to go at once, with no goodbye, and dismissing leaves it gone', async () => {
+    const left = vi.fn(() => false);
+    const { hook, navigate } = setup({ left });
+    act(() => void hook.result.current.departure.go(pixel));
+    await tick(DEPARTURE.noticeMs + DEPARTURE.waveMs + PRESENCE.departMs);
+    expect(hook.result.current.departure.phase).toBe('gone');
+    expect(navigate).toHaveBeenCalledTimes(1);
+    // The boundary published the move before asking the page to go
+    left.mockReturnValue(true);
+    await tick(DEPARTURE.failMs + 1);
+    expect(hook.result.current.departure.phase).toBe('failed');
+    expect(hook.result.current.presence.state).toBe('absent');
+    act(() => void expect(hook.result.current.departure.retry()).toBe(true));
+    expect(hook.result.current.departure.phase).toBe('gone');
+    await tick(0);
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(hook.result.current.presence.state).toBe('absent');
+    await tick(DEPARTURE.failMs + 1);
+    expect(hook.result.current.departure.phase).toBe('failed');
+    expect(hook.result.current.presence.state).toBe('absent');
+    act(() => hook.result.current.departure.cancel());
+    expect(hook.result.current.departure.phase).toBe('idle');
+    expect(hook.result.current.departure.world).toBeNull();
+    await tick(10_000);
+    expect(hook.result.current.presence.state).toBe('absent');
+    expect(navigate).toHaveBeenCalledTimes(2);
   });
 
   it('coming back from the other world with Back (a cached page) restores the Blobbi here', async () => {
