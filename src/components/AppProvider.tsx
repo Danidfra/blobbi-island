@@ -11,6 +11,8 @@ import {
 import { applyThemeBackground, applyThemeFonts } from '@/lib/island-theme-media';
 import { useIslandSafetyPolicy } from '@/safety';
 import { isEgressAllowed } from '@/external-egress';
+import { BLOBBI_RELAY_URL } from '@/relays/relay-routing';
+import { migrateRelayConfig, sameRelaySelection } from '@/relays/relay-config';
 
 interface AppProviderProps {
   children: ReactNode;
@@ -48,7 +50,15 @@ const AppConfigSchema: z.ZodType<AppConfig> = z.object({
   */
   themeChosenAt: z.number().finite().optional().catch(undefined),
   themeChosenBy: z.string().optional().catch(undefined),
-  relayUrl: z.string().url().catch('wss://relay.ditto.pub'),
+  relayUrl: z.string().url().catch(BLOBBI_RELAY_URL),
+  /*
+    Absent in every configuration written before the primary/secondary split.
+    `migrateRelayConfig` (run on every load, below) turns that shape into the
+    current one: the relay the player had becomes a secondary, so nothing they
+    own stops being read.
+  */
+  secondaryRelays: z.array(z.string()).optional().catch(undefined),
+  relayConfigVersion: z.number().optional().catch(undefined),
 });
 
 export function AppProvider(props: AppProviderProps) {
@@ -67,7 +77,7 @@ export function AppProvider(props: AppProviderProps) {
       serialize: JSON.stringify,
       deserialize: (value: string) => {
         const parsed = JSON.parse(value);
-        return AppConfigSchema.parse(parsed);
+        return migrateRelayConfig(AppConfigSchema.parse(parsed));
       }
     }
   );
@@ -92,9 +102,14 @@ export function AppProvider(props: AppProviderProps) {
   const updateConfig = (updater: (currentConfig: AppConfig) => AppConfig) => {
     setConfig((currentConfig) => {
       const next = updater(currentConfig);
-      if (next.relayUrl === currentConfig.relayUrl) return next;
+      if (sameRelaySelection(next, currentConfig)) return next;
       if (isEgressAllowed(policy, 'relay-management')) return next;
-      return { ...next, relayUrl: currentConfig.relayUrl };
+      return {
+        ...next,
+        relayUrl: currentConfig.relayUrl,
+        secondaryRelays: currentConfig.secondaryRelays,
+        relayConfigVersion: currentConfig.relayConfigVersion,
+      };
     });
   };
 

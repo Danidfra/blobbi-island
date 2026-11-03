@@ -29,6 +29,11 @@ export const OFFICIAL_ITEM_ISSUER_PUBKEY =
  * currently-configured relay) so definitions resolve even if the user's
  * selected relay does not carry them. This is a relay-orchestration concern
  * that the framework-free package intentionally does not handle.
+ *
+ * This list is an ATTESTED record (the publication runbooks verify each relay
+ * on it), so `wss://relay.blobbi.pet` is not added here until the definitions
+ * have actually been published there. The catalog still asks it: it is the
+ * player's primary relay, which every catalog read includes.
  */
 export const OFFICIAL_ITEM_RELAYS: readonly string[] = [
   'wss://relay.ditto.pub',

@@ -55,8 +55,19 @@ export interface AppConfig {
    * both of which yield to the account, the safe direction.
    */
   themeChosenBy?: string;
-  /** Selected relay URL */
+  /**
+   * The PRIMARY relay: asked first and written first. `wss://relay.blobbi.pet`
+   * unless the player picked another. See `src/relays/relay-config.ts`.
+   */
   relayUrl: string;
+  /**
+   * Relays read and written beside the primary: the ones earlier builds used,
+   * plus any the player added. Absent only in a configuration written before
+   * the field existed, which `migrateRelayConfig` fills in.
+   */
+  secondaryRelays?: string[];
+  /** Which shape the relay fields are in; absent before the primary/secondary split. */
+  relayConfigVersion?: number;
 }
 
 export interface AppContextType {

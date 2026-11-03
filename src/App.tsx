@@ -24,6 +24,8 @@ import { PhotoBoothProvider } from '@/contexts/PhotoBoothContext';
 import { DebugOverlaysProvider } from '@/contexts/DebugOverlaysContext';
 import { IslandSafetyProvider } from '@/safety';
 import { ExternalEgressProvider } from '@/external-egress';
+import { BLOBBI_RELAY_URL } from '@/relays/relay-routing';
+import { DEFAULT_RELAY_CONFIG } from '@/relays/relay-config';
 import AppRouter from './AppRouter';
 
 const head = createHead({
@@ -47,10 +49,12 @@ const queryClient = new QueryClient({
 const defaultConfig: AppConfig = {
   // Island theme id; see src/lib/island-themes.ts.
   theme: DEFAULT_ISLAND_THEME_ID,
-  relayUrl: "wss://relay.ditto.pub",
+  // The Blobbi relay as primary, the relays earlier builds used as secondaries.
+  ...DEFAULT_RELAY_CONFIG,
 };
 
 const presetRelays = [
+  { url: BLOBBI_RELAY_URL, name: 'Blobbi' },
   { url: 'wss://relay.ditto.pub', name: 'Ditto' },
   { url: 'wss://relay.primal.net', name: 'Primal' },
 ];
