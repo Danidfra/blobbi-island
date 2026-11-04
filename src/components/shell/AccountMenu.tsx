@@ -27,7 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { RelaySelector } from "@/components/RelaySelector";
+import { RelaySettings } from "@/components/RelaySettings";
 import { CurrentBlobbiDisplay } from "@/components/blobbi/CurrentBlobbiDisplay";
 import LoginDialog from "@/components/auth/LoginDialog";
 import SignupDialog from "@/components/auth/SignupDialog";
@@ -335,7 +335,7 @@ function AccountMenuBody({
 
       <SettingsSection label="Network" icon={<Settings />}>
         <div className="px-1.5 py-1">
-          <RelaySelector className="w-full" />
+          <RelaySettings />
         </div>
       </SettingsSection>
 

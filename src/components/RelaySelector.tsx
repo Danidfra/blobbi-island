@@ -18,6 +18,7 @@ import { useState } from "react";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useIslandSafetyPolicy } from "@/safety";
 import { isEgressAllowed } from "@/external-egress";
+import { withPrimary } from "@/relays/relay-config";
 
 interface RelaySelectorProps {
   className?: string;
@@ -30,7 +31,8 @@ export function RelaySelector(props: RelaySelectorProps) {
   
   const selectedRelay = config.relayUrl;
   const setSelectedRelay = (relay: string) => {
-    updateConfig((current) => ({ ...current, relayUrl: relay }));
+    // The relay this replaces stays, as a secondary: what was saved there keeps being read.
+    updateConfig((current) => withPrimary(current, relay));
   };
 
   const [open, setOpen] = useState(false);
