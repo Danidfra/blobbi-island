@@ -59,7 +59,7 @@
  * that tag's business; this hook follows whatever Blobbi the Island has
  * selected.
  */
-import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createElement, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useNostrLogin } from '@nostrify/react/login';
 import { verifyEvent } from 'nostr-tools/pure';
@@ -81,7 +81,10 @@ import {
   type WorldTravelSnapshot,
   type WorldTravelStore,
 } from '@blobbi-kit/core';
-import { poolWorldTravelRelays, useWorldTravel, useWorldTravelSync, type TravelPoolLike } from '@blobbi-kit/react';
+import { useWorldTravel, useWorldTravelSync, type TravelPoolLike } from '@blobbi-kit/react';
+import { islandWorldTravelRelays } from '@/relays/travel-relays';
+import { IslandRelayPool } from '@/relays/island-relay-pool';
+import { AppContext } from '@/contexts/AppContext';
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
@@ -240,7 +243,10 @@ function useNostrTravel(o: IslandWorldTravelOptions | null): IslandWorldTravel {
   const latest = useRef({ user, login, owner, d });
   latest.current = { user, login, owner, d };
 
-  const relays = useMemo(() => (canAskRelays(nostr) ? poolWorldTravelRelays(nostr, BLOBBI_WORLD_TRAVEL_RELAYS, { onReconnect: () => void sessionRef.current?.refresh() }) : null), [nostr]);
+  // The kit's list, plus the Island's primary relay (whose empty answer alone is never taken as "no location")
+  // (read from the context directly: a host with no AppProvider keeps the kit's list alone)
+  const primaryRelay = useContext(AppContext)?.config.relayUrl ?? BLOBBI_WORLD_TRAVEL_RELAYS[0];
+  const relays = useMemo(() => (canAskRelays(nostr) ? islandWorldTravelRelays(nostr, primaryRelay, BLOBBI_WORLD_TRAVEL_RELAYS, { onReconnect: () => void sessionRef.current?.refresh(), mayCarryTo: (relay) => nostr instanceof IslandRelayPool && nostr.mayCarryTo(relay) }) : null), [nostr, primaryRelay]);
   const relaysRef = useRef(relays);
   relaysRef.current = relays;
   const options = useMemo<WorldTravelOptions | null>(() => {
