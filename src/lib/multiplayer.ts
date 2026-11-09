@@ -921,6 +921,26 @@ export type PresenceValidation =
   | { ok: true }
   | { ok: false; reason: string };
 
+/**
+ * The largest presence `content` accepted, in UTF-8 bytes, checked before
+ * `JSON.parse`. A real presence is a few hundred bytes (state, location,
+ * anchor, an optional goal and a few short ids); 4 KiB leaves ample room for
+ * additive fields while keeping a hostile multi-megabyte payload from ever
+ * reaching the parser on the hot subscription path.
+ */
+export const PRESENCE_CONTENT_MAX_BYTES = 4096;
+
+/**
+ * How far past its own `created_at` a presence may claim to live. The writer
+ * stamps `expiration = now + EXP_SECONDS` and the signer stamps `created_at`
+ * at or after that moment, so an honest event is always within
+ * `EXP_SECONDS`; the slack absorbs second rounding. Both values come from the
+ * SIGNER's clock, so a remote player whose clock is off is not affected.
+ */
+const PRESENCE_EXPIRATION_SLACK_SECONDS = 5;
+
+const utf8 = new TextEncoder();
+
 export function explainPresenceEvent(event: NostrEvent): PresenceValidation {
   try {
     if (event.kind !== 31950) return { ok: false, reason: 'kind != 31950' };
@@ -940,10 +960,36 @@ export function explainPresenceEvent(event: NostrEvent): PresenceValidation {
     if (!locationTag) return { ok: false, reason: 'missing loc tag' };
     if (!expirationTag) return { ok: false, reason: 'missing expiration' };
 
+    // OWNERSHIP. The `a` tag names the Blobbi this presence walks around as,
+    // and the renderer fetches that Blobbi's look and name from the pubkey
+    // inside it. Only its owner may claim it: otherwise anyone could appear
+    // as somebody else's Blobbi, with its name. The island's own writer
+    // always builds `a` from the signing pubkey (`useIslandPresence`).
+    let owner: string;
+    try {
+      owner = parseA(aTag).pubkey;
+    } catch {
+      return { ok: false, reason: 'invalid a tag' };
+    }
+    if (owner !== event.pubkey) return { ok: false, reason: 'a tag pubkey != event pubkey' };
+
     const expiration = parseInt(expirationTag);
     if (Number.isNaN(expiration)) return { ok: false, reason: 'expiration NaN' };
     // The one presence-lifetime comparison in the app. See {@link isPresenceAlive}.
     if (!isPresenceAlive(expiration)) return { ok: false, reason: 'expired' };
+    if (expiration > event.created_at + EXP_SECONDS + PRESENCE_EXPIRATION_SLACK_SECONDS) {
+      return { ok: false, reason: 'expiration too far past created_at' };
+    }
+
+    // Size before parse: a cheap length bound first (UTF-8 never takes fewer
+    // bytes than the string has UTF-16 code units), then the exact count.
+    if (typeof event.content !== 'string') return { ok: false, reason: 'content not a string' };
+    if (
+      event.content.length > PRESENCE_CONTENT_MAX_BYTES ||
+      utf8.encode(event.content).length > PRESENCE_CONTENT_MAX_BYTES
+    ) {
+      return { ok: false, reason: 'content too large' };
+    }
 
     // Parse content
     const content: PresenceContent = JSON.parse(event.content);
