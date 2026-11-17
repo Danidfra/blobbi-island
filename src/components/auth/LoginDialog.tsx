@@ -8,8 +8,11 @@
 // roomier horizontal sign.
 // Copy stays simplified and the credential stays clearly a Nostr secret key
 // (nsec), never a "passport".
-// Authentication logic, hooks, login methods, tab values, prop signatures and
-// callback timing are unchanged.
+// Authentication logic, hooks, login methods, tab values and prop signatures
+// are unchanged. Callback timing changed once, on purpose: the extension and
+// bunker logins are asynchronous, and they are now awaited, so the dialog
+// closes only after the login actually succeeded and a failure is shown on
+// the plate instead of becoming an unhandled rejection behind a closed dialog.
 
 import React, { useRef, useState } from 'react';
 import { Shield, Upload, X } from 'lucide-react';
@@ -41,23 +44,29 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   // Default to the Secret key tab: most players paste/upload their nsec here.
   // Extension and Bunker remain available; tab `value`s are unchanged.
   const [tab, setTab] = useState('key');
+  // The last login failure, shown in the tab it came from until the player
+  // edits that tab's input, switches tab or tries again.
+  const [loginError, setLoginError] = useState<{ tab: string; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const login = useLoginActions();
   // Render inside the game window (and above the fullscreen layer) rather than
   // over the whole browser page.
   const portalContainer = useFullscreenPortalContainer();
 
-  const handleExtensionLogin = () => {
+  const handleExtensionLogin = async () => {
     setIsLoading(true);
+    setLoginError(null);
     try {
       if (!('nostr' in window)) {
-        throw new Error('Nostr extension not found. Please install a NIP-07 extension.');
+        setLoginError({ tab: 'extension', message: 'Nostr extension not found. Please install a NIP-07 extension.' });
+        return;
       }
-      login.extension();
+      await login.extension();
       onLogin();
       onClose();
     } catch (error) {
       console.error('Extension login failed:', error);
+      setLoginError({ tab: 'extension', message: 'The extension did not sign you in. Check it and try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -66,32 +75,43 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const handleKeyLogin = () => {
     if (!nsec.trim()) return;
     setIsLoading(true);
+    setLoginError(null);
 
     try {
       login.nsec(nsec);
       onLogin();
       onClose();
-    } catch (error) {
-      console.error('Nsec login failed:', error);
+    } catch {
+      // Never log the error: it can carry the text that was pasted.
+      setLoginError({ tab: 'key', message: 'That is not a valid Nostr secret key (nsec1...).' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBunkerLogin = () => {
+  const handleBunkerLogin = async () => {
     if (!bunkerUri.trim() || !bunkerUri.startsWith('bunker://')) return;
     setIsLoading(true);
+    setLoginError(null);
 
     try {
-      login.bunker(bunkerUri);
+      await login.bunker(bunkerUri);
       onLogin();
       onClose();
     } catch (error) {
       console.error('Bunker login failed:', error);
+      setLoginError({ tab: 'bunker', message: 'Could not connect to the bunker. Check the URI and that the bunker is online.' });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const errorFor = (forTab: string) =>
+    loginError?.tab === forTab ? (
+      <p role='alert' className='px-1 text-xs font-medium text-red-200 [text-shadow:0_1px_3px_rgba(58,42,26,0.9)]'>
+        {loginError.message}
+      </p>
+    ) : null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -211,7 +231,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
           {/* Tabs + fields sit DIRECTLY on the wood (no wrapping cream card). */}
           <Tabs
             value={tab}
-            onValueChange={setTab}
+            onValueChange={(next) => {
+              setTab(next);
+              setLoginError(null);
+            }}
             className='mt-3 flex min-h-0 flex-1 flex-col landscape:max-md:mt-2'
           >
             {/* Tab strip as small cream/wood pills on the plate. */}
@@ -254,6 +277,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 >
                   {isLoading ? 'Signing in…' : 'Login with Extension'}
                 </Button>
+                {errorFor('extension')}
               </TabsContent>
 
               <TabsContent value='key' forceMount className='space-y-2 data-[state=inactive]:hidden landscape:max-md:space-y-2'>
@@ -265,13 +289,17 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                     type='password'
                     id='nsec'
                     value={nsec}
-                    onChange={(e) => setNsec(e.target.value)}
+                    onChange={(e) => {
+                      setNsec(e.target.value);
+                      setLoginError(null);
+                    }}
                     className={inputClass}
                     placeholder='nsec1…'
                   />
                   <p className={cn(woodTextClass, 'px-1 text-xs text-island-cream/90')}>
                     <span className={woodMarkClass}>Never share your secret key.</span>
                   </p>
+                  {errorFor('key')}
                 </div>
 
                 <input
@@ -313,7 +341,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   <Input
                     id='bunkerUri'
                     value={bunkerUri}
-                    onChange={(e) => setBunkerUri(e.target.value)}
+                    onChange={(e) => {
+                      setBunkerUri(e.target.value);
+                      setLoginError(null);
+                    }}
                     className={inputClass}
                     placeholder='bunker://'
                   />
@@ -331,6 +362,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                 >
                   {isLoading ? 'Connecting…' : 'Login with Bunker'}
                 </Button>
+                {errorFor('bunker')}
               </TabsContent>
             </div>
           </Tabs>
