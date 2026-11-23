@@ -1,32 +1,61 @@
 name: Test
 
 on:
+  # production is the default branch (Vercel deploys it); main is the old one,
+  # kept so a PR still aimed at it is checked too.
   push:
-    branches: [ "main" ]
+    branches: [ "production", "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "production", "main" ]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+# Least privilege: the job only reads the repository. No secrets are used, so a
+# pull request from a fork runs with nothing worth stealing.
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 30
+
     steps:
+      # Third-party actions are pinned to full commit SHAs (the tag in the
+      # trailing comment), so a moved tag cannot change what runs here.
       - name: Checkout repository
-        uses: actions/checkout@v4
-        
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
       - name: Setup Node.js
         # .nvmrc is the single source of truth for the Node line (24 LTS), so CI
         # and a contributor's `nvm use` can never drift apart.
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
 
       - name: Clean install dependencies
-        run: |
-          rm -rf node_modules
-          npm ci
-          
-      - name: Run tests
-        run: npm run test
+        run: npm ci
+
+      - name: Audit runtime dependencies
+        # Fails on a high or critical advisory in anything that ships.
+        run: npm audit --omit=dev --audit-level=high
+
+      # The same checks, in the same order, as `npm run test` (and the GitLab
+      # validate job), spelled out so a red run names the failing one.
+      - name: Typecheck
+        run: npx tsc -p tsconfig.app.json --noEmit
+
+      - name: Lint
+        run: npx eslint
+
+      - name: Unit tests
+        run: npx vitest run --reporter=dot --silent
+
+      - name: Build
+        run: npx vite build -l error
