@@ -289,9 +289,10 @@ Relay-facing behaviour is generally exercised through mocks and test doubles.
 The test app mounts the real provider stack, and the suite is not structured to
 guarantee complete network isolation. There is no browser end-to-end suite.
 There is a
-GitLab pipeline and there are GitHub workflows, but the GitHub ones watch a
-branch that is not where development happens, so do not read GitHub Actions
-status as validation of the current code.
+GitLab pipeline and there are GitHub workflows. The GitHub `Test` workflow runs
+on pushes and pull requests to `production` (the default branch) and `main`:
+a runtime `npm audit` at high severity, then the same checks as `npm test`.
+The GitHub Pages deploy workflow still watches `main` only.
 
 ## Deployment
 

@@ -13,7 +13,7 @@
     "test": "tsc -p tsconfig.app.json --noEmit && eslint && vitest run --reporter=dot --silent && vite build -l error",
     "docs:registry": "UPDATE_REGISTRY_DOC=1 vitest run src/protocol/event-registry-doc.test.ts",
     "dev:inventory-lab": "VITE_ENABLE_LIVE_INVENTORY_LAB=true vite",
-    "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup"
+    "deploy": "npm run build && npx -y nostr-deploy-cli@0.7.6 deploy --skip-setup"
   },
   "dependencies": {
     "@blobbi-kit/core": "^0.11.1",

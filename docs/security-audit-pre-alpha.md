@@ -8,7 +8,8 @@ guards it (`MultiplayerLayer.visual-injection.test.tsx`) makes sense.
 ## Platform
 
 Blobbi Island is a browser-only single-page app: Vite + React, served as static
-files (GitHub Pages workflow, `nostr-deploy-cli`, an `_redirects` fallback).
+files (Vercel in production; also a GitHub Pages workflow, `nostr-deploy-cli`
+and an `_redirects` fallback).
 There is no Android/iOS wrapper, no Capacitor, Cordova, Electron, Tauri or
 React Native. `public/sw.js` is a self-destroying service worker that only
 unregisters an old one; nothing registers a worker. The manifest is a plain PWA
@@ -58,8 +59,15 @@ and bunker (NIP-46) logins never hold the user's key in the page.
 
 ## Defence in depth
 
-The CSP is a `<meta>` tag because static hosting cannot set headers. A meta
-CSP cannot carry `frame-ancestors`, so the app has no clickjacking protection
-on GitHub Pages; if it ever moves to a host that supports headers, add
-`Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options:
-nosniff` and a `Referrer-Policy`.
+Production is served by Vercel, which sends the security headers from
+`vercel.json`: the same CSP as the `<meta>` tag in `index.html` plus
+`frame-ancestors 'none'` and `form-action 'self'`, `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, a minimal `Permissions-Policy` and
+`Cross-Origin-Opener-Policy: same-origin` (every window the app opens is
+`noopener`). `src/security-headers.test.ts` keeps the two CSPs in step.
+
+The `<meta>` CSP stays for the static hosts that cannot set headers (the
+GitHub Pages workflow, `nostr-deploy-cli`). A meta CSP cannot carry
+`frame-ancestors`, so a copy served from those hosts still has no
+clickjacking protection.
